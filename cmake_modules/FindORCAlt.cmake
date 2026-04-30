@@ -25,7 +25,12 @@ if(_PAIMON_ORC_TARGET)
         target_link_libraries(orc::orc INTERFACE ${_PAIMON_ORC_TARGET})
     endif()
 
-    foreach(_dependency zstd snappy lz4 zlib libprotobuf)
+    foreach(_dependency
+            zstd
+            snappy
+            lz4
+            zlib
+            libprotobuf)
         if(TARGET ${_dependency})
             target_link_libraries(orc::orc INTERFACE ${_dependency})
         endif()
@@ -39,15 +44,17 @@ else()
         pkg_check_modules(PC_ORC QUIET orc)
     endif()
 
-    find_path(ORC_INCLUDE_DIR NAMES orc/OrcFile.hh
-              ${_PAIMON_ORC_FIND_ARGS} HINTS ${PC_ORC_INCLUDE_DIRS}
+    find_path(ORC_INCLUDE_DIR
+              NAMES orc/OrcFile.hh ${_PAIMON_ORC_FIND_ARGS}
+              HINTS ${PC_ORC_INCLUDE_DIRS}
               PATH_SUFFIXES include)
-    find_library(ORC_LIBRARY NAMES orc ${_PAIMON_ORC_FIND_ARGS}
-                 HINTS ${PC_ORC_LIBRARY_DIRS} PATH_SUFFIXES lib lib64)
+    find_library(ORC_LIBRARY
+                 NAMES orc ${_PAIMON_ORC_FIND_ARGS}
+                 HINTS ${PC_ORC_LIBRARY_DIRS}
+                 PATH_SUFFIXES lib lib64)
 
     include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(ORCAlt REQUIRED_VARS ORC_LIBRARY
-                                                       ORC_INCLUDE_DIR)
+    find_package_handle_standard_args(ORCAlt REQUIRED_VARS ORC_LIBRARY ORC_INCLUDE_DIR)
 
     if(ORCAlt_FOUND AND NOT TARGET orc::orc)
         add_library(orc::orc UNKNOWN IMPORTED)
@@ -55,7 +62,12 @@ else()
                               PROPERTIES IMPORTED_LOCATION "${ORC_LIBRARY}"
                                          INTERFACE_INCLUDE_DIRECTORIES
                                          "${ORC_INCLUDE_DIR}")
-        foreach(_dependency zstd snappy lz4 zlib libprotobuf)
+        foreach(_dependency
+                zstd
+                snappy
+                lz4
+                zlib
+                libprotobuf)
             if(TARGET ${_dependency})
                 target_link_libraries(orc::orc INTERFACE ${_dependency})
             endif()

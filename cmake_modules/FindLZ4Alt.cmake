@@ -26,7 +26,7 @@ if(_PAIMON_LZ4_TARGET)
         add_library(lz4 INTERFACE IMPORTED)
         if(LZ4_INCLUDE_DIR)
             set_target_properties(lz4 PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                                "${LZ4_INCLUDE_DIR}")
+                                                 "${LZ4_INCLUDE_DIR}")
         endif()
         target_link_libraries(lz4 INTERFACE ${_PAIMON_LZ4_TARGET})
     endif()
@@ -38,14 +38,17 @@ else()
         pkg_check_modules(PC_LZ4 QUIET liblz4)
     endif()
 
-    find_path(LZ4_INCLUDE_DIR NAMES lz4.h ${_PAIMON_LZ4_FIND_ARGS}
-              HINTS ${PC_LZ4_INCLUDE_DIRS} PATH_SUFFIXES include)
-    find_library(LZ4_LIBRARY NAMES lz4 liblz4 ${_PAIMON_LZ4_FIND_ARGS}
-                 HINTS ${PC_LZ4_LIBRARY_DIRS} PATH_SUFFIXES lib lib64)
+    find_path(LZ4_INCLUDE_DIR
+              NAMES lz4.h ${_PAIMON_LZ4_FIND_ARGS}
+              HINTS ${PC_LZ4_INCLUDE_DIRS}
+              PATH_SUFFIXES include)
+    find_library(LZ4_LIBRARY
+                 NAMES lz4 liblz4 ${_PAIMON_LZ4_FIND_ARGS}
+                 HINTS ${PC_LZ4_LIBRARY_DIRS}
+                 PATH_SUFFIXES lib lib64)
 
     include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(LZ4Alt REQUIRED_VARS LZ4_LIBRARY
-                                                       LZ4_INCLUDE_DIR)
+    find_package_handle_standard_args(LZ4Alt REQUIRED_VARS LZ4_LIBRARY LZ4_INCLUDE_DIR)
 
     if(LZ4Alt_FOUND AND NOT TARGET lz4)
         add_library(lz4 UNKNOWN IMPORTED)

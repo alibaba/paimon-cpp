@@ -37,20 +37,24 @@ else()
         pkg_check_modules(PC_fmt QUIET fmt)
     endif()
 
-    find_path(FMT_INCLUDE_DIR NAMES fmt/core.h ${_PAIMON_FMT_FIND_ARGS}
-              HINTS ${PC_fmt_INCLUDE_DIRS} PATH_SUFFIXES include)
-    find_library(FMT_LIBRARY NAMES fmt ${_PAIMON_FMT_FIND_ARGS}
-                 HINTS ${PC_fmt_LIBRARY_DIRS} PATH_SUFFIXES lib lib64)
+    find_path(FMT_INCLUDE_DIR
+              NAMES fmt/core.h ${_PAIMON_FMT_FIND_ARGS}
+              HINTS ${PC_fmt_INCLUDE_DIRS}
+              PATH_SUFFIXES include)
+    find_library(FMT_LIBRARY
+                 NAMES fmt ${_PAIMON_FMT_FIND_ARGS}
+                 HINTS ${PC_fmt_LIBRARY_DIRS}
+                 PATH_SUFFIXES lib lib64)
 
     include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(fmtAlt REQUIRED_VARS FMT_INCLUDE_DIR
-                                                       FMT_LIBRARY)
+    find_package_handle_standard_args(fmtAlt REQUIRED_VARS FMT_INCLUDE_DIR FMT_LIBRARY)
 
     if(fmtAlt_FOUND AND NOT TARGET fmt)
         add_library(fmt UNKNOWN IMPORTED)
-        set_target_properties(fmt PROPERTIES IMPORTED_LOCATION "${FMT_LIBRARY}"
-                                            INTERFACE_INCLUDE_DIRECTORIES
-                                            "${FMT_INCLUDE_DIR}")
+        set_target_properties(fmt
+                              PROPERTIES IMPORTED_LOCATION "${FMT_LIBRARY}"
+                                         INTERFACE_INCLUDE_DIRECTORIES
+                                         "${FMT_INCLUDE_DIR}")
         set(FMT_LIBRARIES "${FMT_LIBRARY}")
     endif()
 endif()

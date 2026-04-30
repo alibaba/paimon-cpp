@@ -36,21 +36,24 @@ else()
         pkg_check_modules(PC_TBB QUIET tbb)
     endif()
 
-    find_path(TBB_INCLUDE_DIR NAMES tbb/tbb.h oneapi/tbb/tbb.h
-              ${_PAIMON_TBB_FIND_ARGS} HINTS ${PC_TBB_INCLUDE_DIRS}
+    find_path(TBB_INCLUDE_DIR
+              NAMES tbb/tbb.h oneapi/tbb/tbb.h ${_PAIMON_TBB_FIND_ARGS}
+              HINTS ${PC_TBB_INCLUDE_DIRS}
               PATH_SUFFIXES include)
-    find_library(TBB_LIBRARY NAMES tbb ${_PAIMON_TBB_FIND_ARGS}
-                 HINTS ${PC_TBB_LIBRARY_DIRS} PATH_SUFFIXES lib lib64)
+    find_library(TBB_LIBRARY
+                 NAMES tbb ${_PAIMON_TBB_FIND_ARGS}
+                 HINTS ${PC_TBB_LIBRARY_DIRS}
+                 PATH_SUFFIXES lib lib64)
 
     include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(TBBAlt REQUIRED_VARS TBB_LIBRARY
-                                                       TBB_INCLUDE_DIR)
+    find_package_handle_standard_args(TBBAlt REQUIRED_VARS TBB_LIBRARY TBB_INCLUDE_DIR)
 
     if(TBBAlt_FOUND AND NOT TARGET tbb)
         add_library(tbb UNKNOWN IMPORTED)
-        set_target_properties(tbb PROPERTIES IMPORTED_LOCATION "${TBB_LIBRARY}"
-                                            INTERFACE_INCLUDE_DIRECTORIES
-                                            "${TBB_INCLUDE_DIR}")
+        set_target_properties(tbb
+                              PROPERTIES IMPORTED_LOCATION "${TBB_LIBRARY}"
+                                         INTERFACE_INCLUDE_DIRECTORIES
+                                         "${TBB_INCLUDE_DIR}")
     endif()
 endif()
 

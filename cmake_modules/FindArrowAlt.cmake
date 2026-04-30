@@ -25,36 +25,29 @@ function(_paimon_select_first_target OUT_VAR)
 endfunction()
 
 if(PAIMON_DEPENDENCY_USE_SHARED)
-    _paimon_select_first_target(_PAIMON_ARROW_TARGET Arrow::arrow_shared
-                                Arrow::arrow)
+    _paimon_select_first_target(_PAIMON_ARROW_TARGET Arrow::arrow_shared Arrow::arrow)
     _paimon_select_first_target(_PAIMON_PARQUET_TARGET Parquet::parquet_shared
                                 Parquet::parquet)
     _paimon_select_first_target(_PAIMON_ARROW_DATASET_TARGET
                                 ArrowDataset::arrow_dataset_shared
-                                Arrow::arrow_dataset_shared
-                                ArrowDataset::arrow_dataset)
-    _paimon_select_first_target(_PAIMON_ARROW_ACERO_TARGET
-                                ArrowAcero::arrow_acero_shared
+                                Arrow::arrow_dataset_shared ArrowDataset::arrow_dataset)
+    _paimon_select_first_target(_PAIMON_ARROW_ACERO_TARGET ArrowAcero::arrow_acero_shared
                                 Arrow::arrow_acero_shared ArrowAcero::arrow_acero)
 else()
-    _paimon_select_first_target(_PAIMON_ARROW_TARGET Arrow::arrow_static
-                                Arrow::arrow)
+    _paimon_select_first_target(_PAIMON_ARROW_TARGET Arrow::arrow_static Arrow::arrow)
     _paimon_select_first_target(_PAIMON_PARQUET_TARGET Parquet::parquet_static
                                 Parquet::parquet)
     _paimon_select_first_target(_PAIMON_ARROW_DATASET_TARGET
                                 ArrowDataset::arrow_dataset_static
-                                Arrow::arrow_dataset_static
-                                ArrowDataset::arrow_dataset)
-    _paimon_select_first_target(_PAIMON_ARROW_ACERO_TARGET
-                                ArrowAcero::arrow_acero_static
+                                Arrow::arrow_dataset_static ArrowDataset::arrow_dataset)
+    _paimon_select_first_target(_PAIMON_ARROW_ACERO_TARGET ArrowAcero::arrow_acero_static
                                 Arrow::arrow_acero_static ArrowAcero::arrow_acero)
 endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
-    ArrowAlt
-    REQUIRED_VARS _PAIMON_ARROW_TARGET _PAIMON_PARQUET_TARGET
-                  _PAIMON_ARROW_DATASET_TARGET _PAIMON_ARROW_ACERO_TARGET)
+    ArrowAlt REQUIRED_VARS _PAIMON_ARROW_TARGET _PAIMON_PARQUET_TARGET
+                           _PAIMON_ARROW_DATASET_TARGET _PAIMON_ARROW_ACERO_TARGET)
 
 if(ArrowAlt_FOUND)
     get_target_property(ARROW_INCLUDE_DIR ${_PAIMON_ARROW_TARGET}
@@ -64,28 +57,25 @@ if(ArrowAlt_FOUND)
         add_library(arrow INTERFACE IMPORTED)
         if(ARROW_INCLUDE_DIR)
             set_target_properties(arrow PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                                 "${ARROW_INCLUDE_DIR}")
+                                                   "${ARROW_INCLUDE_DIR}")
         endif()
         target_link_libraries(arrow INTERFACE ${_PAIMON_ARROW_TARGET})
     endif()
 
     if(NOT TARGET arrow_acero)
         add_library(arrow_acero INTERFACE IMPORTED)
-        target_link_libraries(arrow_acero INTERFACE ${_PAIMON_ARROW_ACERO_TARGET}
-                                                    arrow)
+        target_link_libraries(arrow_acero INTERFACE ${_PAIMON_ARROW_ACERO_TARGET} arrow)
     endif()
 
     if(NOT TARGET arrow_dataset)
         add_library(arrow_dataset INTERFACE IMPORTED)
-        target_link_libraries(arrow_dataset
-                              INTERFACE ${_PAIMON_ARROW_DATASET_TARGET}
-                                        arrow_acero)
+        target_link_libraries(arrow_dataset INTERFACE ${_PAIMON_ARROW_DATASET_TARGET}
+                                                      arrow_acero)
     endif()
 
     if(NOT TARGET parquet)
         add_library(parquet INTERFACE IMPORTED)
-        target_link_libraries(parquet INTERFACE ${_PAIMON_PARQUET_TARGET}
-                                                arrow_dataset)
+        target_link_libraries(parquet INTERFACE ${_PAIMON_PARQUET_TARGET} arrow_dataset)
     endif()
 endif()
 

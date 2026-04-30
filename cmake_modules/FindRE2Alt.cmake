@@ -20,14 +20,17 @@ else()
         pkg_check_modules(PC_RE2 QUIET re2)
     endif()
 
-    find_path(RE2_INCLUDE_DIR NAMES re2/re2.h ${_PAIMON_RE2_FIND_ARGS}
-              HINTS ${PC_RE2_INCLUDE_DIRS} PATH_SUFFIXES include)
-    find_library(RE2_LIBRARY NAMES re2 ${_PAIMON_RE2_FIND_ARGS}
-                 HINTS ${PC_RE2_LIBRARY_DIRS} PATH_SUFFIXES lib lib64)
+    find_path(RE2_INCLUDE_DIR
+              NAMES re2/re2.h ${_PAIMON_RE2_FIND_ARGS}
+              HINTS ${PC_RE2_INCLUDE_DIRS}
+              PATH_SUFFIXES include)
+    find_library(RE2_LIBRARY
+                 NAMES re2 ${_PAIMON_RE2_FIND_ARGS}
+                 HINTS ${PC_RE2_LIBRARY_DIRS}
+                 PATH_SUFFIXES lib lib64)
 
     include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(RE2Alt REQUIRED_VARS RE2_LIBRARY
-                                                      RE2_INCLUDE_DIR)
+    find_package_handle_standard_args(RE2Alt REQUIRED_VARS RE2_LIBRARY RE2_INCLUDE_DIR)
 
     if(RE2Alt_FOUND)
         add_library(re2::re2 UNKNOWN IMPORTED)

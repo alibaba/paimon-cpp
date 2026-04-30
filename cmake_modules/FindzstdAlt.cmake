@@ -14,7 +14,10 @@ set(_PAIMON_ZSTD_TARGETS)
 if(PAIMON_DEPENDENCY_USE_SHARED)
     list(APPEND _PAIMON_ZSTD_TARGETS zstd::libzstd_shared zstd::libzstd)
 endif()
-list(APPEND _PAIMON_ZSTD_TARGETS zstd::libzstd_static zstd::libzstd
+list(APPEND
+     _PAIMON_ZSTD_TARGETS
+     zstd::libzstd_static
+     zstd::libzstd
      zstd::zstd)
 
 foreach(_target IN LISTS _PAIMON_ZSTD_TARGETS)
@@ -43,14 +46,17 @@ else()
         pkg_check_modules(PC_zstd QUIET libzstd)
     endif()
 
-    find_path(ZSTD_INCLUDE_DIR NAMES zstd.h ${_PAIMON_ZSTD_FIND_ARGS}
-              HINTS ${PC_zstd_INCLUDE_DIRS} PATH_SUFFIXES include)
-    find_library(ZSTD_LIBRARY NAMES zstd libzstd ${_PAIMON_ZSTD_FIND_ARGS}
-                 HINTS ${PC_zstd_LIBRARY_DIRS} PATH_SUFFIXES lib lib64)
+    find_path(ZSTD_INCLUDE_DIR
+              NAMES zstd.h ${_PAIMON_ZSTD_FIND_ARGS}
+              HINTS ${PC_zstd_INCLUDE_DIRS}
+              PATH_SUFFIXES include)
+    find_library(ZSTD_LIBRARY
+                 NAMES zstd libzstd ${_PAIMON_ZSTD_FIND_ARGS}
+                 HINTS ${PC_zstd_LIBRARY_DIRS}
+                 PATH_SUFFIXES lib lib64)
 
     include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(zstdAlt REQUIRED_VARS ZSTD_LIBRARY
-                                                        ZSTD_INCLUDE_DIR)
+    find_package_handle_standard_args(zstdAlt REQUIRED_VARS ZSTD_LIBRARY ZSTD_INCLUDE_DIR)
 
     if(zstdAlt_FOUND AND NOT TARGET zstd)
         add_library(zstd UNKNOWN IMPORTED)

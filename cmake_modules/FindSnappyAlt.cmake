@@ -5,8 +5,7 @@
 set(_PAIMON_SNAPPY_ROOTS ${Snappy_ROOT} ${SNAPPY_ROOT} ${PAIMON_PACKAGE_PREFIX})
 list(REMOVE_ITEM _PAIMON_SNAPPY_ROOTS "")
 if(_PAIMON_SNAPPY_ROOTS)
-    set(_PAIMON_SNAPPY_FIND_ARGS HINTS ${_PAIMON_SNAPPY_ROOTS}
-                                 NO_DEFAULT_PATH)
+    set(_PAIMON_SNAPPY_FIND_ARGS HINTS ${_PAIMON_SNAPPY_ROOTS} NO_DEFAULT_PATH)
 endif()
 
 find_package(Snappy CONFIG QUIET ${_PAIMON_SNAPPY_FIND_ARGS})
@@ -26,7 +25,7 @@ if(_PAIMON_SNAPPY_TARGET)
         add_library(snappy INTERFACE IMPORTED)
         if(SNAPPY_INCLUDE_DIR)
             set_target_properties(snappy PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                                   "${SNAPPY_INCLUDE_DIR}")
+                                                    "${SNAPPY_INCLUDE_DIR}")
         endif()
         target_link_libraries(snappy INTERFACE ${_PAIMON_SNAPPY_TARGET})
     endif()
@@ -38,14 +37,18 @@ else()
         pkg_check_modules(PC_Snappy QUIET snappy)
     endif()
 
-    find_path(SNAPPY_INCLUDE_DIR NAMES snappy.h ${_PAIMON_SNAPPY_FIND_ARGS}
-              HINTS ${PC_Snappy_INCLUDE_DIRS} PATH_SUFFIXES include)
-    find_library(SNAPPY_LIBRARY NAMES snappy ${_PAIMON_SNAPPY_FIND_ARGS}
-                 HINTS ${PC_Snappy_LIBRARY_DIRS} PATH_SUFFIXES lib lib64)
+    find_path(SNAPPY_INCLUDE_DIR
+              NAMES snappy.h ${_PAIMON_SNAPPY_FIND_ARGS}
+              HINTS ${PC_Snappy_INCLUDE_DIRS}
+              PATH_SUFFIXES include)
+    find_library(SNAPPY_LIBRARY
+                 NAMES snappy ${_PAIMON_SNAPPY_FIND_ARGS}
+                 HINTS ${PC_Snappy_LIBRARY_DIRS}
+                 PATH_SUFFIXES lib lib64)
 
     include(FindPackageHandleStandardArgs)
     find_package_handle_standard_args(SnappyAlt REQUIRED_VARS SNAPPY_LIBRARY
-                                                         SNAPPY_INCLUDE_DIR)
+                                                              SNAPPY_INCLUDE_DIR)
 
     if(SnappyAlt_FOUND AND NOT TARGET snappy)
         add_library(snappy UNKNOWN IMPORTED)

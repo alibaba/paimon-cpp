@@ -10,55 +10,58 @@ endif()
 
 find_package(GTest CONFIG QUIET ${_PAIMON_GTEST_FIND_ARGS})
 
-if(NOT TARGET GTest::gtest OR NOT TARGET GTest::gtest_main
+if(NOT TARGET GTest::gtest
+   OR NOT TARGET GTest::gtest_main
    OR NOT TARGET GTest::gmock)
-    find_path(GTEST_INCLUDE_DIR NAMES gtest/gtest.h ${_PAIMON_GTEST_FIND_ARGS}
+    find_path(GTEST_INCLUDE_DIR
+              NAMES gtest/gtest.h ${_PAIMON_GTEST_FIND_ARGS}
               PATH_SUFFIXES include)
-    find_library(GTEST_LIBRARY NAMES gtest ${_PAIMON_GTEST_FIND_ARGS}
+    find_library(GTEST_LIBRARY
+                 NAMES gtest ${_PAIMON_GTEST_FIND_ARGS}
                  PATH_SUFFIXES lib lib64)
-    find_library(GTEST_MAIN_LIBRARY NAMES gtest_main ${_PAIMON_GTEST_FIND_ARGS}
+    find_library(GTEST_MAIN_LIBRARY
+                 NAMES gtest_main ${_PAIMON_GTEST_FIND_ARGS}
                  PATH_SUFFIXES lib lib64)
-    find_library(GMOCK_LIBRARY NAMES gmock ${_PAIMON_GTEST_FIND_ARGS}
+    find_library(GMOCK_LIBRARY
+                 NAMES gmock ${_PAIMON_GTEST_FIND_ARGS}
                  PATH_SUFFIXES lib lib64)
 
     include(FindPackageHandleStandardArgs)
     find_package_handle_standard_args(
-        GTestAlt REQUIRED_VARS GTEST_INCLUDE_DIR GTEST_LIBRARY
-                                 GTEST_MAIN_LIBRARY GMOCK_LIBRARY)
+        GTestAlt REQUIRED_VARS GTEST_INCLUDE_DIR GTEST_LIBRARY GTEST_MAIN_LIBRARY
+                               GMOCK_LIBRARY)
 
     if(GTestAlt_FOUND)
         if(NOT TARGET GTest::gtest)
             add_library(GTest::gtest UNKNOWN IMPORTED)
-            set_target_properties(
-                GTest::gtest
-                PROPERTIES IMPORTED_LOCATION "${GTEST_LIBRARY}"
-                           INTERFACE_INCLUDE_DIRECTORIES "${GTEST_INCLUDE_DIR}")
+            set_target_properties(GTest::gtest
+                                  PROPERTIES IMPORTED_LOCATION "${GTEST_LIBRARY}"
+                                             INTERFACE_INCLUDE_DIRECTORIES
+                                             "${GTEST_INCLUDE_DIR}")
         endif()
         if(NOT TARGET GTest::gtest_main)
             add_library(GTest::gtest_main UNKNOWN IMPORTED)
-            set_target_properties(
-                GTest::gtest_main
-                PROPERTIES IMPORTED_LOCATION "${GTEST_MAIN_LIBRARY}"
-                           INTERFACE_INCLUDE_DIRECTORIES "${GTEST_INCLUDE_DIR}")
+            set_target_properties(GTest::gtest_main
+                                  PROPERTIES IMPORTED_LOCATION "${GTEST_MAIN_LIBRARY}"
+                                             INTERFACE_INCLUDE_DIRECTORIES
+                                             "${GTEST_INCLUDE_DIR}")
         endif()
         if(NOT TARGET GTest::gmock)
             add_library(GTest::gmock UNKNOWN IMPORTED)
-            set_target_properties(
-                GTest::gmock
-                PROPERTIES IMPORTED_LOCATION "${GMOCK_LIBRARY}"
-                           INTERFACE_INCLUDE_DIRECTORIES "${GTEST_INCLUDE_DIR}")
+            set_target_properties(GTest::gmock
+                                  PROPERTIES IMPORTED_LOCATION "${GMOCK_LIBRARY}"
+                                             INTERFACE_INCLUDE_DIRECTORIES
+                                             "${GTEST_INCLUDE_DIR}")
         endif()
     endif()
 else()
-    get_target_property(GTEST_INCLUDE_DIR GTest::gtest
-                        INTERFACE_INCLUDE_DIRECTORIES)
+    get_target_property(GTEST_INCLUDE_DIR GTest::gtest INTERFACE_INCLUDE_DIRECTORIES)
     set(GTestAlt_FOUND TRUE)
 endif()
 
 if(GTestAlt_FOUND)
     find_package(Threads REQUIRED)
-    set(GTEST_LINK_TOOLCHAIN GTest::gtest_main GTest::gtest GTest::gmock
-                            Threads::Threads)
+    set(GTEST_LINK_TOOLCHAIN GTest::gtest_main GTest::gtest GTest::gmock Threads::Threads)
 endif()
 
 unset(_PAIMON_GTEST_FIND_ARGS)

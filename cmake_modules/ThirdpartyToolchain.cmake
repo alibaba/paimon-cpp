@@ -401,22 +401,26 @@ function(paimon_set_dependency_source_default DEPENDENCY_NAME SOURCE_VALUE REASO
             CACHE STRING "Dependency source for ${DEPENDENCY_NAME}" FORCE)
         set_property(CACHE ${DEPENDENCY_NAME}_SOURCE
                      PROPERTY STRINGS ${PAIMON_DEPENDENCY_SOURCE_VALUES})
-        message(STATUS
-                "Defaulting ${DEPENDENCY_NAME}_SOURCE to ${SOURCE_VALUE}: ${REASON}")
+        message(STATUS "Defaulting ${DEPENDENCY_NAME}_SOURCE to ${SOURCE_VALUE}: ${REASON}"
+        )
     endif()
 endfunction()
 
 function(paimon_apply_dependency_source_defaults)
     paimon_get_dependency_source(Arrow _arrow_source)
     if(_arrow_source STREQUAL "SYSTEM" OR _arrow_source STREQUAL "BUNDLED")
-        foreach(_dependency zstd Snappy LZ4 ZLIB RE2)
+        foreach(_dependency
+                zstd
+                Snappy
+                LZ4
+                ZLIB
+                RE2)
             paimon_set_dependency_source_default(
                 ${_dependency} ${_arrow_source}
                 "follow Arrow_SOURCE to avoid mixed transitive dependencies")
         endforeach()
     elseif(_arrow_source STREQUAL "AUTO")
-        paimon_configure_dependency_root(Arrow "${_arrow_source}"
-                                         _arrow_resolved_source)
+        paimon_configure_dependency_root(Arrow "${_arrow_source}" _arrow_resolved_source)
         find_package(ArrowAlt QUIET MODULE)
         if(ArrowAlt_FOUND)
             set(_arrow_dependency_default SYSTEM)
@@ -427,10 +431,14 @@ function(paimon_apply_dependency_source_defaults)
             set(_arrow_dependency_reason
                 "system Arrow not found during AUTO dependency precheck")
         endif()
-        foreach(_dependency zstd Snappy LZ4 ZLIB RE2)
+        foreach(_dependency
+                zstd
+                Snappy
+                LZ4
+                ZLIB
+                RE2)
             paimon_set_dependency_source_default(
-                ${_dependency} ${_arrow_dependency_default}
-                "${_arrow_dependency_reason}")
+                ${_dependency} ${_arrow_dependency_default} "${_arrow_dependency_reason}")
         endforeach()
     endif()
 
@@ -441,13 +449,11 @@ function(paimon_apply_dependency_source_defaults)
                 Protobuf ${_orc_source}
                 "follow ORC_SOURCE to avoid mixed transitive dependencies")
         elseif(_orc_source STREQUAL "AUTO")
-            paimon_configure_dependency_root(ORC "${_orc_source}"
-                                             _orc_resolved_source)
+            paimon_configure_dependency_root(ORC "${_orc_source}" _orc_resolved_source)
             find_package(ORCAlt QUIET MODULE)
             if(ORCAlt_FOUND)
                 paimon_set_dependency_source_default(
-                    Protobuf SYSTEM
-                    "system ORC found during AUTO dependency precheck")
+                    Protobuf SYSTEM "system ORC found during AUTO dependency precheck")
             else()
                 paimon_set_dependency_source_default(
                     Protobuf BUNDLED
@@ -460,8 +466,8 @@ endfunction()
 function(paimon_configure_dependency_root DEPENDENCY_NAME SOURCE_VALUE OUT_SOURCE)
     set(_root_var "${DEPENDENCY_NAME}_ROOT")
 
-    if(NOT "${PAIMON_PACKAGE_PREFIX}" STREQUAL ""
-       AND (NOT DEFINED ${_root_var} OR "${${_root_var}}" STREQUAL ""))
+    if(NOT "${PAIMON_PACKAGE_PREFIX}" STREQUAL "" AND (NOT DEFINED ${_root_var}
+                                                       OR "${${_root_var}}" STREQUAL ""))
         set(${_root_var}
             "${PAIMON_PACKAGE_PREFIX}"
             CACHE PATH "Root directory for ${DEPENDENCY_NAME}" FORCE)
@@ -515,8 +521,11 @@ function(paimon_get_dependency_compat_target DEPENDENCY_NAME OUT_VAR)
         PARENT_SCOPE)
 endfunction()
 
-function(paimon_record_dependency_resolution DEPENDENCY_NAME REQUESTED_SOURCE
-         ACTUAL_SOURCE TARGET_NAME)
+function(paimon_record_dependency_resolution
+         DEPENDENCY_NAME
+         REQUESTED_SOURCE
+         ACTUAL_SOURCE
+         TARGET_NAME)
     get_property(_dependencies GLOBAL PROPERTY PAIMON_RESOLVED_DEPENDENCIES)
     list(APPEND _dependencies "${DEPENDENCY_NAME}")
     list(REMOVE_DUPLICATES _dependencies)
@@ -524,12 +533,11 @@ function(paimon_record_dependency_resolution DEPENDENCY_NAME REQUESTED_SOURCE
 
     paimon_get_dependency_root("${DEPENDENCY_NAME}" _root)
     set_property(GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_REQUESTED_SOURCE"
-                                "${REQUESTED_SOURCE}")
+                                 "${REQUESTED_SOURCE}")
     set_property(GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE"
-                                "${ACTUAL_SOURCE}")
+                                 "${ACTUAL_SOURCE}")
     set_property(GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_ROOT" "${_root}")
-    set_property(GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_TARGET"
-                                "${TARGET_NAME}")
+    set_property(GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_TARGET" "${TARGET_NAME}")
 endfunction()
 
 function(paimon_print_dependency_resolution_summary)
@@ -540,13 +548,11 @@ function(paimon_print_dependency_resolution_summary)
 
     message(STATUS "Dependency resolution summary:")
     foreach(_dependency IN LISTS _dependencies)
-        get_property(_requested GLOBAL
-                     PROPERTY "PAIMON_${_dependency}_REQUESTED_SOURCE")
+        get_property(_requested GLOBAL PROPERTY "PAIMON_${_dependency}_REQUESTED_SOURCE")
         get_property(_actual GLOBAL PROPERTY "PAIMON_${_dependency}_ACTUAL_SOURCE")
         get_property(_root GLOBAL PROPERTY "PAIMON_${_dependency}_ROOT")
         get_property(_target GLOBAL PROPERTY "PAIMON_${_dependency}_TARGET")
-        message(STATUS
-                "  ${_dependency}: requested=${_requested}, actual=${_actual}, target=${_target}, root=${_root}"
+        message(STATUS "  ${_dependency}: requested=${_requested}, actual=${_actual}, target=${_target}, root=${_root}"
         )
     endforeach()
 endfunction()
@@ -665,15 +671,19 @@ function(paimon_warn_if_mixed_arrow_dependencies)
         return()
     endif()
 
-    foreach(_dependency zstd Snappy LZ4 ZLIB RE2)
+    foreach(_dependency
+            zstd
+            Snappy
+            LZ4
+            ZLIB
+            RE2)
         if(DEFINED PAIMON_${_dependency}_ACTUAL_SOURCE
            AND NOT "${PAIMON_${_dependency}_ACTUAL_SOURCE}" STREQUAL
-                   "${PAIMON_Arrow_ACTUAL_SOURCE}")
-            message(WARNING
-                    "Arrow resolved from ${PAIMON_Arrow_ACTUAL_SOURCE}, but "
-                    "${_dependency} resolved from "
-                    "${PAIMON_${_dependency}_ACTUAL_SOURCE}. Mixing SYSTEM "
-                    "and BUNDLED dependencies can cause ABI conflicts.")
+               "${PAIMON_Arrow_ACTUAL_SOURCE}")
+            message(WARNING "Arrow resolved from ${PAIMON_Arrow_ACTUAL_SOURCE}, but "
+                            "${_dependency} resolved from "
+                            "${PAIMON_${_dependency}_ACTUAL_SOURCE}. Mixing SYSTEM "
+                            "and BUNDLED dependencies can cause ABI conflicts.")
         endif()
     endforeach()
 endfunction()
@@ -791,8 +801,8 @@ macro(build_jieba)
     # The include directory must exist before it is referenced by a target.
     include_directories(SYSTEM ${JIEBA_INCLUDE_DIR} ${JIEBA_DICT_DIR})
     add_library(jieba INTERFACE IMPORTED)
-    target_include_directories(jieba SYSTEM
-                               INTERFACE "${JIEBA_INCLUDE_DIR} ${JIEBA_DICT_DIR}")
+    target_include_directories(jieba SYSTEM INTERFACE ${JIEBA_INCLUDE_DIR}
+                                                      ${JIEBA_DICT_DIR})
     add_dependencies(jieba_ep limonp_ep)
     add_dependencies(jieba jieba_ep)
 endmacro()

@@ -30,14 +30,15 @@ if(TARGET ZLIB::ZLIB)
     set(ZLIB_LIBRARIES ZLIB::ZLIB)
     set(ZLIBAlt_FOUND TRUE)
 else()
-    find_path(ZLIB_INCLUDE_DIR NAMES zlib.h ${_PAIMON_ZLIB_FIND_ARGS}
+    find_path(ZLIB_INCLUDE_DIR
+              NAMES zlib.h ${_PAIMON_ZLIB_FIND_ARGS}
               PATH_SUFFIXES include)
-    find_library(ZLIB_LIBRARY NAMES z zlib ${_PAIMON_ZLIB_FIND_ARGS}
+    find_library(ZLIB_LIBRARY
+                 NAMES z zlib ${_PAIMON_ZLIB_FIND_ARGS}
                  PATH_SUFFIXES lib lib64)
 
     include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(ZLIBAlt REQUIRED_VARS ZLIB_LIBRARY
-                                                        ZLIB_INCLUDE_DIR)
+    find_package_handle_standard_args(ZLIBAlt REQUIRED_VARS ZLIB_LIBRARY ZLIB_INCLUDE_DIR)
 
     if(ZLIBAlt_FOUND AND NOT TARGET zlib)
         add_library(zlib UNKNOWN IMPORTED)

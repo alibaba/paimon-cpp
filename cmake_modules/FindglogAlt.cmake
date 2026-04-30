@@ -36,21 +36,26 @@ else()
         pkg_check_modules(PC_glog QUIET libglog)
     endif()
 
-    find_path(GLOG_INCLUDE_DIR NAMES glog/logging.h ${_PAIMON_GLOG_FIND_ARGS}
-              HINTS ${PC_glog_INCLUDE_DIRS} PATH_SUFFIXES include)
-    find_library(GLOG_LIBRARY NAMES glog ${_PAIMON_GLOG_FIND_ARGS}
-                 HINTS ${PC_glog_LIBRARY_DIRS} PATH_SUFFIXES lib lib64)
+    find_path(GLOG_INCLUDE_DIR
+              NAMES glog/logging.h ${_PAIMON_GLOG_FIND_ARGS}
+              HINTS ${PC_glog_INCLUDE_DIRS}
+              PATH_SUFFIXES include)
+    find_library(GLOG_LIBRARY
+                 NAMES glog ${_PAIMON_GLOG_FIND_ARGS}
+                 HINTS ${PC_glog_LIBRARY_DIRS}
+                 PATH_SUFFIXES lib lib64)
 
     include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(glogAlt REQUIRED_VARS GLOG_LIBRARY
-                                                        GLOG_INCLUDE_DIR)
+    find_package_handle_standard_args(glogAlt REQUIRED_VARS GLOG_LIBRARY GLOG_INCLUDE_DIR)
 
     if(glogAlt_FOUND AND NOT TARGET glog)
         add_library(glog UNKNOWN IMPORTED)
-        set_target_properties(
-            glog PROPERTIES IMPORTED_LOCATION "${GLOG_LIBRARY}"
-                            INTERFACE_INCLUDE_DIRECTORIES "${GLOG_INCLUDE_DIR}"
-                            INTERFACE_COMPILE_DEFINITIONS "GLOG_USE_GLOG_EXPORT")
+        set_target_properties(glog
+                              PROPERTIES IMPORTED_LOCATION "${GLOG_LIBRARY}"
+                                         INTERFACE_INCLUDE_DIRECTORIES
+                                         "${GLOG_INCLUDE_DIR}"
+                                         INTERFACE_COMPILE_DEFINITIONS
+                                         "GLOG_USE_GLOG_EXPORT")
         find_library(LIBUNWIND_LIBRARY NAMES unwind)
         if(LIBUNWIND_LIBRARY)
             target_link_libraries(glog INTERFACE ${LIBUNWIND_LIBRARY})
