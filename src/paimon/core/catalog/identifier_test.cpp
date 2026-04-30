@@ -54,6 +54,16 @@ TEST(IdentifierTest, EmptyDatabaseRemainsEmpty) {
     EXPECT_EQ(id.GetTableName(), "my_table");
 }
 
+TEST(IdentifierTest, ParseDataTable) {
+    Identifier id("db", "tbl");
+    EXPECT_EQ(id.GetTableName(), "tbl");
+    EXPECT_EQ(id.GetDataTableName(), "tbl");
+    EXPECT_FALSE(id.GetBranchName());
+    EXPECT_EQ(id.GetBranchNameOrDefault(), Identifier::kDefaultMainBranch);
+    EXPECT_FALSE(id.GetSystemTableName());
+    EXPECT_FALSE(id.IsSystemTable());
+}
+
 TEST(IdentifierTest, ParseSystemTable) {
     Identifier id("db", "tbl$options");
     EXPECT_EQ(id.GetTableName(), "tbl$options");
@@ -90,6 +100,14 @@ TEST(IdentifierTest, InvalidSystemTableName) {
 
     Identifier too_many("db", "tbl$branch_dev$options$extra");
     EXPECT_THROW(too_many.IsSystemTable(), std::invalid_argument);
+}
+
+TEST(IdentifierTest, InvalidEmptySystemTableNameParts) {
+    EXPECT_THROW(Identifier("db", "$options").IsSystemTable(), std::invalid_argument);
+    EXPECT_THROW(Identifier("db", "tbl$").IsSystemTable(), std::invalid_argument);
+    EXPECT_THROW(Identifier("db", "tbl$branch_").IsSystemTable(), std::invalid_argument);
+    EXPECT_THROW(Identifier("db", "tbl$branch_dev$").IsSystemTable(), std::invalid_argument);
+    EXPECT_THROW(Identifier("db", "tbl$$options").IsSystemTable(), std::invalid_argument);
 }
 
 }  // namespace paimon::test

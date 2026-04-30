@@ -106,6 +106,9 @@ Result<std::unique_ptr<TableScan>> OptionsSystemTable::NewScan() const {
 Result<std::unique_ptr<BatchReader>> OptionsSystemTable::NewReader(
     const std::vector<std::shared_ptr<Split>>& splits,
     const std::shared_ptr<MemoryPool>& /*pool*/) const {
+    if (splits.size() != 1) {
+        return Status::Invalid("options system table expects a single split");
+    }
     for (const auto& split : splits) {
         if (!std::dynamic_pointer_cast<SystemTableSplit>(split)) {
             return Status::Invalid("unsupported split for options system table");

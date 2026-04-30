@@ -173,6 +173,8 @@ TEST(FileSystemCatalogTest, TestOptionsSystemTableCatalog) {
     ASSERT_TRUE(exists);
     ASSERT_OK_AND_ASSIGN(exists, catalog.TableExists(Identifier("db1", "tbl1$unknown")));
     ASSERT_FALSE(exists);
+    ASSERT_OK_AND_ASSIGN(exists, catalog.TableExists(Identifier("db1", "missing$options")));
+    ASSERT_FALSE(exists);
     ASSERT_EQ(catalog.GetTableLocation(options_identifier),
               PathUtil::JoinPath(PathUtil::JoinPath(dir->Str(), "db1.db"), "tbl1$options"));
 
@@ -183,6 +185,15 @@ TEST(FileSystemCatalogTest, TestOptionsSystemTableCatalog) {
     ASSERT_TRUE(loaded_schema_result.ok()) << loaded_schema_result.status().ToString();
     auto loaded_schema = loaded_schema_result.ValueUnsafe();
     ASSERT_EQ(loaded_schema->field_names(), (std::vector<std::string>{"key", "value"}));
+    ASSERT_EQ(loaded_schema->field(0)->type()->id(), arrow::Type::STRING);
+    ASSERT_EQ(loaded_schema->field(1)->type()->id(), arrow::Type::STRING);
+    ASSERT_FALSE(loaded_schema->field(0)->nullable());
+    ASSERT_FALSE(loaded_schema->field(1)->nullable());
+
+    ASSERT_OK_AND_ASSIGN(auto system_table, catalog.GetTable(options_identifier));
+    ASSERT_EQ(system_table->Name(), "tbl1$options");
+    ASSERT_NOK_WITH_MSG(catalog.LoadTableSchema(Identifier("db1", "tbl1$unknown")), "not exist");
+    ASSERT_NOK_WITH_MSG(catalog.LoadTableSchema(Identifier("db1", "missing$options")), "not exist");
 
     ::ArrowSchema system_create_schema;
     ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &system_create_schema).ok());

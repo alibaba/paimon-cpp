@@ -17,8 +17,10 @@
 #include "paimon/table/source/table_read.h"
 
 #include <map>
+#include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "arrow/api.h"
 #include "arrow/c/abi.h"
@@ -201,6 +203,9 @@ TEST(TableReadTest, TestReadOptionsSystemTable) {
     ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
     std::vector<std::shared_ptr<Split>> splits = {deserialized_split};
     ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(splits));
+    ASSERT_NOK_WITH_MSG(table_read->CreateReader(std::vector<std::shared_ptr<Split>>{}),
+                        "single split");
+    ASSERT_NOK_WITH_MSG(table_read->CreateReader(std::make_shared<Split>()), "unsupported split");
     ASSERT_OK_AND_ASSIGN(auto result, ReadResultCollector::CollectResult(batch_reader.get()));
     ASSERT_TRUE(result);
     ASSERT_EQ(result->type()->id(), arrow::Type::STRUCT);
