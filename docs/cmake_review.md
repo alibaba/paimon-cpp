@@ -14,6 +14,17 @@
 
 Issue #103 提出的"per-dependency `_SOURCE` + `resolve_dependency()` 框架"方向上没问题，但完全自己复刻 Arrow 的 `ThirdpartyToolchain.cmake`（Arrow 那份已 4000+ 行）是**长期高维护成本路径**。本文档同时给出工程层修复建议与依赖管理的替代方案。
 
+当前 issue #103 的首个 PR 建议收敛为：
+
+- 支持 `AUTO` / `BUNDLED` / `SYSTEM` 三种依赖来源
+- 支持主要第三方依赖的 per-dependency `_SOURCE`
+- 用 `FindXxxAlt.cmake` 兼容不同系统包暴露出来的 target 名称
+- 内部继续消费稳定的兼容 imported targets
+- 输出依赖解析 summary，帮助 reviewer 和用户判断实际走了 system 还是 bundled
+- 不在首个 PR 中承诺具体包管理器模式
+
+后续 CMake 现代化可以继续拆成独立 PR：package export、target namespace、directory-scope 命令清理、平台 linker flag 修复、版本约束和包管理器集成等。
+
 ---
 
 ## 一、CMake 工程层面的问题
@@ -237,7 +248,7 @@ Arrow 的 ExternalProject 最大的问题是它在 build 阶段才执行，**编
 
 #### D. 包管理器模式需要后续单独设计
 
-Conda、vcpkg、Conan 等包管理器各自有不同的 toolchain / prefix 约定。它们不应混进第一版 `AUTO` / `SYSTEM` / `BUNDLED` 解析框架里仓促定型，后续可以围绕 `CMAKE_PREFIX_PATH`、`CMAKE_TOOLCHAIN_FILE`、manifest 文件和版本锁定策略单独设计。
+包管理器各自有不同的 toolchain / prefix 约定。它们不应混进第一版 `AUTO` / `SYSTEM` / `BUNDLED` 解析框架里仓促定型，后续可以围绕 `CMAKE_PREFIX_PATH`、`CMAKE_TOOLCHAIN_FILE`、manifest 文件和版本锁定策略单独设计。
 
 #### E. SYSTEM 模式需要版本下限检查
 
@@ -265,7 +276,7 @@ find_package(Arrow CONFIG ${PAIMON_ARROW_BUILD_VERSION})
 | **P0** | `string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE)` 改名 | 潜在 multi-config 兼容隐患 |
 | **P1** | 把 `add_definitions` / `include_directories` / `link_directories` 收编到 `paimon_compile_options` interface lib | 一次性还掉大笔技术债，让以后 SYSTEM/BUNDLED 切换不再靠"全局变量泄漏" |
 | **P1** | `build_*` macro → function | 迁移到 SYSTEM 时不会再悄无声息地 break |
-| **P1** | 评估 vcpkg/CPM 方案，看是否能替代 issue #103 大部分手写代码 | 接下来要写的 Phase 3/4 会更轻松 |
+| **P1** | 评估 vcpkg/CPM 方案，看是否能替代部分手写依赖代码 | 需要作为包管理器策略单独讨论 |
 | **P2** | 升级 cmake_minimum_required 到 3.22；引入 CMakePresets.json | 让 dev / CI 配置可复用 |
 | **P2** | 命名空间统一 | 长期可维护性 |
 | **P3** | 各种小清理（重复 set、debug print、shell 命令） | 代码卫生 |
@@ -276,15 +287,15 @@ find_package(Arrow CONFIG ${PAIMON_ARROW_BUILD_VERSION})
 
 当前 CMake 工程是"能 work，但欠了不少现代化债" —— 沿用了 Arrow 2018 年左右的写法。
 
-Issue #103 的方向（SOURCE / ROOT / 软默认）本身没问题，但完全自己实现 `resolve_dependency` 框架可能不是最佳投入。建议：
+Issue #103 的方向（SOURCE / ROOT / 软默认）本身没问题，但完全自己实现并长期扩展 `resolve_dependency` 框架可能不是最佳投入。建议：
 
 1. **先解决 P0/P1**，特别是 `PaimonConfig.cmake.in` 与 macOS 兼容性 —— 这两条直接决定了项目能不能被外部用户消费。
-2. **把 vcpkg 作为 SYSTEM 的标准入口**；issue #103 的 Phase 3/4 可以收敛到"维护一份 `vcpkg.json` + 几个 `FindXxxAlt`"，而不是 1700 行的 ExternalProject 蓝图。
+2. **单独评估包管理器入口**；vcpkg、Conan、CPM 等方案需要结合 CI、离线构建、版本锁定和下游用户体验再决定，不应混进 issue #103 的首个 PR 仓促定型。
 3. **将 `paimon_compile_options` interface lib 落地**作为后续所有 target 的统一编译选项入口，是后续重构的"杠杆点"。
 
 若需要可以分别针对：
 - `PaimonConfig.cmake.in` 重写
 - `paimon_compile_options` 的具体实现
-- `vcpkg.json` 雏形
+- 包管理器集成方案对比
 
 输出独立的改造草稿。

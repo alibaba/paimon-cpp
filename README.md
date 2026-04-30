@@ -179,6 +179,11 @@ $ cmake -B build \
   -DPAIMON_PACKAGE_PREFIX=/opt/paimon-deps
 ```
 
+Package-manager-specific modes are intentionally out of scope for this first
+dependency source interface. They can still be used through standard CMake
+mechanisms such as `CMAKE_PREFIX_PATH` or `CMAKE_TOOLCHAIN_FILE`, while Paimon
+keeps the dependency source values limited to `AUTO`, `BUNDLED`, and `SYSTEM`.
+
 When `Arrow_SOURCE` is explicitly set to `SYSTEM` or `BUNDLED`, the compression
 dependencies default to the same source unless individually overridden. Mixing
 system and bundled copies of transitive dependencies can cause ABI conflicts,
