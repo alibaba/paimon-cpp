@@ -453,8 +453,7 @@ TEST(FileSystemCatalogTest, TestValidateTableSchema) {
     ASSERT_NOK_WITH_MSG(catalog.LoadTableSchema(identifier),
                         "Identifier{database=\'db1\', table=\'tbl1\'} not exist");
 
-    ASSERT_NOK_WITH_MSG(catalog.LoadTableSchema(Identifier("db1", "tbl$11")),
-                        "do not support checking TableSchemaExists for system table.");
+    ASSERT_NOK_WITH_MSG(catalog.LoadTableSchema(Identifier("db1", "tbl$11")), "not exist");
     ArrowSchemaRelease(&schema);
 }
 
