@@ -65,7 +65,6 @@ class ExternalSortBuffer : public SortBuffer {
  private:
     void DoClear();
     bool HasSpilledData() const;
-    std::vector<FileIOChannel::ID> GetSpillChannelIdsSnapshot() const;
     Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> CollectSpillReaders() const;
     Result<int64_t> SpillToDisk(std::vector<std::unique_ptr<KeyValueRecordReader>>&& readers,
                                 int32_t write_batch_size);
