@@ -31,11 +31,13 @@ namespace paimon {
 ///
 /// Derived classes are expected to implement the visitor methods (e.g., `VisitEqual`,
 /// `VisitIsNull`, etc.) to return index-based results that indicate which
-/// row satisfy the given predicate.
+/// rows satisfy the given predicate.
 ///
-/// @note All `GlobalIndexResult` objects returned by implementations of this class use **local row
-/// ids** that start from 0 — not global row ids in the entire table.
-/// The `GlobalIndexResult` can be converted to global row ids by calling `AddOffset()`.
+/// @note Leaf implementations of `GlobalIndexReader` (e.g.,
+///     `BTreeGlobalIndexReader`, `BitmapGlobalIndexReader`) return `GlobalIndexResult`
+///     objects containing those **local** row ids. Conversion to **global** row ids is
+///     performed by wrapping the leaf reader with `OffsetGlobalIndexReader`, which adds
+///     `GlobalIndexMeta.row_range_start` to every row id via `GlobalIndexResult::AddOffset()`.
 class PAIMON_EXPORT GlobalIndexReader : public FunctionVisitor<std::shared_ptr<GlobalIndexResult>> {
  public:
     /// VisitVectorSearch performs approximate vector similarity search.

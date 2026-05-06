@@ -25,7 +25,9 @@ set(PAIMON_GLOBAL_INDEX_SRC
     btree/lazy_filtered_btree_reader.cpp
     btree/key_serializer.cpp
     rangebitmap/range_bitmap_global_index.cpp
-    rangebitmap/range_bitmap_global_index_factory.cpp)
+    rangebitmap/range_bitmap_global_index_factory.cpp
+    offset_global_index_reader.cpp
+    union_global_index_reader.cpp)
 
 add_paimon_lib(paimon_global_index
                SOURCES

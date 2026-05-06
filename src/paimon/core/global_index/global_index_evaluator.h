@@ -17,10 +17,12 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 
 #include "paimon/global_index/global_index_result.h"
 #include "paimon/predicate/predicate.h"
 #include "paimon/predicate/vector_search.h"
+#include "paimon/utils/row_range_index.h"
 #include "paimon/visibility.h"
 
 namespace paimon {
@@ -30,21 +32,20 @@ class PAIMON_EXPORT GlobalIndexEvaluator {
     virtual ~GlobalIndexEvaluator() = default;
     /// Evaluates a predicate against the global index.
     ///
-    /// @param predicate The filter predicate to evaluate.
-    /// @param vector_search The vector similarity search to evaluate.
-    /// @note When both `predicate` and `vector_search` are present, the predicate
-    ///       is used to constrain the vector search space (for example, via a
-    ///       pre-filter callback that may be applied during vector search), so
-    ///       vector similarity scoring is effectively limited to rows that satisfy
-    ///       the predicate.
+    /// @param predicate       The filter predicate to evaluate.
+    /// @param row_range_index Optional row range that limits evaluation to the given
+    ///                        ranges of row ids. Index files whose row range does not
+    ///                        intersect with `row_range_index` will be skipped. If a field has
+    ///                        no usable index file in the requested range, the evaluator
+    ///                        returns `nullptr` for that field.
     /// @return A `Result` containing:
     ///         - `nullptr` if the predicate cannot be evaluated by this index (e.g., field has
-    ///         no index),
+    ///         no index, or no index file intersects with `row_range_index`),
     ///         - A `std::shared_ptr<GlobalIndexResult>` if evaluation succeeds.
     ///         The `GlobalIndexResult` indicates the matching rows (e.g., via row ID bitmaps).
     virtual Result<std::shared_ptr<GlobalIndexResult>> Evaluate(
         const std::shared_ptr<Predicate>& predicate,
-        const std::shared_ptr<VectorSearch>& vector_search) = 0;
+        const std::optional<RowRangeIndex>& row_range_index) = 0;
 };
 
 }  // namespace paimon

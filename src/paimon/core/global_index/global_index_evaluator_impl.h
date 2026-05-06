@@ -27,12 +27,16 @@
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/global_index/global_index_reader.h"
 #include "paimon/predicate/compound_predicate.h"
+#include "paimon/utils/row_range_index.h"
 
 namespace paimon {
 class GlobalIndexEvaluatorImpl : public GlobalIndexEvaluator {
  public:
+    /// Creates the underlying readers for the given field, optionally restricted to the
+    /// provided row range. Returns an empty vector when the field has no usable index.
     using IndexReadersCreator =
-        std::function<Result<std::vector<std::shared_ptr<GlobalIndexReader>>>(int32_t)>;
+        std::function<Result<std::vector<std::shared_ptr<GlobalIndexReader>>>(
+            int32_t, const std::optional<RowRangeIndex>&)>;
 
     GlobalIndexEvaluatorImpl(const std::shared_ptr<TableSchema>& table_schema,
                              IndexReadersCreator create_index_readers)
@@ -40,28 +44,30 @@ class GlobalIndexEvaluatorImpl : public GlobalIndexEvaluator {
 
     Result<std::shared_ptr<GlobalIndexResult>> Evaluate(
         const std::shared_ptr<Predicate>& predicate,
-        const std::shared_ptr<VectorSearch>& vector_search) override;
+        const std::optional<RowRangeIndex>& row_range_index) override;
 
  private:
-    Result<std::shared_ptr<GlobalIndexResult>> EvaluateVectorSearch(
-        const std::shared_ptr<VectorSearch>& vector_search,
-        const std::shared_ptr<GlobalIndexResult>& predicate_result);
+    /// Per-evaluation cache keyed by field id. Reused across recursive calls within a single
+    /// `Evaluate` invocation so that the same field is not loaded twice; a fresh cache is used
+    /// for every public `Evaluate` call because `row_range_index` may change between calls.
+    using ReadersCache = std::map<int32_t, std::vector<std::shared_ptr<GlobalIndexReader>>>;
 
     Result<std::shared_ptr<GlobalIndexResult>> EvaluatePredicate(
-        const std::shared_ptr<Predicate>& predicate);
+        const std::shared_ptr<Predicate>& predicate,
+        const std::optional<RowRangeIndex>& row_range_index, ReadersCache& cache);
 
     Result<std::shared_ptr<GlobalIndexResult>> EvaluateCompoundPredicate(
-        const std::shared_ptr<CompoundPredicate>& compound_predicate);
+        const std::shared_ptr<CompoundPredicate>& compound_predicate,
+        const std::optional<RowRangeIndex>& row_range_index, ReadersCache& cache);
 
     Result<std::vector<std::shared_ptr<GlobalIndexReader>>> GetIndexReaders(
-        const std::string& field_name);
+        const std::string& field_name, const std::optional<RowRangeIndex>& row_range_index,
+        ReadersCache& cache);
 
  private:
     std::shared_ptr<TableSchema> table_schema_;
-    // create_index_readers_(field_id)
+    // create_index_readers_(field_id, row_range_index)
     IndexReadersCreator create_index_readers_;
-    // [field_id, vector<reader>]
-    std::map<int32_t, std::vector<std::shared_ptr<GlobalIndexReader>>> index_readers_cache_;
 };
 
 }  // namespace paimon
