@@ -25,6 +25,7 @@
 #include "arrow/api.h"
 #include "arrow/c/bridge.h"
 #include "paimon/common/metrics/metrics_impl.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/system/system_table_scan.h"
@@ -42,8 +43,9 @@ std::shared_ptr<arrow::Schema> OptionsSchema() {
 
 class OptionsBatchReader : public BatchReader {
  public:
-    explicit OptionsBatchReader(std::map<std::string, std::string> options)
-        : options_(std::move(options)) {}
+    OptionsBatchReader(std::map<std::string, std::string> options,
+                       const std::shared_ptr<MemoryPool>& pool)
+        : arrow_pool_(GetArrowPool(pool)), options_(std::move(options)) {}
 
     Result<ReadBatch> NextBatch() override {
         if (emitted_) {
@@ -51,16 +53,23 @@ class OptionsBatchReader : public BatchReader {
         }
         emitted_ = true;
 
-        arrow::StringBuilder key_builder;
-        arrow::StringBuilder value_builder;
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::unique_ptr<arrow::ArrayBuilder> key_array_builder,
+                                          arrow::MakeBuilder(arrow::utf8(), arrow_pool_.get()));
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::unique_ptr<arrow::ArrayBuilder> value_array_builder,
+                                          arrow::MakeBuilder(arrow::utf8(), arrow_pool_.get()));
+        auto* key_builder = dynamic_cast<arrow::StringBuilder*>(key_array_builder.get());
+        auto* value_builder = dynamic_cast<arrow::StringBuilder*>(value_array_builder.get());
+        if (key_builder == nullptr || value_builder == nullptr) {
+            return Status::Invalid("cannot create string builders for options system table");
+        }
         for (const auto& [key, value] : options_) {
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(key_builder.Append(key));
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(value_builder.Append(value));
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(key_builder->Append(key));
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(value_builder->Append(value));
         }
         std::shared_ptr<arrow::Array> key_array;
         std::shared_ptr<arrow::Array> value_array;
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(key_array, key_builder.Finish());
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(value_array, value_builder.Finish());
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(key_builder->Finish(&key_array));
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(value_builder->Finish(&value_array));
         auto struct_array = std::make_shared<arrow::StructArray>(
             arrow::struct_(OptionsSchema()->fields()), key_array->length(),
             std::vector<std::shared_ptr<arrow::Array>>{key_array, value_array});
@@ -81,6 +90,7 @@ class OptionsBatchReader : public BatchReader {
     }
 
  private:
+    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
     std::map<std::string, std::string> options_;
     bool emitted_ = false;
 };
@@ -92,7 +102,7 @@ OptionsSystemTable::OptionsSystemTable(std::string table_path,
     : table_path_(std::move(table_path)), table_schema_(std::move(table_schema)) {}
 
 std::string OptionsSystemTable::Name() const {
-    return NAME;
+    return kName;
 }
 
 std::shared_ptr<arrow::Schema> OptionsSystemTable::ArrowSchema() const {
@@ -105,7 +115,7 @@ Result<std::unique_ptr<TableScan>> OptionsSystemTable::NewScan() const {
 
 Result<std::unique_ptr<BatchReader>> OptionsSystemTable::NewReader(
     const std::vector<std::shared_ptr<Split>>& splits,
-    const std::shared_ptr<MemoryPool>& /*pool*/) const {
+    const std::shared_ptr<MemoryPool>& pool) const {
     if (splits.size() != 1) {
         return Status::Invalid("options system table expects a single split");
     }
@@ -114,7 +124,7 @@ Result<std::unique_ptr<BatchReader>> OptionsSystemTable::NewReader(
             return Status::Invalid("unsupported split for options system table");
         }
     }
-    return std::make_unique<OptionsBatchReader>(table_schema_->Options());
+    return std::make_unique<OptionsBatchReader>(table_schema_->Options(), pool);
 }
 
 }  // namespace paimon

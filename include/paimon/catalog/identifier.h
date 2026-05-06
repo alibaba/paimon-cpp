@@ -19,6 +19,7 @@
 #include <optional>
 #include <string>
 
+#include "paimon/result.h"
 #include "paimon/type_fwd.h"
 #include "paimon/visibility.h"
 
@@ -38,15 +39,15 @@ class PAIMON_EXPORT Identifier {
     bool operator==(const Identifier& other);
     const std::string& GetDatabaseName() const;
     const std::string& GetTableName() const;
-    const std::string& GetDataTableName() const;
-    const std::optional<std::string>& GetBranchName() const;
-    std::string GetBranchNameOrDefault() const;
-    const std::optional<std::string>& GetSystemTableName() const;
-    bool IsSystemTable() const;
+    Result<std::string> GetDataTableName() const;
+    Result<std::optional<std::string>> GetBranchName() const;
+    Result<std::string> GetBranchNameOrDefault() const;
+    Result<std::optional<std::string>> GetSystemTableName() const;
+    Result<bool> IsSystemTable() const;
     std::string ToString() const;
 
  private:
-    void SplitTableName() const;
+    Status SplitTableName() const;
 
     const std::string database_;
     const std::string table_;

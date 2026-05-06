@@ -16,10 +16,8 @@
 
 #pragma once
 
-#include <cstdint>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "paimon/table/source/table_scan.h"
@@ -30,10 +28,7 @@ class Split;
 
 class SystemTableSplit : public Split {
  public:
-    static constexpr int64_t MAGIC = -739241698710434219L;
-    static constexpr int32_t VERSION = 1;
-
-    explicit SystemTableSplit(std::string table_path) : table_path_(std::move(table_path)) {}
+    explicit SystemTableSplit(const std::string& table_path) : table_path_(table_path) {}
 
     const std::string& TablePath() const {
         return table_path_;
@@ -45,7 +40,7 @@ class SystemTableSplit : public Split {
 
 class SystemTableScan : public TableScan {
  public:
-    explicit SystemTableScan(std::string table_path);
+    explicit SystemTableScan(const std::string& table_path);
 
     Result<std::shared_ptr<Plan>> CreatePlan() override;
 

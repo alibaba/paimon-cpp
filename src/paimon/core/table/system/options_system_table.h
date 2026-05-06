@@ -28,7 +28,7 @@ class TableSchema;
 
 class OptionsSystemTable : public SystemTable {
  public:
-    static constexpr const char* NAME = "options";
+    static constexpr const char* kName = "options";
 
     OptionsSystemTable(std::string table_path, std::shared_ptr<TableSchema> table_schema);
 

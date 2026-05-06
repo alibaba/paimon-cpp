@@ -18,7 +18,6 @@
 
 #include <memory>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -28,56 +27,59 @@
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/system/options_system_table.h"
+#include "paimon/core/utils/branch_manager.h"
 
 namespace paimon {
 
-bool IsSupportedSystemTable(const std::string& system_table_name) {
-    return StringUtils::ToLowerCase(system_table_name) == OptionsSystemTable::NAME;
+bool SystemTableLoader::IsSupported(const std::string& system_table_name) {
+    return StringUtils::ToLowerCase(system_table_name) == OptionsSystemTable::kName;
 }
 
-Result<std::shared_ptr<SystemTable>> CreateSystemTable(
+Result<std::shared_ptr<SystemTable>> SystemTableLoader::Load(
     const std::string& system_table_name, const std::shared_ptr<FileSystem>& /*fs*/,
     const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema) {
     std::string normalized_name = StringUtils::ToLowerCase(system_table_name);
-    if (normalized_name == OptionsSystemTable::NAME) {
+    if (normalized_name == OptionsSystemTable::kName) {
         return std::make_shared<OptionsSystemTable>(table_path, table_schema);
     }
-    return Status::NotExist("unsupported system table: ", system_table_name);
+    return Status::NotImplemented("unsupported system table: ", system_table_name);
 }
 
-Result<std::optional<SystemTablePath>> TryParseSystemTablePath(const std::string& path) {
+Result<std::optional<SystemTablePath>> SystemTableLoader::TryParsePath(const std::string& path) {
     std::string table_name = PathUtil::GetName(path);
     Identifier identifier(table_name);
-    try {
-        if (!identifier.IsSystemTable()) {
-            return std::optional<SystemTablePath>();
-        }
-        std::string parent = PathUtil::GetParentDirPath(path);
-        SystemTablePath system_table_path;
-        system_table_path.table_path = PathUtil::JoinPath(parent, identifier.GetDataTableName());
-        system_table_path.branch = identifier.GetBranchName();
-        system_table_path.system_table_name = identifier.GetSystemTableName().value();
-        return std::optional<SystemTablePath>(std::move(system_table_path));
-    } catch (const std::exception& e) {
-        return Status::Invalid(e.what());
+    PAIMON_ASSIGN_OR_RAISE(bool is_system_table, identifier.IsSystemTable());
+    if (!is_system_table) {
+        return std::optional<SystemTablePath>();
     }
+    PAIMON_ASSIGN_OR_RAISE(std::string data_table_name, identifier.GetDataTableName());
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> branch, identifier.GetBranchName());
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> system_table_name,
+                           identifier.GetSystemTableName());
+    std::string parent = PathUtil::GetParentDirPath(path);
+    SystemTablePath system_table_path;
+    system_table_path.table_path = PathUtil::JoinPath(parent, data_table_name);
+    system_table_path.branch = std::move(branch);
+    system_table_path.system_table_name = system_table_name.value();
+    return std::optional<SystemTablePath>(std::move(system_table_path));
 }
 
-Result<std::shared_ptr<SystemTable>> LoadSystemTableFromPath(const std::shared_ptr<FileSystem>& fs,
-                                                             const std::string& path) {
+Result<std::shared_ptr<SystemTable>> SystemTableLoader::LoadFromPath(
+    const std::shared_ptr<FileSystem>& fs, const std::string& path) {
     PAIMON_ASSIGN_OR_RAISE(std::optional<SystemTablePath> system_table_path,
-                           TryParseSystemTablePath(path));
+                           TryParsePath(path));
     if (!system_table_path) {
         return Status::Invalid("path is not a system table path: ", path);
     }
     const auto& parsed = system_table_path.value();
-    SchemaManager schema_manager(fs, parsed.table_path, parsed.branch.value_or(""));
+    SchemaManager schema_manager(fs, parsed.table_path,
+                                 parsed.branch.value_or(BranchManager::DEFAULT_MAIN_BRANCH));
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
                            schema_manager.Latest());
     if (!latest_schema) {
         return Status::NotExist("base table schema not found for system table path: ", path);
     }
-    return CreateSystemTable(parsed.system_table_name, fs, path, latest_schema.value());
+    return Load(parsed.system_table_name, fs, path, latest_schema.value());
 }
 
 }  // namespace paimon

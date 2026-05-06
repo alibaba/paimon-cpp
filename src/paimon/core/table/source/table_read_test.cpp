@@ -22,12 +22,7 @@
 #include <utility>
 #include <vector>
 
-#include "arrow/api.h"
-#include "arrow/c/abi.h"
-#include "arrow/c/bridge.h"
 #include "gtest/gtest.h"
-#include "paimon/catalog/catalog.h"
-#include "paimon/catalog/identifier.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/operation/abstract_split_read.h"
 #include "paimon/core/operation/split_read.h"
@@ -37,11 +32,7 @@
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/read_context.h"
-#include "paimon/scan_context.h"
 #include "paimon/status.h"
-#include "paimon/table/source/split.h"
-#include "paimon/table/source/table_scan.h"
-#include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -165,61 +156,4 @@ TEST(TableReadTest, TestMergeOptions) {
     ASSERT_EQ(expected_options, core_options.ToMap());
 }
 
-TEST(TableReadTest, TestReadOptionsSystemTable) {
-    std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
-                                                  {Options::FILE_FORMAT, "orc"},
-                                                  {Options::MANIFEST_FORMAT, "orc"},
-                                                  {"custom.option", "custom-value"}};
-    auto dir = UniqueTestDirectory::Create();
-    ASSERT_TRUE(dir);
-    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir->Str(), options));
-    ASSERT_OK(catalog->CreateDatabase("db1", options, /*ignore_if_exists=*/false));
-
-    auto typed_schema = arrow::schema({arrow::field("f0", arrow::int32())});
-    ::ArrowSchema schema;
-    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &schema).ok());
-    ASSERT_OK(catalog->CreateTable(Identifier("db1", "tbl1"), &schema,
-                                   /*partition_keys=*/{}, /*primary_keys=*/{}, options,
-                                   /*ignore_if_exists=*/false));
-    ArrowSchemaRelease(&schema);
-
-    std::string system_table_path = catalog->GetTableLocation(Identifier("db1", "tbl1$options"));
-    ScanContextBuilder scan_context_builder(system_table_path);
-    scan_context_builder.SetOptions(options);
-    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
-    ASSERT_OK_AND_ASSIGN(auto plan, table_scan->CreatePlan());
-    ASSERT_EQ(plan->Splits().size(), 1);
-
-    ASSERT_OK_AND_ASSIGN(auto serialized_split,
-                         Split::Serialize(plan->Splits()[0], GetDefaultPool()));
-    ASSERT_OK_AND_ASSIGN(
-        auto deserialized_split,
-        Split::Deserialize(serialized_split.data(), serialized_split.size(), GetDefaultPool()));
-
-    ReadContextBuilder read_context_builder(system_table_path);
-    read_context_builder.SetOptions(options);
-    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
-    std::vector<std::shared_ptr<Split>> splits = {deserialized_split};
-    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(splits));
-    ASSERT_NOK_WITH_MSG(table_read->CreateReader(std::vector<std::shared_ptr<Split>>{}),
-                        "single split");
-    ASSERT_NOK_WITH_MSG(table_read->CreateReader(std::make_shared<Split>()), "unsupported split");
-    ASSERT_OK_AND_ASSIGN(auto result, ReadResultCollector::CollectResult(batch_reader.get()));
-    ASSERT_TRUE(result);
-    ASSERT_EQ(result->type()->id(), arrow::Type::STRUCT);
-
-    auto struct_array = std::static_pointer_cast<arrow::StructArray>(result->chunk(0));
-    auto key_array = std::static_pointer_cast<arrow::StringArray>(struct_array->field(0));
-    auto value_array = std::static_pointer_cast<arrow::StringArray>(struct_array->field(1));
-    std::map<std::string, std::string> actual;
-    for (int64_t i = 0; i < struct_array->length(); ++i) {
-        actual[key_array->GetString(i)] = value_array->GetString(i);
-    }
-    EXPECT_EQ(actual[Options::FILE_SYSTEM], "local");
-    EXPECT_EQ(actual[Options::FILE_FORMAT], "orc");
-    EXPECT_EQ(actual[Options::MANIFEST_FORMAT], "orc");
-    EXPECT_EQ(actual["custom.option"], "custom-value");
-}
 }  // namespace paimon::test

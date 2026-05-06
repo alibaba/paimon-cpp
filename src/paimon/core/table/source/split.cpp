@@ -26,7 +26,6 @@
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/core/table/source/deletion_file.h"
 #include "paimon/core/table/source/fallback_data_split.h"
-#include "paimon/core/table/system/system_table_scan.h"
 #include "paimon/core/utils/object_serializer.h"
 #include "paimon/global_index/indexed_split.h"
 #include "paimon/io/byte_array_input_stream.h"
@@ -163,13 +162,8 @@ Result<std::string> Split::Serialize(const std::shared_ptr<Split>& split,
         } else {
             out.WriteValue<bool>(false);
         }
-    } else if (auto system_table_split = std::dynamic_pointer_cast<SystemTableSplit>(split)) {
-        out.WriteValue<int64_t>(SystemTableSplit::MAGIC);
-        out.WriteValue<int32_t>(SystemTableSplit::VERSION);
-        out.WriteString(system_table_split->TablePath());
     } else {
-        return Status::Invalid(
-            "invalid split, cannot cast to DataSplit, IndexedSplit or SystemTableSplit");
+        return Status::Invalid("invalid split, cannot cast to DataSplit or IndexedSplit");
     }
     PAIMON_UNIQUE_PTR<Bytes> bytes =
         MemorySegmentUtils::CopyToBytes(out.Segments(), 0, out.CurrentSize(), pool.get());
@@ -223,21 +217,6 @@ Result<std::shared_ptr<Split>> Split::Deserialize(const char* buffer, size_t len
                 fmt::format("invalid IndexedSplit, remaining {} bytes after deserializing",
                             stream_length - pos));
         }
-    } else if (magic == SystemTableSplit::MAGIC) {
-        PAIMON_ASSIGN_OR_RAISE(int32_t version, in.ReadValue<int32_t>());
-        if (version != SystemTableSplit::VERSION) {
-            return Status::Invalid(
-                fmt::format("Unsupported SystemTableSplit version: {}", version));
-        }
-        PAIMON_ASSIGN_OR_RAISE(std::string table_path, in.ReadString());
-        PAIMON_ASSIGN_OR_RAISE(int64_t pos, in.GetPos());
-        PAIMON_ASSIGN_OR_RAISE(int64_t stream_length, in.Length());
-        if (pos != stream_length) {
-            return Status::Invalid(
-                fmt::format("invalid SystemTableSplit, remaining {} bytes after deserializing",
-                            stream_length - pos));
-        }
-        return std::make_shared<SystemTableSplit>(table_path);
     } else if (magic == DataSplitImpl::MAGIC) {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataSplitImpl> data_split,
                                ReadDataSplitWithoutMagicNumber(magic, &in, pool));
@@ -254,6 +233,6 @@ Result<std::shared_ptr<Split>> Split::Deserialize(const char* buffer, size_t len
                 stream_length - pos));
         }
     }
-    return Status::Invalid("invalid split, must be DataSplit, IndexedSplit or SystemTableSplit");
+    return Status::Invalid("invalid split, must be DataSplit or IndexedSplit");
 }
 }  // namespace paimon

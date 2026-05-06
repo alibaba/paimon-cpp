@@ -52,15 +52,18 @@ class SystemTable {
         const std::shared_ptr<MemoryPool>& pool) const = 0;
 };
 
-Result<std::shared_ptr<SystemTable>> CreateSystemTable(
-    const std::string& system_table_name, const std::shared_ptr<FileSystem>& fs,
-    const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema);
+class SystemTableLoader {
+ public:
+    static bool IsSupported(const std::string& system_table_name);
 
-bool IsSupportedSystemTable(const std::string& system_table_name);
+    static Result<std::shared_ptr<SystemTable>> Load(
+        const std::string& system_table_name, const std::shared_ptr<FileSystem>& fs,
+        const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema);
 
-Result<std::optional<SystemTablePath>> TryParseSystemTablePath(const std::string& path);
+    static Result<std::optional<SystemTablePath>> TryParsePath(const std::string& path);
 
-Result<std::shared_ptr<SystemTable>> LoadSystemTableFromPath(const std::shared_ptr<FileSystem>& fs,
+    static Result<std::shared_ptr<SystemTable>> LoadFromPath(const std::shared_ptr<FileSystem>& fs,
                                                              const std::string& path);
+};
 
 }  // namespace paimon

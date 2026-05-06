@@ -17,14 +17,13 @@
 #include "paimon/core/table/system/system_table_scan.h"
 
 #include <memory>
-#include <utility>
 #include <vector>
 
 #include "paimon/core/table/source/plan_impl.h"
 
 namespace paimon {
 
-SystemTableScan::SystemTableScan(std::string table_path) : table_path_(std::move(table_path)) {}
+SystemTableScan::SystemTableScan(const std::string& table_path) : table_path_(table_path) {}
 
 Result<std::shared_ptr<Plan>> SystemTableScan::CreatePlan() {
     std::vector<std::shared_ptr<Split>> splits = {std::make_shared<SystemTableSplit>(table_path_)};

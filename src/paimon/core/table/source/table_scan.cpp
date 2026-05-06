@@ -167,11 +167,11 @@ Result<std::unique_ptr<TableScan>> TableScan::Create(std::unique_ptr<ScanContext
         CoreOptions tmp_options,
         CoreOptions::FromMap(context->GetOptions(), context->GetSpecificFileSystem()));
     PAIMON_ASSIGN_OR_RAISE(std::optional<SystemTablePath> system_table_path,
-                           TryParseSystemTablePath(context->GetPath()));
+                           SystemTableLoader::TryParsePath(context->GetPath()));
     if (system_table_path) {
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<SystemTable> system_table,
-            LoadSystemTableFromPath(tmp_options.GetFileSystem(), context->GetPath()));
+            SystemTableLoader::LoadFromPath(tmp_options.GetFileSystem(), context->GetPath()));
         return system_table->NewScan();
     }
     SchemaManager schema_manager(tmp_options.GetFileSystem(), context->GetPath());

@@ -18,11 +18,12 @@
 
 #include <cstring>
 #include <optional>
-#include <stdexcept>
 #include <vector>
 
 #include "fmt/format.h"
 #include "paimon/common/utils/string_utils.h"
+#include "paimon/result.h"
+#include "paimon/status.h"
 
 namespace paimon {
 
@@ -49,37 +50,38 @@ const std::string& Identifier::GetTableName() const {
     return table_;
 }
 
-const std::string& Identifier::GetDataTableName() const {
-    SplitTableName();
+Result<std::string> Identifier::GetDataTableName() const {
+    PAIMON_RETURN_NOT_OK(SplitTableName());
     return data_table_;
 }
 
-const std::optional<std::string>& Identifier::GetBranchName() const {
-    SplitTableName();
+Result<std::optional<std::string>> Identifier::GetBranchName() const {
+    PAIMON_RETURN_NOT_OK(SplitTableName());
     return branch_;
 }
 
-std::string Identifier::GetBranchNameOrDefault() const {
-    const auto& branch = GetBranchName();
-    return branch ? branch.value() : std::string(kDefaultMainBranch);
+Result<std::string> Identifier::GetBranchNameOrDefault() const {
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> branch, GetBranchName());
+    return branch.value_or(kDefaultMainBranch);
 }
 
-const std::optional<std::string>& Identifier::GetSystemTableName() const {
-    SplitTableName();
+Result<std::optional<std::string>> Identifier::GetSystemTableName() const {
+    PAIMON_RETURN_NOT_OK(SplitTableName());
     return system_table_;
 }
 
-bool Identifier::IsSystemTable() const {
-    return GetSystemTableName().has_value();
+Result<bool> Identifier::IsSystemTable() const {
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> system_table, GetSystemTableName());
+    return system_table.has_value();
 }
 
 std::string Identifier::ToString() const {
     return fmt::format("Identifier{{database='{}', table='{}'}}", database_, table_);
 }
 
-void Identifier::SplitTableName() const {
+Status Identifier::SplitTableName() const {
     if (parsed_) {
-        return;
+        return Status::OK();
     }
     std::string data_table;
     std::optional<std::string> branch;
@@ -97,23 +99,24 @@ void Identifier::SplitTableName() const {
         }
     } else if (splits.size() == 3) {
         if (!StringUtils::StartsWith(splits[1], kSystemBranchPrefix, /*start_pos=*/0)) {
-            throw std::invalid_argument(fmt::format(
+            return Status::Invalid(fmt::format(
                 "System table can only contain one '$' separator, but this is: {}", table_));
         }
         data_table = splits[0];
         branch = splits[1].substr(std::strlen(kSystemBranchPrefix));
         system_table = splits[2];
     } else {
-        throw std::invalid_argument(fmt::format("Invalid table name: {}", table_));
+        return Status::Invalid(fmt::format("Invalid table name: {}", table_));
     }
     if (data_table.empty() || (branch && branch->empty()) ||
         (system_table && system_table->empty())) {
-        throw std::invalid_argument(fmt::format("Invalid table name: {}", table_));
+        return Status::Invalid(fmt::format("Invalid table name: {}", table_));
     }
     data_table_ = std::move(data_table);
     branch_ = std::move(branch);
     system_table_ = std::move(system_table);
     parsed_ = true;
+    return Status::OK();
 }
 
 }  // namespace paimon
