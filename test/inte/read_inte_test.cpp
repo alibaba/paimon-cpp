@@ -41,7 +41,6 @@
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/scope_guard.h"
-#include "paimon/defs.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/manifest/file_source.h"
 #include "paimon/core/stats/simple_stats.h"
@@ -50,6 +49,7 @@
 #include "paimon/core/table/source/fallback_data_split.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
+#include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/memory_pool.h"
@@ -61,10 +61,10 @@
 #include "paimon/result.h"
 #include "paimon/scan_context.h"
 #include "paimon/status.h"
-#include "paimon/table/source/plan.h"
 #include "paimon/table/source/data_split.h"
-#include "paimon/table/source/table_scan.h"
+#include "paimon/table/source/plan.h"
 #include "paimon/table/source/table_read.h"
+#include "paimon/table/source/table_scan.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/io_exception_helper.h"
 #include "paimon/testing/utils/read_result_collector.h"
@@ -197,7 +197,7 @@ class ReadInteTest : public testing::Test, public ::testing::WithParamInterface<
         return std::dynamic_pointer_cast<Split>(split);
     }
 
-private:
+ private:
     std::shared_ptr<MemoryPool> pool_;
 };
 
@@ -541,9 +541,8 @@ TEST(SystemTableReadInteTest, TestReadBranchOptionsSystemTable) {
     ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(plan->Splits()));
     ASSERT_OK_AND_ASSIGN(auto result, ReadResultCollector::CollectResult(batch_reader.get()));
 
-    std::map<std::string, std::string> expected = {{"bucket", "2"},
-                                                   {"file.format", "parquet"},
-                                                   {"manifest.format", "avro"}};
+    std::map<std::string, std::string> expected = {
+        {"bucket", "2"}, {"file.format", "parquet"}, {"manifest.format", "avro"}};
     ASSERT_EQ(CollectStringMap(result), expected) << result->ToString();
 }
 

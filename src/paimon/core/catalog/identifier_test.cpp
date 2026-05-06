@@ -124,8 +124,7 @@ TEST(IdentifierTest, InvalidEmptySystemTableNameParts) {
     ASSERT_NOK_WITH_MSG(Identifier("db", "$options").IsSystemTable(), "Invalid table name");
     ASSERT_NOK_WITH_MSG(Identifier("db", "tbl$").IsSystemTable(), "Invalid table name");
     ASSERT_NOK_WITH_MSG(Identifier("db", "tbl$branch_").IsSystemTable(), "Invalid table name");
-    ASSERT_NOK_WITH_MSG(Identifier("db", "tbl$branch_dev$").IsSystemTable(),
-                        "Invalid table name");
+    ASSERT_NOK_WITH_MSG(Identifier("db", "tbl$branch_dev$").IsSystemTable(), "Invalid table name");
     ASSERT_NOK_WITH_MSG(Identifier("db", "tbl$$options").IsSystemTable(),
                         "System table can only contain one '$' separator");
 }
