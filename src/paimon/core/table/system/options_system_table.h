@@ -35,7 +35,7 @@ class OptionsSystemTable : public SystemTable {
     std::string Name() const override;
     std::shared_ptr<arrow::Schema> ArrowSchema() const override;
     Result<std::unique_ptr<TableScan>> NewScan() const override;
-    Result<std::unique_ptr<BatchReader>> NewReader(
+    Result<std::unique_ptr<BatchReader>> CreateBatchReader(
         const std::vector<std::shared_ptr<Split>>& splits,
         const std::shared_ptr<MemoryPool>& pool) const override;
 

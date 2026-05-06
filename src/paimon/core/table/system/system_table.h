@@ -31,6 +31,7 @@ namespace paimon {
 class FileSystem;
 class MemoryPool;
 class Split;
+class SystemTableRead;
 class TableScan;
 class TableSchema;
 
@@ -40,14 +41,15 @@ struct SystemTablePath {
     std::string system_table_name;
 };
 
-class SystemTable {
+class SystemTable : public std::enable_shared_from_this<SystemTable> {
  public:
     virtual ~SystemTable() = default;
 
     virtual std::string Name() const = 0;
     virtual std::shared_ptr<arrow::Schema> ArrowSchema() const = 0;
     virtual Result<std::unique_ptr<TableScan>> NewScan() const = 0;
-    virtual Result<std::unique_ptr<BatchReader>> NewReader(
+    Result<std::unique_ptr<SystemTableRead>> NewRead(const std::shared_ptr<MemoryPool>& pool) const;
+    virtual Result<std::unique_ptr<BatchReader>> CreateBatchReader(
         const std::vector<std::shared_ptr<Split>>& splits,
         const std::shared_ptr<MemoryPool>& pool) const = 0;
 };

@@ -25,6 +25,8 @@
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/core_options.h"
+#include "paimon/core/schema/table_schema.h"
+#include "paimon/core/table/system/system_table_schema.h"
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/file_system_factory.h"
@@ -180,6 +182,8 @@ TEST(FileSystemCatalogTest, TestOptionsSystemTableCatalog) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> system_schema,
                          catalog.LoadTableSchema(options_identifier));
+    ASSERT_TRUE(std::dynamic_pointer_cast<SystemSchema>(system_schema) != nullptr);
+    ASSERT_TRUE(std::dynamic_pointer_cast<SystemTableSchema>(system_schema) != nullptr);
     ASSERT_OK_AND_ASSIGN(auto c_schema, system_schema->GetArrowSchema());
     auto loaded_schema_result = arrow::ImportSchema(c_schema.get());
     ASSERT_TRUE(loaded_schema_result.ok()) << loaded_schema_result.status().ToString();
@@ -245,6 +249,8 @@ TEST(FileSystemCatalogTest, TestCreateTableWithBlob) {
     ASSERT_EQ(table_names[0], "tbl1");
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> table_schema,
                          catalog.LoadTableSchema(Identifier("db1", "tbl1")));
+    ASSERT_TRUE(std::dynamic_pointer_cast<DataSchema>(table_schema) != nullptr);
+    ASSERT_TRUE(std::dynamic_pointer_cast<TableSchema>(table_schema) != nullptr);
     ASSERT_OK_AND_ASSIGN(auto arrow_schema, table_schema->GetArrowSchema());
     auto loaded_schema = arrow::ImportSchema(arrow_schema.get()).ValueOrDie();
     ASSERT_TRUE(typed_schema.Equals(loaded_schema));
@@ -415,11 +421,13 @@ TEST(FileSystemCatalogTest, TestValidateTableSchema) {
     ASSERT_NOK_WITH_MSG(catalog.LoadTableSchema(Identifier("db0", "tbl0")),
                         "Identifier{database=\'db0\', table=\'tbl0\'} not exist");
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> table_schema, catalog.LoadTableSchema(identifier));
-    ASSERT_EQ(0, table_schema->Id());
-    ASSERT_EQ(3, table_schema->HighestFieldId());
-    ASSERT_EQ(1, table_schema->PartitionKeys().size());
-    ASSERT_EQ(0, table_schema->PrimaryKeys().size());
-    ASSERT_EQ(-1, table_schema->NumBuckets());
+    auto data_schema = std::dynamic_pointer_cast<DataSchema>(table_schema);
+    ASSERT_TRUE(data_schema != nullptr);
+    ASSERT_EQ(0, data_schema->Id());
+    ASSERT_EQ(3, data_schema->HighestFieldId());
+    ASSERT_EQ(1, data_schema->PartitionKeys().size());
+    ASSERT_EQ(0, data_schema->PrimaryKeys().size());
+    ASSERT_EQ(-1, data_schema->NumBuckets());
     ASSERT_FALSE(table_schema->Comment().has_value());
     std::vector<std::string> field_names = table_schema->FieldNames();
     std::vector<std::string> expected_field_names = {"f0", "f1", "f2", "f3"};

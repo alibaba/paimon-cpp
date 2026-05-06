@@ -136,7 +136,7 @@ Result<std::unique_ptr<TableRead>> TableRead::Create(std::unique_ptr<ReadContext
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<SystemTable> system_table,
             SystemTableLoader::LoadFromPath(tmp_core_options.GetFileSystem(), context->GetPath()));
-        return std::make_unique<SystemTableRead>(system_table, memory_pool);
+        return system_table->NewRead(memory_pool);
     }
 
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InternalReadContext> internal_context,

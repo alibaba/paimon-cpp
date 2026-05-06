@@ -28,7 +28,7 @@
 
 namespace paimon {
 
-class SystemTableSchema : public Schema {
+class SystemTableSchema : public SystemSchema {
  public:
     explicit SystemTableSchema(std::shared_ptr<arrow::Schema> schema);
 
@@ -36,20 +36,11 @@ class SystemTableSchema : public Schema {
     Result<std::string> GetJsonSchema() const override;
     std::vector<std::string> FieldNames() const override;
     Result<FieldType> GetFieldType(const std::string& field_name) const override;
-    int64_t Id() const override;
-    const std::vector<std::string>& PrimaryKeys() const override;
-    const std::vector<std::string>& PartitionKeys() const override;
-    const std::vector<std::string>& BucketKeys() const override;
-    int32_t NumBuckets() const override;
-    int32_t HighestFieldId() const override;
-    const std::map<std::string, std::string>& Options() const override;
     std::optional<std::string> Comment() const override;
 
  private:
     std::shared_ptr<arrow::Schema> schema_;
     std::vector<std::string> field_names_;
-    std::vector<std::string> empty_keys_;
-    std::map<std::string, std::string> empty_options_;
 };
 
 }  // namespace paimon

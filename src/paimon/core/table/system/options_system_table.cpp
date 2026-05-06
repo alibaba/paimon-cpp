@@ -113,7 +113,7 @@ Result<std::unique_ptr<TableScan>> OptionsSystemTable::NewScan() const {
     return std::make_unique<SystemTableScan>(table_path_);
 }
 
-Result<std::unique_ptr<BatchReader>> OptionsSystemTable::NewReader(
+Result<std::unique_ptr<BatchReader>> OptionsSystemTable::CreateBatchReader(
     const std::vector<std::shared_ptr<Split>>& splits,
     const std::shared_ptr<MemoryPool>& pool) const {
     if (splits.size() != 1) {

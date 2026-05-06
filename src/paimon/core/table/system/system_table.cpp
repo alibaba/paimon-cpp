@@ -27,9 +27,16 @@
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/system/options_system_table.h"
+#include "paimon/core/table/system/system_table_read.h"
 #include "paimon/core/utils/branch_manager.h"
 
 namespace paimon {
+
+Result<std::unique_ptr<SystemTableRead>> SystemTable::NewRead(
+    const std::shared_ptr<MemoryPool>& pool) const {
+    return std::make_unique<SystemTableRead>(
+        std::const_pointer_cast<SystemTable>(shared_from_this()), pool);
+}
 
 bool SystemTableLoader::IsSupported(const std::string& system_table_name) {
     return StringUtils::ToLowerCase(system_table_name) == OptionsSystemTable::kName;
@@ -66,8 +73,7 @@ Result<std::optional<SystemTablePath>> SystemTableLoader::TryParsePath(const std
 
 Result<std::shared_ptr<SystemTable>> SystemTableLoader::LoadFromPath(
     const std::shared_ptr<FileSystem>& fs, const std::string& path) {
-    PAIMON_ASSIGN_OR_RAISE(std::optional<SystemTablePath> system_table_path,
-                           TryParsePath(path));
+    PAIMON_ASSIGN_OR_RAISE(std::optional<SystemTablePath> system_table_path, TryParsePath(path));
     if (!system_table_path) {
         return Status::Invalid("path is not a system table path: ", path);
     }

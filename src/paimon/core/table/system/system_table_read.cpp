@@ -30,7 +30,7 @@ SystemTableRead::SystemTableRead(std::shared_ptr<SystemTable> system_table,
 
 Result<std::unique_ptr<BatchReader>> SystemTableRead::CreateReader(
     const std::vector<std::shared_ptr<Split>>& splits) {
-    return system_table_->NewReader(splits, GetMemoryPool());
+    return system_table_->CreateBatchReader(splits, GetMemoryPool());
 }
 
 Result<std::unique_ptr<BatchReader>> SystemTableRead::CreateReader(

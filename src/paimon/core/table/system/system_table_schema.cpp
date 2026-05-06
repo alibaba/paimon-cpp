@@ -16,7 +16,6 @@
 
 #include "paimon/core/table/system/system_table_schema.h"
 
-#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
@@ -54,34 +53,6 @@ Result<FieldType> SystemTableSchema::GetFieldType(const std::string& field_name)
         return Status::NotExist("field ", field_name, " not exist in system table schema");
     }
     return FieldTypeUtils::ConvertToFieldType(field->type()->id());
-}
-
-int64_t SystemTableSchema::Id() const {
-    return 0;
-}
-
-const std::vector<std::string>& SystemTableSchema::PrimaryKeys() const {
-    return empty_keys_;
-}
-
-const std::vector<std::string>& SystemTableSchema::PartitionKeys() const {
-    return empty_keys_;
-}
-
-const std::vector<std::string>& SystemTableSchema::BucketKeys() const {
-    return empty_keys_;
-}
-
-int32_t SystemTableSchema::NumBuckets() const {
-    return -1;
-}
-
-int32_t SystemTableSchema::HighestFieldId() const {
-    return static_cast<int32_t>(schema_->num_fields() - 1);
-}
-
-const std::map<std::string, std::string>& SystemTableSchema::Options() const {
-    return empty_options_;
 }
 
 std::optional<std::string> SystemTableSchema::Comment() const {
