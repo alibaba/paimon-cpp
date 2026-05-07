@@ -94,7 +94,7 @@ TEST(BufferedInputStreamTest, TestSimple) {
     ASSERT_OK(input_stream->Close());
 }
 
-TEST(BufferedInputStreamTest, TestSeekBranchCoverage) {
+TEST(BufferedInputStreamTest, TestSeek) {
     // Data: "0123456789abcdef" (16 bytes), buffer_size = 8
     auto pool = GetDefaultPool();
     std::string data = "0123456789abcdef";
