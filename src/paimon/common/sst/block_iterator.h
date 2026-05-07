@@ -32,6 +32,10 @@ class PAIMON_EXPORT BlockIterator {
 
     Result<BlockEntry> ReadEntry();
 
+    /// Read only the value MemorySlice from the current position, skipping the key.
+    /// Used in fast-path iteration where no key comparison is needed.
+    Result<MemorySlice> SkipKeyAndReadValue();
+
     Result<bool> SeekTo(const MemorySlice& target_key);
 
  private:

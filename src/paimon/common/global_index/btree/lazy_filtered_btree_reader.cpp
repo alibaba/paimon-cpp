@@ -31,15 +31,18 @@
 #include "paimon/common/sst/sst_file_reader.h"
 #include "paimon/common/utils/crc32c.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
+#include "paimon/io/buffered_input_stream.h"
 #include "paimon/utils/roaring_bitmap64.h"
 
 namespace paimon {
 LazyFilteredBTreeReader::LazyFilteredBTreeReader(
-    const std::vector<GlobalIndexIOMeta>& files, const std::shared_ptr<arrow::DataType>& key_type,
+    std::optional<int32_t> read_buffer_size, const std::vector<GlobalIndexIOMeta>& files,
+    const std::shared_ptr<arrow::DataType>& key_type,
     const std::shared_ptr<GlobalIndexFileReader>& file_reader,
     const std::shared_ptr<CacheManager>& cache_manager, const std::shared_ptr<MemoryPool>& pool,
     const std::shared_ptr<Executor>& executor)
-    : pool_(pool),
+    : read_buffer_size_(read_buffer_size),
+      pool_(pool),
       file_selector_(files, key_type, pool),
       key_type_(key_type),
       file_reader_(file_reader),
@@ -187,6 +190,7 @@ Result<std::shared_ptr<GlobalIndexReader>> LazyFilteredBTreeReader::CreateUnionR
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexReader> reader, GetOrCreateReader(meta));
         readers.push_back(std::move(reader));
     }
+
     return std::make_shared<UnionGlobalIndexReader>(std::move(readers), executor_);
 }
 
@@ -206,24 +210,25 @@ Result<std::shared_ptr<GlobalIndexReader>> LazyFilteredBTreeReader::CreateSingle
     // Create comparator based on field type
     auto comparator = KeySerializer::CreateComparator(key_type_, pool_);
 
-    // Deserialize min/max keys from meta
+    // Get min/max key slices from meta data (keep as slices; Create() will deserialize)
     auto index_meta = BTreeIndexMeta::Deserialize(meta.metadata, pool_.get());
-    std::optional<Literal> min_key;
-    std::optional<Literal> max_key;
+    std::optional<MemorySlice> min_key_slice;
+    std::optional<MemorySlice> max_key_slice;
     if (index_meta->FirstKey()) {
-        PAIMON_ASSIGN_OR_RAISE(
-            min_key, KeySerializer::DeserializeKey(MemorySlice::Wrap(index_meta->FirstKey()),
-                                                   key_type_, pool_.get()));
+        min_key_slice = MemorySlice::Wrap(index_meta->FirstKey());
     }
     if (index_meta->LastKey()) {
-        PAIMON_ASSIGN_OR_RAISE(
-            max_key, KeySerializer::DeserializeKey(MemorySlice::Wrap(index_meta->LastKey()),
-                                                   key_type_, pool_.get()));
+        max_key_slice = MemorySlice::Wrap(index_meta->LastKey());
     }
 
     // Open input stream and create block cache
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> input_stream,
                            file_reader_->GetInputStream(meta.file_path));
+    if (read_buffer_size_) {
+        input_stream = std::make_shared<BufferedInputStream>(
+            input_stream, read_buffer_size_.value(), pool_.get());
+    }
+
     auto block_cache =
         std::make_shared<BlockCache>(meta.file_path, input_stream, cache_manager_, pool_);
 
@@ -247,8 +252,8 @@ Result<std::shared_ptr<GlobalIndexReader>> LazyFilteredBTreeReader::CreateSingle
         SstFileReader::Create(footer->GetIndexBlockHandle(), footer->GetBloomFilterHandle(),
                               comparator, block_cache, pool_));
 
-    return std::make_shared<BTreeGlobalIndexReader>(sst_file_reader, std::move(null_bitmap),
-                                                    min_key, max_key, key_type_, pool_);
+    return BTreeGlobalIndexReader::Create(sst_file_reader, std::move(null_bitmap), min_key_slice,
+                                          max_key_slice, key_type_, pool_);
 }
 
 Result<RoaringBitmap64> LazyFilteredBTreeReader::ReadNullBitmap(

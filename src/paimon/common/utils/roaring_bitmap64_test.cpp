@@ -518,4 +518,113 @@ TEST(RoaringBitmap64Test, TestAddRangeLargeValues) {
     ASSERT_EQ(values[0], start);
     ASSERT_EQ(values[100], end);
 }
+
+TEST(RoaringBitmap64Test, TestAddMany) {
+    // empty input
+    {
+        RoaringBitmap64 bitmap;
+        bitmap.AddMany(0, nullptr);
+        ASSERT_TRUE(bitmap.IsEmpty());
+    }
+    // single element
+    {
+        RoaringBitmap64 bitmap;
+        int64_t value = 999999999999l;
+        bitmap.AddMany(1, &value);
+        ASSERT_EQ(bitmap.Cardinality(), 1);
+        ASSERT_TRUE(bitmap.Contains(999999999999l));
+    }
+    // single bucket (all values share the same high-32 bits)
+    {
+        RoaringBitmap64 bitmap;
+        std::vector<int64_t> values = {100000000001l, 100000000005l, 100000000003l, 100000000002l};
+        bitmap.AddMany(values.size(), values.data());
+        ASSERT_EQ(bitmap.Cardinality(), 4);
+        ASSERT_TRUE(bitmap.Contains(100000000001l));
+        ASSERT_TRUE(bitmap.Contains(100000000002l));
+        ASSERT_TRUE(bitmap.Contains(100000000003l));
+        ASSERT_TRUE(bitmap.Contains(100000000005l));
+        ASSERT_FALSE(bitmap.Contains(100000000004l));
+    }
+    // multiple buckets (values span different high-32 bit buckets)
+    {
+        RoaringBitmap64 bitmap;
+        std::vector<int64_t> values = {1l, 100000000000l, 200000000000l, 2l, 100000000001l};
+        bitmap.AddMany(values.size(), values.data());
+        ASSERT_EQ(bitmap.Cardinality(), 5);
+        ASSERT_TRUE(bitmap.Contains(1l));
+        ASSERT_TRUE(bitmap.Contains(2l));
+        ASSERT_TRUE(bitmap.Contains(100000000000l));
+        ASSERT_TRUE(bitmap.Contains(100000000001l));
+        ASSERT_TRUE(bitmap.Contains(200000000000l));
+    }
+    // duplicates
+    {
+        RoaringBitmap64 bitmap;
+        std::vector<int64_t> values = {42l, 42l, 42l, 100000000000l, 100000000000l};
+        bitmap.AddMany(values.size(), values.data());
+        ASSERT_EQ(bitmap.Cardinality(), 2);
+        ASSERT_TRUE(bitmap.Contains(42l));
+        ASSERT_TRUE(bitmap.Contains(100000000000l));
+    }
+    // unsorted input (reverse order)
+    {
+        std::vector<int64_t> values;
+        for (int64_t i = 99; i >= 0; --i) {
+            values.push_back(i + 100000000000l);
+        }
+        RoaringBitmap64 bitmap;
+        bitmap.AddMany(values.size(), values.data());
+        ASSERT_EQ(bitmap.Cardinality(), 100);
+        for (int64_t i = 0; i < 100; ++i) {
+            ASSERT_TRUE(bitmap.Contains(i + 100000000000l));
+        }
+    }
+    // incremental insert (multiple AddMany calls accumulate)
+    {
+        RoaringBitmap64 bitmap;
+        std::vector<int64_t> batch1 = {10l, 20l, 30l};
+        std::vector<int64_t> batch2 = {20l, 40l, 100000000000l};
+        bitmap.AddMany(batch1.size(), batch1.data());
+        ASSERT_EQ(bitmap.Cardinality(), 3);
+        bitmap.AddMany(batch2.size(), batch2.data());
+        ASSERT_EQ(bitmap.Cardinality(), 5);
+        ASSERT_TRUE(bitmap.Contains(10l));
+        ASSERT_TRUE(bitmap.Contains(20l));
+        ASSERT_TRUE(bitmap.Contains(30l));
+        ASSERT_TRUE(bitmap.Contains(40l));
+        ASSERT_TRUE(bitmap.Contains(100000000000l));
+    }
+    // large values near MAX_VALUE
+    {
+        std::vector<int64_t> values;
+        for (int64_t i = 0; i < 50; ++i) {
+            values.push_back(RoaringBitmap64::MAX_VALUE - 1 - i);
+        }
+        RoaringBitmap64 bitmap;
+        bitmap.AddMany(values.size(), values.data());
+        ASSERT_EQ(bitmap.Cardinality(), 50);
+        for (auto v : values) {
+            ASSERT_TRUE(bitmap.Contains(v));
+        }
+    }
+    // consistency with Add: AddMany must produce the same bitmap as repeated Add
+    {
+        std::vector<int64_t> values;
+        for (int64_t i = 0; i < 100; ++i) {
+            values.push_back(i + 100000000000l);
+        }
+        for (int64_t i = 0; i < 50; ++i) {
+            values.push_back(i + 200000000000l);
+        }
+        RoaringBitmap64 bitmap_add;
+        for (auto v : values) {
+            bitmap_add.Add(v);
+        }
+        RoaringBitmap64 bitmap_add_many;
+        bitmap_add_many.AddMany(values.size(), values.data());
+        ASSERT_EQ(bitmap_add, bitmap_add_many);
+    }
+}
+
 }  // namespace paimon::test
