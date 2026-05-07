@@ -97,20 +97,26 @@ class ConfigParser {
         return Status::OK();  // Return success even if the configuration does not exist
     }
 
-    // Parse string configurations
-    Status ParseString(const std::string& key, std::string* value) const {
+    // Parse memory size configurations
+    template <typename T>
+    Status ParseMemorySize(const std::string& key, T* value) const {
+        static_assert(std::is_same_v<T, int64_t> || std::is_same_v<T, std::optional<int64_t>>,
+                      "ParseMemorySize only supports int64_t and std::optional<int64_t>");
         auto iter = config_map_.find(key);
         if (iter != config_map_.end()) {
-            *value = iter->second;
+            PAIMON_ASSIGN_OR_RAISE(*value, MemorySize::ParseBytes(iter->second));
         }
         return Status::OK();
     }
 
-    // Parse memory size configurations
-    Status ParseMemorySize(const std::string& key, int64_t* value) const {
+    // Parse time duration configurations
+    template <typename T>
+    Status ParseTimeDuration(const std::string& key, T* value) const {
+        static_assert(std::is_same_v<T, int64_t> || std::is_same_v<T, std::optional<int64_t>>,
+                      "ParseTimeDuration only supports int64_t and std::optional<int64_t>");
         auto iter = config_map_.find(key);
         if (iter != config_map_.end()) {
-            PAIMON_ASSIGN_OR_RAISE(*value, MemorySize::ParseBytes(iter->second));
+            PAIMON_ASSIGN_OR_RAISE(*value, TimeDuration::Parse(iter->second));
         }
         return Status::OK();
     }
@@ -288,28 +294,25 @@ class ConfigParser {
         std::map<int32_t, std::shared_ptr<FileFormat>>* file_format_per_level_ptr) const {
         auto& file_format_per_level = *file_format_per_level_ptr;
         std::string file_format_per_level_str;
-        PAIMON_RETURN_NOT_OK(
-            ParseString(Options::FILE_FORMAT_PER_LEVEL, &file_format_per_level_str));
-        if (!file_format_per_level_str.empty()) {
-            auto level2format =
-                StringUtils::Split(file_format_per_level_str, std::string(","), std::string(":"));
-            for (const auto& single_level : level2format) {
-                if (single_level.size() != 2) {
-                    return Status::Invalid(fmt::format(
-                        "fail to parse key {}, value {} (usage example: 0:avro,3:parquet)",
-                        Options::FILE_FORMAT_PER_LEVEL, file_format_per_level_str));
-                }
-                auto level = StringUtils::StringToValue<int32_t>(single_level[0]);
-                if (!level || level.value() < 0) {
-                    return Status::Invalid(
-                        fmt::format("fail to parse level {} from string to int in {}",
-                                    single_level[0], Options::FILE_FORMAT_PER_LEVEL));
-                }
-                std::shared_ptr<FileFormat> file_format;
-                PAIMON_RETURN_NOT_OK(ParseObject<FileFormatFactory>(
-                    "_no_use", /*default_identifier=*/single_level[1], &file_format));
-                file_format_per_level[level.value()] = file_format;
+        PAIMON_RETURN_NOT_OK(Parse(Options::FILE_FORMAT_PER_LEVEL, &file_format_per_level_str));
+        auto level2format =
+            StringUtils::Split(file_format_per_level_str, std::string(","), std::string(":"));
+        for (const auto& single_level : level2format) {
+            if (single_level.size() != 2) {
+                return Status::Invalid(
+                    fmt::format("fail to parse key {}, value {} (usage example: 0:avro,3:parquet)",
+                                Options::FILE_FORMAT_PER_LEVEL, file_format_per_level_str));
             }
+            auto level = StringUtils::StringToValue<int32_t>(single_level[0]);
+            if (!level || level.value() < 0) {
+                return Status::Invalid(
+                    fmt::format("fail to parse level {} from string to int in {}", single_level[0],
+                                Options::FILE_FORMAT_PER_LEVEL));
+            }
+            std::shared_ptr<FileFormat> file_format;
+            PAIMON_RETURN_NOT_OK(ParseObject<FileFormatFactory>(
+                "_no_use", /*default_identifier=*/single_level[1], &file_format));
+            file_format_per_level[level.value()] = file_format;
         }
         return Status::OK();
     }
@@ -320,24 +323,22 @@ class ConfigParser {
         auto& file_compression_per_level = *file_compression_per_level_ptr;
         std::string file_compression_per_level_str;
         PAIMON_RETURN_NOT_OK(
-            ParseString(Options::FILE_COMPRESSION_PER_LEVEL, &file_compression_per_level_str));
-        if (!file_compression_per_level_str.empty()) {
-            auto level2compression = StringUtils::Split(file_compression_per_level_str,
-                                                        std::string(","), std::string(":"));
-            for (const auto& single_level : level2compression) {
-                if (single_level.size() != 2) {
-                    return Status::Invalid(fmt::format(
-                        "fail to parse key {}, value {} (usage example: 0:lz4,1:zstd)",
-                        Options::FILE_COMPRESSION_PER_LEVEL, file_compression_per_level_str));
-                }
-                auto level = StringUtils::StringToValue<int32_t>(single_level[0]);
-                if (!level || level.value() < 0) {
-                    return Status::Invalid(
-                        fmt::format("fail to parse level {} from string to int in {}",
-                                    single_level[0], Options::FILE_COMPRESSION_PER_LEVEL));
-                }
-                file_compression_per_level[level.value()] = single_level[1];
+            Parse(Options::FILE_COMPRESSION_PER_LEVEL, &file_compression_per_level_str));
+        auto level2compression =
+            StringUtils::Split(file_compression_per_level_str, std::string(","), std::string(":"));
+        for (const auto& single_level : level2compression) {
+            if (single_level.size() != 2) {
+                return Status::Invalid(fmt::format(
+                    "fail to parse key {}, value {} (usage example: 0:lz4,1:zstd)",
+                    Options::FILE_COMPRESSION_PER_LEVEL, file_compression_per_level_str));
             }
+            auto level = StringUtils::StringToValue<int32_t>(single_level[0]);
+            if (!level || level.value() < 0) {
+                return Status::Invalid(
+                    fmt::format("fail to parse level {} from string to int in {}", single_level[0],
+                                Options::FILE_COMPRESSION_PER_LEVEL));
+            }
+            file_compression_per_level[level.value()] = single_level[1];
         }
         return Status::OK();
     }
@@ -393,6 +394,7 @@ struct CoreOptions::Impl {
     int32_t manifest_merge_min_count = 30;
     int32_t read_batch_size = 1024;
     int32_t write_batch_size = 1024;
+    int32_t local_sort_max_num_file_handles = 128;
     int32_t commit_max_retries = 10;
     int32_t compaction_min_file_num = 5;
     int32_t compaction_max_size_amplification_percent = 200;
@@ -411,8 +413,10 @@ struct CoreOptions::Impl {
     BucketFunctionType bucket_function_type = BucketFunctionType::DEFAULT;
 
     int32_t file_compression_zstd_level = 1;
+    int64_t write_buffer_spill_max_disk_size = std::numeric_limits<int64_t>::max();
 
     bool ignore_delete = false;
+    bool write_buffer_spillable = true;
     bool write_only = false;
     bool deletion_vectors_enabled = false;
     bool deletion_vectors_bitmap64 = false;
@@ -444,6 +448,7 @@ struct CoreOptions::Impl {
     bool lookup_remote_file_enabled = false;
     int32_t lookup_remote_level_threshold = INT32_MIN;
     CompressOptions lookup_compress_options{"zstd", 1};
+    CompressOptions spill_compress_options{"zstd", 1};
     int64_t cache_page_size = 64 * 1024;  // 64KB
     std::map<int32_t, std::shared_ptr<FileFormat>> file_format_per_level;
     std::map<int32_t, std::string> file_compression_per_level;
@@ -460,23 +465,14 @@ struct CoreOptions::Impl {
         PAIMON_RETURN_NOT_OK(parser.Parse(Options::BUCKET, &bucket));
         // Parse partition.default-name - default partition name for null/empty partition values
         PAIMON_RETURN_NOT_OK(
-            parser.ParseString(Options::PARTITION_DEFAULT_NAME, &partition_default_name));
+            parser.Parse(Options::PARTITION_DEFAULT_NAME, &partition_default_name));
         // Parse page-size - memory page size, default 64 kb
         PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::PAGE_SIZE, &page_size));
         // Parse target-file-size - target size of a data file
-        if (parser.ContainsKey(Options::TARGET_FILE_SIZE)) {
-            int64_t parsed_target_file_size;
-            PAIMON_RETURN_NOT_OK(
-                parser.ParseMemorySize(Options::TARGET_FILE_SIZE, &parsed_target_file_size));
-            target_file_size = parsed_target_file_size;
-        }
+        PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::TARGET_FILE_SIZE, &target_file_size));
         // Parse blob.target-file-size - target size of a blob file
-        if (parser.ContainsKey(Options::BLOB_TARGET_FILE_SIZE)) {
-            int64_t parsed_blob_target_file_size;
-            PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::BLOB_TARGET_FILE_SIZE,
-                                                        &parsed_blob_target_file_size));
-            blob_target_file_size = parsed_blob_target_file_size;
-        }
+        PAIMON_RETURN_NOT_OK(
+            parser.ParseMemorySize(Options::BLOB_TARGET_FILE_SIZE, &blob_target_file_size));
         // Parse source.split.target-size - target size of a source split when scanning a bucket
         PAIMON_RETURN_NOT_OK(
             parser.ParseMemorySize(Options::SOURCE_SPLIT_TARGET_SIZE, &source_split_target_size));
@@ -490,6 +486,21 @@ struct CoreOptions::Impl {
         // Parse write-buffer-size - data to build up in memory before flushing to disk
         PAIMON_RETURN_NOT_OK(
             parser.ParseMemorySize(Options::WRITE_BUFFER_SIZE, &write_buffer_size));
+        // Parse write-buffer-spillable - whether write buffer may spill to disk
+        PAIMON_RETURN_NOT_OK(
+            parser.Parse<bool>(Options::WRITE_BUFFER_SPILLABLE, &write_buffer_spillable));
+        // Parse write-buffer-spill.max-disk-size - max disk size for spill files
+        PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::WRITE_BUFFER_SPILL_MAX_DISK_SIZE,
+                                                    &write_buffer_spill_max_disk_size));
+        // Parse local-sort.max-num-file-handles - spill file handle cap for local merge
+        PAIMON_RETURN_NOT_OK(parser.Parse(Options::LOCAL_SORT_MAX_NUM_FILE_HANDLES,
+                                          &local_sort_max_num_file_handles));
+        // Parse spill-compression - compression codec for spill files
+        PAIMON_RETURN_NOT_OK(
+            parser.Parse(Options::SPILL_COMPRESSION, &spill_compress_options.compress));
+        // Parse spill-compression.zstd-level - zstd level for spill compression, default 1
+        PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::SPILL_COMPRESSION_ZSTD_LEVEL,
+                                                   &(spill_compress_options.zstd_level)));
         // Parse file-system - file system type, default "local"
         PAIMON_RETURN_NOT_OK(parser.ParseFileSystem(fs_scheme_to_identifier_map,
                                                     specified_file_system, &file_system));
@@ -502,16 +513,12 @@ struct CoreOptions::Impl {
         PAIMON_RETURN_NOT_OK(parser.Parse<bool>("test.enable-adaptive-prefetch-strategy",
                                                 &enable_adaptive_prefetch_strategy));
         // Parse data-file.external-paths - external paths for data files, comma separated
-        std::string parsed_external_paths;
         PAIMON_RETURN_NOT_OK(
-            parser.ParseString(Options::DATA_FILE_EXTERNAL_PATHS, &parsed_external_paths));
-        if (!parsed_external_paths.empty()) {
-            data_file_external_paths = parsed_external_paths;
-        }
+            parser.Parse(Options::DATA_FILE_EXTERNAL_PATHS, &data_file_external_paths));
         // Parse data-file.external-paths.strategy - strategy for selecting external path
         PAIMON_RETURN_NOT_OK(parser.ParseExternalPathStrategy(&external_path_strategy));
         // Parse data-file.prefix - file name prefix of data files, default "data-"
-        PAIMON_RETURN_NOT_OK(parser.ParseString(Options::DATA_FILE_PREFIX, &data_file_prefix));
+        PAIMON_RETURN_NOT_OK(parser.Parse(Options::DATA_FILE_PREFIX, &data_file_prefix));
         // Parse row-tracking.enabled - whether to enable unique row id for append table
         PAIMON_RETURN_NOT_OK(
             parser.Parse<bool>(Options::ROW_TRACKING_ENABLED, &row_tracking_enabled));
@@ -529,7 +536,7 @@ struct CoreOptions::Impl {
         PAIMON_RETURN_NOT_OK(parser.ParseObject<FileFormatFactory>(
             Options::FILE_FORMAT, /*default_identifier=*/"parquet", &file_format));
         // Parse file.compression - default file compression, default "zstd"
-        PAIMON_RETURN_NOT_OK(parser.ParseString(Options::FILE_COMPRESSION, &file_compression));
+        PAIMON_RETURN_NOT_OK(parser.Parse(Options::FILE_COMPRESSION, &file_compression));
         // Parse file.compression.zstd-level - zstd compression level, default 1
         PAIMON_RETURN_NOT_OK(
             parser.Parse(Options::FILE_COMPRESSION_ZSTD_LEVEL, &file_compression_zstd_level));
@@ -546,8 +553,7 @@ struct CoreOptions::Impl {
         PAIMON_RETURN_NOT_OK(parser.ParseObject<FileFormatFactory>(
             Options::MANIFEST_FORMAT, /*default_identifier=*/"avro", &manifest_file_format));
         // Parse manifest.compression - manifest file compression, default "zstd"
-        PAIMON_RETURN_NOT_OK(
-            parser.ParseString(Options::MANIFEST_COMPRESSION, &manifest_compression));
+        PAIMON_RETURN_NOT_OK(parser.Parse(Options::MANIFEST_COMPRESSION, &manifest_compression));
         // Parse manifest.target-file-size - suggested manifest file size, default 8MB
         PAIMON_RETURN_NOT_OK(
             parser.ParseMemorySize(Options::MANIFEST_TARGET_FILE_SIZE, &manifest_target_file_size));
@@ -568,17 +574,15 @@ struct CoreOptions::Impl {
         int32_t snapshot_num_retain_max = std::numeric_limits<int32_t>::max();
         // Parse snapshot.expire.limit - maximum snapshots allowed to expire at a time, default 10
         int32_t snapshot_expire_limit = 10;
+        // Parse snapshot.time-retained - maximum time of completed snapshots to retain
+        int64_t snapshot_time_retained = 1 * 3600 * 1000;  // 1 hour
         PAIMON_RETURN_NOT_OK(
             parser.Parse(Options::SNAPSHOT_NUM_RETAINED_MIN, &snapshot_num_retain_min));
         PAIMON_RETURN_NOT_OK(
             parser.Parse(Options::SNAPSHOT_NUM_RETAINED_MAX, &snapshot_num_retain_max));
         PAIMON_RETURN_NOT_OK(parser.Parse(Options::SNAPSHOT_EXPIRE_LIMIT, &snapshot_expire_limit));
-        // Parse snapshot.time-retained - maximum time of completed snapshots to retain
-        std::string snapshot_time_retained_str = "1 hour";
         PAIMON_RETURN_NOT_OK(
-            parser.ParseString(Options::SNAPSHOT_TIME_RETAINED, &snapshot_time_retained_str));
-        PAIMON_ASSIGN_OR_RAISE(int64_t snapshot_time_retained,
-                               TimeDuration::Parse(snapshot_time_retained_str));
+            parser.ParseTimeDuration(Options::SNAPSHOT_TIME_RETAINED, &snapshot_time_retained));
         // Parse snapshot.clean-empty-directories - whether to clean empty dirs on expiration
         bool snapshot_clean_empty_directories = false;
         PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::SNAPSHOT_CLEAN_EMPTY_DIRECTORIES,
@@ -595,11 +599,7 @@ struct CoreOptions::Impl {
         PAIMON_RETURN_NOT_OK(
             parser.Parse<bool>(Options::COMMIT_FORCE_COMPACT, &commit_force_compact));
         // Parse commit.timeout - timeout duration of retry when commit failed
-        std::string commit_timeout_str;
-        PAIMON_RETURN_NOT_OK(parser.ParseString(Options::COMMIT_TIMEOUT, &commit_timeout_str));
-        if (!commit_timeout_str.empty()) {
-            PAIMON_ASSIGN_OR_RAISE(commit_timeout, TimeDuration::Parse(commit_timeout_str));
-        }
+        PAIMON_RETURN_NOT_OK(parser.ParseTimeDuration(Options::COMMIT_TIMEOUT, &commit_timeout));
         // Parse commit.max-retries - maximum retries when commit failed, default 10
         PAIMON_RETURN_NOT_OK(parser.Parse(Options::COMMIT_MAX_RETRIES, &commit_max_retries));
         return Status::OK();
@@ -619,12 +619,7 @@ struct CoreOptions::Impl {
         // Parse ignore-delete - whether to ignore delete records, default false
         PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::IGNORE_DELETE, &ignore_delete));
         // Parse fields.default-aggregate-function - default agg function for partial-update
-        std::string parsed_default_func;
-        PAIMON_RETURN_NOT_OK(
-            parser.ParseString(Options::FIELDS_DEFAULT_AGG_FUNC, &parsed_default_func));
-        if (!parsed_default_func.empty()) {
-            field_default_func = parsed_default_func;
-        }
+        PAIMON_RETURN_NOT_OK(parser.Parse(Options::FIELDS_DEFAULT_AGG_FUNC, &field_default_func));
         // Parse changelog-producer - whether to double write to a changelog file, default "none"
         PAIMON_RETURN_NOT_OK(parser.ParseChangelogProducer(&changelog_producer));
         // Parse partial-update.remove-record-on-delete - remove whole row on delete
@@ -660,7 +655,7 @@ struct CoreOptions::Impl {
         PAIMON_RETURN_NOT_OK(parser.Parse(Options::SCAN_SNAPSHOT_ID, &scan_snapshot_id));
         // Parse scan.timestamp-millis and scan.timestamp
         std::string scan_timestamp_str;
-        PAIMON_RETURN_NOT_OK(parser.ParseString(Options::SCAN_TIMESTAMP, &scan_timestamp_str));
+        PAIMON_RETURN_NOT_OK(parser.Parse(Options::SCAN_TIMESTAMP, &scan_timestamp_str));
         PAIMON_RETURN_NOT_OK(parser.Parse(Options::SCAN_TIMESTAMP_MILLIS, &scan_timestamp_millis));
         if (scan_timestamp_millis != std::nullopt && !scan_timestamp_str.empty()) {
             return Status::Invalid(
@@ -674,20 +669,11 @@ struct CoreOptions::Impl {
         // Parse scan.mode - scanning behavior of the source, default "default"
         PAIMON_RETURN_NOT_OK(parser.ParseStartupMode(&startup_mode));
         // Parse scan.fallback-branch - fallback branch when partition not found
-        std::string parsed_fallback_branch;
-        PAIMON_RETURN_NOT_OK(
-            parser.ParseString(Options::SCAN_FALLBACK_BRANCH, &parsed_fallback_branch));
-        if (!parsed_fallback_branch.empty()) {
-            scan_fallback_branch = parsed_fallback_branch;
-        }
+        PAIMON_RETURN_NOT_OK(parser.Parse(Options::SCAN_FALLBACK_BRANCH, &scan_fallback_branch));
         // Parse branch - branch name, default "main"
-        PAIMON_RETURN_NOT_OK(parser.ParseString(Options::BRANCH, &branch));
+        PAIMON_RETURN_NOT_OK(parser.Parse(Options::BRANCH, &branch));
         // Parse scan.tag-name - optional tag name for "from-snapshot" scan mode
-        std::string parsed_tag_name;
-        PAIMON_RETURN_NOT_OK(parser.ParseString(Options::SCAN_TAG_NAME, &parsed_tag_name));
-        if (!parsed_tag_name.empty()) {
-            scan_tag_name = parsed_tag_name;
-        }
+        PAIMON_RETURN_NOT_OK(parser.Parse(Options::SCAN_TAG_NAME, &scan_tag_name));
         return Status::OK();
     }
 
@@ -703,12 +689,8 @@ struct CoreOptions::Impl {
         PAIMON_RETURN_NOT_OK(
             parser.Parse<bool>(Options::GLOBAL_INDEX_ENABLED, &global_index_enabled));
         // Parse global-index.external-path - global index root directory
-        std::string parsed_global_index_external_path;
-        PAIMON_RETURN_NOT_OK(parser.ParseString(Options::GLOBAL_INDEX_EXTERNAL_PATH,
-                                                &parsed_global_index_external_path));
-        if (!parsed_global_index_external_path.empty()) {
-            global_index_external_path = parsed_global_index_external_path;
-        }
+        PAIMON_RETURN_NOT_OK(
+            parser.Parse(Options::GLOBAL_INDEX_EXTERNAL_PATH, &global_index_external_path));
         return Status::OK();
     }
 
@@ -739,31 +721,15 @@ struct CoreOptions::Impl {
         PAIMON_RETURN_NOT_OK(
             parser.Parse<bool>(Options::COMPACTION_FORCE_UP_LEVEL_0, &compaction_force_up_level_0));
         // Parse compaction.optimization-interval - how often to perform optimization compaction
-        std::string optimized_compaction_interval_str;
-        PAIMON_RETURN_NOT_OK(parser.ParseString(Options::COMPACTION_OPTIMIZATION_INTERVAL,
-                                                &optimized_compaction_interval_str));
-        if (!optimized_compaction_interval_str.empty()) {
-            PAIMON_ASSIGN_OR_RAISE(optimized_compaction_interval,
-                                   TimeDuration::Parse(optimized_compaction_interval_str));
-        }
+        PAIMON_RETURN_NOT_OK(parser.ParseTimeDuration(Options::COMPACTION_OPTIMIZATION_INTERVAL,
+                                                      &optimized_compaction_interval));
         // Parse compaction.total-size-threshold - force full compaction when total size is smaller
-        std::string compaction_total_size_threshold_str;
-        PAIMON_RETURN_NOT_OK(parser.ParseString(Options::COMPACTION_TOTAL_SIZE_THRESHOLD,
-                                                &compaction_total_size_threshold_str));
-        if (!compaction_total_size_threshold_str.empty()) {
-            PAIMON_ASSIGN_OR_RAISE(compaction_total_size_threshold,
-                                   MemorySize::ParseBytes(compaction_total_size_threshold_str));
-        }
+        PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::COMPACTION_TOTAL_SIZE_THRESHOLD,
+                                                    &compaction_total_size_threshold));
         // Parse compaction.incremental-size-threshold - force full compaction when incremental size
         // is bigger
-        std::string compaction_incremental_size_threshold_str;
-        PAIMON_RETURN_NOT_OK(parser.ParseString(Options::COMPACTION_INCREMENTAL_SIZE_THRESHOLD,
-                                                &compaction_incremental_size_threshold_str));
-        if (!compaction_incremental_size_threshold_str.empty()) {
-            PAIMON_ASSIGN_OR_RAISE(
-                compaction_incremental_size_threshold,
-                MemorySize::ParseBytes(compaction_incremental_size_threshold_str));
-        }
+        PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::COMPACTION_INCREMENTAL_SIZE_THRESHOLD,
+                                                    &compaction_incremental_size_threshold));
         // Parse compaction.offpeak.start.hour - start of off-peak hours (0-23), -1 to disable
         PAIMON_RETURN_NOT_OK(
             parser.Parse(Options::COMPACT_OFFPEAK_START_HOUR, &compact_off_peak_start_hour));
@@ -800,12 +766,8 @@ struct CoreOptions::Impl {
         PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::LOOKUP_REMOTE_LEVEL_THRESHOLD,
                                                    &lookup_remote_level_threshold));
         // Parse lookup.cache-spill-compression - spill compression for lookup cache, default "zstd"
-        std::string lookup_compress_options_compression_str;
-        PAIMON_RETURN_NOT_OK(parser.ParseString(Options::LOOKUP_CACHE_SPILL_COMPRESSION,
-                                                &lookup_compress_options_compression_str));
-        if (!lookup_compress_options_compression_str.empty()) {
-            lookup_compress_options.compress = lookup_compress_options_compression_str;
-        }
+        PAIMON_RETURN_NOT_OK(parser.Parse(Options::LOOKUP_CACHE_SPILL_COMPRESSION,
+                                          &lookup_compress_options.compress));
         // Parse spill-compression.zstd-level - zstd level for spill compression, default 1
         PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::SPILL_COMPRESSION_ZSTD_LEVEL,
                                                    &(lookup_compress_options.zstd_level)));
@@ -824,13 +786,8 @@ struct CoreOptions::Impl {
                 lookup_cache_high_prio_pool_ratio));
         }
         // Parse lookup.cache-file-retention - cached files retention time, default "1 hour"
-        std::string lookup_cache_file_retention_str;
-        PAIMON_RETURN_NOT_OK(parser.ParseString(Options::LOOKUP_CACHE_FILE_RETENTION,
-                                                &lookup_cache_file_retention_str));
-        if (!lookup_cache_file_retention_str.empty()) {
-            PAIMON_ASSIGN_OR_RAISE(lookup_cache_file_retention_ms,
-                                   TimeDuration::Parse(lookup_cache_file_retention_str));
-        }
+        PAIMON_RETURN_NOT_OK(parser.ParseTimeDuration(Options::LOOKUP_CACHE_FILE_RETENTION,
+                                                      &lookup_cache_file_retention_ms));
         // Parse lookup.cache-max-disk-size - max disk size for lookup cache, default unlimited
         PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::LOOKUP_CACHE_MAX_DISK_SIZE,
                                                     &lookup_cache_max_disk_size));
@@ -1000,6 +957,22 @@ int64_t CoreOptions::GetWriteBufferSize() const {
     return impl_->write_buffer_size;
 }
 
+bool CoreOptions::GetWriteBufferSpillable() const {
+    return impl_->write_buffer_spillable;
+}
+
+int64_t CoreOptions::GetWriteBufferSpillMaxDiskSize() const {
+    return impl_->write_buffer_spill_max_disk_size;
+}
+
+int32_t CoreOptions::GetLocalSortMaxNumFileHandles() const {
+    return impl_->local_sort_max_num_file_handles;
+}
+
+const CompressOptions& CoreOptions::GetSpillCompressOptions() const {
+    return impl_->spill_compress_options;
+}
+
 bool CoreOptions::CommitForceCompact() const {
     return impl_->commit_force_compact;
 }
@@ -1119,14 +1092,11 @@ bool CoreOptions::EnableAdaptivePrefetchStrategy() const {
 Result<std::optional<std::string>> CoreOptions::GetFieldAggFunc(
     const std::string& field_name) const {
     ConfigParser parser(impl_->raw_options);
-    std::string field_agg_func = "";
+    std::optional<std::string> field_agg_func;
     std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
                       std::string(Options::AGG_FUNCTION);
-    PAIMON_RETURN_NOT_OK(parser.ParseString(key, &field_agg_func));
-    if (!field_agg_func.empty()) {
-        return std::optional<std::string>(field_agg_func);
-    }
-    return std::optional<std::string>();
+    PAIMON_RETURN_NOT_OK(parser.Parse(key, &field_agg_func));
+    return field_agg_func;
 }
 
 Result<bool> CoreOptions::FieldAggIgnoreRetract(const std::string& field_name) const {
@@ -1143,7 +1113,7 @@ Result<std::string> CoreOptions::FieldListAggDelimiter(const std::string& field_
     std::string delimiter = ",";
     std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
                       std::string(Options::LIST_AGG_DELIMITER);
-    PAIMON_RETURN_NOT_OK(parser.ParseString(key, &delimiter));
+    PAIMON_RETURN_NOT_OK(parser.Parse(key, &delimiter));
     return delimiter;
 }
 
@@ -1257,7 +1227,8 @@ Result<std::vector<std::string>> CoreOptions::CreateExternalPaths() const {
     if (strategy == ExternalPathStrategy::SPECIFIC_FS) {
         return Status::NotImplemented("do not support specific-fs external path strategy for now");
     }
-    if (data_file_external_paths == std::nullopt || strategy == ExternalPathStrategy::NONE) {
+    if (data_file_external_paths == std::nullopt || data_file_external_paths->empty() ||
+        strategy == ExternalPathStrategy::NONE) {
         return external_paths;
     }
     for (const auto& p : StringUtils::Split(data_file_external_paths.value(), ",")) {
@@ -1305,8 +1276,8 @@ std::optional<std::string> CoreOptions::GetGlobalIndexExternalPath() const {
 
 Result<std::optional<std::string>> CoreOptions::CreateGlobalIndexExternalPath() const {
     std::optional<std::string> global_index_external_path = GetGlobalIndexExternalPath();
-    if (global_index_external_path == std::nullopt) {
-        return global_index_external_path;
+    if (global_index_external_path == std::nullopt || global_index_external_path->empty()) {
+        return std::optional<std::string>();
     }
     std::string tmp_path = global_index_external_path.value();
     StringUtils::Trim(&tmp_path);

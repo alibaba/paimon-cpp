@@ -327,6 +327,12 @@ TEST_F(StringUtilsTest, TestSplit) {
             StringUtils::Split("key1=value1//key3=value3", std::string("/"), std::string("="));
         ASSERT_EQ(expect, result);
     }
+    {
+        std::vector<std::vector<std::string>> expect = {};
+        std::vector<std::vector<std::string>> result =
+            StringUtils::Split("", std::string("/"), std::string("="));
+        ASSERT_EQ(expect, result);
+    }
 }
 
 TEST_F(StringUtilsTest, TestStringToValueSimple) {

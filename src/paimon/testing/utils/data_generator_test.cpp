@@ -51,15 +51,6 @@ TEST_F(DataGeneratorTest, TestSimple) {
                                  arrow::field("f1", arrow::utf8()),
                                  arrow::field("f2", arrow::utf8())};
     auto schema = arrow::schema(fields);
-    std::vector<std::string> primary_keys = {"f0"};
-    std::vector<std::string> partition_keys = {"f1"};
-    std::map<std::string, std::string> options;
-    options[Options::BUCKET_KEY] = "f0";
-    options[Options::BUCKET] = "2";
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<TableSchema> table_schema,
-        TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
-    DataGenerator gen(table_schema, GetDefaultPool());
 
     std::vector<BinaryRow> rows;
     rows.push_back(Make(RowKind::Insert(), "Alex", "20250326", "18"));
@@ -69,8 +60,34 @@ TEST_F(DataGeneratorTest, TestSimple) {
     rows.push_back(Make(RowKind::Insert(), "Evan", "20250326", "22"));
     rows.push_back(Make(RowKind::Delete(), "Alex", "20250326", "18"));
     rows.push_back(Make(RowKind::Delete(), "Bob", "20250326", "19"));
-    ASSERT_OK_AND_ASSIGN(auto batches, gen.SplitArrayByPartitionAndBucket(rows));
-    ASSERT_EQ(3, batches.size());
+
+    {
+        std::vector<std::string> primary_keys = {"f0"};
+        std::vector<std::string> partition_keys = {"f1"};
+        std::map<std::string, std::string> options;
+        options[Options::BUCKET_KEY] = "f0";
+        options[Options::BUCKET] = "2";
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<TableSchema> table_schema,
+            TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
+        DataGenerator gen(table_schema, GetDefaultPool());
+
+        ASSERT_OK_AND_ASSIGN(auto batches, gen.SplitArrayByPartitionAndBucket(rows));
+        ASSERT_EQ(3, batches.size());
+    }
+
+    {
+        std::vector<std::string> primary_keys;
+        std::vector<std::string> partition_keys;
+        std::map<std::string, std::string> options;
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<TableSchema> table_schema,
+            TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
+        DataGenerator gen(table_schema, GetDefaultPool());
+
+        ASSERT_OK_AND_ASSIGN(auto batches, gen.SplitArrayByPartitionAndBucket(rows));
+        ASSERT_EQ(1, batches.size());
+    }
 }
 
 }  // namespace paimon::test

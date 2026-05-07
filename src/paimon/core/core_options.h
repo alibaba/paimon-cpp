@@ -17,7 +17,6 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -83,6 +82,10 @@ class PAIMON_EXPORT CoreOptions {
     int32_t GetReadBatchSize() const;
     int32_t GetWriteBatchSize() const;
     int64_t GetWriteBufferSize() const;
+    bool GetWriteBufferSpillable() const;
+    int64_t GetWriteBufferSpillMaxDiskSize() const;
+    int32_t GetLocalSortMaxNumFileHandles() const;
+    const CompressOptions& GetSpillCompressOptions() const;
 
     const ExpireConfig& GetExpireConfig() const;
 
