@@ -27,7 +27,7 @@
 #include "paimon/visibility.h"
 
 namespace paimon {
-/// Global index result that holds the row ids selected by a predicate.
+/// Global index result that holds the row ids.
 class PAIMON_EXPORT GlobalIndexResult : public std::enable_shared_from_this<GlobalIndexResult> {
  public:
     virtual ~GlobalIndexResult() = default;

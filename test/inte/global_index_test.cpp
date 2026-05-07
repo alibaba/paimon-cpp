@@ -13,17 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "arrow/type.h"
 #include "gtest/gtest.h"
 #include "paimon/common/factories/io_hook.h"
 #include "paimon/common/global_index/bitmap/bitmap_global_index_factory.h"
+#include "paimon/common/global_index/union_global_index_reader.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/global_index/global_index_scan_impl.h"
 #include "paimon/core/global_index/indexed_split_impl.h"
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/defs.h"
+#include "paimon/executor.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/global_index/bitmap_scored_global_index_result.h"
@@ -431,10 +432,10 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
 
     std::string table_path = paimon::test::GetDataDir() + "/" + file_format_ +
                              "/append_with_global_index.db/append_with_global_index";
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<GlobalIndexScan> global_index_scan,
-        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
+                                                 /*executor=*/nullptr, pool_));
     // test index reader
     // test f0 field
     ASSERT_OK_AND_ASSIGN(auto index_readers, global_index_scan->CreateReaders("f0", std::nullopt));
@@ -446,9 +447,8 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
     auto global_index_scan_impl = std::dynamic_pointer_cast<GlobalIndexScanImpl>(global_index_scan);
     {
         // test with non predicate
-        ASSERT_OK_AND_ASSIGN(
-            auto index_result,
-            global_index_scan_impl->Scan(/*predicate=*/nullptr, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             global_index_scan_impl->Scan(/*predicate=*/nullptr));
         ASSERT_FALSE(index_result);
     }
     {
@@ -456,8 +456,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
         auto predicate =
             PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                     Literal(FieldType::STRING, "Alice", 5));
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_EQ(index_result->ToString(), "{0,7}");
     }
     {
@@ -465,40 +464,35 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
         auto predicate =
             PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                        Literal(FieldType::STRING, "Alice", 5));
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_EQ(index_result->ToString(), "{1,2,3,4,5,6}");
     }
     {
         // test equal predicate for f1
         auto predicate = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                  FieldType::INT, Literal(20));
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_EQ(index_result->ToString(), "{4,6,7}");
     }
     {
         // test equal predicate for f2
         auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2",
                                                  FieldType::INT, Literal(1));
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_EQ(index_result->ToString(), "{0,1,4,5}");
     }
     {
         // test is null predicate
         auto predicate =
             PredicateBuilder::IsNull(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT);
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_EQ(index_result->ToString(), "{7}");
     }
     {
         // test is not null predicate
         auto predicate =
             PredicateBuilder::IsNotNull(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT);
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_EQ(index_result->ToString(), "{0,1,2,3,4,5,6}");
     }
     {
@@ -507,8 +501,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
             {Literal(FieldType::STRING, "Alice", 5), Literal(FieldType::STRING, "Bob", 3),
              Literal(FieldType::STRING, "Lucy", 4)});
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_EQ(index_result->ToString(), "{0,1,4,5,7}");
     }
     {
@@ -517,8 +510,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
             {Literal(FieldType::STRING, "Alice", 5), Literal(FieldType::STRING, "Bob", 3),
              Literal(FieldType::STRING, "Lucy", 4)});
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_EQ(index_result->ToString(), "{2,3,6}");
     }
     {
@@ -529,8 +521,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
         auto f1_predicate = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                     FieldType::INT, Literal(20));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({f0_predicate, f1_predicate}));
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_EQ(index_result->ToString(), "{7}");
     }
     {
@@ -541,16 +532,14 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
         auto f1_predicate = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                     FieldType::INT, Literal(20));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::Or({f0_predicate, f1_predicate}));
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_EQ(index_result->ToString(), "{0,4,6,7}");
     }
     {
         // test non-result
         auto predicate = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                  FieldType::INT, Literal(30));
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_EQ(index_result->ToString(), "{}");
     }
     {
@@ -565,49 +554,42 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
 
         ASSERT_OK_AND_ASSIGN(auto predicate,
                              PredicateBuilder::And({f1_predicate, f2_predicate, f0_predicate}));
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_EQ(index_result->ToString(), "{}");
     }
     {
         // test greater than predicate which bitmap index is not support, will return all range
         auto predicate = PredicateBuilder::GreaterThan(/*field_index=*/1, /*field_name=*/"f1",
                                                        FieldType::INT, Literal(10));
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_FALSE(index_result);
     }
     {
         // test greater or equal predicate which bitmap index is not support, will return all range
         auto predicate = PredicateBuilder::GreaterOrEqual(/*field_index=*/1, /*field_name=*/"f1",
                                                           FieldType::INT, Literal(10));
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_FALSE(index_result);
     }
     {
         // test less than predicate which bitmap index is not support, will return all range
         auto predicate = PredicateBuilder::LessThan(/*field_index=*/1, /*field_name=*/"f1",
                                                     FieldType::INT, Literal(10));
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_FALSE(index_result);
     }
     {
         // test less or equal predicate which bitmap index is not support, will return all range
         auto predicate = PredicateBuilder::LessOrEqual(/*field_index=*/1, /*field_name=*/"f1",
                                                        FieldType::INT, Literal(10));
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_FALSE(index_result);
     }
     {
         // test a predicate for field with no index
         auto f3_predicate = PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3",
                                                     FieldType::DOUBLE, Literal(1.2));
-        ASSERT_OK_AND_ASSIGN(
-            auto index_result,
-            global_index_scan_impl->Scan(f3_predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(f3_predicate));
         ASSERT_FALSE(index_result);
     }
 }
@@ -620,10 +602,10 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
     std::string table_path = paimon::test::GetDataDir() + "/" + file_format_ +
                              "/append_with_global_index.db/append_with_global_index";
     // snapshot 2 has f0 index
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<GlobalIndexScan> global_index_scan,
-        GlobalIndexScan::Create(table_path, /*snapshot_id=*/2l,
-                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/2l,
+                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
+                                                 /*executor=*/nullptr, pool_));
     // test index reader
     // test f0 field
     ASSERT_OK_AND_ASSIGN(auto index_readers, global_index_scan->CreateReaders("f0", std::nullopt));
@@ -633,7 +615,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
     ASSERT_EQ(index_result->ToString(), "{0,7}");
     // test f1 field
     ASSERT_OK_AND_ASSIGN(auto index_readers2, global_index_scan->CreateReaders("f1", std::nullopt));
-    ASSERT_EQ(index_readers.size(), 1u);
+    ASSERT_EQ(index_readers2.size(), 0u);
 
     auto global_index_scan_impl = std::dynamic_pointer_cast<GlobalIndexScanImpl>(global_index_scan);
 
@@ -645,8 +627,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
         auto f1_predicate = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                     FieldType::INT, Literal(20));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({f0_predicate, f1_predicate}));
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_EQ(index_result->ToString(), "{0,7}");
     }
     {
@@ -657,8 +638,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
         auto f1_predicate = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                     FieldType::INT, Literal(20));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::Or({f0_predicate, f1_predicate}));
-        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(
-                                                    predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
         ASSERT_FALSE(index_result);
     }
 }
@@ -671,10 +651,10 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshotWithNoIndex) {
     std::string table_path = paimon::test::GetDataDir() + "/" + file_format_ +
                              "/append_with_global_index.db/append_with_global_index";
     // snapshot 1 has no index
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<GlobalIndexScan> global_index_scan,
-        GlobalIndexScan::Create(table_path, /*snapshot_id=*/1l,
-                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/1l,
+                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
+                                                 /*executor=*/nullptr, pool_));
     // test index reader
     ASSERT_OK_AND_ASSIGN(auto index_readers, global_index_scan->CreateReaders("f0", std::nullopt));
     ASSERT_EQ(index_readers.size(), 0u);
@@ -684,8 +664,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshotWithNoIndex) {
     auto predicate =
         PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                    Literal(FieldType::STRING, "Alice", 5));
-    ASSERT_OK_AND_ASSIGN(auto index_result,
-                         global_index_scan_impl->Scan(predicate, /*row_range_index=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
     ASSERT_FALSE(index_result);
 }
 
@@ -696,10 +675,10 @@ TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
 
     std::string table_path = paimon::test::GetDataDir() + "/" + file_format_ +
                              "/append_with_global_index.db/append_with_global_index";
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<GlobalIndexScan> global_index_scan,
-        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
+                                                 /*executor=*/nullptr, pool_));
     auto global_index_scan_impl = std::dynamic_pointer_cast<GlobalIndexScanImpl>(global_index_scan);
     {
         // test index reader
@@ -713,9 +692,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
         auto predicate =
             PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                        Literal(FieldType::STRING, "Alice", 5));
-        ASSERT_OK_AND_ASSIGN(
-            auto evaluator_result,
-            global_index_scan_impl->Scan(predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto evaluator_result, global_index_scan_impl->Scan(predicate));
         ASSERT_EQ(evaluator_result->ToString(), "{1,2,3,4,5,6}");
     }
     {
@@ -724,13 +701,6 @@ TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
         ASSERT_OK_AND_ASSIGN(auto index_readers,
                              global_index_scan->CreateReaders("f0", row_range_index));
         ASSERT_EQ(index_readers.size(), 0u);
-
-        auto predicate =
-            PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
-                                       Literal(FieldType::STRING, "Alice", 5));
-        ASSERT_OK_AND_ASSIGN(auto index_result,
-                             global_index_scan_impl->Scan(predicate, row_range_index));
-        ASSERT_FALSE(index_result);
     }
 }
 
@@ -745,9 +715,10 @@ TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
         "/append_with_global_index_with_partition.db/append_with_global_index_with_partition";
     auto check_result =
         [&](const std::optional<std::vector<std::map<std::string, std::string>>>& partitions) {
-            ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
-                                 GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                                         partitions, /*options=*/{}, fs_, pool_));
+            ASSERT_OK_AND_ASSIGN(
+                std::shared_ptr<GlobalIndexScan> global_index_scan,
+                GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt, partitions,
+                                        /*options=*/{}, fs_, /*executor=*/nullptr, pool_));
             // test index reader
             ASSERT_OK_AND_ASSIGN(RowRangeIndex row_range_index,
                                  RowRangeIndex::Create({Range(0, 4)}));
@@ -766,26 +737,19 @@ TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
                 auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2",
                                                          FieldType::INT, Literal(1));
 
-                ASSERT_OK_AND_ASSIGN(auto index_result,
-                                     global_index_scan_impl->Scan(predicate, row_range_index));
+                ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
                 ASSERT_FALSE(index_result);
             }
             {
                 // test not equal predicate for Bob
-                auto predicate = PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0",
-                                                            FieldType::STRING,
-                                                            Literal(FieldType::STRING, "Bob", 3));
-                ASSERT_OK_AND_ASSIGN(auto index_result,
-                                     global_index_scan_impl->Scan(predicate, row_range_index));
+                ASSERT_OK_AND_ASSIGN(auto index_result, index_readers[0]->VisitNotEqual(
+                                                            Literal(FieldType::STRING, "Bob", 3)));
                 ASSERT_EQ(index_result->ToString(), "{0,2,3}");
             }
             {
                 // test equal predicate for Alice
-                auto predicate = PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0",
-                                                         FieldType::STRING,
-                                                         Literal(FieldType::STRING, "Alice", 5));
-                ASSERT_OK_AND_ASSIGN(auto index_result,
-                                     global_index_scan_impl->Scan(predicate, row_range_index));
+                ASSERT_OK_AND_ASSIGN(auto index_result, index_readers[0]->VisitEqual(Literal(
+                                                            FieldType::STRING, "Alice", 5)));
                 ASSERT_EQ(index_result->ToString(), "{0}");
             }
         };
@@ -807,10 +771,10 @@ TEST_P(GlobalIndexTest, TestScanUnregisteredIndex) {
 
     std::string table_path = paimon::test::GetDataDir() + "/" + file_format_ +
                              "/append_with_global_index.db/append_with_global_index";
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<GlobalIndexScan> global_index_scan,
-        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
+                                                 /*executor=*/nullptr, pool_));
     ASSERT_OK_AND_ASSIGN(auto index_readers, global_index_scan->CreateReaders("f0", std::nullopt));
     ASSERT_EQ(index_readers.size(), 0u);
 
@@ -819,8 +783,7 @@ TEST_P(GlobalIndexTest, TestScanUnregisteredIndex) {
         PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                    Literal(FieldType::STRING, "Bob", 3));
 
-    ASSERT_OK_AND_ASSIGN(auto index_result,
-                         global_index_scan_impl->Scan(predicate, /*row_range_index=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto index_result, global_index_scan_impl->Scan(predicate));
     ASSERT_FALSE(index_result);
 }
 
@@ -848,10 +811,10 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndex) {
     ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f0", "bitmap",
                          /*options=*/{}, Range(0, 7)));
 
-    ASSERT_OK_AND_ASSIGN(
-        auto global_index_scan,
-        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
+    ASSERT_OK_AND_ASSIGN(auto global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
+                                                 /*executor=*/nullptr, pool_));
     ASSERT_OK_AND_ASSIGN(auto index_readers, global_index_scan->CreateReaders("f0", std::nullopt));
     ASSERT_EQ(index_readers.size(), 1u);
     ASSERT_OK_AND_ASSIGN(auto index_result,
@@ -924,22 +887,18 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
                                      const std::shared_ptr<arrow::Array>& expected_array,
                                      const std::map<int64_t, float>& id_to_score) {
         std::vector<std::map<std::string, std::string>> partitions = {partition};
-        ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
-                             GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                                     partitions, lumina_options, fs_, pool_));
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<GlobalIndexScan> global_index_scan,
+            GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt, partitions,
+                                    lumina_options, fs_, /*executor=*/nullptr, pool_));
         // check bitmap index
-        auto scanner_impl = std::dynamic_pointer_cast<GlobalIndexScanImpl>(global_index_scan);
-
-        auto predicate1 =
-            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
-                                    Literal(FieldType::STRING, "Alice", 5));
-        auto predicate2 =
-            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
-                                    Literal(FieldType::STRING, "Paul", 4));
-        ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::Or({predicate1, predicate2}));
-
-        ASSERT_OK_AND_ASSIGN(auto index_result, scanner_impl->Scan(predicate, row_range_index));
-        ASSERT_TRUE(index_result);
+        ASSERT_OK_AND_ASSIGN(auto readers, global_index_scan->CreateReaders("f0", row_range_index));
+        ASSERT_EQ(readers.size(), 1u);
+        ASSERT_OK_AND_ASSIGN(auto result1,
+                             readers[0]->VisitEqual(Literal(FieldType::STRING, "Alice", 5)));
+        ASSERT_OK_AND_ASSIGN(auto result2,
+                             readers[0]->VisitEqual(Literal(FieldType::STRING, "Paul", 4)));
+        ASSERT_OK_AND_ASSIGN(auto index_result, result1->Or(result2));
         ASSERT_EQ(index_result->ToString(), bitmap_result);
 
         // check lumina index
@@ -1000,7 +959,7 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
             GlobalIndexScan::Create(
                 table_path, /*snapshot_id=*/std::nullopt,
                 /*partitions=*/std::vector<std::map<std::string, std::string>>(), lumina_options,
-                fs_, pool_),
+                fs_, /*executor=*/nullptr, pool_),
             "invalid input partition, supposed to be null or at least one partition");
     }
 }
@@ -1624,10 +1583,11 @@ TEST_P(GlobalIndexTest, TestScanIndexWithTwoIndexes) {
     ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f1", "lumina",
                          /*options=*/lumina_options, Range(0, 8)));
 
-    ASSERT_OK_AND_ASSIGN(auto global_index_scan,
-                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                                 /*partitions=*/std::nullopt,
-                                                 /*options=*/lumina_options, fs_, pool_));
+    ASSERT_OK_AND_ASSIGN(
+        auto global_index_scan,
+        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                /*partitions=*/std::nullopt,
+                                /*options=*/lumina_options, fs_, /*executor=*/nullptr, pool_));
     // query f0
     ASSERT_OK_AND_ASSIGN(auto index_readers, global_index_scan->CreateReaders("f0", std::nullopt));
     ASSERT_EQ(index_readers.size(), 1);
@@ -2078,13 +2038,13 @@ TEST_P(GlobalIndexTest, TestLuceneWriteCommitScanReadIndexWithScore) {
     ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f0", "lucene-fts",
                          /*options=*/lucene_options, Range(0, 3)));
 
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<GlobalIndexScan> global_index_scan,
-        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
+                                                 /*executor=*/nullptr, pool_));
     // test f0 field
     ASSERT_OK_AND_ASSIGN(auto index_readers,
-                         global_index_scan->CreateReaders("f0", /*row_rangw_index=*/std::nullopt));
+                         global_index_scan->CreateReaders("f0", /*row_range_index=*/std::nullopt));
     ASSERT_EQ(index_readers.size(), 1u);
     auto index_reader = index_readers[0];
     {
@@ -2145,10 +2105,10 @@ TEST_P(GlobalIndexTest, TestBTreeWriteCommitScanReadIndex) {
     ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f0", "btree",
                          /*options=*/{}, Range(0, 7)));
 
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<GlobalIndexScan> global_index_scan,
-        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
+                                                 /*executor=*/nullptr, pool_));
     ASSERT_OK_AND_ASSIGN(auto index_readers,
                          global_index_scan->CreateReaders("f0", /*row_range_index=*/std::nullopt));
     ASSERT_EQ(index_readers.size(), 1u);
@@ -2248,8 +2208,7 @@ TEST_P(GlobalIndexTest, TestBTreeWriteCommitScanReadIndex) {
         auto predicate =
             PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                     Literal(FieldType::STRING, "Tony", 4));
-        ASSERT_OK_AND_ASSIGN(auto result,
-                             scan_impl->Scan(predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto result, scan_impl->Scan(predicate));
         ASSERT_TRUE(result);
         ASSERT_EQ(result->ToString(), "{5,6}");
     }
@@ -2263,8 +2222,7 @@ TEST_P(GlobalIndexTest, TestBTreeWriteCommitScanReadIndex) {
         auto f1_predicate = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                     FieldType::INT, Literal(20));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({f0_predicate, f1_predicate}));
-        ASSERT_OK_AND_ASSIGN(auto result,
-                             scan_impl->Scan(predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto result, scan_impl->Scan(predicate));
         ASSERT_TRUE(result);
         ASSERT_EQ(result->ToString(), "{1,2}");
     }
@@ -2294,8 +2252,7 @@ TEST_P(GlobalIndexTest, TestBTreeWriteCommitScanReadIndex) {
             PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                     Literal(FieldType::STRING, "Bob", 3));
         auto scan_impl = std::dynamic_pointer_cast<GlobalIndexScanImpl>(global_index_scan);
-        ASSERT_OK_AND_ASSIGN(auto index_result,
-                             scan_impl->Scan(predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, scan_impl->Scan(predicate));
         ASSERT_TRUE(index_result);
         ASSERT_EQ(index_result->ToString(), "{1,2}");
 
@@ -2356,10 +2313,10 @@ TEST_P(GlobalIndexTest, TestBTreeWriteCommitScanReadIndexWithPartition) {
 
     // Scan all partitions
     {
-        ASSERT_OK_AND_ASSIGN(
-            std::shared_ptr<GlobalIndexScan> global_index_scan,
-            GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                    /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
+                             GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                     /*partitions=*/std::nullopt, /*options=*/{},
+                                                     fs_, /*executor=*/nullptr, pool_));
         ASSERT_OK_AND_ASSIGN(auto index_readers,
                              global_index_scan->CreateReaders("f0", std::nullopt));
         // One reader per partition range -> 2 ranges -> UnionGlobalIndexReader wraps them
@@ -2391,7 +2348,7 @@ TEST_P(GlobalIndexTest, TestBTreeWriteCommitScanReadIndexWithPartition) {
         ASSERT_OK_AND_ASSIGN(
             std::shared_ptr<GlobalIndexScan> global_index_scan,
             GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt, partitions,
-                                    /*options=*/{}, fs_, pool_));
+                                    /*options=*/{}, fs_, /*executor=*/nullptr, pool_));
         ASSERT_OK_AND_ASSIGN(auto index_readers,
                              global_index_scan->CreateReaders("f0", std::nullopt));
         ASSERT_EQ(index_readers.size(), 1u);
@@ -2411,10 +2368,10 @@ TEST_P(GlobalIndexTest, TestBTreeWriteCommitScanReadIndexWithPartition) {
 
     // Scan with row_range_index filtering: only range [5,7] (partition f1=20)
     {
-        ASSERT_OK_AND_ASSIGN(
-            std::shared_ptr<GlobalIndexScan> global_index_scan,
-            GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                    /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
+                             GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                     /*partitions=*/std::nullopt, /*options=*/{},
+                                                     fs_, /*executor=*/nullptr, pool_));
         ASSERT_OK_AND_ASSIGN(RowRangeIndex row_range_index, RowRangeIndex::Create({Range(5, 7)}));
         ASSERT_OK_AND_ASSIGN(auto index_readers,
                              global_index_scan->CreateReaders("f0", row_range_index));
@@ -2429,18 +2386,17 @@ TEST_P(GlobalIndexTest, TestBTreeWriteCommitScanReadIndexWithPartition) {
 
     // Full pipeline with evaluator: Scan(predicate) -> read data
     {
-        ASSERT_OK_AND_ASSIGN(
-            std::shared_ptr<GlobalIndexScan> global_index_scan,
-            GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                    /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
+                             GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                     /*partitions=*/std::nullopt, /*options=*/{},
+                                                     fs_, /*executor=*/nullptr, pool_));
         auto scanner_impl = std::dynamic_pointer_cast<GlobalIndexScanImpl>(global_index_scan);
         ASSERT_TRUE(scanner_impl);
 
         auto predicate =
             PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                     Literal(FieldType::STRING, "Tony", 4));
-        ASSERT_OK_AND_ASSIGN(auto index_result,
-                             scanner_impl->Scan(predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, scanner_impl->Scan(predicate));
         ASSERT_TRUE(index_result);
         ASSERT_EQ(index_result->ToString(), "{4,7}");
 
@@ -2458,6 +2414,105 @@ TEST_P(GlobalIndexTest, TestBTreeWriteCommitScanReadIndexWithPartition) {
     }
 }
 
+TEST_P(GlobalIndexTest, TestBTreeWithPartitionAndCustomExecutor) {
+    // Test that UnionGlobalIndexReader uses a custom 8-thread executor to read
+    // btree indexes from two partitions in parallel.
+    auto schema = arrow::schema(fields_);
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, file_format_},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(/*partition_keys=*/{"f1"}, schema, options);
+
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    std::vector<std::string> write_cols = schema->field_names();
+
+    // Write partition f1=10 (5 rows, sorted by f0)
+    auto src_array1 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+["Alice", 10, 1, 11.1],
+["Bob", 10, 1, 12.1],
+["Bob", 10, 0, 13.1],
+["Emily", 10, 0, 14.1],
+["Tony", 10, 1, 15.1]
+    ])")
+                          .ValueOrDie();
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs1,
+                         WriteArray(table_path, {{"f1", "10"}}, write_cols, src_array1));
+    ASSERT_OK(Commit(table_path, commit_msgs1));
+    ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{{{"f1", "10"}}}, "f0", "btree",
+                         /*options=*/{}, Range(0, 4)));
+
+    // Write partition f1=20 (3 rows, sorted by f0)
+    auto src_array2 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+["Alice", 20, null, 16.1],
+["Lucy", 20, 1, 17.1],
+["Tony", 20, 0, 18.1]
+    ])")
+                          .ValueOrDie();
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs2,
+                         WriteArray(table_path, {{"f1", "20"}}, write_cols, src_array2));
+    ASSERT_OK(Commit(table_path, commit_msgs2));
+    ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{{{"f1", "20"}}}, "f0", "btree",
+                         /*options=*/{}, Range(5, 7)));
+
+    // Create a GlobalIndexScan with an explicit 8-thread executor
+    std::shared_ptr<Executor> executor = CreateDefaultExecutor(/*thread_count=*/8);
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<GlobalIndexScan> global_index_scan,
+        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, executor, pool_));
+
+    // CreateReaders should return 1 UnionGlobalIndexReader (2 sub-readers for 2 ranges)
+    ASSERT_OK_AND_ASSIGN(auto index_readers, global_index_scan->CreateReaders("f0", std::nullopt));
+    ASSERT_EQ(index_readers.size(), 1u);
+
+    auto union_reader = std::dynamic_pointer_cast<UnionGlobalIndexReader>(index_readers[0]);
+    ASSERT_TRUE(union_reader);
+    ASSERT_EQ(union_reader->executor_, executor);
+
+    // "Alice" in both partitions: global ids {0, 5}
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         index_readers[0]->VisitEqual(Literal(FieldType::STRING, "Alice", 5)));
+    ASSERT_TRUE(result);
+    ASSERT_EQ(result->ToString(), "{0,5}");
+
+    // "Bob" only in f1=10: global ids {1, 2}
+    ASSERT_OK_AND_ASSIGN(auto result2,
+                         index_readers[0]->VisitEqual(Literal(FieldType::STRING, "Bob", 3)));
+    ASSERT_TRUE(result2);
+    ASSERT_EQ(result2->ToString(), "{1,2}");
+
+    // "Lucy" only in f1=20: global id {6}
+    ASSERT_OK_AND_ASSIGN(auto result3,
+                         index_readers[0]->VisitEqual(Literal(FieldType::STRING, "Lucy", 4)));
+    ASSERT_TRUE(result3);
+    ASSERT_EQ(result3->ToString(), "{6}");
+
+    // Full pipeline: evaluator with the 8-thread executor
+    auto scanner_impl = std::dynamic_pointer_cast<GlobalIndexScanImpl>(global_index_scan);
+    ASSERT_TRUE(scanner_impl);
+
+    auto predicate =
+        PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                Literal(FieldType::STRING, "Tony", 4));
+    ASSERT_OK_AND_ASSIGN(auto index_result, scanner_impl->Scan(predicate));
+    ASSERT_TRUE(index_result);
+    ASSERT_EQ(index_result->ToString(), "{4,7}");
+
+    auto result_fields = fields_;
+    result_fields.insert(result_fields.begin(), SpecialFields::ValueKind().ArrowField());
+    auto expected_array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Tony", 10, 1, 15.1],
+[0, "Tony", 20, 0, 18.1]
+    ])")
+            .ValueOrDie();
+    ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr,
+                                                           /*options=*/{}, index_result));
+    ASSERT_OK(ReadData(table_path, write_cols, expected_array, /*predicate=*/nullptr, plan));
+}
+
 TEST_P(GlobalIndexTest, TestBTreeAndBitmapCoexist) {
     // Test btree-global and bitmap index coexisting on the same field (f0).
     // The evaluator should AND their results, producing the intersection.
@@ -2466,7 +2521,7 @@ TEST_P(GlobalIndexTest, TestBTreeAndBitmapCoexist) {
     auto schema = arrow::schema(fields_);
     std::vector<std::string> write_cols = schema->field_names();
 
-    // Data sorted by f0 for btree: Alice < Bob < Bob < Emily < Lucy < Tony < Tony < null
+    // Data sorted by f0 for btree: Alice < Bob < Bob < Emily < Lucy < Tony < Tony
     auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
 ["Alice", 10, 1, 11.1],
 ["Bob", 10, 1, 12.1],
@@ -2488,19 +2543,19 @@ TEST_P(GlobalIndexTest, TestBTreeAndBitmapCoexist) {
     ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f0", "bitmap",
                          /*options=*/{}, Range(0, 7)));
 
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<GlobalIndexScan> global_index_scan,
-        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
+                                                 /*executor=*/nullptr, pool_));
 
     // Two index types on f0 -> 2 readers
     ASSERT_OK_AND_ASSIGN(auto index_readers, global_index_scan->CreateReaders("f0", std::nullopt));
     ASSERT_EQ(index_readers.size(), 2u);
 
     // Each reader individually should return the same result for Equal("Bob")
-    for (size_t i = 0; i < index_readers.size(); i++) {
+    for (const auto& index_reader : index_readers) {
         ASSERT_OK_AND_ASSIGN(auto result,
-                             index_readers[i]->VisitEqual(Literal(FieldType::STRING, "Bob", 3)));
+                             index_reader->VisitEqual(Literal(FieldType::STRING, "Bob", 3)));
         ASSERT_TRUE(result);
         ASSERT_EQ(result->ToString(), "{1,2}");
     }
@@ -2514,8 +2569,7 @@ TEST_P(GlobalIndexTest, TestBTreeAndBitmapCoexist) {
         auto predicate =
             PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                     Literal(FieldType::STRING, "Bob", 3));
-        ASSERT_OK_AND_ASSIGN(auto result,
-                             evaluator->Evaluate(predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto result, evaluator->Evaluate(predicate));
         ASSERT_TRUE(result);
         ASSERT_EQ(result->ToString(), "{1,2}");
     }
@@ -2524,8 +2578,7 @@ TEST_P(GlobalIndexTest, TestBTreeAndBitmapCoexist) {
         auto predicate =
             PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                        Literal(FieldType::STRING, "Bob", 3));
-        ASSERT_OK_AND_ASSIGN(auto result,
-                             evaluator->Evaluate(predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto result, evaluator->Evaluate(predicate));
         ASSERT_TRUE(result);
         ASSERT_EQ(result->ToString(), "{0,3,4,5,6}");
     }
@@ -2533,8 +2586,7 @@ TEST_P(GlobalIndexTest, TestBTreeAndBitmapCoexist) {
         // IsNull: both agree on row 7
         auto predicate =
             PredicateBuilder::IsNull(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING);
-        ASSERT_OK_AND_ASSIGN(auto result,
-                             evaluator->Evaluate(predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto result, evaluator->Evaluate(predicate));
         ASSERT_TRUE(result);
         ASSERT_EQ(result->ToString(), "{7}");
     }
@@ -2544,8 +2596,7 @@ TEST_P(GlobalIndexTest, TestBTreeAndBitmapCoexist) {
         auto predicate =
             PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                     Literal(FieldType::STRING, "Alice", 5));
-        ASSERT_OK_AND_ASSIGN(auto index_result,
-                             scanner_impl->Scan(predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, scanner_impl->Scan(predicate));
         ASSERT_TRUE(index_result);
         ASSERT_EQ(index_result->ToString(), "{0}");
 
@@ -2571,8 +2622,7 @@ TEST_P(GlobalIndexTest, TestBTreeAndBitmapCoexist) {
         auto f1_pred = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                FieldType::INT, Literal(10));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({f0_pred, f1_pred}));
-        ASSERT_OK_AND_ASSIGN(auto index_result,
-                             scanner_impl->Scan(predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, scanner_impl->Scan(predicate));
         ASSERT_TRUE(index_result);
         ASSERT_EQ(index_result->ToString(), "{1,2}");
 
@@ -2598,10 +2648,10 @@ TEST_P(GlobalIndexTest, TestBTreeScanWithPartitionWithMultiMeta) {
         paimon::test::GetDataDir() + "/" + file_format_ +
         "/append_with_btree_with_partition.db/append_with_btree_with_partition";
 
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<GlobalIndexScan> global_index_scan,
-        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
+                                                 /*executor=*/nullptr, pool_));
 
     auto count_rows = [](const std::shared_ptr<GlobalIndexResult>& result) -> int64_t {
         EXPECT_TRUE(result);
@@ -2716,9 +2766,8 @@ TEST_P(GlobalIndexTest, TestBTreeScanWithPartitionWithMultiMeta) {
             auto eq_present,
             reader->VisitEqual(Literal(Decimal::FromUnscaledLong(5 * 123456L, 18, 6))));
         ASSERT_EQ(count_rows(eq_present), 2);
-        ASSERT_OK_AND_ASSIGN(
-            auto eq_missing,
-            reader->VisitEqual(Literal(Decimal::FromUnscaledLong(/*unscaled=*/1L, 18, 6))));
+        ASSERT_OK_AND_ASSIGN(auto eq_missing,
+                             reader->VisitEqual(Literal(Decimal::FromUnscaledLong(1L, 18, 6))));
         ASSERT_EQ(count_rows(eq_missing), 0);
         // GreaterThan(i=10): i in [11, 19] -> 18 rows globally.
         ASSERT_OK_AND_ASSIGN(
@@ -2795,10 +2844,11 @@ TEST_P(GlobalIndexTest, TestBTreeWithLumina) {
     ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f1", "lumina",
                          /*options=*/lumina_options, Range(0, 7)));
 
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
-                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                                 /*partitions=*/std::nullopt,
-                                                 /*options=*/lumina_options, fs_, pool_));
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<GlobalIndexScan> global_index_scan,
+        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                /*partitions=*/std::nullopt,
+                                /*options=*/lumina_options, fs_, /*executor=*/nullptr, pool_));
 
     // Query f0 via btree
     {
@@ -2839,8 +2889,7 @@ TEST_P(GlobalIndexTest, TestBTreeWithLumina) {
         auto predicate =
             PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                     Literal(FieldType::STRING, "Bob", 3));
-        ASSERT_OK_AND_ASSIGN(auto index_result,
-                             scanner_impl->Scan(predicate, /*row_range_index=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(auto index_result, scanner_impl->Scan(predicate));
         ASSERT_TRUE(index_result);
         ASSERT_EQ(index_result->ToString(), "{2,3}");
 

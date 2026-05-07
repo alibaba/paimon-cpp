@@ -129,13 +129,14 @@ Result<std::shared_ptr<GlobalIndexResult>> DataEvolutionBatchScan::EvalGlobalInd
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<GlobalIndexScan> index_scan,
         GlobalIndexScan::Create(table_path_, core_options_.GetScanSnapshotId(), partition_filter,
-                                core_options_.ToMap(), core_options_.GetFileSystem(), pool_));
+                                core_options_.ToMap(), core_options_.GetFileSystem(), executor_,
+                                pool_));
     auto index_scan_impl = dynamic_cast<GlobalIndexScanImpl*>(index_scan.get());
     if (!index_scan_impl) {
         return Status::Invalid("invalid GlobalIndexScan, cannot cast to GlobalIndexScanImpl");
     }
 
-    return index_scan_impl->Scan(predicate, /*row_range_index=*/std::nullopt);
+    return index_scan_impl->Scan(predicate);
 }
 
 }  // namespace paimon

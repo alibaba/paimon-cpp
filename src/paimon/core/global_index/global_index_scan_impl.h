@@ -38,17 +38,17 @@ class GlobalIndexScanImpl : public GlobalIndexScan {
     static Result<std::unique_ptr<GlobalIndexScanImpl>> Create(
         const std::string& root_path, const std::shared_ptr<TableSchema>& table_schema,
         const Snapshot& snapshot, const std::shared_ptr<PredicateFilter>& partitions,
-        const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool);
+        const CoreOptions& options, const std::shared_ptr<Executor>& executor,
+        const std::shared_ptr<MemoryPool>& pool);
 
-    Result<std::shared_ptr<GlobalIndexResult>> Scan(
-        const std::shared_ptr<Predicate>& predicate,
-        const std::optional<RowRangeIndex>& row_range_index);
-
-    Result<std::vector<std::shared_ptr<GlobalIndexReader>>> CreateReaders(
-        int32_t field_id, const std::optional<RowRangeIndex>& row_range_index) const;
+    Result<std::shared_ptr<GlobalIndexResult>> Scan(const std::shared_ptr<Predicate>& predicate);
 
     Result<std::vector<std::shared_ptr<GlobalIndexReader>>> CreateReaders(
-        const std::string& field_name, const std::optional<RowRangeIndex>& row_range_index) const;
+        const std::string& field_name,
+        const std::optional<RowRangeIndex>& row_range_index) const override;
+
+    Result<std::vector<std::shared_ptr<GlobalIndexReader>>> CreateReaders(
+        int32_t field_id, const std::optional<RowRangeIndex>& row_range_index) const override;
 
  private:
     /// (id->index_type->row_range) -> index meta list
@@ -59,7 +59,8 @@ class GlobalIndexScanImpl : public GlobalIndexScan {
     GlobalIndexScanImpl(const std::shared_ptr<TableSchema>& table_schema,
                         const CoreOptions& options,
                         const std::shared_ptr<IndexPathFactory>& path_factory,
-                        IndexMetaMap&& index_metas, const std::shared_ptr<MemoryPool>& pool);
+                        IndexMetaMap&& index_metas, const std::shared_ptr<Executor>& executor,
+                        const std::shared_ptr<MemoryPool>& pool);
 
     Result<std::shared_ptr<GlobalIndexEvaluator>> GetOrCreateIndexEvaluator();
 
@@ -78,6 +79,7 @@ class GlobalIndexScanImpl : public GlobalIndexScan {
     CoreOptions options_;
     std::shared_ptr<GlobalIndexFileManager> index_file_manager_;
     IndexMetaMap index_metas_;
+    std::shared_ptr<Executor> executor_;
     std::shared_ptr<GlobalIndexEvaluator> evaluator_;
 };
 

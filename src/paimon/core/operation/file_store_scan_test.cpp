@@ -129,4 +129,58 @@ TEST_F(FileStoreScanTest, TestCreatePartitionPredicateWithInvalidPartitionFilter
                         "field invalid does not exist in partition keys");
 }
 
+TEST_F(FileStoreScanTest, TestFilterManifestByRowRanges) {
+    class FakeFileStoreScan : public FileStoreScan {
+     public:
+        FakeFileStoreScan(const std::shared_ptr<SnapshotManager>& snapshot_manager,
+                          const std::shared_ptr<SchemaManager>& schema_manager,
+                          const std::shared_ptr<ManifestList>& manifest_list,
+                          const std::shared_ptr<ManifestFile>& manifest_file,
+                          const std::shared_ptr<TableSchema>& table_schema,
+                          const std::shared_ptr<arrow::Schema>& schema,
+                          const CoreOptions& core_options,
+                          const std::shared_ptr<Executor>& executor,
+                          const std::shared_ptr<MemoryPool>& pool)
+            : FileStoreScan(snapshot_manager, schema_manager, manifest_list, manifest_file,
+                            table_schema, schema, core_options, executor, pool) {}
+        Result<bool> FilterByStats(const ManifestEntry& entry) const override {
+            return false;
+        }
+    };
+    // row id [10, 20]
+    auto manifest1 =
+        ManifestFileMeta("manifest-65b0d403-a1bc-4157-b242-bff73c46596d-0", /*file_size=*/2779,
+                         /*num_added_files=*/1, /*num_deleted_files=*/0, SimpleStats::EmptyStats(),
+                         /*schema_id=*/0, /*min_bucket=*/0, /*max_bucket=*/0,
+                         /*min_level=*/0, /*max_level=*/0,
+                         /*min_row_id=*/10, /*max_row_id=*/20);
+
+    ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({{}}));
+    auto file_store_scan = std::make_shared<FakeFileStoreScan>(
+        /*snapshot_manager=*/nullptr, /*schema_manager=*/nullptr, /*manifest_list=*/nullptr,
+        /*manifest_file=*/nullptr, /*table_schema=*/nullptr, /*schema=*/nullptr, options,
+        /*executor=*/CreateDefaultExecutor(), GetDefaultPool());
+    ASSERT_TRUE(file_store_scan->FilterManifestByRowRanges(manifest1));
+
+    ASSERT_OK_AND_ASSIGN(
+        RowRangeIndex row_range_index,
+        RowRangeIndex::Create(std::vector<Range>({Range(0, 15), Range(100, 200)})));
+    file_store_scan->WithRowRangeIndex(row_range_index);
+    ASSERT_TRUE(file_store_scan->FilterManifestByRowRanges(manifest1));
+
+    ASSERT_OK_AND_ASSIGN(row_range_index,
+                         RowRangeIndex::Create(std::vector<Range>({Range(0, 5), Range(100, 200)})));
+    file_store_scan->WithRowRangeIndex(row_range_index);
+    ASSERT_FALSE(file_store_scan->FilterManifestByRowRanges(manifest1));
+
+    auto manifest2 =
+        ManifestFileMeta("manifest-65b0d403-a1bc-4157-b242-bff73c46596d-0", /*file_size=*/2779,
+                         /*num_added_files=*/1, /*num_deleted_files=*/0, SimpleStats::EmptyStats(),
+                         /*schema_id=*/0, /*min_bucket=*/0, /*max_bucket=*/0,
+                         /*min_level=*/0, /*max_level=*/0,
+                         /*min_row_id=*/std::nullopt, /*max_row_id=*/std::nullopt);
+    ASSERT_OK_AND_ASSIGN(row_range_index, RowRangeIndex::Create(std::vector<Range>({Range(0, 0)})));
+    file_store_scan->WithRowRangeIndex(row_range_index);
+    ASSERT_TRUE(file_store_scan->FilterManifestByRowRanges(manifest2));
+}
 }  // namespace paimon::test

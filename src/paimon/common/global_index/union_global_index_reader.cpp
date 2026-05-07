@@ -185,7 +185,7 @@ Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::Union(ReaderA
 template <typename R>
 std::vector<R> UnionGlobalIndexReader::ExecuteAllReaders(
     const std::function<R(const std::shared_ptr<GlobalIndexReader>&)>& action) {
-    if (executor_ == nullptr) {
+    if (executor_ == nullptr || readers_.size() == 1) {
         std::vector<R> results;
         results.reserve(readers_.size());
         for (const auto& reader : readers_) {

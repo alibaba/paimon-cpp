@@ -174,9 +174,10 @@ class PAIMON_EXPORT CoreOptions {
     int64_t GetLookupCacheFileRetentionMs() const;
     int64_t GetLookupCacheMaxDiskSize() const;
 
-    const std::map<std::string, std::string>& ToMap() const;
-
     BucketFunctionType GetBucketFunctionType() const;
+    std::optional<int32_t> GetGlobalIndexThreadNum() const;
+
+    const std::map<std::string, std::string>& ToMap() const;
 
  private:
     std::optional<std::string> GetDataFileExternalPaths() const;

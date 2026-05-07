@@ -25,6 +25,7 @@
 #include "gtest/gtest.h"
 #include "paimon/executor.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
+#include "paimon/global_index/bitmap_scored_global_index_result.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/testing/utils/testharness.h"
 #include "paimon/utils/roaring_bitmap64.h"
@@ -51,6 +52,13 @@ class FakeReader : public GlobalIndexReader {
         return_error_ = true;
         return_nullptr_ = false;
         error_message_ = message;
+    }
+
+    /// Sets a scored result returned by VisitVectorSearch.
+    void SetScoredResult(const std::vector<int64_t>& row_ids, const std::vector<float>& scores) {
+        scored_row_ids_ = row_ids;
+        scored_scores_ = scores;
+        has_scored_result_ = true;
     }
 
     /// Counts how many times any Visit* method was invoked. Useful to assert all readers
@@ -124,7 +132,13 @@ class FakeReader : public GlobalIndexReader {
         if (return_error_) {
             return Status::Invalid(error_message_);
         }
-        return std::shared_ptr<ScoredGlobalIndexResult>(nullptr);
+        if (!has_scored_result_) {
+            return std::shared_ptr<ScoredGlobalIndexResult>(nullptr);
+        }
+        auto bitmap = RoaringBitmap64::From(scored_row_ids_);
+        auto scores = scored_scores_;
+        return std::make_shared<BitmapScoredGlobalIndexResult>(std::move(bitmap),
+                                                               std::move(scores));
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitFullTextSearch(
@@ -159,7 +173,10 @@ class FakeReader : public GlobalIndexReader {
     bool return_nullptr_ = false;
     bool return_error_ = false;
     std::string error_message_;
-    std::atomic<int> invocation_count_{0};
+    std::vector<int64_t> scored_row_ids_;
+    std::vector<float> scored_scores_;
+    bool has_scored_result_ = false;
+    std::atomic<int32_t> invocation_count_{0};
 };
 
 class UnionGlobalIndexReaderTest : public ::testing::Test {
@@ -174,6 +191,20 @@ class UnionGlobalIndexReaderTest : public ::testing::Test {
         ASSERT_EQ(*bitmap, RoaringBitmap64::From(expected))
             << "result=" << bitmap->ToString()
             << ", expected=" << RoaringBitmap64::From(expected).ToString();
+    }
+
+    static void CheckScoredResult(const std::shared_ptr<ScoredGlobalIndexResult>& result,
+                                  const std::vector<int64_t>& expected_row_ids,
+                                  const std::vector<float>& expected_scores) {
+        ASSERT_TRUE(result);
+        auto typed_result = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(result);
+        ASSERT_TRUE(typed_result);
+        ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, typed_result->GetBitmap());
+        ASSERT_TRUE(bitmap);
+        ASSERT_EQ(*bitmap, RoaringBitmap64::From(expected_row_ids))
+            << "result=" << bitmap->ToString()
+            << ", expected=" << RoaringBitmap64::From(expected_row_ids).ToString();
+        ASSERT_EQ(typed_result->GetScores(), expected_scores);
     }
 };
 
@@ -419,6 +450,7 @@ TEST_F(UnionGlobalIndexReaderTest, TestVisitFullTextSearchUnion) {
 TEST_F(UnionGlobalIndexReaderTest, TestVisitVectorSearchAllNullptr) {
     auto reader1 = std::make_shared<FakeReader>();
     auto reader2 = std::make_shared<FakeReader>();
+    // Neither reader has SetScoredResult -> VisitVectorSearch returns nullptr
     reader1->SetDefaultResult({1});
     reader2->SetDefaultResult({2});
 
@@ -429,10 +461,52 @@ TEST_F(UnionGlobalIndexReaderTest, TestVisitVectorSearchAllNullptr) {
     ASSERT_FALSE(result);
 }
 
+TEST_F(UnionGlobalIndexReaderTest, TestVisitVectorSearchSingleReader) {
+    auto reader = std::make_shared<FakeReader>();
+    reader->SetScoredResult({1, 3, 5}, {0.9f, 0.7f, 0.5f});
+
+    std::vector<std::shared_ptr<GlobalIndexReader>> readers = {reader};
+    UnionGlobalIndexReader union_reader(std::move(readers), nullptr);
+
+    ASSERT_OK_AND_ASSIGN(auto result, union_reader.VisitVectorSearch(nullptr));
+    CheckScoredResult(result, {1, 3, 5}, {0.9f, 0.7f, 0.5f});
+}
+
+TEST_F(UnionGlobalIndexReaderTest, TestVisitVectorSearchMultipleReadersUnion) {
+    auto reader1 = std::make_shared<FakeReader>();
+    auto reader2 = std::make_shared<FakeReader>();
+    reader1->SetScoredResult({1, 3}, {0.9f, 0.7f});
+    reader2->SetScoredResult({2, 4}, {0.8f, 0.6f});
+
+    std::vector<std::shared_ptr<GlobalIndexReader>> readers = {reader1, reader2};
+    UnionGlobalIndexReader union_reader(std::move(readers), nullptr);
+
+    ASSERT_OK_AND_ASSIGN(auto result, union_reader.VisitVectorSearch(nullptr));
+    // {1,3} OR {2,4} -> {1,2,3,4}, scores merged in row id order
+    CheckScoredResult(result, {1, 2, 3, 4}, {0.9f, 0.8f, 0.7f, 0.6f});
+}
+
+TEST_F(UnionGlobalIndexReaderTest, TestVisitVectorSearchPartialNullptr) {
+    auto reader1 = std::make_shared<FakeReader>();
+    auto reader2 = std::make_shared<FakeReader>();
+    auto reader3 = std::make_shared<FakeReader>();
+    reader1->SetScoredResult({1, 2}, {0.9f, 0.8f});
+    // reader2 has no scored result -> returns nullptr
+    reader2->SetDefaultResult({10});
+    reader3->SetScoredResult({5, 6}, {0.5f, 0.4f});
+
+    std::vector<std::shared_ptr<GlobalIndexReader>> readers = {reader1, reader2, reader3};
+    UnionGlobalIndexReader union_reader(std::move(readers), nullptr);
+
+    ASSERT_OK_AND_ASSIGN(auto result, union_reader.VisitVectorSearch(nullptr));
+    // reader2 nullptr is skipped, {1,2} OR {5,6} -> {1,2,5,6}
+    CheckScoredResult(result, {1, 2, 5, 6}, {0.9f, 0.8f, 0.5f, 0.4f});
+}
+
 TEST_F(UnionGlobalIndexReaderTest, TestVisitVectorSearchErrorPropagation) {
     auto reader1 = std::make_shared<FakeReader>();
     auto reader2 = std::make_shared<FakeReader>();
-    reader1->SetDefaultResult({1});
+    reader1->SetScoredResult({1}, {0.9f});
     reader2->SetReturnError("vector search failure");
 
     std::vector<std::shared_ptr<GlobalIndexReader>> readers = {reader1, reader2};

@@ -69,7 +69,7 @@ Result<std::unique_ptr<GlobalIndexScan>> GlobalIndexScan::Create(
     const std::string& root_path, const std::optional<int64_t>& snapshot_id,
     const std::optional<std::vector<std::map<std::string, std::string>>>& partitions,
     const std::map<std::string, std::string>& options,
-    const std::shared_ptr<FileSystem>& file_system,
+    const std::shared_ptr<FileSystem>& file_system, const std::shared_ptr<Executor>& executor,
     const std::shared_ptr<MemoryPool>& memory_pool) {
     if (partitions && partitions.value().empty()) {
         return Status::Invalid(
@@ -90,13 +90,13 @@ Result<std::unique_ptr<GlobalIndexScan>> GlobalIndexScan::Create(
     }
     PAIMON_ASSIGN_OR_RAISE(Snapshot snapshot, LoadSnapshot(root_path, snapshot_id, core_options));
     return GlobalIndexScanImpl::Create(root_path, table_schema, snapshot, partition_filters,
-                                       core_options, pool);
+                                       core_options, executor, pool);
 }
 
 Result<std::unique_ptr<GlobalIndexScan>> GlobalIndexScan::Create(
     const std::string& root_path, const std::optional<int64_t>& snapshot_id,
     const std::shared_ptr<Predicate>& partitions, const std::map<std::string, std::string>& options,
-    const std::shared_ptr<FileSystem>& file_system,
+    const std::shared_ptr<FileSystem>& file_system, const std::shared_ptr<Executor>& executor,
     const std::shared_ptr<MemoryPool>& memory_pool) {
     std::shared_ptr<PredicateFilter> partition_filters;
     if (partitions) {
@@ -112,7 +112,7 @@ Result<std::unique_ptr<GlobalIndexScan>> GlobalIndexScan::Create(
                            MergeOptions(table_schema, options, file_system));
     PAIMON_ASSIGN_OR_RAISE(Snapshot snapshot, LoadSnapshot(root_path, snapshot_id, core_options));
     return GlobalIndexScanImpl::Create(root_path, table_schema, snapshot, partition_filters,
-                                       core_options, pool);
+                                       core_options, executor, pool);
 }
 
 }  // namespace paimon

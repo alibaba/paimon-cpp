@@ -46,6 +46,8 @@ class PAIMON_EXPORT GlobalIndexScan {
     /// @param file_system    File system for accessing index files.
     ///                       If not provided (nullptr), it is inferred from the `FILE_SYSTEM`
     ///                       key in the `options` parameter.
+    /// @param executor       The executor to be used for asynchronous operations during global
+    ///                       index scan.
     /// @param pool           Memory pool for temporary allocations; if nullptr, uses default.
     /// @return A `Result` containing a unique pointer to the created scanner,
     ///         or an error if initialization fails (e.g., I/O error, invalid snapshot id,
@@ -54,7 +56,8 @@ class PAIMON_EXPORT GlobalIndexScan {
         const std::string& table_path, const std::optional<int64_t>& snapshot_id,
         const std::optional<std::vector<std::map<std::string, std::string>>>& partitions,
         const std::map<std::string, std::string>& options,
-        const std::shared_ptr<FileSystem>& file_system, const std::shared_ptr<MemoryPool>& pool);
+        const std::shared_ptr<FileSystem>& file_system, const std::shared_ptr<Executor>& executor,
+        const std::shared_ptr<MemoryPool>& pool);
 
     /// Creates a `GlobalIndexScan` instance for the specified table and context, with a
     /// predicate-based partition filter.
@@ -66,15 +69,17 @@ class PAIMON_EXPORT GlobalIndexScan {
     /// @param options           User defined configuration.
     /// @param file_system       File system for accessing index files. If nullptr, it is
     ///                          inferred from the `FILE_SYSTEM` key in `options`.
-    /// @param memory_pool       Memory pool for temporary allocations; if nullptr, uses default.
+    /// @param executor          The executor to be used for asynchronous operations during global
+    ///                          index scan.
+    /// @param pool              Memory pool for temporary allocations; if nullptr, uses default.
     /// @return A `Result` containing a unique pointer to the created scanner,
     ///         or an error if initialization fails.
     static Result<std::unique_ptr<GlobalIndexScan>> Create(
         const std::string& root_path, const std::optional<int64_t>& snapshot_id,
         const std::shared_ptr<Predicate>& partition_filters,
         const std::map<std::string, std::string>& options,
-        const std::shared_ptr<FileSystem>& file_system,
-        const std::shared_ptr<MemoryPool>& memory_pool);
+        const std::shared_ptr<FileSystem>& file_system, const std::shared_ptr<Executor>& executor,
+        const std::shared_ptr<MemoryPool>& pool);
 
     virtual ~GlobalIndexScan() = default;
 
@@ -83,7 +88,8 @@ class PAIMON_EXPORT GlobalIndexScan {
     /// @param row_range_index  Optional row range that limits the scan to a sub-range of row ids.
     ///                         If not provided, the entire row range is considered.
     /// @return A `Result` that is:
-    ///         - Successful with several readers if the indexes exist and load correctly;
+    ///         - Successful with several readers(with global row id) if the indexes exist and load
+    ///         correctly;
     ///         - Successful with an empty vector if no index was built for the given field;
     ///         - Error returns when loading fails (e.g., file corruption, I/O error,
     ///           unsupported format).
@@ -96,7 +102,8 @@ class PAIMON_EXPORT GlobalIndexScan {
     /// @param row_range_index  Optional row range that limits the scan to a sub-range of row ids.
     ///                         If not provided, the entire row range is considered.
     /// @return A `Result` that is:
-    ///         - Successful with several readers if the indexes exist and load correctly;
+    ///         - Successful with several readers(with global row id) if the indexes exist and load
+    ///         correctly;
     ///         - Successful with an empty vector if no index was built for the given field;
     ///         - Error returns when loading fails (e.g., file corruption, I/O error,
     ///           unsupported format).

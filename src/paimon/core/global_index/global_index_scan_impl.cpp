@@ -16,10 +16,13 @@
 #include "paimon/core/global_index/global_index_scan_impl.h"
 
 #include <string>
+#include <thread>
 #include <utility>
 
+#include "arrow/c/bridge.h"
 #include "paimon/common/global_index/offset_global_index_reader.h"
 #include "paimon/common/global_index/union_global_index_reader.h"
+#include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/global_index/global_index_evaluator_impl.h"
 #include "paimon/core/index/index_file_handler.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
@@ -31,18 +34,21 @@ GlobalIndexScanImpl::GlobalIndexScanImpl(const std::shared_ptr<TableSchema>& tab
                                          const CoreOptions& options,
                                          const std::shared_ptr<IndexPathFactory>& path_factory,
                                          IndexMetaMap&& index_metas,
+                                         const std::shared_ptr<Executor>& executor,
                                          const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
       table_schema_(table_schema),
       options_(options),
       index_file_manager_(
           std::make_shared<GlobalIndexFileManager>(options.GetFileSystem(), path_factory)),
-      index_metas_(std::move(index_metas)) {}
+      index_metas_(std::move(index_metas)),
+      executor_(executor) {}
 
 Result<std::unique_ptr<GlobalIndexScanImpl>> GlobalIndexScanImpl::Create(
     const std::string& root_path, const std::shared_ptr<TableSchema>& table_schema,
     const Snapshot& snapshot, const std::shared_ptr<PredicateFilter>& partitions,
-    const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool) {
+    const CoreOptions& options, const std::shared_ptr<Executor>& executor,
+    const std::shared_ptr<MemoryPool>& pool) {
     auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> external_paths, options.CreateExternalPaths());
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> global_index_external_path,
@@ -94,8 +100,17 @@ Result<std::unique_ptr<GlobalIndexScanImpl>> GlobalIndexScanImpl::Create(
         index_metas[index_meta->index_field_id][index_file_meta->IndexType()][range].push_back(
             index_file_meta);
     }
-    return std::unique_ptr<GlobalIndexScanImpl>(
-        new GlobalIndexScanImpl(table_schema, options, path_factory, std::move(index_metas), pool));
+    auto final_executor = executor;
+    if (!final_executor) {
+        std::optional<int32_t> thread_num = options.GetGlobalIndexThreadNum();
+        if (!thread_num) {
+            uint32_t cpu_count = std::thread::hardware_concurrency();
+            thread_num = cpu_count > 0 ? static_cast<int32_t>(cpu_count) : 1;
+        }
+        final_executor = CreateDefaultExecutor(static_cast<uint32_t>(thread_num.value()));
+    }
+    return std::unique_ptr<GlobalIndexScanImpl>(new GlobalIndexScanImpl(
+        table_schema, options, path_factory, std::move(index_metas), final_executor, pool));
 }
 
 Result<std::shared_ptr<GlobalIndexEvaluator>> GlobalIndexScanImpl::GetOrCreateIndexEvaluator() {
@@ -103,9 +118,8 @@ Result<std::shared_ptr<GlobalIndexEvaluator>> GlobalIndexScanImpl::GetOrCreateIn
         return evaluator_;
     }
     GlobalIndexEvaluatorImpl::IndexReadersCreator create_index_readers =
-        [this](int32_t field_id, const std::optional<RowRangeIndex>& row_range_index)
-        -> Result<std::vector<std::shared_ptr<GlobalIndexReader>>> {
-        return CreateReaders(field_id, row_range_index);
+        [this](int32_t field_id) -> Result<std::vector<std::shared_ptr<GlobalIndexReader>>> {
+        return CreateReaders(field_id, /*row_range_index=*/std::nullopt);
     };
     evaluator_ = std::make_shared<GlobalIndexEvaluatorImpl>(table_schema_, create_index_readers);
     return evaluator_;
@@ -161,9 +175,8 @@ Result<std::vector<std::shared_ptr<GlobalIndexReader>>> GlobalIndexScanImpl::Cre
         if (union_readers.empty()) {
             continue;
         }
-        // TODO(lisizhuo.lsz): add executor in UnionGlobalIndexReader
-        readers.push_back(std::make_shared<UnionGlobalIndexReader>(std::move(union_readers),
-                                                                   /*executor=*/nullptr));
+        readers.push_back(
+            std::make_shared<UnionGlobalIndexReader>(std::move(union_readers), executor_));
     }
     return readers;
 }
@@ -187,11 +200,10 @@ GlobalIndexIOMeta GlobalIndexScanImpl::ToGlobalIndexIOMeta(
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexScanImpl::Scan(
-    const std::shared_ptr<Predicate>& predicate,
-    const std::optional<RowRangeIndex>& row_range_index) {
+    const std::shared_ptr<Predicate>& predicate) {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexEvaluator> evaluator,
                            GetOrCreateIndexEvaluator());
-    return evaluator->Evaluate(predicate, row_range_index);
+    return evaluator->Evaluate(predicate);
 }
 
 }  // namespace paimon

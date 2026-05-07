@@ -21,6 +21,7 @@
 
 #include "gtest/gtest.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
+#include "paimon/global_index/bitmap_scored_global_index_result.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/testing/utils/testharness.h"
 #include "paimon/utils/roaring_bitmap64.h"
@@ -30,6 +31,13 @@ class FakeGlobalIndexReader : public GlobalIndexReader {
  public:
     void SetDefaultResult(const std::vector<int64_t>& row_ids) {
         default_result_ = row_ids;
+    }
+
+    void SetVectorSearchResult(const std::vector<int64_t>& row_ids,
+                               const std::vector<float>& scores) {
+        vector_search_row_ids_ = row_ids;
+        vector_search_scores_ = scores;
+        has_vector_search_result_ = true;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNotNull() override {
@@ -93,7 +101,13 @@ class FakeGlobalIndexReader : public GlobalIndexReader {
 
     Result<std::shared_ptr<ScoredGlobalIndexResult>> VisitVectorSearch(
         const std::shared_ptr<VectorSearch>& vector_search) override {
-        return Status::Invalid("FakeGlobalIndexReader does not support vector search");
+        if (!has_vector_search_result_) {
+            return Status::Invalid("FakeGlobalIndexReader does not support vector search");
+        }
+        auto bitmap = RoaringBitmap64::From(vector_search_row_ids_);
+        auto scores = vector_search_scores_;
+        return std::make_shared<BitmapScoredGlobalIndexResult>(std::move(bitmap),
+                                                               std::move(scores));
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitFullTextSearch(
@@ -119,6 +133,9 @@ class FakeGlobalIndexReader : public GlobalIndexReader {
 
  private:
     std::vector<int64_t> default_result_;
+    std::vector<int64_t> vector_search_row_ids_;
+    std::vector<float> vector_search_scores_;
+    bool has_vector_search_result_ = false;
 };
 
 class OffsetGlobalIndexReaderTest : public ::testing::Test {
@@ -133,6 +150,20 @@ class OffsetGlobalIndexReaderTest : public ::testing::Test {
         ASSERT_EQ(*bitmap, RoaringBitmap64::From(expected))
             << "result=" << bitmap->ToString()
             << ", expected=" << RoaringBitmap64::From(expected).ToString();
+    }
+
+    static void CheckScoredResult(const std::shared_ptr<ScoredGlobalIndexResult>& result,
+                                  const std::vector<int64_t>& expected_row_ids,
+                                  const std::vector<float>& expected_scores) {
+        ASSERT_TRUE(result);
+        auto typed_result = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(result);
+        ASSERT_TRUE(typed_result);
+        ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, typed_result->GetBitmap());
+        ASSERT_TRUE(bitmap);
+        ASSERT_EQ(*bitmap, RoaringBitmap64::From(expected_row_ids))
+            << "result=" << bitmap->ToString()
+            << ", expected=" << RoaringBitmap64::From(expected_row_ids).ToString();
+        ASSERT_EQ(typed_result->GetScores(), expected_scores);
     }
 };
 
@@ -300,10 +331,21 @@ TEST_F(OffsetGlobalIndexReaderTest, TestVisitFullTextSearchWithOffset) {
     CheckResult(result, {10, 13, 15});
 }
 
+TEST_F(OffsetGlobalIndexReaderTest, TestVisitVectorSearchWithOffset) {
+    auto fake_reader = std::make_shared<FakeGlobalIndexReader>();
+    fake_reader->SetVectorSearchResult({0, 2, 5}, {0.9f, 0.7f, 0.3f});
+
+    auto offset_reader = std::make_shared<OffsetGlobalIndexReader>(fake_reader, 100);
+
+    ASSERT_OK_AND_ASSIGN(auto result, offset_reader->VisitVectorSearch(nullptr));
+    // row ids {0, 2, 5} + offset 100 -> {100, 102, 105}, scores unchanged
+    CheckScoredResult(result, {100, 102, 105}, {0.9f, 0.7f, 0.3f});
+}
+
 TEST_F(OffsetGlobalIndexReaderTest, TestVisitVectorSearchNotSupported) {
     auto fake_reader = std::make_shared<FakeGlobalIndexReader>();
     auto offset_reader = std::make_shared<OffsetGlobalIndexReader>(fake_reader, 10);
-    // FakeGlobalIndexReader returns error for VectorSearch
+    // FakeGlobalIndexReader without SetVectorSearchResult returns error for VectorSearch
     ASSERT_NOK_WITH_MSG(offset_reader->VisitVectorSearch(nullptr),
                         "FakeGlobalIndexReader does not support vector search");
 }
