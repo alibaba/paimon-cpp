@@ -74,10 +74,12 @@ class SortMergeReaderTest : public testing::Test {
                      const std::vector<KeyValue>& expected) const {
         CheckSortMergeResult<SortMergeReaderWithLoserTree>(src_array_vec, user_key_comparator,
                                                            user_defined_seq_comparator, key_schema,
-                                                           value_schema, expected);
+                                                           value_schema, expected,
+                                                           /*need_merge=*/true);
         CheckSortMergeResult<SortMergeReaderWithMinHeap>(src_array_vec, user_key_comparator,
                                                          user_defined_seq_comparator, key_schema,
-                                                         value_schema, expected);
+                                                         value_schema, expected,
+                                                         /*need_merge=*/true);
     }
 
  private:
@@ -87,10 +89,18 @@ class SortMergeReaderTest : public testing::Test {
         const std::shared_ptr<FieldsComparator>& user_key_comparator,
         const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
         const std::shared_ptr<arrow::Schema>& key_schema,
-        const std::shared_ptr<arrow::Schema>& value_schema, int32_t batch_size) const {
+        const std::shared_ptr<arrow::Schema>& value_schema, int32_t batch_size,
+        bool need_merge) const {
         auto mfunc = std::make_unique<DeduplicateMergeFunction>(/*ignore_delete=*/false);
         auto merge_function_wrapper =
             std::make_shared<ReducerMergeFunctionWrapper>(std::move(mfunc));
+        if (!need_merge) {
+            if constexpr (std::is_same_v<SortMergeReaderType, SortMergeReaderWithMinHeap>) {
+                merge_function_wrapper = nullptr;
+            } else {
+                ADD_FAILURE() << "Only SortMergeReaderWithMinHeap supports no merge";
+            }
+        }
         std::vector<std::unique_ptr<KeyValueRecordReader>> concat_readers;
         for (const auto& src_array : src_array_vec) {
             auto file_batch_reader = std::make_unique<MockFileBatchReader>(
@@ -114,11 +124,11 @@ class SortMergeReaderTest : public testing::Test {
                               const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
                               const std::shared_ptr<arrow::Schema>& key_schema,
                               const std::shared_ptr<arrow::Schema>& value_schema,
-                              const std::vector<KeyValue>& expected) const {
+                              const std::vector<KeyValue>& expected, bool need_merge) const {
         for (auto batch_size : {1, 2, 3, 4, 100}) {
             auto sort_merge_reader = CreateSortMergeReader<SortMergeReaderType>(
                 src_array_vec, user_key_comparator, user_defined_seq_comparator, key_schema,
-                value_schema, batch_size);
+                value_schema, batch_size, need_merge);
             ASSERT_OK_AND_ASSIGN(
                 std::vector<KeyValue> results,
                 (ReadResultCollector::CollectKeyValueResult<
@@ -215,7 +225,7 @@ TEST_F(SortMergeReaderTest, TestSimpleWithTwoSameKeys) {
         {1, 1, 1}, {{2}, {3}, {5}}, {{2, 30}, {3, 30}, {5, 50}}, pool_);
     CheckSortMergeResult<SortMergeReaderWithLoserTree>(
         {src_array1, src_array2, src_array3, src_array4}, user_key_comparator, nullptr, key_schema,
-        value_schema, expected);
+        value_schema, expected, /*need_merge=*/true);
 }
 
 TEST_F(SortMergeReaderTest, TestSimpleWithThreeSameKeys) {
@@ -261,7 +271,7 @@ TEST_F(SortMergeReaderTest, TestSimpleWithThreeSameKeys) {
         KeyValueChecker::GenerateKeyValues({2, 1}, {{2}, {5}}, {{2, 30}, {5, 50}}, pool_);
     CheckSortMergeResult<SortMergeReaderWithLoserTree>(
         {src_array1, src_array2, src_array3, src_array4}, user_key_comparator, nullptr, key_schema,
-        value_schema, expected);
+        value_schema, expected, /*need_merge=*/true);
 }
 
 TEST_F(SortMergeReaderTest, TestSimpleWithThreeSameKeys2) {
@@ -306,7 +316,7 @@ TEST_F(SortMergeReaderTest, TestSimpleWithThreeSameKeys2) {
         KeyValueChecker::GenerateKeyValues({2, 1}, {{2}, {5}}, {{2, 30}, {5, 50}}, pool_);
     CheckSortMergeResult<SortMergeReaderWithLoserTree>(
         {src_array1, src_array2, src_array3, src_array4}, user_key_comparator, nullptr, key_schema,
-        value_schema, expected);
+        value_schema, expected, /*need_merge=*/true);
 }
 
 TEST_F(SortMergeReaderTest, TestSortMergeIn2Ways) {
@@ -710,6 +720,133 @@ TEST_F(SortMergeReaderTest, TestSortMergeWithAggMergeFunction) {
     CheckSortMergeResultForAggregate<SortMergeReaderWithMinHeap>(
         {src_array1, src_array2}, user_key_comparator, user_defined_seq_comparator, key_schema,
         value_schema, {user_defined_sequence_field}, {"k0"}, core_options, expected);
+}
+
+TEST_F(SortMergeReaderTest, TestRawSortNoMergeKeepsDuplicateKeys) {
+    arrow::FieldVector fields = {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+                                 arrow::field("_VALUE_KIND", arrow::int8()),
+                                 arrow::field("k0", arrow::int32()),
+                                 arrow::field("v0", arrow::int32())};
+
+    auto data_fields = CreateDataField(fields);
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
+    std::shared_ptr<arrow::Schema> value_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
+
+    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [0, 0, 2, 10]
+    ])")
+            .ValueOrDie());
+
+    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [2, 0, 2, 30]
+    ])")
+            .ValueOrDie());
+
+    auto src_array3 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [1, 0, 5, 50]
+    ])")
+            .ValueOrDie());
+
+    auto src_array4 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [1, 0, 2, 30]
+    ])")
+            .ValueOrDie());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
+                         FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
+                                                  /*is_ascending_order=*/true));
+    std::vector<KeyValue> expected = KeyValueChecker::GenerateKeyValues(
+        {0, 1, 2, 1}, {{2}, {2}, {2}, {5}}, {{2, 10}, {2, 30}, {2, 30}, {5, 50}}, pool_);
+    CheckSortMergeResult<SortMergeReaderWithMinHeap>(
+        {src_array1, src_array2, src_array3, src_array4}, user_key_comparator,
+        /*user_defined_seq_comparator=*/nullptr, key_schema, value_schema, expected,
+        /*need_merge=*/false);
+}
+
+TEST_F(SortMergeReaderTest, TestRawSortNoMergeWithMinHeap) {
+    // key: k0, user defined sequence field: ts, value: v0
+    // Format: [_SEQUENCE_NUMBER, _VALUE_KIND, k0, ts, v0]
+    // Reader1 (SEQUENCE_NUMBER 0..5):
+    //   [key=1,ts=1,v=1], [key=1,ts=2,v=2], [key=1,ts=3,v=3]
+    //   [key=1,ts=4,v=4], [key=2,ts=4,v=40], [key=2,ts=5,v=50]
+    // Reader2 (SEQUENCE_NUMBER 6..11):
+    //   [key=1,ts=5,v=5], [key=1,ts=6,v=6], [key=2,ts=1,v=10]
+    //   [key=2,ts=2,v=20], [key=2,ts=3,v=30], [key=2,ts=6,v=60]
+    //
+    // After sort:
+    // With user_defined_seq_comparator on ts field, sort by key asc, then ts asc within same key
+    // key=1: ts=1(seq0,v=1), ts=2(seq1,v=2), ts=3(seq2,v=3), ts=4(seq3,v=4),
+    //        ts=5(seq6,v=5), ts=6(seq7,v=6)
+    // key=2: ts=1(seq8,v=10), ts=2(seq9,v=20), ts=3(seq10,v=30), ts=4(seq4,v=40),
+    //        ts=5(seq5,v=50), ts=6(seq11,v=60)
+
+    arrow::FieldVector fields = {
+        arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+        arrow::field("_VALUE_KIND", arrow::int8()), arrow::field("k0", arrow::int32()),
+        arrow::field("ts", arrow::int32()), arrow::field("v0", arrow::int32())};
+
+    auto data_fields = CreateDataField(fields);
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
+    std::shared_ptr<arrow::Schema> value_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4]}));
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
+
+    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [0, 0, 1, 1, 1],
+        [1, 0, 1, 2, 2],
+        [2, 0, 1, 3, 3],
+        [3, 0, 1, 4, 4],
+        [4, 0, 2, 4, 40],
+        [5, 0, 2, 5, 50]
+    ])")
+            .ValueOrDie());
+
+    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [6, 0, 1, 5, 5],
+        [7, 0, 1, 6, 6],
+        [8, 0, 2, 1, 10],
+        [9, 0, 2, 2, 20],
+        [10, 0, 2, 3, 30],
+        [11, 0, 2, 6, 60]
+    ])")
+            .ValueOrDie());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
+                         FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
+                                                  /*is_ascending_order=*/true));
+    // user_defined_seq_comparator based on ts field (index 1 in value schema {k0, ts, v0})
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_defined_seq_comparator,
+                         FieldsComparator::Create({data_fields[2], data_fields[3], data_fields[4]},
+                                                  std::vector<int32_t>({1}),
+                                                  /*is_ascending_order=*/true));
+
+    std::vector<KeyValue> expected = KeyValueChecker::GenerateKeyValues(
+        {0, 1, 2, 3, 6, 7, 8, 9, 10, 4, 5, 11},
+        {{1}, {1}, {1}, {1}, {1}, {1}, {2}, {2}, {2}, {2}, {2}, {2}},
+        {{1, 1, 1},
+         {1, 2, 2},
+         {1, 3, 3},
+         {1, 4, 4},
+         {1, 5, 5},
+         {1, 6, 6},
+         {2, 1, 10},
+         {2, 2, 20},
+         {2, 3, 30},
+         {2, 4, 40},
+         {2, 5, 50},
+         {2, 6, 60}},
+        pool_);
+    CheckSortMergeResult<SortMergeReaderWithMinHeap>({src_array1, src_array2}, user_key_comparator,
+                                                     user_defined_seq_comparator, key_schema,
+                                                     value_schema, expected, /*need_merge=*/false);
 }
 
 }  // namespace paimon::test

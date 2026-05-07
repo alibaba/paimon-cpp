@@ -17,16 +17,13 @@
 #include "paimon/core/core_options.h"
 
 #include <limits>
-#include <utility>
 
 #include "gtest/gtest.h"
 #include "paimon/bucket/bucket_function_type.h"
 #include "paimon/common/fs/resolving_file_system.h"
 #include "paimon/core/options/expire_config.h"
 #include "paimon/defs.h"
-#include "paimon/format/file_format.h"
 #include "paimon/fs/local/local_file_system.h"
-#include "paimon/status.h"
 #include "paimon/testing/mock/mock_file_system.h"
 #include "paimon/testing/utils/testharness.h"
 #include "paimon/testing/utils/timezone_guard.h"
@@ -63,6 +60,11 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(1024, core_options.GetReadBatchSize());
     ASSERT_EQ(1024, core_options.GetWriteBatchSize());
     ASSERT_EQ(256 * 1024 * 1024, core_options.GetWriteBufferSize());
+    ASSERT_TRUE(core_options.GetWriteBufferSpillable());
+    ASSERT_EQ(std::numeric_limits<int64_t>::max(), core_options.GetWriteBufferSpillMaxDiskSize());
+    ASSERT_EQ(128, core_options.GetLocalSortMaxNumFileHandles());
+    ASSERT_EQ("zstd", core_options.GetSpillCompressOptions().compress);
+    ASSERT_EQ(1, core_options.GetSpillCompressOptions().zstd_level);
     ASSERT_FALSE(core_options.CommitForceCompact());
     ASSERT_EQ(std::numeric_limits<int64_t>::max(), core_options.GetCommitTimeout());
     ASSERT_EQ(10, core_options.GetCommitMaxRetries());
@@ -112,7 +114,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_FALSE(core_options.DataEvolutionEnabled());
     ASSERT_TRUE(core_options.LegacyPartitionNameEnabled());
     ASSERT_TRUE(core_options.GlobalIndexEnabled());
-    ASSERT_FALSE(core_options.GetGlobalIndexExternalPath());
+    ASSERT_EQ(std::nullopt, core_options.GetGlobalIndexExternalPath());
     ASSERT_EQ(std::nullopt, core_options.GetScanTagName());
     ASSERT_EQ(std::nullopt, core_options.GetOptimizedCompactionInterval());
     ASSERT_EQ(std::nullopt, core_options.GetCompactionTotalSizeThreshold());
@@ -129,6 +131,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(1, core_options.GetCompactionSizeRatio());
     ASSERT_EQ(5, core_options.GetNumSortedRunsCompactionTrigger());
     ASSERT_EQ(8, core_options.GetNumSortedRunsStopTrigger());
+    ASSERT_EQ(6, core_options.GetNumLevels());
     ASSERT_EQ(LookupCompactMode::RADICAL, core_options.GetLookupCompactMode());
     ASSERT_EQ(10, core_options.GetLookupCompactMaxInterval());
     ASSERT_EQ(256 * 1024 * 1024, core_options.GetLookupCacheMaxMemory());
@@ -158,10 +161,15 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::READ_BATCH_SIZE, "2048"},
         {Options::WRITE_BUFFER_SIZE, "16MB"},
         {Options::WRITE_BATCH_SIZE, "1234"},
+        {Options::WRITE_BUFFER_SPILLABLE, "false"},
+        {Options::WRITE_BUFFER_SPILL_MAX_DISK_SIZE, "7GB"},
+        {Options::LOCAL_SORT_MAX_NUM_FILE_HANDLES, "64"},
+        {Options::SPILL_COMPRESSION, "lz4"},
         {Options::COMMIT_FORCE_COMPACT, "true"},
         {Options::COMMIT_TIMEOUT, "120s"},
         {Options::COMMIT_MAX_RETRIES, "20"},
         {Options::SCAN_SNAPSHOT_ID, "5"},
+        {Options::SCAN_MODE, "from-snapshot-full"},
         {Options::SNAPSHOT_NUM_RETAINED_MIN, "15"},
         {Options::SNAPSHOT_NUM_RETAINED_MAX, "30"},
         {Options::SNAPSHOT_EXPIRE_LIMIT, "20"},
@@ -211,6 +219,7 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::COMPACTION_SIZE_RATIO, "9"},
         {Options::NUM_SORTED_RUNS_COMPACTION_TRIGGER, "11"},
         {Options::NUM_SORTED_RUNS_STOP_TRIGGER, "17"},
+        {Options::NUM_LEVELS, "9"},
         {Options::LOOKUP_COMPACT, "gentle"},
         {Options::LOOKUP_COMPACT_MAX_INTERVAL, "7"},
         {Options::COMPACTION_OPTIMIZATION_INTERVAL, "2s"},
@@ -260,6 +269,11 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(2048, core_options.GetReadBatchSize());
     ASSERT_EQ(1234, core_options.GetWriteBatchSize());
     ASSERT_EQ(16 * 1024 * 1024, core_options.GetWriteBufferSize());
+    ASSERT_FALSE(core_options.GetWriteBufferSpillable());
+    ASSERT_EQ(7L * 1024 * 1024 * 1024, core_options.GetWriteBufferSpillMaxDiskSize());
+    ASSERT_EQ(64, core_options.GetLocalSortMaxNumFileHandles());
+    ASSERT_EQ("lz4", core_options.GetSpillCompressOptions().compress);
+    ASSERT_EQ(2, core_options.GetSpillCompressOptions().zstd_level);
     ASSERT_TRUE(core_options.CommitForceCompact());
     ASSERT_EQ(120 * 1000, core_options.GetCommitTimeout());
     ASSERT_EQ(20, core_options.GetCommitMaxRetries());
@@ -322,7 +336,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_TRUE(core_options.GetGlobalIndexExternalPath());
     ASSERT_EQ(core_options.GetGlobalIndexExternalPath().value(), "FILE:///tmp/global_index/");
     ASSERT_EQ("test-tag", core_options.GetScanTagName().value());
-    ASSERT_EQ(StartupMode::FromSnapshot(), core_options.GetStartupMode());
+    ASSERT_EQ(StartupMode::FromSnapshotFull(), core_options.GetStartupMode());
     ASSERT_EQ(375809637, core_options.GetCompactionFileSize(/*has_primary_key=*/true));
     ASSERT_EQ(375809637, core_options.GetCompactionFileSize(/*has_primary_key=*/false));
     ASSERT_TRUE(core_options.WriteOnly());
@@ -331,6 +345,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(9, core_options.GetCompactionSizeRatio());
     ASSERT_EQ(11, core_options.GetNumSortedRunsCompactionTrigger());
     ASSERT_EQ(17, core_options.GetNumSortedRunsStopTrigger());
+    ASSERT_EQ(9, core_options.GetNumLevels());
     ASSERT_EQ(LookupCompactMode::GENTLE, core_options.GetLookupCompactMode());
     ASSERT_EQ(11, core_options.GetLookupCompactMaxInterval());
     ASSERT_TRUE(core_options.CompactionForceRewriteAllFiles());

@@ -20,8 +20,6 @@
 #include <mutex>
 #include <string>
 
-#include "paimon/common/utils/path_util.h"
-#include "paimon/common/utils/uuid.h"
 #include "paimon/core/disk/file_channel_manager.h"
 #include "paimon/result.h"
 

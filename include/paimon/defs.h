@@ -178,6 +178,27 @@ struct PAIMON_EXPORT Options {
     /// on-disk file. The default value is 256 mb
     static const char WRITE_BUFFER_SIZE[];
 
+    /// "write-buffer-spillable" - Whether the write buffer can be spillable. Default value is true.
+    static const char WRITE_BUFFER_SPILLABLE[];
+
+    /// "write-buffer-spill.max-disk-size" - The max disk to use for write buffer spill. This only
+    /// works when the write buffer spill is enabled. Default value is unlimited.
+    static const char WRITE_BUFFER_SPILL_MAX_DISK_SIZE[];
+
+    /// "local-sort.max-num-file-handles" - The maximal fan-in for external merge sort. It limits
+    /// the number of file handles. If it is too small, may cause intermediate merging. But if it is
+    /// too large, it will cause too many files opened at the same time, consume memory and lead to
+    /// random reading. Default value is 128.
+    static const char LOCAL_SORT_MAX_NUM_FILE_HANDLES[];
+
+    /// "spill-compression" - Compression for spill. Default value is zstd.
+    static const char SPILL_COMPRESSION[];
+
+    /// "spill-compression.zstd-level" - Default spill compression zstd level. For higher
+    /// compression rates, it can be configured to 9, but the read and write speed will
+    /// significantly decrease. Default value is 1.
+    static const char SPILL_COMPRESSION_ZSTD_LEVEL[];
+
     /// "snapshot.num-retained.min" - The minimum number of completed snapshots to retain. Should be
     /// greater than or equal to 1. Default value is 10
     static const char SNAPSHOT_NUM_RETAINED_MIN[];
@@ -417,10 +438,6 @@ struct PAIMON_EXPORT Options {
     /// lz4 are supported. Default value is zstd.
     /// Noted that java paimon also supports lzo which paimon-cpp does not support for now.
     static const char LOOKUP_CACHE_SPILL_COMPRESSION[];
-    /// "spill-compression.zstd-level" - Default spill compression zstd level. For higher
-    /// compression rates, it can be configured to 9, but the read and write speed will
-    /// significantly decrease. Default value is 1.
-    static const char SPILL_COMPRESSION_ZSTD_LEVEL[];
     /// "cache-page-size" - Memory page size for caching. Default value is 64 kb.
     static const char CACHE_PAGE_SIZE[];
     /// "file.format.per.level" - Define different file format for different level, you can add the

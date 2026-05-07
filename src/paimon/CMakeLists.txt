@@ -234,6 +234,7 @@ set(PAIMON_CORE_SRCS
     core/manifest/manifest_list.cpp
     core/manifest/partition_entry.cpp
     core/manifest/index_manifest_file_handler.cpp
+    core/memory/writer_memory_manager.cpp
     core/mergetree/compact/universal_compaction.cpp
     core/mergetree/compact/early_full_compaction.cpp
     core/mergetree/compact/aggregate/aggregate_merge_function.cpp
@@ -251,6 +252,7 @@ set(PAIMON_CORE_SRCS
     core/mergetree/compact/changelog_merge_tree_rewriter.cpp
     core/mergetree/merge_tree_writer.cpp
     core/mergetree/in_memory_sort_buffer.cpp
+    core/mergetree/external_sort_buffer.cpp
     core/mergetree/write_buffer.cpp
     core/mergetree/levels.cpp
     core/mergetree/lookup_file.cpp
@@ -594,6 +596,7 @@ if(PAIMON_BUILD_TESTS)
                     core/manifest/file_entry_test.cpp
                     core/manifest/index_manifest_entry_serializer_test.cpp
                     core/manifest/index_manifest_file_handler_test.cpp
+                    core/memory/writer_memory_manager_test.cpp
                     core/mergetree/levels_test.cpp
                     core/mergetree/lookup_file_test.cpp
                     core/mergetree/lookup_levels_test.cpp
@@ -633,6 +636,7 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/drop_delete_reader_test.cpp
                     core/mergetree/merge_tree_writer_test.cpp
                     core/mergetree/write_buffer_test.cpp
+                    core/mergetree/sort_buffer_test.cpp
                     core/mergetree/sorted_run_test.cpp
                     core/mergetree/spill_channel_manager_test.cpp
                     core/mergetree/spill_reader_writer_test.cpp
