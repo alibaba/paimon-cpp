@@ -383,12 +383,14 @@ function(paimon_validate_dependency_source SOURCE_VALUE OPTION_NAME)
 endfunction()
 
 function(paimon_get_dependency_source DEPENDENCY_NAME OUT_VAR)
+    set(_source_option_name "${DEPENDENCY_NAME}_SOURCE")
     set(_source "${${DEPENDENCY_NAME}_SOURCE}")
     if("${_source}" STREQUAL "")
         set(_source "${PAIMON_DEPENDENCY_SOURCE}")
+        set(_source_option_name "PAIMON_DEPENDENCY_SOURCE")
     endif()
     string(TOUPPER "${_source}" _source)
-    paimon_validate_dependency_source("${_source}" "${DEPENDENCY_NAME}_SOURCE")
+    paimon_validate_dependency_source("${_source}" "${_source_option_name}")
     set(${OUT_VAR}
         "${_source}"
         PARENT_SCOPE)
