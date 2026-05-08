@@ -27,12 +27,12 @@
 #include "paimon/visibility.h"
 
 namespace paimon {
-/// Global index result to get selected global row ids.
+/// Global index result that holds the row ids.
 class PAIMON_EXPORT GlobalIndexResult : public std::enable_shared_from_this<GlobalIndexResult> {
  public:
     virtual ~GlobalIndexResult() = default;
 
-    /// Iterator interface for traversing selected global row ids.
+    /// Iterator interface for traversing selected row ids.
     class Iterator {
      public:
         virtual ~Iterator() = default;
@@ -40,7 +40,7 @@ class PAIMON_EXPORT GlobalIndexResult : public std::enable_shared_from_this<Glob
         /// Checks whether more row ids are available.
         virtual bool HasNext() const = 0;
 
-        /// @return The next global row id and advances the iterator.
+        /// @return The next row id and advances the iterator.
         virtual int64_t Next() = 0;
     };
 
@@ -53,7 +53,7 @@ class PAIMON_EXPORT GlobalIndexResult : public std::enable_shared_from_this<Glob
     ///           (e.g., during lazy loading of index data).
     virtual Result<bool> IsEmpty() const = 0;
 
-    /// Creates a new iterator over the selected global row ids.
+    /// Creates a new iterator over the selected row ids.
     virtual Result<std::unique_ptr<Iterator>> CreateIterator() const = 0;
 
     /// Returns non-overlapping, sorted ranges covering all row ids in `GlobalIndexResult`.
@@ -125,7 +125,7 @@ class PAIMON_EXPORT ScoredGlobalIndexResult : public GlobalIndexResult {
         /// Retrieves the next (row_id, score) pair and advances the iterator.
         ///
         /// @return A pair where:
-        ///   - first: the global row id (returned in ascending order),
+        ///   - first: the row id (returned in ascending order).
         ///   - second: the associated score computed by the index.
         ///
         /// @note The sequence is ordered by **row_id**, not by score.

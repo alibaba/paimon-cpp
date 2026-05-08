@@ -154,6 +154,10 @@ class PAIMON_EXPORT WriteContextBuilder {
     /// @return Reference to this builder for method chaining.
     WriteContextBuilder& WithStreamingMode(bool is_streaming_mode);
 
+    /// Set whether to skip num-bucket consistency check (default is false)
+    /// @return Reference to this builder for method chaining.
+    WriteContextBuilder& WithIgnoreNumBucketCheck(bool ignore_num_bucket_check);
+
     /// Set whether the write operation should ignore previously stored files. (default is false)
     /// @return Reference to this builder for method chaining.
     WriteContextBuilder& WithIgnorePreviousFiles(bool ignore_previous_files);

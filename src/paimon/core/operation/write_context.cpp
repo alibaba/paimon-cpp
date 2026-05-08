@@ -116,6 +116,11 @@ WriteContextBuilder& WriteContextBuilder::WithStreamingMode(bool is_streaming_mo
     return *this;
 }
 
+WriteContextBuilder& WriteContextBuilder::WithIgnoreNumBucketCheck(bool ignore_num_bucket_check) {
+    impl_->ignore_num_bucket_check_ = ignore_num_bucket_check;
+    return *this;
+}
+
 WriteContextBuilder& WriteContextBuilder::WithMemoryPool(
     const std::shared_ptr<MemoryPool>& memory_pool) {
     impl_->memory_pool_ = memory_pool;

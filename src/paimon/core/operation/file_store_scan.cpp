@@ -130,7 +130,6 @@ Result<std::shared_ptr<FileStoreScan::RawPlan>> FileStoreScan::CreatePlan() cons
     std::vector<ManifestFileMeta> filtered_manifest_file_metas;
     PAIMON_RETURN_NOT_OK(
         ReadManifests(&snapshot, &all_manifest_file_metas, &filtered_manifest_file_metas));
-    filtered_manifest_file_metas = PostFilterManifests(std::move(filtered_manifest_file_metas));
 
     std::vector<ManifestEntry> manifest_entries;
     PAIMON_RETURN_NOT_OK(ReadManifestEntries(filtered_manifest_file_metas, &manifest_entries));
@@ -288,14 +287,31 @@ Result<bool> FileStoreScan::FilterManifestFileMeta(const ManifestFileMeta& manif
         }
     }
     // filter by partition filter
-    if (!partition_filter_) {
+
+    if (partition_filter_) {
+        SimpleStats stats = manifest.PartitionStats();
+        PAIMON_ASSIGN_OR_RAISE(
+            bool saved, partition_filter_->Test(
+                            partition_schema_,
+                            /*row_count=*/manifest.NumAddedFiles() + manifest.NumDeletedFiles(),
+                            stats.MinValues(), stats.MaxValues(), stats.NullCounts()));
+        if (!saved) {
+            return false;
+        }
+    }
+    return FilterManifestByRowRanges(manifest);
+}
+
+bool FileStoreScan::FilterManifestByRowRanges(const ManifestFileMeta& manifest) const {
+    if (!row_range_index_) {
         return true;
     }
-    SimpleStats stats = manifest.PartitionStats();
-    return partition_filter_->Test(
-        partition_schema_,
-        /*row_count=*/manifest.NumAddedFiles() + manifest.NumDeletedFiles(), stats.MinValues(),
-        stats.MaxValues(), stats.NullCounts());
+    std::optional<int64_t> min = manifest.MinRowId();
+    std::optional<int64_t> max = manifest.MaxRowId();
+    if (!min || !max) {
+        return true;
+    }
+    return row_range_index_->Intersects(min.value(), max.value());
 }
 
 Status FileStoreScan::ReadManifestFileMeta(const ManifestFileMeta& manifest,

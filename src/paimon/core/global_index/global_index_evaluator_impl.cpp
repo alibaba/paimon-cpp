@@ -23,16 +23,10 @@
 
 namespace paimon {
 Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexEvaluatorImpl::Evaluate(
-    const std::shared_ptr<Predicate>& predicate,
-    const std::shared_ptr<VectorSearch>& vector_search) {
+    const std::shared_ptr<Predicate>& predicate) {
     std::shared_ptr<GlobalIndexResult> compound_result;
     if (predicate) {
         PAIMON_ASSIGN_OR_RAISE(compound_result, EvaluatePredicate(predicate));
-    }
-    if (vector_search) {
-        PAIMON_ASSIGN_OR_RAISE(
-            compound_result,
-            EvaluateVectorSearch(vector_search, /*predicate_result=*/compound_result));
     }
     return compound_result;
 }
@@ -53,42 +47,6 @@ Result<std::vector<std::shared_ptr<GlobalIndexReader>>> GlobalIndexEvaluatorImpl
     return readers;
 }
 
-Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexEvaluatorImpl::EvaluateVectorSearch(
-    const std::shared_ptr<VectorSearch>& vector_search,
-    const std::shared_ptr<GlobalIndexResult>& predicate_result) {
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<GlobalIndexReader>> readers,
-                           GetIndexReaders(vector_search->field_name));
-    if (readers.empty()) {
-        return predicate_result;
-    }
-    if (readers.size() > 1) {
-        return Status::Invalid("Vector search cannot have multiple global indexes");
-    }
-    const auto& vector_search_reader = readers[0];
-    if (predicate_result && vector_search->pre_filter != nullptr) {
-        return Status::Invalid("Predicate result and pre_filter in VectorSearch conflict");
-    }
-    auto final_vector_search = vector_search;
-    if (predicate_result) {
-        auto bitmap_global_index_result =
-            std::dynamic_pointer_cast<BitmapGlobalIndexResult>(predicate_result);
-        if (!bitmap_global_index_result) {
-            return Status::Invalid(
-                "The pre_filter of vector search only supports BitmapGlobalIndexResult");
-        }
-        PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* bitmap,
-                               bitmap_global_index_result->GetBitmap());
-        assert(bitmap);
-        final_vector_search = vector_search->ReplacePreFilter(
-            [bitmap_global_index_result, bitmap](int64_t row_id) -> bool {
-                return bitmap->Contains(row_id);
-            });
-    }
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> scored_result,
-                           vector_search_reader->VisitVectorSearch(final_vector_search));
-    return scored_result;
-}
-
 Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexEvaluatorImpl::EvaluatePredicate(
     const std::shared_ptr<Predicate>& predicate) {
     if (predicate == nullptr) {
@@ -101,6 +59,12 @@ Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexEvaluatorImpl::EvaluatePre
         const std::string& field_name = leaf_predicate->FieldName();
         PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<GlobalIndexReader>> readers,
                                GetIndexReaders(field_name));
+        if (readers.empty()) {
+            // No usable index for this field within the requested range. Treat as "no
+            // pushdown available" so the upstream falls back to a full scan instead of
+            // wrongly producing an empty result.
+            return std::shared_ptr<GlobalIndexResult>(nullptr);
+        }
         // calculate compound result as field may has multiple indexes
         std::shared_ptr<GlobalIndexResult> compound_result;
         for (const auto& index_reader : readers) {

@@ -24,6 +24,7 @@
 #include "paimon/common/global_index/btree/btree_global_index_reader.h"
 #include "paimon/common/global_index/btree/btree_index_meta.h"
 #include "paimon/common/global_index/btree/key_serializer.h"
+#include "paimon/common/global_index/union_global_index_reader.h"
 #include "paimon/common/memory/memory_slice.h"
 #include "paimon/common/memory/memory_slice_input.h"
 #include "paimon/common/sst/block_cache.h"
@@ -170,55 +171,23 @@ Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::DispatchVisi
         return std::make_shared<BitmapGlobalIndexResult>([]() { return RoaringBitmap64(); });
     }
 
-    // Prepare all readers sequentially (reader_cache_ is not thread-safe)
+    // Create a UnionGlobalIndexReader from cached readers for the selected files
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexReader> union_reader,
+                           CreateUnionReader(selected_files));
+
+    // Delegate the action to the union reader
+    return action(union_reader);
+}
+
+Result<std::shared_ptr<GlobalIndexReader>> LazyFilteredBTreeReader::CreateUnionReader(
+    const std::vector<GlobalIndexIOMeta>& files) {
     std::vector<std::shared_ptr<GlobalIndexReader>> readers;
-    readers.reserve(selected_files.size());
-    for (const auto& meta : selected_files) {
+    readers.reserve(files.size());
+    for (const auto& meta : files) {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexReader> reader, GetOrCreateReader(meta));
         readers.push_back(std::move(reader));
     }
-
-    // Execute actions: parallel if executor is available, sequential otherwise
-    std::vector<Result<std::shared_ptr<GlobalIndexResult>>> collected_results;
-    if (executor_ != nullptr) {
-        // Parallel: submit all tasks to executor, then collect results in order
-        std::vector<std::future<Result<std::shared_ptr<GlobalIndexResult>>>> futures;
-        futures.reserve(readers.size());
-        for (const auto& reader : readers) {
-            futures.push_back(
-                Via(executor_.get(),
-                    [&action, &reader]() -> Result<std::shared_ptr<GlobalIndexResult>> {
-                        return action(reader);
-                    }));
-        }
-        collected_results = CollectAll(futures);
-    } else {
-        // Sequential fallback: execute actions one by one
-        collected_results.reserve(readers.size());
-        for (const auto& reader : readers) {
-            collected_results.push_back(action(reader));
-        }
-    }
-
-    // Merge results in submission order
-    std::shared_ptr<GlobalIndexResult> merged_result = nullptr;
-    for (auto& result_or_status : collected_results) {
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> result,
-                               std::move(result_or_status));
-        if (result == nullptr) {
-            continue;
-        }
-        if (merged_result == nullptr) {
-            merged_result = std::move(result);
-        } else {
-            PAIMON_ASSIGN_OR_RAISE(merged_result, merged_result->Or(result));
-        }
-    }
-
-    if (merged_result == nullptr) {
-        return Status::Invalid("DispatchVisit cannot return empty result");
-    }
-    return merged_result;
+    return std::make_shared<UnionGlobalIndexReader>(std::move(readers), executor_);
 }
 
 Result<std::shared_ptr<GlobalIndexReader>> LazyFilteredBTreeReader::GetOrCreateReader(

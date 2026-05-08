@@ -154,7 +154,7 @@ Result<MemorySegment> SstFileReader::DecompressBlock(const MemorySegment& compre
     crc32c_code = CRC32C::calculate(&compression_val, 1, crc32c_code);
     if (trailer->Crc32c() != static_cast<int32_t>(crc32c_code)) {
         return Status::Invalid(fmt::format("Expected crc32c({:#x}) but found crc32c({:#x})",
-                                           trailer->Crc32c(), crc32c_code));
+                                           static_cast<uint32_t>(trailer->Crc32c()), crc32c_code));
     }
 
     // decompress data

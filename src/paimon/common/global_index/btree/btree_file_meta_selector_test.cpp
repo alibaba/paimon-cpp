@@ -182,7 +182,7 @@ TEST_F(BTreeFileMetaSelectorTest, TestVisitIn) {
     //   1 in [1,10]=file1, [1,5]=file4
     //   2 in [1,10]=file1, [1,5]=file4
     //   3 in [1,10]=file1, [1,5]=file4
-    //   26 in [21,30]=file3, [19,25]=file5
+    //   26 in [21,30]=file3
     //   27 in [21,30]=file3
     //   28 in [21,30]=file3
     ASSERT_OK_AND_ASSIGN(auto result, selector.VisitIn({Literal(1), Literal(2), Literal(3),

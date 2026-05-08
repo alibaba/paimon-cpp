@@ -115,6 +115,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_TRUE(core_options.LegacyPartitionNameEnabled());
     ASSERT_TRUE(core_options.GlobalIndexEnabled());
     ASSERT_EQ(std::nullopt, core_options.GetGlobalIndexExternalPath());
+    ASSERT_EQ(std::nullopt, core_options.GetGlobalIndexThreadNum());
     ASSERT_EQ(std::nullopt, core_options.GetScanTagName());
     ASSERT_EQ(std::nullopt, core_options.GetOptimizedCompactionInterval());
     ASSERT_EQ(std::nullopt, core_options.GetCompactionTotalSizeThreshold());
@@ -209,6 +210,7 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::DATA_EVOLUTION_ENABLED, "true"},
         {Options::PARTITION_GENERATE_LEGACY_NAME, "false"},
         {Options::GLOBAL_INDEX_ENABLED, "false"},
+        {Options::GLOBAL_INDEX_THREAD_NUM, "4"},
         {Options::GLOBAL_INDEX_EXTERNAL_PATH, "FILE:///tmp/global_index/"},
         {Options::SCAN_TAG_NAME, "test-tag"},
         {Options::WRITE_ONLY, "true"},
@@ -333,6 +335,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_TRUE(core_options.DataEvolutionEnabled());
     ASSERT_FALSE(core_options.LegacyPartitionNameEnabled());
     ASSERT_FALSE(core_options.GlobalIndexEnabled());
+    ASSERT_EQ(core_options.GetGlobalIndexThreadNum(), 4);
     ASSERT_TRUE(core_options.GetGlobalIndexExternalPath());
     ASSERT_EQ(core_options.GetGlobalIndexExternalPath().value(), "FILE:///tmp/global_index/");
     ASSERT_EQ("test-tag", core_options.GetScanTagName().value());
