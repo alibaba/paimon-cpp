@@ -324,6 +324,7 @@ Result<RoaringBitmap64> BTreeGlobalIndexReader::RangeQuery(const std::optional<L
                                sst_file_reader_->GetNextBlock(index_iterator));
 
         if (!data_iterator || !data_iterator->HasNext()) {
+            assert(false);
             break;
         }
 

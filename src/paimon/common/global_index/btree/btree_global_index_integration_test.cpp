@@ -240,6 +240,11 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadIntData) {
         Literal literal_5(5);
         ASSERT_OK_AND_ASSIGN(result, reader->VisitGreaterThan(literal_5));
         CheckResult(result, {});
+
+        // GreaterThan 1 (min_key) -> skip entries with value==1 via from_inclusive=false
+        Literal literal_1(1);
+        ASSERT_OK_AND_ASSIGN(result, reader->VisitGreaterThan(literal_1));
+        CheckResult(result, {3, 4, 6, 7, 8, 9, 10});
     }
 
     // --- VisitGreaterOrEqual ---
@@ -361,6 +366,10 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadStringData) {
         Literal lit_cherry(FieldType::STRING, "cherry", 6);
         ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterThan(lit_cherry));
         CheckResult(result, {8});
+
+        Literal lit_apple(FieldType::STRING, "apple", 5);
+        ASSERT_OK_AND_ASSIGN(result, reader->VisitGreaterThan(lit_apple));
+        CheckResult(result, {1, 3, 4, 6, 7, 8});
     }
 
     // --- VisitGreaterOrEqual ---
@@ -401,6 +410,17 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadStringData) {
         // StartsWith "z" -> no match
         Literal lit_z(FieldType::STRING, "z", 1);
         ASSERT_OK_AND_ASSIGN(result, reader->VisitStartsWith(lit_z));
+        CheckResult(result, {});
+
+        // StartsWith "" (empty prefix) -> all non-null rows
+        Literal lit_empty(FieldType::STRING, "", 0);
+        ASSERT_OK_AND_ASSIGN(result, reader->VisitStartsWith(lit_empty));
+        CheckResult(result, {0, 1, 3, 4, 6, 7, 8});
+
+        // StartsWith "\xFF\xFF" (all 0xFF bytes, overflow branch) -> no match
+        std::string xff_prefix = "\xFF\xFF";
+        Literal lit_xff(FieldType::STRING, xff_prefix.data(), xff_prefix.size());
+        ASSERT_OK_AND_ASSIGN(result, reader->VisitStartsWith(lit_xff));
         CheckResult(result, {});
     }
 
@@ -1448,6 +1468,27 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadAllNull) {
         ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotIn(not_in_literals));
         CheckResult(result, {});
     }
+
+    // --- VisitGreaterThan -> empty (min_key_/max_key_ are nullopt) ---
+    {
+        Literal lit_1(1);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterThan(lit_1));
+        CheckResult(result, {});
+    }
+
+    // --- VisitGreaterOrEqual -> empty ---
+    {
+        Literal lit_1(1);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(lit_1));
+        CheckResult(result, {});
+    }
+
+    // --- VisitLessOrEqual -> empty ---
+    {
+        Literal lit_1(1);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessOrEqual(lit_1));
+        CheckResult(result, {});
+    }
 }
 
 TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadLargeDataWithSmallBlocks) {
@@ -1985,6 +2026,101 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadMultiFilesWithMetaSelector) 
         std::vector<Literal> literals = {Literal(1), Literal(12), Literal(20)};
         ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotIn(literals));
         CheckResult(result, {1, 3, 4, 6, 9});
+    }
+}
+
+// Test both-bounds RangeQuery branch.
+TEST_P(BTreeGlobalIndexIntegrationTest, TestRangeQuery) {
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("str_field", arrow::utf8());
+    auto c_schema = CreateArrowSchema(field);
+
+    // Use very small block size to force data into multiple blocks
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "64"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         indexer->CreateWriter("str_field", c_schema.get(), file_writer, pool_));
+    // Data layout
+    //   0->"aaa", 1->"aab", 2->"bba", 3->"bbb", 4->"bbc",
+    //   5->null, 6->"cca", 7->"ccb", 8->"ddd"
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        ["aaa"],
+        ["aab"],
+        ["bba"],
+        ["bbb"],
+        ["bbc"],
+        [null],
+        ["cca"],
+        ["ccb"],
+        ["ddd"]
+    ])")
+                     .ValueOrDie();
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+    std::vector<int64_t> row_ids(array->length());
+    std::iota(row_ids.begin(), row_ids.end(), 0);
+    ASSERT_OK(writer->AddBatch(&c_array, std::move(row_ids)));
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
+    ASSERT_EQ(metas.size(), 1);
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+    // Non-null rows: {0,1,2,3,4,6,7,8}, Null rows: {5}
+
+    {
+        Literal lit_bb(FieldType::STRING, "bb", 2);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitStartsWith(lit_bb));
+        CheckResult(result, {2, 3, 4});
+    }
+
+    {
+        Literal lit_cc(FieldType::STRING, "cc", 2);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitStartsWith(lit_cc));
+        CheckResult(result, {6, 7});
+    }
+
+    {
+        Literal lit_aaa(FieldType::STRING, "aaa", 3);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterThan(lit_aaa));
+        CheckResult(result, {1, 2, 3, 4, 6, 7, 8});
+    }
+
+    {
+        Literal lit_ddd(FieldType::STRING, "ddd", 3);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterThan(lit_ddd));
+        CheckResult(result, {});
+    }
+
+    {
+        Literal lit_empty(FieldType::STRING, "", 0);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitStartsWith(lit_empty));
+        CheckResult(result, {0, 1, 2, 3, 4, 6, 7, 8});
+    }
+
+    // Raw RangeQuery call to cover both-bounds branch with from_inclusive=false and
+    // to_inclusive=false
+    {
+        ASSERT_FALSE(reader->IsThreadSafe());
+        ASSERT_EQ(reader->GetIndexType(), BtreeDefs::kIdentifier);
+        auto lazy_reader = std::dynamic_pointer_cast<LazyFilteredBTreeReader>(reader);
+        ASSERT_TRUE(lazy_reader);
+        ASSERT_OK_AND_ASSIGN(auto tmp_reader, lazy_reader->GetOrCreateReader(metas[0]));
+        auto btree_reader = std::dynamic_pointer_cast<BTreeGlobalIndexReader>(tmp_reader);
+        ASSERT_TRUE(btree_reader);
+        ASSERT_FALSE(btree_reader->IsThreadSafe());
+        ASSERT_EQ(btree_reader->GetIndexType(), BtreeDefs::kIdentifier);
+
+        Literal from_lit(FieldType::STRING, "bba", 3);
+        Literal to_lit(FieldType::STRING, "bbc", 3);
+        ASSERT_OK_AND_ASSIGN(RoaringBitmap64 range_result,
+                             btree_reader->RangeQuery(from_lit, to_lit, /*from_inclusive=*/false,
+                                                      /*to_inclusive=*/false));
+        ASSERT_EQ(range_result, RoaringBitmap64::From({3}));
     }
 }
 
