@@ -16,7 +16,6 @@
 
 #include "paimon/common/utils/arrow/arrow_input_stream_adapter.h"
 
-#include <algorithm>
 #include <cstdint>
 #include <functional>
 #include <utility>
@@ -52,16 +51,7 @@ ArrowInputStreamAdapter::ArrowInputStreamAdapter(
     : input_stream_(input_stream), pool_(pool), file_size_(file_size) {}
 
 ArrowInputStreamAdapter::~ArrowInputStreamAdapter() {
-    WaitForPendingAsyncReads();
     [[maybe_unused]] auto status = DoClose();
-}
-
-void ArrowInputStreamAdapter::WaitForPendingAsyncReads() {
-    std::lock_guard<std::mutex> lock(pending_futures_mutex_);
-    if (!pending_futures_.empty()) {
-        (void)arrow::All(pending_futures_).result();
-        pending_futures_.clear();
-    }
 }
 
 arrow::Status ArrowInputStreamAdapter::Seek(int64_t position) {
@@ -141,14 +131,6 @@ arrow::Future<std::shared_ptr<arrow::Buffer>> ArrowInputStreamAdapter::ReadAsync
                                      fut.MarkFinished(ToArrowStatus(callback_status));
                                  }
                              });
-    {
-        std::lock_guard<std::mutex> lock(pending_futures_mutex_);
-        // Prune completed futures to avoid unbounded growth
-        pending_futures_.erase(std::remove_if(pending_futures_.begin(), pending_futures_.end(),
-                                              [](const auto& f) { return f.is_finished(); }),
-                               pending_futures_.end());
-        pending_futures_.push_back(fut);
-    }
     return fut;
 }
 
