@@ -186,27 +186,18 @@ class FileReaderWrapper {
     RowRanges current_filtered_row_ranges_;   // RowRanges for the active page-filtered RG
     uint64_t current_filtered_rg_start_ = 0;  // Absolute row-group start row number
 
-    // Page-level filtering state. Externally injected via SetRowGroupRowRanges.
+    // Page-level filtering state. Externally injected via SetRowGroupRowRanges and
+    // looked up by row group index when entering a page-filtered RG.
     std::map<int32_t, RowRanges> row_group_row_ranges_;
 
-    // Cached metadata for each page-filtered row group, keyed by target_row_groups_
-    // positional index. Populated in PrepareForReading and kept until the next
-    // PrepareForReading or destruction — entries are NOT erased on consumption so that
-    // a backward seek into a previously-read page-filtered RG can rebuild the per-RG
-    // reader from the same metadata. Caching page_ranges in particular avoids
-    // re-deserializing OffsetIndex (Thrift parse) on every lazy-init.
-    struct PageFilteredRowGroupMeta {
-        int32_t rg_index;
-        RowRanges row_ranges;
-        std::vector<int32_t> column_indices;
-        std::shared_ptr<arrow::Schema> read_schema;
-        ::arrow::io::CacheOptions cache_options;
-        std::vector<::arrow::io::ReadRange> page_ranges;
-    };
-    std::map<uint64_t, PageFilteredRowGroupMeta> pending_filtered_reads_;
-
     // Set of target_row_groups_ positional indices that use page-filtered reading.
+    // Built in PrepareForReading from row_group_row_ranges_.
     std::set<uint64_t> page_filtered_indices_;
+
+    // Arrow schema covering target_column_indices_, used when constructing the per-RG
+    // page-filtered reader. Cached in PrepareForReading because it's identical across
+    // all page-filtered RGs in a session.
+    std::shared_ptr<arrow::Schema> page_filtered_read_schema_;
 
     // Track pre-buffered ranges so we can wait on destruction
     std::vector<::arrow::io::ReadRange> prebuffered_ranges_;

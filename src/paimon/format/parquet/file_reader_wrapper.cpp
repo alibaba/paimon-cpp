@@ -150,18 +150,10 @@ Status FileReaderWrapper::SeekToRow(uint64_t row_number) {
             current_row_group_idx_ = i;
             next_row_to_read_ = target_row_groups_[i].first;
 
-            // Drop pending entries strictly before the seek position. The forward-only
-            // seek contract means those RGs will never be visited again; freeing the
-            // cached meta keeps memory bounded by the unconsumed-RG count.
-            for (auto it = pending_filtered_reads_.begin(); it != pending_filtered_reads_.end();) {
-                if (it->first < i) {
-                    it = pending_filtered_reads_.erase(it);
-                } else {
-                    ++it;
-                }
-            }
-
-            // Rebuild batch_reader_ only for non-page-filtered row groups at/after seek position
+            // Rebuild batch_reader_ only for non-page-filtered row groups at/after seek
+            // position. Page-filtered RGs need no seek-side bookkeeping: their per-RG
+            // reader is constructed on demand in Next() from row_group_row_ranges_ each
+            // time, so backward seek "just works".
             std::vector<int32_t> target_row_group_indices;
             for (uint64_t j = i; j < target_row_groups_.size(); j++) {
                 if (page_filtered_indices_.count(j) == 0) {
@@ -197,18 +189,24 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::Next() {
         bool is_page_filtered = page_filtered_indices_.count(current_row_group_idx_) > 0;
 
         if (is_page_filtered) {
-            // Lazy-init the per-RG streaming reader on first entry into this RG, then
-            // erase the meta — page-filtered RGs are consumed once. Backward seek into
-            // a consumed RG is not supported and surfaces as the "missing pending read
-            // metadata" error below.
+            // Construct the per-RG streaming reader on demand. Inputs are recomputed each
+            // time from existing wrapper fields (no per-RG meta cached on the wrapper),
+            // mirroring how the fully-matched path delegates to Arrow's stateless
+            // GetRecordBatchReader. This makes both forward and backward seeks work
+            // uniformly: SeekToRow only resets current_page_filtered_reader_, and the
+            // next Next() rebuilds from authoritative state.
             if (!current_page_filtered_reader_) {
-                auto pending_it = pending_filtered_reads_.find(current_row_group_idx_);
-                if (pending_it == pending_filtered_reads_.end()) {
+                PAIMON_ASSIGN_OR_RAISE(int32_t rg_index,
+                                       GetRowGroupId(target_row_groups_[current_row_group_idx_]));
+                auto range_it = row_group_row_ranges_.find(rg_index);
+                if (range_it == row_group_row_ranges_.end()) {
                     return Status::Invalid(fmt::format(
-                        "page-filtered row group {} missing pending read metadata",
-                        current_row_group_idx_));
+                        "page-filtered row group {} missing row ranges in row_group_row_ranges_",
+                        rg_index));
                 }
-                const auto& meta = pending_it->second;
+                const RowRanges& row_ranges = range_it->second;
+                auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
+                    file_reader_->parquet_reader(), rg_index, row_ranges, target_column_indices_);
                 bool pre_buffered = !prebuffered_ranges_.empty();
                 // batch_size_ == 0 means "no per-batch row cap" in the wrapper's contract,
                 // but TableBatchReader::set_chunksize(0) would loop forever emitting empty
@@ -216,16 +214,16 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::Next() {
                 // underlying chunk boundary instead.
                 int64_t max_chunksize =
                     batch_size_ > 0 ? batch_size_ : std::numeric_limits<int64_t>::max();
-                PAIMON_ASSIGN_OR_RAISE(current_page_filtered_reader_,
-                                       PageFilteredRowGroupReader::ReadFilteredRowGroup(
-                                           file_reader_->parquet_reader(), meta.rg_index,
-                                           meta.row_ranges, meta.column_indices, meta.read_schema,
-                                           pool_, meta.cache_options, pre_buffered,
-                                           meta.page_ranges, max_chunksize));
-                current_filtered_row_ranges_ = meta.row_ranges;
+                PAIMON_ASSIGN_OR_RAISE(
+                    current_page_filtered_reader_,
+                    PageFilteredRowGroupReader::ReadFilteredRowGroup(
+                        file_reader_->parquet_reader(), rg_index, row_ranges,
+                        target_column_indices_, page_filtered_read_schema_, pool_,
+                        file_reader_->properties().cache_options(), pre_buffered, page_ranges,
+                        max_chunksize));
+                current_filtered_row_ranges_ = row_ranges;
                 current_filtered_rg_start_ = target_row_groups_[current_row_group_idx_].first;
                 filtered_global_offset_ = 0;
-                pending_filtered_reads_.erase(pending_it);
             }
             PAIMON_RETURN_NOT_OK_FROM_ARROW(
                 current_page_filtered_reader_->ReadNext(&record_batch));
@@ -332,21 +330,27 @@ Status FileReaderWrapper::PrepareForReading(const std::set<int32_t>& target_row_
     }
 
     // Separate row groups into fully matched (Arrow's standard reader) and partially
-    // matched (page-filtered, lazy on-demand reading from cached metadata).
+    // matched (page-filtered, per-RG reader constructed on demand in Next()).
+    // Per-RG metadata for the page-filtered path is NOT cached on the wrapper — it's
+    // recomputed on demand in Next() from row_group_row_ranges_ + target_column_indices_,
+    // mirroring how the fully-matched path lets Arrow's FileReader own all metadata.
     std::vector<int32_t> fully_matched_row_groups;
-    pending_filtered_reads_.clear();
     page_filtered_indices_.clear();
+    page_filtered_read_schema_.reset();
 
-    std::shared_ptr<arrow::Schema> read_schema;
+    // Page-level byte ranges collected here only for the bulk PreBuffer call below;
+    // discarded once PreBuffer is dispatched.
+    std::vector<::arrow::io::ReadRange> page_filtered_byte_ranges;
+
     for (int32_t rg_idx : target_row_group_indices) {
         auto range_it = row_group_row_ranges_.find(rg_idx);
         if (range_it != row_group_row_ranges_.end()) {
             uint64_t pos = rg_idx_to_position[rg_idx];
             page_filtered_indices_.insert(pos);
 
-            // Build read_schema lazily on first page-filtered row group; identical across
-            // all page-filtered RGs in this session, so cached and shared via shared_ptr.
-            if (!read_schema) {
+            // Build the page-filter read_schema once on first encounter — it's identical
+            // across all page-filtered RGs in this session.
+            if (!page_filtered_read_schema_) {
                 std::shared_ptr<arrow::Schema> schema;
                 PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetSchema(&schema));
                 std::vector<std::shared_ptr<arrow::Field>> fields;
@@ -362,22 +366,17 @@ Status FileReaderWrapper::PrepareForReading(const std::set<int32_t>& target_row_
                     }
                     fields.push_back(field);
                 }
-                read_schema = arrow::schema(fields);
+                page_filtered_read_schema_ = arrow::schema(fields);
             }
 
-            // Compute page-level byte ranges for this row group. The result is also fed
-            // to the bulk PreBuffer call below; caching it in the meta avoids
-            // re-deserializing OffsetIndex on every lazy-init in Next().
-            auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
-                file_reader_->parquet_reader(), rg_idx, range_it->second, column_indices);
-
-            pending_filtered_reads_[pos] =
-                PageFilteredRowGroupMeta{rg_idx,
-                                         range_it->second,
-                                         column_indices,
-                                         read_schema,
-                                         file_reader_->properties().cache_options(),
-                                         std::move(page_ranges)};
+            if (!disable_prebuffer_) {
+                auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
+                    file_reader_->parquet_reader(), rg_idx, range_it->second, column_indices);
+                page_filtered_byte_ranges.insert(
+                    page_filtered_byte_ranges.end(),
+                    std::make_move_iterator(page_ranges.begin()),
+                    std::make_move_iterator(page_ranges.end()));
+            }
         } else {
             fully_matched_row_groups.push_back(rg_idx);
         }
@@ -409,13 +408,8 @@ Status FileReaderWrapper::PrepareForReading(const std::set<int32_t>& target_row_
     //
     // Skip prebuffer entirely when disable_prebuffer_ is set (for testing IO error
     // recovery).
-    if (!disable_prebuffer_ && !pending_filtered_reads_.empty()) {
-        std::vector<::arrow::io::ReadRange> all_ranges;
-
-        // Page-filtered row groups: add their page-level ranges (already cached in meta)
-        for (const auto& [pos, meta] : pending_filtered_reads_) {
-            all_ranges.insert(all_ranges.end(), meta.page_ranges.begin(), meta.page_ranges.end());
-        }
+    if (!disable_prebuffer_ && !page_filtered_indices_.empty()) {
+        std::vector<::arrow::io::ReadRange> all_ranges = std::move(page_filtered_byte_ranges);
 
         // Fully-matched row groups: add entire column chunk ranges
         // The correct calculation follows Arrow's ColumnChunkMetaData::file_range():

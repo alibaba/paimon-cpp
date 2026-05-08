@@ -276,11 +276,12 @@ TEST_F(FileReaderWrapperTest, PageFilteredZeroBatchSizeDoesNotHang) {
     ASSERT_GE(batch_count, 1);
 }
 
-/// Page-filtered RGs are consumed once: their cached metadata is erased after the
-/// per-RG reader is built. Backward seek into a consumed page-filtered RG is therefore
-/// unsupported and must fail loudly with a clear error rather than silently returning
-/// wrong data or skipping rows.
-TEST_F(FileReaderWrapperTest, SeekBackToConsumedPageFilteredRowGroupErrors) {
+/// SeekToRow back to a previously-consumed page-filtered row group must rebuild the
+/// per-RG streaming reader from row_group_row_ranges_ and re-yield the same rows.
+/// The page-filter path holds no per-RG cache that consumption could destroy; the
+/// reader is constructed on demand each time, mirroring Arrow's stateless
+/// GetRecordBatchReader for the fully-matched path.
+TEST_F(FileReaderWrapperTest, SeekBackToConsumedPageFilteredRowGroup) {
     std::string file_path = PathUtil::JoinPath(dir_->Str(), "seek_back.parquet");
     // 2000 rows produces 2 row groups (max_row_group_length=1000) with page index enabled.
     PrepareParquetFile(file_path, /*row_count=*/2000, /*enable_page_index=*/true);
@@ -296,19 +297,30 @@ TEST_F(FileReaderWrapperTest, SeekBackToConsumedPageFilteredRowGroupErrors) {
     std::vector<int32_t> all_columns = {0, 1, 2};
     ASSERT_OK(reader_wrapper->PrepareForReading({0, 1}, all_columns));
 
-    int64_t total = 0;
-    while (true) {
-        ASSERT_OK_AND_ASSIGN(auto batch, reader_wrapper->Next());
-        if (!batch) break;
-        total += batch->num_rows();
-    }
-    ASSERT_EQ(90, total);
+    auto count_all_rows = [&](int64_t* out_total) {
+        int64_t total = 0;
+        while (true) {
+            auto next = reader_wrapper->Next();
+            if (!next.ok()) return next.status();
+            auto batch = std::move(next).value();
+            if (!batch) break;
+            total += batch->num_rows();
+        }
+        *out_total = total;
+        return Status::OK();
+    };
 
-    // Seek back to row 0 succeeds (it just resets indices and rebuilds batch_reader_).
+    int64_t first_total = 0;
+    ASSERT_OK(count_all_rows(&first_total));
+    ASSERT_EQ(90, first_total);  // 40 + 50
+
+    // Seek back to row 0 (start of RG0). The on-demand reader construction means RG0
+    // is read again from scratch, producing the same 90 rows total.
     ASSERT_OK(reader_wrapper->SeekToRow(0));
 
-    // But re-entering RG0 fails: its meta was erased on first consumption.
-    ASSERT_NOK_WITH_MSG(reader_wrapper->Next(), "missing pending read metadata");
+    int64_t second_total = 0;
+    ASSERT_OK(count_all_rows(&second_total));
+    ASSERT_EQ(90, second_total);
 }
 
 TEST_F(FileReaderWrapperTest, GetRowGroupRanges) {
