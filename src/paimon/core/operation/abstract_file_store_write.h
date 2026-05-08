@@ -29,6 +29,7 @@
 #include "paimon/common/io/cache/cache_manager.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/deletionvectors/bucketed_dv_maintainer.h"
+#include "paimon/core/memory/writer_memory_manager.h"
 #include "paimon/file_store_write.h"
 #include "paimon/logging.h"
 #include "paimon/metrics.h"
@@ -61,7 +62,6 @@ class MemoryPool;
 class RecordBatch;
 class RestoreFiles;
 class IOManager;
-class WriterMemoryManager;
 
 class AbstractFileStoreWrite : public FileStoreWrite {
  public:
@@ -132,7 +132,7 @@ class AbstractFileStoreWrite : public FileStoreWrite {
     std::shared_ptr<BucketedDvMaintainer::Factory> dv_maintainer_factory_;
     std::shared_ptr<IOManager> io_manager_;
     std::shared_ptr<CacheManager> cache_manager_;
-    std::shared_ptr<WriterMemoryManager> writer_memory_manager_;
+    std::unique_ptr<WriterMemoryManager> writer_memory_manager_;
 
     CoreOptions options_;
     std::shared_ptr<Executor> compact_executor_;

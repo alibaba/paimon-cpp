@@ -117,7 +117,7 @@ Result<std::shared_ptr<BatchWriter>> KeyValueFileStoreWrite::CreateWriter(
             restore_max_seq_number, trimmed_primary_keys, data_file_path_factory, key_comparator_,
             user_defined_seq_comparator_, merge_function_wrapper_, table_schema_->Id(), schema_,
             options_, compact_manager, io_manager_, pool_));
-    return std::shared_ptr<BatchWriter>(writer);
+    return writer;
 }
 
 Status KeyValueFileStoreWrite::Close() {

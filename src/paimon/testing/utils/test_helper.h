@@ -381,18 +381,21 @@ class TestHelper {
 
     static int64_t CountChannelFiles(const std::shared_ptr<FileSystem>& file_system,
                                      const std::string& tmp_path) {
-        std::vector<std::unique_ptr<BasicFileStatus>> file_statuses;
-        EXPECT_OK(file_system->ListDir(tmp_path, &file_statuses));
+        std::vector<std::unique_ptr<BasicFileStatus>> dir_statuses;
+        EXPECT_OK(file_system->ListDir(tmp_path, &dir_statuses));
 
         int64_t channel_file_count = 0;
-        for (const auto& file_status : file_statuses) {
-            const std::string path = file_status->GetPath();
-            if (file_status->IsDir() && path.find("paimon-io-") != std::string::npos) {
-                channel_file_count += CountChannelFiles(file_system, path);
-                continue;
-            }
-            if (StringUtils::EndsWith(path, ".channel")) {
-                ++channel_file_count;
+        for (const auto& dir_status : dir_statuses) {
+            const std::string dir_path = dir_status->GetPath();
+            if (dir_status->IsDir() && dir_path.find("paimon-io-") != std::string::npos) {
+                std::vector<std::unique_ptr<BasicFileStatus>> file_statuses;
+                EXPECT_OK(file_system->ListDir(dir_path, &file_statuses));
+
+                for (const auto& file_status : file_statuses) {
+                    if (StringUtils::EndsWith(file_status->GetPath(), ".channel")) {
+                        ++channel_file_count;
+                    }
+                }
             }
         }
         return channel_file_count;

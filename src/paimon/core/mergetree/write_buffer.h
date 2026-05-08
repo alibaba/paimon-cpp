@@ -46,8 +46,8 @@ template <typename T>
 class MergeFunctionWrapper;
 
 /// WriteBuffer manages the batch buffer for MergeTreeWriter.
-/// It delegates to a SortBuffer implementation (BinaryInMemorySortBuffer or
-/// BinaryExternalSortBuffer) based on the spillable configuration.
+/// It delegates to a SortBuffer implementation (InMemorySortBuffer or ExternalSortBuffer) based on
+/// the spillable configuration.
 class WriteBuffer {
  public:
     static Result<std::unique_ptr<WriteBuffer>> Create(

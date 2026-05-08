@@ -24,7 +24,6 @@
 #include "fmt/format.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/metrics/metrics_impl.h"
-#include "paimon/core/memory/writer_memory_manager.h"
 #include "paimon/core/operation/file_store_scan.h"
 #include "paimon/core/operation/file_system_write_restore.h"
 #include "paimon/core/operation/metrics/compaction_metrics.h"
@@ -83,7 +82,7 @@ AbstractFileStoreWrite::AbstractFileStoreWrite(
       metrics_(std::make_shared<MetricsImpl>()),
       logger_(Logger::GetLogger("AbstractFileStoreWrite")) {
     writer_memory_manager_ =
-        std::make_shared<WriterMemoryManager>(static_cast<uint64_t>(options.GetWriteBufferSize()));
+        std::make_unique<WriterMemoryManager>(static_cast<uint64_t>(options.GetWriteBufferSize()));
     cache_manager_ = std::make_shared<CacheManager>(options.GetLookupCacheMaxMemory(),
                                                     options.GetLookupCacheHighPrioPoolRatio());
 }

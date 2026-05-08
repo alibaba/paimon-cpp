@@ -218,8 +218,7 @@ TEST_F(KeyValueFileStoreWriteTest,
     ASSERT_EQ(commit_messages.size(), 1);
 }
 
-TEST_F(KeyValueFileStoreWriteTest,
-       TestWriteShouldSpillLargestWriterWhenGlobalMemoryLimitIsExceeded) {
+TEST_F(KeyValueFileStoreWriteTest, TestSpillSimple) {
     auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false)};
     arrow::Schema typed_schema(fields);
     ::ArrowSchema schema;
@@ -241,17 +240,38 @@ TEST_F(KeyValueFileStoreWriteTest,
 
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context, context_builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
+    auto key_value_file_store_write = dynamic_cast<KeyValueFileStoreWrite*>(file_store_write.get());
+    auto get_writer = [&](int32_t bucket) -> std::shared_ptr<paimon::BatchWriter> {
+        auto partition_iter = key_value_file_store_write->writers_.find(BinaryRow::EmptyRow());
+        if (partition_iter != key_value_file_store_write->writers_.end()) {
+            auto& buckets = partition_iter->second;
+            auto bucket_iter = buckets.find(bucket);
+            if (PAIMON_LIKELY(bucket_iter != buckets.end())) {
+                return bucket_iter->second.writer;
+            }
+        }
+        assert(false);
+        return nullptr;
+    };
 
+    // write bucket 0, not trigger spill
     ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, std::string(48, 'a')));
     ASSERT_EQ(TestHelper::CountChannelFiles(dir->GetFileSystem(), dir->Str()), 0);
+    ASSERT_GT(get_writer(0)->GetMemoryUsage(), 0);
 
-    ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/1, std::string(48, 'b')));
+    // write bucket 1, spill bucket 0 (pick largest writer)
+    ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/1, std::string(32, 'b')));
     ASSERT_GT(TestHelper::CountChannelFiles(dir->GetFileSystem(), dir->Str()), 0);
+    ASSERT_EQ(get_writer(0)->GetMemoryUsage(), 0);
+    ASSERT_GT(get_writer(1)->GetMemoryUsage(), 0);
 
+    // prepare commit, clean all spill files and memory buffers
     ASSERT_OK_AND_ASSIGN(auto commit_messages,
                          file_store_write->PrepareCommit(/*wait_compaction=*/true));
     ASSERT_EQ(commit_messages.size(), 2);
     ASSERT_EQ(TestHelper::CountChannelFiles(dir->GetFileSystem(), dir->Str()), 0);
+    ASSERT_EQ(get_writer(0)->GetMemoryUsage(), 0);
+    ASSERT_EQ(get_writer(1)->GetMemoryUsage(), 0);
 }
 
 }  // namespace paimon::test
