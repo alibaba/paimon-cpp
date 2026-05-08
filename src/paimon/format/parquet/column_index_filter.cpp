@@ -22,6 +22,7 @@
 #include <memory>
 #include <set>
 
+#include "fmt/format.h"
 #include "paimon/data/decimal.h"
 #include "paimon/predicate/compound_predicate.h"
 #include "paimon/predicate/function.h"
@@ -44,22 +45,22 @@ Result<RowRanges> ColumnIndexFilter::CalculateRowRanges(
         return RowRanges::CreateSingle(row_group_row_count);
     }
 
-    return VisitPredicate(predicate, rg_page_index_reader.get(), column_name_to_index,
-                          row_group_row_count);
+    return VisitPredicate(predicate, column_name_to_index, row_group_row_count,
+                          rg_page_index_reader.get());
 }
 
 Result<RowRanges> ColumnIndexFilter::VisitPredicate(
     const std::shared_ptr<Predicate>& predicate,
-    ::parquet::RowGroupPageIndexReader* rg_page_index_reader,
-    const std::map<std::string, int32_t>& column_name_to_index, int64_t row_group_row_count) {
+    const std::map<std::string, int32_t>& column_name_to_index, int64_t row_group_row_count,
+    ::parquet::RowGroupPageIndexReader* rg_page_index_reader) {
     if (auto leaf_predicate = std::dynamic_pointer_cast<LeafPredicate>(predicate)) {
-        return VisitLeafPredicate(leaf_predicate, rg_page_index_reader, column_name_to_index,
-                                  row_group_row_count);
+        return VisitLeafPredicate(leaf_predicate, column_name_to_index, row_group_row_count,
+                                  rg_page_index_reader);
     }
 
     if (auto compound_predicate = std::dynamic_pointer_cast<CompoundPredicate>(predicate)) {
-        return VisitCompoundPredicate(compound_predicate, rg_page_index_reader,
-                                      column_name_to_index, row_group_row_count);
+        return VisitCompoundPredicate(compound_predicate, column_name_to_index, row_group_row_count,
+                                      rg_page_index_reader);
     }
 
     return Status::Invalid("Unknown predicate type");
@@ -67,61 +68,19 @@ Result<RowRanges> ColumnIndexFilter::VisitPredicate(
 
 Result<RowRanges> ColumnIndexFilter::VisitLeafPredicate(
     const std::shared_ptr<LeafPredicate>& leaf_predicate,
-    ::parquet::RowGroupPageIndexReader* rg_page_index_reader,
-    const std::map<std::string, int32_t>& column_name_to_index, int64_t row_group_row_count) {
+    const std::map<std::string, int32_t>& column_name_to_index, int64_t row_group_row_count,
+    ::parquet::RowGroupPageIndexReader* rg_page_index_reader) {
     const std::string& field_name = leaf_predicate->FieldName();
     auto it = column_name_to_index.find(field_name);
     if (it == column_name_to_index.end()) {
-        // Column not found in file (schema evolution): all values are treated as NULL.
-        // Return precise results based on predicate type, matching Java behavior.
-        const auto& function = leaf_predicate->GetFunction();
-        auto function_type = function.GetType();
-        const auto& literals = leaf_predicate->Literals();
-        switch (function_type) {
-            case Function::Type::IS_NULL:
-                // All values are null, IS_NULL matches all rows.
-                return RowRanges::CreateSingle(row_group_row_count);
-            case Function::Type::EQUAL: {
-                // NULL = null_literal → all rows (null-safe equal semantics);
-                // NULL = non_null → no rows.
-                bool has_null_literal = !literals.empty() && literals[0].IsNull();
-                return has_null_literal ? RowRanges::CreateSingle(row_group_row_count)
-                                        : RowRanges::CreateEmpty();
-            }
-            case Function::Type::IN: {
-                // IN list contains null → all rows; otherwise no rows.
-                bool has_null = std::any_of(literals.begin(), literals.end(),
-                                            [](const Literal& l) { return l.IsNull(); });
-                return has_null ? RowRanges::CreateSingle(row_group_row_count)
-                                : RowRanges::CreateEmpty();
-            }
-            case Function::Type::NOT_EQUAL: {
-                // NULL != null_literal → no rows; NULL != non_null → all rows
-                // (safe over-approximation matching Java).
-                bool has_null_literal = !literals.empty() && literals[0].IsNull();
-                return has_null_literal ? RowRanges::CreateEmpty()
-                                        : RowRanges::CreateSingle(row_group_row_count);
-            }
-            case Function::Type::NOT_IN: {
-                // NOT_IN list contains null → no rows; otherwise all rows
-                // (safe over-approximation matching Java).
-                bool has_null = std::any_of(literals.begin(), literals.end(),
-                                            [](const Literal& l) { return l.IsNull(); });
-                return has_null ? RowRanges::CreateEmpty()
-                                : RowRanges::CreateSingle(row_group_row_count);
-            }
-            case Function::Type::IS_NOT_NULL:
-            case Function::Type::LESS_THAN:
-            case Function::Type::LESS_OR_EQUAL:
-            case Function::Type::GREATER_THAN:
-            case Function::Type::GREATER_OR_EQUAL:
-                // All values are null, these predicates cannot match any row.
-                return RowRanges::CreateEmpty();
-            default:
-                // Unknown predicate type, safe fallback to all rows.
-                return RowRanges::CreateSingle(row_group_row_count);
-        }
+        // Predicates referencing fields absent from the data file are stripped
+        // upstream by FieldMappingBuilder, so reaching here indicates a contract
+        // violation by the caller.
+        return Status::Invalid(
+            fmt::format("column '{}' not found in column_name_to_index", field_name));
     }
+    const auto& function = leaf_predicate->GetFunction();
+    auto function_type = function.GetType();
 
     int32_t column_index = it->second;
     auto column_index_ptr = rg_page_index_reader->GetColumnIndex(column_index);
@@ -132,8 +91,6 @@ Result<RowRanges> ColumnIndexFilter::VisitLeafPredicate(
         return RowRanges::CreateSingle(row_group_row_count);
     }
 
-    const auto& function = leaf_predicate->GetFunction();
-    auto function_type = function.GetType();
     const auto& literals = leaf_predicate->Literals();
     FieldType field_type = leaf_predicate->GetFieldType();
 
@@ -195,8 +152,8 @@ Result<RowRanges> ColumnIndexFilter::VisitLeafPredicate(
 
 Result<RowRanges> ColumnIndexFilter::VisitCompoundPredicate(
     const std::shared_ptr<CompoundPredicate>& compound_predicate,
-    ::parquet::RowGroupPageIndexReader* rg_page_index_reader,
-    const std::map<std::string, int32_t>& column_name_to_index, int64_t row_group_row_count) {
+    const std::map<std::string, int32_t>& column_name_to_index, int64_t row_group_row_count,
+    ::parquet::RowGroupPageIndexReader* rg_page_index_reader) {
     const auto& children = compound_predicate->Children();
     const auto& function = compound_predicate->GetFunction();
     auto function_type = function.GetType();
@@ -207,8 +164,8 @@ Result<RowRanges> ColumnIndexFilter::VisitCompoundPredicate(
 
     // Calculate row ranges for first child
     PAIMON_ASSIGN_OR_RAISE(RowRanges result,
-                           VisitPredicate(children[0], rg_page_index_reader, column_name_to_index,
-                                          row_group_row_count));
+                           VisitPredicate(children[0], column_name_to_index, row_group_row_count,
+                                          rg_page_index_reader));
 
     if (function_type == Function::Type::AND) {
         // Short-circuit: if result is empty, no need to continue
@@ -218,8 +175,8 @@ Result<RowRanges> ColumnIndexFilter::VisitCompoundPredicate(
 
         for (size_t i = 1; i < children.size(); ++i) {
             PAIMON_ASSIGN_OR_RAISE(RowRanges child_ranges,
-                                   VisitPredicate(children[i], rg_page_index_reader,
-                                                  column_name_to_index, row_group_row_count));
+                                   VisitPredicate(children[i], column_name_to_index,
+                                                  row_group_row_count, rg_page_index_reader));
 
             result = RowRanges::Intersection(result, child_ranges);
 
@@ -236,8 +193,8 @@ Result<RowRanges> ColumnIndexFilter::VisitCompoundPredicate(
 
         for (size_t i = 1; i < children.size(); ++i) {
             PAIMON_ASSIGN_OR_RAISE(RowRanges child_ranges,
-                                   VisitPredicate(children[i], rg_page_index_reader,
-                                                  column_name_to_index, row_group_row_count));
+                                   VisitPredicate(children[i], column_name_to_index,
+                                                  row_group_row_count, rg_page_index_reader));
 
             result = RowRanges::Union(result, child_ranges);
 

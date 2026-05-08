@@ -202,7 +202,8 @@ Result<std::shared_ptr<arrow::RecordBatch>> PageFilteredRowGroupReader::ReadFilt
         empty_columns.reserve(arrow_schema->num_fields());
         for (int i = 0; i < arrow_schema->num_fields(); ++i) {
             PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-                auto empty_array, arrow::MakeEmptyArray(arrow_schema->field(i)->type(), pool));
+                std::shared_ptr<arrow::Array> empty_array,
+                arrow::MakeEmptyArray(arrow_schema->field(i)->type(), pool));
             empty_columns.push_back(std::move(empty_array));
         }
         return arrow::RecordBatch::Make(arrow_schema, 0, std::move(empty_columns));
@@ -277,7 +278,8 @@ Result<std::shared_ptr<arrow::RecordBatch>> PageFilteredRowGroupReader::ReadFilt
             arrays.push_back(chunked->chunk(0));
         } else if (chunked->num_chunks() == 0) {
             PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-                auto empty_array, arrow::MakeEmptyArray(arrow_schema->field(i)->type(), pool));
+                std::shared_ptr<arrow::Array> empty_array,
+                arrow::MakeEmptyArray(arrow_schema->field(i)->type(), pool));
             arrays.push_back(std::move(empty_array));
         } else {
             return Status::Invalid(fmt::format(

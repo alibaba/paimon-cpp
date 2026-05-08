@@ -464,27 +464,13 @@ TEST_F(ColumnIndexFilterTest, OrCompound) {
     EXPECT_EQ(99, ranges.GetRanges()[1].to);
 }
 
-/// EQUAL on unknown column with non-null literal (schema evolution) → no rows returned
-TEST_F(ColumnIndexFilterTest, UnknownColumnReturnsAllRows) {
+/// Predicates referencing fields absent from the data file are stripped upstream
+/// by FieldMappingBuilder, so reaching ColumnIndexFilter with such a predicate is
+/// a contract violation and surfaces as an error.
+TEST_F(ColumnIndexFilterTest, UnknownColumnReturnsError) {
     auto pred = PredicateBuilder::Equal(0, "nonexistent", FieldType::INT,
                                         Literal(static_cast<int32_t>(42)));
-    ASSERT_OK_AND_ASSIGN(auto ranges, Filter(pred));
-    // Column not in file: IS_NULL-like behavior doesn't apply for EQUAL on non-null literal
-    EXPECT_TRUE(ranges.IsEmpty());
-}
-
-/// IS_NULL on unknown column → all rows (all values are null for missing column)
-TEST_F(ColumnIndexFilterTest, IsNullUnknownColumnReturnsAllRows) {
-    auto pred = PredicateBuilder::IsNull(0, "nonexistent", FieldType::INT);
-    ASSERT_OK_AND_ASSIGN(auto ranges, Filter(pred));
-    EXPECT_EQ(row_group_row_count_, ranges.RowCount());
-}
-
-/// IS_NOT_NULL on unknown column → no rows
-TEST_F(ColumnIndexFilterTest, IsNotNullUnknownColumnReturnsEmpty) {
-    auto pred = PredicateBuilder::IsNotNull(0, "nonexistent", FieldType::INT);
-    ASSERT_OK_AND_ASSIGN(auto ranges, Filter(pred));
-    EXPECT_TRUE(ranges.IsEmpty());
+    EXPECT_FALSE(Filter(pred).ok());
 }
 
 /// Null predicate → all rows

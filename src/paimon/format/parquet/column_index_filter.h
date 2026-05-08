@@ -69,20 +69,20 @@ class ColumnIndexFilter {
     /// Visit a predicate and calculate row ranges.
     static Result<RowRanges> VisitPredicate(
         const std::shared_ptr<Predicate>& predicate,
-        ::parquet::RowGroupPageIndexReader* rg_page_index_reader,
-        const std::map<std::string, int32_t>& column_name_to_index, int64_t row_group_row_count);
+        const std::map<std::string, int32_t>& column_name_to_index, int64_t row_group_row_count,
+        ::parquet::RowGroupPageIndexReader* rg_page_index_reader);
 
     /// Visit a leaf predicate and calculate row ranges.
     static Result<RowRanges> VisitLeafPredicate(
         const std::shared_ptr<LeafPredicate>& leaf_predicate,
-        ::parquet::RowGroupPageIndexReader* rg_page_index_reader,
-        const std::map<std::string, int32_t>& column_name_to_index, int64_t row_group_row_count);
+        const std::map<std::string, int32_t>& column_name_to_index, int64_t row_group_row_count,
+        ::parquet::RowGroupPageIndexReader* rg_page_index_reader);
 
     /// Visit a compound predicate (AND/OR) and calculate row ranges.
     static Result<RowRanges> VisitCompoundPredicate(
         const std::shared_ptr<CompoundPredicate>& compound_predicate,
-        ::parquet::RowGroupPageIndexReader* rg_page_index_reader,
-        const std::map<std::string, int32_t>& column_name_to_index, int64_t row_group_row_count);
+        const std::map<std::string, int32_t>& column_name_to_index, int64_t row_group_row_count,
+        ::parquet::RowGroupPageIndexReader* rg_page_index_reader);
 
     /// Filter pages based on column index statistics for EQUAL predicate.
     static std::vector<int32_t> FilterPagesByEqual(
