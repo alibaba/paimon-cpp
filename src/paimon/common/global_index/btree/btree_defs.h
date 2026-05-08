@@ -45,8 +45,9 @@ struct BtreeDefs {
     /// index. This setting can be tuned based on query patterns:
     ///   - For range queries (e.g., `VisitLessThan`, `VisitGreaterOrEqual`), increasing the buffer
     ///   size (e.g., to 1MB) may improve I/O bandwidth and sequential read performance.
-    ///   - For point queries (e.g., `VisitEqual`), buffering provides minimal benefit; leave unset
-    ///   to use default.
+    ///   - For point queries (e.g., `VisitEqual`), buffering can introduce negative effects due to
+    ///   read amplification; it is recommended to leave this option unset.
+    ///
     /// If specified, read block with `BufferedInputStream`.
     static inline const char kBtreeIndexReadBufferSize[] = "btree-index.read-buffer-size";
 

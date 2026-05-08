@@ -41,24 +41,24 @@ Result<std::shared_ptr<BTreeGlobalIndexReader>> BTreeGlobalIndexReader::Create(
             max_key, KeySerializer::DeserializeKey(max_key_slice.value(), key_type, pool.get()));
     }
     return std::shared_ptr<BTreeGlobalIndexReader>(new BTreeGlobalIndexReader(
-        sst_file_reader, std::move(null_bitmap), std::move(min_key), std::move(max_key), key_type,
-        pool, min_key_slice, max_key_slice));
+        sst_file_reader, std::move(null_bitmap), std::move(min_key), std::move(max_key),
+        min_key_slice, max_key_slice, key_type, pool));
 }
 
 BTreeGlobalIndexReader::BTreeGlobalIndexReader(
     const std::shared_ptr<SstFileReader>& sst_file_reader, RoaringBitmap64&& null_bitmap,
     std::optional<Literal> min_key, std::optional<Literal> max_key,
-    const std::shared_ptr<arrow::DataType>& key_type, const std::shared_ptr<MemoryPool>& pool,
-    std::optional<MemorySlice> min_key_slice, std::optional<MemorySlice> max_key_slice)
+    std::optional<MemorySlice> min_key_slice, std::optional<MemorySlice> max_key_slice,
+    const std::shared_ptr<arrow::DataType>& key_type, const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
       sst_file_reader_(sst_file_reader),
       null_bitmap_(std::move(null_bitmap)),
       min_key_(std::move(min_key)),
       max_key_(std::move(max_key)),
-      key_type_(key_type),
-      comparator_(KeySerializer::CreateComparator(key_type, pool)),
       min_key_slice_(std::move(min_key_slice)),
-      max_key_slice_(std::move(max_key_slice)) {}
+      max_key_slice_(std::move(max_key_slice)),
+      key_type_(key_type),
+      comparator_(KeySerializer::CreateComparator(key_type, pool)) {}
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitIsNotNull() {
     return std::make_shared<BitmapGlobalIndexResult>(
@@ -305,17 +305,15 @@ Result<RoaringBitmap64> BTreeGlobalIndexReader::RangeQuery(const std::optional<L
 
     RoaringBitmap64 result;
 
-    // Per-data-block row-id buffer. Collecting row-ids within a single data
-    // block and flushing them with one AddMany call keeps peak memory bounded
-    // (one block's worth of row-ids, typically a few thousand) while still
-    // taking the 32-bit Roaring's true-batch addMany path.
+    // Per-data-block row-id buffer. Collect row-ids within a single data
+    // block and flush them with one AddMany call.
     std::vector<int64_t> block_row_ids;
 
     auto index_iterator = sst_file_reader_->CreateIndexIterator();
     PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] bool seek_result, index_iterator->SeekTo(from_slice));
 
     bool first_block = true;
-    // After SeekTo positions us at the first entry >= from, only entries in the first
+    // After SeekTo positions at the first entry >= from, only entries in the first
     // block before the seek position could be < from. Once we pass them, all subsequent
     // entries are guaranteed >= from, so we can skip the lower bound check.
     bool passed_from_bound = skip_from_check;

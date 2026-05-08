@@ -180,8 +180,7 @@ void RoaringBitmap64::AddMany(size_t n, const int64_t* values) {
     auto& bitmap = GetRoaringBitmap(roaring_bitmap_);
 
     // Bucket values by their high-32 bits in a single pass. K (the number of
-    // distinct buckets) is typically very small (often 1, rarely > a handful),
-    // so a flat vector with linear lookup beats unordered_map here.
+    // distinct buckets) is typically very small (often 1, rarely > a handful).
     struct Bucket {
         uint32_t high;
         std::vector<uint32_t> lows;
@@ -220,7 +219,7 @@ void RoaringBitmap64::AddMany(size_t n, const int64_t* values) {
 
     // Hand each bucket to the inner 32-bit Roaring's true-batch addMany,
     // which performs container-level bulk insertion.
-    for (auto& b : buckets) {
+    for (const auto& b : buckets) {
         bitmap.getOrCreateInner(b.high).addMany(b.lows.size(), b.lows.data());
     }
 }

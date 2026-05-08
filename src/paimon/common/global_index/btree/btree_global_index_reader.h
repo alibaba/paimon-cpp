@@ -90,11 +90,10 @@ class BTreeGlobalIndexReader : public GlobalIndexReader,
  private:
     BTreeGlobalIndexReader(const std::shared_ptr<SstFileReader>& sst_file_reader,
                            RoaringBitmap64&& null_bitmap, std::optional<Literal> min_key,
-                           std::optional<Literal> max_key,
+                           std::optional<Literal> max_key, std::optional<MemorySlice> min_key_slice,
+                           std::optional<MemorySlice> max_key_slice,
                            const std::shared_ptr<arrow::DataType>& key_type,
-                           const std::shared_ptr<MemoryPool>& pool,
-                           std::optional<MemorySlice> min_key_slice,
-                           std::optional<MemorySlice> max_key_slice);
+                           const std::shared_ptr<MemoryPool>& pool);
 
     Result<RoaringBitmap64> RangeQuery(const std::optional<Literal>& from,
                                        const std::optional<Literal>& to, bool from_inclusive,
@@ -109,12 +108,12 @@ class BTreeGlobalIndexReader : public GlobalIndexReader,
     RoaringBitmap64 null_bitmap_;
     std::optional<Literal> min_key_;
     std::optional<Literal> max_key_;
-    std::shared_ptr<arrow::DataType> key_type_;
-    MemorySlice::SliceComparator comparator_;
-
     /// Cached serialized min/max key slices to avoid repeated serialization in RangeQuery.
     std::optional<MemorySlice> min_key_slice_;
     std::optional<MemorySlice> max_key_slice_;
+
+    std::shared_ptr<arrow::DataType> key_type_;
+    MemorySlice::SliceComparator comparator_;
 };
 
 }  // namespace paimon

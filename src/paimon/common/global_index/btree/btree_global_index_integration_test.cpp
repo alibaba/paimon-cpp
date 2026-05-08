@@ -20,6 +20,8 @@
 #include "paimon/common/factories/io_hook.h"
 #include "paimon/common/global_index/btree/btree_global_index_writer.h"
 #include "paimon/common/global_index/btree/btree_global_indexer.h"
+#include "paimon/common/global_index/btree/lazy_filtered_btree_reader.h"
+#include "paimon/common/options/memory_size.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
@@ -27,6 +29,7 @@
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/global_index/io/global_index_file_reader.h"
 #include "paimon/global_index/io/global_index_file_writer.h"
+#include "paimon/io/buffered_input_stream.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/testing/utils/io_exception_helper.h"
@@ -1544,6 +1547,25 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadLargeDataWithSmallBlocks) {
         c_schema = CreateArrowSchema(field);
         ASSERT_OK_AND_ASSIGN(auto reader,
                              read_indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+        // check input stream and read buffer size
+        {
+            auto lazy_reader = std::dynamic_pointer_cast<LazyFilteredBTreeReader>(reader);
+            ASSERT_TRUE(lazy_reader);
+            ASSERT_OK_AND_ASSIGN(auto tmp_reader, lazy_reader->GetOrCreateReader(metas[0]));
+            auto btree_reader = std::dynamic_pointer_cast<BTreeGlobalIndexReader>(tmp_reader);
+            ASSERT_TRUE(btree_reader);
+            auto input_stream = btree_reader->sst_file_reader_->block_cache_->in_;
+            auto buffered_stream = std::dynamic_pointer_cast<BufferedInputStream>(input_stream);
+            if (!buf_size.empty()) {
+                ASSERT_TRUE(buffered_stream);
+                ASSERT_OK_AND_ASSIGN(int32_t expected_buffer_size,
+                                     MemorySize::ParseBytes(buf_size));
+                ASSERT_EQ(buffered_stream->buffer_size_, expected_buffer_size);
+            } else {
+                ASSERT_FALSE(buffered_stream);
+            }
+        }
 
         // --- VisitIsNull ---
         {

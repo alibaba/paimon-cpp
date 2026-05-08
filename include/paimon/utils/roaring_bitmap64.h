@@ -80,8 +80,7 @@ class PAIMON_EXPORT RoaringBitmap64 {
     ///   1. Buckets the input values by their high-32 bits in a single pass.
     ///   2. Feeds each bucket to the inner 32-bit Roaring's true-batch
     ///      `addMany(uint32_t*)` path, which performs container-level bulk
-    ///      insertion (with internal radix-style sort and direct
-    ///      array/bitset/run container selection).
+    ///      insertion.
     ///
     /// This avoids the per-value `std::map` lookup of the 64-bit wrapper and
     /// the per-value insertion overhead inside the 32-bit array container.
