@@ -59,7 +59,7 @@ Result<std::shared_ptr<MergeTreeWriter>> MergeTreeWriter::Create(
     const std::shared_ptr<IOManager>& io_manager, const std::shared_ptr<MemoryPool>& pool) {
     auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
     PAIMON_ASSIGN_OR_RAISE(
-        auto write_buffer,
+        std::unique_ptr<WriteBuffer> write_buffer,
         WriteBuffer::Create(last_sequence_number, value_schema, trimmed_primary_keys,
                             options.GetSequenceField(), key_comparator, user_defined_seq_comparator,
                             merge_function_wrapper, options, io_manager, pool));
