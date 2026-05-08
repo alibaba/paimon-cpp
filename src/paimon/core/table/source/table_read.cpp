@@ -33,6 +33,8 @@
 #include "paimon/core/table/source/append_only_table_read.h"
 #include "paimon/core/table/source/fallback_table_read.h"
 #include "paimon/core/table/source/key_value_table_read.h"
+#include "paimon/core/table/system/system_table.h"
+#include "paimon/core/table/system/system_table_read.h"
 #include "paimon/core/utils/branch_manager.h"
 #include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/defs.h"
@@ -123,6 +125,19 @@ Result<std::unique_ptr<TableRead>> TableRead::Create(std::unique_ptr<ReadContext
     }
     auto memory_pool = context->GetMemoryPool();
     auto executor = context->GetExecutor();
+
+    PAIMON_ASSIGN_OR_RAISE(
+        CoreOptions tmp_core_options,
+        CoreOptions::FromMap(context->GetOptions(), context->GetSpecificFileSystem(),
+                             context->GetFileSystemSchemeToIdentifierMap()));
+    PAIMON_ASSIGN_OR_RAISE(std::optional<SystemTablePath> system_table_path,
+                           SystemTableLoader::TryParsePath(context->GetPath()));
+    if (system_table_path) {
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<SystemTable> system_table,
+            SystemTableLoader::LoadFromPath(tmp_core_options.GetFileSystem(), context->GetPath()));
+        return system_table->NewRead(memory_pool);
+    }
 
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InternalReadContext> internal_context,
                            CreateInternalReadContext(context, context->GetBranch()));

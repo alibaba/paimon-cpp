@@ -20,6 +20,7 @@
 #include "gtest/gtest.h"
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
+#include "paimon/schema/schema.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -50,9 +51,12 @@ TEST(TableTest, TestCreateWithUnknownDatabase) {
 
     std::shared_ptr<Schema> latest_schema = table->LatestSchema();
     ASSERT_NE(latest_schema, nullptr);
-    EXPECT_EQ(latest_schema->Id(), 0);
-    EXPECT_EQ(latest_schema->PartitionKeys(), partition_keys);
-    EXPECT_EQ(latest_schema->PrimaryKeys(), primary_keys);
+    auto data_schema = std::dynamic_pointer_cast<DataSchema>(latest_schema);
+    ASSERT_TRUE(data_schema != nullptr);
+    ASSERT_TRUE(std::dynamic_pointer_cast<TableSchema>(latest_schema) != nullptr);
+    EXPECT_EQ(data_schema->Id(), 0);
+    EXPECT_EQ(data_schema->PartitionKeys(), partition_keys);
+    EXPECT_EQ(data_schema->PrimaryKeys(), primary_keys);
 }
 
 TEST(TableTest, TestCreateFailedWithNonExistSchema) {
