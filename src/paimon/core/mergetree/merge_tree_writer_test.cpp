@@ -1063,4 +1063,7 @@ TEST_F(MergeTreeWriterTest, TestUpdateCompactResultWithFileInCompactBefore) {
     ASSERT_EQ(merge_writer->compact_after_, std::vector<std::shared_ptr<DataFileMeta>>({file_y}));
 }
 
+INSTANTIATE_TEST_SUITE_P(WithOptionalIOManager, MergeTreeWriterTest,
+                         ::testing::Values(false, true));
+
 }  // namespace paimon::test
