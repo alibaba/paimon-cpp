@@ -105,10 +105,11 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
     std::optional<int32_t> read_buffer_size;
     if (auto iter = options_.find(BtreeDefs::kBtreeIndexReadBufferSize); iter != options_.end()) {
         PAIMON_ASSIGN_OR_RAISE(int64_t tmp_buffer_size, MemorySize::ParseBytes(iter->second));
-        if (tmp_buffer_size > INT_MAX) {
+        if (tmp_buffer_size <= 0 || tmp_buffer_size > INT_MAX) {
             return Status::Invalid(
-                fmt::format("In BTreeGlobalIndexer::CreateReader: option {} is {}, exceed INT_MAX",
-                            BtreeDefs::kBtreeIndexReadBufferSize, tmp_buffer_size));
+                fmt::format("In BTreeGlobalIndexer::CreateReader: option {} is {}, exceed INT_MAX "
+                            "or less than 0",
+                            BtreeDefs::kBtreeIndexReadBufferSize, iter->second));
         }
         read_buffer_size = static_cast<int32_t>(tmp_buffer_size);
     }

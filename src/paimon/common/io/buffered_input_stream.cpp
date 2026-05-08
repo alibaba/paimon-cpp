@@ -50,7 +50,7 @@ Status BufferedInputStream::Seek(int64_t offset, SeekOrigin origin) {
     // else: FS_SEEK_SET — target_abs_offset is already absolute.
 
     // Fast path: if the new absolute offset still falls into the bytes already
-    // cached in buffer_ (i.e. the window [buf_start_abs, buf_end_abs)), just
+    // cached in buffer_ (i.e. the window from buf_start_abs to buf_end_abs), just
     // adjust pos_ without touching the underlying stream.
     if (count_ > 0) {
         PAIMON_ASSIGN_OR_RAISE(int64_t in_pos, in_->GetPos());

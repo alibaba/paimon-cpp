@@ -174,7 +174,7 @@ void RoaringBitmap64::Add(int64_t x) {
 }
 
 void RoaringBitmap64::AddMany(size_t n, const int64_t* values) {
-    if (n == 0) {
+    if (n == 0 || !values) {
         return;
     }
     auto& bitmap = GetRoaringBitmap(roaring_bitmap_);

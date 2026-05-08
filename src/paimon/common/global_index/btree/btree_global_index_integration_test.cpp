@@ -1761,6 +1761,22 @@ TEST_P(BTreeGlobalIndexIntegrationTest, FinishWithEmptyData) {
     ASSERT_NOK_WITH_MSG(writer->Finish(), "Should never write an empty btree index file");
 }
 
+TEST_P(BTreeGlobalIndexIntegrationTest, InvalidReadOptions) {
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("int_field", arrow::int32());
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()},
+                                                  {BtreeDefs::kBtreeIndexReadBufferSize, "4GB"}};
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    ASSERT_NOK_WITH_MSG(indexer->CreateReader(c_schema.get(), file_reader, /*metas=*/{}, pool_),
+                        "In BTreeGlobalIndexer::CreateReader: option btree-index.read-buffer-size "
+                        "is 4GB, exceed INT_MAX or less than 0");
+}
+
 TEST_P(BTreeGlobalIndexIntegrationTest, TestIOException) {
     bool run_complete = false;
     auto io_hook = paimon::IOHook::GetInstance();
