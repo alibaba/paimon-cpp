@@ -286,8 +286,7 @@ Result<std::shared_ptr<RestoreFiles>> AbstractFileStoreWrite::ScanExistingFileMe
         partition_filters.push_back(part_values_map);
     }
     auto scan_filter = std::make_shared<ScanFilter>(
-        /*predicate=*/nullptr, partition_filters, std::optional<int32_t>(bucket),
-        /*vector_search=*/nullptr);
+        /*predicate=*/nullptr, partition_filters, std::optional<int32_t>(bucket));
 
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStoreScan> scan, CreateFileStoreScan(scan_filter));
     std::shared_ptr<IndexFileHandler> index_file_handler;

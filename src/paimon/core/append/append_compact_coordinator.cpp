@@ -235,8 +235,7 @@ Result<LinkedHashMap<BinaryRow, std::vector<std::shared_ptr<DataFileMeta>>>> Sca
     const std::vector<std::map<std::string, std::string>>& partitions,
     const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool) {
     auto scan_filter = std::make_shared<ScanFilter>(
-        /*predicate=*/nullptr, partitions, /*bucket_filter=*/std::nullopt,
-        /*vector_search=*/nullptr);
+        /*predicate=*/nullptr, partitions, /*bucket_filter=*/std::nullopt);
 
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStoreScan> scan,
                            CreateFileStoreScan(snapshot_manager, schema_manager, table_schema,

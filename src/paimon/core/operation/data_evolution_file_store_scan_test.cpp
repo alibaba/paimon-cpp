@@ -558,14 +558,8 @@ TEST_F(DataEvolutionFileStoreScanTest, TestFilterEntryByRowRanges) {
     {
         // row_ids is null
         ASSERT_OK_AND_ASSIGN(bool exist, DataEvolutionFileStoreScan::FilterEntryByRowRanges(
-                                             entry, /*row_ranges=*/std::nullopt));
+                                             entry, /*row_range_index=*/std::nullopt));
         ASSERT_TRUE(exist);
-    }
-    {
-        // row_ids is empty
-        ASSERT_OK_AND_ASSIGN(bool exist, DataEvolutionFileStoreScan::FilterEntryByRowRanges(
-                                             entry, /*row_ranges=*/std::vector<Range>()));
-        ASSERT_FALSE(exist);
     }
     {
         auto file_without_first_row_id = std::make_shared<DataFileMeta>(
@@ -582,59 +576,37 @@ TEST_F(DataEvolutionFileStoreScanTest, TestFilterEntryByRowRanges) {
         ManifestEntry entry_without_first_row_id(FileKind::Add(), BinaryRow::EmptyRow(),
                                                  /*bucket=*/0, /*total_buckets=*/1,
                                                  file_without_first_row_id);
+        ASSERT_OK_AND_ASSIGN(RowRangeIndex row_range_index,
+                             RowRangeIndex::Create(std::vector<Range>({Range(0l, 0l)})));
         // first row id is null
-        ASSERT_OK_AND_ASSIGN(
-            bool exist, DataEvolutionFileStoreScan::FilterEntryByRowRanges(
-                            entry_without_first_row_id,
-                            /*row_ranges=*/std::optional<std::vector<Range>>({Range(0l, 0l)})));
+        ASSERT_OK_AND_ASSIGN(bool exist, DataEvolutionFileStoreScan::FilterEntryByRowRanges(
+                                             entry_without_first_row_id, row_range_index));
         ASSERT_TRUE(exist);
     }
     {
-        ASSERT_OK_AND_ASSIGN(bool exist,
-                             DataEvolutionFileStoreScan::FilterEntryByRowRanges(
-                                 entry, /*row_ranges=*/std::optional<std::vector<Range>>(
-                                     {Range(0l, 0l), Range(10l, 10l)})));
+        ASSERT_OK_AND_ASSIGN(
+            RowRangeIndex row_range_index,
+            RowRangeIndex::Create(std::vector<Range>({Range(0l, 0l), Range(10l, 10l)})));
+        ASSERT_OK_AND_ASSIGN(
+            bool exist, DataEvolutionFileStoreScan::FilterEntryByRowRanges(entry, row_range_index));
         ASSERT_FALSE(exist);
     }
     {
-        ASSERT_OK_AND_ASSIGN(bool exist,
-                             DataEvolutionFileStoreScan::FilterEntryByRowRanges(
-                                 entry, /*row_ranges=*/std::optional<std::vector<Range>>(
-                                     {Range(0l, 0l), Range(101l, 101l)})));
+        ASSERT_OK_AND_ASSIGN(
+            RowRangeIndex row_range_index,
+            RowRangeIndex::Create(std::vector<Range>({Range(0l, 0l), Range(101l, 101l)})));
+        ASSERT_OK_AND_ASSIGN(
+            bool exist, DataEvolutionFileStoreScan::FilterEntryByRowRanges(entry, row_range_index));
         ASSERT_TRUE(exist);
     }
     {
-        ASSERT_OK_AND_ASSIGN(bool exist,
-                             DataEvolutionFileStoreScan::FilterEntryByRowRanges(
-                                 entry, /*row_ranges=*/std::optional<std::vector<Range>>(
-                                     {Range(100l, 100l), Range(189l, 189l)})));
+        ASSERT_OK_AND_ASSIGN(
+            RowRangeIndex row_range_index,
+            RowRangeIndex::Create(std::vector<Range>({Range(100l, 100l), Range(189l, 189l)})));
+        ASSERT_OK_AND_ASSIGN(
+            bool exist, DataEvolutionFileStoreScan::FilterEntryByRowRanges(entry, row_range_index));
         ASSERT_TRUE(exist);
     }
 }
 
-TEST_F(DataEvolutionFileStoreScanTest, TestFilterManifestByRowRanges) {
-    // row id [10, 20]
-    auto manifest1 =
-        ManifestFileMeta("manifest-65b0d403-a1bc-4157-b242-bff73c46596d-0", /*file_size=*/2779,
-                         /*num_added_files=*/1, /*num_deleted_files=*/0, SimpleStats::EmptyStats(),
-                         /*schema_id=*/0, /*min_bucket=*/0, /*max_bucket=*/0,
-                         /*min_level=*/0, /*max_level=*/0,
-                         /*min_row_id=*/10, /*max_row_id=*/20);
-    ASSERT_TRUE(DataEvolutionFileStoreScan::FilterManifestByRowRanges(manifest1, std::nullopt));
-    ASSERT_FALSE(
-        DataEvolutionFileStoreScan::FilterManifestByRowRanges(manifest1, std::vector<Range>()));
-    ASSERT_TRUE(DataEvolutionFileStoreScan::FilterManifestByRowRanges(
-        manifest1, std::optional<std::vector<Range>>({Range(0, 15), Range(100, 200)})));
-    ASSERT_FALSE(DataEvolutionFileStoreScan::FilterManifestByRowRanges(
-        manifest1, std::optional<std::vector<Range>>({Range(0, 5), Range(100, 200)})));
-
-    auto manifest2 =
-        ManifestFileMeta("manifest-65b0d403-a1bc-4157-b242-bff73c46596d-0", /*file_size=*/2779,
-                         /*num_added_files=*/1, /*num_deleted_files=*/0, SimpleStats::EmptyStats(),
-                         /*schema_id=*/0, /*min_bucket=*/0, /*max_bucket=*/0,
-                         /*min_level=*/0, /*max_level=*/0,
-                         /*min_row_id=*/std::nullopt, /*max_row_id=*/std::nullopt);
-    ASSERT_TRUE(DataEvolutionFileStoreScan::FilterManifestByRowRanges(
-        manifest2, std::optional<std::vector<Range>>({Range(0, 0)})));
-}
 }  // namespace paimon::test

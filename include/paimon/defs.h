@@ -365,6 +365,9 @@ struct PAIMON_EXPORT Options {
     static const char BLOB_AS_DESCRIPTOR[];
     /// "global-index.enabled" - Whether to enable global index for scan. Default value is "true".
     static const char GLOBAL_INDEX_ENABLED[];
+    /// "global-index.thread-num" - The maximum number of concurrent scanner for global index. No
+    /// default value. By default is the number of processors available to the machine.
+    static const char GLOBAL_INDEX_THREAD_NUM[];
     /// "global-index.external-path" - Global index root directory, if not set, the global index
     /// files will be stored under the index directory.
     static const char GLOBAL_INDEX_EXTERNAL_PATH[];

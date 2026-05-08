@@ -91,6 +91,7 @@ const char Options::DATA_EVOLUTION_ENABLED[] = "data-evolution.enabled";
 const char Options::PARTITION_GENERATE_LEGACY_NAME[] = "partition.legacy-name";
 const char Options::BLOB_AS_DESCRIPTOR[] = "blob-as-descriptor";
 const char Options::GLOBAL_INDEX_ENABLED[] = "global-index.enabled";
+const char Options::GLOBAL_INDEX_THREAD_NUM[] = "global-index.thread-num";
 const char Options::GLOBAL_INDEX_EXTERNAL_PATH[] = "global-index.external-path";
 const char Options::AGGREGATION_REMOVE_RECORD_ON_DELETE[] = "aggregation.remove-record-on-delete";
 const char Options::SCAN_TIMESTAMP_MILLIS[] = "scan.timestamp-millis";

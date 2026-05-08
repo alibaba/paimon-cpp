@@ -31,6 +31,8 @@
 namespace paimon {
 class GlobalIndexEvaluatorImpl : public GlobalIndexEvaluator {
  public:
+    /// Creates the underlying readers for the given field. Returns an empty vector when the field
+    /// has no usable index.
     using IndexReadersCreator =
         std::function<Result<std::vector<std::shared_ptr<GlobalIndexReader>>>(int32_t)>;
 
@@ -39,14 +41,9 @@ class GlobalIndexEvaluatorImpl : public GlobalIndexEvaluator {
         : table_schema_(table_schema), create_index_readers_(std::move(create_index_readers)) {}
 
     Result<std::shared_ptr<GlobalIndexResult>> Evaluate(
-        const std::shared_ptr<Predicate>& predicate,
-        const std::shared_ptr<VectorSearch>& vector_search) override;
+        const std::shared_ptr<Predicate>& predicate) override;
 
  private:
-    Result<std::shared_ptr<GlobalIndexResult>> EvaluateVectorSearch(
-        const std::shared_ptr<VectorSearch>& vector_search,
-        const std::shared_ptr<GlobalIndexResult>& predicate_result);
-
     Result<std::shared_ptr<GlobalIndexResult>> EvaluatePredicate(
         const std::shared_ptr<Predicate>& predicate);
 

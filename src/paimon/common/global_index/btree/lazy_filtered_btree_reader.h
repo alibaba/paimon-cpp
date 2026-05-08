@@ -82,6 +82,8 @@ class LazyFilteredBTreeReader : public GlobalIndexReader {
 
     Result<std::shared_ptr<GlobalIndexResult>> DispatchVisit(SelectAction select_files,
                                                              ReaderAction action);
+    Result<std::shared_ptr<GlobalIndexReader>> CreateUnionReader(
+        const std::vector<GlobalIndexIOMeta>& files);
     Result<std::shared_ptr<GlobalIndexReader>> GetOrCreateReader(const GlobalIndexIOMeta& meta);
     Result<std::shared_ptr<GlobalIndexReader>> CreateSingleReader(const GlobalIndexIOMeta& meta);
     Result<RoaringBitmap64> ReadNullBitmap(const std::shared_ptr<BlockCache>& cache,

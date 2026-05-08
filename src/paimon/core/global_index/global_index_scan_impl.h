@@ -23,48 +23,64 @@
 
 #include "paimon/common/predicate/predicate_filter.h"
 #include "paimon/core/core_options.h"
-#include "paimon/core/manifest/index_manifest_entry.h"
+#include "paimon/core/global_index/global_index_evaluator.h"
+#include "paimon/core/global_index/global_index_file_manager.h"
+#include "paimon/core/index/index_file_meta.h"
+#include "paimon/core/index/index_path_factory.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/snapshot.h"
-#include "paimon/core/utils/file_store_path_factory.h"
-#include "paimon/core/utils/snapshot_manager.h"
+#include "paimon/global_index/global_index_io_meta.h"
 #include "paimon/global_index/global_index_scan.h"
 
 namespace paimon {
 class GlobalIndexScanImpl : public GlobalIndexScan {
  public:
-    GlobalIndexScanImpl(const std::string& root_path,
-                        const std::shared_ptr<TableSchema>& table_schema, const Snapshot& snapshot,
-                        const std::shared_ptr<PredicateFilter>& partitions,
-                        const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool);
+    static Result<std::unique_ptr<GlobalIndexScanImpl>> Create(
+        const std::string& root_path, const std::shared_ptr<TableSchema>& table_schema,
+        const Snapshot& snapshot, const std::shared_ptr<PredicateFilter>& partitions,
+        const CoreOptions& options, const std::shared_ptr<Executor>& executor,
+        const std::shared_ptr<MemoryPool>& pool);
 
-    Result<std::shared_ptr<RowRangeGlobalIndexScanner>> CreateRangeScan(
-        const Range& range) override;
+    Result<std::shared_ptr<GlobalIndexResult>> Scan(const std::shared_ptr<Predicate>& predicate);
 
-    Result<std::vector<Range>> GetRowRangeList() override;
+    Result<std::vector<std::shared_ptr<GlobalIndexReader>>> CreateReaders(
+        const std::string& field_name,
+        const std::optional<RowRangeIndex>& row_range_index) const override;
 
-    const Snapshot& GetSnapshot() const {
-        return snapshot_;
-    }
-
-    Result<std::shared_ptr<GlobalIndexResult>> ParallelScan(
-        const std::vector<Range>& ranges, const std::shared_ptr<Predicate>& predicate,
-        const std::shared_ptr<VectorSearch>& vector_search,
-        const std::shared_ptr<Executor>& executor);
+    Result<std::vector<std::shared_ptr<GlobalIndexReader>>> CreateReaders(
+        int32_t field_id, const std::optional<RowRangeIndex>& row_range_index) const override;
 
  private:
-    Status Scan();
+    /// (id->index_type->row_range) -> index meta list
+    using IndexMetaMap =
+        std::map<int32_t, std::map<std::string,
+                                   std::map<Range, std::vector<std::shared_ptr<IndexFileMeta>>>>>;
+
+    GlobalIndexScanImpl(const std::shared_ptr<TableSchema>& table_schema,
+                        const CoreOptions& options,
+                        const std::shared_ptr<IndexPathFactory>& path_factory,
+                        IndexMetaMap&& index_metas, const std::shared_ptr<Executor>& executor,
+                        const std::shared_ptr<MemoryPool>& pool);
+
+    Result<std::shared_ptr<GlobalIndexEvaluator>> GetOrCreateIndexEvaluator();
+
+    Result<std::vector<std::shared_ptr<GlobalIndexReader>>> CreateReaders(
+        const DataField& field, const std::optional<RowRangeIndex>& row_range_index) const;
+
+    std::vector<GlobalIndexIOMeta> ToGlobalIndexIOMetas(
+        const std::vector<std::shared_ptr<IndexFileMeta>>& metas) const;
+
+    GlobalIndexIOMeta ToGlobalIndexIOMeta(const std::shared_ptr<IndexFileMeta>& index_meta) const;
 
  private:
-    bool initialized_ = false;
     std::shared_ptr<MemoryPool> pool_;
     std::string root_path_;
     std::shared_ptr<TableSchema> table_schema_;
-    Snapshot snapshot_;
-    std::shared_ptr<PredicateFilter> partitions_;
     CoreOptions options_;
-    std::shared_ptr<FileStorePathFactory> path_factory_;
-    std::vector<IndexManifestEntry> entries_;
+    std::shared_ptr<GlobalIndexFileManager> index_file_manager_;
+    IndexMetaMap index_metas_;
+    std::shared_ptr<Executor> executor_;
+    std::shared_ptr<GlobalIndexEvaluator> evaluator_;
 };
 
 }  // namespace paimon

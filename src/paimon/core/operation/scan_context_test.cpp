@@ -36,7 +36,6 @@ TEST(ScanContextTest, TestSimple) {
     ASSERT_TRUE(ctx->GetScanFilters());
     ASSERT_FALSE(ctx->GetScanFilters()->GetBucketFilter());
     ASSERT_FALSE(ctx->GetScanFilters()->GetPredicate());
-    ASSERT_FALSE(ctx->GetScanFilters()->GetVectorSearch());
     ASSERT_TRUE(ctx->GetScanFilters()->GetPartitionFilters().empty());
     ASSERT_FALSE(ctx->GetGlobalIndexResult());
     ASSERT_FALSE(ctx->GetSpecificFileSystem());
@@ -50,11 +49,6 @@ TEST(ScanContextTest, TestSetFilter) {
     auto predicate =
         PredicateBuilder::IsNull(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT);
     builder.SetPredicate(predicate);
-    std::vector<float> query = {1.0, 2.0};
-    VectorSearch::PreFilter pre_filter = [](int64_t id) -> bool { return id % 2; };
-    builder.SetVectorSearch(std::make_shared<VectorSearch>(
-        "f0", 10, query, pre_filter, nullptr, VectorSearch::DistanceType::INNER_PRODUCT,
-        std::map<std::string, std::string>()));
     std::vector<Range> row_ranges = {Range(1, 2), Range(4, 5)};
     auto global_index_result = BitmapGlobalIndexResult::FromRanges(row_ranges);
     builder.SetGlobalIndexResult(global_index_result);
@@ -70,11 +64,6 @@ TEST(ScanContextTest, TestSetFilter) {
     ASSERT_TRUE(ctx->GetScanFilters());
     ASSERT_EQ(10, ctx->GetScanFilters()->GetBucketFilter());
     ASSERT_EQ(*predicate, *(ctx->GetScanFilters()->GetPredicate()));
-    auto result_vector_search = ctx->GetScanFilters()->GetVectorSearch();
-    ASSERT_TRUE(result_vector_search);
-    ASSERT_EQ(query, result_vector_search->query);
-    ASSERT_EQ(VectorSearch::DistanceType::INNER_PRODUCT,
-              result_vector_search->distance_type.value());
     ASSERT_EQ(partition_filters, ctx->GetScanFilters()->GetPartitionFilters());
     ASSERT_EQ("{1,2,4,5}", ctx->GetGlobalIndexResult()->ToString());
     std::map<std::string, std::string> expected_options = {{"key", "value"}};

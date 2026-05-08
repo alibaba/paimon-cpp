@@ -242,8 +242,7 @@ Result<std::unique_ptr<TableScan>> TableScan::Create(std::unique_ptr<ScanContext
     }
     return std::make_unique<DataEvolutionBatchScan>(
         context->GetPath(), snapshot_reader, std::move(batch_scan), context->GetGlobalIndexResult(),
-        context->GetScanFilters()->GetVectorSearch(), core_options, context->GetMemoryPool(),
-        context->GetExecutor());
+        core_options, context->GetMemoryPool(), context->GetExecutor());
 }
 
 }  // namespace paimon

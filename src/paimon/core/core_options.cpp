@@ -431,6 +431,7 @@ struct CoreOptions::Impl {
     bool data_evolution_enabled = false;
     bool legacy_partition_name_enabled = true;
     bool global_index_enabled = true;
+    std::optional<int32_t> global_index_thread_num;
     bool commit_force_compact = false;
     bool compaction_force_rewrite_all_files = false;
     bool compaction_force_up_level_0 = false;
@@ -688,6 +689,10 @@ struct CoreOptions::Impl {
         // Parse global-index.enabled - whether to enable global index for scan, default true
         PAIMON_RETURN_NOT_OK(
             parser.Parse<bool>(Options::GLOBAL_INDEX_ENABLED, &global_index_enabled));
+        // Parse global-index.thread-num - the maximum number of concurrent scanner for global
+        // index, no default value
+        PAIMON_RETURN_NOT_OK(
+            parser.Parse<int32_t>(Options::GLOBAL_INDEX_THREAD_NUM, &global_index_thread_num));
         // Parse global-index.external-path - global index root directory
         PAIMON_RETURN_NOT_OK(
             parser.Parse(Options::GLOBAL_INDEX_EXTERNAL_PATH, &global_index_external_path));
@@ -1268,6 +1273,10 @@ bool CoreOptions::LegacyPartitionNameEnabled() const {
 
 bool CoreOptions::GlobalIndexEnabled() const {
     return impl_->global_index_enabled;
+}
+
+std::optional<int32_t> CoreOptions::GetGlobalIndexThreadNum() const {
+    return impl_->global_index_thread_num;
 }
 
 std::optional<std::string> CoreOptions::GetGlobalIndexExternalPath() const {

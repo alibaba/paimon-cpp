@@ -50,6 +50,7 @@
 #include "paimon/result.h"
 #include "paimon/scan_context.h"
 #include "paimon/status.h"
+#include "paimon/utils/row_range_index.h"
 
 namespace arrow {
 class Schema;
@@ -114,8 +115,8 @@ class FileStoreScan {
         return this;
     }
 
-    FileStoreScan* WithRowRanges(const std::vector<Range>& row_ranges) {
-        row_ranges_ = row_ranges;
+    FileStoreScan* WithRowRangeIndex(const RowRangeIndex& row_range_index) {
+        row_range_index_ = row_range_index;
         return this;
     }
 
@@ -194,11 +195,6 @@ class FileStoreScan {
     /// @note Keep this thread-safe.
     virtual Result<bool> FilterByStats(const ManifestEntry& entry) const = 0;
 
-    virtual std::vector<ManifestFileMeta> PostFilterManifests(
-        std::vector<ManifestFileMeta>&& manifests) const {
-        return std::move(manifests);
-    }
-
     virtual Result<std::vector<ManifestEntry>> PostFilterManifestEntries(
         std::vector<ManifestEntry>&& entries) const {
         return std::move(entries);
@@ -252,6 +248,8 @@ class FileStoreScan {
 
     Result<bool> FilterManifestFileMeta(const ManifestFileMeta& manifest) const;
 
+    bool FilterManifestByRowRanges(const ManifestFileMeta& manifest) const;
+
     Status ReadManifestFileMeta(const ManifestFileMeta& manifest,
                                 std::vector<ManifestEntry>* entries) const;
 
@@ -261,7 +259,7 @@ class FileStoreScan {
     std::shared_ptr<PredicateFilter> predicates_;
     std::shared_ptr<arrow::Schema> schema_;
     std::shared_ptr<TableSchema> table_schema_;
-    std::optional<std::vector<Range>> row_ranges_;
+    std::optional<RowRangeIndex> row_range_index_;
 
     ScanMode scan_mode_ = ScanMode::ALL;
     CoreOptions core_options_;

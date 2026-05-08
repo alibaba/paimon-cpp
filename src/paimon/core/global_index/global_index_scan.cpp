@@ -20,7 +20,9 @@
 #include "paimon/core/global_index/global_index_scan_impl.h"
 #include "paimon/core/operation/file_store_scan.h"
 #include "paimon/core/schema/schema_manager.h"
+#include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/core/utils/snapshot_manager.h"
+
 namespace paimon {
 namespace {
 Result<std::shared_ptr<TableSchema>> LoadSchema(const std::string& root_path,
@@ -67,7 +69,7 @@ Result<std::unique_ptr<GlobalIndexScan>> GlobalIndexScan::Create(
     const std::string& root_path, const std::optional<int64_t>& snapshot_id,
     const std::optional<std::vector<std::map<std::string, std::string>>>& partitions,
     const std::map<std::string, std::string>& options,
-    const std::shared_ptr<FileSystem>& file_system,
+    const std::shared_ptr<FileSystem>& file_system, const std::shared_ptr<Executor>& executor,
     const std::shared_ptr<MemoryPool>& memory_pool) {
     if (partitions && partitions.value().empty()) {
         return Status::Invalid(
@@ -87,14 +89,14 @@ Result<std::unique_ptr<GlobalIndexScan>> GlobalIndexScan::Create(
                                                       arrow_schema, partitions.value()));
     }
     PAIMON_ASSIGN_OR_RAISE(Snapshot snapshot, LoadSnapshot(root_path, snapshot_id, core_options));
-    return std::make_unique<GlobalIndexScanImpl>(root_path, table_schema, snapshot,
-                                                 partition_filters, core_options, pool);
+    return GlobalIndexScanImpl::Create(root_path, table_schema, snapshot, partition_filters,
+                                       core_options, executor, pool);
 }
 
 Result<std::unique_ptr<GlobalIndexScan>> GlobalIndexScan::Create(
     const std::string& root_path, const std::optional<int64_t>& snapshot_id,
     const std::shared_ptr<Predicate>& partitions, const std::map<std::string, std::string>& options,
-    const std::shared_ptr<FileSystem>& file_system,
+    const std::shared_ptr<FileSystem>& file_system, const std::shared_ptr<Executor>& executor,
     const std::shared_ptr<MemoryPool>& memory_pool) {
     std::shared_ptr<PredicateFilter> partition_filters;
     if (partitions) {
@@ -109,8 +111,8 @@ Result<std::unique_ptr<GlobalIndexScan>> GlobalIndexScan::Create(
     PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options,
                            MergeOptions(table_schema, options, file_system));
     PAIMON_ASSIGN_OR_RAISE(Snapshot snapshot, LoadSnapshot(root_path, snapshot_id, core_options));
-    return std::make_unique<GlobalIndexScanImpl>(root_path, table_schema, snapshot,
-                                                 partition_filters, core_options, pool);
+    return GlobalIndexScanImpl::Create(root_path, table_schema, snapshot, partition_filters,
+                                       core_options, executor, pool);
 }
 
 }  // namespace paimon
