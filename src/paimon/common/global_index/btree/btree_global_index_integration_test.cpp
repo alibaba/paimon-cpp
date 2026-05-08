@@ -1772,7 +1772,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, InvalidReadOptions) {
     ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
 
     auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
-    ASSERT_NOK_WITH_MSG(indexer->CreateReader(c_schema.get(), file_reader, /*metas=*/{}, pool_),
+    ASSERT_NOK_WITH_MSG(indexer->CreateReader(c_schema.get(), file_reader, /*files=*/{}, pool_),
                         "In BTreeGlobalIndexer::CreateReader: option btree-index.read-buffer-size "
                         "is 4GB, exceed INT_MAX or less than 0");
 }
