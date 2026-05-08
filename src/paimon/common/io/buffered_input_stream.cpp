@@ -37,15 +37,34 @@ BufferedInputStream::BufferedInputStream(const std::shared_ptr<InputStream>& in,
 BufferedInputStream::~BufferedInputStream() noexcept = default;
 
 Status BufferedInputStream::Seek(int64_t offset, SeekOrigin origin) {
+    // Convert all seek origins to an absolute offset so the buffer-hit fast
+    // path below can work uniformly on absolute positions.
+    int64_t target_abs_offset = offset;
     if (origin == SeekOrigin::FS_SEEK_CUR) {
         PAIMON_ASSIGN_OR_RAISE(int64_t cur_pos, GetPos());
-        offset = offset + cur_pos;
-        PAIMON_RETURN_NOT_OK(in_->Seek(offset, FS_SEEK_SET));
-    } else {
-        PAIMON_RETURN_NOT_OK(in_->Seek(offset, origin));
+        target_abs_offset = cur_pos + offset;
+    } else if (origin == SeekOrigin::FS_SEEK_END) {
+        PAIMON_ASSIGN_OR_RAISE(int64_t length, in_->Length());
+        target_abs_offset = length + offset;
+    }
+    // else: FS_SEEK_SET — target_abs_offset is already absolute.
+
+    // Fast path: if the new absolute offset still falls into the bytes already
+    // cached in buffer_ (i.e. the window from buf_start_abs to buf_end_abs), just
+    // adjust pos_ without touching the underlying stream.
+    if (count_ > 0) {
+        PAIMON_ASSIGN_OR_RAISE(int64_t in_pos, in_->GetPos());
+        const int64_t buf_start_abs = in_pos - count_;
+        const int64_t buf_end_abs = in_pos;
+        if (target_abs_offset >= buf_start_abs && target_abs_offset <= buf_end_abs) {
+            pos_ = static_cast<int32_t>(target_abs_offset - buf_start_abs);
+            return Status::OK();
+        }
     }
 
-    // after seek, reset buffer_
+    // Slow path: the target is outside the current buffer window, fall back to
+    // a real seek on the underlying stream and invalidate the buffer.
+    PAIMON_RETURN_NOT_OK(in_->Seek(target_abs_offset, FS_SEEK_SET));
     pos_ = 0;
     count_ = 0;
     return Status::OK();

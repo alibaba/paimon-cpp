@@ -24,15 +24,39 @@
 #include "paimon/memory/bytes.h"
 #include "paimon/predicate/literal.h"
 namespace paimon {
+
+Result<std::shared_ptr<BTreeGlobalIndexReader>> BTreeGlobalIndexReader::Create(
+    const std::shared_ptr<SstFileReader>& sst_file_reader, RoaringBitmap64&& null_bitmap,
+    const std::optional<MemorySlice>& min_key_slice,
+    const std::optional<MemorySlice>& max_key_slice,
+    const std::shared_ptr<arrow::DataType>& key_type, const std::shared_ptr<MemoryPool>& pool) {
+    std::optional<Literal> min_key;
+    std::optional<Literal> max_key;
+    if (min_key_slice) {
+        PAIMON_ASSIGN_OR_RAISE(
+            min_key, KeySerializer::DeserializeKey(min_key_slice.value(), key_type, pool.get()));
+    }
+    if (max_key_slice) {
+        PAIMON_ASSIGN_OR_RAISE(
+            max_key, KeySerializer::DeserializeKey(max_key_slice.value(), key_type, pool.get()));
+    }
+    return std::shared_ptr<BTreeGlobalIndexReader>(new BTreeGlobalIndexReader(
+        sst_file_reader, std::move(null_bitmap), std::move(min_key), std::move(max_key),
+        min_key_slice, max_key_slice, key_type, pool));
+}
+
 BTreeGlobalIndexReader::BTreeGlobalIndexReader(
     const std::shared_ptr<SstFileReader>& sst_file_reader, RoaringBitmap64&& null_bitmap,
-    const std::optional<Literal>& min_key, const std::optional<Literal>& max_key,
+    std::optional<Literal> min_key, std::optional<Literal> max_key,
+    std::optional<MemorySlice> min_key_slice, std::optional<MemorySlice> max_key_slice,
     const std::shared_ptr<arrow::DataType>& key_type, const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
       sst_file_reader_(sst_file_reader),
       null_bitmap_(std::move(null_bitmap)),
-      min_key_(min_key),
-      max_key_(max_key),
+      min_key_(std::move(min_key)),
+      max_key_(std::move(max_key)),
+      min_key_slice_(std::move(min_key_slice)),
+      max_key_slice_(std::move(max_key_slice)),
       key_type_(key_type),
       comparator_(KeySerializer::CreateComparator(key_type, pool)) {}
 
@@ -253,9 +277,8 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitFullText
 Result<RoaringBitmap64> BTreeGlobalIndexReader::RangeQuery(const std::optional<Literal>& from,
                                                            const std::optional<Literal>& to,
                                                            bool from_inclusive, bool to_inclusive) {
-    RoaringBitmap64 result;
     if (!from || !to) {
-        return result;
+        return RoaringBitmap64();
     }
 
     // Create an index block iterator to iterate through data blocks
@@ -266,10 +289,35 @@ Result<RoaringBitmap64> BTreeGlobalIndexReader::RangeQuery(const std::optional<L
     MemorySlice from_slice = MemorySlice::Wrap(from_bytes);
     MemorySlice to_slice = MemorySlice::Wrap(to_bytes);
 
+    // Determine if we can skip lower/upper bound checks using cached serialized min/max keys.
+    // When from == min_key_, all entries are >= from, so skip lower bound comparison.
+    // When to == max_key_, all entries are <= to, so skip upper bound comparison.
+    bool skip_from_check = false;
+    bool skip_to_check = false;
+    if (min_key_slice_) {
+        PAIMON_ASSIGN_OR_RAISE(int32_t cmp_min, comparator_(from_slice, min_key_slice_.value()));
+        skip_from_check = (cmp_min == 0) && from_inclusive;
+    }
+    if (max_key_slice_) {
+        PAIMON_ASSIGN_OR_RAISE(int32_t cmp_max, comparator_(to_slice, max_key_slice_.value()));
+        skip_to_check = (cmp_max == 0) && to_inclusive;
+    }
+
+    RoaringBitmap64 result;
+
+    // Per-data-block row-id buffer. Collect row-ids within a single data
+    // block and flush them with one AddMany call.
+    std::vector<int64_t> block_row_ids;
+
     auto index_iterator = sst_file_reader_->CreateIndexIterator();
     PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] bool seek_result, index_iterator->SeekTo(from_slice));
 
     bool first_block = true;
+    // After SeekTo positions at the first entry >= from, only entries in the first
+    // block before the seek position could be < from. Once we pass them, all subsequent
+    // entries are guaranteed >= from, so we can skip the lower bound check.
+    bool passed_from_bound = skip_from_check;
+
     while (index_iterator->HasNext()) {
         // Get the next data block
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlockIterator> data_iterator,
@@ -285,26 +333,83 @@ Result<RoaringBitmap64> BTreeGlobalIndexReader::RangeQuery(const std::optional<L
             first_block = false;
         }
 
-        // Iterate through entries in the data block
-        while (data_iterator->HasNext()) {
-            PAIMON_ASSIGN_OR_RAISE(BlockEntry entry, data_iterator->Next());
+        block_row_ids.clear();
 
-            // Compare entry key against from bound
-            PAIMON_ASSIGN_OR_RAISE(int32_t cmp_from, comparator_(entry.key, from_slice));
-
-            // Check lower bound
-            if (!from_inclusive && cmp_from == 0) {
-                continue;
+        if (skip_to_check && passed_from_bound) {
+            // Fast path: no boundary checks needed, skip key parsing entirely
+            while (data_iterator->HasNext()) {
+                PAIMON_ASSIGN_OR_RAISE(MemorySlice value, data_iterator->SkipKeyAndReadValue());
+                PAIMON_RETURN_NOT_OK(DeserializeRowIds(value, &block_row_ids));
             }
-
-            // Compare entry key against to bound
-            PAIMON_ASSIGN_OR_RAISE(int32_t cmp_to, comparator_(entry.key, to_slice));
-
-            if (cmp_to > 0 || (!to_inclusive && cmp_to == 0)) {
+        } else if (skip_to_check) {
+            // Only need to check lower bound (first few entries in first block)
+            while (data_iterator->HasNext()) {
+                PAIMON_ASSIGN_OR_RAISE(BlockEntry entry, data_iterator->Next());
+                if (!passed_from_bound) {
+                    PAIMON_ASSIGN_OR_RAISE(int32_t cmp_from, comparator_(entry.key, from_slice));
+                    if (!from_inclusive && cmp_from == 0) {
+                        continue;
+                    }
+                    if (cmp_from > 0) {
+                        passed_from_bound = true;
+                    }
+                }
+                PAIMON_RETURN_NOT_OK(DeserializeRowIds(entry.value, &block_row_ids));
+            }
+            passed_from_bound = true;
+        } else if (passed_from_bound) {
+            // Only need to check upper bound
+            bool reached_end = false;
+            while (data_iterator->HasNext()) {
+                PAIMON_ASSIGN_OR_RAISE(BlockEntry entry, data_iterator->Next());
+                PAIMON_ASSIGN_OR_RAISE(int32_t cmp_to, comparator_(entry.key, to_slice));
+                if (cmp_to > 0 || (!to_inclusive && cmp_to == 0)) {
+                    reached_end = true;
+                    break;
+                }
+                PAIMON_RETURN_NOT_OK(DeserializeRowIds(entry.value, &block_row_ids));
+            }
+            if (!block_row_ids.empty()) {
+                result.AddMany(block_row_ids.size(), block_row_ids.data());
+            }
+            if (reached_end) {
                 return result;
             }
+            continue;
+        } else {
+            // Need to check both bounds
+            bool reached_end = false;
+            while (data_iterator->HasNext()) {
+                PAIMON_ASSIGN_OR_RAISE(BlockEntry entry, data_iterator->Next());
+                if (!passed_from_bound) {
+                    PAIMON_ASSIGN_OR_RAISE(int32_t cmp_from, comparator_(entry.key, from_slice));
+                    if (!from_inclusive && cmp_from == 0) {
+                        continue;
+                    }
+                    if (cmp_from > 0) {
+                        passed_from_bound = true;
+                    }
+                }
+                PAIMON_ASSIGN_OR_RAISE(int32_t cmp_to, comparator_(entry.key, to_slice));
+                if (cmp_to > 0 || (!to_inclusive && cmp_to == 0)) {
+                    reached_end = true;
+                    break;
+                }
+                PAIMON_RETURN_NOT_OK(DeserializeRowIds(entry.value, &block_row_ids));
+            }
+            passed_from_bound = true;
+            if (!block_row_ids.empty()) {
+                result.AddMany(block_row_ids.size(), block_row_ids.data());
+            }
+            if (reached_end) {
+                return result;
+            }
+            continue;
+        }
 
-            PAIMON_RETURN_NOT_OK(DeserializeRowIds(entry.value, &result));
+        // Flush this block's row-ids in one batched call
+        if (!block_row_ids.empty()) {
+            result.AddMany(block_row_ids.size(), block_row_ids.data());
         }
     }
 
@@ -312,7 +417,7 @@ Result<RoaringBitmap64> BTreeGlobalIndexReader::RangeQuery(const std::optional<L
 }
 
 Status BTreeGlobalIndexReader::DeserializeRowIds(const MemorySlice& slice,
-                                                 RoaringBitmap64* result) const {
+                                                 std::vector<int64_t>* out) const {
     auto input = slice.ToInput();
     PAIMON_ASSIGN_OR_RAISE(int32_t num_row_ids, input.ReadVarLenInt());
     if (num_row_ids <= 0) {
@@ -320,9 +425,10 @@ Status BTreeGlobalIndexReader::DeserializeRowIds(const MemorySlice& slice,
             "Invalid row id length {} in DeserializeRowIds for BTreeGlobalIndexReader, must > 0",
             num_row_ids));
     }
+    out->reserve(out->size() + static_cast<size_t>(num_row_ids));
     for (int32_t i = 0; i < num_row_ids; i++) {
         PAIMON_ASSIGN_OR_RAISE(int64_t row_id, input.ReadVarLenLong());
-        result->Add(row_id);
+        out->push_back(row_id);
     }
     return Status::OK();
 }

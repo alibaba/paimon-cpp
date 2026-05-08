@@ -2552,6 +2552,10 @@ public:
 
     friend class Roaring64MapSetBitForwardIterator;
     friend class Roaring64MapSetBitBiDirectionalIterator;
+
+    Roaring &getOrCreateInner(uint32_t high) {
+        return lookupOrCreateInner(high);
+    }
     typedef Roaring64MapSetBitForwardIterator const_iterator;
     typedef Roaring64MapSetBitBiDirectionalIterator const_bidirectional_iterator;
 
