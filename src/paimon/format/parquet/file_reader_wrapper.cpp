@@ -399,8 +399,17 @@ Status FileReaderWrapper::PrepareForReading(const std::set<int32_t>& target_row_
     // Collect all byte ranges for a single PreBufferRanges call.
     // Page-filtered RGs: only matching page ranges (from ComputePageRanges).
     // Fully-matched RGs: entire column chunk ranges.
-    // Skip prebuffer when disable_prebuffer_ is set (for testing IO error recovery).
-    if (!disable_prebuffer_) {
+    //
+    // When there are no page-filtered RGs, skip the manual PreBufferRanges entirely:
+    // GetRecordBatchReader has already issued PreBuffer internally (driven by
+    // ArrowReaderProperties::pre_buffer=true), and a second PreBufferRanges call here
+    // would tear down and rebuild cached_source_, redundantly re-issuing the same IO
+    // on remote filesystems. The manual path is only needed to merge page-level ranges
+    // with column-chunk ranges into a single PreBuffer covering both kinds of RGs.
+    //
+    // Skip prebuffer entirely when disable_prebuffer_ is set (for testing IO error
+    // recovery).
+    if (!disable_prebuffer_ && !pending_filtered_reads_.empty()) {
         std::vector<::arrow::io::ReadRange> all_ranges;
 
         // Page-filtered row groups: add their page-level ranges (already cached in meta)
