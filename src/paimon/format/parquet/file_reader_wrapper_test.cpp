@@ -137,7 +137,8 @@ class FileReaderWrapperTest : public ::testing::Test {
         return FileReaderWrapper::Create(std::move(file_reader));
     }
 
-    void PrepareParquetFile(const std::string& file_path, int32_t row_count) {
+    void PrepareParquetFile(const std::string& file_path, int32_t row_count,
+                            bool enable_page_index = false) {
         auto schema_pair = PrepareArrowSchema();
         const auto& arrow_schema = schema_pair.first;
         const auto& struct_type = schema_pair.second;
@@ -148,6 +149,11 @@ class FileReaderWrapperTest : public ::testing::Test {
         builder.write_batch_size(10);
         builder.max_row_group_length(1000);
         builder.enable_store_decimal_as_integer();
+        if (enable_page_index) {
+            builder.enable_write_page_index();
+            builder.disable_dictionary();
+            builder.data_pagesize(1);
+        }
         auto writer_properties = builder.build();
         ASSERT_OK_AND_ASSIGN(
             std::shared_ptr<ParquetFormatWriter> format_writer,
@@ -236,6 +242,73 @@ TEST_F(FileReaderWrapperTest, Simple) {
     ASSERT_FALSE(record_batch);
     ASSERT_EQ(5500, reader_wrapper->GetNextRowToRead());
     ASSERT_EQ(5500, reader_wrapper->GetPreviousBatchFirstRowNumber().value());
+}
+
+/// Regression: when batch_size_ is 0 (the default) and a row group is consumed via
+/// the page-filtered streaming path, we must not pass 0 to TableBatchReader::set_chunksize
+/// — that would make ReadNext spin forever on zero-row batches. The wrapper now
+/// translates 0 to int64_max so the reader produces one batch covering all matched rows.
+TEST_F(FileReaderWrapperTest, PageFilteredZeroBatchSizeDoesNotHang) {
+    std::string file_path = PathUtil::JoinPath(dir_->Str(), "page_zero_batch.parquet");
+    PrepareParquetFile(file_path, /*row_count=*/200, /*enable_page_index=*/true);
+    ASSERT_OK_AND_ASSIGN(auto reader_wrapper, PrepareReaderWrapper(file_path));
+    ASSERT_EQ(1, reader_wrapper->GetNumberOfRowGroups());
+
+    // Inject a per-RG RowRanges to drive the page-filtered streaming path. Two non-
+    // contiguous ranges keep the test honest about RowRanges semantics; the actual
+    // numbers don't matter as long as their total falls inside the row group.
+    RowRanges rr({RowRanges::Range(0, 49), RowRanges::Range(100, 149)});
+    reader_wrapper->SetRowGroupRowRanges({{0, rr}});
+
+    std::vector<int32_t> all_columns = {0, 1, 2};
+    ASSERT_OK(reader_wrapper->PrepareForReading({0}, all_columns));
+
+    int64_t total = 0;
+    int64_t batch_count = 0;
+    while (true) {
+        ASSERT_OK_AND_ASSIGN(auto batch, reader_wrapper->Next());
+        if (!batch) break;
+        total += batch->num_rows();
+        ++batch_count;
+        ASSERT_LT(batch_count, 1000) << "Next() did not converge — likely an infinite loop";
+    }
+    ASSERT_EQ(100, total);
+    ASSERT_GE(batch_count, 1);
+}
+
+/// Page-filtered RGs are consumed once: their cached metadata is erased after the
+/// per-RG reader is built. Backward seek into a consumed page-filtered RG is therefore
+/// unsupported and must fail loudly with a clear error rather than silently returning
+/// wrong data or skipping rows.
+TEST_F(FileReaderWrapperTest, SeekBackToConsumedPageFilteredRowGroupErrors) {
+    std::string file_path = PathUtil::JoinPath(dir_->Str(), "seek_back.parquet");
+    // 2000 rows produces 2 row groups (max_row_group_length=1000) with page index enabled.
+    PrepareParquetFile(file_path, /*row_count=*/2000, /*enable_page_index=*/true);
+    ASSERT_OK_AND_ASSIGN(auto reader_wrapper, PrepareReaderWrapper(file_path));
+    ASSERT_EQ(2, reader_wrapper->GetNumberOfRowGroups());
+
+    // Both RGs page-filtered. RowRanges are RG-local: RG0 keeps 40 rows, RG1 keeps 50.
+    std::map<int32_t, RowRanges> row_ranges_map;
+    row_ranges_map[0] = RowRanges(RowRanges::Range(10, 49));
+    row_ranges_map[1] = RowRanges(RowRanges::Range(100, 149));
+    reader_wrapper->SetRowGroupRowRanges(row_ranges_map);
+
+    std::vector<int32_t> all_columns = {0, 1, 2};
+    ASSERT_OK(reader_wrapper->PrepareForReading({0, 1}, all_columns));
+
+    int64_t total = 0;
+    while (true) {
+        ASSERT_OK_AND_ASSIGN(auto batch, reader_wrapper->Next());
+        if (!batch) break;
+        total += batch->num_rows();
+    }
+    ASSERT_EQ(90, total);
+
+    // Seek back to row 0 succeeds (it just resets indices and rebuilds batch_reader_).
+    ASSERT_OK(reader_wrapper->SeekToRow(0));
+
+    // But re-entering RG0 fails: its meta was erased on first consumption.
+    ASSERT_NOK_WITH_MSG(reader_wrapper->Next(), "missing pending read metadata");
 }
 
 TEST_F(FileReaderWrapperTest, GetRowGroupRanges) {

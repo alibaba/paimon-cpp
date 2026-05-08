@@ -33,6 +33,33 @@
 
 namespace paimon::parquet {
 
+namespace {
+
+/// Wraps an arrow::Table + TableBatchReader as a RecordBatchReader so the caller can
+/// stream zero-copy-sliced batches without deep-copying multi-chunk columns. The Table
+/// is held to keep its ChunkedArrays alive for the inner TableBatchReader.
+class TableRecordBatchReader : public arrow::RecordBatchReader {
+ public:
+    TableRecordBatchReader(std::shared_ptr<arrow::Table> table, int64_t chunksize)
+        : table_(std::move(table)), inner_(*table_) {
+        inner_.set_chunksize(chunksize);
+    }
+
+    std::shared_ptr<arrow::Schema> schema() const override {
+        return table_->schema();
+    }
+
+    arrow::Status ReadNext(std::shared_ptr<arrow::RecordBatch>* out) override {
+        return inner_.ReadNext(out);
+    }
+
+ private:
+    std::shared_ptr<arrow::Table> table_;
+    arrow::TableBatchReader inner_;
+};
+
+}  // namespace
+
 std::function<bool(const ::parquet::DataPageStats&)> PageFilteredRowGroupReader::MakePageFilter(
     const RowRanges& row_ranges, const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
     int64_t row_group_row_count) {
@@ -191,22 +218,16 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
     return chunked_array;
 }
 
-Result<std::shared_ptr<arrow::RecordBatch>> PageFilteredRowGroupReader::ReadFilteredRowGroup(
+Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::ReadFilteredRowGroup(
     ::parquet::ParquetFileReader* parquet_reader, int32_t row_group_index,
     const RowRanges& row_ranges, const std::vector<int32_t>& column_indices,
     const std::shared_ptr<arrow::Schema>& arrow_schema, ::arrow::MemoryPool* pool,
     const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
-    const std::vector<::arrow::io::ReadRange>& page_ranges) {
+    const std::vector<::arrow::io::ReadRange>& page_ranges, int64_t max_chunksize) {
     if (row_ranges.IsEmpty()) {
-        std::vector<std::shared_ptr<arrow::Array>> empty_columns;
-        empty_columns.reserve(arrow_schema->num_fields());
-        for (int i = 0; i < arrow_schema->num_fields(); ++i) {
-            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-                std::shared_ptr<arrow::Array> empty_array,
-                arrow::MakeEmptyArray(arrow_schema->field(i)->type(), pool));
-            empty_columns.push_back(std::move(empty_array));
-        }
-        return arrow::RecordBatch::Make(arrow_schema, 0, std::move(empty_columns));
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Table> empty_table,
+                                          arrow::Table::MakeEmpty(arrow_schema, pool));
+        return std::make_unique<TableRecordBatchReader>(std::move(empty_table), max_chunksize);
     }
 
     int64_t expected_rows = row_ranges.RowCount();
@@ -264,31 +285,13 @@ Result<std::shared_ptr<arrow::RecordBatch>> PageFilteredRowGroupReader::ReadFilt
         columns.push_back(std::move(chunked_array));
     }
 
-    // Build Table from ChunkedArrays, then combine chunks and extract a single RecordBatch
-    auto table = arrow::Table::Make(arrow_schema, columns, expected_rows);
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Table> combined_table,
-                                      table->CombineChunks(pool));
-
-    // Extract arrays from the single-chunk table
-    std::vector<std::shared_ptr<arrow::Array>> arrays;
-    arrays.reserve(combined_table->num_columns());
-    for (int i = 0; i < combined_table->num_columns(); ++i) {
-        auto chunked = combined_table->column(i);
-        if (chunked->num_chunks() == 1) {
-            arrays.push_back(chunked->chunk(0));
-        } else if (chunked->num_chunks() == 0) {
-            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-                std::shared_ptr<arrow::Array> empty_array,
-                arrow::MakeEmptyArray(arrow_schema->field(i)->type(), pool));
-            arrays.push_back(std::move(empty_array));
-        } else {
-            return Status::Invalid(fmt::format(
-                "PageFilteredRowGroupReader: CombineChunks produced {} chunks for column {}",
-                chunked->num_chunks(), i));
-        }
-    }
-
-    return arrow::RecordBatch::Make(arrow_schema, expected_rows, std::move(arrays));
+    // Wrap columns in a Table and stream zero-copy-sliced batches via TableBatchReader.
+    // For multi-chunk variable-length columns this avoids the deep copy of CombineChunks:
+    // each emitted batch contains at most max_chunksize rows (capped further by the
+    // smallest remaining chunk across columns), and every column's Array is a zero-copy
+    // Slice of its underlying chunk.
+    auto table = arrow::Table::Make(arrow_schema, std::move(columns), expected_rows);
+    return std::make_unique<TableRecordBatchReader>(std::move(table), max_chunksize);
 }
 
 std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRanges(

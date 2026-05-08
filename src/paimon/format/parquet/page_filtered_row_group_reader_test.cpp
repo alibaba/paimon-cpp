@@ -624,6 +624,66 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesMultiplePages) {
     ASSERT_LT(ranges[0].offset, ranges[1].offset);
 }
 
+/// Test: variable-length columns are streamed across multiple zero-copy-sliced
+/// RecordBatches when batch_size is smaller than the matched row count, instead of
+/// being concatenated into a single RecordBatch via CombineChunks.
+///
+/// This verifies the alignment with Arrow's standard TableBatchReader path:
+/// multi-chunk binary/string columns split along chunk + batch_size boundaries,
+/// with no deep copy. Asserts both correctness (total rows + full content order) and
+/// the multi-batch shape (more than one chunk in the collected ChunkedArray).
+TEST_F(PageFilteredRowGroupReaderTest, StringColumnMultiBatchStreaming) {
+    std::string file_name = dir_->Str() + "/string_multi_batch.parquet";
+
+    arrow::StringBuilder str_builder;
+    ASSERT_TRUE(str_builder.Reserve(60).ok());
+    // 6 pages of 10 rows each: prefix "p0_".."p5_" so each page has a distinct min/max.
+    for (int32_t i = 0; i < 60; ++i) {
+        std::string val = "p" + std::to_string(i / 10) + "_" + (i < 10 ? "0" : "") +
+                          std::to_string(i);
+        ASSERT_TRUE(str_builder.Append(val).ok());
+    }
+    auto str_array = str_builder.Finish().ValueOrDie();
+    auto field = arrow::field("val", arrow::utf8());
+    auto struct_arr = arrow::StructArray::Make({str_array}, {field}).ValueOrDie();
+
+    WriteTestFile(file_name, struct_arr, /*write_batch_size=*/10, /*max_row_group_length=*/60);
+
+    // Predicate matches pages 2..5 (40 rows: "p2_20".."p5_59"). batch_size=7 forces
+    // the wrapper to surface multiple batches per page-filtered RG.
+    auto read_schema = arrow::schema({field});
+    auto predicate = PredicateBuilder::GreaterOrEqual(
+        /*field_index=*/0, /*field_name=*/"val", FieldType::STRING,
+        Literal(FieldType::STRING, "p2", 2));
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateImpl(file_name, read_schema, predicate, &result, /*batch_size=*/7);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(40, result->length());
+
+    // Multi-batch shape: with 40 matched rows and batch_size=7 we expect at least
+    // ceil(40/7)=6 chunks. Anything > 1 already proves we did not collapse to a single
+    // post-CombineChunks RecordBatch.
+    ASSERT_GT(result->num_chunks(), 1);
+
+    // Content correctness: rows arrive in the original page order, "p2_20" through "p5_59".
+    int64_t seen = 0;
+    for (int i = 0; i < result->num_chunks(); ++i) {
+        auto struct_chunk = std::dynamic_pointer_cast<arrow::StructArray>(result->chunk(i));
+        ASSERT_TRUE(struct_chunk);
+        auto str_chunk = std::dynamic_pointer_cast<arrow::StringArray>(struct_chunk->field(0));
+        ASSERT_TRUE(str_chunk);
+        for (int64_t j = 0; j < str_chunk->length(); ++j) {
+            int32_t row = 20 + static_cast<int32_t>(seen);
+            std::string expected =
+                "p" + std::to_string(row / 10) + "_" + (row < 10 ? "0" : "") + std::to_string(row);
+            ASSERT_EQ(expected, str_chunk->GetString(j));
+            ++seen;
+        }
+    }
+    ASSERT_EQ(40, seen);
+}
+
 /// Test: end-to-end page-filtered read produces correct results when using page-level PreBuffer.
 ///
 /// This exercises the full path: ComputePageRanges → PreBufferRanges → CachedInputStream →

@@ -178,16 +178,23 @@ class FileReaderWrapper {
     uint64_t current_row_group_idx_ = 0;
     bool reader_initialized_ = false;
 
-    // Batched consumption of page-filtered RecordBatch (when batch exceeds batch_size_)
-    std::shared_ptr<arrow::RecordBatch> current_filtered_batch_;
-    int64_t filtered_batch_offset_ = 0;
-    RowRanges current_filtered_row_ranges_;   // RowRanges for current filtered batch
-    uint64_t current_filtered_rg_start_ = 0;  // Row-group start for current filtered batch
+    // Streaming reader for the currently-active page-filtered row group. Created lazily
+    // on the first Next() call into a page-filtered RG, drained batch-by-batch, then reset
+    // when ReadNext returns nullptr (end of that RG).
+    std::unique_ptr<arrow::RecordBatchReader> current_page_filtered_reader_;
+    int64_t filtered_global_offset_ = 0;      // Cumulative filtered-row offset within RG
+    RowRanges current_filtered_row_ranges_;   // RowRanges for the active page-filtered RG
+    uint64_t current_filtered_rg_start_ = 0;  // Absolute row-group start row number
 
-    // Page-level filtering state
+    // Page-level filtering state. Externally injected via SetRowGroupRowRanges.
     std::map<int32_t, RowRanges> row_group_row_ranges_;
 
-    // Metadata for lazy on-demand reading of page-filtered row groups
+    // Cached metadata for each page-filtered row group, keyed by target_row_groups_
+    // positional index. Populated in PrepareForReading and kept until the next
+    // PrepareForReading or destruction — entries are NOT erased on consumption so that
+    // a backward seek into a previously-read page-filtered RG can rebuild the per-RG
+    // reader from the same metadata. Caching page_ranges in particular avoids
+    // re-deserializing OffsetIndex (Thrift parse) on every lazy-init.
     struct PageFilteredRowGroupMeta {
         int32_t rg_index;
         RowRanges row_ranges;
@@ -198,7 +205,7 @@ class FileReaderWrapper {
     };
     std::map<uint64_t, PageFilteredRowGroupMeta> pending_filtered_reads_;
 
-    // Set of target_row_groups_ indices that use page-filtered reading
+    // Set of target_row_groups_ positional indices that use page-filtered reading.
     std::set<uint64_t> page_filtered_indices_;
 
     // Track pre-buffered ranges so we can wait on destruction
