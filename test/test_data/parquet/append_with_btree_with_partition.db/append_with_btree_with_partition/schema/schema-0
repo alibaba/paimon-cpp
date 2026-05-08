@@ -1,0 +1,50 @@
+{
+  "version" : 3,
+  "id" : 0,
+  "fields" : [ {
+    "id" : 0,
+    "name" : "pt",
+    "type" : "INT"
+  }, {
+    "id" : 1,
+    "name" : "col_boolean",
+    "type" : "BOOLEAN"
+  }, {
+    "id" : 2,
+    "name" : "col_int",
+    "type" : "INT"
+  }, {
+    "id" : 3,
+    "name" : "col_date",
+    "type" : "DATE"
+  }, {
+    "id" : 4,
+    "name" : "col_double",
+    "type" : "DOUBLE"
+  }, {
+    "id" : 5,
+    "name" : "col_timestamp",
+    "type" : "TIMESTAMP(3)"
+  }, {
+    "id" : 6,
+    "name" : "col_timestamp_ltz",
+    "type" : "TIMESTAMP(3) WITH LOCAL TIME ZONE"
+  }, {
+    "id" : 7,
+    "name" : "col_decimal",
+    "type" : "DECIMAL(18, 6)"
+  }, {
+    "id" : 8,
+    "name" : "col_string",
+    "type" : "STRING"
+  } ],
+  "highestFieldId" : 8,
+  "partitionKeys" : [ "pt" ],
+  "primaryKeys" : [ ],
+  "options" : {
+    "btree-index.records-per-range" : "10",
+    "data-evolution.enabled" : "true",
+    "row-tracking.enabled" : "true"
+  },
+  "timeMillis" : 1777882015920
+}

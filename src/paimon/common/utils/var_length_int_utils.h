@@ -16,16 +16,23 @@
 
 #pragma once
 
-#include "fmt/format.h"
-#include "paimon/memory/bytes.h"
-#include "paimon/result.h"
+#include <cstdint>
+#include <cstring>
 
+#include "fmt/format.h"
+#include "paimon/macros.h"
+#include "paimon/result.h"
 namespace paimon {
-/// This file is based on source code of LongPacker from the PalDB Project
-/// (https://github.com/linkedin/PalDB), licensed by the Apache Software Foundation (ASF) under the
-/// Apache License, Version 2.0. See the NOTICE file distributed with this work for additional
-/// information regarding copyright ownership.
-/// Utils for encoding int/long to var length bytes.
+
+/// Variable-length integer encoding/decoding utilities.
+///
+/// Encoding format (same as protobuf unsigned varint):
+///   - Each byte stores 7 payload bits in bits [6:0].
+///   - Bit 7 (0x80) is the continuation flag: 1 = more bytes follow, 0 = last byte.
+///   - A varint32 uses at most 5 bytes; a varint64 uses at most 9 bytes.
+///
+/// Based on the LongPacker from PalDB (https://github.com/linkedin/PalDB),
+/// licensed under Apache 2.0.
 class VarLengthIntUtils {
  public:
     VarLengthIntUtils() = delete;
@@ -34,67 +41,85 @@ class VarLengthIntUtils {
     static constexpr int32_t kMaxVarIntSize = 5;
     static constexpr int32_t kMaxVarLongSize = 9;
 
-    /// Returns encoding bytes length.
-    static Result<int32_t> EncodeInt(int32_t offset, int32_t value, Bytes* bytes) {
-        if (value < 0) {
+    // ==================== Encoding (writes to char*) ====================
+
+    /// Encodes a non-negative int32 as varint into `dest`.
+    /// Returns the number of bytes written.
+    static Result<int32_t> EncodeInt(int32_t value, char* dest) {
+        if (PAIMON_UNLIKELY(value < 0)) {
             return Status::Invalid(
                 fmt::format("negative value: v={} for VarLengthInt Encoding", value));
         }
-
-        int32_t i = 1;
+        int32_t num_bytes = 0;
         while ((value & ~0x7F) != 0) {
-            (*bytes)[i + offset - 1] = static_cast<char>((value & 0x7F) | 0x80);
+            dest[num_bytes] = static_cast<char>((value & 0x7F) | 0x80);
             value >>= 7;
-            ++i;
+            ++num_bytes;
         }
-        (*bytes)[i + offset - 1] = static_cast<char>(value);
-        return i;
+        dest[num_bytes] = static_cast<char>(value);
+        return num_bytes + 1;
     }
 
-    static Result<int32_t> DecodeInt(const Bytes* bytes, int32_t* offset) {
+    /// Encodes a non-negative int64 as varint into `dest`.
+    /// Returns the number of bytes written.
+    static Result<int32_t> EncodeLong(int64_t value, char* dest) {
+        if (PAIMON_UNLIKELY(value < 0)) {
+            return Status::Invalid(
+                fmt::format("negative value: v={} for VarLengthInt Encoding", value));
+        }
+        int32_t num_bytes = 0;
+        while ((value & ~0x7FLL) != 0) {
+            dest[num_bytes] = static_cast<char>(static_cast<int32_t>(value & 0x7F) | 0x80);
+            value >>= 7;
+            ++num_bytes;
+        }
+        dest[num_bytes] = static_cast<char>(value);
+        return num_bytes + 1;
+    }
+
+    // ==================== Decoding (reads from const char*) ====================
+
+    /// Decodes a varint32 from `data` at `*offset`, advancing `*offset` past the consumed bytes.
+    /// Inlines a 1-byte fast path (values 0-127), which is the most common case.
+    static inline Result<int32_t> DecodeInt(const char* data, int32_t* offset) {
+        auto first_byte = static_cast<uint8_t>(data[*offset]);
+        if (PAIMON_LIKELY((first_byte & 0x80) == 0)) {
+            ++(*offset);
+            return static_cast<int32_t>(first_byte);
+        }
+        // Multi-byte: fall through to generic loop
         int32_t result = 0;
         for (int32_t shift = 0; shift < 32; shift += 7) {
-            auto b = static_cast<int32_t>((*bytes)[*offset]);
+            auto byte_val = static_cast<uint8_t>(data[*offset]);
             ++(*offset);
-
-            result |= (b & 0x7Fu) << shift;
-
-            if ((b & 0x80u) == 0) {
+            result |= static_cast<int32_t>(byte_val & 0x7F) << shift;
+            if ((byte_val & 0x80) == 0) {
                 return result;
             }
         }
-        return Status::Invalid("Malformed integer for VarLengthInt Decoding");
+        return Status::Invalid("Malformed varint32: too many continuation bytes");
     }
 
-    /// Returns encoding bytes length.
-    static Result<int32_t> EncodeLong(int64_t value, Bytes* bytes) {
-        if (value < 0) {
-            return Status::Invalid(
-                fmt::format("negative value: v={} for VarLengthInt Encoding", value));
+    /// Decodes a varint64 from `data` at `*offset`, advancing `*offset` past the consumed bytes.
+    /// Inlines a 1-byte fast path (values 0-127), which is the most common case.
+    static inline Result<int64_t> DecodeLong(const char* data, int32_t* offset) {
+        auto first_byte = static_cast<uint8_t>(data[*offset]);
+        if (PAIMON_LIKELY((first_byte & 0x80) == 0)) {
+            ++(*offset);
+            return static_cast<int64_t>(first_byte);
         }
-
-        int32_t i = 1;
-        while ((value & ~0x7FLL) != 0) {
-            (*bytes)[i - 1] = static_cast<char>(static_cast<int32_t>(value & 0x7F) | 0x80);
-            value >>= 7;
-            ++i;
-        }
-        (*bytes)[i - 1] = static_cast<char>(value);
-        return i;
-    }
-
-    static Result<int64_t> DecodeLong(const Bytes* bytes, int32_t index) {
+        // Multi-byte: fall through to generic loop
         int64_t result = 0;
         for (int32_t shift = 0; shift < 64; shift += 7) {
-            auto b = static_cast<int64_t>((*bytes)[index++]);
-
-            result |= (b & 0x7FLL) << shift;
-
-            if ((b & 0x80u) == 0) {
+            auto byte_val = static_cast<uint8_t>(data[*offset]);
+            ++(*offset);
+            result |= static_cast<int64_t>(byte_val & 0x7F) << shift;
+            if ((byte_val & 0x80) == 0) {
                 return result;
             }
         }
-        return Status::Invalid("Malformed long for VarLengthInt Decoding");
+        return Status::Invalid("Malformed varint64: too many continuation bytes");
     }
 };
+
 }  // namespace paimon

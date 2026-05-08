@@ -24,21 +24,25 @@
 #include "paimon/common/global_index/btree/btree_global_index_reader.h"
 #include "paimon/common/global_index/btree/btree_index_meta.h"
 #include "paimon/common/global_index/btree/key_serializer.h"
+#include "paimon/common/global_index/union_global_index_reader.h"
 #include "paimon/common/memory/memory_slice.h"
 #include "paimon/common/memory/memory_slice_input.h"
 #include "paimon/common/sst/block_cache.h"
 #include "paimon/common/sst/sst_file_reader.h"
 #include "paimon/common/utils/crc32c.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
+#include "paimon/io/buffered_input_stream.h"
 #include "paimon/utils/roaring_bitmap64.h"
 
 namespace paimon {
 LazyFilteredBTreeReader::LazyFilteredBTreeReader(
-    const std::vector<GlobalIndexIOMeta>& files, const std::shared_ptr<arrow::DataType>& key_type,
+    std::optional<int32_t> read_buffer_size, const std::vector<GlobalIndexIOMeta>& files,
+    const std::shared_ptr<arrow::DataType>& key_type,
     const std::shared_ptr<GlobalIndexFileReader>& file_reader,
     const std::shared_ptr<CacheManager>& cache_manager, const std::shared_ptr<MemoryPool>& pool,
     const std::shared_ptr<Executor>& executor)
-    : pool_(pool),
+    : read_buffer_size_(read_buffer_size),
+      pool_(pool),
       file_selector_(files, key_type, pool),
       key_type_(key_type),
       file_reader_(file_reader),
@@ -170,55 +174,24 @@ Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::DispatchVisi
         return std::make_shared<BitmapGlobalIndexResult>([]() { return RoaringBitmap64(); });
     }
 
-    // Prepare all readers sequentially (reader_cache_ is not thread-safe)
+    // Create a UnionGlobalIndexReader from cached readers for the selected files
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexReader> union_reader,
+                           CreateUnionReader(selected_files));
+
+    // Delegate the action to the union reader
+    return action(union_reader);
+}
+
+Result<std::shared_ptr<GlobalIndexReader>> LazyFilteredBTreeReader::CreateUnionReader(
+    const std::vector<GlobalIndexIOMeta>& files) {
     std::vector<std::shared_ptr<GlobalIndexReader>> readers;
-    readers.reserve(selected_files.size());
-    for (const auto& meta : selected_files) {
+    readers.reserve(files.size());
+    for (const auto& meta : files) {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexReader> reader, GetOrCreateReader(meta));
         readers.push_back(std::move(reader));
     }
 
-    // Execute actions: parallel if executor is available, sequential otherwise
-    std::vector<Result<std::shared_ptr<GlobalIndexResult>>> collected_results;
-    if (executor_ != nullptr) {
-        // Parallel: submit all tasks to executor, then collect results in order
-        std::vector<std::future<Result<std::shared_ptr<GlobalIndexResult>>>> futures;
-        futures.reserve(readers.size());
-        for (const auto& reader : readers) {
-            futures.push_back(
-                Via(executor_.get(),
-                    [&action, &reader]() -> Result<std::shared_ptr<GlobalIndexResult>> {
-                        return action(reader);
-                    }));
-        }
-        collected_results = CollectAll(futures);
-    } else {
-        // Sequential fallback: execute actions one by one
-        collected_results.reserve(readers.size());
-        for (const auto& reader : readers) {
-            collected_results.push_back(action(reader));
-        }
-    }
-
-    // Merge results in submission order
-    std::shared_ptr<GlobalIndexResult> merged_result = nullptr;
-    for (auto& result_or_status : collected_results) {
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> result,
-                               std::move(result_or_status));
-        if (result == nullptr) {
-            continue;
-        }
-        if (merged_result == nullptr) {
-            merged_result = std::move(result);
-        } else {
-            PAIMON_ASSIGN_OR_RAISE(merged_result, merged_result->Or(result));
-        }
-    }
-
-    if (merged_result == nullptr) {
-        return Status::Invalid("DispatchVisit cannot return empty result");
-    }
-    return merged_result;
+    return std::make_shared<UnionGlobalIndexReader>(std::move(readers), executor_);
 }
 
 Result<std::shared_ptr<GlobalIndexReader>> LazyFilteredBTreeReader::GetOrCreateReader(
@@ -234,26 +207,28 @@ Result<std::shared_ptr<GlobalIndexReader>> LazyFilteredBTreeReader::GetOrCreateR
 
 Result<std::shared_ptr<GlobalIndexReader>> LazyFilteredBTreeReader::CreateSingleReader(
     const GlobalIndexIOMeta& meta) {
+    // Create comparator based on field type
     auto comparator = KeySerializer::CreateComparator(key_type_, pool_);
 
-    // Deserialize min/max keys from meta
+    // Get min/max key slices from meta data (keep as slices; Create() will deserialize)
     auto index_meta = BTreeIndexMeta::Deserialize(meta.metadata, pool_.get());
-    std::optional<Literal> min_key;
-    std::optional<Literal> max_key;
+    std::optional<MemorySlice> min_key_slice;
+    std::optional<MemorySlice> max_key_slice;
     if (index_meta->FirstKey()) {
-        PAIMON_ASSIGN_OR_RAISE(
-            min_key, KeySerializer::DeserializeKey(MemorySlice::Wrap(index_meta->FirstKey()),
-                                                   key_type_, pool_.get()));
+        min_key_slice = MemorySlice::Wrap(index_meta->FirstKey());
     }
     if (index_meta->LastKey()) {
-        PAIMON_ASSIGN_OR_RAISE(
-            max_key, KeySerializer::DeserializeKey(MemorySlice::Wrap(index_meta->LastKey()),
-                                                   key_type_, pool_.get()));
+        max_key_slice = MemorySlice::Wrap(index_meta->LastKey());
     }
 
     // Open input stream and create block cache
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> input_stream,
                            file_reader_->GetInputStream(meta.file_path));
+    if (read_buffer_size_) {
+        input_stream = std::make_shared<BufferedInputStream>(
+            input_stream, read_buffer_size_.value(), pool_.get());
+    }
+
     auto block_cache =
         std::make_shared<BlockCache>(meta.file_path, input_stream, cache_manager_, pool_);
 
@@ -277,8 +252,8 @@ Result<std::shared_ptr<GlobalIndexReader>> LazyFilteredBTreeReader::CreateSingle
         SstFileReader::Create(footer->GetIndexBlockHandle(), footer->GetBloomFilterHandle(),
                               comparator, block_cache, pool_));
 
-    return std::make_shared<BTreeGlobalIndexReader>(sst_file_reader, std::move(null_bitmap),
-                                                    min_key, max_key, key_type_, pool_);
+    return BTreeGlobalIndexReader::Create(sst_file_reader, std::move(null_bitmap), min_key_slice,
+                                          max_key_slice, key_type_, pool_);
 }
 
 Result<RoaringBitmap64> LazyFilteredBTreeReader::ReadNullBitmap(
@@ -298,7 +273,7 @@ Result<RoaringBitmap64> LazyFilteredBTreeReader::ReadNullBitmap(
     auto slice_input = slice.ToInput();
 
     // Read null bitmap data
-    auto null_bitmap_bytes = slice_input.ReadSlice(block_handle->Size()).CopyBytes(pool_.get());
+    auto null_bitmap_bytes = slice_input.ReadSliceView(block_handle->Size()).CopyBytes(pool_.get());
 
     // Calculate and verify CRC32C checksum
     uint32_t calculated_crc =

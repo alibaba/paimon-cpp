@@ -173,6 +173,57 @@ void RoaringBitmap64::Add(int64_t x) {
     GetRoaringBitmap(roaring_bitmap_).add(static_cast<uint64_t>(x));
 }
 
+void RoaringBitmap64::AddMany(size_t n, const int64_t* values) {
+    if (n == 0 || !values) {
+        return;
+    }
+    auto& bitmap = GetRoaringBitmap(roaring_bitmap_);
+
+    // Bucket values by their high-32 bits in a single pass. K (the number of
+    // distinct buckets) is typically very small (often 1, rarely > a handful).
+    struct Bucket {
+        uint32_t high;
+        std::vector<uint32_t> lows;
+    };
+    std::vector<Bucket> buckets;
+    buckets.reserve(4);
+
+    for (size_t i = 0; i < n; ++i) {
+        const auto v = static_cast<uint64_t>(values[i]);
+        const auto high = static_cast<uint32_t>(v >> 32);
+        const auto low = static_cast<uint32_t>(v);
+
+        Bucket* target = nullptr;
+        // Fast path: the previous bucket is overwhelmingly likely to match for
+        // sequential row-id streams produced by a B-tree scan.
+        if (!buckets.empty() && buckets.back().high == high) {
+            target = &buckets.back();
+        } else {
+            for (auto& b : buckets) {
+                if (b.high == high) {
+                    target = &b;
+                    break;
+                }
+            }
+            if (target == nullptr) {
+                buckets.push_back({high, {}});
+                // Reserve generously on first encounter; we may end up using
+                // more memory than necessary if K turns out to be > 1, but
+                // this avoids repeated grow-and-copy in the common K == 1 case.
+                buckets.back().lows.reserve(buckets.size() == 1 ? n : n / 4);
+                target = &buckets.back();
+            }
+        }
+        target->lows.push_back(low);
+    }
+
+    // Hand each bucket to the inner 32-bit Roaring's true-batch addMany,
+    // which performs container-level bulk insertion.
+    for (const auto& b : buckets) {
+        bitmap.getOrCreateInner(b.high).addMany(b.lows.size(), b.lows.data());
+    }
+}
+
 void RoaringBitmap64::AddRange(int64_t min, int64_t max) {
     GetRoaringBitmap(roaring_bitmap_).addRange(min, max);
 }

@@ -31,11 +31,7 @@ namespace paimon {
 ///
 /// Derived classes are expected to implement the visitor methods (e.g., `VisitEqual`,
 /// `VisitIsNull`, etc.) to return index-based results that indicate which
-/// row satisfy the given predicate.
-///
-/// @note All `GlobalIndexResult` objects returned by implementations of this class use **local row
-/// ids** that start from 0 — not global row ids in the entire table.
-/// The `GlobalIndexResult` can be converted to global row ids by calling `AddOffset()`.
+/// rows satisfy the given predicate.
 class PAIMON_EXPORT GlobalIndexReader : public FunctionVisitor<std::shared_ptr<GlobalIndexResult>> {
  public:
     /// VisitVectorSearch performs approximate vector similarity search.

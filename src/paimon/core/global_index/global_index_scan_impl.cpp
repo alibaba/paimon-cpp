@@ -16,121 +16,70 @@
 #include "paimon/core/global_index/global_index_scan_impl.h"
 
 #include <string>
-#include <unordered_set>
+#include <thread>
 #include <utility>
 
-#include "paimon/common/executor/future.h"
-#include "paimon/core/global_index/row_range_global_index_scanner_impl.h"
+#include "arrow/c/bridge.h"
+#include "paimon/common/global_index/offset_global_index_reader.h"
+#include "paimon/common/global_index/union_global_index_reader.h"
+#include "paimon/common/utils/scope_guard.h"
+#include "paimon/core/global_index/global_index_evaluator_impl.h"
 #include "paimon/core/index/index_file_handler.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
+#include "paimon/global_index/global_indexer.h"
+#include "paimon/global_index/global_indexer_factory.h"
+
 namespace paimon {
-GlobalIndexScanImpl::GlobalIndexScanImpl(const std::string& root_path,
-                                         const std::shared_ptr<TableSchema>& table_schema,
-                                         const Snapshot& snapshot,
-                                         const std::shared_ptr<PredicateFilter>& partitions,
+GlobalIndexScanImpl::GlobalIndexScanImpl(const std::shared_ptr<TableSchema>& table_schema,
                                          const CoreOptions& options,
+                                         const std::shared_ptr<IndexPathFactory>& path_factory,
+                                         IndexMetaMap&& index_metas,
+                                         const std::shared_ptr<Executor>& executor,
                                          const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
-      root_path_(root_path),
       table_schema_(table_schema),
-      snapshot_(snapshot),
-      partitions_(partitions),
-      options_(options) {}
+      options_(options),
+      index_file_manager_(
+          std::make_shared<GlobalIndexFileManager>(options.GetFileSystem(), path_factory)),
+      index_metas_(std::move(index_metas)),
+      executor_(executor) {}
 
-Result<std::shared_ptr<RowRangeGlobalIndexScanner>> GlobalIndexScanImpl::CreateRangeScan(
-    const Range& range) {
-    PAIMON_RETURN_NOT_OK(Scan());
-    std::optional<BinaryRow> partition;
-    // field id -> {index type -> entry}
-    std::map<int32_t, std::map<std::string, std::vector<IndexManifestEntry>>> filtered_entries;
-    for (const auto& entry : entries_) {
-        const auto& global_index_meta = entry.index_file->GetGlobalIndexMeta();
-        assert(global_index_meta);
-        const auto& meta = global_index_meta.value();
-        if (Range::HasIntersection(range, Range(meta.row_range_start, meta.row_range_end))) {
-            if (!partition) {
-                partition = entry.partition;
-            } else if (!(partition.value() == entry.partition)) {
-                return Status::Invalid(
-                    "input range contain multiple partitions, fail to create range scan");
-            }
-            filtered_entries[meta.index_field_id][entry.index_file->IndexType()].push_back(entry);
-        }
-    }
-    std::shared_ptr<IndexPathFactory> index_file_path_factory =
-        path_factory_->CreateGlobalIndexFileFactory();
-    return std::make_shared<RowRangeGlobalIndexScannerImpl>(table_schema_, index_file_path_factory,
-                                                            filtered_entries, options_, pool_);
-}
-
-Result<std::vector<Range>> GlobalIndexScanImpl::GetRowRangeList() {
-    PAIMON_RETURN_NOT_OK(Scan());
-    std::map<std::string, std::vector<Range>> index_type_to_ranges;
-    std::vector<Range> index_ranges;
-    index_ranges.reserve(entries_.size());
-    for (const auto& entry : entries_) {
-        const auto& global_index_meta = entry.index_file->GetGlobalIndexMeta();
-        assert(global_index_meta);
-        const auto& index_meta = global_index_meta.value();
-        Range range(index_meta.row_range_start, index_meta.row_range_end);
-        index_ranges.push_back(range);
-        index_type_to_ranges[entry.index_file->IndexType()].push_back(range);
-    }
-    std::string check_index_type;
-    std::vector<Range> check_ranges;
-    // check all type index have same shard ranges
-    // If index a has [1,10],[20,30] and index b has [1,10],[20,25], it's inconsistent, because
-    // it is hard to handle the [26,30] range.
-    for (const auto& [type, ranges] : index_type_to_ranges) {
-        if (check_index_type.empty()) {
-            check_index_type = type;
-            check_ranges = Range::SortAndMergeOverlap(ranges, /*adjacent=*/true);
-        } else {
-            auto merged = Range::SortAndMergeOverlap(ranges, /*adjacent=*/true);
-            if (merged != check_ranges) {
-                return Status::Invalid(
-                    fmt::format("Inconsistent row ranges among index types: {} and {}",
-                                check_index_type, type));
-            }
-        }
-    }
-    return Range::SortAndMergeOverlap(index_ranges, /*adjacent=*/false);
-}
-
-Status GlobalIndexScanImpl::Scan() {
-    if (initialized_) {
-        return Status::OK();
-    }
-    auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema_->Fields());
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> external_paths, options_.CreateExternalPaths());
+Result<std::unique_ptr<GlobalIndexScanImpl>> GlobalIndexScanImpl::Create(
+    const std::string& root_path, const std::shared_ptr<TableSchema>& table_schema,
+    const Snapshot& snapshot, const std::shared_ptr<PredicateFilter>& partitions,
+    const CoreOptions& options, const std::shared_ptr<Executor>& executor,
+    const std::shared_ptr<MemoryPool>& pool) {
+    auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> external_paths, options.CreateExternalPaths());
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> global_index_external_path,
-                           options_.CreateGlobalIndexExternalPath());
+                           options.CreateGlobalIndexExternalPath());
     PAIMON_ASSIGN_OR_RAISE(
-        path_factory_,
+        std::shared_ptr<FileStorePathFactory> file_store_path_factory,
         FileStorePathFactory::Create(
-            root_path_, arrow_schema, table_schema_->PartitionKeys(),
-            options_.GetPartitionDefaultName(), options_.GetFileFormat()->Identifier(),
-            options_.DataFilePrefix(), options_.LegacyPartitionNameEnabled(), external_paths,
-            global_index_external_path, options_.IndexFileInDataFileDir(), pool_));
+            root_path, arrow_schema, table_schema->PartitionKeys(),
+            options.GetPartitionDefaultName(), options.GetFileFormat()->Identifier(),
+            options.DataFilePrefix(), options.LegacyPartitionNameEnabled(), external_paths,
+            global_index_external_path, options.IndexFileInDataFileDir(), pool));
+    std::shared_ptr<IndexPathFactory> path_factory =
+        file_store_path_factory->CreateGlobalIndexFileFactory();
 
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<IndexManifestFile> index_manifest_file,
-        IndexManifestFile::Create(options_.GetFileSystem(), options_.GetManifestFormat(),
-                                  options_.GetManifestCompression(), path_factory_,
-                                  options_.GetBucket(), pool_, options_));
-    auto index_file_handler =
-        std::make_unique<IndexFileHandler>(options_.GetFileSystem(), std::move(index_manifest_file),
-                                           std::make_shared<IndexFilePathFactories>(path_factory_),
-                                           options_.DeletionVectorsBitmap64(), pool_);
+        IndexManifestFile::Create(options.GetFileSystem(), options.GetManifestFormat(),
+                                  options.GetManifestCompression(), file_store_path_factory,
+                                  options.GetBucket(), pool, options));
+    auto index_file_handler = std::make_unique<IndexFileHandler>(
+        options.GetFileSystem(), std::move(index_manifest_file),
+        std::make_shared<IndexFilePathFactories>(file_store_path_factory),
+        options.DeletionVectorsBitmap64(), pool);
 
     PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> partition_fields,
-                           table_schema_->GetFields(table_schema_->PartitionKeys()));
+                           table_schema->GetFields(table_schema->PartitionKeys()));
     auto partition_schema = DataField::ConvertDataFieldsToArrowSchema(partition_fields);
     std::function<Result<bool>(const IndexManifestEntry&)> filter =
         [&](const IndexManifestEntry& entry) -> Result<bool> {
-        if (partitions_) {
-            PAIMON_ASSIGN_OR_RAISE(bool saved,
-                                   partitions_->Test(partition_schema, entry.partition));
+        if (partitions) {
+            PAIMON_ASSIGN_OR_RAISE(bool saved, partitions->Test(partition_schema, entry.partition));
             if (!saved) {
                 return false;
             }
@@ -140,76 +89,121 @@ Status GlobalIndexScanImpl::Scan() {
         }
         return true;
     };
-    PAIMON_ASSIGN_OR_RAISE(entries_, index_file_handler->Scan(snapshot_, filter));
-    initialized_ = true;
-    return Status::OK();
+    PAIMON_ASSIGN_OR_RAISE(std::vector<IndexManifestEntry> entries,
+                           index_file_handler->Scan(snapshot, filter));
+    IndexMetaMap index_metas;
+    for (const auto& entry : entries) {
+        auto index_file_meta = entry.index_file;
+        const auto& index_meta = index_file_meta->GetGlobalIndexMeta();
+        assert(index_meta);
+        Range range(index_meta->row_range_start, index_meta->row_range_end);
+        index_metas[index_meta->index_field_id][index_file_meta->IndexType()][range].push_back(
+            index_file_meta);
+    }
+    auto final_executor = executor;
+    if (!final_executor) {
+        std::optional<int32_t> thread_num = options.GetGlobalIndexThreadNum();
+        if (!thread_num) {
+            uint32_t cpu_count = std::thread::hardware_concurrency();
+            thread_num = cpu_count > 0 ? static_cast<int32_t>(cpu_count) : 1;
+        }
+        final_executor = CreateDefaultExecutor(static_cast<uint32_t>(thread_num.value()));
+    }
+    return std::unique_ptr<GlobalIndexScanImpl>(new GlobalIndexScanImpl(
+        table_schema, options, path_factory, std::move(index_metas), final_executor, pool));
 }
 
-Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexScanImpl::ParallelScan(
-    const std::vector<Range>& ranges, const std::shared_ptr<Predicate>& predicate,
-    const std::shared_ptr<VectorSearch>& vector_search, const std::shared_ptr<Executor>& executor) {
-    std::vector<std::shared_ptr<RowRangeGlobalIndexScannerImpl>> range_scanners;
-    range_scanners.reserve(ranges.size());
-    for (const auto& range : ranges) {
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RowRangeGlobalIndexScanner> scanner,
-                               CreateRangeScan(range));
-        auto scanner_impl = std::dynamic_pointer_cast<RowRangeGlobalIndexScannerImpl>(scanner);
-        if (!scanner_impl) {
-            return Status::Invalid(
-                "invalid RowRangeGlobalIndexScanner, fail to cast to "
-                "RowRangeGlobalIndexScannerImpl");
-        }
-        range_scanners.push_back(scanner_impl);
+Result<std::shared_ptr<GlobalIndexEvaluator>> GlobalIndexScanImpl::GetOrCreateIndexEvaluator() {
+    if (evaluator_) {
+        return evaluator_;
     }
+    GlobalIndexEvaluatorImpl::IndexReadersCreator create_index_readers =
+        [this](int32_t field_id) -> Result<std::vector<std::shared_ptr<GlobalIndexReader>>> {
+        return CreateReaders(field_id, /*row_range_index=*/std::nullopt);
+    };
+    evaluator_ = std::make_shared<GlobalIndexEvaluatorImpl>(table_schema_, create_index_readers);
+    return evaluator_;
+}
 
-    std::vector<std::future<Result<std::shared_ptr<GlobalIndexResult>>>> futures;
-    for (size_t i = 0; i < range_scanners.size(); i++) {
-        const auto& scanner = range_scanners[i];
-        const auto& range = ranges[i];
-        auto search_index = [&scanner, &predicate, &vector_search,
-                             &range]() -> Result<std::shared_ptr<GlobalIndexResult>> {
-            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexEvaluator> evaluator,
-                                   scanner->CreateIndexEvaluator());
-            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> index_result,
-                                   evaluator->Evaluate(predicate, vector_search));
-            if (!index_result) {
-                return index_result;
+Result<std::vector<std::shared_ptr<GlobalIndexReader>>> GlobalIndexScanImpl::CreateReaders(
+    int32_t field_id, const std::optional<RowRangeIndex>& row_range_index) const {
+    PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema_->GetField(field_id));
+    return CreateReaders(field, row_range_index);
+}
+
+Result<std::vector<std::shared_ptr<GlobalIndexReader>>> GlobalIndexScanImpl::CreateReaders(
+    const std::string& field_name, const std::optional<RowRangeIndex>& row_range_index) const {
+    PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema_->GetField(field_name));
+    return CreateReaders(field, row_range_index);
+}
+
+Result<std::vector<std::shared_ptr<GlobalIndexReader>>> GlobalIndexScanImpl::CreateReaders(
+    const DataField& field, const std::optional<RowRangeIndex>& row_range_index) const {
+    auto field_iter = index_metas_.find(field.Id());
+    if (field_iter == index_metas_.end()) {
+        return std::vector<std::shared_ptr<GlobalIndexReader>>();
+    }
+    const auto& index_type_to_metas = field_iter->second;
+    std::vector<std::shared_ptr<GlobalIndexReader>> readers;
+    readers.reserve(index_type_to_metas.size());
+    for (const auto& [index_type, range_to_metas] : index_type_to_metas) {
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<GlobalIndexer> indexer,
+                               GlobalIndexerFactory::Get(index_type, options_.ToMap()));
+        if (!indexer) {
+            continue;
+        }
+        std::vector<std::shared_ptr<GlobalIndexReader>> union_readers;
+        union_readers.reserve(range_to_metas.size());
+        for (const auto& [range, metas] : range_to_metas) {
+            if (row_range_index && !row_range_index->Intersects(range.from, range.to)) {
+                continue;
             }
-            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> result_with_offset,
-                                   index_result->AddOffset(range.from));
-            return result_with_offset;
-        };
-        futures.push_back(Via(executor.get(), search_index));
-    }
-    auto collected_results = CollectAll(futures);
+            // TODO(xinyu.lxy): c_arrow_schema may contains additional associated fields.
+            auto arrow_field = DataField::ConvertDataFieldToArrowField(field);
+            auto arrow_schema = arrow::schema({arrow_field});
 
-    // collect inner result and check all null
-    bool all_null = true;
-    std::vector<std::shared_ptr<GlobalIndexResult>> results;
-    for (auto& result : collected_results) {
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> inner_result, result);
-        if (inner_result) {
-            all_null = false;
+            ArrowSchema c_arrow_schema;
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*arrow_schema, &c_arrow_schema));
+            auto index_io_metas = ToGlobalIndexIOMetas(metas);
+            ScopeGuard guard([&]() { ArrowSchemaRelease(&c_arrow_schema); });
+            PAIMON_ASSIGN_OR_RAISE(
+                std::shared_ptr<GlobalIndexReader> index_reader,
+                indexer->CreateReader(&c_arrow_schema, index_file_manager_, index_io_metas, pool_));
+            union_readers.push_back(
+                std::make_shared<OffsetGlobalIndexReader>(std::move(index_reader), range.from));
         }
-        results.push_back(std::move(inner_result));
-    }
-    if (all_null) {
-        return std::shared_ptr<GlobalIndexResult>(nullptr);
-    }
-
-    // union result from multiple ranges
-    std::shared_ptr<GlobalIndexResult> final_global_index_result;
-
-    for (size_t i = 0; i < results.size(); ++i) {
-        std::shared_ptr<GlobalIndexResult> result =
-            results[i] ? results[i] : BitmapGlobalIndexResult::FromRanges({ranges[i]});
-        if (!final_global_index_result) {
-            final_global_index_result = result;
-        } else {
-            PAIMON_ASSIGN_OR_RAISE(final_global_index_result,
-                                   final_global_index_result->Or(result));
+        if (union_readers.empty()) {
+            continue;
         }
+        readers.push_back(
+            std::make_shared<UnionGlobalIndexReader>(std::move(union_readers), executor_));
     }
-    return final_global_index_result;
+    return readers;
 }
+
+std::vector<GlobalIndexIOMeta> GlobalIndexScanImpl::ToGlobalIndexIOMetas(
+    const std::vector<std::shared_ptr<IndexFileMeta>>& metas) const {
+    std::vector<GlobalIndexIOMeta> index_io_metas;
+    index_io_metas.reserve(metas.size());
+    for (const auto& meta : metas) {
+        index_io_metas.push_back(ToGlobalIndexIOMeta(meta));
+    }
+    return index_io_metas;
+}
+
+GlobalIndexIOMeta GlobalIndexScanImpl::ToGlobalIndexIOMeta(
+    const std::shared_ptr<IndexFileMeta>& index_meta) const {
+    assert(index_meta->GetGlobalIndexMeta());
+    const auto& global_index_meta = index_meta->GetGlobalIndexMeta().value();
+    return {index_file_manager_->ToPath(index_meta), index_meta->FileSize(),
+            global_index_meta.index_meta};
+}
+
+Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexScanImpl::Scan(
+    const std::shared_ptr<Predicate>& predicate) {
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexEvaluator> evaluator,
+                           GetOrCreateIndexEvaluator());
+    return evaluator->Evaluate(predicate);
+}
+
 }  // namespace paimon

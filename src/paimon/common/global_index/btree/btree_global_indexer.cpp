@@ -70,7 +70,10 @@ Result<std::shared_ptr<GlobalIndexWriter>> BTreeGlobalIndexer::CreateWriter(
         std::string block_size_str,
         OptionsUtils::GetValueFromMap<std::string>(options_, BtreeDefs::kBtreeIndexBlockSize,
                                                    BtreeDefs::kDefaultBtreeIndexBlockSize));
-    PAIMON_ASSIGN_OR_RAISE(int32_t block_size, MemorySize::ParseBytes(block_size_str));
+    PAIMON_ASSIGN_OR_RAISE(int64_t block_size, MemorySize::ParseBytes(block_size_str));
+    if (block_size > INT32_MAX) {
+        return Status::Invalid("invalid block size, exceed INT32_MAX");
+    }
     PAIMON_ASSIGN_OR_RAISE(
         std::string compress_str,
         OptionsUtils::GetValueFromMap<std::string>(options_, BtreeDefs::kBtreeIndexCompression,
@@ -82,8 +85,9 @@ Result<std::shared_ptr<GlobalIndexWriter>> BTreeGlobalIndexer::CreateWriter(
     CompressOptions compress_options{compress_str, compress_level};
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<paimon::BlockCompressionFactory> compression_factory,
                            BlockCompressionFactory::Create(compress_options));
-    return BTreeGlobalIndexWriter::Create(field_name, struct_type, file_writer, block_size,
-                                          compression_factory, pool);
+    return BTreeGlobalIndexWriter::Create(field_name, struct_type, file_writer,
+                                          static_cast<int32_t>(block_size), compression_factory,
+                                          pool);
 }
 
 Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
@@ -97,10 +101,22 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
             "invalid schema for BTreeGlobalIndexReader, supposed to have single field.");
     }
     auto key_type = schema->field(0)->type();
+
+    std::optional<int32_t> read_buffer_size;
+    if (auto iter = options_.find(BtreeDefs::kBtreeIndexReadBufferSize); iter != options_.end()) {
+        PAIMON_ASSIGN_OR_RAISE(int64_t tmp_buffer_size, MemorySize::ParseBytes(iter->second));
+        if (tmp_buffer_size <= 0 || tmp_buffer_size > INT_MAX) {
+            return Status::Invalid(
+                fmt::format("In BTreeGlobalIndexer::CreateReader: option {} is {}, exceed INT_MAX "
+                            "or less than 0",
+                            BtreeDefs::kBtreeIndexReadBufferSize, iter->second));
+        }
+        read_buffer_size = static_cast<int32_t>(tmp_buffer_size);
+    }
     // TODO(lisizhuo.lsz): Allow users to specify an executor
     std::shared_ptr<Executor> executor = CreateDefaultExecutor();
-    return std::make_shared<LazyFilteredBTreeReader>(files, key_type, file_reader, cache_manager_,
-                                                     pool, executor);
+    return std::make_shared<LazyFilteredBTreeReader>(read_buffer_size, files, key_type, file_reader,
+                                                     cache_manager_, pool, executor);
 }
 
 }  // namespace paimon

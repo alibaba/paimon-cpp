@@ -30,6 +30,8 @@
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/snapshot.h"
+#include "paimon/core/table/system/system_table.h"
+#include "paimon/core/table/system/system_table_schema.h"
 #include "paimon/core/utils/branch_manager.h"
 #include "paimon/core/utils/snapshot_manager.h"
 #include "paimon/defs.h"
@@ -92,6 +94,19 @@ Result<bool> FileSystemCatalog::DatabaseExists(const std::string& db_name) const
 }
 
 Result<bool> FileSystemCatalog::TableExists(const Identifier& identifier) const {
+    PAIMON_ASSIGN_OR_RAISE(bool is_system_table, identifier.IsSystemTable());
+    if (is_system_table) {
+        PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> system_table_name,
+                               identifier.GetSystemTableName());
+        if (!system_table_name || !SystemTableLoader::IsSupported(system_table_name.value())) {
+            return false;
+        }
+        PAIMON_ASSIGN_OR_RAISE(std::string data_table_name, identifier.GetDataTableName());
+        Identifier data_identifier(identifier.GetDatabaseName(), data_table_name);
+        PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
+                               TableSchemaExists(data_identifier));
+        return latest_schema != std::nullopt;
+    }
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
                            TableSchemaExists(identifier));
     return latest_schema != std::nullopt;
@@ -110,7 +125,8 @@ Status FileSystemCatalog::CreateTable(const Identifier& identifier, ArrowSchema*
                                       const std::vector<std::string>& primary_keys,
                                       const std::map<std::string, std::string>& options,
                                       bool ignore_if_exists) {
-    if (IsSystemTable(identifier)) {
+    PAIMON_ASSIGN_OR_RAISE(bool is_system_table, IsSystemTable(identifier));
+    if (is_system_table) {
         return Status::Invalid(
             fmt::format("Cannot create table for system table {}, please use data table.",
                         identifier.ToString()));
@@ -148,7 +164,8 @@ Status FileSystemCatalog::CreateTable(const Identifier& identifier, ArrowSchema*
 
 Result<std::optional<std::shared_ptr<TableSchema>>> FileSystemCatalog::TableSchemaExists(
     const Identifier& identifier) const {
-    if (IsSystemTable(identifier)) {
+    PAIMON_ASSIGN_OR_RAISE(bool is_system_table, IsSystemTable(identifier));
+    if (is_system_table) {
         return Status::NotImplemented(
             "do not support checking TableSchemaExists for system table.");
     }
@@ -168,12 +185,15 @@ bool FileSystemCatalog::IsSystemDatabase(const std::string& db_name) {
     return db_name == SYSTEM_DATABASE_NAME;
 }
 
-bool FileSystemCatalog::IsSpecifiedSystemTable(const Identifier& identifier) {
-    return (identifier.GetTableName().find(SYSTEM_TABLE_SPLITTER) != std::string::npos);
+Result<bool> FileSystemCatalog::IsSpecifiedSystemTable(const Identifier& identifier) {
+    return identifier.IsSystemTable();
 }
 
-bool FileSystemCatalog::IsSystemTable(const Identifier& identifier) {
-    return IsSystemDatabase(identifier.GetDatabaseName()) || IsSpecifiedSystemTable(identifier);
+Result<bool> FileSystemCatalog::IsSystemTable(const Identifier& identifier) {
+    if (IsSystemDatabase(identifier.GetDatabaseName())) {
+        return true;
+    }
+    return IsSpecifiedSystemTable(identifier);
 }
 
 std::string FileSystemCatalog::NewDatabasePath(const std::string& warehouse,
@@ -237,6 +257,26 @@ Result<bool> FileSystemCatalog::TableExistsInFileSystem(const std::string& table
 
 Result<std::shared_ptr<Schema>> FileSystemCatalog::LoadTableSchema(
     const Identifier& identifier) const {
+    PAIMON_ASSIGN_OR_RAISE(bool is_system_table, identifier.IsSystemTable());
+    if (is_system_table) {
+        PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> system_table_name,
+                               identifier.GetSystemTableName());
+        if (!system_table_name || !SystemTableLoader::IsSupported(system_table_name.value())) {
+            return Status::NotExist(fmt::format("{} not exist", identifier.ToString()));
+        }
+        PAIMON_ASSIGN_OR_RAISE(std::string data_table_name, identifier.GetDataTableName());
+        Identifier data_identifier(identifier.GetDatabaseName(), data_table_name);
+        PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
+                               TableSchemaExists(data_identifier));
+        if (!latest_schema) {
+            return Status::NotExist(fmt::format("{} not exist", data_identifier.ToString()));
+        }
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<SystemTable> system_table,
+            SystemTableLoader::Load(system_table_name.value(), fs_, GetTableLocation(identifier),
+                                    latest_schema.value()));
+        return std::make_shared<SystemTableSchema>(system_table->ArrowSchema());
+    }
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
                            TableSchemaExists(identifier));
     if (!latest_schema) {
@@ -246,6 +286,12 @@ Result<std::shared_ptr<Schema>> FileSystemCatalog::LoadTableSchema(
 }
 
 Result<std::shared_ptr<Table>> FileSystemCatalog::GetTable(const Identifier& identifier) const {
+    PAIMON_ASSIGN_OR_RAISE(bool is_system_table, identifier.IsSystemTable());
+    if (is_system_table) {
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Schema> schema, LoadTableSchema(identifier));
+        return std::make_shared<Table>(schema, identifier.GetDatabaseName(),
+                                       identifier.GetTableName());
+    }
     return Table::Create(fs_, GetTableLocation(identifier), identifier);
 }
 
@@ -351,7 +397,8 @@ Status FileSystemCatalog::DropTableImpl(const Identifier& identifier,
 }
 
 Status FileSystemCatalog::DropTable(const Identifier& identifier, bool ignore_if_not_exists) {
-    if (IsSystemTable(identifier)) {
+    PAIMON_ASSIGN_OR_RAISE(bool is_system_table, IsSystemTable(identifier));
+    if (is_system_table) {
         return Status::Invalid(fmt::format("Cannot drop system table {}.", identifier.ToString()));
     }
 
@@ -414,7 +461,9 @@ Status FileSystemCatalog::DropTable(const Identifier& identifier, bool ignore_if
 
 Status FileSystemCatalog::RenameTable(const Identifier& from_table, const Identifier& to_table,
                                       bool ignore_if_not_exists) {
-    if (IsSystemTable(from_table) || IsSystemTable(to_table)) {
+    PAIMON_ASSIGN_OR_RAISE(bool is_from_system_table, IsSystemTable(from_table));
+    PAIMON_ASSIGN_OR_RAISE(bool is_to_system_table, IsSystemTable(to_table));
+    if (is_from_system_table || is_to_system_table) {
         return Status::Invalid(fmt::format("Cannot rename system table {} or {}.",
                                            from_table.ToString(), to_table.ToString()));
     }

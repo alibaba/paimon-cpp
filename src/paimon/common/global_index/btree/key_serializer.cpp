@@ -21,6 +21,7 @@
 #include "paimon/common/memory/memory_slice_output.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/common/utils/preconditions.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
@@ -195,6 +196,66 @@ Result<Literal> KeySerializer::DeserializeKey(const MemorySlice& slice,
 
 MemorySlice::SliceComparator KeySerializer::CreateComparator(
     const std::shared_ptr<arrow::DataType>& type, const std::shared_ptr<MemoryPool>& pool) {
+    // Fast paths for integer and string types: direct value comparison without Literal
+    // deserialization, avoiding heap allocations entirely.
+    switch (type->id()) {
+        case arrow::Type::type::STRING:
+            return [](const MemorySlice& a, const MemorySlice& b) -> Result<int32_t> {
+                std::string_view sv_a = a.ReadStringView();
+                std::string_view sv_b = b.ReadStringView();
+                int32_t cmp = sv_a.compare(sv_b);
+                return cmp == 0 ? 0 : (cmp > 0 ? 1 : -1);
+            };
+        case arrow::Type::type::BOOL:
+        case arrow::Type::type::INT8:
+            return [](const MemorySlice& a, const MemorySlice& b) -> Result<int32_t> {
+                int8_t va = a.ReadByte(0);
+                int8_t vb = b.ReadByte(0);
+                return (va < vb) ? -1 : (va > vb ? 1 : 0);
+            };
+        case arrow::Type::type::INT16:
+            return [](const MemorySlice& a, const MemorySlice& b) -> Result<int32_t> {
+                int16_t va = a.ReadShort(0);
+                int16_t vb = b.ReadShort(0);
+                return (va < vb) ? -1 : (va > vb ? 1 : 0);
+            };
+        case arrow::Type::type::INT32:
+        case arrow::Type::type::DATE32:
+            return [](const MemorySlice& a, const MemorySlice& b) -> Result<int32_t> {
+                int32_t va = a.ReadInt(0);
+                int32_t vb = b.ReadInt(0);
+                return (va < vb) ? -1 : (va > vb ? 1 : 0);
+            };
+        case arrow::Type::type::INT64:
+            return [](const MemorySlice& a, const MemorySlice& b) -> Result<int32_t> {
+                int64_t va = a.ReadLong(0);
+                int64_t vb = b.ReadLong(0);
+                return (va < vb) ? -1 : (va > vb ? 1 : 0);
+            };
+        case arrow::Type::type::FLOAT:
+            return [](const MemorySlice& a, const MemorySlice& b) -> Result<int32_t> {
+                int32_t ia = a.ReadInt(0);
+                int32_t ib = b.ReadInt(0);
+                float fa, fb;
+                memcpy(&fa, &ia, sizeof(float));
+                memcpy(&fb, &ib, sizeof(float));
+                return FieldsComparator::CompareFloatingPoint(fa, fb);
+            };
+        case arrow::Type::type::DOUBLE:
+            return [](const MemorySlice& a, const MemorySlice& b) -> Result<int32_t> {
+                int64_t ia = a.ReadLong(0);
+                int64_t ib = b.ReadLong(0);
+                double da, db;
+                memcpy(&da, &ia, sizeof(double));
+                memcpy(&db, &ib, sizeof(double));
+                return FieldsComparator::CompareFloatingPoint(da, db);
+            };
+        default:
+            break;
+    }
+
+    // Fallback for complex types (TIMESTAMP, DECIMAL, etc.):
+    // deserialize to Literal and compare.
     return
         [pool = pool, type = type](const MemorySlice& a, const MemorySlice& b) -> Result<int32_t> {
             PAIMON_ASSIGN_OR_RAISE(Literal la, DeserializeKey(a, type, pool.get()));

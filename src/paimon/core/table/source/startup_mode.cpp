@@ -42,6 +42,10 @@ const StartupMode StartupMode::FromSnapshotFull() {
     static const StartupMode mode = StartupMode("from-snapshot-full");
     return mode;
 }
+const StartupMode StartupMode::FromTimestamp() {
+    static const StartupMode mode = StartupMode("from-timestamp");
+    return mode;
+}
 
 std::string StartupMode::ToString() const {
     return value_;
@@ -65,6 +69,8 @@ Result<StartupMode> StartupMode::FromString(const std::string& str) {
         return StartupMode::FromSnapshot();
     } else if (str == StartupMode::FromSnapshotFull().ToString()) {
         return StartupMode::FromSnapshotFull();
+    } else if (str == StartupMode::FromTimestamp().ToString()) {
+        return StartupMode::FromTimestamp();
     } else {
         return Status::Invalid(fmt::format("invalid startup mode {}", str));
     }

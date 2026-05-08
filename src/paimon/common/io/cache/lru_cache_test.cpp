@@ -46,7 +46,7 @@ class LruCacheTest : public ::testing::Test {
     std::shared_ptr<CacheValue> MakeValue(int32_t size, char fill_byte = 0,
                                           CacheCallback callback = {}) const {
         auto segment = MemorySegment::AllocateHeapMemory(size, pool_.get());
-        std::memset(segment.GetHeapMemory()->data(), fill_byte, size);
+        std::memset(segment.MutableData(), fill_byte, size);
         return std::make_shared<CacheValue>(segment, std::move(callback));
     }
 

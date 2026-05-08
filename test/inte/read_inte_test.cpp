@@ -16,6 +16,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -29,12 +31,15 @@
 #include "arrow/c/abi.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
+#include "paimon/catalog/catalog.h"
+#include "paimon/catalog/identifier.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/factories/io_hook.h"
 #include "paimon/common/reader/complete_row_kind_batch_reader.h"
 #include "paimon/common/reader/concat_batch_reader.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/manifest/file_source.h"
@@ -54,9 +59,12 @@
 #include "paimon/read_context.h"
 #include "paimon/reader/batch_reader.h"
 #include "paimon/result.h"
+#include "paimon/scan_context.h"
 #include "paimon/status.h"
 #include "paimon/table/source/data_split.h"
+#include "paimon/table/source/plan.h"
 #include "paimon/table/source/table_read.h"
+#include "paimon/table/source/table_scan.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/io_exception_helper.h"
 #include "paimon/testing/utils/read_result_collector.h"
@@ -192,6 +200,36 @@ class ReadInteTest : public testing::Test, public ::testing::WithParamInterface<
  private:
     std::shared_ptr<MemoryPool> pool_;
 };
+
+namespace {
+
+std::map<std::string, std::string> CollectStringMap(
+    const std::shared_ptr<arrow::ChunkedArray>& result) {
+    std::map<std::string, std::string> values;
+    EXPECT_TRUE(result);
+    EXPECT_EQ(result->num_chunks(), 1);
+    if (!result || result->num_chunks() != 1) {
+        return values;
+    }
+    auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(result->chunk(0));
+    EXPECT_TRUE(struct_array);
+    if (!struct_array) {
+        return values;
+    }
+    auto key_array = std::dynamic_pointer_cast<arrow::StringArray>(struct_array->field(0));
+    auto value_array = std::dynamic_pointer_cast<arrow::StringArray>(struct_array->field(1));
+    EXPECT_TRUE(key_array);
+    EXPECT_TRUE(value_array);
+    if (!key_array || !value_array) {
+        return values;
+    }
+    for (int64_t i = 0; i < struct_array->length(); ++i) {
+        values.emplace(key_array->GetString(i), value_array->GetString(i));
+    }
+    return values;
+}
+
+}  // namespace
 
 std::vector<TestParam> PrepareTestParam() {
     std::vector<TestParam> values = {
@@ -432,6 +470,80 @@ TEST_P(ReadInteTest, TestReadOnlyPartitionField) {
                                                                          &expected_array);
     ASSERT_TRUE(array_status.ok());
     ASSERT_TRUE(result_array->Equals(expected_array)) << result_array->ToString();
+}
+
+TEST(SystemTableReadInteTest, TestReadOptionsSystemTable) {
+    std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
+                                                  {Options::FILE_FORMAT, "orc"},
+                                                  {Options::MANIFEST_FORMAT, "orc"},
+                                                  {"custom.option", "custom-value"}};
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    std::string warehouse = PathUtil::JoinPath(dir->Str(), "warehouse");
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(warehouse, options));
+    ASSERT_OK(catalog->CreateDatabase("db1", options, /*ignore_if_exists=*/false));
+
+    auto typed_schema = arrow::schema({arrow::field("f0", arrow::int32())});
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &schema).ok());
+    ASSERT_OK(catalog->CreateTable(Identifier("db1", "tbl1"), &schema,
+                                   /*partition_keys=*/{}, /*primary_keys=*/{}, options,
+                                   /*ignore_if_exists=*/false));
+    ArrowSchemaRelease(&schema);
+
+    std::string system_table_path = catalog->GetTableLocation(Identifier("db1", "tbl1$options"));
+    ScanContextBuilder scan_context_builder(system_table_path);
+    scan_context_builder.SetOptions(options);
+    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+    ASSERT_OK_AND_ASSIGN(auto plan, table_scan->CreatePlan());
+    ASSERT_EQ(plan->Splits().size(), 1);
+
+    ReadContextBuilder read_context_builder(system_table_path);
+    read_context_builder.SetOptions(options);
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(plan->Splits()));
+    ASSERT_OK_AND_ASSIGN(auto result, ReadResultCollector::CollectResult(batch_reader.get()));
+    ASSERT_TRUE(result);
+
+    std::map<std::string, std::string> expected = {{"custom.option", "custom-value"},
+                                                   {"file-system", "local"},
+                                                   {"file.format", "orc"},
+                                                   {"manifest.format", "orc"}};
+    ASSERT_EQ(CollectStringMap(result), expected) << result->ToString();
+}
+
+TEST(SystemTableReadInteTest, TestReadBranchOptionsSystemTable) {
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    std::string source_path =
+        GetDataDir() + "/parquet/append_table_with_rt_branch.db/append_table_with_rt_branch";
+    std::string table_path = PathUtil::JoinPath(dir->Str(), "branch_table");
+    ASSERT_TRUE(TestUtil::CopyDirectory(std::filesystem::path(source_path),
+                                        std::filesystem::path(table_path)));
+
+    std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
+                                                  {Options::FILE_FORMAT, "parquet"},
+                                                  {Options::MANIFEST_FORMAT, "avro"}};
+    std::string system_table_path = table_path + "$branch_rt$options";
+    ScanContextBuilder scan_context_builder(system_table_path);
+    scan_context_builder.SetOptions(options);
+    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+    ASSERT_OK_AND_ASSIGN(auto plan, table_scan->CreatePlan());
+    ASSERT_EQ(plan->Splits().size(), 1);
+
+    ReadContextBuilder read_context_builder(system_table_path);
+    read_context_builder.SetOptions(options);
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(plan->Splits()));
+    ASSERT_OK_AND_ASSIGN(auto result, ReadResultCollector::CollectResult(batch_reader.get()));
+
+    std::map<std::string, std::string> expected = {
+        {"bucket", "2"}, {"file.format", "parquet"}, {"manifest.format", "avro"}};
+    ASSERT_EQ(CollectStringMap(result), expected) << result->ToString();
 }
 
 TEST_P(ReadInteTest, TestAppendReadWithMultipleBuckets) {

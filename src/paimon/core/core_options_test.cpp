@@ -17,18 +17,16 @@
 #include "paimon/core/core_options.h"
 
 #include <limits>
-#include <utility>
 
 #include "gtest/gtest.h"
 #include "paimon/bucket/bucket_function_type.h"
 #include "paimon/common/fs/resolving_file_system.h"
 #include "paimon/core/options/expire_config.h"
 #include "paimon/defs.h"
-#include "paimon/format/file_format.h"
 #include "paimon/fs/local/local_file_system.h"
-#include "paimon/status.h"
 #include "paimon/testing/mock/mock_file_system.h"
 #include "paimon/testing/utils/testharness.h"
+#include "paimon/testing/utils/timezone_guard.h"
 namespace paimon::test {
 
 TEST(CoreOptionsTest, TestDefaultValue) {
@@ -62,6 +60,11 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(1024, core_options.GetReadBatchSize());
     ASSERT_EQ(1024, core_options.GetWriteBatchSize());
     ASSERT_EQ(256 * 1024 * 1024, core_options.GetWriteBufferSize());
+    ASSERT_TRUE(core_options.GetWriteBufferSpillable());
+    ASSERT_EQ(std::numeric_limits<int64_t>::max(), core_options.GetWriteBufferSpillMaxDiskSize());
+    ASSERT_EQ(128, core_options.GetLocalSortMaxNumFileHandles());
+    ASSERT_EQ("zstd", core_options.GetSpillCompressOptions().compress);
+    ASSERT_EQ(1, core_options.GetSpillCompressOptions().zstd_level);
     ASSERT_FALSE(core_options.CommitForceCompact());
     ASSERT_EQ(std::numeric_limits<int64_t>::max(), core_options.GetCommitTimeout());
     ASSERT_EQ(10, core_options.GetCommitMaxRetries());
@@ -111,7 +114,8 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_FALSE(core_options.DataEvolutionEnabled());
     ASSERT_TRUE(core_options.LegacyPartitionNameEnabled());
     ASSERT_TRUE(core_options.GlobalIndexEnabled());
-    ASSERT_FALSE(core_options.GetGlobalIndexExternalPath());
+    ASSERT_EQ(std::nullopt, core_options.GetGlobalIndexExternalPath());
+    ASSERT_EQ(std::nullopt, core_options.GetGlobalIndexThreadNum());
     ASSERT_EQ(std::nullopt, core_options.GetScanTagName());
     ASSERT_EQ(std::nullopt, core_options.GetOptimizedCompactionInterval());
     ASSERT_EQ(std::nullopt, core_options.GetCompactionTotalSizeThreshold());
@@ -128,6 +132,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(1, core_options.GetCompactionSizeRatio());
     ASSERT_EQ(5, core_options.GetNumSortedRunsCompactionTrigger());
     ASSERT_EQ(8, core_options.GetNumSortedRunsStopTrigger());
+    ASSERT_EQ(6, core_options.GetNumLevels());
     ASSERT_EQ(LookupCompactMode::RADICAL, core_options.GetLookupCompactMode());
     ASSERT_EQ(10, core_options.GetLookupCompactMaxInterval());
     ASSERT_EQ(256 * 1024 * 1024, core_options.GetLookupCacheMaxMemory());
@@ -157,10 +162,15 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::READ_BATCH_SIZE, "2048"},
         {Options::WRITE_BUFFER_SIZE, "16MB"},
         {Options::WRITE_BATCH_SIZE, "1234"},
+        {Options::WRITE_BUFFER_SPILLABLE, "false"},
+        {Options::WRITE_BUFFER_SPILL_MAX_DISK_SIZE, "7GB"},
+        {Options::LOCAL_SORT_MAX_NUM_FILE_HANDLES, "64"},
+        {Options::SPILL_COMPRESSION, "lz4"},
         {Options::COMMIT_FORCE_COMPACT, "true"},
         {Options::COMMIT_TIMEOUT, "120s"},
         {Options::COMMIT_MAX_RETRIES, "20"},
         {Options::SCAN_SNAPSHOT_ID, "5"},
+        {Options::SCAN_MODE, "from-snapshot-full"},
         {Options::SNAPSHOT_NUM_RETAINED_MIN, "15"},
         {Options::SNAPSHOT_NUM_RETAINED_MAX, "30"},
         {Options::SNAPSHOT_EXPIRE_LIMIT, "20"},
@@ -200,6 +210,7 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::DATA_EVOLUTION_ENABLED, "true"},
         {Options::PARTITION_GENERATE_LEGACY_NAME, "false"},
         {Options::GLOBAL_INDEX_ENABLED, "false"},
+        {Options::GLOBAL_INDEX_THREAD_NUM, "4"},
         {Options::GLOBAL_INDEX_EXTERNAL_PATH, "FILE:///tmp/global_index/"},
         {Options::SCAN_TAG_NAME, "test-tag"},
         {Options::WRITE_ONLY, "true"},
@@ -210,6 +221,7 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::COMPACTION_SIZE_RATIO, "9"},
         {Options::NUM_SORTED_RUNS_COMPACTION_TRIGGER, "11"},
         {Options::NUM_SORTED_RUNS_STOP_TRIGGER, "17"},
+        {Options::NUM_LEVELS, "9"},
         {Options::LOOKUP_COMPACT, "gentle"},
         {Options::LOOKUP_COMPACT_MAX_INTERVAL, "7"},
         {Options::COMPACTION_OPTIMIZATION_INTERVAL, "2s"},
@@ -259,6 +271,11 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(2048, core_options.GetReadBatchSize());
     ASSERT_EQ(1234, core_options.GetWriteBatchSize());
     ASSERT_EQ(16 * 1024 * 1024, core_options.GetWriteBufferSize());
+    ASSERT_FALSE(core_options.GetWriteBufferSpillable());
+    ASSERT_EQ(7L * 1024 * 1024 * 1024, core_options.GetWriteBufferSpillMaxDiskSize());
+    ASSERT_EQ(64, core_options.GetLocalSortMaxNumFileHandles());
+    ASSERT_EQ("lz4", core_options.GetSpillCompressOptions().compress);
+    ASSERT_EQ(2, core_options.GetSpillCompressOptions().zstd_level);
     ASSERT_TRUE(core_options.CommitForceCompact());
     ASSERT_EQ(120 * 1000, core_options.GetCommitTimeout());
     ASSERT_EQ(20, core_options.GetCommitMaxRetries());
@@ -318,10 +335,11 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_TRUE(core_options.DataEvolutionEnabled());
     ASSERT_FALSE(core_options.LegacyPartitionNameEnabled());
     ASSERT_FALSE(core_options.GlobalIndexEnabled());
+    ASSERT_EQ(core_options.GetGlobalIndexThreadNum(), 4);
     ASSERT_TRUE(core_options.GetGlobalIndexExternalPath());
     ASSERT_EQ(core_options.GetGlobalIndexExternalPath().value(), "FILE:///tmp/global_index/");
     ASSERT_EQ("test-tag", core_options.GetScanTagName().value());
-    ASSERT_EQ(StartupMode::FromSnapshot(), core_options.GetStartupMode());
+    ASSERT_EQ(StartupMode::FromSnapshotFull(), core_options.GetStartupMode());
     ASSERT_EQ(375809637, core_options.GetCompactionFileSize(/*has_primary_key=*/true));
     ASSERT_EQ(375809637, core_options.GetCompactionFileSize(/*has_primary_key=*/false));
     ASSERT_TRUE(core_options.WriteOnly());
@@ -330,6 +348,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(9, core_options.GetCompactionSizeRatio());
     ASSERT_EQ(11, core_options.GetNumSortedRunsCompactionTrigger());
     ASSERT_EQ(17, core_options.GetNumSortedRunsStopTrigger());
+    ASSERT_EQ(9, core_options.GetNumLevels());
     ASSERT_EQ(LookupCompactMode::GENTLE, core_options.GetLookupCompactMode());
     ASSERT_EQ(11, core_options.GetLookupCompactMaxInterval());
     ASSERT_TRUE(core_options.CompactionForceRewriteAllFiles());
@@ -597,5 +616,52 @@ TEST(CoreOptionsTest, TestNormalizeValueInCoreOption) {
     ASSERT_EQ(LookupCompactMode::GENTLE, core_options.GetLookupCompactMode());
     ASSERT_TRUE(core_options.SequenceFieldSortOrderIsAscending());
     ASSERT_EQ(BucketFunctionType::MOD, core_options.GetBucketFunctionType());
+}
+
+TEST(CoreOptionsTest, TestScanTimestampMillis) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options,
+                         CoreOptions::FromMap({{Options::SCAN_TIMESTAMP_MILLIS, "1721614515032"}}));
+    ASSERT_EQ(1721614515032, core_options.GetScanTimestampMillis().value());
+    ASSERT_EQ(StartupMode::FromTimestamp(), core_options.GetStartupMode());
+}
+
+TEST(CoreOptionsTest, TestScanTimestampMillisExplicitMode) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options,
+                         CoreOptions::FromMap({{Options::SCAN_MODE, "from-timestamp"},
+                                               {Options::SCAN_TIMESTAMP_MILLIS, "1721614515032"}}));
+    ASSERT_EQ(StartupMode::FromTimestamp(), core_options.GetStartupMode());
+    ASSERT_EQ(1721614515032, core_options.GetScanTimestampMillis().value());
+}
+
+TEST(CoreOptionsTest, TestScanTimestampMillisNotSet) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap({}));
+    ASSERT_EQ(std::nullopt, core_options.GetScanTimestampMillis());
+    ASSERT_EQ(StartupMode::LatestFull(), core_options.GetStartupMode());
+}
+
+TEST(CoreOptionsTest, TestScanTimestampString) {
+    TimezoneGuard tz_guard("Asia/Shanghai");
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options,
+                         CoreOptions::FromMap({{Options::SCAN_TIMESTAMP, "2023-06-01 00:00:00"}}));
+    ASSERT_EQ(core_options.GetScanTimestampMillis().value(), 1685548800000);
+    ASSERT_EQ(StartupMode::FromTimestamp(), core_options.GetStartupMode());
+}
+
+TEST(CoreOptionsTest, TestScanTimestampStringDateOnly) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions opts1,
+                         CoreOptions::FromMap({{Options::SCAN_TIMESTAMP, "2023-06-01"}}));
+    ASSERT_OK_AND_ASSIGN(CoreOptions opts2,
+                         CoreOptions::FromMap({{Options::SCAN_TIMESTAMP, "2023-06-01 00:00:00"}}));
+    ASSERT_EQ(opts1.GetScanTimestampMillis().value(), opts2.GetScanTimestampMillis().value());
+}
+
+TEST(CoreOptionsTest, TestScanTimestampMillisAndStringMutuallyExclusive) {
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::SCAN_TIMESTAMP_MILLIS, "1721614515032"},
+                                              {Options::SCAN_TIMESTAMP, "2023-06-01 00:00:00"}}),
+                        "scan.timestamp-millis and scan.timestamp cannot be set at the same time");
+}
+
+TEST(CoreOptionsTest, TestScanTimestampInvalidString) {
+    ASSERT_NOK(CoreOptions::FromMap({{Options::SCAN_TIMESTAMP, "not-a-date"}}));
 }
 }  // namespace paimon::test

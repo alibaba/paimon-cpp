@@ -16,8 +16,11 @@
 
 #include "paimon/common/utils/var_length_int_utils.h"
 
+#include <cstring>
+#include <limits>
+#include <vector>
+
 #include "gtest/gtest.h"
-#include "paimon/memory/memory_pool.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -26,16 +29,13 @@ TEST(VarLengthIntUtilsTest, TestEncodeAndDecodeInt) {
                                         1000, 10000, 100000, 1000000, 10000000, 2147483647};
 
     for (int32_t value : test_values) {
-        // Encode
-        auto buffer =
-            std::make_shared<Bytes>(VarLengthIntUtils::kMaxVarIntSize, GetDefaultPool().get());
-        ASSERT_OK_AND_ASSIGN(int32_t encoded_length,
-                             VarLengthIntUtils::EncodeInt(0, value, buffer.get()));
+        char buffer[VarLengthIntUtils::kMaxVarIntSize];
+        std::memset(buffer, 0, sizeof(buffer));
 
-        // Decode
+        ASSERT_OK_AND_ASSIGN(int32_t encoded_length, VarLengthIntUtils::EncodeInt(value, buffer));
+
         int32_t offset = 0;
-        ASSERT_OK_AND_ASSIGN(int32_t decoded_value,
-                             VarLengthIntUtils::DecodeInt(buffer.get(), &offset));
+        ASSERT_OK_AND_ASSIGN(int32_t decoded_value, VarLengthIntUtils::DecodeInt(buffer, &offset));
 
         ASSERT_EQ(value, decoded_value) << "Encoded and decoded values don't match for: " << value;
         ASSERT_EQ(offset, encoded_length) << "Offset doesn't match encoded length for: " << value;
@@ -58,53 +58,45 @@ TEST(VarLengthIntUtilsTest, TestEncodeAndDecodeLong) {
                                         std::numeric_limits<int64_t>::max()};
 
     for (int64_t value : test_values) {
-        // Encode
-        auto buffer =
-            std::make_shared<Bytes>(VarLengthIntUtils::kMaxVarLongSize, GetDefaultPool().get());
-        ASSERT_OK_AND_ASSIGN([[maybe_unused]] int32_t encoded_length,
-                             VarLengthIntUtils::EncodeLong(value, buffer.get()));
+        char buffer[VarLengthIntUtils::kMaxVarLongSize + 1];
+        std::memset(buffer, 0, sizeof(buffer));
 
-        // Decode
-        ASSERT_OK_AND_ASSIGN(int64_t decoded_value,
-                             VarLengthIntUtils::DecodeLong(buffer.get(), /*index=*/0));
+        ASSERT_OK_AND_ASSIGN([[maybe_unused]] int32_t encoded_length,
+                             VarLengthIntUtils::EncodeLong(value, buffer));
+
+        int32_t offset = 0;
+        ASSERT_OK_AND_ASSIGN(int64_t decoded_value, VarLengthIntUtils::DecodeLong(buffer, &offset));
 
         ASSERT_EQ(value, decoded_value) << "Encoded and decoded values don't match for: " << value;
     }
 }
 
 TEST(VarLengthIntUtilsTest, TestEncodeNegativeValue) {
-    auto buffer =
-        std::make_shared<Bytes>(VarLengthIntUtils::kMaxVarIntSize, GetDefaultPool().get());
-    ASSERT_NOK_WITH_MSG(VarLengthIntUtils::EncodeInt(0, -1, buffer.get()),
+    char buffer[VarLengthIntUtils::kMaxVarIntSize];
+    ASSERT_NOK_WITH_MSG(VarLengthIntUtils::EncodeInt(-1, buffer),
                         "negative value: v=-1 for VarLengthInt Encoding");
 }
 
 TEST(VarLengthIntUtilsTest, TestEncodeNegativeLongValue) {
-    auto buffer =
-        std::make_shared<Bytes>(VarLengthIntUtils::kMaxVarLongSize, GetDefaultPool().get());
-    ASSERT_NOK_WITH_MSG(VarLengthIntUtils::EncodeLong(-1, buffer.get()),
+    char buffer[VarLengthIntUtils::kMaxVarLongSize + 1];
+    ASSERT_NOK_WITH_MSG(VarLengthIntUtils::EncodeLong(-1, buffer),
                         "negative value: v=-1 for VarLengthInt Encoding");
 }
 
-TEST(VarLengthIntUtilsTest, TestEncodeIntWithOffset) {
-    auto buffer =
-        std::make_shared<Bytes>(VarLengthIntUtils::kMaxVarIntSize * 2, GetDefaultPool().get());
+TEST(VarLengthIntUtilsTest, TestEncodeIntSequential) {
+    char buffer[VarLengthIntUtils::kMaxVarIntSize * 2];
+    std::memset(buffer, 0, sizeof(buffer));
     int32_t value1 = 100;
     int32_t value2 = 200;
 
-    // Encode first value at offset 0
-    ASSERT_OK_AND_ASSIGN(auto length1, VarLengthIntUtils::EncodeInt(0, value1, buffer.get()));
-    // Encode second value at offset length1
+    ASSERT_OK_AND_ASSIGN(auto length1, VarLengthIntUtils::EncodeInt(value1, buffer));
     ASSERT_OK_AND_ASSIGN([[maybe_unused]] auto length2,
-                         VarLengthIntUtils::EncodeInt(length1, value2, buffer.get()));
+                         VarLengthIntUtils::EncodeInt(value2, buffer + length1));
 
-    // Decode both values
     int32_t offset = 0;
-    ASSERT_OK_AND_ASSIGN(int32_t decoded_result1,
-                         VarLengthIntUtils::DecodeInt(buffer.get(), &offset));
+    ASSERT_OK_AND_ASSIGN(int32_t decoded_result1, VarLengthIntUtils::DecodeInt(buffer, &offset));
     ASSERT_EQ(value1, decoded_result1);
-    ASSERT_OK_AND_ASSIGN(int32_t decoded_result2,
-                         VarLengthIntUtils::DecodeInt(buffer.get(), &offset));
+    ASSERT_OK_AND_ASSIGN(int32_t decoded_result2, VarLengthIntUtils::DecodeInt(buffer, &offset));
     ASSERT_EQ(value2, decoded_result2);
 }
 
@@ -118,10 +110,10 @@ TEST(VarLengthIntUtilsTest, TestEncodeBytesNumber) {
     };
 
     for (int32_t i = 0; i < static_cast<int32_t>(values.size()); ++i) {
-        auto buffer =
-            std::make_shared<Bytes>(VarLengthIntUtils::kMaxVarIntSize, GetDefaultPool().get());
+        char buffer[VarLengthIntUtils::kMaxVarIntSize];
+        std::memset(buffer, 0, sizeof(buffer));
         ASSERT_OK_AND_ASSIGN(int32_t encoded_length,
-                             VarLengthIntUtils::EncodeInt(0, values[i], buffer.get()));
+                             VarLengthIntUtils::EncodeInt(values[i], buffer));
         ASSERT_EQ(encoded_length, i + 1);
     }
 }
@@ -140,10 +132,10 @@ TEST(VarLengthIntUtilsTest, TestEncodeLongBytesNumber) {
     };
 
     for (int32_t i = 0; i < static_cast<int32_t>(values.size()); ++i) {
-        auto buffer =
-            std::make_shared<Bytes>(VarLengthIntUtils::kMaxVarLongSize, GetDefaultPool().get());
+        char buffer[VarLengthIntUtils::kMaxVarLongSize + 1];
+        std::memset(buffer, 0, sizeof(buffer));
         ASSERT_OK_AND_ASSIGN(int32_t encoded_length,
-                             VarLengthIntUtils::EncodeLong(values[i], buffer.get()));
+                             VarLengthIntUtils::EncodeLong(values[i], buffer));
         ASSERT_EQ(encoded_length, i + 1) << values[i];
     }
 }

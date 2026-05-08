@@ -27,7 +27,8 @@ SortMergeReaderWithMinHeap::SortMergeReaderWithMinHeap(
     const std::shared_ptr<FieldsComparator>& user_key_comparator,
     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
     const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper)
-    : readers_holder_(std::move(readers)),
+    : need_merge_(merge_function_wrapper != nullptr),
+      readers_holder_(std::move(readers)),
       user_key_comparator_(user_key_comparator),
       merge_function_wrapper_(merge_function_wrapper),
       min_heap_(HeapSorter(user_key_comparator, user_defined_seq_comparator)) {
@@ -64,6 +65,10 @@ Result<std::unique_ptr<SortMergeReader::Iterator>> SortMergeReaderWithMinHeap::N
 Result<bool> SortMergeReaderWithMinHeap::Iterator::HasNext() {
     while (true) {
         PAIMON_ASSIGN_OR_RAISE(bool has_more, NextImpl());
+        if (!reader_->need_merge_) {
+            // no merge: just return every kv in sorted order, possibly with duplicate keys
+            return has_more;
+        }
         if (!has_more) {
             return false;
         }
@@ -97,6 +102,16 @@ Result<bool> SortMergeReaderWithMinHeap::Iterator::NextImpl() {
     if (reader_->min_heap_.empty()) {
         return Status::Invalid("Min heap is empty. This is a bug.");
     }
+
+    if (!reader_->need_merge_) {
+        // no merge: only poll the top element, set it as result directly
+        auto& element = const_cast<Element&>(reader_->min_heap_.top());
+        result_ = std::move(element.kv);
+        reader_->polled_.push_back(std::move(element));
+        reader_->min_heap_.pop();
+        return true;
+    }
+
     reader_->merge_function_wrapper_->Reset();
     std::shared_ptr<InternalRow> key = reader_->min_heap_.top().kv.key;
     bool is_first = true;

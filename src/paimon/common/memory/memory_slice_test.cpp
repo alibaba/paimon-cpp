@@ -273,10 +273,10 @@ TEST_F(MemorySliceTest, TestSliceCopyBytes) {
     ASSERT_NE(bytes->data(), copied->data());
 }
 
-TEST_F(MemorySliceTest, TestSliceGetHeapMemory) {
+TEST_F(MemorySliceTest, TestSliceGetOrCreateHeapMemory) {
     auto bytes = std::make_shared<Bytes>("test", pool_.get());
     MemorySlice slice = MemorySlice::Wrap(bytes);
-    ASSERT_EQ(bytes, slice.GetHeapMemory());
+    ASSERT_EQ(bytes, slice.GetOrCreateHeapMemory(pool_.get()));
 }
 
 TEST_F(MemorySliceTest, TestSliceToInput) {
@@ -372,17 +372,17 @@ TEST_F(MemorySliceTest, TestInputReadIntAndLong) {
     ASSERT_EQ(INT64_MIN, input.ReadLong());
 }
 
-TEST_F(MemorySliceTest, TestInputReadSlice) {
+TEST_F(MemorySliceTest, TestInputReadSliceView) {
     std::string data = "abcdefghij";
     auto bytes = std::make_shared<Bytes>(data, pool_.get());
     MemorySlice slice = MemorySlice::Wrap(bytes);
     MemorySliceInput input(slice);
 
-    MemorySlice sub = input.ReadSlice(5);
+    MemorySlice sub = input.ReadSliceView(5);
     ASSERT_EQ("abcde", sub.ReadStringView());
     ASSERT_EQ(5, input.Position());
 
-    MemorySlice sub2 = input.ReadSlice(5);
+    MemorySlice sub2 = input.ReadSliceView(5);
     ASSERT_EQ("fghij", sub2.ReadStringView());
     ASSERT_EQ(10, input.Position());
 }
@@ -420,7 +420,7 @@ TEST_F(MemorySliceTest, TestRoundTripMixedTypes) {
 
     int32_t str_len = input.ReadInt();
     ASSERT_EQ(4, str_len);
-    MemorySlice str_slice = input.ReadSlice(str_len);
+    MemorySlice str_slice = input.ReadSliceView(str_len);
     ASSERT_EQ("test", str_slice.ReadStringView());
 }
 

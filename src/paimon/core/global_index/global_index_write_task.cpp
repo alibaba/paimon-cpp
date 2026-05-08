@@ -123,7 +123,12 @@ Result<std::vector<GlobalIndexIOMeta>> BuildIndex(const std::string& field_name,
         std::vector<int64_t> relative_row_ids;
         relative_row_ids.reserve(typed_row_id_array->length());
         for (int64_t i = 0; i < typed_row_id_array->length(); i++) {
-            relative_row_ids.push_back(typed_row_id_array->Value(i) - range.from);
+            int64_t row_id = typed_row_id_array->Value(i);
+            if (row_id < range.from || row_id > range.to) {
+                return Status::Invalid("invalid row id {}, out of range [{}, {}]", row_id,
+                                       range.from, range.to);
+            }
+            relative_row_ids.push_back(row_id - range.from);
         }
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::StructArray> new_array,
                                           arrow::StructArray::Make({indexed_array}, {field_name}));

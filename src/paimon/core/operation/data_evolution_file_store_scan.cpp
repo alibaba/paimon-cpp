@@ -26,9 +26,9 @@
 #include "paimon/common/utils/range_helper.h"
 namespace paimon {
 Result<bool> DataEvolutionFileStoreScan::FilterEntryByRowRanges(
-    const ManifestEntry& entry, const std::optional<std::vector<Range>>& row_ranges) {
-    // If row ranges is null, all entries should be kept
-    if (!row_ranges) {
+    const ManifestEntry& entry, const std::optional<RowRangeIndex>& row_range_index) {
+    // If row range index is null, all entries should be kept
+    if (!row_range_index) {
         return true;
     }
     // If firstRowId does not exist, keep the entry
@@ -39,34 +39,12 @@ Result<bool> DataEvolutionFileStoreScan::FilterEntryByRowRanges(
 
     // Check if any value in indices is in the range [firstRowId, firstRowId + rowCount - 1]
     int64_t end_row_id = first_row_id.value() + entry.File()->row_count - 1;
-    Range file_range(first_row_id.value(), end_row_id);
 
-    for (const auto& row_range : row_ranges.value()) {
-        if (Range::HasIntersection(file_range, row_range)) {
-            return true;
-        }
-    }
-    // No matching indices found, skip this entry
-    return false;
+    return row_range_index->Intersects(first_row_id.value(), end_row_id);
 }
 
 Result<bool> DataEvolutionFileStoreScan::FilterByStats(const ManifestEntry& entry) const {
-    return FilterEntryByRowRanges(entry, row_ranges_);
-}
-
-std::vector<ManifestFileMeta> DataEvolutionFileStoreScan::PostFilterManifests(
-    std::vector<ManifestFileMeta>&& manifests) const {
-    if (!row_ranges_) {
-        return std::move(manifests);
-    }
-    std::vector<ManifestFileMeta> result_metas;
-    result_metas.reserve(manifests.size());
-    for (auto& manifest : manifests) {
-        if (FilterManifestByRowRanges(manifest, row_ranges_)) {
-            result_metas.push_back(std::move(manifest));
-        }
-    }
-    return result_metas;
+    return FilterEntryByRowRanges(entry, row_range_index_);
 }
 
 Result<std::vector<ManifestEntry>> DataEvolutionFileStoreScan::PostFilterManifestEntries(
@@ -99,26 +77,6 @@ Result<std::vector<ManifestEntry>> DataEvolutionFileStoreScan::PostFilterManifes
         }
     }
     return result_entries;
-}
-
-bool DataEvolutionFileStoreScan::FilterManifestByRowRanges(
-    const ManifestFileMeta& manifest, const std::optional<std::vector<Range>>& row_ranges) {
-    if (!row_ranges) {
-        return true;
-    }
-    std::optional<int64_t> min = manifest.MinRowId();
-    std::optional<int64_t> max = manifest.MaxRowId();
-    if (!min || !max) {
-        return true;
-    }
-
-    Range manifest_range(min.value(), max.value());
-    for (const auto& range : row_ranges.value()) {
-        if (Range::HasIntersection(manifest_range, range)) {
-            return true;
-        }
-    }
-    return false;
 }
 
 Result<bool> DataEvolutionFileStoreScan::FilterByStatsWithSameRowId(

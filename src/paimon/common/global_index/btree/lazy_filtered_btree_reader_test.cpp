@@ -135,7 +135,8 @@ class LazyFilteredBTreeReaderTest : public ::testing::Test {
         const std::shared_ptr<Executor>& executor = nullptr) const {
         auto file_reader = std::make_shared<FakeLazyFileReader>(fs_, base_path_);
         auto cache_manager = std::make_shared<CacheManager>(1024 * 1024, 0.5);
-        return std::make_shared<LazyFilteredBTreeReader>(all_metas_, arrow::int32(), file_reader,
+        return std::make_shared<LazyFilteredBTreeReader>(/*read_buffer_size=*/std::nullopt,
+                                                         all_metas_, arrow::int32(), file_reader,
                                                          cache_manager, pool_, executor);
     }
 
@@ -360,7 +361,8 @@ TEST_F(LazyFilteredBTreeReaderTest, TestEmptyFilesList) {
     auto file_reader = std::make_shared<FakeLazyFileReader>(fs_, base_path_);
     auto cache_manager = std::make_shared<CacheManager>(1024 * 1024, 0.5);
     auto reader = std::make_shared<LazyFilteredBTreeReader>(
-        empty_metas, arrow::int32(), file_reader, cache_manager, pool_, /*executor=*/nullptr);
+        /*read_buffer_size=*/std::nullopt, empty_metas, arrow::int32(), file_reader, cache_manager,
+        pool_, /*executor=*/nullptr);
 
     // Any query on empty files should return empty bitmap
     Literal literal_1(1);
@@ -451,7 +453,8 @@ TEST_F(LazyFilteredBTreeReaderTest, TestParallelEmptyFilesList) {
     auto file_reader = std::make_shared<FakeLazyFileReader>(fs_, base_path_);
     auto cache_manager = std::make_shared<CacheManager>(1024 * 1024, 0.5);
     auto reader = std::make_shared<LazyFilteredBTreeReader>(
-        empty_metas, arrow::int32(), file_reader, cache_manager, pool_, executor);
+        /*read_buffer_size=*/std::nullopt, empty_metas, arrow::int32(), file_reader, cache_manager,
+        pool_, executor);
     Literal literal_1(1);
     ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal_1));
     CheckEmpty(result);

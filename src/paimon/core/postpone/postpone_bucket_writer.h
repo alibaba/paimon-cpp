@@ -72,6 +72,16 @@ class PostponeBucketWriter : public BatchWriter {
         return Status::NotImplemented("not implemented");
     }
 
+    uint64_t GetMemoryUsage() const override {
+        // used for spill, PostponeBucketWriter do not support spill, so return 0 to avoid
+        // triggering spill
+        return 0;
+    }
+
+    Status FlushMemory() override {
+        return Flush();
+    }
+
     Result<CommitIncrement> PrepareCommit(bool wait_compaction) override;
 
     Status Close() override {

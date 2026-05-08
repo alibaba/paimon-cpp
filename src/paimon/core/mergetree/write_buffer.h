@@ -22,6 +22,8 @@
 #include <vector>
 
 #include "arrow/type_fwd.h"
+#include "paimon/core/mergetree/in_memory_sort_buffer.h"
+#include "paimon/core/mergetree/sort_buffer.h"
 #include "paimon/record_batch.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -33,7 +35,6 @@ class StructArray;
 }  // namespace arrow
 
 namespace paimon {
-
 class KeyValueRecordReader;
 class FieldsComparator;
 class MemoryPool;
@@ -46,7 +47,7 @@ class MergeFunctionWrapper;
 /// and flushing buffered batches into KeyValueRecordReaders.
 class WriteBuffer {
  public:
-    WriteBuffer(const std::shared_ptr<arrow::DataType>& value_type,
+    WriteBuffer(int64_t last_sequence_number, const std::shared_ptr<arrow::DataType>& value_type,
                 const std::vector<std::string>& trimmed_primary_keys,
                 const std::vector<std::string>& user_defined_sequence_fields,
                 const std::shared_ptr<FieldsComparator>& key_comparator,
@@ -57,41 +58,28 @@ class WriteBuffer {
     /// Does NOT check memory thresholds or trigger flush.
     Status Write(std::unique_ptr<RecordBatch>&& batch);
 
-    /// Drain all buffered batches into KeyValueInMemoryRecordReaders and clear the buffer.
-    /// @param[in,out] last_sequence_number current sequence number, updated after draining
+    /// Create KeyValueRecordReaders from sort buffer without clearing the buffer.
+    /// The caller should invoke Clear() after consuming the readers.
     /// @return list of KeyValueRecordReaders built from buffered data
-    Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> DrainToReaders(
-        int64_t* last_sequence_number);
+    Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> CreateReaders();
 
     /// Return current memory usage in bytes.
-    int64_t GetMemoryUsage() const {
-        return current_memory_in_bytes_;
+    uint64_t GetMemoryUsage() const {
+        return sort_buffer_->GetMemorySize();
     }
 
     /// Return whether the buffer is empty.
     bool IsEmpty() const {
-        return batch_vec_.empty();
+        return !sort_buffer_->HasData();
     }
 
     /// Clear the buffer without building readers (for error paths or Close).
     void Clear();
 
  private:
-    /// Estimate memory usage of an Arrow Array.
-    static Result<int64_t> EstimateMemoryUse(const std::shared_ptr<arrow::Array>& array);
-
-    // Immutable configuration
-    const std::shared_ptr<MemoryPool> pool_;
-    const std::shared_ptr<arrow::DataType> value_type_;
-    const std::vector<std::string> trimmed_primary_keys_;
-    const std::vector<std::string> user_defined_sequence_fields_;
-    const std::shared_ptr<FieldsComparator> key_comparator_;
-    const std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;
-
-    // Mutable buffer state
-    std::vector<std::shared_ptr<arrow::StructArray>> batch_vec_;
-    std::vector<std::vector<RecordBatch::RowKind>> row_kinds_vec_;
-    int64_t current_memory_in_bytes_ = 0;
+    std::unique_ptr<SortBuffer> sort_buffer_;
+    std::shared_ptr<FieldsComparator> key_comparator_;
+    std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;
 };
 
 }  // namespace paimon

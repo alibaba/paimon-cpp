@@ -178,6 +178,27 @@ struct PAIMON_EXPORT Options {
     /// on-disk file. The default value is 256 mb
     static const char WRITE_BUFFER_SIZE[];
 
+    /// "write-buffer-spillable" - Whether the write buffer can be spillable. Default value is true.
+    static const char WRITE_BUFFER_SPILLABLE[];
+
+    /// "write-buffer-spill.max-disk-size" - The max disk to use for write buffer spill. This only
+    /// works when the write buffer spill is enabled. Default value is unlimited.
+    static const char WRITE_BUFFER_SPILL_MAX_DISK_SIZE[];
+
+    /// "local-sort.max-num-file-handles" - The maximal fan-in for external merge sort. It limits
+    /// the number of file handles. If it is too small, may cause intermediate merging. But if it is
+    /// too large, it will cause too many files opened at the same time, consume memory and lead to
+    /// random reading. Default value is 128.
+    static const char LOCAL_SORT_MAX_NUM_FILE_HANDLES[];
+
+    /// "spill-compression" - Compression for spill. Default value is zstd.
+    static const char SPILL_COMPRESSION[];
+
+    /// "spill-compression.zstd-level" - Default spill compression zstd level. For higher
+    /// compression rates, it can be configured to 9, but the read and write speed will
+    /// significantly decrease. Default value is 1.
+    static const char SPILL_COMPRESSION_ZSTD_LEVEL[];
+
     /// "snapshot.num-retained.min" - The minimum number of completed snapshots to retain. Should be
     /// greater than or equal to 1. Default value is 10
     static const char SNAPSHOT_NUM_RETAINED_MIN[];
@@ -344,12 +365,27 @@ struct PAIMON_EXPORT Options {
     static const char BLOB_AS_DESCRIPTOR[];
     /// "global-index.enabled" - Whether to enable global index for scan. Default value is "true".
     static const char GLOBAL_INDEX_ENABLED[];
+    /// "global-index.thread-num" - The maximum number of concurrent scanner for global index. No
+    /// default value. By default is the number of processors available to the machine.
+    static const char GLOBAL_INDEX_THREAD_NUM[];
     /// "global-index.external-path" - Global index root directory, if not set, the global index
     /// files will be stored under the index directory.
     static const char GLOBAL_INDEX_EXTERNAL_PATH[];
     /// "aggregation.remove-record-on-delete" - Whether to remove the whole row in aggregation
     /// engine when delete records are received. Default value is "false".
     static const char AGGREGATION_REMOVE_RECORD_ON_DELETE[];
+
+    /// "scan.timestamp-millis" - Optional timestamp used in case of "from-timestamp" scan mode.
+    /// For batch sources, produces the latest snapshot earlier than or equal to the timestamp.
+    /// For streaming sources, starts from the first snapshot at or after the timestamp.
+    /// "scan.timestamp" can be used as an alternative string input for the same mode.
+    static const char SCAN_TIMESTAMP_MILLIS[];
+
+    /// "scan.timestamp" - Optional timestamp string used in case of "from-timestamp" scan mode,
+    /// as an alternative to "scan.timestamp-millis".
+    /// It will be automatically converted to timestamp in unix milliseconds, using local time zone.
+    /// Supported formats: yyyy-MM-dd, yyyy-MM-dd HH:mm:ss, yyyy-MM-dd HH:mm:ss.SSS.
+    static const char SCAN_TIMESTAMP[];
 
     /// "scan.tag-name" - Optional tag name used in case of "from-snapshot" scan mode.
     static const char SCAN_TAG_NAME[];
@@ -405,10 +441,6 @@ struct PAIMON_EXPORT Options {
     /// lz4 are supported. Default value is zstd.
     /// Noted that java paimon also supports lzo which paimon-cpp does not support for now.
     static const char LOOKUP_CACHE_SPILL_COMPRESSION[];
-    /// "spill-compression.zstd-level" - Default spill compression zstd level. For higher
-    /// compression rates, it can be configured to 9, but the read and write speed will
-    /// significantly decrease. Default value is 1.
-    static const char SPILL_COMPRESSION_ZSTD_LEVEL[];
     /// "cache-page-size" - Memory page size for caching. Default value is 64 kb.
     static const char CACHE_PAGE_SIZE[];
     /// "file.format.per.level" - Define different file format for different level, you can add the

@@ -53,6 +53,8 @@ set(PAIMON_COMMON_SRCS
     common/fs/resolving_file_system.cpp
     common/fs/file_system_factory.cpp
     common/global_config.cpp
+    common/global_index/union_global_index_reader.cpp
+    common/global_index/offset_global_index_reader.cpp
     common/global_index/complete_index_score_batch_reader.cpp
     common/global_index/bitmap_scored_global_index_result.cpp
     common/global_index/bitmap_global_index_result.cpp
@@ -76,7 +78,6 @@ set(PAIMON_COMMON_SRCS
     common/memory/memory_segment.cpp
     common/memory/memory_segment_utils.cpp
     common/memory/memory_slice.cpp
-    common/memory/memory_slice_input.cpp
     common/memory/memory_slice_output.cpp
     common/metrics/metrics_impl.cpp
     common/metrics/histogram.cpp
@@ -196,7 +197,6 @@ set(PAIMON_CORE_SRCS
     core/global_index/global_index_evaluator_impl.cpp
     core/global_index/global_index_scan.cpp
     core/global_index/global_index_scan_impl.cpp
-    core/global_index/row_range_global_index_scanner_impl.cpp
     core/global_index/global_index_write_task.cpp
     core/index/index_file_handler.cpp
     core/index/global_index_meta.cpp
@@ -217,6 +217,7 @@ set(PAIMON_CORE_SRCS
     core/io/key_value_data_file_record_reader.cpp
     core/io/key_value_data_file_writer.cpp
     core/io/key_value_in_memory_record_reader.cpp
+    core/io/merged_key_value_record_reader.cpp
     core/io/key_value_meta_projection_consumer.cpp
     core/io/key_value_projection_consumer.cpp
     core/io/key_value_projection_reader.cpp
@@ -234,6 +235,7 @@ set(PAIMON_CORE_SRCS
     core/manifest/manifest_list.cpp
     core/manifest/partition_entry.cpp
     core/manifest/index_manifest_file_handler.cpp
+    core/memory/writer_memory_manager.cpp
     core/mergetree/compact/universal_compaction.cpp
     core/mergetree/compact/early_full_compaction.cpp
     core/mergetree/compact/aggregate/aggregate_merge_function.cpp
@@ -250,6 +252,8 @@ set(PAIMON_CORE_SRCS
     core/mergetree/compact/lookup_merge_tree_compact_rewriter.cpp
     core/mergetree/compact/changelog_merge_tree_rewriter.cpp
     core/mergetree/merge_tree_writer.cpp
+    core/mergetree/in_memory_sort_buffer.cpp
+    core/mergetree/external_sort_buffer.cpp
     core/mergetree/write_buffer.cpp
     core/mergetree/levels.cpp
     core/mergetree/lookup_file.cpp
@@ -310,6 +314,11 @@ set(PAIMON_CORE_SRCS
     core/table/source/table_read.cpp
     core/table/source/table_scan.cpp
     core/table/source/data_evolution_batch_scan.cpp
+    core/table/system/options_system_table.cpp
+    core/table/system/system_table.cpp
+    core/table/system/system_table_read.cpp
+    core/table/system/system_table_scan.cpp
+    core/table/system/system_table_schema.cpp
     core/tag/tag.cpp
     core/utils/field_mapping.cpp
     core/utils/file_store_path_factory.cpp
@@ -410,6 +419,8 @@ if(PAIMON_BUILD_TESTS)
                     common/global_index/complete_index_score_batch_reader_test.cpp
                     common/global_index/global_index_result_test.cpp
                     common/global_index/global_index_utils_test.cpp
+                    common/global_index/offset_global_index_reader_test.cpp
+                    common/global_index/union_global_index_reader_test.cpp
                     common/global_index/global_indexer_factory_test.cpp
                     common/global_index/bitmap_global_index_result_test.cpp
                     common/global_index/bitmap_scored_global_index_result_test.cpp
@@ -574,6 +585,7 @@ if(PAIMON_BUILD_TESTS)
                     core/io/key_value_data_file_record_reader_test.cpp
                     core/io/key_value_projection_reader_test.cpp
                     core/io/key_value_in_memory_record_reader_test.cpp
+                    core/io/merged_key_value_record_reader_test.cpp
                     core/io/complete_row_tracking_fields_reader_test.cpp
                     core/io/data_file_meta_test.cpp
                     core/io/file_index_evaluator_test.cpp
@@ -592,6 +604,7 @@ if(PAIMON_BUILD_TESTS)
                     core/manifest/file_entry_test.cpp
                     core/manifest/index_manifest_entry_serializer_test.cpp
                     core/manifest/index_manifest_file_handler_test.cpp
+                    core/memory/writer_memory_manager_test.cpp
                     core/mergetree/levels_test.cpp
                     core/mergetree/lookup_file_test.cpp
                     core/mergetree/lookup_levels_test.cpp
@@ -631,6 +644,7 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/drop_delete_reader_test.cpp
                     core/mergetree/merge_tree_writer_test.cpp
                     core/mergetree/write_buffer_test.cpp
+                    core/mergetree/sort_buffer_test.cpp
                     core/mergetree/sorted_run_test.cpp
                     core/mergetree/spill_channel_manager_test.cpp
                     core/mergetree/spill_reader_writer_test.cpp

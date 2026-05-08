@@ -58,33 +58,6 @@ int32_t MemorySegment::Compare(const MemorySegment& seg2, int32_t offset1, int32
     return c == 0 ? (len1 - len2) : c;
 }
 
-void MemorySegment::SwapBytes(Bytes* temp_buffer, MemorySegment* seg2, int32_t offset1,
-                              int32_t offset2, int32_t len) {
-    if ((offset1 | offset2 | len | (temp_buffer->size() - len) |
-         (heap_memory_->size() - (offset1 + len)) |
-         (seg2->heap_memory_->size() - (offset2 + len))) >= 0) {
-        // this -> temp buffer
-        std::memcpy(temp_buffer->data(), heap_memory_->data() + offset1, len);
-
-        // other -> this
-        std::memcpy(heap_memory_->data() + offset1, seg2->heap_memory_->data() + offset2, len);
-
-        // temp buffer -> other
-        std::memcpy(seg2->heap_memory_->data() + offset2, temp_buffer->data(), len);
-        return;
-    }
-    assert(false);
-
-    // index is in fact invalid
-    // return Status::InternalError(
-    //     "IndexOutOfBoundsException",
-    //     fmt::format("offset1={}, offset2={}, len={}, temp buffer size={}, heap
-    //     mem 1 "
-    //                 "size={}, heap mem 2 size={}",
-    //                 offset1, offset2, len, temp_buffer->size(),
-    //                 heap_memory_->size(), seg2->heap_memory_->size()));
-}
-
 bool MemorySegment::EqualTo(const MemorySegment& seg2, int32_t offset1, int32_t offset2,
                             int32_t length) const {
     int32_t i = 0;

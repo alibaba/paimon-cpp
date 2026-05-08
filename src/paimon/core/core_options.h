@@ -17,7 +17,6 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -75,6 +74,7 @@ class PAIMON_EXPORT CoreOptions {
     int64_t GetSourceSplitTargetSize() const;
     int64_t GetSourceSplitOpenFileCost() const;
     std::optional<int64_t> GetScanSnapshotId() const;
+    std::optional<int64_t> GetScanTimestampMillis() const;
 
     int64_t GetManifestTargetFileSize() const;
     StartupMode GetStartupMode() const;
@@ -82,6 +82,10 @@ class PAIMON_EXPORT CoreOptions {
     int32_t GetReadBatchSize() const;
     int32_t GetWriteBatchSize() const;
     int64_t GetWriteBufferSize() const;
+    bool GetWriteBufferSpillable() const;
+    int64_t GetWriteBufferSpillMaxDiskSize() const;
+    int32_t GetLocalSortMaxNumFileHandles() const;
+    const CompressOptions& GetSpillCompressOptions() const;
 
     const ExpireConfig& GetExpireConfig() const;
 
@@ -170,9 +174,10 @@ class PAIMON_EXPORT CoreOptions {
     int64_t GetLookupCacheFileRetentionMs() const;
     int64_t GetLookupCacheMaxDiskSize() const;
 
-    const std::map<std::string, std::string>& ToMap() const;
-
     BucketFunctionType GetBucketFunctionType() const;
+    std::optional<int32_t> GetGlobalIndexThreadNum() const;
+
+    const std::map<std::string, std::string>& ToMap() const;
 
  private:
     std::optional<std::string> GetDataFileExternalPaths() const;

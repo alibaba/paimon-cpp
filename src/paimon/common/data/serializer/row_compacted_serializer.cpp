@@ -524,7 +524,7 @@ std::shared_ptr<Bytes> RowCompactedSerializer::RowWriter::CopyBuffer() const {
 Status RowCompactedSerializer::RowWriter::WriteUnsignedInt(int32_t value) {
     EnsureCapacity(VarLengthIntUtils::kMaxVarIntSize);
     PAIMON_ASSIGN_OR_RAISE(int32_t len,
-                           VarLengthIntUtils::EncodeInt(position_, value, buffer_.get()));
+                           VarLengthIntUtils::EncodeInt(value, buffer_->data() + position_));
     position_ += len;
     return Status::OK();
 }
@@ -577,7 +577,7 @@ Result<const RowKind*> RowCompactedSerializer::RowReader::ReadRowKind() const {
 
 Result<std::string_view> RowCompactedSerializer::RowReader::ReadStringView() {
     PAIMON_ASSIGN_OR_RAISE(int32_t length, ReadUnsignedInt());
-    std::string_view str(segment_.GetArray()->data() + position_, length);
+    std::string_view str(segment_.Data() + position_, length);
     position_ += length;
     return str;
 }

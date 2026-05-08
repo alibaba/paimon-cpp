@@ -30,7 +30,10 @@ namespace paimon {
 class MemoryPool;
 class MemorySliceInput;
 
-///  Slice of a MemorySegment.
+/// Slice of a MemorySegment.
+///
+/// Represents a sub-range [offset_, offset_ + length_) of a MemorySegment.
+/// The MemorySegment may be owning (with shared_ptr<Bytes>) or non-owning (view).
 class PAIMON_EXPORT MemorySlice {
  public:
     static MemorySlice Wrap(const std::shared_ptr<Bytes>& bytes);
@@ -39,13 +42,20 @@ class PAIMON_EXPORT MemorySlice {
     using SliceComparator = std::function<Result<int32_t>(const MemorySlice&, const MemorySlice&)>;
 
  public:
+    /// Construct a slice over a segment with given offset and length.
     MemorySlice(const MemorySegment& segment, int32_t offset, int32_t length);
+
     MemorySlice Slice(int32_t index, int32_t length) const;
 
     int32_t Length() const;
     int32_t Offset() const;
-    std::shared_ptr<Bytes> GetHeapMemory() const;
+    std::shared_ptr<Bytes> GetOrCreateHeapMemory(MemoryPool* pool) const;
     const MemorySegment& GetSegment() const;
+
+    /// Returns a raw pointer to the start of this slice's data.
+    inline const char* Data() const {
+        return segment_.Data() + offset_;
+    }
 
     int8_t ReadByte(int32_t position) const;
     int32_t ReadInt(int32_t position) const;

@@ -32,7 +32,6 @@ class DataEvolutionBatchScan : public AbstractTableScan {
                            const std::shared_ptr<SnapshotReader>& snapshot_reader,
                            std::unique_ptr<DataTableBatchScan>&& batch_scan,
                            const std::shared_ptr<GlobalIndexResult>& global_index_result,
-                           const std::shared_ptr<VectorSearch>& vector_search,
                            const CoreOptions& core_options, const std::shared_ptr<MemoryPool>& pool,
                            const std::shared_ptr<Executor>& executor);
 
@@ -40,7 +39,7 @@ class DataEvolutionBatchScan : public AbstractTableScan {
 
  private:
     Result<std::shared_ptr<Plan>> WrapToIndexedSplits(
-        const std::shared_ptr<Plan>& data_plan, const std::vector<Range>& row_ranges,
+        const std::shared_ptr<Plan>& data_plan, const RowRangeIndex& row_range_index,
         const std::map<int64_t, float>& id_to_score) const;
     Result<std::shared_ptr<GlobalIndexResult>> EvalGlobalIndex() const;
 
@@ -49,7 +48,6 @@ class DataEvolutionBatchScan : public AbstractTableScan {
     std::string table_path_;
     std::unique_ptr<DataTableBatchScan> batch_scan_;
     std::shared_ptr<GlobalIndexResult> global_index_result_;
-    std::shared_ptr<VectorSearch> vector_search_;
     std::shared_ptr<Executor> executor_;
 };
 
