@@ -38,7 +38,6 @@
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/record_batch.h"
-#include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -77,11 +76,13 @@ class RemoteLookupFileManagerTest : public testing::Test {
         auto merge_function_wrapper =
             std::make_shared<ReducerMergeFunctionWrapper>(std::move(mfunc));
 
-        auto writer = std::make_shared<MergeTreeWriter>(
-            /*last_sequence_number=*/last_sequence_number, std::vector<std::string>({"key"}),
-            data_path_factory, key_comparator,
-            /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper, /*schema_id=*/0,
-            arrow_schema_, options, noop_compact_manager_, pool_);
+        PAIMON_ASSIGN_OR_RAISE(
+            auto writer,
+            MergeTreeWriter::Create(/*last_sequence_number=*/last_sequence_number,
+                                    std::vector<std::string>({"key"}), data_path_factory,
+                                    key_comparator, /*user_defined_seq_comparator=*/nullptr,
+                                    merge_function_wrapper, /*schema_id=*/0, arrow_schema_, options,
+                                    noop_compact_manager_, /*io_manager=*/nullptr, pool_));
 
         ArrowArray c_src_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*src_array, &c_src_array));

@@ -29,6 +29,7 @@
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/compact/noop_compact_manager.h"
 #include "paimon/core/core_options.h"
+#include "paimon/core/disk/io_manager.h"
 #include "paimon/core/io/data_file_path_factory.h"
 #include "paimon/core/mergetree/compact/deduplicate_merge_function.h"
 #include "paimon/core/mergetree/compact/reducer_merge_function_wrapper.h"
@@ -79,11 +80,13 @@ class LookupLevelsTest : public testing::Test {
         auto merge_function_wrapper =
             std::make_shared<ReducerMergeFunctionWrapper>(std::move(mfunc));
 
-        auto writer = std::make_shared<MergeTreeWriter>(
-            /*last_sequence_number=*/last_sequence_number, std::vector<std::string>({"key"}),
-            data_path_factory, key_comparator,
-            /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper, /*schema_id=*/0,
-            arrow_schema_, options, noop_compact_manager_, pool_);
+        PAIMON_ASSIGN_OR_RAISE(
+            auto writer,
+            MergeTreeWriter::Create(/*last_sequence_number=*/last_sequence_number,
+                                    std::vector<std::string>({"key"}), data_path_factory,
+                                    key_comparator, /*user_defined_seq_comparator=*/nullptr,
+                                    merge_function_wrapper, /*schema_id=*/0, arrow_schema_, options,
+                                    noop_compact_manager_, /*io_manager=*/nullptr, pool_));
 
         // write data
         ArrowArray c_src_array;
@@ -429,7 +432,7 @@ TEST_F(LookupLevelsTest, TestLookupLevel0WithMultipleFiles) {
     ASSERT_FALSE(positioned_kv);
 }
 
-TEST_F(LookupLevelsTest, TestWithPosistion) {
+TEST_F(LookupLevelsTest, TestWithPosition) {
     std::map<std::string, std::string> options = {};
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
     ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));

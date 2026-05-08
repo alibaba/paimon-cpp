@@ -21,7 +21,6 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include "arrow/type.h"
@@ -62,6 +61,7 @@ class MemoryPool;
 class RecordBatch;
 class RestoreFiles;
 class IOManager;
+class WriterMemoryManager;
 
 class AbstractFileStoreWrite : public FileStoreWrite {
  public:
@@ -132,6 +132,7 @@ class AbstractFileStoreWrite : public FileStoreWrite {
     std::shared_ptr<BucketedDvMaintainer::Factory> dv_maintainer_factory_;
     std::shared_ptr<IOManager> io_manager_;
     std::shared_ptr<CacheManager> cache_manager_;
+    std::shared_ptr<WriterMemoryManager> writer_memory_manager_;
 
     CoreOptions options_;
     std::shared_ptr<Executor> compact_executor_;

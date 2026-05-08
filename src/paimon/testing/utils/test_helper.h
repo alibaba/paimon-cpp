@@ -379,6 +379,25 @@ class TestHelper {
         }
     }
 
+    static int64_t CountChannelFiles(const std::shared_ptr<FileSystem>& file_system,
+                                     const std::string& tmp_path) {
+        std::vector<std::unique_ptr<BasicFileStatus>> file_statuses;
+        EXPECT_OK(file_system->ListDir(tmp_path, &file_statuses));
+
+        int64_t channel_file_count = 0;
+        for (const auto& file_status : file_statuses) {
+            const std::string path = file_status->GetPath();
+            if (file_status->IsDir() && path.find("paimon-io-") != std::string::npos) {
+                channel_file_count += CountChannelFiles(file_system, path);
+                continue;
+            }
+            if (StringUtils::EndsWith(path, ".channel")) {
+                ++channel_file_count;
+            }
+        }
+        return channel_file_count;
+    }
+
  private:
     void CheckExternalPath(const std::vector<std::shared_ptr<CommitMessage>>& actuals) {
         for (const auto& actual : actuals) {
