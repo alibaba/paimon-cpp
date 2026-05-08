@@ -261,7 +261,7 @@ TEST_F(KeyValueFileStoreWriteTest, TestSpillSimple) {
 
     // write bucket 1, spill bucket 0 (pick largest writer)
     ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/1, std::string(32, 'b')));
-    ASSERT_GT(TestHelper::CountChannelFiles(dir->GetFileSystem(), dir->Str()), 0);
+    ASSERT_EQ(TestHelper::CountChannelFiles(dir->GetFileSystem(), dir->Str()), 1);
     ASSERT_EQ(get_writer(0)->GetMemoryUsage(), 0);
     ASSERT_GT(get_writer(1)->GetMemoryUsage(), 0);
 
