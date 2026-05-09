@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -30,9 +31,12 @@
 namespace paimon {
 class FileSystem;
 class MemoryPool;
+class ReadContext;
+class ScanContext;
 class Split;
 class SystemTableRead;
 class TableScan;
+class TableRead;
 class TableSchema;
 
 struct SystemTablePath {
@@ -48,7 +52,11 @@ class SystemTable : public std::enable_shared_from_this<SystemTable> {
     virtual std::string Name() const = 0;
     virtual std::shared_ptr<arrow::Schema> ArrowSchema() const = 0;
     virtual Result<std::unique_ptr<TableScan>> NewScan() const = 0;
+    virtual Result<std::unique_ptr<TableScan>> NewScan(
+        const std::shared_ptr<ScanContext>& context) const;
     Result<std::unique_ptr<SystemTableRead>> NewRead(const std::shared_ptr<MemoryPool>& pool) const;
+    virtual Result<std::unique_ptr<TableRead>> NewRead(
+        const std::shared_ptr<ReadContext>& context) const;
     virtual Result<std::unique_ptr<BatchReader>> CreateBatchReader(
         const std::vector<std::shared_ptr<Split>>& splits,
         const std::shared_ptr<MemoryPool>& pool) const = 0;
@@ -60,12 +68,14 @@ class SystemTableLoader {
 
     static Result<std::shared_ptr<SystemTable>> Load(
         const std::string& system_table_name, const std::shared_ptr<FileSystem>& fs,
-        const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema);
+        const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
+        const std::map<std::string, std::string>& dynamic_options = {});
 
     static Result<std::optional<SystemTablePath>> TryParsePath(const std::string& path);
 
-    static Result<std::shared_ptr<SystemTable>> LoadFromPath(const std::shared_ptr<FileSystem>& fs,
-                                                             const std::string& path);
+    static Result<std::shared_ptr<SystemTable>> LoadFromPath(
+        const std::shared_ptr<FileSystem>& fs, const std::string& path,
+        const std::map<std::string, std::string>& dynamic_options = {});
 };
 
 }  // namespace paimon

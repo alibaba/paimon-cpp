@@ -42,6 +42,8 @@ class KeyValueTableRead : public TableRead {
 
     Result<std::unique_ptr<BatchReader>> CreateReader(const std::shared_ptr<Split>& split) override;
 
+    void ForceKeepDelete(bool force_keep_delete);
+
  private:
     KeyValueTableRead(std::vector<std::unique_ptr<SplitRead>>&& split_reads,
                       const std::shared_ptr<MemoryPool>& memory_pool);

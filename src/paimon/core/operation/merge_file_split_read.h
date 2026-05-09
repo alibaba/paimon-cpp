@@ -84,6 +84,10 @@ class MergeFileSplitRead : public AbstractSplitRead {
 
     Result<bool> Match(const std::shared_ptr<Split>& split, bool force_keep_delete) const override;
 
+    void ForceKeepDelete(bool force_keep_delete) {
+        force_keep_delete_ = force_keep_delete;
+    }
+
     Result<std::unique_ptr<FileBatchReader>> ApplyIndexAndDvReaderIfNeeded(
         std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
         const std::shared_ptr<arrow::Schema>& data_schema,
@@ -180,5 +184,6 @@ class MergeFileSplitRead : public AbstractSplitRead {
     std::shared_ptr<FieldsComparator> key_comparator_;
     std::shared_ptr<FieldsComparator> user_defined_seq_comparator_;
     std::shared_ptr<Predicate> predicate_for_keys_;
+    bool force_keep_delete_ = false;
 };
 }  // namespace paimon

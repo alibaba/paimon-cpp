@@ -72,6 +72,15 @@ Result<BatchReader::ReadBatch> KeyValueProjectionConsumer::NextBatch(
         array_builder_->AppendValues(key_value_vec.size(), /*valid_bytes=*/nullptr));
     for (size_t i = 0; i < target_to_src_mapping_.size(); i++) {
         for (const auto& row : key_value_vec) {
+            if (target_to_src_mapping_[i] == kSequenceNumberProjection) {
+                auto* builder = dynamic_cast<arrow::Int64Builder*>(
+                    array_builder_->field_builder(static_cast<int>(i)));
+                if (builder == nullptr) {
+                    return Status::Invalid("cannot append sequence number to non-int64 field");
+                }
+                PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(row.sequence_number));
+                continue;
+            }
             PAIMON_RETURN_NOT_OK_FROM_ARROW(appenders_[i](*(row.value), target_to_src_mapping_[i]));
         }
     }

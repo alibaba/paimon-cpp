@@ -48,6 +48,7 @@
 #include "paimon/core/table/source/merge_tree_split_generator.h"
 #include "paimon/core/table/source/snapshot/snapshot_reader.h"
 #include "paimon/core/table/source/split_generator.h"
+#include "paimon/core/table/source/table_scan_utils.h"
 #include "paimon/core/table/system/system_table.h"
 #include "paimon/core/utils/field_mapping.h"
 #include "paimon/core/utils/file_store_path_factory.h"
@@ -162,18 +163,32 @@ Result<std::unique_ptr<TableScan>> TableScan::Create(std::unique_ptr<ScanContext
         return Status::Invalid("executor is null pointer");
     }
 
+    std::shared_ptr<ScanContext> shared_context = std::move(context);
     // load schema
-    PAIMON_ASSIGN_OR_RAISE(
-        CoreOptions tmp_options,
-        CoreOptions::FromMap(context->GetOptions(), context->GetSpecificFileSystem()));
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions tmp_options,
+                           CoreOptions::FromMap(shared_context->GetOptions(),
+                                                shared_context->GetSpecificFileSystem()));
     PAIMON_ASSIGN_OR_RAISE(std::optional<SystemTablePath> system_table_path,
-                           SystemTableLoader::TryParsePath(context->GetPath()));
+                           SystemTableLoader::TryParsePath(shared_context->GetPath()));
     if (system_table_path) {
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<SystemTable> system_table,
-            SystemTableLoader::LoadFromPath(tmp_options.GetFileSystem(), context->GetPath()));
-        return system_table->NewScan();
+            SystemTableLoader::LoadFromPath(tmp_options.GetFileSystem(), shared_context->GetPath(),
+                                            shared_context->GetOptions()));
+        return system_table->NewScan(shared_context);
     }
+    return NewDataTableScan(shared_context);
+}
+
+Result<std::unique_ptr<TableScan>> NewDataTableScan(std::unique_ptr<ScanContext> context) {
+    std::shared_ptr<ScanContext> shared_context = std::move(context);
+    return NewDataTableScan(shared_context);
+}
+
+Result<std::unique_ptr<TableScan>> NewDataTableScan(const std::shared_ptr<ScanContext>& context) {
+    PAIMON_ASSIGN_OR_RAISE(
+        CoreOptions tmp_options,
+        CoreOptions::FromMap(context->GetOptions(), context->GetSpecificFileSystem()));
     SchemaManager schema_manager(tmp_options.GetFileSystem(), context->GetPath());
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_table_schema,
                            schema_manager.Latest());

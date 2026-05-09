@@ -26,11 +26,21 @@
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
+#include "paimon/core/table/system/audit_log_system_table.h"
+#include "paimon/core/table/system/binlog_system_table.h"
 #include "paimon/core/table/system/options_system_table.h"
 #include "paimon/core/table/system/system_table_read.h"
 #include "paimon/core/utils/branch_manager.h"
+#include "paimon/read_context.h"
+#include "paimon/status.h"
+#include "paimon/table/source/table_read.h"
 
 namespace paimon {
+
+Result<std::unique_ptr<TableScan>> SystemTable::NewScan(
+    const std::shared_ptr<ScanContext>& /*context*/) const {
+    return NewScan();
+}
 
 Result<std::unique_ptr<SystemTableRead>> SystemTable::NewRead(
     const std::shared_ptr<MemoryPool>& pool) const {
@@ -38,16 +48,37 @@ Result<std::unique_ptr<SystemTableRead>> SystemTable::NewRead(
         std::const_pointer_cast<SystemTable>(shared_from_this()), pool);
 }
 
+Result<std::unique_ptr<TableRead>> SystemTable::NewRead(
+    const std::shared_ptr<ReadContext>& context) const {
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SystemTableRead> read,
+                           NewRead(context->GetMemoryPool()));
+    return std::unique_ptr<TableRead>(std::move(read));
+}
+
 bool SystemTableLoader::IsSupported(const std::string& system_table_name) {
-    return StringUtils::ToLowerCase(system_table_name) == OptionsSystemTable::kName;
+    std::string normalized_name = StringUtils::ToLowerCase(system_table_name);
+    return normalized_name == OptionsSystemTable::kName ||
+           normalized_name == AuditLogSystemTable::kName ||
+           normalized_name == BinlogSystemTable::kName;
 }
 
 Result<std::shared_ptr<SystemTable>> SystemTableLoader::Load(
-    const std::string& system_table_name, const std::shared_ptr<FileSystem>& /*fs*/,
-    const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema) {
+    const std::string& system_table_name, const std::shared_ptr<FileSystem>& fs,
+    const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
+    const std::map<std::string, std::string>& dynamic_options) {
     std::string normalized_name = StringUtils::ToLowerCase(system_table_name);
     if (normalized_name == OptionsSystemTable::kName) {
         return std::make_shared<OptionsSystemTable>(table_path, table_schema);
+    }
+    auto options = table_schema->Options();
+    for (const auto& [key, value] : dynamic_options) {
+        options[key] = value;
+    }
+    if (normalized_name == AuditLogSystemTable::kName) {
+        return std::make_shared<AuditLogSystemTable>(fs, table_path, table_schema, options);
+    }
+    if (normalized_name == BinlogSystemTable::kName) {
+        return std::make_shared<BinlogSystemTable>(fs, table_path, table_schema, options);
     }
     return Status::NotImplemented("unsupported system table: ", system_table_name);
 }
@@ -72,7 +103,8 @@ Result<std::optional<SystemTablePath>> SystemTableLoader::TryParsePath(const std
 }
 
 Result<std::shared_ptr<SystemTable>> SystemTableLoader::LoadFromPath(
-    const std::shared_ptr<FileSystem>& fs, const std::string& path) {
+    const std::shared_ptr<FileSystem>& fs, const std::string& path,
+    const std::map<std::string, std::string>& dynamic_options) {
     PAIMON_ASSIGN_OR_RAISE(std::optional<SystemTablePath> system_table_path, TryParsePath(path));
     if (!system_table_path) {
         return Status::Invalid("path is not a system table path: ", path);
@@ -85,7 +117,11 @@ Result<std::shared_ptr<SystemTable>> SystemTableLoader::LoadFromPath(
     if (!latest_schema) {
         return Status::NotExist("base table schema not found for system table path: ", path);
     }
-    return Load(parsed.system_table_name, fs, path, latest_schema.value());
+    auto options = dynamic_options;
+    if (parsed.branch) {
+        options[Options::BRANCH] = parsed.branch.value();
+    }
+    return Load(parsed.system_table_name, fs, parsed.table_path, latest_schema.value(), options);
 }
 
 }  // namespace paimon

@@ -1,0 +1,315 @@
+/*
+ * Copyright 2026-present Alibaba Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "paimon/core/table/system/audit_log_system_table.h"
+
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "arrow/api.h"
+#include "arrow/array/array_base.h"
+#include "arrow/array/array_nested.h"
+#include "arrow/array/array_primitive.h"
+#include "arrow/c/abi.h"
+#include "arrow/c/bridge.h"
+#include "arrow/util/checked_cast.h"
+#include "paimon/common/metrics/metrics_impl.h"
+#include "paimon/common/table/special_fields.h"
+#include "paimon/common/types/data_field.h"
+#include "paimon/common/types/row_kind.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
+#include "paimon/common/utils/arrow/status_utils.h"
+#include "paimon/core/core_options.h"
+#include "paimon/core/schema/table_schema.h"
+#include "paimon/core/table/source/key_value_table_read.h"
+#include "paimon/core/table/source/table_read_utils.h"
+#include "paimon/core/table/source/table_scan_utils.h"
+#include "paimon/defs.h"
+#include "paimon/read_context.h"
+#include "paimon/scan_context.h"
+#include "paimon/status.h"
+#include "paimon/table/source/table_read.h"
+#include "paimon/table/source/table_scan.h"
+
+namespace paimon {
+namespace {
+
+class AuditLogBatchReader : public BatchReader {
+ public:
+    AuditLogBatchReader(std::unique_ptr<BatchReader> reader,
+                        std::shared_ptr<arrow::Schema> output_schema, bool include_sequence_number,
+                        bool binlog, const std::shared_ptr<MemoryPool>& pool)
+        : reader_(std::move(reader)),
+          output_schema_(std::move(output_schema)),
+          include_sequence_number_(include_sequence_number),
+          binlog_(binlog),
+          arrow_pool_(GetArrowPool(pool)) {}
+
+    Result<ReadBatch> NextBatch() override {
+        PAIMON_ASSIGN_OR_RAISE(ReadBatch batch, reader_->NextBatch());
+        if (BatchReader::IsEofBatch(batch)) {
+            return batch;
+        }
+        auto& [c_array, c_schema] = batch;
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> arrow_array,
+                                          arrow::ImportArray(c_array.get(), c_schema.get()));
+        auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(arrow_array);
+        if (!struct_array) {
+            return Status::Invalid("audit_log system table expects struct batches");
+        }
+
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> rowkind_array,
+                               BuildRowKindArray(struct_array));
+
+        arrow::ArrayVector output_arrays = {rowkind_array};
+        int32_t field_offset = 1;
+        if (include_sequence_number_) {
+            auto sequence_array =
+                struct_array->GetFieldByName(SpecialFields::SequenceNumber().Name());
+            if (!sequence_array) {
+                return Status::Invalid("cannot find _SEQUENCE_NUMBER in audit_log batch");
+            }
+            output_arrays.push_back(sequence_array);
+            field_offset++;
+        }
+
+        for (int32_t i = field_offset; i < struct_array->num_fields(); ++i) {
+            auto array = struct_array->field(i);
+            if (binlog_) {
+                PAIMON_ASSIGN_OR_RAISE(array, WrapAsSingletonList(array));
+            }
+            output_arrays.push_back(array);
+        }
+
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+            std::shared_ptr<arrow::StructArray> output_array,
+            arrow::StructArray::Make(output_arrays, output_schema_->fields(),
+                                     struct_array->null_bitmap(), struct_array->null_count(),
+                                     struct_array->offset()));
+        auto output_c_array = std::make_unique<ArrowArray>();
+        auto output_c_schema = std::make_unique<ArrowSchema>();
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(
+            arrow::ExportArray(*output_array, output_c_array.get(), output_c_schema.get()));
+        return std::make_pair(std::move(output_c_array), std::move(output_c_schema));
+    }
+
+    std::shared_ptr<Metrics> GetReaderMetrics() const override {
+        return reader_->GetReaderMetrics();
+    }
+
+    void Close() override {
+        reader_->Close();
+    }
+
+ private:
+    Result<std::shared_ptr<arrow::Array>> BuildRowKindArray(
+        const std::shared_ptr<arrow::StructArray>& struct_array) const {
+        auto value_kind_array = std::dynamic_pointer_cast<arrow::Int8Array>(
+            struct_array->GetFieldByName(SpecialFields::ValueKind().Name()));
+        if (!value_kind_array) {
+            return Status::Invalid("cannot find _VALUE_KIND in audit_log batch");
+        }
+        arrow::StringBuilder builder(arrow_pool_.get());
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(builder.Reserve(value_kind_array->length()));
+        for (int64_t i = 0; i < value_kind_array->length(); ++i) {
+            if (value_kind_array->IsNull(i)) {
+                PAIMON_RETURN_NOT_OK_FROM_ARROW(builder.AppendNull());
+                continue;
+            }
+            PAIMON_ASSIGN_OR_RAISE(const RowKind* row_kind,
+                                   RowKind::FromByteValue(value_kind_array->Value(i)));
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(builder.Append(row_kind->ShortString()));
+        }
+        std::shared_ptr<arrow::Array> result;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(builder.Finish(&result));
+        return result;
+    }
+
+    Result<std::shared_ptr<arrow::Array>> WrapAsSingletonList(
+        const std::shared_ptr<arrow::Array>& array) const {
+        arrow::Int32Builder offsets_builder(arrow_pool_.get());
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(offsets_builder.Reserve(array->length() + 1));
+        for (int64_t i = 0; i <= array->length(); ++i) {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(offsets_builder.Append(static_cast<int32_t>(i)));
+        }
+        std::shared_ptr<arrow::Array> offsets_array;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(offsets_builder.Finish(&offsets_array));
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+            std::shared_ptr<arrow::Array> list_array,
+            arrow::ListArray::FromArrays(*offsets_array, *array, arrow_pool_.get()));
+        return list_array;
+    }
+
+    std::unique_ptr<BatchReader> reader_;
+    std::shared_ptr<arrow::Schema> output_schema_;
+    bool include_sequence_number_;
+    bool binlog_;
+    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
+};
+
+class AuditLogTableRead : public TableRead {
+ public:
+    AuditLogTableRead(std::unique_ptr<TableRead> data_read,
+                      std::shared_ptr<arrow::Schema> output_schema, bool include_sequence_number,
+                      bool binlog, const std::shared_ptr<MemoryPool>& pool)
+        : TableRead(pool),
+          data_read_(std::move(data_read)),
+          output_schema_(std::move(output_schema)),
+          include_sequence_number_(include_sequence_number),
+          binlog_(binlog) {}
+
+    Result<std::unique_ptr<BatchReader>> CreateReader(
+        const std::vector<std::shared_ptr<Split>>& splits) override {
+        PAIMON_ASSIGN_OR_RAISE(auto reader, data_read_->CreateReader(splits));
+        return std::make_unique<AuditLogBatchReader>(
+            std::move(reader), output_schema_, include_sequence_number_, binlog_, GetMemoryPool());
+    }
+
+    Result<std::unique_ptr<BatchReader>> CreateReader(
+        const std::shared_ptr<Split>& split) override {
+        std::vector<std::shared_ptr<Split>> splits = {split};
+        return CreateReader(splits);
+    }
+
+ private:
+    std::unique_ptr<TableRead> data_read_;
+    std::shared_ptr<arrow::Schema> output_schema_;
+    bool include_sequence_number_;
+    bool binlog_;
+};
+
+}  // namespace
+
+AuditLogSystemTable::AuditLogSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
+                                         std::shared_ptr<TableSchema> table_schema,
+                                         std::map<std::string, std::string> options)
+    : fs_(std::move(fs)),
+      table_path_(std::move(table_path)),
+      table_schema_(std::move(table_schema)),
+      options_(std::move(options)) {}
+
+std::string AuditLogSystemTable::Name() const {
+    return kName;
+}
+
+std::shared_ptr<arrow::Schema> AuditLogSystemTable::ArrowSchema() const {
+    arrow::FieldVector fields = {arrow::field("rowkind", arrow::utf8(), /*nullable=*/false)};
+    auto core_options = CoreOptions::FromMap(options_);
+    bool include_sequence_number =
+        core_options.ok() && core_options.value().TableReadSequenceNumberEnabled();
+    if (include_sequence_number) {
+        fields.push_back(DataField::ConvertDataFieldToArrowField(SpecialFields::SequenceNumber()));
+    }
+    for (const auto& field : table_schema_->Fields()) {
+        fields.push_back(field.ArrowField());
+    }
+    return arrow::schema(fields);
+}
+
+Result<std::unique_ptr<TableScan>> AuditLogSystemTable::NewScan() const {
+    ScanContextBuilder builder(table_path_);
+    builder.SetOptions(options_);
+    PAIMON_ASSIGN_OR_RAISE(auto context, builder.Finish());
+    return NewDataTableScan(std::move(context));
+}
+
+Result<std::unique_ptr<TableScan>> AuditLogSystemTable::NewScan(
+    const std::shared_ptr<ScanContext>& context) const {
+    if (context->GetScanFilters() && context->GetScanFilters()->GetPredicate()) {
+        return Status::NotImplemented("audit_log system table predicate pushdown is not supported");
+    }
+    ScanContextBuilder builder(table_path_);
+    builder.SetOptions(options_)
+        .WithStreamingMode(context->IsStreamingMode())
+        .WithMemoryPool(context->GetMemoryPool())
+        .WithExecutor(context->GetExecutor())
+        .WithFileSystem(context->GetSpecificFileSystem());
+    if (context->GetLimit()) {
+        builder.SetLimit(context->GetLimit().value());
+    }
+    PAIMON_ASSIGN_OR_RAISE(auto data_context, builder.Finish());
+    return NewDataTableScan(std::move(data_context));
+}
+
+Result<std::unique_ptr<TableRead>> AuditLogSystemTable::NewRead(
+    const std::shared_ptr<ReadContext>& context) const {
+    if (table_schema_->PrimaryKeys().empty()) {
+        return Status::NotImplemented("audit_log system table only supports primary key table");
+    }
+    if (context->GetPredicate()) {
+        return Status::NotImplemented("audit_log system table predicate pushdown is not supported");
+    }
+
+    ReadContextBuilder builder(table_path_);
+    builder.SetOptions(ReadOptions())
+        .SetReadSchema(BaseReadSchema()->field_names())
+        .WithMemoryPool(context->GetMemoryPool())
+        .WithExecutor(context->GetExecutor())
+        .WithFileSystem(context->GetSpecificFileSystem())
+        .WithFileSystemSchemeToIdentifierMap(context->GetFileSystemSchemeToIdentifierMap())
+        .EnablePrefetch(context->EnablePrefetch())
+        .SetPrefetchBatchCount(context->GetPrefetchBatchCount())
+        .SetPrefetchMaxParallelNum(context->GetPrefetchMaxParallelNum())
+        .EnableMultiThreadRowToBatch(context->EnableMultiThreadRowToBatch())
+        .SetRowToBatchThreadNumber(context->GetRowToBatchThreadNumber())
+        .SetPrefetchCacheMode(context->GetPrefetchCacheMode())
+        .WithCacheConfig(context->GetCacheConfig());
+
+    PAIMON_ASSIGN_OR_RAISE(auto data_context, builder.Finish());
+    PAIMON_ASSIGN_OR_RAISE(auto data_read, NewDataTableRead(std::move(data_context)));
+    auto* key_value_read = dynamic_cast<KeyValueTableRead*>(data_read.get());
+    if (!key_value_read) {
+        return Status::Invalid("audit_log system table requires key-value table read");
+    }
+    key_value_read->ForceKeepDelete(true);
+    auto core_options = CoreOptions::FromMap(options_);
+    bool include_sequence_number =
+        core_options.ok() && core_options.value().TableReadSequenceNumberEnabled();
+    return std::make_unique<AuditLogTableRead>(std::move(data_read), ArrowSchema(),
+                                               include_sequence_number, IsBinlog(),
+                                               context->GetMemoryPool());
+}
+
+Result<std::unique_ptr<BatchReader>> AuditLogSystemTable::CreateBatchReader(
+    const std::vector<std::shared_ptr<Split>>& /*splits*/,
+    const std::shared_ptr<MemoryPool>& /*pool*/) const {
+    return Status::Invalid("audit_log system table requires context-aware read");
+}
+
+std::shared_ptr<arrow::Schema> AuditLogSystemTable::BaseReadSchema() const {
+    arrow::FieldVector fields;
+    auto core_options = CoreOptions::FromMap(options_);
+    bool include_sequence_number =
+        core_options.ok() && core_options.value().TableReadSequenceNumberEnabled();
+    if (include_sequence_number) {
+        fields.push_back(DataField::ConvertDataFieldToArrowField(SpecialFields::SequenceNumber()));
+    }
+    for (const auto& field : table_schema_->Fields()) {
+        fields.push_back(field.ArrowField());
+    }
+    return arrow::schema(fields);
+}
+
+std::map<std::string, std::string> AuditLogSystemTable::ReadOptions() const {
+    auto read_options = options_;
+    read_options[Options::KEY_VALUE_SEQUENCE_NUMBER_ENABLED] = "true";
+    return read_options;
+}
+
+}  // namespace paimon

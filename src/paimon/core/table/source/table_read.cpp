@@ -33,6 +33,7 @@
 #include "paimon/core/table/source/append_only_table_read.h"
 #include "paimon/core/table/source/fallback_table_read.h"
 #include "paimon/core/table/source/key_value_table_read.h"
+#include "paimon/core/table/source/table_read_utils.h"
 #include "paimon/core/table/system/system_table.h"
 #include "paimon/core/table/system/system_table_read.h"
 #include "paimon/core/utils/branch_manager.h"
@@ -47,7 +48,6 @@ class DataSplit;
 class Executor;
 class MemoryPool;
 
-namespace {
 Result<std::unique_ptr<InternalReadContext>> CreateInternalReadContext(
     const std::shared_ptr<ReadContext>& context, const std::string& branch) {
     std::map<std::string, std::string> tmp_options = context->GetOptions();
@@ -108,7 +108,37 @@ Result<std::unique_ptr<TableRead>> CreateTableRead(
     }
     return KeyValueTableRead::Create(path_factory, internal_context, memory_pool, executor);
 }
-}  // namespace
+
+Result<std::unique_ptr<TableRead>> NewDataTableRead(const std::shared_ptr<ReadContext>& context) {
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InternalReadContext> internal_context,
+                           CreateInternalReadContext(context, context->GetBranch()));
+
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<TableRead> table_read,
+        CreateTableRead(internal_context, context->GetMemoryPool(), context->GetExecutor()));
+
+    std::optional<std::string> scan_fallback_branch =
+        internal_context->GetCoreOptions().GetScanFallbackBranch();
+    if (!scan_fallback_branch ||
+        StringUtils::IsNullOrWhitespaceOnly(scan_fallback_branch.value())) {
+        return std::move(table_read);
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<InternalReadContext> fallback_context,
+        CreateInternalReadContext(context, /*branch=*/scan_fallback_branch.value()));
+
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<TableRead> fallback_table_read,
+        CreateTableRead(fallback_context, context->GetMemoryPool(), context->GetExecutor()));
+    return std::make_unique<FallbackTableRead>(
+        std::move(table_read), std::move(fallback_table_read), context->GetMemoryPool());
+}
+
+Result<std::unique_ptr<TableRead>> NewDataTableRead(std::unique_ptr<ReadContext> ctx) {
+    std::shared_ptr<ReadContext> context = std::move(ctx);
+    return NewDataTableRead(context);
+}
 
 TableRead::TableRead(const std::shared_ptr<MemoryPool>& memory_pool) : pool_(memory_pool) {}
 
@@ -123,9 +153,6 @@ Result<std::unique_ptr<TableRead>> TableRead::Create(std::unique_ptr<ReadContext
     if (context->GetExecutor() == nullptr) {
         return Status::Invalid("executor is null pointer");
     }
-    auto memory_pool = context->GetMemoryPool();
-    auto executor = context->GetExecutor();
-
     PAIMON_ASSIGN_OR_RAISE(
         CoreOptions tmp_core_options,
         CoreOptions::FromMap(context->GetOptions(), context->GetSpecificFileSystem(),
@@ -135,31 +162,12 @@ Result<std::unique_ptr<TableRead>> TableRead::Create(std::unique_ptr<ReadContext
     if (system_table_path) {
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<SystemTable> system_table,
-            SystemTableLoader::LoadFromPath(tmp_core_options.GetFileSystem(), context->GetPath()));
-        return system_table->NewRead(memory_pool);
+            SystemTableLoader::LoadFromPath(tmp_core_options.GetFileSystem(), context->GetPath(),
+                                            context->GetOptions()));
+        return system_table->NewRead(context);
     }
 
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InternalReadContext> internal_context,
-                           CreateInternalReadContext(context, context->GetBranch()));
-
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> table_read,
-                           CreateTableRead(internal_context, memory_pool, executor));
-
-    std::optional<std::string> scan_fallback_branch =
-        internal_context->GetCoreOptions().GetScanFallbackBranch();
-    if (!scan_fallback_branch ||
-        StringUtils::IsNullOrWhitespaceOnly(scan_fallback_branch.value())) {
-        return std::move(table_read);
-    }
-
-    PAIMON_ASSIGN_OR_RAISE(
-        std::shared_ptr<InternalReadContext> fallback_context,
-        CreateInternalReadContext(context, /*branch=*/scan_fallback_branch.value()));
-
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> fallback_table_read,
-                           CreateTableRead(fallback_context, memory_pool, executor));
-    return std::make_unique<FallbackTableRead>(std::move(table_read),
-                                               std::move(fallback_table_read), memory_pool);
+    return NewDataTableRead(context);
 }
 
 Result<std::unique_ptr<BatchReader>> TableRead::CreateReader(

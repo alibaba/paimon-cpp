@@ -128,6 +128,8 @@ class PAIMON_EXPORT CoreOptions {
     std::map<std::string, std::string> GetFieldsSequenceGroups() const;
     bool PartialUpdateRemoveRecordOnDelete() const;
     bool AggregationRemoveRecordOnDelete() const;
+    bool TableReadSequenceNumberEnabled() const;
+    bool KeyValueSequenceNumberEnabled() const;
     std::vector<std::string> GetPartialUpdateRemoveRecordOnSequenceGroup() const;
 
     std::optional<std::string> GetScanFallbackBranch() const;
