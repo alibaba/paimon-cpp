@@ -30,14 +30,19 @@ class PAIMON_EXPORT BlockIterator {
 
     Result<BlockEntry> Next();
 
-    Result<BlockEntry> ReadEntry();
+    /// Read only the value MemorySlice from the current position, skipping the key.
+    /// Used in fast-path iteration where no key comparison is needed.
+    /// @note Public function, conceptually similar to `Next()` but optimized to skip key parsing.
+    Result<MemorySlice> SkipKeyAndReadValue();
 
     Result<bool> SeekTo(const MemorySlice& target_key);
 
  private:
     /// Read only the key MemorySlice from the current position, skipping the value.
-    /// This avoids creating a value MemorySlice and BlockEntry during binary search.
+    /// @note Inner function, only called by `SeekTo`.
     Result<MemorySlice> ReadKeyAndSkipValue();
+
+    Result<BlockEntry> ReadEntry();
 
     MemorySliceInput input_;
     /// Position of the entry that should be returned by Next() after SeekTo.
