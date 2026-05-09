@@ -33,7 +33,6 @@
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/types/row_kind.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/schema/table_schema.h"
@@ -54,12 +53,12 @@ class AuditLogBatchReader : public BatchReader {
  public:
     AuditLogBatchReader(std::unique_ptr<BatchReader> reader,
                         std::shared_ptr<arrow::Schema> output_schema, bool include_sequence_number,
-                        bool binlog, const std::shared_ptr<MemoryPool>& pool)
+                        bool binlog, const std::shared_ptr<MemoryPool>& /*pool*/)
         : reader_(std::move(reader)),
           output_schema_(std::move(output_schema)),
           include_sequence_number_(include_sequence_number),
           binlog_(binlog),
-          arrow_pool_(GetArrowPool(pool)) {}
+          arrow_pool_(arrow::default_memory_pool()) {}
 
     Result<ReadBatch> NextBatch() override {
         PAIMON_ASSIGN_OR_RAISE(ReadBatch batch, reader_->NextBatch());
@@ -160,7 +159,7 @@ class AuditLogBatchReader : public BatchReader {
     std::shared_ptr<arrow::Schema> output_schema_;
     bool include_sequence_number_;
     bool binlog_;
-    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
+    arrow::MemoryPool* arrow_pool_;
 };
 
 class AuditLogTableRead : public TableRead {
