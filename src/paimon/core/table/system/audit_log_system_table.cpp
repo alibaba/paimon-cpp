@@ -24,6 +24,7 @@
 
 #include "arrow/api.h"
 #include "arrow/array/array_base.h"
+#include "arrow/array/concatenate.h"
 #include "arrow/array/array_nested.h"
 #include "arrow/array/array_primitive.h"
 #include "arrow/c/abi.h"
@@ -84,6 +85,7 @@ class AuditLogBatchReader : public BatchReader {
             if (!sequence_array) {
                 return Status::Invalid("cannot find _SEQUENCE_NUMBER in audit_log batch");
             }
+            PAIMON_ASSIGN_OR_RAISE(sequence_array, CopyToStablePool(sequence_array));
             output_arrays.push_back(sequence_array);
             field_offset++;
         }
@@ -93,6 +95,7 @@ class AuditLogBatchReader : public BatchReader {
             if (binlog_) {
                 PAIMON_ASSIGN_OR_RAISE(array, WrapAsSingletonList(array));
             }
+            PAIMON_ASSIGN_OR_RAISE(array, CopyToStablePool(array));
             output_arrays.push_back(array);
         }
 
@@ -117,6 +120,13 @@ class AuditLogBatchReader : public BatchReader {
     }
 
  private:
+    Result<std::shared_ptr<arrow::Array>> CopyToStablePool(
+        const std::shared_ptr<arrow::Array>& array) const {
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> result,
+                                          arrow::Concatenate({array}, arrow_pool_));
+        return result;
+    }
+
     Result<std::shared_ptr<arrow::Array>> BuildRowKindArray(
         const std::shared_ptr<arrow::StructArray>& struct_array) const {
         auto value_kind_array = std::dynamic_pointer_cast<arrow::Int8Array>(
