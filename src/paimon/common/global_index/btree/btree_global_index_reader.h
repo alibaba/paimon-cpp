@@ -37,11 +37,11 @@ namespace paimon {
 class BTreeGlobalIndexReader : public GlobalIndexReader,
                                public std::enable_shared_from_this<BTreeGlobalIndexReader> {
  public:
-    BTreeGlobalIndexReader(const std::shared_ptr<SstFileReader>& sst_file_reader,
-                           RoaringBitmap64&& null_bitmap, const std::optional<Literal>& min_key,
-                           const std::optional<Literal>& max_key,
-                           const std::shared_ptr<arrow::DataType>& key_type,
-                           const std::shared_ptr<MemoryPool>& pool);
+    static Result<std::shared_ptr<BTreeGlobalIndexReader>> Create(
+        const std::shared_ptr<SstFileReader>& sst_file_reader, RoaringBitmap64&& null_bitmap,
+        const std::optional<MemorySlice>& min_key_slice,
+        const std::optional<MemorySlice>& max_key_slice,
+        const std::shared_ptr<arrow::DataType>& key_type, const std::shared_ptr<MemoryPool>& pool);
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNotNull() override;
 
@@ -88,11 +88,18 @@ class BTreeGlobalIndexReader : public GlobalIndexReader,
     }
 
  private:
+    BTreeGlobalIndexReader(const std::shared_ptr<SstFileReader>& sst_file_reader,
+                           RoaringBitmap64&& null_bitmap, std::optional<Literal> min_key,
+                           std::optional<Literal> max_key, std::optional<MemorySlice> min_key_slice,
+                           std::optional<MemorySlice> max_key_slice,
+                           const std::shared_ptr<arrow::DataType>& key_type,
+                           const std::shared_ptr<MemoryPool>& pool);
+
     Result<RoaringBitmap64> RangeQuery(const std::optional<Literal>& from,
                                        const std::optional<Literal>& to, bool from_inclusive,
                                        bool to_inclusive);
 
-    Status DeserializeRowIds(const MemorySlice& slice, RoaringBitmap64* result) const;
+    Status DeserializeRowIds(const MemorySlice& slice, std::vector<int64_t>* out) const;
 
     Result<RoaringBitmap64> AllNonNullRows();
 
@@ -101,6 +108,10 @@ class BTreeGlobalIndexReader : public GlobalIndexReader,
     RoaringBitmap64 null_bitmap_;
     std::optional<Literal> min_key_;
     std::optional<Literal> max_key_;
+    /// Cached serialized min/max key slices to avoid repeated serialization in RangeQuery.
+    std::optional<MemorySlice> min_key_slice_;
+    std::optional<MemorySlice> max_key_slice_;
+
     std::shared_ptr<arrow::DataType> key_type_;
     MemorySlice::SliceComparator comparator_;
 };

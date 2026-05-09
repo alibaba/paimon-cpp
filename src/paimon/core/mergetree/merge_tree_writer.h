@@ -32,7 +32,6 @@
 #include "paimon/core/mergetree/write_buffer.h"
 #include "paimon/core/utils/batch_writer.h"
 #include "paimon/core/utils/commit_increment.h"
-#include "paimon/core/utils/path_factory.h"
 #include "paimon/record_batch.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -46,6 +45,7 @@ class StructArray;
 
 namespace paimon {
 class DataFilePathFactory;
+class IOManager;
 class FieldsComparator;
 class MemoryPool;
 class Metrics;
@@ -54,16 +54,15 @@ class MergeFunctionWrapper;
 
 class MergeTreeWriter : public BatchWriter {
  public:
-    MergeTreeWriter(int64_t last_sequence_number,
-                    const std::vector<std::string>& trimmed_primary_keys,
-                    const std::shared_ptr<DataFilePathFactory>& path_factory,
-                    const std::shared_ptr<FieldsComparator>& key_comparator,
-                    const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
-                    const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
-                    int64_t schema_id, const std::shared_ptr<arrow::Schema>& value_schema,
-                    const CoreOptions& options,
-                    const std::shared_ptr<CompactManager>& compact_manager,
-                    const std::shared_ptr<MemoryPool>& pool);
+    static Result<std::shared_ptr<MergeTreeWriter>> Create(
+        int64_t last_sequence_number, const std::vector<std::string>& trimmed_primary_keys,
+        const std::shared_ptr<DataFilePathFactory>& path_factory,
+        const std::shared_ptr<FieldsComparator>& key_comparator,
+        const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
+        const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
+        int64_t schema_id, const std::shared_ptr<arrow::Schema>& value_schema,
+        const CoreOptions& options, const std::shared_ptr<CompactManager>& compact_manager,
+        const std::shared_ptr<IOManager>& io_manager, const std::shared_ptr<MemoryPool>& pool);
 
     Status Write(std::unique_ptr<RecordBatch>&& batch) override;
 
@@ -76,12 +75,10 @@ class MergeTreeWriter : public BatchWriter {
     Result<CommitIncrement> PrepareCommit(bool wait_compaction) override;
 
     uint64_t GetMemoryUsage() const override {
-        return 0;
+        return write_buffer_->GetMemoryUsage();
     }
 
-    Status FlushMemory() override {
-        return Flush(/*wait_for_latest_compaction=*/false, /*forced_full_compaction=*/false);
-    }
+    Status FlushMemory() override;
 
     Status Close() override {
         return DoClose();
@@ -94,7 +91,7 @@ class MergeTreeWriter : public BatchWriter {
  private:
     Status DoClose();
 
-    Status Flush(bool wait_for_latest_compaction, bool forced_full_compaction);
+    Status FlushWriteBuffer(bool wait_for_latest_compaction, bool forced_full_compaction);
     Result<CommitIncrement> DrainIncrement();
 
     std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>
@@ -105,6 +102,17 @@ class MergeTreeWriter : public BatchWriter {
     Status UpdateCompactDeletionFile(const std::shared_ptr<CompactDeletionFile>& new_deletion_file);
 
  private:
+    MergeTreeWriter(const std::shared_ptr<MemoryPool>& pool,
+                    const std::vector<std::string>& trimmed_primary_keys,
+                    const CoreOptions& options,
+                    const std::shared_ptr<DataFilePathFactory>& path_factory,
+                    const std::shared_ptr<FieldsComparator>& key_comparator,
+                    const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
+                    const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
+                    int64_t schema_id, const std::shared_ptr<arrow::Schema>& write_schema,
+                    const std::shared_ptr<CompactManager>& compact_manager,
+                    std::unique_ptr<WriteBuffer>&& write_buffer);
+
     std::shared_ptr<MemoryPool> pool_;
     std::vector<std::string> trimmed_primary_keys_;
     CoreOptions options_;

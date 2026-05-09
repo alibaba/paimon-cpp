@@ -24,7 +24,6 @@
 #include "fmt/format.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/metrics/metrics_impl.h"
-#include "paimon/core/manifest/manifest_entry.h"
 #include "paimon/core/operation/file_store_scan.h"
 #include "paimon/core/operation/file_system_write_restore.h"
 #include "paimon/core/operation/metrics/compaction_metrics.h"
@@ -82,6 +81,8 @@ AbstractFileStoreWrite::AbstractFileStoreWrite(
       ignore_num_bucket_check_(ignore_num_bucket_check),
       metrics_(std::make_shared<MetricsImpl>()),
       logger_(Logger::GetLogger("AbstractFileStoreWrite")) {
+    writer_memory_manager_ =
+        std::make_unique<WriterMemoryManager>(static_cast<uint64_t>(options.GetWriteBufferSize()));
     cache_manager_ = std::make_shared<CacheManager>(options.GetLookupCacheMaxMemory(),
                                                     options.GetLookupCacheHighPrioPoolRatio());
 }
@@ -129,7 +130,9 @@ Status AbstractFileStoreWrite::Write(std::unique_ptr<RecordBatch>&& batch) {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BatchWriter> writer,
                            GetWriter(partition, batch->GetBucket()));
     assert(writer);
-    return writer->Write(std::move(batch));
+    PAIMON_RETURN_NOT_OK(writer->Write(std::move(batch)));
+    PAIMON_RETURN_NOT_OK(writer_memory_manager_->OnWriteCompleted(writer.get()));
+    return Status::OK();
 }
 
 Status AbstractFileStoreWrite::Compact(const std::map<std::string, std::string>& partition,
@@ -188,6 +191,7 @@ Result<std::vector<std::shared_ptr<CommitMessage>>> AbstractFileStoreWrite::Prep
             WriterContainer<BatchWriter>& writer_container = bucket_iter->second;
             PAIMON_ASSIGN_OR_RAISE(CommitIncrement increment,
                                    writer_container.writer->PrepareCommit(wait_compaction));
+            writer_memory_manager_->RefreshWriterMemory(writer_container.writer.get());
             auto compact_deletion_file = increment.GetCompactDeletionFile();
             auto& compact_increment = increment.GetCompactIncrement();
             if (compact_deletion_file) {
@@ -234,6 +238,7 @@ Result<std::vector<std::shared_ptr<CommitMessage>>> AbstractFileStoreWrite::Prep
                                      partition.ToString().c_str(), bucket,
                                      writer_container.last_modified_commit_identifier,
                                      latest_committed_identifier, commit_identifier);
+                    writer_memory_manager_->UnregisterWriter(writer_container.writer.get());
                     PAIMON_RETURN_NOT_OK(writer_container.writer->Close());
                     bucket_iter = buckets.erase(bucket_iter);
                     continue;
@@ -257,6 +262,7 @@ Result<std::vector<std::shared_ptr<CommitMessage>>> AbstractFileStoreWrite::Prep
 Status AbstractFileStoreWrite::Close() {
     for (auto& [_, bucket_writers] : writers_) {
         for (auto& [_, writer_container] : bucket_writers) {
+            writer_memory_manager_->UnregisterWriter(writer_container.writer.get());
             PAIMON_RETURN_NOT_OK(writer_container.writer->Close());
         }
     }
@@ -351,6 +357,7 @@ Result<std::shared_ptr<BatchWriter>> AbstractFileStoreWrite::GetWriter(const Bin
     } else {
         partition_iter->second.emplace(bucket, WriterContainer<BatchWriter>(writer, total_buckets));
     }
+    writer_memory_manager_->RegisterWriter(writer.get());
 
     return writer;
 }

@@ -101,10 +101,22 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
             "invalid schema for BTreeGlobalIndexReader, supposed to have single field.");
     }
     auto key_type = schema->field(0)->type();
+
+    std::optional<int32_t> read_buffer_size;
+    if (auto iter = options_.find(BtreeDefs::kBtreeIndexReadBufferSize); iter != options_.end()) {
+        PAIMON_ASSIGN_OR_RAISE(int64_t tmp_buffer_size, MemorySize::ParseBytes(iter->second));
+        if (tmp_buffer_size <= 0 || tmp_buffer_size > INT_MAX) {
+            return Status::Invalid(
+                fmt::format("In BTreeGlobalIndexer::CreateReader: option {} is {}, exceed INT_MAX "
+                            "or less than 0",
+                            BtreeDefs::kBtreeIndexReadBufferSize, iter->second));
+        }
+        read_buffer_size = static_cast<int32_t>(tmp_buffer_size);
+    }
     // TODO(lisizhuo.lsz): Allow users to specify an executor
     std::shared_ptr<Executor> executor = CreateDefaultExecutor();
-    return std::make_shared<LazyFilteredBTreeReader>(files, key_type, file_reader, cache_manager_,
-                                                     pool, executor);
+    return std::make_shared<LazyFilteredBTreeReader>(read_buffer_size, files, key_type, file_reader,
+                                                     cache_manager_, pool, executor);
 }
 
 }  // namespace paimon

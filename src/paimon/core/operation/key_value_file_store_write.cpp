@@ -16,9 +16,6 @@
 
 #include "paimon/core/operation/key_value_file_store_write.h"
 
-#include <limits>
-#include <map>
-#include <optional>
 #include <vector>
 
 #include "paimon/common/data/binary_row.h"
@@ -30,9 +27,7 @@
 #include "paimon/core/mergetree/merge_tree_writer.h"
 #include "paimon/core/operation/file_store_scan.h"
 #include "paimon/core/operation/key_value_file_store_scan.h"
-#include "paimon/core/operation/restore_files.h"
 #include "paimon/core/schema/table_schema.h"
-#include "paimon/core/snapshot.h"
 #include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/core/utils/primary_key_table_utils.h"
 #include "paimon/core/utils/snapshot_manager.h"
@@ -116,11 +111,13 @@ Result<std::shared_ptr<BatchWriter>> KeyValueFileStoreWrite::CreateWriter(
         compact_manager_factory_->CreateCompactManager(partition, bucket, compact_strategy,
                                                        compact_executor_, levels, dv_maintainer));
 
-    auto writer = std::make_shared<MergeTreeWriter>(
-        restore_max_seq_number, trimmed_primary_keys, data_file_path_factory, key_comparator_,
-        user_defined_seq_comparator_, merge_function_wrapper_, table_schema_->Id(), schema_,
-        options_, compact_manager, pool_);
-    return std::shared_ptr<BatchWriter>(writer);
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<MergeTreeWriter> writer,
+        MergeTreeWriter::Create(
+            restore_max_seq_number, trimmed_primary_keys, data_file_path_factory, key_comparator_,
+            user_defined_seq_comparator_, merge_function_wrapper_, table_schema_->Id(), schema_,
+            options_, compact_manager, io_manager_, pool_));
+    return writer;
 }
 
 Status KeyValueFileStoreWrite::Close() {

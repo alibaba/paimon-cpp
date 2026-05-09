@@ -17,8 +17,11 @@
 #include "paimon/write_context.h"
 
 #include "gtest/gtest.h"
+#include "paimon/executor.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
+#include "paimon/testing/mock/mock_file_system.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -41,11 +44,41 @@ TEST(WriteContextTest, TestSimple) {
     ASSERT_TRUE(ctx->GetFileSystemSchemeToIdentifierMap().empty());
 }
 
-TEST(WriteContextTest, TestWithTempDirectory) {
+TEST(WriteContextTest, TestAllWithMethods) {
     WriteContextBuilder builder("table_root_path", "commit_user_1");
 
-    ASSERT_OK_AND_ASSIGN(auto ctx, builder.WithTempDirectory("/tmp").Finish());
-    ASSERT_EQ(ctx->GetTempDirectory(), "/tmp");
+    auto memory_pool = GetDefaultPool();
+    std::shared_ptr<Executor> executor = CreateDefaultExecutor();
+    auto file_system = std::make_shared<MockFileSystem>();
+    std::vector<std::string> write_schema = {"f0", "f1"};
+    std::map<std::string, std::string> fs_scheme_to_identifier_map = {{"file", "local"},
+                                                                      {"oss", "jindo"}};
+
+    ASSERT_OK_AND_ASSIGN(auto ctx,
+                         builder.WithStreamingMode(true)
+                             .WithIgnoreNumBucketCheck(true)
+                             .WithIgnorePreviousFiles(true)
+                             .WithMemoryPool(memory_pool)
+                             .WithExecutor(executor)
+                             .WithTempDirectory("/tmp/with-all")
+                             .WithWriteId(123)
+                             .WithBranch("test_branch")
+                             .WithWriteSchema(write_schema)
+                             .WithFileSystemSchemeToIdentifierMap(fs_scheme_to_identifier_map)
+                             .WithFileSystem(file_system)
+                             .Finish());
+
+    ASSERT_TRUE(ctx->IsStreamingMode());
+    ASSERT_TRUE(ctx->IgnoreNumBucketCheck());
+    ASSERT_TRUE(ctx->IgnorePreviousFiles());
+    ASSERT_EQ(ctx->GetMemoryPool(), memory_pool);
+    ASSERT_EQ(ctx->GetExecutor(), executor);
+    ASSERT_EQ(ctx->GetTempDirectory(), "/tmp/with-all");
+    ASSERT_EQ(ctx->GetWriteId(), 123);
+    ASSERT_EQ(ctx->GetBranch(), "test_branch");
+    ASSERT_EQ(ctx->GetWriteSchema(), write_schema);
+    ASSERT_EQ(ctx->GetFileSystemSchemeToIdentifierMap(), fs_scheme_to_identifier_map);
+    ASSERT_EQ(ctx->GetSpecificFileSystem(), file_system);
 }
 
 }  // namespace paimon::test
