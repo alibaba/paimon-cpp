@@ -24,9 +24,9 @@
 
 #include "arrow/api.h"
 #include "arrow/array/array_base.h"
-#include "arrow/array/concatenate.h"
 #include "arrow/array/array_nested.h"
 #include "arrow/array/array_primitive.h"
+#include "arrow/array/concatenate.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "arrow/util/checked_cast.h"
