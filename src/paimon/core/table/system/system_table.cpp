@@ -34,6 +34,7 @@
 #include "paimon/read_context.h"
 #include "paimon/status.h"
 #include "paimon/table/source/table_read.h"
+#include "paimon/table/source/table_scan.h"
 
 namespace paimon {
 
