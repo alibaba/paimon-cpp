@@ -66,6 +66,10 @@ class PAIMON_EXPORT TableRead {
  protected:
     explicit TableRead(const std::shared_ptr<MemoryPool>& memory_pool);
 
+    std::shared_ptr<MemoryPool> GetMemoryPool() const {
+        return pool_;
+    }
+
  private:
     std::shared_ptr<MemoryPool> pool_;
 };

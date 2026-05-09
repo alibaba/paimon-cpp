@@ -350,4 +350,52 @@ TEST_F(OffsetGlobalIndexReaderTest, TestVisitVectorSearchNotSupported) {
                         "FakeGlobalIndexReader does not support vector search");
 }
 
+TEST_F(OffsetGlobalIndexReaderTest, TestVisitStartsWithWithOffset) {
+    auto fake_reader = std::make_shared<FakeGlobalIndexReader>();
+    fake_reader->SetDefaultResult({0, 1, 4});
+
+    auto offset_reader = std::make_shared<OffsetGlobalIndexReader>(fake_reader, 50);
+
+    Literal prefix(FieldType::STRING, "abc", 3);
+    ASSERT_OK_AND_ASSIGN(auto result, offset_reader->VisitStartsWith(prefix));
+    // row ids {0, 1, 4} + offset 50 -> {50, 51, 54}
+    CheckResult(result, {50, 51, 54});
+}
+
+TEST_F(OffsetGlobalIndexReaderTest, TestVisitEndsWithWithOffset) {
+    auto fake_reader = std::make_shared<FakeGlobalIndexReader>();
+    fake_reader->SetDefaultResult({2, 3});
+
+    auto offset_reader = std::make_shared<OffsetGlobalIndexReader>(fake_reader, 25);
+
+    Literal suffix(FieldType::STRING, "xyz", 3);
+    ASSERT_OK_AND_ASSIGN(auto result, offset_reader->VisitEndsWith(suffix));
+    // row ids {2, 3} + offset 25 -> {27, 28}
+    CheckResult(result, {27, 28});
+}
+
+TEST_F(OffsetGlobalIndexReaderTest, TestVisitContainsWithOffset) {
+    auto fake_reader = std::make_shared<FakeGlobalIndexReader>();
+    fake_reader->SetDefaultResult({1, 5, 6});
+
+    auto offset_reader = std::make_shared<OffsetGlobalIndexReader>(fake_reader, 300);
+
+    Literal literal(FieldType::STRING, "foo", 3);
+    ASSERT_OK_AND_ASSIGN(auto result, offset_reader->VisitContains(literal));
+    // row ids {1, 5, 6} + offset 300 -> {301, 305, 306}
+    CheckResult(result, {301, 305, 306});
+}
+
+TEST_F(OffsetGlobalIndexReaderTest, TestVisitLikeWithOffset) {
+    auto fake_reader = std::make_shared<FakeGlobalIndexReader>();
+    fake_reader->SetDefaultResult({0, 3, 7});
+
+    auto offset_reader = std::make_shared<OffsetGlobalIndexReader>(fake_reader, 40);
+
+    Literal pattern(FieldType::STRING, "ab%", 3);
+    ASSERT_OK_AND_ASSIGN(auto result, offset_reader->VisitLike(pattern));
+    // row ids {0, 3, 7} + offset 40 -> {40, 43, 47}
+    CheckResult(result, {40, 43, 47});
+}
+
 }  // namespace paimon::test

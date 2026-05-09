@@ -17,8 +17,10 @@
 #include "paimon/table/source/table_read.h"
 
 #include <map>
+#include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "paimon/core/core_options.h"
@@ -153,4 +155,5 @@ TEST(TableReadTest, TestMergeOptions) {
         {"manifest.format", "orc"}, {"file.format", "orc"}};
     ASSERT_EQ(expected_options, core_options.ToMap());
 }
+
 }  // namespace paimon::test

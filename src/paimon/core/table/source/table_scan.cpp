@@ -48,6 +48,7 @@
 #include "paimon/core/table/source/merge_tree_split_generator.h"
 #include "paimon/core/table/source/snapshot/snapshot_reader.h"
 #include "paimon/core/table/source/split_generator.h"
+#include "paimon/core/table/system/system_table.h"
 #include "paimon/core/utils/field_mapping.h"
 #include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/core/utils/index_file_path_factories.h"
@@ -165,6 +166,14 @@ Result<std::unique_ptr<TableScan>> TableScan::Create(std::unique_ptr<ScanContext
     PAIMON_ASSIGN_OR_RAISE(
         CoreOptions tmp_options,
         CoreOptions::FromMap(context->GetOptions(), context->GetSpecificFileSystem()));
+    PAIMON_ASSIGN_OR_RAISE(std::optional<SystemTablePath> system_table_path,
+                           SystemTableLoader::TryParsePath(context->GetPath()));
+    if (system_table_path) {
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<SystemTable> system_table,
+            SystemTableLoader::LoadFromPath(tmp_options.GetFileSystem(), context->GetPath()));
+        return system_table->NewScan();
+    }
     SchemaManager schema_manager(tmp_options.GetFileSystem(), context->GetPath());
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_table_schema,
                            schema_manager.Latest());

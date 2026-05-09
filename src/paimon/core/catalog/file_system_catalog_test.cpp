@@ -25,6 +25,8 @@
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/core_options.h"
+#include "paimon/core/schema/table_schema.h"
+#include "paimon/core/table/system/system_table_schema.h"
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/file_system_factory.h"
@@ -149,6 +151,65 @@ TEST(FileSystemCatalogTest, TestCreateTable) {
     ArrowSchemaRelease(&schema);
 }
 
+TEST(FileSystemCatalogTest, TestOptionsSystemTableCatalog) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    options["custom.option"] = "custom-value";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
+
+    auto typed_schema = arrow::schema({arrow::field("f0", arrow::int32())});
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &schema).ok());
+    ASSERT_OK(catalog.CreateTable(Identifier("db1", "tbl1"), &schema,
+                                  /*partition_keys=*/{}, /*primary_keys=*/{}, options,
+                                  /*ignore_if_exists=*/false));
+    ArrowSchemaRelease(&schema);
+
+    Identifier options_identifier("db1", "tbl1$options");
+    ASSERT_OK_AND_ASSIGN(bool exists, catalog.TableExists(options_identifier));
+    ASSERT_TRUE(exists);
+    ASSERT_OK_AND_ASSIGN(exists, catalog.TableExists(Identifier("db1", "tbl1$unknown")));
+    ASSERT_FALSE(exists);
+    ASSERT_OK_AND_ASSIGN(exists, catalog.TableExists(Identifier("db1", "missing$options")));
+    ASSERT_FALSE(exists);
+    ASSERT_EQ(catalog.GetTableLocation(options_identifier),
+              PathUtil::JoinPath(PathUtil::JoinPath(dir->Str(), "db1.db"), "tbl1$options"));
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> system_schema,
+                         catalog.LoadTableSchema(options_identifier));
+    ASSERT_TRUE(std::dynamic_pointer_cast<SystemSchema>(system_schema) != nullptr);
+    ASSERT_TRUE(std::dynamic_pointer_cast<SystemTableSchema>(system_schema) != nullptr);
+    ASSERT_OK_AND_ASSIGN(auto c_schema, system_schema->GetArrowSchema());
+    auto loaded_schema_result = arrow::ImportSchema(c_schema.get());
+    ASSERT_TRUE(loaded_schema_result.ok()) << loaded_schema_result.status().ToString();
+    auto loaded_schema = loaded_schema_result.ValueUnsafe();
+    ASSERT_EQ(loaded_schema->field_names(), (std::vector<std::string>{"key", "value"}));
+    ASSERT_EQ(loaded_schema->field(0)->type()->id(), arrow::Type::STRING);
+    ASSERT_EQ(loaded_schema->field(1)->type()->id(), arrow::Type::STRING);
+    ASSERT_FALSE(loaded_schema->field(0)->nullable());
+    ASSERT_FALSE(loaded_schema->field(1)->nullable());
+
+    ASSERT_OK_AND_ASSIGN(auto system_table, catalog.GetTable(options_identifier));
+    ASSERT_EQ(system_table->Name(), "tbl1$options");
+    ASSERT_NOK_WITH_MSG(catalog.LoadTableSchema(Identifier("db1", "tbl1$unknown")), "not exist");
+    ASSERT_NOK_WITH_MSG(catalog.LoadTableSchema(Identifier("db1", "missing$options")), "not exist");
+
+    ::ArrowSchema system_create_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &system_create_schema).ok());
+    ASSERT_NOK_WITH_MSG(
+        catalog.CreateTable(options_identifier, &system_create_schema, {}, {}, options, false),
+        "Cannot create table for system table");
+    ArrowSchemaRelease(&system_create_schema);
+    ASSERT_NOK_WITH_MSG(catalog.DropTable(options_identifier, false), "Cannot drop system table");
+    ASSERT_NOK_WITH_MSG(catalog.RenameTable(options_identifier, Identifier("db1", "tbl2"), false),
+                        "Cannot rename system table");
+}
+
 TEST(FileSystemCatalogTest, TestCreateTableWithBlob) {
     std::map<std::string, std::string> options;
     options[Options::FILE_SYSTEM] = "local";
@@ -188,6 +249,8 @@ TEST(FileSystemCatalogTest, TestCreateTableWithBlob) {
     ASSERT_EQ(table_names[0], "tbl1");
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> table_schema,
                          catalog.LoadTableSchema(Identifier("db1", "tbl1")));
+    ASSERT_TRUE(std::dynamic_pointer_cast<DataSchema>(table_schema) != nullptr);
+    ASSERT_TRUE(std::dynamic_pointer_cast<TableSchema>(table_schema) != nullptr);
     ASSERT_OK_AND_ASSIGN(auto arrow_schema, table_schema->GetArrowSchema());
     auto loaded_schema = arrow::ImportSchema(arrow_schema.get()).ValueOrDie();
     ASSERT_TRUE(typed_schema.Equals(loaded_schema));
@@ -358,11 +421,13 @@ TEST(FileSystemCatalogTest, TestValidateTableSchema) {
     ASSERT_NOK_WITH_MSG(catalog.LoadTableSchema(Identifier("db0", "tbl0")),
                         "Identifier{database=\'db0\', table=\'tbl0\'} not exist");
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> table_schema, catalog.LoadTableSchema(identifier));
-    ASSERT_EQ(0, table_schema->Id());
-    ASSERT_EQ(3, table_schema->HighestFieldId());
-    ASSERT_EQ(1, table_schema->PartitionKeys().size());
-    ASSERT_EQ(0, table_schema->PrimaryKeys().size());
-    ASSERT_EQ(-1, table_schema->NumBuckets());
+    auto data_schema = std::dynamic_pointer_cast<DataSchema>(table_schema);
+    ASSERT_TRUE(data_schema != nullptr);
+    ASSERT_EQ(0, data_schema->Id());
+    ASSERT_EQ(3, data_schema->HighestFieldId());
+    ASSERT_EQ(1, data_schema->PartitionKeys().size());
+    ASSERT_EQ(0, data_schema->PrimaryKeys().size());
+    ASSERT_EQ(-1, data_schema->NumBuckets());
     ASSERT_FALSE(table_schema->Comment().has_value());
     std::vector<std::string> field_names = table_schema->FieldNames();
     std::vector<std::string> expected_field_names = {"f0", "f1", "f2", "f3"};
@@ -396,8 +461,7 @@ TEST(FileSystemCatalogTest, TestValidateTableSchema) {
     ASSERT_NOK_WITH_MSG(catalog.LoadTableSchema(identifier),
                         "Identifier{database=\'db1\', table=\'tbl1\'} not exist");
 
-    ASSERT_NOK_WITH_MSG(catalog.LoadTableSchema(Identifier("db1", "tbl$11")),
-                        "do not support checking TableSchemaExists for system table.");
+    ASSERT_NOK_WITH_MSG(catalog.LoadTableSchema(Identifier("db1", "tbl$11")), "not exist");
     ArrowSchemaRelease(&schema);
 }
 

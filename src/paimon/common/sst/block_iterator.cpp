@@ -46,6 +46,17 @@ Result<BlockEntry> BlockIterator::ReadEntry() {
     return BlockEntry(key, value);
 }
 
+Result<MemorySlice> BlockIterator::SkipKeyAndReadValue() {
+    if (polled_position_ >= 0) {
+        PAIMON_RETURN_NOT_OK(input_.SetPosition(polled_position_));
+        polled_position_ = -1;
+    }
+    PAIMON_ASSIGN_OR_RAISE(int32_t key_length, input_.ReadVarLenInt());
+    PAIMON_RETURN_NOT_OK(input_.SetPosition(input_.Position() + key_length));
+    PAIMON_ASSIGN_OR_RAISE(int32_t value_length, input_.ReadVarLenInt());
+    return input_.ReadSliceView(value_length);
+}
+
 Result<MemorySlice> BlockIterator::ReadKeyAndSkipValue() {
     PAIMON_ASSIGN_OR_RAISE(int32_t key_length, input_.ReadVarLenInt());
     auto key = input_.ReadSliceView(key_length);
