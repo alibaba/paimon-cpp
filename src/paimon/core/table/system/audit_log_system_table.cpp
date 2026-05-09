@@ -231,13 +231,6 @@ std::shared_ptr<arrow::Schema> AuditLogSystemTable::ArrowSchema() const {
     return arrow::schema(fields);
 }
 
-Result<std::unique_ptr<TableScan>> AuditLogSystemTable::NewScan() const {
-    ScanContextBuilder builder(table_path_);
-    builder.SetOptions(options_);
-    PAIMON_ASSIGN_OR_RAISE(auto context, builder.Finish());
-    return NewDataTableScan(std::move(context));
-}
-
 Result<std::unique_ptr<TableScan>> AuditLogSystemTable::NewScan(
     const std::shared_ptr<ScanContext>& context) const {
     if (context->GetScanFilters() && context->GetScanFilters()->GetPredicate()) {
@@ -293,12 +286,6 @@ Result<std::unique_ptr<TableRead>> AuditLogSystemTable::NewRead(
     return std::make_unique<AuditLogTableRead>(std::move(data_read), ArrowSchema(),
                                                include_sequence_number, IsBinlog(),
                                                context->GetMemoryPool());
-}
-
-Result<std::unique_ptr<BatchReader>> AuditLogSystemTable::CreateBatchReader(
-    const std::vector<std::shared_ptr<Split>>& /*splits*/,
-    const std::shared_ptr<MemoryPool>& /*pool*/) const {
-    return Status::Invalid("audit_log system table requires context-aware read");
 }
 
 std::shared_ptr<arrow::Schema> AuditLogSystemTable::BaseReadSchema() const {

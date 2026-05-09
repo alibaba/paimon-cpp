@@ -35,7 +35,6 @@
 #include "paimon/core/table/source/key_value_table_read.h"
 #include "paimon/core/table/source/table_read_utils.h"
 #include "paimon/core/table/system/system_table.h"
-#include "paimon/core/table/system/system_table_read.h"
 #include "paimon/core/utils/branch_manager.h"
 #include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/defs.h"

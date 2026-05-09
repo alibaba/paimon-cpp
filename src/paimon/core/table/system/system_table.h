@@ -20,21 +20,16 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <vector>
 
 #include "arrow/api.h"
-#include "paimon/reader/batch_reader.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 #include "paimon/type_fwd.h"
 
 namespace paimon {
 class FileSystem;
-class MemoryPool;
 class ReadContext;
 class ScanContext;
-class Split;
-class SystemTableRead;
 class TableScan;
 class TableRead;
 class TableSchema;
@@ -51,15 +46,10 @@ class SystemTable : public std::enable_shared_from_this<SystemTable> {
 
     virtual std::string Name() const = 0;
     virtual std::shared_ptr<arrow::Schema> ArrowSchema() const = 0;
-    virtual Result<std::unique_ptr<TableScan>> NewScan() const = 0;
     virtual Result<std::unique_ptr<TableScan>> NewScan(
-        const std::shared_ptr<ScanContext>& context) const;
-    Result<std::unique_ptr<SystemTableRead>> NewRead(const std::shared_ptr<MemoryPool>& pool) const;
+        const std::shared_ptr<ScanContext>& context) const = 0;
     virtual Result<std::unique_ptr<TableRead>> NewRead(
-        const std::shared_ptr<ReadContext>& context) const;
-    virtual Result<std::unique_ptr<BatchReader>> CreateBatchReader(
-        const std::vector<std::shared_ptr<Split>>& splits,
-        const std::shared_ptr<MemoryPool>& pool) const = 0;
+        const std::shared_ptr<ReadContext>& context) const = 0;
 };
 
 class SystemTableLoader {

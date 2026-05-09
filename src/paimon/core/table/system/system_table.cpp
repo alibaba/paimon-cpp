@@ -29,32 +29,10 @@
 #include "paimon/core/table/system/audit_log_system_table.h"
 #include "paimon/core/table/system/binlog_system_table.h"
 #include "paimon/core/table/system/options_system_table.h"
-#include "paimon/core/table/system/system_table_read.h"
 #include "paimon/core/utils/branch_manager.h"
-#include "paimon/read_context.h"
 #include "paimon/status.h"
-#include "paimon/table/source/table_read.h"
-#include "paimon/table/source/table_scan.h"
 
 namespace paimon {
-
-Result<std::unique_ptr<TableScan>> SystemTable::NewScan(
-    const std::shared_ptr<ScanContext>& /*context*/) const {
-    return NewScan();
-}
-
-Result<std::unique_ptr<SystemTableRead>> SystemTable::NewRead(
-    const std::shared_ptr<MemoryPool>& pool) const {
-    return std::make_unique<SystemTableRead>(
-        std::const_pointer_cast<SystemTable>(shared_from_this()), pool);
-}
-
-Result<std::unique_ptr<TableRead>> SystemTable::NewRead(
-    const std::shared_ptr<ReadContext>& context) const {
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SystemTableRead> read,
-                           NewRead(context->GetMemoryPool()));
-    return std::unique_ptr<TableRead>(std::move(read));
-}
 
 bool SystemTableLoader::IsSupported(const std::string& system_table_name) {
     std::string normalized_name = StringUtils::ToLowerCase(system_table_name);

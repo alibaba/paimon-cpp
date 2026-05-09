@@ -37,14 +37,10 @@ class AuditLogSystemTable : public SystemTable {
 
     std::string Name() const override;
     std::shared_ptr<arrow::Schema> ArrowSchema() const override;
-    Result<std::unique_ptr<TableScan>> NewScan() const override;
     Result<std::unique_ptr<TableScan>> NewScan(
         const std::shared_ptr<ScanContext>& context) const override;
     Result<std::unique_ptr<TableRead>> NewRead(
         const std::shared_ptr<ReadContext>& context) const override;
-    Result<std::unique_ptr<BatchReader>> CreateBatchReader(
-        const std::vector<std::shared_ptr<Split>>& splits,
-        const std::shared_ptr<MemoryPool>& pool) const override;
 
  protected:
     virtual bool IsBinlog() const {
