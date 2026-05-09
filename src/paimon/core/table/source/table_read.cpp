@@ -33,7 +33,6 @@
 #include "paimon/core/table/source/append_only_table_read.h"
 #include "paimon/core/table/source/fallback_table_read.h"
 #include "paimon/core/table/source/key_value_table_read.h"
-#include "paimon/core/table/source/table_read_utils.h"
 #include "paimon/core/table/system/system_table.h"
 #include "paimon/core/utils/branch_manager.h"
 #include "paimon/core/utils/file_store_path_factory.h"
@@ -46,6 +45,8 @@ namespace paimon {
 class DataSplit;
 class Executor;
 class MemoryPool;
+
+namespace {
 
 Result<std::unique_ptr<InternalReadContext>> CreateInternalReadContext(
     const std::shared_ptr<ReadContext>& context, const std::string& branch) {
@@ -134,10 +135,7 @@ Result<std::unique_ptr<TableRead>> NewDataTableRead(const std::shared_ptr<ReadCo
         std::move(table_read), std::move(fallback_table_read), context->GetMemoryPool());
 }
 
-Result<std::unique_ptr<TableRead>> NewDataTableRead(std::unique_ptr<ReadContext> ctx) {
-    std::shared_ptr<ReadContext> context = std::move(ctx);
-    return NewDataTableRead(context);
-}
+}  // namespace
 
 TableRead::TableRead(const std::shared_ptr<MemoryPool>& memory_pool) : pool_(memory_pool) {}
 

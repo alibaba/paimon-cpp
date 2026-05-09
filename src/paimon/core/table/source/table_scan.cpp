@@ -48,7 +48,6 @@
 #include "paimon/core/table/source/merge_tree_split_generator.h"
 #include "paimon/core/table/source/snapshot/snapshot_reader.h"
 #include "paimon/core/table/source/split_generator.h"
-#include "paimon/core/table/source/table_scan_utils.h"
 #include "paimon/core/table/system/system_table.h"
 #include "paimon/core/utils/field_mapping.h"
 #include "paimon/core/utils/file_store_path_factory.h"
@@ -66,6 +65,8 @@ class Schema;
 namespace paimon {
 class Executor;
 class MemoryPool;
+
+namespace {
 
 class TableScanImpl {
  public:
@@ -152,6 +153,10 @@ class TableScanImpl {
     }
 };
 
+Result<std::unique_ptr<TableScan>> NewDataTableScan(const std::shared_ptr<ScanContext>& context);
+
+}  // namespace
+
 Result<std::unique_ptr<TableScan>> TableScan::Create(std::unique_ptr<ScanContext> context) {
     if (context == nullptr) {
         return Status::Invalid("scan context is null pointer");
@@ -180,10 +185,7 @@ Result<std::unique_ptr<TableScan>> TableScan::Create(std::unique_ptr<ScanContext
     return NewDataTableScan(shared_context);
 }
 
-Result<std::unique_ptr<TableScan>> NewDataTableScan(std::unique_ptr<ScanContext> context) {
-    std::shared_ptr<ScanContext> shared_context = std::move(context);
-    return NewDataTableScan(shared_context);
-}
+namespace {
 
 Result<std::unique_ptr<TableScan>> NewDataTableScan(const std::shared_ptr<ScanContext>& context) {
     PAIMON_ASSIGN_OR_RAISE(
@@ -268,5 +270,7 @@ Result<std::unique_ptr<TableScan>> NewDataTableScan(const std::shared_ptr<ScanCo
         context->GetPath(), snapshot_reader, std::move(batch_scan), context->GetGlobalIndexResult(),
         core_options, context->GetMemoryPool(), context->GetExecutor());
 }
+
+}  // namespace
 
 }  // namespace paimon

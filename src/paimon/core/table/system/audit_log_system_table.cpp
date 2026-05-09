@@ -38,8 +38,6 @@
 #include "paimon/core/core_options.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/source/key_value_table_read.h"
-#include "paimon/core/table/source/table_read_utils.h"
-#include "paimon/core/table/source/table_scan_utils.h"
 #include "paimon/defs.h"
 #include "paimon/read_context.h"
 #include "paimon/scan_context.h"
@@ -240,7 +238,7 @@ Result<std::unique_ptr<TableScan>> AuditLogSystemTable::NewScan(
         builder.SetLimit(context->GetLimit().value());
     }
     PAIMON_ASSIGN_OR_RAISE(auto data_context, builder.Finish());
-    return NewDataTableScan(std::move(data_context));
+    return TableScan::Create(std::move(data_context));
 }
 
 Result<std::unique_ptr<TableRead>> AuditLogSystemTable::NewRead(
@@ -274,7 +272,7 @@ Result<std::unique_ptr<TableRead>> AuditLogSystemTable::NewChangelogRead(
         .WithCacheConfig(context->GetCacheConfig());
 
     PAIMON_ASSIGN_OR_RAISE(auto data_context, builder.Finish());
-    PAIMON_ASSIGN_OR_RAISE(auto data_read, NewDataTableRead(std::move(data_context)));
+    PAIMON_ASSIGN_OR_RAISE(auto data_read, TableRead::Create(std::move(data_context)));
     auto* key_value_read = dynamic_cast<KeyValueTableRead*>(data_read.get());
     if (!key_value_read) {
         return Status::Invalid("audit_log system table requires key-value table read");
