@@ -184,6 +184,7 @@ void RoaringBitmap64::AddMany(size_t n, const int64_t* values) {
     struct Bucket {
         uint32_t high;
         std::vector<uint32_t> lows;
+        explicit Bucket(uint32_t high_val) : high(high_val) {}
     };
     std::vector<Bucket> buckets;
     buckets.reserve(4);
@@ -206,7 +207,7 @@ void RoaringBitmap64::AddMany(size_t n, const int64_t* values) {
                 }
             }
             if (target == nullptr) {
-                buckets.push_back({high, {}});
+                buckets.emplace_back(high);
                 // Reserve generously on first encounter; we may end up using
                 // more memory than necessary if K turns out to be > 1, but
                 // this avoids repeated grow-and-copy in the common K == 1 case.

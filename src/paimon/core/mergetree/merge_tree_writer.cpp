@@ -18,7 +18,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cstddef>
 #include <unordered_set>
 #include <utility>
 
@@ -29,6 +28,7 @@
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/scope_guard.h"
+#include "paimon/core/disk/io_manager.h"
 #include "paimon/core/io/async_key_value_producer_and_consumer.h"
 #include "paimon/core/io/compact_increment.h"
 #include "paimon/core/io/data_file_path_factory.h"
@@ -44,12 +44,11 @@
 #include "paimon/core/utils/commit_increment.h"
 #include "paimon/format/file_format.h"
 #include "paimon/format/writer_builder.h"
-#include "paimon/metrics.h"
 
 namespace paimon {
 class FormatStatsExtractor;
 
-MergeTreeWriter::MergeTreeWriter(
+Result<std::shared_ptr<MergeTreeWriter>> MergeTreeWriter::Create(
     int64_t last_sequence_number, const std::vector<std::string>& trimmed_primary_keys,
     const std::shared_ptr<DataFilePathFactory>& path_factory,
     const std::shared_ptr<FieldsComparator>& key_comparator,
@@ -57,7 +56,28 @@ MergeTreeWriter::MergeTreeWriter(
     const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
     int64_t schema_id, const std::shared_ptr<arrow::Schema>& value_schema,
     const CoreOptions& options, const std::shared_ptr<CompactManager>& compact_manager,
-    const std::shared_ptr<MemoryPool>& pool)
+    const std::shared_ptr<IOManager>& io_manager, const std::shared_ptr<MemoryPool>& pool) {
+    auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<WriteBuffer> write_buffer,
+        WriteBuffer::Create(last_sequence_number, value_schema, trimmed_primary_keys,
+                            options.GetSequenceField(), key_comparator, user_defined_seq_comparator,
+                            merge_function_wrapper, options, io_manager, pool));
+    return std::shared_ptr<MergeTreeWriter>(
+        new MergeTreeWriter(pool, trimmed_primary_keys, options, path_factory, key_comparator,
+                            user_defined_seq_comparator, merge_function_wrapper, schema_id,
+                            write_schema, compact_manager, std::move(write_buffer)));
+}
+
+MergeTreeWriter::MergeTreeWriter(
+    const std::shared_ptr<MemoryPool>& pool, const std::vector<std::string>& trimmed_primary_keys,
+    const CoreOptions& options, const std::shared_ptr<DataFilePathFactory>& path_factory,
+    const std::shared_ptr<FieldsComparator>& key_comparator,
+    const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
+    const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
+    int64_t schema_id, const std::shared_ptr<arrow::Schema>& write_schema,
+    const std::shared_ptr<CompactManager>& compact_manager,
+    std::unique_ptr<WriteBuffer>&& write_buffer)
     : pool_(pool),
       trimmed_primary_keys_(trimmed_primary_keys),
       options_(options),
@@ -66,13 +86,10 @@ MergeTreeWriter::MergeTreeWriter(
       user_defined_seq_comparator_(user_defined_seq_comparator),
       merge_function_wrapper_(merge_function_wrapper),
       schema_id_(schema_id),
+      write_schema_(write_schema),
       compact_manager_(compact_manager),
-      metrics_(std::make_shared<MetricsImpl>()) {
-    write_schema_ = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
-    write_buffer_ = std::make_unique<WriteBuffer>(
-        last_sequence_number, arrow::struct_(value_schema->fields()), trimmed_primary_keys_,
-        options_.GetSequenceField(), key_comparator_, merge_function_wrapper_, pool_);
-}
+      write_buffer_(std::move(write_buffer)),
+      metrics_(std::make_shared<MetricsImpl>()) {}
 
 Status MergeTreeWriter::DoClose() {
     // Request cancellation and wait for running compaction to exit.
@@ -115,16 +132,26 @@ Status MergeTreeWriter::DoClose() {
     return Status::OK();
 }
 
+Status MergeTreeWriter::FlushMemory() {
+    PAIMON_ASSIGN_OR_RAISE(bool has_remaining_quota, write_buffer_->FlushMemory());
+    if (!has_remaining_quota) {
+        PAIMON_RETURN_NOT_OK(FlushWriteBuffer(/*wait_for_latest_compaction=*/false,
+                                              /*forced_full_compaction=*/false));
+    }
+    return Status::OK();
+}
+
 Status MergeTreeWriter::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
-    PAIMON_RETURN_NOT_OK(write_buffer_->Write(std::move(moved_batch)));
-    if (write_buffer_->GetMemoryUsage() >= static_cast<uint64_t>(options_.GetWriteBufferSize())) {
-        return Flush(/*wait_for_latest_compaction=*/false, /*forced_full_compaction=*/false);
+    PAIMON_ASSIGN_OR_RAISE(bool has_remaining_quota, write_buffer_->Write(std::move(moved_batch)));
+    if (!has_remaining_quota) {
+        return FlushWriteBuffer(/*wait_for_latest_compaction=*/false,
+                                /*forced_full_compaction=*/false);
     }
     return Status::OK();
 }
 
 Status MergeTreeWriter::Compact(bool full_compaction) {
-    return Flush(/*wait_for_latest_compaction=*/true, full_compaction);
+    return FlushWriteBuffer(/*wait_for_latest_compaction=*/true, full_compaction);
 }
 
 Status MergeTreeWriter::Sync() {
@@ -197,7 +224,7 @@ Status MergeTreeWriter::UpdateCompactDeletionFile(
 }
 
 Result<CommitIncrement> MergeTreeWriter::PrepareCommit(bool wait_compaction) {
-    PAIMON_RETURN_NOT_OK(Flush(wait_compaction, /*forced_full_compaction=*/false));
+    PAIMON_RETURN_NOT_OK(FlushWriteBuffer(wait_compaction, /*forced_full_compaction=*/false));
     if (options_.CommitForceCompact()) {
         wait_compaction = true;
     }
@@ -218,13 +245,14 @@ Result<bool> MergeTreeWriter::CompactNotCompleted() {
     return compact_manager_->CompactNotCompleted();
 }
 
-Status MergeTreeWriter::Flush(bool wait_for_latest_compaction, bool forced_full_compaction) {
+Status MergeTreeWriter::FlushWriteBuffer(bool wait_for_latest_compaction,
+                                         bool forced_full_compaction) {
     if (!write_buffer_->IsEmpty()) {
         if (compact_manager_->ShouldWaitForLatestCompaction()) {
             wait_for_latest_compaction = true;
         }
         auto cleanup_guard = ScopeGuard([&]() { write_buffer_->Clear(); });
-        // 1. flush write buffer to get in-memory readers
+        // 1. flush write buffer to get sorted readers
         PAIMON_ASSIGN_OR_RAISE(std::vector<std::unique_ptr<KeyValueRecordReader>> readers,
                                write_buffer_->CreateReaders());
         // 2. prepare loser tree sort merge reader
@@ -257,6 +285,7 @@ Status MergeTreeWriter::Flush(bool wait_for_latest_compaction, bool forced_full_
         PAIMON_RETURN_NOT_OK(rolling_writer->Close());
         PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<DataFileMeta>> flushed_files,
                                rolling_writer->GetResult());
+        async_key_value_producer_consumer->Close();
         write_guard.Release();
 
         for (const auto& flushed_file : flushed_files) {
