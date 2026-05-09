@@ -242,6 +242,10 @@ std::shared_ptr<arrow::StructArray> SingleStructChunk(
     return struct_array;
 }
 
+std::vector<std::string> StructFieldNames(const std::shared_ptr<arrow::StructArray>& array) {
+    return arrow::schema(array->type()->fields())->field_names();
+}
+
 Result<std::shared_ptr<arrow::ChunkedArray>> ReadSystemTable(
     const std::string& system_table_path, const std::map<std::string, std::string>& options) {
     ScanContextBuilder scan_context_builder(system_table_path);
@@ -621,8 +625,7 @@ TEST(SystemTableReadInteTest, TestReadAuditLogSystemTable) {
     auto array = SingleStructChunk(result);
     ASSERT_TRUE(array);
     ASSERT_EQ(array->length(), 2);
-    ASSERT_EQ(array->struct_type()->field_names(),
-              (std::vector<std::string>{"rowkind", "pk", "v"}));
+    ASSERT_EQ(StructFieldNames(array), (std::vector<std::string>{"rowkind", "pk", "v"}));
     AssertAuditLogRow(array, 0, "+I", "a", 1);
     AssertAuditLogRow(array, 1, "+I", "b", 2);
 }
@@ -660,7 +663,7 @@ TEST(SystemTableReadInteTest, TestReadAuditLogSystemTableWithSequenceNumber) {
     auto array = SingleStructChunk(result);
     ASSERT_TRUE(array);
     ASSERT_EQ(array->length(), 1);
-    ASSERT_EQ(array->struct_type()->field_names(),
+    ASSERT_EQ(StructFieldNames(array),
               (std::vector<std::string>{"rowkind", "_SEQUENCE_NUMBER", "pk", "v"}));
     auto rowkind_array = std::dynamic_pointer_cast<arrow::StringArray>(array->field(0));
     auto sequence_array = std::dynamic_pointer_cast<arrow::Int64Array>(array->field(1));
@@ -707,8 +710,7 @@ TEST(SystemTableReadInteTest, TestReadBinlogSystemTable) {
     auto array = SingleStructChunk(result);
     ASSERT_TRUE(array);
     ASSERT_EQ(array->length(), 2);
-    ASSERT_EQ(array->struct_type()->field_names(),
-              (std::vector<std::string>{"rowkind", "pk", "v"}));
+    ASSERT_EQ(StructFieldNames(array), (std::vector<std::string>{"rowkind", "pk", "v"}));
 
     auto rowkind_array = std::dynamic_pointer_cast<arrow::StringArray>(array->field(0));
     auto pk_array = std::dynamic_pointer_cast<arrow::ListArray>(array->field(1));
