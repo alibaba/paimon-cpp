@@ -36,11 +36,8 @@ class BinlogSystemTable : public AuditLogSystemTable {
 
     std::string Name() const override;
     std::shared_ptr<arrow::Schema> ArrowSchema() const override;
-
- protected:
-    bool IsBinlog() const override {
-        return true;
-    }
+    Result<std::unique_ptr<TableRead>> NewRead(
+        const std::shared_ptr<ReadContext>& context) const override;
 };
 
 }  // namespace paimon

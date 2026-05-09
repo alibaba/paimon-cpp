@@ -27,6 +27,14 @@ namespace paimon {
 class FileSystem;
 class TableSchema;
 
+class ChangelogBatchConverter {
+ public:
+    virtual ~ChangelogBatchConverter() = default;
+
+    virtual Result<std::shared_ptr<arrow::Array>> ConvertDataColumn(
+        const std::shared_ptr<arrow::Array>& array, arrow::MemoryPool* pool) const = 0;
+};
+
 class AuditLogSystemTable : public SystemTable {
  public:
     static constexpr const char* kName = "audit_log";
@@ -43,10 +51,9 @@ class AuditLogSystemTable : public SystemTable {
         const std::shared_ptr<ReadContext>& context) const override;
 
  protected:
-    virtual bool IsBinlog() const {
-        return false;
-    }
-
+    Result<std::unique_ptr<TableRead>> NewChangelogRead(
+        const std::shared_ptr<ReadContext>& context,
+        std::shared_ptr<const ChangelogBatchConverter> converter) const;
     std::shared_ptr<arrow::Schema> BaseReadSchema() const;
     std::map<std::string, std::string> ReadOptions() const;
 

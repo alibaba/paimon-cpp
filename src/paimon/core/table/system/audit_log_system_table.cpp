@@ -50,15 +50,24 @@
 namespace paimon {
 namespace {
 
-class AuditLogBatchReader : public BatchReader {
+class AuditLogBatchConverter : public ChangelogBatchConverter {
  public:
-    AuditLogBatchReader(std::unique_ptr<BatchReader> reader,
-                        std::shared_ptr<arrow::Schema> output_schema, bool include_sequence_number,
-                        bool binlog, const std::shared_ptr<MemoryPool>& /*pool*/)
+    Result<std::shared_ptr<arrow::Array>> ConvertDataColumn(
+        const std::shared_ptr<arrow::Array>& array, arrow::MemoryPool* /*pool*/) const override {
+        return array;
+    }
+};
+
+class ChangelogBatchReader : public BatchReader {
+ public:
+    ChangelogBatchReader(std::unique_ptr<BatchReader> reader,
+                         std::shared_ptr<arrow::Schema> output_schema, bool include_sequence_number,
+                         std::shared_ptr<const ChangelogBatchConverter> converter,
+                         const std::shared_ptr<MemoryPool>& /*pool*/)
         : reader_(std::move(reader)),
           output_schema_(std::move(output_schema)),
           include_sequence_number_(include_sequence_number),
-          binlog_(binlog),
+          converter_(std::move(converter)),
           arrow_pool_(arrow::default_memory_pool()) {}
 
     Result<ReadBatch> NextBatch() override {
@@ -92,9 +101,7 @@ class AuditLogBatchReader : public BatchReader {
 
         for (int32_t i = field_offset; i < struct_array->num_fields(); ++i) {
             auto array = struct_array->field(i);
-            if (binlog_) {
-                PAIMON_ASSIGN_OR_RAISE(array, WrapAsSingletonList(array));
-            }
+            PAIMON_ASSIGN_OR_RAISE(array, converter_->ConvertDataColumn(array, arrow_pool_));
             PAIMON_ASSIGN_OR_RAISE(array, CopyToStablePool(array));
             output_arrays.push_back(array);
         }
@@ -150,44 +157,31 @@ class AuditLogBatchReader : public BatchReader {
         return result;
     }
 
-    Result<std::shared_ptr<arrow::Array>> WrapAsSingletonList(
-        const std::shared_ptr<arrow::Array>& array) const {
-        arrow::Int32Builder offsets_builder(arrow_pool_);
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(offsets_builder.Reserve(array->length() + 1));
-        for (int64_t i = 0; i <= array->length(); ++i) {
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(offsets_builder.Append(static_cast<int32_t>(i)));
-        }
-        std::shared_ptr<arrow::Array> offsets_array;
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(offsets_builder.Finish(&offsets_array));
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-            std::shared_ptr<arrow::Array> list_array,
-            arrow::ListArray::FromArrays(*offsets_array, *array, arrow_pool_));
-        return list_array;
-    }
-
     std::unique_ptr<BatchReader> reader_;
     std::shared_ptr<arrow::Schema> output_schema_;
     bool include_sequence_number_;
-    bool binlog_;
+    std::shared_ptr<const ChangelogBatchConverter> converter_;
     arrow::MemoryPool* arrow_pool_;
 };
 
-class AuditLogTableRead : public TableRead {
+class ChangelogTableRead : public TableRead {
  public:
-    AuditLogTableRead(std::unique_ptr<TableRead> data_read,
-                      std::shared_ptr<arrow::Schema> output_schema, bool include_sequence_number,
-                      bool binlog, const std::shared_ptr<MemoryPool>& pool)
+    ChangelogTableRead(std::unique_ptr<TableRead> data_read,
+                       std::shared_ptr<arrow::Schema> output_schema, bool include_sequence_number,
+                       std::shared_ptr<const ChangelogBatchConverter> converter,
+                       const std::shared_ptr<MemoryPool>& pool)
         : TableRead(pool),
           data_read_(std::move(data_read)),
           output_schema_(std::move(output_schema)),
           include_sequence_number_(include_sequence_number),
-          binlog_(binlog) {}
+          converter_(std::move(converter)) {}
 
     Result<std::unique_ptr<BatchReader>> CreateReader(
         const std::vector<std::shared_ptr<Split>>& splits) override {
         PAIMON_ASSIGN_OR_RAISE(auto reader, data_read_->CreateReader(splits));
-        return std::make_unique<AuditLogBatchReader>(
-            std::move(reader), output_schema_, include_sequence_number_, binlog_, GetMemoryPool());
+        return std::make_unique<ChangelogBatchReader>(std::move(reader), output_schema_,
+                                                      include_sequence_number_, converter_,
+                                                      GetMemoryPool());
     }
 
     Result<std::unique_ptr<BatchReader>> CreateReader(
@@ -200,7 +194,7 @@ class AuditLogTableRead : public TableRead {
     std::unique_ptr<TableRead> data_read_;
     std::shared_ptr<arrow::Schema> output_schema_;
     bool include_sequence_number_;
-    bool binlog_;
+    std::shared_ptr<const ChangelogBatchConverter> converter_;
 };
 
 }  // namespace
@@ -251,11 +245,17 @@ Result<std::unique_ptr<TableScan>> AuditLogSystemTable::NewScan(
 
 Result<std::unique_ptr<TableRead>> AuditLogSystemTable::NewRead(
     const std::shared_ptr<ReadContext>& context) const {
+    return NewChangelogRead(context, std::make_shared<AuditLogBatchConverter>());
+}
+
+Result<std::unique_ptr<TableRead>> AuditLogSystemTable::NewChangelogRead(
+    const std::shared_ptr<ReadContext>& context,
+    std::shared_ptr<const ChangelogBatchConverter> converter) const {
     if (table_schema_->PrimaryKeys().empty()) {
-        return Status::NotImplemented("audit_log system table only supports primary key table");
+        return Status::NotImplemented(Name(), " system table only supports primary key table");
     }
     if (context->GetPredicate()) {
-        return Status::NotImplemented("audit_log system table predicate pushdown is not supported");
+        return Status::NotImplemented(Name(), " system table predicate pushdown is not supported");
     }
 
     ReadContextBuilder builder(table_path_);
@@ -283,9 +283,9 @@ Result<std::unique_ptr<TableRead>> AuditLogSystemTable::NewRead(
     auto core_options = CoreOptions::FromMap(options_);
     bool include_sequence_number =
         core_options.ok() && core_options.value().TableReadSequenceNumberEnabled();
-    return std::make_unique<AuditLogTableRead>(std::move(data_read), ArrowSchema(),
-                                               include_sequence_number, IsBinlog(),
-                                               context->GetMemoryPool());
+    return std::make_unique<ChangelogTableRead>(std::move(data_read), ArrowSchema(),
+                                                include_sequence_number, std::move(converter),
+                                                context->GetMemoryPool());
 }
 
 std::shared_ptr<arrow::Schema> AuditLogSystemTable::BaseReadSchema() const {
