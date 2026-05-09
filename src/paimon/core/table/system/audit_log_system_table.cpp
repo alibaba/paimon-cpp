@@ -124,7 +124,7 @@ class AuditLogBatchReader : public BatchReader {
         if (!value_kind_array) {
             return Status::Invalid("cannot find _VALUE_KIND in audit_log batch");
         }
-        arrow::StringBuilder builder(arrow_pool_.get());
+        arrow::StringBuilder builder(arrow_pool_);
         PAIMON_RETURN_NOT_OK_FROM_ARROW(builder.Reserve(value_kind_array->length()));
         for (int64_t i = 0; i < value_kind_array->length(); ++i) {
             if (value_kind_array->IsNull(i)) {
@@ -142,7 +142,7 @@ class AuditLogBatchReader : public BatchReader {
 
     Result<std::shared_ptr<arrow::Array>> WrapAsSingletonList(
         const std::shared_ptr<arrow::Array>& array) const {
-        arrow::Int32Builder offsets_builder(arrow_pool_.get());
+        arrow::Int32Builder offsets_builder(arrow_pool_);
         PAIMON_RETURN_NOT_OK_FROM_ARROW(offsets_builder.Reserve(array->length() + 1));
         for (int64_t i = 0; i <= array->length(); ++i) {
             PAIMON_RETURN_NOT_OK_FROM_ARROW(offsets_builder.Append(static_cast<int32_t>(i)));
@@ -151,7 +151,7 @@ class AuditLogBatchReader : public BatchReader {
         PAIMON_RETURN_NOT_OK_FROM_ARROW(offsets_builder.Finish(&offsets_array));
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
             std::shared_ptr<arrow::Array> list_array,
-            arrow::ListArray::FromArrays(*offsets_array, *array, arrow_pool_.get()));
+            arrow::ListArray::FromArrays(*offsets_array, *array, arrow_pool_));
         return list_array;
     }
 
