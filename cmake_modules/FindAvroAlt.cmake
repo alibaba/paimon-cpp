@@ -1,6 +1,16 @@
-# Copyright 2024-present Alibaba Inc.
+# Copyright 2026-present Alibaba Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 set(_PAIMON_AVRO_ROOTS ${Avro_ROOT} ${AVRO_ROOT} ${PAIMON_PACKAGE_PREFIX})
 list(REMOVE_ITEM _PAIMON_AVRO_ROOTS "")
@@ -17,8 +27,15 @@ find_path(AVRO_INCLUDE_DIR
           NAMES avro/Decoder.hh ${_PAIMON_AVRO_FIND_ARGS}
           HINTS ${PC_Avro_INCLUDE_DIRS}
           PATH_SUFFIXES include)
+
+if(PAIMON_DEPENDENCY_USE_SHARED)
+    set(_PAIMON_AVRO_LIBRARY_NAMES avrocpp avrocpp_s)
+else()
+    set(_PAIMON_AVRO_LIBRARY_NAMES avrocpp_s avrocpp)
+endif()
+
 find_library(AVRO_LIBRARY
-             NAMES avrocpp_s avrocpp ${_PAIMON_AVRO_FIND_ARGS}
+             NAMES ${_PAIMON_AVRO_LIBRARY_NAMES} ${_PAIMON_AVRO_FIND_ARGS}
              HINTS ${PC_Avro_LIBRARY_DIRS}
              PATH_SUFFIXES lib lib64)
 
@@ -39,4 +56,5 @@ if(AvroAlt_FOUND AND NOT TARGET avro)
 endif()
 
 unset(_PAIMON_AVRO_FIND_ARGS)
+unset(_PAIMON_AVRO_LIBRARY_NAMES)
 unset(_PAIMON_AVRO_ROOTS)

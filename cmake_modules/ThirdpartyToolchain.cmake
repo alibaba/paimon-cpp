@@ -386,8 +386,13 @@ function(paimon_get_dependency_source DEPENDENCY_NAME OUT_VAR)
     set(_source_option_name "${DEPENDENCY_NAME}_SOURCE")
     set(_source "${${DEPENDENCY_NAME}_SOURCE}")
     if("${_source}" STREQUAL "")
-        set(_source "${PAIMON_DEPENDENCY_SOURCE}")
-        set(_source_option_name "PAIMON_DEPENDENCY_SOURCE")
+        get_property(_source GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_DERIVED_SOURCE")
+        if("${_source}" STREQUAL "")
+            set(_source "${PAIMON_DEPENDENCY_SOURCE}")
+            set(_source_option_name "PAIMON_DEPENDENCY_SOURCE")
+        else()
+            set(_source_option_name "derived ${DEPENDENCY_NAME}_SOURCE")
+        endif()
     endif()
     string(TOUPPER "${_source}" _source)
     paimon_validate_dependency_source("${_source}" "${_source_option_name}")
@@ -398,13 +403,12 @@ endfunction()
 
 function(paimon_set_dependency_source_default DEPENDENCY_NAME SOURCE_VALUE REASON)
     if("${${DEPENDENCY_NAME}_SOURCE}" STREQUAL "")
-        set(${DEPENDENCY_NAME}_SOURCE
-            "${SOURCE_VALUE}"
-            CACHE STRING "Dependency source for ${DEPENDENCY_NAME}" FORCE)
-        set_property(CACHE ${DEPENDENCY_NAME}_SOURCE
-                     PROPERTY STRINGS ${PAIMON_DEPENDENCY_SOURCE_VALUES})
-        message(STATUS "Defaulting ${DEPENDENCY_NAME}_SOURCE to ${SOURCE_VALUE}: ${REASON}"
-        )
+        string(TOUPPER "${SOURCE_VALUE}" _source)
+        paimon_validate_dependency_source("${_source}"
+                                          "derived ${DEPENDENCY_NAME}_SOURCE")
+        set_property(GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_DERIVED_SOURCE"
+                                     "${_source}")
+        message(STATUS "Defaulting ${DEPENDENCY_NAME}_SOURCE to ${_source}: ${REASON}")
     endif()
 endfunction()
 
@@ -466,15 +470,6 @@ function(paimon_apply_dependency_source_defaults)
 endfunction()
 
 function(paimon_configure_dependency_root DEPENDENCY_NAME SOURCE_VALUE OUT_SOURCE)
-    set(_root_var "${DEPENDENCY_NAME}_ROOT")
-
-    if(NOT "${PAIMON_PACKAGE_PREFIX}" STREQUAL "" AND (NOT DEFINED ${_root_var}
-                                                       OR "${${_root_var}}" STREQUAL ""))
-        set(${_root_var}
-            "${PAIMON_PACKAGE_PREFIX}"
-            CACHE PATH "Root directory for ${DEPENDENCY_NAME}" FORCE)
-    endif()
-
     set(${OUT_SOURCE}
         "${SOURCE_VALUE}"
         PARENT_SCOPE)
@@ -485,6 +480,10 @@ function(paimon_get_dependency_root DEPENDENCY_NAME OUT_VAR)
     if(DEFINED ${_root_var} AND NOT "${${_root_var}}" STREQUAL "")
         set(${OUT_VAR}
             "${${_root_var}}"
+            PARENT_SCOPE)
+    elseif(NOT "${PAIMON_PACKAGE_PREFIX}" STREQUAL "")
+        set(${OUT_VAR}
+            "${PAIMON_PACKAGE_PREFIX}"
             PARENT_SCOPE)
     else()
         set(${OUT_VAR}
