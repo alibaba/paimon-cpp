@@ -92,7 +92,7 @@ Result<bool> MergedKeyValueRecordReader::Iterator::MergeNextKey() const {
 }
 
 Status MergedKeyValueRecordReader::Iterator::LoadNextRawKeyValue() const {
-    if (next_raw_key_value_.has_value() || eof_) {
+    if (next_raw_key_value_.has_value()) {
         return Status::OK();
     }
 
@@ -109,7 +109,6 @@ Status MergedKeyValueRecordReader::Iterator::LoadNextRawKeyValue() const {
         current_iterator_.reset();
         PAIMON_ASSIGN_OR_RAISE(current_iterator_, reader_->reader_->NextBatch());
         if (current_iterator_ == nullptr) {
-            eof_ = true;
             return Status::OK();
         }
     }

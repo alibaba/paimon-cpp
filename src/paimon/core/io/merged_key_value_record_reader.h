@@ -25,6 +25,9 @@
 namespace paimon {
 class FieldsComparator;
 
+/// Merges consecutive key-value records with the same primary key from the wrapped reader.
+/// The wrapped reader must return records ordered by primary key, so all records for the same
+/// primary key are contiguous.
 class MergedKeyValueRecordReader : public KeyValueRecordReader {
  public:
     MergedKeyValueRecordReader(
@@ -52,7 +55,6 @@ class MergedKeyValueRecordReader : public KeyValueRecordReader {
         mutable std::optional<KeyValue> next_raw_key_value_;
         // Merged kv prepared by HasNext() and consumed by Next().
         mutable std::optional<KeyValue> merged_key_value_;
-        mutable bool eof_ = false;
     };
 
     Result<std::unique_ptr<KeyValueRecordReader::Iterator>> NextBatch() override;
