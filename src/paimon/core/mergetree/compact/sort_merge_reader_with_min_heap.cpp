@@ -48,7 +48,8 @@ Result<std::unique_ptr<SortMergeReader::Iterator>> SortMergeReaderWithMinHeap::N
                 reader->Close();
                 break;
             }
-            if (iterator->HasNext()) {
+            PAIMON_ASSIGN_OR_RAISE(bool has_next, iterator->HasNext());
+            if (has_next) {
                 PAIMON_ASSIGN_OR_RAISE(KeyValue kv, iterator->Next());
                 min_heap_.emplace(std::move(kv), std::move(iterator), reader);
                 break;

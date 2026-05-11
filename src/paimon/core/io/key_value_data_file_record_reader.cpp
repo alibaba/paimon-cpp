@@ -48,7 +48,7 @@ KeyValueDataFileRecordReader::KeyValueDataFileRecordReader(
       value_schema_(value_schema),
       value_names_(value_schema_->field_names()) {}
 
-bool KeyValueDataFileRecordReader::Iterator::HasNext() const {
+Result<bool> KeyValueDataFileRecordReader::Iterator::HasNext() const {
     int64_t array_length = reader_->row_kind_array_->length();
     const auto& selection_bitmap = reader_->selection_bitmap_;
     if (selection_bitmap.Cardinality() == array_length) {
@@ -67,7 +67,6 @@ bool KeyValueDataFileRecordReader::Iterator::HasNext() const {
 }
 
 Result<KeyValue> KeyValueDataFileRecordReader::Iterator::Next() {
-    assert(HasNext());
     // key is only used in merge sort; key context does not hold parent struct array
     auto key = std::make_unique<ColumnarRowRef>(reader_->key_ctx_, cursor_);
     // value is used in merge sort and projection (maybe async and multi-thread), so value context

@@ -23,6 +23,7 @@
 #include "arrow/array/array_nested.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
+#include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/mergetree/compact/deduplicate_merge_function.h"
@@ -55,14 +56,11 @@ TEST_F(MergedKeyValueRecordReaderTest, TestMergeAcrossUnderlyingBatches) {
                                      DataField(3, arrow::field("v1", arrow::int32())),
                                      DataField(4, arrow::field("v2", arrow::int32()))};
 
-    auto key_schema = arrow::schema({fields[0].ArrowField(), fields[1].ArrowField()});
-    auto value_schema =
-        arrow::schema({fields[0].ArrowField(), fields[1].ArrowField(), fields[2].ArrowField(),
-                       fields[3].ArrowField(), fields[4].ArrowField()});
-    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(
-        {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
-         arrow::field("_VALUE_KIND", arrow::int8()), fields[0].ArrowField(), fields[1].ArrowField(),
-         fields[2].ArrowField(), fields[3].ArrowField(), fields[4].ArrowField()});
+    auto value_schema = DataField::ConvertDataFieldsToArrowSchema(fields);
+    auto arrow_fields = value_schema->fields();
+    auto key_schema = arrow::schema({arrow_fields[0], arrow_fields[1]});
+    std::shared_ptr<arrow::DataType> src_type =
+        arrow::struct_(SpecialFields::CompleteSequenceAndValueKindField(value_schema)->fields());
 
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
@@ -94,6 +92,52 @@ TEST_F(MergedKeyValueRecordReaderTest, TestMergeAcrossUnderlyingBatches) {
             (ReadResultCollector::CollectKeyValueResult<
                 MergedKeyValueRecordReader, KeyValueRecordReader::Iterator>(merged_reader.get())));
         KeyValueChecker::CheckResult(expected, results, /*key_arity=*/2, /*value_arity=*/5);
+    }
+}
+
+TEST_F(MergedKeyValueRecordReaderTest, TestSkipMergedNulloptResultInHasNext) {
+    auto mfunc = std::make_unique<DeduplicateMergeFunction>(/*ignore_delete=*/true);
+    auto merge_function_wrapper = std::make_shared<ReducerMergeFunctionWrapper>(std::move(mfunc));
+
+    std::vector<DataField> fields = {DataField(0, arrow::field("k0", arrow::int32())),
+                                     DataField(1, arrow::field("v0", arrow::int32()))};
+
+    auto value_schema = DataField::ConvertDataFieldsToArrowSchema(fields);
+    auto arrow_fields = value_schema->fields();
+    auto key_schema = arrow::schema({arrow_fields[0]});
+    std::shared_ptr<arrow::DataType> src_type =
+        arrow::struct_(SpecialFields::CompleteSequenceAndValueKindField(value_schema)->fields());
+
+    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [0, 3, 1, 10],
+        [3, 3, 1, 11],
+        [2, 3, 2, 200],
+        [4, 3, 2, 240],
+        [1, 0, 3, 300],
+        [5, 3, 3, 30]
+    ])")
+            .ValueOrDie());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> key_comparator,
+                         FieldsComparator::Create({fields[0]}, /*is_ascending_order=*/true));
+
+    auto expected = KeyValueChecker::GenerateKeyValues(
+        /*seq_vec=*/{1}, /*key_vec=*/{{3}}, /*value_vec=*/{{3, 300}}, pool_);
+
+    for (auto batch_size : {1, 2, 3}) {
+        auto file_batch_reader =
+            std::make_unique<MockFileBatchReader>(src_array, src_type, /*batch_size=*/batch_size);
+        auto raw_reader = std::make_unique<MockKeyValueDataFileRecordReader>(
+            std::move(file_batch_reader), key_schema, value_schema, /*level=*/0, pool_);
+        auto merged_reader = std::make_unique<MergedKeyValueRecordReader>(
+            std::move(raw_reader), key_comparator, merge_function_wrapper);
+
+        ASSERT_OK_AND_ASSIGN(
+            auto results,
+            (ReadResultCollector::CollectKeyValueResult<
+                MergedKeyValueRecordReader, KeyValueRecordReader::Iterator>(merged_reader.get())));
+        KeyValueChecker::CheckResult(expected, results, /*key_arity=*/1, /*value_arity=*/2);
     }
 }
 

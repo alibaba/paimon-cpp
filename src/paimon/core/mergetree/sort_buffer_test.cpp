@@ -115,7 +115,11 @@ class SortBufferTest : public ::testing::Test {
             if (iterator == nullptr) {
                 break;
             }
-            while (iterator->HasNext()) {
+            while (true) {
+                PAIMON_ASSIGN_OR_RAISE(bool has_next, iterator->HasNext());
+                if (!has_next) {
+                    break;
+                }
                 PAIMON_ASSIGN_OR_RAISE(KeyValue key_value, iterator->Next());
                 rows.push_back(ReaderResult{std::string(key_value.key->GetStringView(0)),
                                             key_value.value->GetInt(1), key_value.value->GetInt(2),

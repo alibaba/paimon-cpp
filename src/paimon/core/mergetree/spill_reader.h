@@ -49,7 +49,7 @@ class SpillReader : public KeyValueRecordReader {
     class Iterator : public KeyValueRecordReader::Iterator {
      public:
         explicit Iterator(SpillReader* reader);
-        bool HasNext() const override;
+        Result<bool> HasNext() const override;
         Result<KeyValue> Next() override;
 
      private:
