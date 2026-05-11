@@ -55,7 +55,7 @@ class KeyValueInMemoryRecordReader : public KeyValueRecordReader {
     class Iterator : public KeyValueRecordReader::Iterator {
      public:
         explicit Iterator(KeyValueInMemoryRecordReader* reader) : reader_(reader) {}
-        bool HasNext() const override {
+        Result<bool> HasNext() const override {
             return cursor_ < reader_->value_struct_array_->length();
         }
         Result<KeyValue> Next() override;

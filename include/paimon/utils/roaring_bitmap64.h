@@ -74,6 +74,19 @@ class PAIMON_EXPORT RoaringBitmap64 {
     /// @param x value added to bitmap
     void Add(int64_t x);
 
+    /// Bulk-insert `n` values into the bitmap.
+    ///
+    /// Compared to repeatedly calling `Add`, this implementation:
+    ///   1. Buckets the input values by their high-32 bits in a single pass.
+    ///   2. Feeds each bucket to the inner 32-bit Roaring's true-batch
+    ///      `addMany(uint32_t*)` path, which performs container-level bulk
+    ///      insertion.
+    ///
+    /// This avoids the per-value `std::map` lookup of the 64-bit wrapper and
+    /// the per-value insertion overhead inside the 32-bit array container.
+    /// Values may be unsorted; ordering is handled internally.
+    void AddMany(size_t n, const int64_t* values);
+
     /// @param x value added to bitmap
     /// @return false if contain x; true if not contain x
     bool CheckedAdd(int64_t x);

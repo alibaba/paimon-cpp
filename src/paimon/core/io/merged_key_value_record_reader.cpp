@@ -17,6 +17,7 @@
 #include "paimon/core/io/merged_key_value_record_reader.h"
 
 #include <cassert>
+#include <memory>
 #include <optional>
 #include <utility>
 
@@ -36,51 +37,73 @@ MergedKeyValueRecordReader::MergedKeyValueRecordReader(
     assert(merge_function_wrapper_ != nullptr);
 }
 
-Result<std::unique_ptr<MergedKeyValueRecordReader::Iterator>>
-MergedKeyValueRecordReader::Iterator::Create(MergedKeyValueRecordReader* reader) {
-    std::unique_ptr<Iterator> iterator(new Iterator(reader));
-    PAIMON_RETURN_NOT_OK(iterator->LoadNextKeyValue());
-    return iterator;
+Result<bool> MergedKeyValueRecordReader::Iterator::HasNext() const {
+    if (merged_key_value_.has_value()) {
+        return true;
+    }
+    return PrepareNextMergedKeyValue();
 }
 
 Result<KeyValue> MergedKeyValueRecordReader::Iterator::Next() {
-    assert(next_key_value_.has_value());
-    reader_->merge_function_wrapper_->Reset();
-    auto current_key = next_key_value_->key;
-    PAIMON_RETURN_NOT_OK(reader_->merge_function_wrapper_->Add(std::move(*next_key_value_)));
-    next_key_value_.reset();
-
-    while (true) {
-        PAIMON_RETURN_NOT_OK(LoadNextKeyValue());
-        if (!next_key_value_.has_value()) {
-            break;
-        }
-        if (reader_->key_comparator_->CompareTo(*current_key, *next_key_value_->key) != 0) {
-            break;
-        }
-        PAIMON_RETURN_NOT_OK(reader_->merge_function_wrapper_->Add(std::move(*next_key_value_)));
-        next_key_value_.reset();
+    if (!merged_key_value_.has_value()) {
+        return Status::Invalid("No more merged key values in current iterator");
     }
+
+    KeyValue result = std::move(*merged_key_value_);
+    merged_key_value_.reset();
+    return result;
+}
+
+Result<bool> MergedKeyValueRecordReader::Iterator::PrepareNextMergedKeyValue() const {
+    while (true) {
+        PAIMON_ASSIGN_OR_RAISE(bool has_next, MergeNextKey());
+        if (!has_next) {
+            return false;
+        }
+        // if merged_key_value_ is empty(maybe all filtered out), continue to fetch next key and
+        // merge until we get a non-empty merged result or no more keys
+        if (merged_key_value_.has_value()) {
+            return true;
+        }
+    }
+}
+
+Result<bool> MergedKeyValueRecordReader::Iterator::MergeNextKey() const {
+    PAIMON_RETURN_NOT_OK(LoadNextRawKeyValue());
+    if (!next_raw_key_value_.has_value()) {
+        return false;
+    }
+
+    reader_->merge_function_wrapper_->Reset();
+    auto current_key = next_raw_key_value_->key;
+
+    do {
+        PAIMON_RETURN_NOT_OK(
+            reader_->merge_function_wrapper_->Add(std::move(*next_raw_key_value_)));
+        next_raw_key_value_.reset();
+        PAIMON_RETURN_NOT_OK(LoadNextRawKeyValue());
+    } while (next_raw_key_value_.has_value() &&
+             reader_->key_comparator_->CompareTo(*current_key, *next_raw_key_value_->key) == 0);
 
     PAIMON_ASSIGN_OR_RAISE(std::optional<KeyValue> result,
                            reader_->merge_function_wrapper_->GetResult());
-    // TODO(jinli.zjw): support merge function producing no result (e.g. all rows are filtered out)
-    if (result == std::nullopt) {
-        return Status::Invalid("merged key value reader produced empty result");
-    }
-    return std::move(result).value();
+    merged_key_value_ = std::move(result);
+    return true;
 }
 
-Status MergedKeyValueRecordReader::Iterator::LoadNextKeyValue() {
-    if (next_key_value_.has_value()) {
+Status MergedKeyValueRecordReader::Iterator::LoadNextRawKeyValue() const {
+    if (next_raw_key_value_.has_value()) {
         return Status::OK();
     }
 
     while (true) {
-        if (current_iterator_ != nullptr && current_iterator_->HasNext()) {
-            PAIMON_ASSIGN_OR_RAISE(KeyValue key_value, current_iterator_->Next());
-            next_key_value_.emplace(std::move(key_value));
-            return Status::OK();
+        if (current_iterator_ != nullptr) {
+            PAIMON_ASSIGN_OR_RAISE(bool has_next, current_iterator_->HasNext());
+            if (has_next) {
+                PAIMON_ASSIGN_OR_RAISE(KeyValue key_value, current_iterator_->Next());
+                next_raw_key_value_.emplace(std::move(key_value));
+                return Status::OK();
+            }
         }
 
         current_iterator_.reset();
@@ -97,8 +120,9 @@ Result<std::unique_ptr<KeyValueRecordReader::Iterator>> MergedKeyValueRecordRead
     }
     visited_ = true;
 
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<Iterator> iterator, Iterator::Create(this));
-    if (!iterator->HasNext()) {
+    auto iterator = std::make_unique<Iterator>(this);
+    PAIMON_ASSIGN_OR_RAISE(bool has_next, iterator->HasNext());
+    if (!has_next) {
         return std::unique_ptr<KeyValueRecordReader::Iterator>();
     }
     return iterator;

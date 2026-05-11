@@ -41,6 +41,16 @@ struct BtreeDefs {
     static inline const char kBtreeIndexHighPriorityPoolRatio[] =
         "btree-index.high-priority-pool-ratio";
 
+    /// "btree-index.read-buffer-size" - Optional. Specifies the read buffer size for the B-tree
+    /// index. This setting can be tuned based on query patterns:
+    ///   - For range queries (e.g., `VisitLessThan`, `VisitGreaterOrEqual`), increasing the buffer
+    ///   size (e.g., to 1MB) may improve I/O bandwidth and sequential read performance.
+    ///   - For point queries (e.g., `VisitEqual`), buffering can introduce negative effects due to
+    ///   read amplification; it is recommended to leave this option unset.
+    ///
+    /// If specified, read block with `BufferedInputStream`.
+    static inline const char kBtreeIndexReadBufferSize[] = "btree-index.read-buffer-size";
+
     static inline const char kDefaultBtreeIndexBlockSize[] = "64KB";
     static inline const char kDefaultBtreeIndexCompression[] = "none";
     static inline const char kDefaultBtreeIndexCacheSize[] = "128MB";

@@ -71,15 +71,15 @@ class SortMergeReaderTest : public testing::Test {
                      const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
                      const std::shared_ptr<arrow::Schema>& key_schema,
                      const std::shared_ptr<arrow::Schema>& value_schema,
-                     const std::vector<KeyValue>& expected) const {
+                     const std::vector<KeyValue>& expected, bool ignore_delete = false) const {
         CheckSortMergeResult<SortMergeReaderWithLoserTree>(src_array_vec, user_key_comparator,
                                                            user_defined_seq_comparator, key_schema,
                                                            value_schema, expected,
-                                                           /*need_merge=*/true);
+                                                           /*need_merge=*/true, ignore_delete);
         CheckSortMergeResult<SortMergeReaderWithMinHeap>(src_array_vec, user_key_comparator,
                                                          user_defined_seq_comparator, key_schema,
                                                          value_schema, expected,
-                                                         /*need_merge=*/true);
+                                                         /*need_merge=*/true, ignore_delete);
     }
 
  private:
@@ -89,9 +89,9 @@ class SortMergeReaderTest : public testing::Test {
         const std::shared_ptr<FieldsComparator>& user_key_comparator,
         const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
         const std::shared_ptr<arrow::Schema>& key_schema,
-        const std::shared_ptr<arrow::Schema>& value_schema, int32_t batch_size,
-        bool need_merge) const {
-        auto mfunc = std::make_unique<DeduplicateMergeFunction>(/*ignore_delete=*/false);
+        const std::shared_ptr<arrow::Schema>& value_schema, int32_t batch_size, bool need_merge,
+        bool ignore_delete) const {
+        auto mfunc = std::make_unique<DeduplicateMergeFunction>(ignore_delete);
         auto merge_function_wrapper =
             std::make_shared<ReducerMergeFunctionWrapper>(std::move(mfunc));
         if (!need_merge) {
@@ -124,11 +124,12 @@ class SortMergeReaderTest : public testing::Test {
                               const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
                               const std::shared_ptr<arrow::Schema>& key_schema,
                               const std::shared_ptr<arrow::Schema>& value_schema,
-                              const std::vector<KeyValue>& expected, bool need_merge) const {
+                              const std::vector<KeyValue>& expected, bool need_merge,
+                              bool ignore_delete = false) const {
         for (auto batch_size : {1, 2, 3, 4, 100}) {
             auto sort_merge_reader = CreateSortMergeReader<SortMergeReaderType>(
                 src_array_vec, user_key_comparator, user_defined_seq_comparator, key_schema,
-                value_schema, batch_size, need_merge);
+                value_schema, batch_size, need_merge, ignore_delete);
             ASSERT_OK_AND_ASSIGN(
                 std::vector<KeyValue> results,
                 (ReadResultCollector::CollectKeyValueResult<
@@ -415,6 +416,54 @@ TEST_F(SortMergeReaderTest, TestSortMergeIn3Ways) {
 
     CheckResult({src_array1, src_array2, src_array3}, user_key_comparator,
                 /*user_defined_seq_comparator=*/nullptr, key_schema, value_schema, expected);
+}
+
+TEST_F(SortMergeReaderTest, TestSortMergeWithDeleteMessages) {
+    arrow::FieldVector fields = {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+                                 arrow::field("_VALUE_KIND", arrow::int8()),
+                                 arrow::field("k0", arrow::int32()),
+                                 arrow::field("v0", arrow::int32())};
+    auto data_fields = CreateDataField(fields);
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
+    std::shared_ptr<arrow::Schema> value_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
+
+    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [0, 3, 1, 10],
+        [2, 3, 2, 200],
+        [1, 0, 3, 300]
+    ])")
+            .ValueOrDie());
+
+    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [3, 3, 1, 11],
+        [4, 3, 2, 240],
+        [5, 3, 3, 30]
+    ])")
+            .ValueOrDie());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
+                         FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
+                                                  /*is_ascending_order=*/true));
+
+    std::vector<RowKind*> delete_row_kinds = {const_cast<RowKind*>(RowKind::Delete()),
+                                              const_cast<RowKind*>(RowKind::Delete()),
+                                              const_cast<RowKind*>(RowKind::Delete())};
+    std::vector<KeyValue> expected_delete = KeyValueChecker::GenerateKeyValues(
+        delete_row_kinds, /*seq_vec=*/{3, 4, 5}, /*level_vec=*/{0, 0, 0},
+        /*key_vec=*/{{1}, {2}, {3}}, /*value_vec=*/{{1, 11}, {2, 240}, {3, 30}}, pool_);
+    CheckResult({src_array1, src_array2}, user_key_comparator,
+                /*user_defined_seq_comparator=*/nullptr, key_schema, value_schema, expected_delete,
+                /*ignore_delete=*/false);
+
+    std::vector<KeyValue> expected_ignore_delete = KeyValueChecker::GenerateKeyValues(
+        /*seq_vec=*/{1}, /*key_vec=*/{{3}}, /*value_vec=*/{{3, 300}}, pool_);
+    CheckResult({src_array1, src_array2}, user_key_comparator,
+                /*user_defined_seq_comparator=*/nullptr, key_schema, value_schema,
+                expected_ignore_delete, /*ignore_delete=*/true);
 }
 
 TEST_F(SortMergeReaderTest, TestSortMergeIn2WaysWithEmptyArray) {

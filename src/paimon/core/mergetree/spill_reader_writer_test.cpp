@@ -154,7 +154,11 @@ TEST_P(SpillReaderWriterTest, TestWriteBatch) {
                 break;
             }
             batch_count++;
-            while (iter->HasNext()) {
+            while (true) {
+                ASSERT_OK_AND_ASSIGN(bool has_next, iter->HasNext());
+                if (!has_next) {
+                    break;
+                }
                 ASSERT_OK_AND_ASSIGN(auto kv, iter->Next());
                 ASSERT_EQ(kv.key->GetStringView(0), expected_keys[total_rows]);
                 total_rows++;
@@ -177,7 +181,11 @@ TEST_P(SpillReaderWriterTest, TestWriteBatch) {
                 break;
             }
             batch_count++;
-            while (iter->HasNext()) {
+            while (true) {
+                ASSERT_OK_AND_ASSIGN(bool has_next, iter->HasNext());
+                if (!has_next) {
+                    break;
+                }
                 ASSERT_OK_AND_ASSIGN(auto kv, iter->Next());
                 ASSERT_EQ(kv.key->GetStringView(0), expected_keys[total_rows]);
                 total_rows++;
@@ -209,7 +217,11 @@ TEST_P(SpillReaderWriterTest, TestReadBatch) {
             ASSERT_OK_AND_ASSIGN(auto iter, reader->NextBatch());
             if (iter == nullptr) break;
             batch_count++;
-            while (iter->HasNext()) {
+            while (true) {
+                ASSERT_OK_AND_ASSIGN(bool has_next, iter->HasNext());
+                if (!has_next) {
+                    break;
+                }
                 ASSERT_OK_AND_ASSIGN(auto kv, iter->Next());
                 ASSERT_EQ(kv.key->GetStringView(0), expected_keys[total_rows]);
                 ASSERT_EQ(kv.value->GetStringView(0), expected_keys[total_rows]);
@@ -236,7 +248,8 @@ TEST_P(SpillReaderWriterTest, TestReadBatch) {
 
         ASSERT_OK_AND_ASSIGN(auto iter, reader->NextBatch());
         if (iter != nullptr) {
-            ASSERT_FALSE(iter->HasNext());
+            ASSERT_OK_AND_ASSIGN(bool has_next, iter->HasNext());
+            ASSERT_FALSE(has_next);
         }
         reader->Close();
     }

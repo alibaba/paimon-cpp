@@ -36,7 +36,7 @@ struct ArrowSchema;
 
 namespace paimon {
 /// Schema of a table, including schemaId and fieldId.
-class TableSchema : public Schema, public Jsonizable<TableSchema> {
+class TableSchema : public DataSchema, public Jsonizable<TableSchema> {
  public:
     static constexpr int64_t FIRST_SCHEMA_ID = 0;
     static constexpr int32_t PAIMON_07_VERSION = 1;

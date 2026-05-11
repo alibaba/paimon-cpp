@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,29 +14,20 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "paimon/core/table/system/system_table_scan.h"
 
 #include <memory>
+#include <vector>
 
-#include "paimon/core/key_value.h"
-#include "paimon/metrics.h"
-#include "paimon/result.h"
+#include "paimon/core/table/source/plan_impl.h"
+
 namespace paimon {
-class KeyValueRecordReader {
- public:
-    virtual ~KeyValueRecordReader() = default;
 
-    class Iterator {
-     public:
-        virtual ~Iterator() = default;
-        virtual Result<bool> HasNext() const = 0;
-        virtual Result<KeyValue> Next() = 0;
-    };
+SystemTableScan::SystemTableScan(const std::string& table_path) : table_path_(table_path) {}
 
-    virtual Result<std::unique_ptr<KeyValueRecordReader::Iterator>> NextBatch() = 0;
+Result<std::shared_ptr<Plan>> SystemTableScan::CreatePlan() {
+    std::vector<std::shared_ptr<Split>> splits = {std::make_shared<SystemTableSplit>(table_path_)};
+    return std::make_shared<PlanImpl>(std::nullopt, splits);
+}
 
-    virtual std::shared_ptr<Metrics> GetReaderMetrics() const = 0;
-
-    virtual void Close() = 0;
-};
 }  // namespace paimon

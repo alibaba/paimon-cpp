@@ -65,7 +65,7 @@ Status SpillReader::Open(const FileIOChannel::ID& channel_id) {
 
 SpillReader::Iterator::Iterator(SpillReader* reader) : reader_(reader) {}
 
-bool SpillReader::Iterator::HasNext() const {
+Result<bool> SpillReader::Iterator::HasNext() const {
     return cursor_ < reader_->batch_length_;
 }
 
