@@ -54,8 +54,8 @@ class AuditLogSystemTable : public SystemTable {
     Result<std::unique_ptr<TableRead>> NewChangelogRead(
         const std::shared_ptr<ReadContext>& context,
         std::shared_ptr<const ChangelogBatchConverter> converter) const;
-    std::shared_ptr<arrow::Schema> BaseReadSchema() const;
-    std::map<std::string, std::string> ReadOptions() const;
+    Result<std::shared_ptr<arrow::Schema>> BaseReadSchema() const;
+    Result<std::map<std::string, std::string>> ReadOptions() const;
 
     std::shared_ptr<FileSystem> fs_;
     std::string table_path_;

@@ -319,6 +319,8 @@ Status MergeFileSplitRead::GenerateKeyValueReadSchema(
     PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> need_fields,
                            DataField::ConvertArrowSchemaToDataFields(raw_read_schema));
     if (options.KeyValueSequenceNumberEnabled()) {
+        // _SEQUENCE_NUMBER is carried by KeyValue metadata, not by KeyValue.value. Remove it before
+        // splitting key/value fields so the value projection can inject it from KeyValue directly.
         need_fields.erase(std::remove_if(need_fields.begin(), need_fields.end(),
                                          [](const DataField& field) {
                                              return field.Name() ==

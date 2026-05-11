@@ -374,11 +374,11 @@ struct PAIMON_EXPORT Options {
     /// "aggregation.remove-record-on-delete" - Whether to remove the whole row in aggregation
     /// engine when delete records are received. Default value is "false".
     static const char AGGREGATION_REMOVE_RECORD_ON_DELETE[];
-    /// "table-read.sequence-number.enabled" - Whether audit_log/binlog system tables expose the
-    /// sequence number column. Default value is "false".
+    /// "table-read.sequence-number.enabled" - Whether the system table read produces the sequence
+    /// number column. Default value is "false".
     static const char TABLE_READ_SEQUENCE_NUMBER_ENABLED[];
-    /// "key-value.sequence_number.enabled" - Internal option for key-value system table reads.
-    /// Default value is "false".
+    /// "key-value.sequence_number.enabled" - Whether the key-value table read produces the sequence
+    /// number column. Default value is "false".
     static const char KEY_VALUE_SEQUENCE_NUMBER_ENABLED[];
 
     /// "scan.timestamp-millis" - Optional timestamp used in case of "from-timestamp" scan mode.

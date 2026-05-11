@@ -25,6 +25,7 @@
 #include "paimon/core/key_value.h"
 #include "paimon/reader/batch_reader.h"
 #include "paimon/result.h"
+#include "paimon/utils/special_field_ids.h"
 
 namespace arrow {
 class MemoryPool;
@@ -40,7 +41,7 @@ struct KeyValue;
 class KeyValueProjectionConsumer
     : public RowToArrowArrayConverter<KeyValue, BatchReader::ReadBatch> {
  public:
-    static constexpr int32_t kSequenceNumberProjection = -1;
+    static const int32_t kSequenceNumberProjection;
 
     static Result<std::unique_ptr<KeyValueProjectionConsumer>> Create(
         const std::shared_ptr<arrow::Schema>& target_schema,

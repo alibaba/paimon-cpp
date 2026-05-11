@@ -59,13 +59,13 @@ class SystemTableLoader {
     static Result<std::shared_ptr<SystemTable>> Load(
         const std::string& system_table_name, const std::shared_ptr<FileSystem>& fs,
         const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
-        const std::map<std::string, std::string>& dynamic_options = {});
+        const std::map<std::string, std::string>& dynamic_options);
 
     static Result<std::optional<SystemTablePath>> TryParsePath(const std::string& path);
 
     static Result<std::shared_ptr<SystemTable>> LoadFromPath(
         const std::shared_ptr<FileSystem>& fs, const std::string& path,
-        const std::map<std::string, std::string>& dynamic_options = {});
+        const std::map<std::string, std::string>& dynamic_options);
 };
 
 }  // namespace paimon
