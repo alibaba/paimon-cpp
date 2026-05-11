@@ -31,20 +31,36 @@
 #include <fstream>
 #include <string>
 
+#if defined(__APPLE__)
+#include <uuid/uuid.h>
+
+#include <array>
+#endif
+
 namespace paimon {
 
 class UUID {
  public:
     static bool Generate(std::string* output) {
+#if defined(__APPLE__)
         output->clear();
-        std::ifstream f("/proc/sys/kernel/random/uuid");
-        std::getline(f, /*&*/ *output);
+        std::array<char, 37> buffer{};
+        uuid_t uuid;
+        uuid_generate_random(uuid);
+        uuid_unparse_lower(uuid, buffer.data());
+        *output = buffer.data();
         if (output->size() == 36) {
             return true;
-        } else {
-            output->clear();
-            return false;
         }
+#else
+        output->clear();
+        std::ifstream f("/proc/sys/kernel/random/uuid");
+        if (std::getline(f, /*&*/ *output) && output->size() == 36) {
+            return true;
+        }
+#endif
+        output->clear();
+        return false;
     }
 };
 
