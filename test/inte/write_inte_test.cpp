@@ -248,6 +248,39 @@ class WriteInteTest : public testing::Test, public ::testing::WithParamInterface
         }
     }
 
+    Status CommitMessages(const std::string& table_path,
+                          const std::vector<std::shared_ptr<CommitMessage>>& commit_messages,
+                          const std::map<std::string, std::string>& commit_options,
+                          bool ignore_empty_commit = true,
+                          int64_t commit_identifier = BATCH_WRITE_COMMIT_IDENTIFIER) const {
+        CommitContextBuilder commit_builder(table_path, "commit_user_1");
+        commit_builder.SetOptions(commit_options);
+        commit_builder.IgnoreEmptyCommit(ignore_empty_commit);
+        PAIMON_ASSIGN_OR_RAISE(auto commit_context, commit_builder.Finish());
+        PAIMON_ASSIGN_OR_RAISE(auto file_store_commit,
+                               FileStoreCommit::Create(std::move(commit_context)));
+        return file_store_commit->Commit(commit_messages, commit_identifier);
+    }
+
+    Status ScanAndVerifyResult(const std::string& table_path, const arrow::FieldVector& fields,
+                               const std::string& expected) const {
+        std::map<std::string, std::string> scan_options = {{Options::FILE_SYSTEM, "local"}};
+        PAIMON_ASSIGN_OR_RAISE(
+            auto helper, TestHelper::Create(table_path, scan_options, /*is_streaming_mode=*/false));
+        PAIMON_ASSIGN_OR_RAISE(auto data_splits, helper->NewScan(StartupMode::LatestFull(),
+                                                                 /*snapshot_id=*/std::nullopt));
+        arrow::FieldVector fields_with_row_kind = fields;
+        fields_with_row_kind.insert(fields_with_row_kind.begin(),
+                                    arrow::field("_VALUE_KIND", arrow::int8()));
+        auto scan_data_type = arrow::struct_(fields_with_row_kind);
+        PAIMON_ASSIGN_OR_RAISE(bool success,
+                               helper->ReadAndCheckResult(scan_data_type, data_splits, expected));
+        if (!success) {
+            return Status::Invalid("scan result does not match expected data");
+        }
+        return Status::OK();
+    }
+
  private:
     std::shared_ptr<FileSystem> file_system_;
     std::shared_ptr<MemoryPool> pool_;
@@ -2413,16 +2446,11 @@ TEST_P(WriteInteTest, TestWriteWithFieldId) {
                          file_store_write->PrepareCommit());
     ASSERT_OK(file_store_write->Close());
 
-    // prepare CommitContext
-    CommitContextBuilder commit_context_builder(table_path, "commit_user_1");
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
-                         commit_context_builder.AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
-                             .AddOption(Options::FILE_SYSTEM, "local")
-                             .IgnoreEmptyCommit(false)
-                             .Finish());
     // commit
-    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
-    ASSERT_OK(commit->Commit(commit_messages));
+    std::map<std::string, std::string> commit_options = {
+        {Options::MANIFEST_TARGET_FILE_SIZE, "8mb"}, {Options::FILE_SYSTEM, "local"}};
+    ASSERT_OK(CommitMessages(table_path, commit_messages, commit_options,
+                             /*ignore_empty_commit=*/false));
 
     // check data file has field id meta
     std::vector<std::unique_ptr<BasicFileStatus>> status_list;
@@ -2504,14 +2532,10 @@ TEST_P(WriteInteTest, TestAppendTableWriteAndReadWithExternalPath) {
     ASSERT_EQ(results.size(), 1);
     auto commit_msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(results[0]);
     auto meta = commit_msg_impl->data_increment_.new_files_[0];
-    CommitContextBuilder commit_context_builder(root_path, "commit_user_1");
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
-                         commit_context_builder.AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
-                             .AddOption(Options::FILE_SYSTEM, "local")
-                             .IgnoreEmptyCommit(false)
-                             .Finish());
-    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
-    ASSERT_OK(commit->Commit(results, 1));
+    std::map<std::string, std::string> commit_options = {
+        {Options::MANIFEST_TARGET_FILE_SIZE, "8mb"}, {Options::FILE_SYSTEM, "local"}};
+    ASSERT_OK(CommitMessages(root_path, results, commit_options,
+                             /*ignore_empty_commit=*/false, /*commit_identifier=*/1));
 
     // check external path
     ASSERT_OK_AND_ASSIGN(bool file_exist, file_system_->Exists(meta->external_path.value()));
@@ -2829,14 +2853,10 @@ TEST_P(WriteInteTest, TestWriteAndReadWithSpecialPartitionValue) {
     ASSERT_EQ(results.size(), 3);
     auto commit_msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(results[0]);
     auto meta = commit_msg_impl->data_increment_.new_files_[0];
-    CommitContextBuilder commit_context_builder(root_path, "commit_user_1");
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
-                         commit_context_builder.AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
-                             .AddOption(Options::FILE_SYSTEM, "local")
-                             .IgnoreEmptyCommit(false)
-                             .Finish());
-    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
-    ASSERT_OK(commit->Commit(results, 1));
+    std::map<std::string, std::string> commit_options = {
+        {Options::MANIFEST_TARGET_FILE_SIZE, "8mb"}, {Options::FILE_SYSTEM, "local"}};
+    ASSERT_OK(CommitMessages(root_path, results, commit_options,
+                             /*ignore_empty_commit=*/false, /*commit_identifier=*/1));
 
     arrow::FieldVector fields_with_row_kind = fields;
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
@@ -3018,14 +3038,10 @@ TEST_P(WriteInteTest, TestWriteWithNestedSchema) {
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> results,
                          file_store_write->PrepareCommit());
     ASSERT_EQ(results.size(), 1);
-    CommitContextBuilder commit_context_builder(root_path, "commit_user_1");
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
-                         commit_context_builder.AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
-                             .AddOption(Options::FILE_SYSTEM, "local")
-                             .IgnoreEmptyCommit(false)
-                             .Finish());
-    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
-    ASSERT_OK(commit->Commit(results, 1));
+    std::map<std::string, std::string> commit_options = {
+        {Options::MANIFEST_TARGET_FILE_SIZE, "8mb"}, {Options::FILE_SYSTEM, "local"}};
+    ASSERT_OK(CommitMessages(root_path, results, commit_options,
+                             /*ignore_empty_commit=*/false, /*commit_identifier=*/1));
 
     // check read result
     ScanContextBuilder scan_context_builder(table_path);
@@ -3935,6 +3951,591 @@ TEST_P(WriteInteTest, TestNullabilityCheck) {
     ASSERT_OK_AND_ASSIGN(auto commit_msgs,
                          helper->WriteAndCommit(std::move(batch), commit_identifier++,
                                                 /*expected_commit_messages=*/std::nullopt));
+}
+
+TEST_P(WriteInteTest, TestPkSpillableDiskQuotaExhaustedFallsBackToFlush) {
+    auto dir = UniqueTestDirectory::Create();
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()),
+        arrow::field("pt", arrow::int32()),
+        arrow::field("f1", arrow::int32()),
+        arrow::field("f2", arrow::float64()),
+    };
+    auto data_type = arrow::struct_(fields);
+    auto file_format = GetParam();
+    std::map<std::string, std::string> options = {
+        {Options::FILE_FORMAT, file_format},
+        {Options::BUCKET, "1"},
+        {Options::FILE_SYSTEM, "local"},
+        {Options::WRITE_BUFFER_SIZE, "1"},
+        {Options::WRITE_BUFFER_SPILLABLE, "true"},
+        {Options::WRITE_BUFFER_SPILL_MAX_DISK_SIZE, "1b"},
+        {Options::WRITE_ONLY, "true"},
+    };
+    auto schema = arrow::schema(fields);
+    ::ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTestTable(dir->Str(), "db", "tbl", &c_schema,
+                                                          /*partition_keys=*/{"pt"},
+                                                          /*primary_keys=*/{"pt", "f0"}, options));
+
+    std::string tmp_dir = PathUtil::JoinPath(dir->Str(), "tmp");
+    WriteContextBuilder write_builder(table_path, "commit_user_1");
+    write_builder.WithStreamingMode(true).WithTempDirectory(tmp_dir);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context, write_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
+
+    auto write_array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
+        ["Alice", 10, 1, 1.0],
+        ["Bob", 10, 2, 2.0]
+    ])")
+                           .ValueOrDie();
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*write_array, &c_array).ok());
+    auto record_batch =
+        std::make_unique<RecordBatch>(std::map<std::string, std::string>{{"pt", "10"}},
+                                      /*bucket=*/0, std::vector<RecordBatch::RowKind>{}, &c_array);
+    ASSERT_OK(file_store_write->Write(std::move(record_batch)));
+    // Disk quota exhausted on spill, so the write falls back to FlushWriteBuffer — no spill files.
+    ASSERT_EQ(0, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+
+    ASSERT_OK_AND_ASSIGN(auto commit_messages,
+                         file_store_write->PrepareCommit(/*wait_compaction=*/false,
+                                                         /*commit_identifier=*/0));
+
+    std::map<std::string, std::string> pk_commit_options = {
+        {"enable-pk-commit-in-inte-test", ""}, {"enable-object-store-commit-in-inte-test", ""}};
+    ASSERT_OK(CommitMessages(table_path, commit_messages, pk_commit_options));
+    ASSERT_OK(file_store_write->Close());
+
+    std::string expected = R"([
+        [0, "Alice", 10, 1, 1.0],
+        [0, "Bob", 10, 2, 2.0]
+    ])";
+    ASSERT_OK(ScanAndVerifyResult(table_path, fields, expected));
+}
+
+TEST_P(WriteInteTest, TestPkSpillableGlobalMemoryPreemptionDataCorrectness) {
+    auto dir = UniqueTestDirectory::Create();
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()),
+        arrow::field("pt", arrow::int32()),
+        arrow::field("f1", arrow::int32()),
+    };
+    auto data_type = arrow::struct_(fields);
+    auto file_format = GetParam();
+    std::map<std::string, std::string> options = {
+        {Options::FILE_FORMAT, file_format},       {Options::BUCKET, "1"},
+        {Options::FILE_SYSTEM, "local"},           {Options::WRITE_BUFFER_SIZE, "95"},
+        {Options::WRITE_BUFFER_SPILLABLE, "true"}, {Options::WRITE_ONLY, "true"},
+    };
+    auto schema = arrow::schema(fields);
+    ::ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTestTable(dir->Str(), "db", "tbl", &c_schema,
+                                                          /*partition_keys=*/{"pt"},
+                                                          /*primary_keys=*/{"pt", "f0"}, options));
+
+    std::string tmp_dir = PathUtil::JoinPath(dir->Str(), "tmp");
+    WriteContextBuilder write_builder(table_path, "commit_user_1");
+    write_builder.WithStreamingMode(true).WithTempDirectory(tmp_dir);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context, write_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
+
+    // Write long strings to different partitions to trigger global memory preemption.
+    std::string long_str_a(48, 'a');
+    std::string long_str_b(48, 'b');
+    auto batch1 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, "[[\"" + long_str_a + "\", 10, 1]]")
+            .ValueOrDie();
+    auto batch2 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, "[[\"" + long_str_b + "\", 20, 2]]")
+            .ValueOrDie();
+
+    ArrowArray c_array1;
+    ASSERT_TRUE(arrow::ExportArray(*batch1, &c_array1).ok());
+    auto record_batch1 =
+        std::make_unique<RecordBatch>(std::map<std::string, std::string>{{"pt", "10"}},
+                                      /*bucket=*/0, std::vector<RecordBatch::RowKind>{}, &c_array1);
+    ASSERT_OK(file_store_write->Write(std::move(record_batch1)));
+    ASSERT_EQ(0, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+
+    ArrowArray c_array2;
+    ASSERT_TRUE(arrow::ExportArray(*batch2, &c_array2).ok());
+    auto record_batch2 =
+        std::make_unique<RecordBatch>(std::map<std::string, std::string>{{"pt", "20"}},
+                                      /*bucket=*/0, std::vector<RecordBatch::RowKind>{}, &c_array2);
+    // Trigger MemoryPreempt
+    ASSERT_OK(file_store_write->Write(std::move(record_batch2)));
+    ASSERT_EQ(1, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+
+    ASSERT_OK_AND_ASSIGN(auto commit_messages,
+                         file_store_write->PrepareCommit(/*wait_compaction=*/false,
+                                                         /*commit_identifier=*/0));
+
+    ASSERT_EQ(0, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+
+    std::map<std::string, std::string> pk_commit_options = {
+        {"enable-pk-commit-in-inte-test", ""}, {"enable-object-store-commit-in-inte-test", ""}};
+    ASSERT_OK(CommitMessages(table_path, commit_messages, pk_commit_options));
+    ASSERT_OK(file_store_write->Close());
+
+    // Scan and verify both partitions
+    std::map<std::string, std::string> scan_options = {{Options::FILE_SYSTEM, "local"}};
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(table_path, scan_options, /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+
+    arrow::FieldVector fields_with_row_kind = fields;
+    fields_with_row_kind.insert(fields_with_row_kind.begin(),
+                                arrow::field("_VALUE_KIND", arrow::int8()));
+    auto scan_data_type = arrow::struct_(fields_with_row_kind);
+
+    // Group splits by partition and verify each one
+    std::map<std::string, std::vector<std::shared_ptr<Split>>> splits_by_partition;
+    for (const auto& split : data_splits) {
+        auto split_impl = dynamic_cast<DataSplitImpl*>(split.get());
+        ASSERT_OK_AND_ASSIGN(std::string partition_str,
+                             helper->PartitionStr(split_impl->Partition()));
+        splits_by_partition[partition_str].push_back(split);
+    }
+    ASSERT_EQ(2u, splits_by_partition.size());
+
+    std::string expected_pt10 = "[[0, \"" + long_str_a + "\", 10, 1]]";
+    ASSERT_OK_AND_ASSIGN(
+        bool success_pt10,
+        helper->ReadAndCheckResult(scan_data_type, splits_by_partition["pt=10/"], expected_pt10));
+    ASSERT_TRUE(success_pt10);
+
+    std::string expected_pt20 = "[[0, \"" + long_str_b + "\", 20, 2]]";
+    ASSERT_OK_AND_ASSIGN(
+        bool success_pt20,
+        helper->ReadAndCheckResult(scan_data_type, splits_by_partition["pt=20/"], expected_pt20));
+    ASSERT_TRUE(success_pt20);
+}
+
+TEST_P(WriteInteTest, TestPkSpillableTempFilesCleanedAfterPrepareCommit) {
+    auto dir = UniqueTestDirectory::Create();
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()),
+        arrow::field("pt", arrow::int32()),
+        arrow::field("f1", arrow::int32()),
+    };
+    auto data_type = arrow::struct_(fields);
+    auto file_format = GetParam();
+    std::map<std::string, std::string> options = {
+        {Options::FILE_FORMAT, file_format},       {Options::BUCKET, "1"},
+        {Options::FILE_SYSTEM, "local"},           {Options::WRITE_BUFFER_SIZE, "1"},
+        {Options::WRITE_BUFFER_SPILLABLE, "true"}, {Options::WRITE_ONLY, "true"},
+    };
+    auto schema = arrow::schema(fields);
+    ::ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTestTable(dir->Str(), "db", "tbl", &c_schema,
+                                                          /*partition_keys=*/{"pt"},
+                                                          /*primary_keys=*/{"pt", "f0"}, options));
+
+    std::string tmp_dir = PathUtil::JoinPath(dir->Str(), "tmp");
+    WriteContextBuilder write_builder(table_path, "commit_user_1");
+    write_builder.WithStreamingMode(true).WithTempDirectory(tmp_dir);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context, write_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
+
+    auto batch1 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Alice", 10, 1]])").ValueOrDie();
+    auto batch2 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Bob", 10, 2]])").ValueOrDie();
+
+    ArrowArray c_array1;
+    ASSERT_TRUE(arrow::ExportArray(*batch1, &c_array1).ok());
+    auto record_batch1 =
+        std::make_unique<RecordBatch>(std::map<std::string, std::string>{{"pt", "10"}},
+                                      /*bucket=*/0, std::vector<RecordBatch::RowKind>{}, &c_array1);
+    ASSERT_OK(file_store_write->Write(std::move(record_batch1)));
+
+    ArrowArray c_array2;
+    ASSERT_TRUE(arrow::ExportArray(*batch2, &c_array2).ok());
+    auto record_batch2 =
+        std::make_unique<RecordBatch>(std::map<std::string, std::string>{{"pt", "10"}},
+                                      /*bucket=*/0, std::vector<RecordBatch::RowKind>{}, &c_array2);
+    ASSERT_OK(file_store_write->Write(std::move(record_batch2)));
+
+    // After PrepareCommit, all spill temp files should be cleaned up
+    ASSERT_OK_AND_ASSIGN(auto commit_messages,
+                         file_store_write->PrepareCommit(/*wait_compaction=*/false,
+                                                         /*commit_identifier=*/0));
+
+    // Verify temp files are cleaned
+    ASSERT_EQ(0, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+
+    ASSERT_OK(file_store_write->Close());
+}
+
+TEST_P(WriteInteTest, TestPkSpillableIntermediateMergeWithTempFileTracking) {
+    auto dir = UniqueTestDirectory::Create();
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()),
+        arrow::field("pt", arrow::int32()),
+        arrow::field("f1", arrow::int32()),
+    };
+    auto data_type = arrow::struct_(fields);
+    auto file_format = GetParam();
+    // WRITE_BUFFER_SIZE=1: every write triggers spill.
+    // LOCAL_SORT_MAX_NUM_FILE_HANDLES=2: intermediate merge after every 2 spill files.
+    std::map<std::string, std::string> options = {
+        {Options::FILE_FORMAT, file_format},
+        {Options::BUCKET, "1"},
+        {Options::FILE_SYSTEM, "local"},
+        {Options::WRITE_BUFFER_SIZE, "1"},
+        {Options::WRITE_BUFFER_SPILLABLE, "true"},
+        {Options::LOCAL_SORT_MAX_NUM_FILE_HANDLES, "2"},
+        {Options::WRITE_ONLY, "true"},
+    };
+    auto schema = arrow::schema(fields);
+    ::ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTestTable(dir->Str(), "db", "tbl", &c_schema,
+                                                          /*partition_keys=*/{"pt"},
+                                                          /*primary_keys=*/{"pt", "f0"}, options));
+
+    std::string tmp_dir = PathUtil::JoinPath(dir->Str(), "tmp");
+
+    WriteContextBuilder write_builder(table_path, "commit_user_1");
+    write_builder.WithStreamingMode(true).WithTempDirectory(tmp_dir);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context, write_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
+
+    auto write_array_fn = [](FileStoreWrite* writer,
+                             const std::map<std::string, std::string>& partition, int32_t bucket,
+                             const std::shared_ptr<arrow::Array>& array) -> Status {
+        ArrowArray c_array;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &c_array));
+        auto batch = std::make_unique<RecordBatch>(partition, bucket,
+                                                   std::vector<RecordBatch::RowKind>{}, &c_array);
+        return writer->Write(std::move(batch));
+    };
+
+    auto batch1 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Alice", 10, 1]])").ValueOrDie();
+    auto batch2 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Bob", 10, 2]])").ValueOrDie();
+    auto batch3 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Alice", 10, 3]])").ValueOrDie();
+
+    // Each write triggers spill. With LOCAL_SORT_MAX_NUM_FILE_HANDLES=2, intermediate
+    // merge keeps the number of temp files bounded.
+    ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/0, batch1));
+    ASSERT_EQ(1, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+
+    ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/0, batch2));
+    ASSERT_EQ(1, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+
+    ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/0, batch3));
+    ASSERT_EQ(1, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+
+    // PrepareCommit should consume all spill files
+    ASSERT_OK_AND_ASSIGN(auto commit_messages,
+                         file_store_write->PrepareCommit(/*wait_compaction=*/false,
+                                                         /*commit_identifier=*/0));
+    ASSERT_EQ(0, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+
+    std::map<std::string, std::string> pk_commit_options = {
+        {"enable-pk-commit-in-inte-test", ""}, {"enable-object-store-commit-in-inte-test", ""}};
+    ASSERT_OK(CommitMessages(table_path, commit_messages, pk_commit_options));
+    ASSERT_OK(file_store_write->Close());
+
+    // Scan: Alice deduped to f1=3, Bob f1=2
+    std::string expected = R"([
+        [0, "Alice", 10, 3],
+        [0, "Bob", 10, 2]
+    ])";
+    ASSERT_OK(ScanAndVerifyResult(table_path, fields, expected));
+}
+
+TEST_P(WriteInteTest, TestPkSpillableMultiBucketMultiRoundDataCorrectness) {
+    auto dir = UniqueTestDirectory::Create();
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()),
+        arrow::field("pt", arrow::int32()),
+        arrow::field("f1", arrow::int32()),
+    };
+    auto data_type = arrow::struct_(fields);
+    auto file_format = GetParam();
+    // BUCKET=2: two buckets to verify cross-bucket spill isolation.
+    // WRITE_BUFFER_SIZE=1: every write triggers spill.
+    // LOCAL_SORT_MAX_NUM_FILE_HANDLES=2: trigger intermediate merge.
+    std::map<std::string, std::string> options = {
+        {Options::FILE_FORMAT, file_format},
+        {Options::BUCKET, "2"},
+        {Options::FILE_SYSTEM, "local"},
+        {Options::WRITE_BUFFER_SIZE, "1"},
+        {Options::WRITE_BUFFER_SPILLABLE, "true"},
+        {Options::LOCAL_SORT_MAX_NUM_FILE_HANDLES, "2"},
+        {Options::WRITE_ONLY, "true"},
+    };
+    auto schema = arrow::schema(fields);
+    ::ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTestTable(dir->Str(), "db", "tbl", &c_schema,
+                                                          /*partition_keys=*/{"pt"},
+                                                          /*primary_keys=*/{"pt", "f0"}, options));
+
+    std::string tmp_dir = PathUtil::JoinPath(dir->Str(), "tmp");
+
+    auto write_array_fn = [](FileStoreWrite* writer,
+                             const std::map<std::string, std::string>& partition, int32_t bucket,
+                             const std::shared_ptr<arrow::Array>& array) -> Status {
+        ArrowArray c_array;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &c_array));
+        auto batch = std::make_unique<RecordBatch>(partition, bucket,
+                                                   std::vector<RecordBatch::RowKind>{}, &c_array);
+        return writer->Write(std::move(batch));
+    };
+
+    WriteContextBuilder write_builder(table_path, "commit_user_1");
+    write_builder.WithStreamingMode(true).WithTempDirectory(tmp_dir);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context, write_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
+
+    // Round 1: Bucket 0 writes Alice(dup) + Bob, Bucket 1 writes Dave(dup) + Eve
+    auto r1_b0_batch1 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Alice", 10, 1]])").ValueOrDie();
+    auto r1_b0_batch2 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Bob", 10, 2]])").ValueOrDie();
+    auto r1_b0_batch3 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Alice", 10, 3]])").ValueOrDie();
+
+    ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/0, r1_b0_batch1));
+    ASSERT_EQ(1, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+    // Trigger spill merge
+    ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/0, r1_b0_batch2));
+    ASSERT_EQ(1, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+    // Trigger spill merge
+    ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/0, r1_b0_batch3));
+    ASSERT_EQ(1, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+
+    auto r1_b1_batch1 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Dave", 10, 10]])").ValueOrDie();
+    auto r1_b1_batch2 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Eve", 10, 20]])").ValueOrDie();
+    auto r1_b1_batch3 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Dave", 10, 30]])").ValueOrDie();
+
+    ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/1, r1_b1_batch1));
+    ASSERT_EQ(2, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+    // Trigger spill merge
+    ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/1, r1_b1_batch2));
+    ASSERT_EQ(2, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+    // Trigger spill merge
+    ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/1, r1_b1_batch3));
+    ASSERT_EQ(2, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+
+    ASSERT_OK_AND_ASSIGN(auto commit_messages_1,
+                         file_store_write->PrepareCommit(/*wait_compaction=*/false,
+                                                         /*commit_identifier=*/0));
+    // Spill files should be cleaned after PrepareCommit
+    ASSERT_EQ(0, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+    std::map<std::string, std::string> pk_commit_options = {
+        {"enable-pk-commit-in-inte-test", ""}, {"enable-object-store-commit-in-inte-test", ""}};
+    ASSERT_OK(CommitMessages(table_path, commit_messages_1, pk_commit_options));
+
+    // Round 2: Bucket 0 writes Charlie + Bob(overwrite), Bucket 1 writes Frank + Eve(overwrite)
+    auto r2_b0_batch1 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Charlie", 10, 4]])")
+            .ValueOrDie();
+    auto r2_b0_batch2 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Bob", 10, 5]])").ValueOrDie();
+
+    ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/0, r2_b0_batch1));
+    ASSERT_EQ(1, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+    // Trigger spill merge
+    ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/0, r2_b0_batch2));
+    ASSERT_EQ(1, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+
+    auto r2_b1_batch1 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Frank", 10, 40]])").ValueOrDie();
+    auto r2_b1_batch2 =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Eve", 10, 50]])").ValueOrDie();
+
+    ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/1, r2_b1_batch1));
+    ASSERT_EQ(2, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+    // Trigger spill merge
+    ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/1, r2_b1_batch2));
+    ASSERT_EQ(2, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+
+    ASSERT_OK_AND_ASSIGN(auto commit_messages_2,
+                         file_store_write->PrepareCommit(/*wait_compaction=*/false,
+                                                         /*commit_identifier=*/1));
+    // Spill files should be cleaned after PrepareCommit
+    ASSERT_EQ(0, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+    ASSERT_OK(CommitMessages(table_path, commit_messages_2, pk_commit_options));
+    ASSERT_OK(file_store_write->Close());
+
+    // Scan and verify per (partition, bucket)
+    std::map<std::string, std::string> scan_options = {{Options::FILE_SYSTEM, "local"}};
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(table_path, scan_options, /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+
+    arrow::FieldVector fields_with_row_kind = fields;
+    fields_with_row_kind.insert(fields_with_row_kind.begin(),
+                                arrow::field("_VALUE_KIND", arrow::int8()));
+    auto scan_data_type = arrow::struct_(fields_with_row_kind);
+
+    // Group splits by (partition, bucket)
+    std::map<std::pair<std::string, int32_t>, std::vector<std::shared_ptr<Split>>>
+        splits_by_partition_bucket;
+    for (const auto& split : data_splits) {
+        auto split_impl = dynamic_cast<DataSplitImpl*>(split.get());
+        ASSERT_OK_AND_ASSIGN(std::string partition_str,
+                             helper->PartitionStr(split_impl->Partition()));
+        splits_by_partition_bucket[std::make_pair(partition_str, split_impl->Bucket())].push_back(
+            split);
+    }
+    ASSERT_EQ(2u, splits_by_partition_bucket.size());
+
+    // Bucket 0: Alice(f1=3, deduped in round1) + Bob(f1=5, overwritten in round2) + Charlie(f1=4)
+    std::string expected_b0 = R"([
+        [0, "Alice", 10, 3],
+        [0, "Bob", 10, 5],
+        [0, "Charlie", 10, 4]
+    ])";
+    ASSERT_OK_AND_ASSIGN(
+        bool success_b0,
+        helper->ReadAndCheckResult(
+            scan_data_type, splits_by_partition_bucket[std::make_pair("pt=10/", 0)], expected_b0));
+    ASSERT_TRUE(success_b0);
+
+    // Bucket 1: Dave(f1=30, deduped in round1) + Eve(f1=50, overwritten in round2) + Frank(f1=40)
+    std::string expected_b1 = R"([
+        [0, "Dave", 10, 30],
+        [0, "Eve", 10, 50],
+        [0, "Frank", 10, 40]
+    ])";
+    ASSERT_OK_AND_ASSIGN(
+        bool success_b1,
+        helper->ReadAndCheckResult(
+            scan_data_type, splits_by_partition_bucket[std::make_pair("pt=10/", 1)], expected_b1));
+    ASSERT_TRUE(success_b1);
+}
+
+TEST_P(WriteInteTest, TestPkSpillableWithIOException) {
+    ::testing::GTEST_FLAG(throw_on_failure) = true;
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::utf8()),
+        arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
+    auto schema = arrow::schema(fields);
+    std::vector<std::string> primary_keys = {"f0", "f1"};
+    std::vector<std::string> partition_keys = {"f1"};
+    auto file_format = GetParam();
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "orc"},   {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"}, {Options::BUCKET, "2"},
+        {Options::BUCKET_KEY, "f0"},         {Options::FILE_SYSTEM, "local"},
+        {Options::WRITE_BUFFER_SIZE, "1"},   {Options::WRITE_BUFFER_SPILLABLE, "true"},
+        {Options::WRITE_ONLY, "true"},
+    };
+    bool run_complete = false;
+    auto io_hook = IOHook::GetInstance();
+
+    // Prepare table and data outside the loop — no need to inject IO errors here.
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir->Str(), options));
+    ASSERT_OK(catalog->CreateDatabase("foo", options, /*ignore_if_exists=*/false));
+    ::ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
+    ASSERT_OK(catalog->CreateTable(Identifier("foo", "bar"), &c_schema, partition_keys,
+                                   primary_keys, options, /*ignore_if_exists=*/false));
+    ArrowSchemaRelease(&c_schema);
+    std::string root_path = PathUtil::JoinPath(dir->Str(), "foo.db/bar");
+    SchemaManager schema_manger(file_system_, root_path);
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                         schema_manger.ReadSchema(/*schema_id=*/0));
+    DataGenerator gen(table_schema, pool_);
+
+    for (size_t i = 0; i < 2000; i++) {
+        ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
+
+        // Round 1 data: INSERT 5 rows + DELETE 2 rows (mixed RowKinds)
+        std::vector<BinaryRow> datas_1;
+        datas_1.push_back(MakeBinaryRow(RowKind::Insert(), "Alex", "20250326", 18, 10.1));
+        datas_1.push_back(MakeBinaryRow(RowKind::Insert(), "Bob", "20250326", 19, 11.1));
+        datas_1.push_back(MakeBinaryRow(RowKind::Insert(), "Cathy", "20250325", 20, 12.1));
+        datas_1.push_back(MakeBinaryRow(RowKind::Insert(), "David", "20250325", 21, 13.1));
+        datas_1.push_back(MakeBinaryRow(RowKind::Insert(), "Evan", "20250326", 22, 14.1));
+        datas_1.push_back(MakeBinaryRow(RowKind::Delete(), "Alex", "20250326", 18, 10.1));
+        datas_1.push_back(MakeBinaryRow(RowKind::Delete(), "Bob", "20250326", 19, 11.1));
+        ASSERT_OK_AND_ASSIGN(auto batches_1, gen.SplitArrayByPartitionAndBucket(datas_1));
+        ASSERT_EQ(3, batches_1.size());
+
+        // Round 2 data: INSERT + UpdateAfter (mixed RowKinds)
+        std::vector<BinaryRow> datas_2;
+        datas_2.push_back(MakeBinaryRow(RowKind::Insert(), "Farm", "20250326", 15, 22.1));
+        datas_2.push_back(MakeBinaryRow(RowKind::Insert(), "Go", "20250325", 22, 23.1));
+        datas_2.push_back(MakeBinaryRow(RowKind::UpdateAfter(), "David", "20250325", 22, 24.1));
+        datas_2.push_back(MakeBinaryRow(RowKind::Insert(), "Hi", "20250325", 23, 24.1));
+        ASSERT_OK_AND_ASSIGN(auto batches_2, gen.SplitArrayByPartitionAndBucket(datas_2));
+        ASSERT_EQ(3, batches_2.size());
+
+        // Write with spill enabled (WithTempDirectory)
+        std::string tmp_dir = PathUtil::JoinPath(dir->Str(), "tmp");
+        WriteContextBuilder context_builder(root_path, "commit_user_1");
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context,
+                             context_builder.SetOptions(options)
+                                 .WithStreamingMode(true)
+                                 .WithTempDirectory(tmp_dir)
+                                 .Finish());
+        ASSERT_OK_AND_ASSIGN(auto file_store_write,
+                             FileStoreWrite::Create(std::move(write_context)));
+
+        // Start IOHook only for spill write/read operations.
+        io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
+
+        // Round 1: write + PrepareCommit
+        CHECK_HOOK_STATUS(file_store_write->Write(std::move(batches_1[0])), i);
+        CHECK_HOOK_STATUS(file_store_write->Write(std::move(batches_1[1])), i);
+        CHECK_HOOK_STATUS(file_store_write->Write(std::move(batches_1[2])), i);
+        Result<std::vector<std::shared_ptr<CommitMessage>>> results_1 =
+            file_store_write->PrepareCommit(/*wait_compaction=*/false, 0);
+        CHECK_HOOK_STATUS(results_1.status(), i);
+
+        // Round 2: write + PrepareCommit
+        CHECK_HOOK_STATUS(file_store_write->Write(std::move(batches_2[0])), i);
+        CHECK_HOOK_STATUS(file_store_write->Write(std::move(batches_2[1])), i);
+        CHECK_HOOK_STATUS(file_store_write->Write(std::move(batches_2[2])), i);
+        Result<std::vector<std::shared_ptr<CommitMessage>>> results_2 =
+            file_store_write->PrepareCommit(/*wait_compaction=*/false, 1);
+        CHECK_HOOK_STATUS(results_2.status(), i);
+
+        io_hook->Clear();
+
+        // Commit both rounds
+        std::map<std::string, std::string> pk_commit_options = {
+            {"enable-pk-commit-in-inte-test", ""}, {"enable-object-store-commit-in-inte-test", ""}};
+        ASSERT_OK(CommitMessages(root_path, results_1.value(), pk_commit_options));
+        ASSERT_OK(CommitMessages(root_path, results_2.value(), pk_commit_options));
+        ASSERT_OK(file_store_write->Close());
+
+        // Scan and verify final state after spill:
+        // Partition 20250325: David updated(f2=22,f3=24.1), Cathy(f2=20), Go(f2=22), Hi(f2=23)
+        // Partition 20250326: Evan(f2=22), Farm(f2=15) — Alex & Bob deleted
+        std::string expected = R"([
+            [0, "Evan", "20250326", 22, 14.1],
+            [0, "Farm", "20250326", 15, 22.1],
+            [0, "Cathy", "20250325", 20, 12.1],
+            [0, "Go", "20250325", 22, 23.1],
+            [0, "Hi", "20250325", 23, 24.1],
+            [0, "David", "20250325", 22, 24.1]
+        ])";
+        ASSERT_OK(ScanAndVerifyResult(root_path, fields, expected));
+        run_complete = true;
+        break;
+    }
+    ASSERT_TRUE(run_complete);
 }
 
 }  // namespace paimon::test
