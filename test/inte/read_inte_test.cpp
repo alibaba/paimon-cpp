@@ -270,8 +270,8 @@ Result<std::shared_ptr<arrow::ChunkedArray>> ReadSystemTable(
 void AssertStructArrayEqualsJson(const std::shared_ptr<arrow::StructArray>& actual,
                                  const std::string& expected_json) {
     ASSERT_TRUE(actual);
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Array> expected,
-                         arrow::ipc::internal::json::ArrayFromJSON(actual->type(), expected_json));
+    auto expected =
+        arrow::ipc::internal::json::ArrayFromJSON(actual->type(), expected_json).ValueOrDie();
     ASSERT_TRUE(actual->Equals(expected))
         << "expected: " << expected->ToString() << "\nactual: " << actual->ToString();
 }
