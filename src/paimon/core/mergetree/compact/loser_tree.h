@@ -116,7 +116,11 @@ class LoserTree {
         Status AdvanceIfAvailable() {
             first_same_key_index = -1;
             state = State::WINNER_WITH_NEW_KEY;
-            if (iterator == nullptr || !iterator->HasNext()) {
+            bool has_next = false;
+            if (iterator != nullptr) {
+                PAIMON_ASSIGN_OR_RAISE(has_next, iterator->HasNext());
+            }
+            if (iterator == nullptr || !has_next) {
                 while (!end_of_input) {
                     PAIMON_ASSIGN_OR_RAISE(iterator, reader->NextBatch());
                     if (!iterator) {
@@ -124,7 +128,11 @@ class LoserTree {
                         reader->Close();
                         end_of_input = true;
                         kv = std::nullopt;
-                    } else if (iterator->HasNext()) {
+                    } else {
+                        PAIMON_ASSIGN_OR_RAISE(has_next, iterator->HasNext());
+                        if (!has_next) {
+                            continue;
+                        }
                         PAIMON_ASSIGN_OR_RAISE(kv, iterator->Next());
                         break;
                     }

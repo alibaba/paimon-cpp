@@ -96,7 +96,11 @@ class WriteBufferTest : public ::testing::Test {
         PAIMON_ASSIGN_OR_RAISE(auto iterator, reader->NextBatch());
 
         ReaderResult result;
-        while (iterator->HasNext()) {
+        while (true) {
+            PAIMON_ASSIGN_OR_RAISE(bool has_next, iterator->HasNext());
+            if (!has_next) {
+                break;
+            }
             PAIMON_ASSIGN_OR_RAISE(KeyValue key_value, iterator->Next());
             result.sequence_numbers.push_back(key_value.sequence_number);
             result.row_kind_values.push_back(key_value.value_kind->ToByteValue());
