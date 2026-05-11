@@ -121,7 +121,7 @@ KeyValueInMemoryRecordReader::SortBatch() const {
     }
     auto sort_options =
         arrow::compute::SortOptions(sort_keys, arrow::compute::NullPlacement::AtStart);
-    arrow::compute::ExecContext exec_context(arrow_pool_.get());
+    static arrow::compute::ExecContext exec_context(arrow_pool_.get());
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> sorted_indices,
                                       arrow::compute::SortIndices(arrow::Datum(value_struct_array_),
                                                                   sort_options, &exec_context));
