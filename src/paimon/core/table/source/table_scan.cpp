@@ -49,6 +49,7 @@
 #include "paimon/core/table/source/snapshot/snapshot_reader.h"
 #include "paimon/core/table/source/split_generator.h"
 #include "paimon/core/table/system/system_table.h"
+#include "paimon/core/utils/branch_manager.h"
 #include "paimon/core/utils/field_mapping.h"
 #include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/core/utils/index_file_path_factories.h"
@@ -78,9 +79,10 @@ class TableScanImpl {
         const ScanContext* context) {
         auto fs = core_options.GetFileSystem();
         auto manifest_file_format = core_options.GetManifestFormat();
-        auto snapshot_manager = std::make_shared<SnapshotManager>(fs, context->GetPath());
+        std::string branch = BranchManager::NormalizeBranch(core_options.GetBranch());
+        auto snapshot_manager = std::make_shared<SnapshotManager>(fs, context->GetPath(), branch);
         // TODO(liancheng.lsz): support fallback branch in scan
-        auto schema_manager = std::make_shared<SchemaManager>(fs, context->GetPath());
+        auto schema_manager = std::make_shared<SchemaManager>(fs, context->GetPath(), branch);
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<ManifestList> manifest_list,
             ManifestList::Create(fs, manifest_file_format, core_options.GetManifestCompression(),
@@ -191,7 +193,8 @@ Result<std::unique_ptr<TableScan>> NewDataTableScan(const std::shared_ptr<ScanCo
     PAIMON_ASSIGN_OR_RAISE(
         CoreOptions tmp_options,
         CoreOptions::FromMap(context->GetOptions(), context->GetSpecificFileSystem()));
-    SchemaManager schema_manager(tmp_options.GetFileSystem(), context->GetPath());
+    std::string branch = BranchManager::NormalizeBranch(tmp_options.GetBranch());
+    SchemaManager schema_manager(tmp_options.GetFileSystem(), context->GetPath(), branch);
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_table_schema,
                            schema_manager.Latest());
     if (latest_table_schema == std::nullopt) {

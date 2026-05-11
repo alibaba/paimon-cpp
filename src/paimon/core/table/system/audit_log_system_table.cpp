@@ -273,9 +273,12 @@ Result<std::unique_ptr<TableRead>> AuditLogSystemTable::NewChangelogRead(
 
     ReadContextBuilder builder(table_path_);
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> base_read_schema, BaseReadSchema());
-    PAIMON_ASSIGN_OR_RAISE(std::map<std::string, std::string> read_options, ReadOptions());
+    using StringMap = std::map<std::string, std::string>;
+    PAIMON_ASSIGN_OR_RAISE(StringMap read_options, ReadOptions());
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(read_options));
     builder.SetOptions(read_options)
         .SetReadSchema(base_read_schema->field_names())
+        .WithBranch(core_options.GetBranch())
         .WithMemoryPool(context->GetMemoryPool())
         .WithExecutor(context->GetExecutor())
         .WithFileSystem(context->GetSpecificFileSystem())
@@ -296,7 +299,6 @@ Result<std::unique_ptr<TableRead>> AuditLogSystemTable::NewChangelogRead(
         return Status::Invalid("audit_log system table requires key-value table read");
     }
     key_value_read->ForceKeepDelete(true);
-    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(options_));
     bool include_sequence_number = core_options.TableReadSequenceNumberEnabled();
     return std::make_unique<ChangelogTableRead>(std::move(data_read), ArrowSchema(),
                                                 include_sequence_number, std::move(converter),

@@ -34,9 +34,6 @@
 namespace paimon {
 class MemoryPool;
 
-const int32_t KeyValueProjectionConsumer::kSequenceNumberProjection =
-    SpecialFieldIds::SEQUENCE_NUMBER;
-
 Result<std::unique_ptr<KeyValueProjectionConsumer>> KeyValueProjectionConsumer::Create(
     const std::shared_ptr<arrow::Schema>& target_schema,
     const std::vector<int32_t>& target_to_src_mapping, const std::shared_ptr<MemoryPool>& pool) {
