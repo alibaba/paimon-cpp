@@ -204,6 +204,17 @@ class ReadInteTest : public testing::Test, public ::testing::WithParamInterface<
 
 namespace {
 
+struct SystemTableReadResult {
+    SystemTableReadResult(std::unique_ptr<BatchReader> batch_reader,
+                          std::shared_ptr<arrow::ChunkedArray> array)
+        : batch_reader(std::move(batch_reader)), array(std::move(array)) {}
+
+    // Keep BatchReader alive while the returned Arrow arrays are used. Some readers allocate
+    // exported ArrowArray buffers on pools owned by the BatchReader.
+    std::unique_ptr<BatchReader> batch_reader;
+    std::shared_ptr<arrow::ChunkedArray> array;
+};
+
 std::map<std::string, std::string> CollectStringMap(
     const std::shared_ptr<arrow::ChunkedArray>& result) {
     std::map<std::string, std::string> values;
@@ -230,14 +241,17 @@ std::map<std::string, std::string> CollectStringMap(
     return values;
 }
 
-std::shared_ptr<arrow::StructArray> SingleStructChunk(
-    const std::shared_ptr<arrow::ChunkedArray>& result) {
-    EXPECT_TRUE(result);
-    EXPECT_EQ(result->num_chunks(), 1);
-    if (!result || result->num_chunks() != 1) {
+std::map<std::string, std::string> CollectStringMap(const SystemTableReadResult& result) {
+    return CollectStringMap(result.array);
+}
+
+std::shared_ptr<arrow::StructArray> SingleStructChunk(const SystemTableReadResult& result) {
+    EXPECT_TRUE(result.array);
+    EXPECT_EQ(result.array->num_chunks(), 1);
+    if (!result.array || result.array->num_chunks() != 1) {
         return nullptr;
     }
-    auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(result->chunk(0));
+    auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(result.array->chunk(0));
     EXPECT_TRUE(struct_array);
     return struct_array;
 }
@@ -246,8 +260,8 @@ std::vector<std::string> StructFieldNames(const std::shared_ptr<arrow::StructArr
     return arrow::schema(array->type()->fields())->field_names();
 }
 
-Result<std::shared_ptr<arrow::ChunkedArray>> ReadSystemTable(
-    const std::string& system_table_path, const std::map<std::string, std::string>& options) {
+Result<SystemTableReadResult> ReadSystemTable(const std::string& system_table_path,
+                                              const std::map<std::string, std::string>& options) {
     ScanContextBuilder scan_context_builder(system_table_path);
     scan_context_builder.SetOptions(options);
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ScanContext> scan_context,
@@ -264,7 +278,9 @@ Result<std::shared_ptr<arrow::ChunkedArray>> ReadSystemTable(
                            TableRead::Create(std::move(read_context)));
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> batch_reader,
                            table_read->CreateReader(plan->Splits()));
-    return ReadResultCollector::CollectResult(batch_reader.get());
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::ChunkedArray> result,
+                           ReadResultCollector::CollectResult(batch_reader.get()));
+    return SystemTableReadResult(std::move(batch_reader), result);
 }
 
 void AssertStructArrayEqualsJson(const std::shared_ptr<arrow::StructArray>& actual,
