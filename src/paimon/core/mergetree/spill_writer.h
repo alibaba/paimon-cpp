@@ -42,8 +42,8 @@ class SpillWriter {
         const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<arrow::Schema>& schema,
         const std::shared_ptr<FileIOChannel::Enumerator>& channel_enumerator,
         const std::shared_ptr<SpillChannelManager>& spill_channel_manager,
-        const std::shared_ptr<MemoryPool>& pool, const std::string& compression,
-        int32_t compression_level);
+        const std::string& compression, int32_t compression_level,
+        const std::shared_ptr<MemoryPool>& pool);
 
     SpillWriter(const SpillWriter&) = delete;
     SpillWriter& operator=(const SpillWriter&) = delete;
@@ -57,8 +57,8 @@ class SpillWriter {
     SpillWriter(const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<arrow::Schema>& schema,
                 const std::shared_ptr<FileIOChannel::Enumerator>& channel_enumerator,
                 const std::shared_ptr<SpillChannelManager>& spill_channel_manager,
-                const std::shared_ptr<MemoryPool>& pool, const std::string& compression,
-                int32_t compression_level);
+                const std::string& compression, int32_t compression_level,
+                const std::shared_ptr<MemoryPool>& pool);
 
     Status Open();
 

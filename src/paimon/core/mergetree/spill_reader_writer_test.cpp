@@ -64,8 +64,8 @@ class SpillReaderWriterTest : public ::testing::TestWithParam<std::string> {
 
     Result<std::unique_ptr<SpillWriter>> CreateSpillWriter() const {
         return SpillWriter::Create(file_system_, write_schema_, channel_enumerator_,
-                                   spill_channel_manager_, pool_, GetParam(),
-                                   /*compression_level=*/1);
+                                   spill_channel_manager_, GetParam(), /*compression_level=*/1,
+                                   pool_);
     }
 
     FileIOChannel::ID WriteSpillFile(
