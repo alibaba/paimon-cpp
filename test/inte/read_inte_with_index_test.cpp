@@ -2452,10 +2452,6 @@ TEST_P(ReadInteWithIndexTest, TestRangeBitmapIndexMultiChunk) {
 
 TEST_P(ReadInteWithIndexTest, TestWithIOException) {
     auto [file_format, enable_prefetch] = GetParam();
-    // Disable parquet prebuffer for IO error recovery testing.
-    // Prebuffer reads all byte ranges upfront, which changes IO patterns
-    // and makes it impossible to find "safe" IO positions that don't affect reads.
-    bool disable_prebuffer = (file_format == "parquet");
     std::string path = GetDataDir() + "/" + file_format +
                        "/append_with_bitmap_no_embedding.db/append_with_bitmap_no_embedding/";
     std::string file_name;
@@ -2507,40 +2503,25 @@ TEST_P(ReadInteWithIndexTest, TestWithIOException) {
     for (size_t i = 0; i < 200; i++) {
         ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
         io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
-        try {
-            ReadContextBuilder context_builder(path);
-            context_builder.AddOption("read.batch-size", "2")
-                .AddOption("test.enable-adaptive-prefetch-strategy", "false")
-                .SetPredicate(predicate);
-            if (disable_prebuffer) {
-                context_builder.AddOption("test.disable-parquet-prebuffer", "true");
-            }
-            if (enable_prefetch) {
-                context_builder.EnablePrefetch(true).SetPrefetchBatchCount(3);
-            }
-            ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
-            Result<std::unique_ptr<TableRead>> table_read =
-                TableRead::Create(std::move(read_context));
-            CHECK_HOOK_STATUS(table_read.status(), i);
-            Result<std::unique_ptr<BatchReader>> batch_reader =
-                table_read.value()->CreateReader(split);
-            CHECK_HOOK_STATUS(batch_reader.status(), i);
-            auto result = ReadResultCollector::CollectResult(batch_reader.value().get());
-            CHECK_HOOK_STATUS(result.status(), i);
-            auto result_array = result.value();
-            ASSERT_TRUE(result_array);
-            ASSERT_TRUE(result_array->Equals(*expected_array));
-            run_complete = true;
-            break;
-        } catch (const std::exception& e) {
-            // Check if the exception is from the expected IO hook position
-            std::string msg = e.what();
-            if (msg.find(fmt::format("io hook triggered io error at position {}", i)) !=
-                std::string::npos) {
-                continue;  // Expected error at this position, try next position
-            }
-            throw;  // Unexpected error, rethrow
+        ReadContextBuilder context_builder(path);
+        context_builder.AddOption("read.batch-size", "2")
+            .AddOption("test.enable-adaptive-prefetch-strategy", "false")
+            .SetPredicate(predicate);
+        if (enable_prefetch) {
+            context_builder.EnablePrefetch(true).SetPrefetchBatchCount(3);
         }
+        ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
+        Result<std::unique_ptr<TableRead>> table_read = TableRead::Create(std::move(read_context));
+        CHECK_HOOK_STATUS(table_read.status(), i);
+        Result<std::unique_ptr<BatchReader>> batch_reader = table_read.value()->CreateReader(split);
+        CHECK_HOOK_STATUS(batch_reader.status(), i);
+        auto result = ReadResultCollector::CollectResult(batch_reader.value().get());
+        CHECK_HOOK_STATUS(result.status(), i);
+        auto result_array = result.value();
+        ASSERT_TRUE(result_array);
+        ASSERT_TRUE(result_array->Equals(*expected_array));
+        run_complete = true;
+        break;
     }
     ASSERT_TRUE(run_complete);
 }

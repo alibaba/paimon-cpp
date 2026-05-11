@@ -135,8 +135,8 @@ class FileReaderWrapperTest : public ::testing::Test {
         PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(arrow_pool_.get())
                                             ->properties(arrow_reader_props)
                                             ->Build(&file_reader));
-        return FileReaderWrapper::Create(std::move(file_reader),
-                                         ::arrow::default_memory_pool(), wrapper_batch_size);
+        return FileReaderWrapper::Create(std::move(file_reader), ::arrow::default_memory_pool(),
+                                         wrapper_batch_size);
     }
 
     void PrepareParquetFile(const std::string& file_path, int32_t row_count,
@@ -196,7 +196,8 @@ TEST_F(FileReaderWrapperTest, EmptyFile) {
 }
 
 TEST_F(FileReaderWrapperTest, NullFileReader) {
-    ASSERT_NOK_WITH_MSG(FileReaderWrapper::Create(nullptr),
+    ASSERT_NOK_WITH_MSG(FileReaderWrapper::Create(nullptr, ::arrow::default_memory_pool(),
+                                                  /*batch_size=*/0),
                         "file reader wrapper create failed. file reader is nullptr");
 }
 

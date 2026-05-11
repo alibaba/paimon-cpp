@@ -212,10 +212,11 @@ TEST_F(RowRangesTest, TestRangeOperations) {
     RowRanges::Range r2(30, 40);
     RowRanges::Range r3(15, 25);
 
-    EXPECT_TRUE(r1.IsBefore(r2));
-    EXPECT_FALSE(r1.IsAfter(r2));
-    EXPECT_FALSE(r1.IsBefore(r3));
-    EXPECT_FALSE(r1.IsAfter(r3));
+    // r1 lies entirely before r2; r3 overlaps r1.
+    EXPECT_TRUE(r1.to < r2.from);
+    EXPECT_FALSE(r1.from > r2.to);
+    EXPECT_FALSE(r1.to < r3.from);
+    EXPECT_FALSE(r1.from > r3.to);
     EXPECT_EQ(11, r1.Count());
 }
 

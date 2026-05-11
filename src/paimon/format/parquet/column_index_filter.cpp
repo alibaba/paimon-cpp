@@ -24,6 +24,8 @@
 
 #include "fmt/format.h"
 #include "paimon/data/decimal.h"
+#include "paimon/memory/bytes.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/compound_predicate.h"
 #include "paimon/predicate/function.h"
 #include "paimon/predicate/leaf_predicate.h"
@@ -214,29 +216,19 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByEqual(
     const std::shared_ptr<::parquet::ColumnIndex>& column_index, const Literal& literal,
     FieldType field_type) {
     std::vector<int32_t> matching_pages;
+
+    if (literal.IsNull()) {
+        // value = NULL is UNKNOWN for any value. No rows can match.
+        return matching_pages;
+    }
+
     const auto& null_pages = column_index->null_pages();
     const auto& min_values = column_index->encoded_min_values();
     const auto& max_values = column_index->encoded_max_values();
-    const auto& null_counts = column_index->null_counts();
-    bool has_null_counts = column_index->has_null_counts();
     auto num_pages = static_cast<int32_t>(null_pages.size());
 
     for (int32_t i = 0; i < num_pages; ++i) {
         if (null_pages[i]) {
-            if (literal.IsNull()) {
-                matching_pages.push_back(i);
-            }
-            continue;
-        }
-
-        if (literal.IsNull()) {
-            // Page is not all-null but may contain some null values.
-            // Include the page if null_counts > 0 or null_counts is unavailable.
-            if (has_null_counts && null_counts[i] > 0) {
-                matching_pages.push_back(i);
-            } else if (!has_null_counts) {
-                matching_pages.push_back(i);
-            }
             continue;
         }
 
@@ -531,7 +523,9 @@ std::optional<int32_t> ColumnIndexFilter::CompareEncodedWithLiteral(const std::s
 
     switch (field_type) {
         case FieldType::BOOLEAN: {
-            if (encoded.size() < 1) return std::nullopt;
+            if (encoded.size() < 1) {
+                return std::nullopt;
+            }
             int32_t enc_val = (encoded[0] != 0) ? 1 : 0;
             int32_t lit_val = literal.GetValue<bool>() ? 1 : 0;
             return (enc_val < lit_val) ? -1 : (enc_val > lit_val) ? 1 : 0;
@@ -540,7 +534,9 @@ std::optional<int32_t> ColumnIndexFilter::CompareEncodedWithLiteral(const std::s
         case FieldType::SMALLINT:
         case FieldType::INT:
         case FieldType::DATE: {
-            if (encoded.size() < sizeof(int32_t)) return std::nullopt;
+            if (encoded.size() < sizeof(int32_t)) {
+                return std::nullopt;
+            }
             int32_t enc_val;
             std::memcpy(&enc_val, encoded.data(), sizeof(int32_t));
             int32_t lit_val;
@@ -554,26 +550,36 @@ std::optional<int32_t> ColumnIndexFilter::CompareEncodedWithLiteral(const std::s
             return (enc_val < lit_val) ? -1 : (enc_val > lit_val) ? 1 : 0;
         }
         case FieldType::BIGINT: {
-            if (encoded.size() < sizeof(int64_t)) return std::nullopt;
+            if (encoded.size() < sizeof(int64_t)) {
+                return std::nullopt;
+            }
             int64_t enc_val;
             std::memcpy(&enc_val, encoded.data(), sizeof(int64_t));
             auto lit_val = literal.GetValue<int64_t>();
             return (enc_val < lit_val) ? -1 : (enc_val > lit_val) ? 1 : 0;
         }
         case FieldType::FLOAT: {
-            if (encoded.size() < sizeof(float)) return std::nullopt;
+            if (encoded.size() < sizeof(float)) {
+                return std::nullopt;
+            }
             float enc_val;
             std::memcpy(&enc_val, encoded.data(), sizeof(float));
             auto lit_val = literal.GetValue<float>();
-            if (std::isnan(enc_val) || std::isnan(lit_val)) return std::nullopt;
+            if (std::isnan(enc_val) || std::isnan(lit_val)) {
+                return std::nullopt;
+            }
             return (enc_val < lit_val) ? -1 : (enc_val > lit_val) ? 1 : 0;
         }
         case FieldType::DOUBLE: {
-            if (encoded.size() < sizeof(double)) return std::nullopt;
+            if (encoded.size() < sizeof(double)) {
+                return std::nullopt;
+            }
             double enc_val;
             std::memcpy(&enc_val, encoded.data(), sizeof(double));
             auto lit_val = literal.GetValue<double>();
-            if (std::isnan(enc_val) || std::isnan(lit_val)) return std::nullopt;
+            if (std::isnan(enc_val) || std::isnan(lit_val)) {
+                return std::nullopt;
+            }
             return (enc_val < lit_val) ? -1 : (enc_val > lit_val) ? 1 : 0;
         }
         case FieldType::STRING:
@@ -600,14 +606,16 @@ std::optional<int32_t> ColumnIndexFilter::CompareEncodedWithLiteral(const std::s
                 std::memcpy(&raw, encoded.data(), sizeof(int64_t));
                 enc_val = static_cast<Decimal::int128_t>(raw);
             } else {
-                // FIXED_LEN_BYTE_ARRAY: big-endian two's complement
-                if (encoded.empty()) return std::nullopt;
-                // Sign-extend from the first byte
-                enc_val = (static_cast<int8_t>(encoded[0]) < 0) ? static_cast<Decimal::int128_t>(-1)
-                                                                : static_cast<Decimal::int128_t>(0);
-                for (char c : encoded) {
-                    enc_val = (enc_val << 8) | static_cast<uint8_t>(c);
+                // FIXED_LEN_BYTE_ARRAY / BYTE_ARRAY: big-endian two's complement.
+                // Defer to Decimal::FromUnscaledBytes so endianness, padding, and
+                // sign extension stay consistent with parquet_stats_extractor.
+                if (encoded.empty()) {
+                    return std::nullopt;
                 }
+                Bytes bytes(encoded, GetDefaultPool().get());
+                enc_val =
+                    Decimal::FromUnscaledBytes(lit_decimal.Precision(), lit_decimal.Scale(), &bytes)
+                        .Value();
             }
 
             return (enc_val < lit_val) ? -1 : (enc_val > lit_val) ? 1 : 0;
@@ -629,12 +637,20 @@ bool ColumnIndexFilter::PageMightContainEqual(const std::string& encoded_min,
 
     // Page might contain equal if min <= literal <= max
     auto cmp_min = CompareEncodedWithLiteral(encoded_min, literal, field_type);
-    if (!cmp_min.has_value()) return true;  // Can't compare, assume match
-    if (*cmp_min > 0) return false;         // min > literal
+    if (!cmp_min.has_value()) {
+        return true;  // Can't compare, assume match
+    }
+    if (*cmp_min > 0) {
+        return false;  // min > literal
+    }
 
     auto cmp_max = CompareEncodedWithLiteral(encoded_max, literal, field_type);
-    if (!cmp_max.has_value()) return true;
-    if (*cmp_max < 0) return false;  // max < literal
+    if (!cmp_max.has_value()) {
+        return true;
+    }
+    if (*cmp_max < 0) {
+        return false;  // max < literal
+    }
 
     return true;  // min <= literal <= max
 }
@@ -647,7 +663,9 @@ bool ColumnIndexFilter::PageMightContainLessThan(const std::string& encoded_min,
 
     // Page might contain values < literal if min < literal
     auto cmp_min = CompareEncodedWithLiteral(encoded_min, literal, field_type);
-    if (!cmp_min.has_value()) return true;
+    if (!cmp_min.has_value()) {
+        return true;
+    }
     return *cmp_min < 0;
 }
 
@@ -659,7 +677,9 @@ bool ColumnIndexFilter::PageMightContainLessOrEqual(const std::string& encoded_m
 
     // Page might contain values <= literal if min <= literal
     auto cmp_min = CompareEncodedWithLiteral(encoded_min, literal, field_type);
-    if (!cmp_min.has_value()) return true;
+    if (!cmp_min.has_value()) {
+        return true;
+    }
     return *cmp_min <= 0;
 }
 
@@ -671,7 +691,9 @@ bool ColumnIndexFilter::PageMightContainGreaterThan(const std::string& encoded_m
 
     // Page might contain values > literal if max > literal
     auto cmp_max = CompareEncodedWithLiteral(encoded_max, literal, field_type);
-    if (!cmp_max.has_value()) return true;
+    if (!cmp_max.has_value()) {
+        return true;
+    }
     return *cmp_max > 0;
 }
 
@@ -684,7 +706,9 @@ bool ColumnIndexFilter::PageMightContainGreaterOrEqual(const std::string& encode
 
     // Page might contain values >= literal if max >= literal
     auto cmp_max = CompareEncodedWithLiteral(encoded_max, literal, field_type);
-    if (!cmp_max.has_value()) return true;
+    if (!cmp_max.has_value()) {
+        return true;
+    }
     return *cmp_max >= 0;
 }
 

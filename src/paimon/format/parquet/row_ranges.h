@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-#include "fmt/format.h"
+#include "paimon/utils/range.h"
 
 namespace paimon::parquet {
 
@@ -30,31 +30,9 @@ namespace paimon::parquet {
 /// This is used for page-level filtering to skip rows that don't match predicates.
 class RowRanges {
  public:
-    /// A single range [from, to] where both are inclusive.
-    struct Range {
-        /// Inclusive lower bound.
-        int64_t from;
-        /// Inclusive upper bound.
-        int64_t to;
-
-        Range(int64_t f, int64_t t) : from(f), to(t) {}
-
-        int64_t Count() const {
-            return to - from + 1;
-        }
-
-        bool IsBefore(const Range& other) const {
-            return to < other.from;
-        }
-
-        bool IsAfter(const Range& other) const {
-            return from > other.to;
-        }
-
-        std::string ToString() const {
-            return fmt::format("[{}, {}]", from, to);
-        }
-    };
+    /// A single inclusive range. Aliased to paimon::Range so the parquet code shares the
+    /// common range type and helpers (Intersection, And, SortAndMergeOverlap, ...).
+    using Range = paimon::Range;
 
     /// Creates an empty RowRanges.
     RowRanges() = default;

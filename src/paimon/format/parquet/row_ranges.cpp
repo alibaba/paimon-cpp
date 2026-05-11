@@ -24,6 +24,7 @@ namespace paimon::parquet {
 namespace {
 
 // Returns the union of the two ranges or nullopt if there are elements between them.
+// Used by Add to splice an inserted range into the existing sorted-disjoint sequence.
 std::optional<RowRanges::Range> UnionRanges(const RowRanges::Range& left,
                                             const RowRanges::Range& right) {
     if (left.from <= right.from) {
@@ -36,71 +37,18 @@ std::optional<RowRanges::Range> UnionRanges(const RowRanges::Range& left,
     return std::nullopt;
 }
 
-// Returns the intersection of the two ranges or nullopt if they don't overlap.
-std::optional<RowRanges::Range> IntersectRanges(const RowRanges::Range& left,
-                                                const RowRanges::Range& right) {
-    if (left.from <= right.from) {
-        if (left.to >= right.from) {
-            return RowRanges::Range(right.from, std::min(left.to, right.to));
-        }
-    } else if (right.to >= left.from) {
-        return RowRanges::Range(left.from, std::min(left.to, right.to));
-    }
-    return std::nullopt;
-}
-
 }  // namespace
 
 RowRanges RowRanges::Union(const RowRanges& left, const RowRanges& right) {
-    RowRanges result;
-
-    auto it1 = left.ranges_.begin();
-    auto it2 = right.ranges_.begin();
-
-    while (it1 != left.ranges_.end() && it2 != right.ranges_.end()) {
-        if (it1->from < it2->from) {
-            result.Add(*it1);
-            ++it1;
-        } else {
-            result.Add(*it2);
-            ++it2;
-        }
-    }
-
-    while (it1 != left.ranges_.end()) {
-        result.Add(*it1);
-        ++it1;
-    }
-
-    while (it2 != right.ranges_.end()) {
-        result.Add(*it2);
-        ++it2;
-    }
-
-    return result;
+    std::vector<Range> combined;
+    combined.reserve(left.ranges_.size() + right.ranges_.size());
+    combined.insert(combined.end(), left.ranges_.begin(), left.ranges_.end());
+    combined.insert(combined.end(), right.ranges_.begin(), right.ranges_.end());
+    return RowRanges(Range::SortAndMergeOverlap(combined, /*adjacent=*/true));
 }
 
 RowRanges RowRanges::Intersection(const RowRanges& left, const RowRanges& right) {
-    RowRanges result;
-
-    size_t right_index = 0;
-    for (const auto& l : left.ranges_) {
-        for (size_t i = right_index; i < right.ranges_.size(); ++i) {
-            const auto& r = right.ranges_[i];
-            if (l.IsBefore(r)) {
-                break;
-            } else if (l.IsAfter(r)) {
-                right_index = i + 1;
-                continue;
-            }
-            auto intersection = IntersectRanges(l, r);
-            if (intersection.has_value()) {
-                result.ranges_.push_back(intersection.value());
-            }
-        }
-    }
-
-    return result;
+    return RowRanges(Range::And(left.ranges_, right.ranges_));
 }
 
 int64_t RowRanges::RowCount() const {
@@ -115,10 +63,7 @@ bool RowRanges::IsOverlapping(int64_t from, int64_t to) const {
     Range target(from, to);
     auto it = std::lower_bound(ranges_.begin(), ranges_.end(), target,
                                [](const Range& r, const Range& t) { return r.to < t.from; });
-    if (it != ranges_.end() && !it->IsAfter(target)) {
-        return true;
-    }
-    return false;
+    return it != ranges_.end() && it->from <= target.to;
 }
 
 void RowRanges::Add(const Range& range) {

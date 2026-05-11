@@ -639,8 +639,8 @@ TEST_F(PageFilteredRowGroupReaderTest, StringColumnMultiBatchStreaming) {
     ASSERT_TRUE(str_builder.Reserve(60).ok());
     // 6 pages of 10 rows each: prefix "p0_".."p5_" so each page has a distinct min/max.
     for (int32_t i = 0; i < 60; ++i) {
-        std::string val = "p" + std::to_string(i / 10) + "_" + (i < 10 ? "0" : "") +
-                          std::to_string(i);
+        std::string val =
+            "p" + std::to_string(i / 10) + "_" + (i < 10 ? "0" : "") + std::to_string(i);
         ASSERT_TRUE(str_builder.Append(val).ok());
     }
     auto str_array = str_builder.Finish().ValueOrDie();

@@ -33,8 +33,6 @@ add_paimon_lib(paimon_parquet_file_format
                DEPENDENCIES
                paimon_shared
                parquet
-               PRIVATE_INCLUDES
-               "${ARROW_SOURCE_DIR}/cpp/src"
                STATIC_LINK_LIBS
                parquet
                arrow
@@ -46,6 +44,9 @@ add_paimon_lib(paimon_parquet_file_format
                paimon_shared
                SHARED_LINK_FLAGS
                ${PAIMON_VERSION_SCRIPT_FLAGS})
+
+target_include_directories(paimon_parquet_file_format_objlib SYSTEM
+                           PRIVATE "${ARROW_SOURCE_DIR}/cpp/src")
 
 if(PAIMON_BUILD_TESTS)
     add_paimon_test(parquet_format_test

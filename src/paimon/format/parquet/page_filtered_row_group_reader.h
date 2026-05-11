@@ -40,6 +40,9 @@ namespace paimon::parquet {
 /// MakePageFilter is available for future I/O-level page skipping optimization.
 class PageFilteredRowGroupReader {
  public:
+    PageFilteredRowGroupReader() = delete;
+    ~PageFilteredRowGroupReader() = delete;
+
     /// Read a row group with page-level filtering.
     /// @param parquet_reader The underlying ParquetFileReader
     /// @param row_group_index Row group to read

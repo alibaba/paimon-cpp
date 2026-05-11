@@ -55,9 +55,8 @@ class FileReaderWrapper {
     ~FileReaderWrapper();
 
     static Result<std::unique_ptr<FileReaderWrapper>> Create(
-        std::unique_ptr<::parquet::arrow::FileReader>&& reader,
-        ::arrow::MemoryPool* pool = ::arrow::default_memory_pool(), int64_t batch_size = 0,
-        bool disable_prebuffer = false);
+        std::unique_ptr<::parquet::arrow::FileReader>&& reader, ::arrow::MemoryPool* pool,
+        int64_t batch_size);
 
     /// Seek to the specified row number.
     /// @param row_number The row to seek to (must be at a row group boundary).
@@ -98,19 +97,10 @@ class FileReaderWrapper {
     }
 
     /// Get the Arrow schema of the file.
-    Result<std::shared_ptr<arrow::Schema>> GetSchema() const {
-        std::shared_ptr<arrow::Schema> file_schema;
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetSchema(&file_schema));
-        return file_schema;
-    }
+    Result<std::shared_ptr<arrow::Schema>> GetSchema() const;
 
     /// Close the batch reader and release resources.
-    Status Close() {
-        if (batch_reader_) {
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(batch_reader_->Close());
-        }
-        return Status::OK();
-    }
+    Status Close();
 
     /// Get the [start, end) ranges for the specified row groups.
     /// @param row_group_indices The row group indices to get ranges for.
@@ -154,8 +144,7 @@ class FileReaderWrapper {
  private:
     FileReaderWrapper(std::unique_ptr<::parquet::arrow::FileReader>&& file_reader,
                       const std::vector<std::pair<uint64_t, uint64_t>>& all_row_group_ranges,
-                      uint64_t num_rows, ::arrow::MemoryPool* pool, int64_t batch_size,
-                      bool disable_prebuffer);
+                      uint64_t num_rows, ::arrow::MemoryPool* pool, int64_t batch_size);
 
     Result<std::set<int32_t>> ReadRangesToRowGroupIds(
         const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) const;
@@ -201,9 +190,6 @@ class FileReaderWrapper {
 
     // Track pre-buffered ranges so we can wait on destruction
     std::vector<::arrow::io::ReadRange> prebuffered_ranges_;
-
-    // For testing: disable prebuffer to test IO error recovery
-    bool disable_prebuffer_;
 
     /// Wait for all pending PreBuffer operations to complete.
     void WaitForPendingPreBuffer();
