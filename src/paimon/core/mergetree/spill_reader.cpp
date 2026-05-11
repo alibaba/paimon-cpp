@@ -53,8 +53,11 @@ Status SpillReader::Open(const FileIOChannel::ID& channel_id) {
     uint64_t file_len = file_status->GetLen();
     arrow_input_stream_adapter_ =
         std::make_shared<ArrowInputStreamAdapter>(in_stream_, arrow_pool_, file_len);
+    auto ipc_read_options = arrow::ipc::IpcReadOptions::Defaults();
+    ipc_read_options.memory_pool = arrow_pool_.get();
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-        arrow_reader_, arrow::ipc::RecordBatchFileReader::Open(arrow_input_stream_adapter_));
+        arrow_reader_,
+        arrow::ipc::RecordBatchFileReader::Open(arrow_input_stream_adapter_, ipc_read_options));
     num_record_batches_ = arrow_reader_->num_record_batches();
     current_batch_index_ = 0;
     return Status::OK();

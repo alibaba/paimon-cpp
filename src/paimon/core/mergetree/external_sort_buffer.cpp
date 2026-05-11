@@ -167,7 +167,7 @@ Result<int64_t> ExternalSortBuffer::SpillToDisk(
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<SpillWriter> spill_writer,
         SpillWriter::Create(options_.GetFileSystem(), write_schema_, spill_channel_enumerator_,
-                            spill_channel_manager_, spill_compress_options.compress,
+                            spill_channel_manager_, pool_, spill_compress_options.compress,
                             spill_compress_options.zstd_level));
     auto cleanup_guard = ScopeGuard([&]() {
         [[maybe_unused]] auto status =
