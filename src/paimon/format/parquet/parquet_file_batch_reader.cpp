@@ -151,6 +151,9 @@ Status ParquetFileBatchReader::SetReadSchema(
     read_row_groups_ = row_groups;
     read_column_indices_ = column_indices;
 
+    metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_TOTAL, reader_->GetNumberOfRowGroups());
+    metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_FILTERED, row_groups.size());
+
     PAIMON_ASSIGN_OR_RAISE(std::set<int32_t> ordered_row_groups,
                            reader_->FilterRowGroupsByReadRanges(read_ranges_, read_row_groups_));
     return reader_->PrepareForReadingLazy(ordered_row_groups, read_column_indices_);
@@ -243,6 +246,12 @@ Result<BatchReader::ReadBatch> ParquetFileBatchReader::NextBatch() {
     std::unique_ptr<ArrowArray> c_array = std::make_unique<ArrowArray>();
     std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, c_array.get(), c_schema.get()));
+
+    read_rows_ += array->length();
+    read_batch_count_++;
+    metrics_->SetCounter(ParquetMetrics::READ_ROWS, read_rows_);
+    metrics_->SetCounter(ParquetMetrics::READ_BATCH_COUNT, read_batch_count_);
+
     return make_pair(std::move(c_array), std::move(c_schema));
 }
 
