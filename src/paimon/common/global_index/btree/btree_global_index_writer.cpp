@@ -119,7 +119,10 @@ Status BTreeGlobalIndexWriter::Flush() {
         return Status::OK();
     }
     MemorySliceOutput output(current_row_ids_.size() * 9 + 5, pool_.get());
-    PAIMON_RETURN_NOT_OK(output.WriteVarLenInt(current_row_ids_.size()));
+    if (current_row_ids_.size() > INT32_MAX) {
+        return Status::Invalid("invalid row id numbers, exceed INT32_MAX");
+    }
+    PAIMON_RETURN_NOT_OK(output.WriteVarLenInt(static_cast<int32_t>(current_row_ids_.size())));
     for (int64_t row_id : current_row_ids_) {
         PAIMON_RETURN_NOT_OK(output.WriteVarLenLong(row_id));
     }

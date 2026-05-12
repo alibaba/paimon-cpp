@@ -38,8 +38,8 @@ class Metrics;
 template <typename T>
 class MergeFunctionWrapper;
 
-/// `SortMergeReader` implemented with min-heap. Merge the KeyValue parsed by
-/// KeyValueDataFileRecordReader and return the iterator of KeyValue
+/// `SortMergeReader` implemented with min-heap. Merge the KeyValue or only sort the KeyValue parsed
+/// by `KeyValueRecordReader` and return the iterator of KeyValue
 class SortMergeReaderWithMinHeap : public SortMergeReader {
  public:
     SortMergeReaderWithMinHeap(
@@ -101,7 +101,8 @@ class SortMergeReaderWithMinHeap : public SortMergeReader {
         }
 
         Result<bool> Update() {
-            if (!iterator->HasNext()) {
+            PAIMON_ASSIGN_OR_RAISE(bool has_next, iterator->HasNext());
+            if (!has_next) {
                 return false;
             }
             PAIMON_ASSIGN_OR_RAISE(KeyValue tmp_kv, iterator->Next());
@@ -142,6 +143,7 @@ class SortMergeReaderWithMinHeap : public SortMergeReader {
     };
 
  private:
+    const bool need_merge_;
     // must hold all readers, as data array is allocated by the pool of data file reader
     std::vector<std::unique_ptr<KeyValueRecordReader>> readers_holder_;
     std::vector<KeyValueRecordReader*> next_batch_readers_;

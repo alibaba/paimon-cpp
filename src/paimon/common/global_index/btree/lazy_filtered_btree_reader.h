@@ -37,7 +37,8 @@
 namespace paimon {
 class LazyFilteredBTreeReader : public GlobalIndexReader {
  public:
-    LazyFilteredBTreeReader(const std::vector<GlobalIndexIOMeta>& files,
+    LazyFilteredBTreeReader(std::optional<int32_t> read_buffer_size,
+                            const std::vector<GlobalIndexIOMeta>& files,
                             const std::shared_ptr<arrow::DataType>& key_type,
                             const std::shared_ptr<GlobalIndexFileReader>& file_reader,
                             const std::shared_ptr<CacheManager>& cache_manager,
@@ -82,12 +83,15 @@ class LazyFilteredBTreeReader : public GlobalIndexReader {
 
     Result<std::shared_ptr<GlobalIndexResult>> DispatchVisit(SelectAction select_files,
                                                              ReaderAction action);
+    Result<std::shared_ptr<GlobalIndexReader>> CreateUnionReader(
+        const std::vector<GlobalIndexIOMeta>& files);
     Result<std::shared_ptr<GlobalIndexReader>> GetOrCreateReader(const GlobalIndexIOMeta& meta);
     Result<std::shared_ptr<GlobalIndexReader>> CreateSingleReader(const GlobalIndexIOMeta& meta);
     Result<RoaringBitmap64> ReadNullBitmap(const std::shared_ptr<BlockCache>& cache,
                                            const std::optional<BlockHandle>& block_handle);
 
  private:
+    std::optional<int32_t> read_buffer_size_;
     std::shared_ptr<MemoryPool> pool_;
     BTreeFileMetaSelector file_selector_;
     std::shared_ptr<arrow::DataType> key_type_;

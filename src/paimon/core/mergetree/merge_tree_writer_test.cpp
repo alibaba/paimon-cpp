@@ -18,6 +18,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <functional>
 #include <map>
 #include <optional>
 #include <utility>
@@ -34,6 +35,7 @@
 #include "paimon/common/utils/fields_comparator.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/compact/noop_compact_manager.h"
+#include "paimon/core/disk/io_manager.h"
 #include "paimon/core/io/compact_increment.h"
 #include "paimon/core/io/data_file_path_factory.h"
 #include "paimon/core/io/data_increment.h"
@@ -47,7 +49,6 @@
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/memory_pool.h"
-#include "paimon/testing/mock/mock_file_system.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/io_exception_helper.h"
 #include "paimon/testing/utils/read_result_collector.h"
@@ -59,7 +60,7 @@ class MergeFunctionWrapper;
 }  // namespace paimon
 
 namespace paimon::test {
-class MergeTreeWriterTest : public ::testing::Test {
+class MergeTreeWriterTest : public ::testing::TestWithParam<bool> {
  public:
     class FakeCompactManager : public paimon::CompactManager {
      public:
@@ -164,6 +165,22 @@ class MergeTreeWriterTest : public ::testing::Test {
             /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
     }
 
+    Result<std::shared_ptr<MergeTreeWriter>> CreateMergeWriter(
+        int64_t last_sequence_number, const std::string& temp_dir,
+        const std::shared_ptr<DataFilePathFactory>& path_factory, int64_t schema_id,
+        const CoreOptions& options,
+        const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator = nullptr,
+        const std::shared_ptr<CompactManager>& compact_manager = nullptr) const {
+        std::shared_ptr<CompactManager> writer_compact_manager =
+            compact_manager ? compact_manager : noop_compact_manager_;
+        std::shared_ptr<IOManager> io_manager =
+            GetParam() ? std::make_shared<IOManager>(temp_dir + "/tmp", file_system_) : nullptr;
+        return MergeTreeWriter::Create(last_sequence_number, primary_keys_, path_factory,
+                                       key_comparator_, user_defined_seq_comparator,
+                                       merge_function_wrapper_, schema_id, value_schema_, options,
+                                       writer_compact_manager, io_manager, pool_);
+    }
+
  private:
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<FileSystem> file_system_;
@@ -177,7 +194,7 @@ class MergeTreeWriterTest : public ::testing::Test {
     std::shared_ptr<NoopCompactManager> noop_compact_manager_;
 };
 
-TEST_F(MergeTreeWriterTest, TestSimple) {
+TEST_P(MergeTreeWriterTest, TestSimple) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
 
@@ -187,10 +204,9 @@ TEST_F(MergeTreeWriterTest, TestSimple) {
     ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
     std::string uuid = path_factory->uuid_;
 
-    auto merge_writer = std::make_shared<MergeTreeWriter>(
-        /*last_sequence_number=*/-1, primary_keys_, path_factory, key_comparator_,
-        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/1,
-        value_schema_, options, noop_compact_manager_, pool_);
+    ASSERT_OK_AND_ASSIGN(auto merge_writer,
+                         CreateMergeWriter(/*last_sequence_number=*/-1, dir->Str(), path_factory,
+                                           /*schema_id=*/1, options));
 
     // write batch
     std::shared_ptr<arrow::Array> array1 =
@@ -249,7 +265,7 @@ TEST_F(MergeTreeWriterTest, TestSimple) {
     ASSERT_EQ(expected_data_increment, commit_increment.GetNewFilesIncrement());
 }
 
-TEST_F(MergeTreeWriterTest, TestWriteMultiBatch) {
+TEST_P(MergeTreeWriterTest, TestWriteMultiBatch) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
 
@@ -259,10 +275,9 @@ TEST_F(MergeTreeWriterTest, TestWriteMultiBatch) {
     ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
     std::string uuid = path_factory->uuid_;
 
-    auto merge_writer = std::make_shared<MergeTreeWriter>(
-        /*last_sequence_number=*/9, primary_keys_, path_factory, key_comparator_,
-        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
-        value_schema_, options, noop_compact_manager_, pool_);
+    ASSERT_OK_AND_ASSIGN(auto merge_writer,
+                         CreateMergeWriter(/*last_sequence_number=*/9, dir->Str(), path_factory,
+                                           /*schema_id=*/0, options));
     // batch1
     std::shared_ptr<arrow::Array> array1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -331,7 +346,7 @@ TEST_F(MergeTreeWriterTest, TestWriteMultiBatch) {
     ASSERT_EQ(expected_data_increment, commit_increment.GetNewFilesIncrement());
 }
 
-TEST_F(MergeTreeWriterTest, TestWriteWithDeleteRow) {
+TEST_P(MergeTreeWriterTest, TestWriteWithDeleteRow) {
     ASSERT_OK_AND_ASSIGN(
         CoreOptions options,
         CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}, {Options::SEQUENCE_FIELD, "f1"}}));
@@ -346,10 +361,9 @@ TEST_F(MergeTreeWriterTest, TestWriteWithDeleteRow) {
                          FieldsComparator::Create({value_fields_[1]},
                                                   /*is_ascending_order=*/true));
     assert(user_defined_seq_comparator);
-    auto merge_writer = std::make_shared<MergeTreeWriter>(
-        /*last_sequence_number=*/9, primary_keys_, path_factory, key_comparator_,
-        user_defined_seq_comparator, merge_function_wrapper_, /*schema_id=*/0, value_schema_,
-        options, noop_compact_manager_, pool_);
+    ASSERT_OK_AND_ASSIGN(auto merge_writer,
+                         CreateMergeWriter(/*last_sequence_number=*/9, dir->Str(), path_factory,
+                                           /*schema_id=*/0, options, user_defined_seq_comparator));
     // batch1
     std::shared_ptr<arrow::Array> array1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -411,7 +425,7 @@ TEST_F(MergeTreeWriterTest, TestWriteWithDeleteRow) {
     ASSERT_EQ(expected_data_increment, commit_increment.GetNewFilesIncrement());
 }
 
-TEST_F(MergeTreeWriterTest, TestMultiplePrepareCommit) {
+TEST_P(MergeTreeWriterTest, TestMultiplePrepareCommit) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"},
                                                {"orc.write.enable-metrics", "true"}}));
@@ -422,10 +436,9 @@ TEST_F(MergeTreeWriterTest, TestMultiplePrepareCommit) {
     ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
     std::string uuid = path_factory->uuid_;
 
-    auto merge_writer = std::make_shared<MergeTreeWriter>(
-        /*last_sequence_number=*/9, primary_keys_, path_factory, key_comparator_,
-        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
-        value_schema_, options, noop_compact_manager_, pool_);
+    ASSERT_OK_AND_ASSIGN(auto merge_writer,
+                         CreateMergeWriter(/*last_sequence_number=*/9, dir->Str(), path_factory,
+                                           /*schema_id=*/0, options));
     // batch1
     std::shared_ptr<arrow::Array> array1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -548,7 +561,7 @@ TEST_F(MergeTreeWriterTest, TestMultiplePrepareCommit) {
     ASSERT_EQ(expected_data_increment2, commit_increment2.GetNewFilesIncrement());
 }
 
-TEST_F(MergeTreeWriterTest, TestPrepareCommitForEmptyData) {
+TEST_P(MergeTreeWriterTest, TestPrepareCommitForEmptyData) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
 
@@ -558,10 +571,9 @@ TEST_F(MergeTreeWriterTest, TestPrepareCommitForEmptyData) {
     ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
     std::string uuid = path_factory->uuid_;
 
-    auto merge_writer = std::make_shared<MergeTreeWriter>(
-        /*last_sequence_number=*/-1, primary_keys_, path_factory, key_comparator_,
-        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
-        value_schema_, options, noop_compact_manager_, pool_);
+    ASSERT_OK_AND_ASSIGN(auto merge_writer,
+                         CreateMergeWriter(/*last_sequence_number=*/-1, dir->Str(), path_factory,
+                                           /*schema_id=*/0, options));
 
     // prepare commit, without write
     ASSERT_OK_AND_ASSIGN(CommitIncrement commit_increment,
@@ -588,7 +600,7 @@ TEST_F(MergeTreeWriterTest, TestPrepareCommitForEmptyData) {
     ASSERT_FALSE(options.GetFileSystem()->Exists(expected_data_file_path).value());
 }
 
-TEST_F(MergeTreeWriterTest, TestCloseBeforePrepareCommit) {
+TEST_P(MergeTreeWriterTest, TestCloseBeforePrepareCommit) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
 
@@ -598,10 +610,9 @@ TEST_F(MergeTreeWriterTest, TestCloseBeforePrepareCommit) {
     ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
     std::string uuid = path_factory->uuid_;
 
-    auto merge_writer = std::make_shared<MergeTreeWriter>(
-        /*last_sequence_number=*/-1, primary_keys_, path_factory, key_comparator_,
-        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
-        value_schema_, options, noop_compact_manager_, pool_);
+    ASSERT_OK_AND_ASSIGN(auto merge_writer,
+                         CreateMergeWriter(/*last_sequence_number=*/-1, dir->Str(), path_factory,
+                                           /*schema_id=*/0, options));
 
     // write batch
     std::shared_ptr<arrow::Array> array1 =
@@ -615,7 +626,7 @@ TEST_F(MergeTreeWriterTest, TestCloseBeforePrepareCommit) {
     ASSERT_OK(merge_writer->Close());
 }
 
-TEST_F(MergeTreeWriterTest, TestCloseDeletesUncommittedFiles) {
+TEST_P(MergeTreeWriterTest, TestCloseDeletesUncommittedFiles) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
 
@@ -625,10 +636,9 @@ TEST_F(MergeTreeWriterTest, TestCloseDeletesUncommittedFiles) {
     ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
     std::string uuid = path_factory->uuid_;
 
-    auto merge_writer = std::make_shared<MergeTreeWriter>(
-        /*last_sequence_number=*/-1, primary_keys_, path_factory, key_comparator_,
-        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
-        value_schema_, options, noop_compact_manager_, pool_);
+    ASSERT_OK_AND_ASSIGN(auto merge_writer,
+                         CreateMergeWriter(/*last_sequence_number=*/-1, dir->Str(), path_factory,
+                                           /*schema_id=*/0, options));
 
     std::shared_ptr<arrow::Array> array1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -649,11 +659,12 @@ TEST_F(MergeTreeWriterTest, TestCloseDeletesUncommittedFiles) {
     ASSERT_FALSE(options.GetFileSystem()->Exists(expected_data_file_path).value());
 }
 
-TEST_F(MergeTreeWriterTest, TestAutoFlush) {
+TEST_P(MergeTreeWriterTest, TestAutoFlush) {
     // each batch is a file due to WRITE_BUFFER_SIZE
-    ASSERT_OK_AND_ASSIGN(
-        CoreOptions options,
-        CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}, {Options::WRITE_BUFFER_SIZE, "1"}}));
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"},
+                                               {Options::WRITE_BUFFER_SIZE, "1"},
+                                               {Options::WRITE_BUFFER_SPILLABLE, "false"}}));
 
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
@@ -661,10 +672,9 @@ TEST_F(MergeTreeWriterTest, TestAutoFlush) {
     ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
     std::string uuid = path_factory->uuid_;
 
-    auto merge_writer = std::make_shared<MergeTreeWriter>(
-        /*last_sequence_number=*/9, primary_keys_, path_factory, key_comparator_,
-        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
-        value_schema_, options, noop_compact_manager_, pool_);
+    ASSERT_OK_AND_ASSIGN(auto merge_writer,
+                         CreateMergeWriter(/*last_sequence_number=*/9, dir->Str(), path_factory,
+                                           /*schema_id=*/0, options));
     // batch1
     std::shared_ptr<arrow::Array> array1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -768,7 +778,7 @@ TEST_F(MergeTreeWriterTest, TestAutoFlush) {
     ASSERT_EQ(expected_data_increment, commit_increment.GetNewFilesIncrement());
 }
 
-TEST_F(MergeTreeWriterTest, TestIOException) {
+TEST_P(MergeTreeWriterTest, TestIOException) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
 
@@ -783,10 +793,10 @@ TEST_F(MergeTreeWriterTest, TestIOException) {
         ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
         std::string uuid = path_factory->uuid_;
 
-        auto merge_writer = std::make_shared<MergeTreeWriter>(
-            /*last_sequence_number=*/-1, primary_keys_, path_factory, key_comparator_,
-            /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
-            value_schema_, options, noop_compact_manager_, pool_);
+        auto merge_writer_result = CreateMergeWriter(
+            /*last_sequence_number=*/-1, dir->Str(), path_factory, /*schema_id=*/0, options);
+        CHECK_HOOK_STATUS(merge_writer_result.status(), i);
+        auto merge_writer = std::move(merge_writer_result).value();
 
         // write batch
         std::shared_ptr<arrow::Array> array =
@@ -812,11 +822,12 @@ TEST_F(MergeTreeWriterTest, TestIOException) {
     ASSERT_TRUE(run_complete);
 }
 
-TEST_F(MergeTreeWriterTest, TestBulkData) {
+TEST_P(MergeTreeWriterTest, TestBulkData) {
     // each batch is a file due to WRITE_BUFFER_SIZE
-    ASSERT_OK_AND_ASSIGN(
-        CoreOptions options,
-        CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}, {Options::WRITE_BUFFER_SIZE, "1"}}));
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"},
+                                               {Options::WRITE_BUFFER_SIZE, "1"},
+                                               {Options::WRITE_BUFFER_SPILLABLE, "false"}}));
 
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
@@ -824,10 +835,9 @@ TEST_F(MergeTreeWriterTest, TestBulkData) {
     ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
     std::string uuid = path_factory->uuid_;
 
-    auto merge_writer = std::make_shared<MergeTreeWriter>(
-        /*last_sequence_number=*/-1, primary_keys_, path_factory, key_comparator_,
-        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
-        value_schema_, options, noop_compact_manager_, pool_);
+    ASSERT_OK_AND_ASSIGN(auto merge_writer,
+                         CreateMergeWriter(/*last_sequence_number=*/-1, dir->Str(), path_factory,
+                                           /*schema_id=*/0, options));
     // multi batch
     size_t batch_size = 500;
     for (size_t i = 0; i < batch_size; ++i) {
@@ -880,7 +890,7 @@ TEST_F(MergeTreeWriterTest, TestBulkData) {
     }
 }
 
-TEST_F(MergeTreeWriterTest, TestShouldWait) {
+TEST_P(MergeTreeWriterTest, TestShouldWait) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
     auto dir = UniqueTestDirectory::Create();
@@ -889,10 +899,10 @@ TEST_F(MergeTreeWriterTest, TestShouldWait) {
     ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
 
     auto fake_compact_manager = std::make_shared<FakeCompactManager>();
-    auto merge_writer = std::make_shared<MergeTreeWriter>(
-        /*last_sequence_number=*/-1, primary_keys_, path_factory, key_comparator_,
-        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
-        value_schema_, options, fake_compact_manager, pool_);
+    ASSERT_OK_AND_ASSIGN(
+        auto merge_writer,
+        CreateMergeWriter(/*last_sequence_number=*/-1, dir->Str(), path_factory, /*schema_id=*/0,
+                          options, /*user_defined_seq_comparator=*/nullptr, fake_compact_manager));
 
     std::shared_ptr<arrow::Array> array =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -912,7 +922,7 @@ TEST_F(MergeTreeWriterTest, TestShouldWait) {
     ASSERT_OK(merge_writer->Close());
 }
 
-TEST_F(MergeTreeWriterTest, TestUpdateCompactResultDeleteIntermediateFile) {
+TEST_P(MergeTreeWriterTest, TestUpdateCompactResultDeleteIntermediateFile) {
     // TODO(lisizhuo.lsz): test UpdateCompactResult in inte compaction test.
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
@@ -922,10 +932,10 @@ TEST_F(MergeTreeWriterTest, TestUpdateCompactResultDeleteIntermediateFile) {
     ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
 
     auto fake_compact_manager = std::make_shared<FakeCompactManager>();
-    auto merge_writer = std::make_shared<MergeTreeWriter>(
-        /*last_sequence_number=*/-1, primary_keys_, path_factory, key_comparator_,
-        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
-        value_schema_, options, fake_compact_manager, pool_);
+    ASSERT_OK_AND_ASSIGN(
+        auto merge_writer,
+        CreateMergeWriter(/*last_sequence_number=*/-1, dir->Str(), path_factory, /*schema_id=*/0,
+                          options, /*user_defined_seq_comparator=*/nullptr, fake_compact_manager));
 
     // Round 1: Before=[A], After=[X]  => compact_before_=[A], compact_after_=[X]
     // Round 2: Before=[X], After=[Y]  => X is in compact_after_, so it's an intermediate file
@@ -944,7 +954,7 @@ TEST_F(MergeTreeWriterTest, TestUpdateCompactResultDeleteIntermediateFile) {
     ASSERT_EQ(merge_writer->compact_after_, std::vector<std::shared_ptr<DataFileMeta>>({file_y}));
 }
 
-TEST_F(MergeTreeWriterTest, TestUpdateCompactResultWithFileInCompactAfter) {
+TEST_P(MergeTreeWriterTest, TestUpdateCompactResultWithFileInCompactAfter) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
     auto dir = UniqueTestDirectory::Create();
@@ -953,10 +963,10 @@ TEST_F(MergeTreeWriterTest, TestUpdateCompactResultWithFileInCompactAfter) {
     ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
 
     auto fake_compact_manager = std::make_shared<FakeCompactManager>();
-    auto merge_writer = std::make_shared<MergeTreeWriter>(
-        /*last_sequence_number=*/-1, primary_keys_, path_factory, key_comparator_,
-        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
-        value_schema_, options, fake_compact_manager, pool_);
+    ASSERT_OK_AND_ASSIGN(
+        auto merge_writer,
+        CreateMergeWriter(/*last_sequence_number=*/-1, dir->Str(), path_factory, /*schema_id=*/0,
+                          options, /*user_defined_seq_comparator=*/nullptr, fake_compact_manager));
 
     // Round 1: Before=[A], After=[X@level0] => compact_after_ = [X@level0]
     // Round 2 (upgrade): Before=[X@level0], After=[X@level1]
@@ -977,7 +987,7 @@ TEST_F(MergeTreeWriterTest, TestUpdateCompactResultWithFileInCompactAfter) {
               std::vector<std::shared_ptr<DataFileMeta>>({file_x_level1}));
 }
 
-TEST_F(MergeTreeWriterTest, TestUpdateCompactResultWithFileInCompactBefore) {
+TEST_P(MergeTreeWriterTest, TestUpdateCompactResultWithFileInCompactBefore) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
     auto dir = UniqueTestDirectory::Create();
@@ -986,10 +996,10 @@ TEST_F(MergeTreeWriterTest, TestUpdateCompactResultWithFileInCompactBefore) {
     ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
 
     auto fake_compact_manager = std::make_shared<FakeCompactManager>();
-    auto merge_writer = std::make_shared<MergeTreeWriter>(
-        /*last_sequence_number=*/-1, primary_keys_, path_factory, key_comparator_,
-        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
-        value_schema_, options, fake_compact_manager, pool_);
+    ASSERT_OK_AND_ASSIGN(
+        auto merge_writer,
+        CreateMergeWriter(/*last_sequence_number=*/-1, dir->Str(), path_factory, /*schema_id=*/0,
+                          options, /*user_defined_seq_comparator=*/nullptr, fake_compact_manager));
 
     // Round 1 (upgrade): Before=[X@level0], After=[X@level1]
     // X is not in compact_after_ yet, so it goes to compact_before_ = [X].
@@ -1011,5 +1021,8 @@ TEST_F(MergeTreeWriterTest, TestUpdateCompactResultWithFileInCompactBefore) {
     ASSERT_EQ(merge_writer->compact_before_, std::vector<std::shared_ptr<DataFileMeta>>({file_x}));
     ASSERT_EQ(merge_writer->compact_after_, std::vector<std::shared_ptr<DataFileMeta>>({file_y}));
 }
+
+INSTANTIATE_TEST_SUITE_P(WithOptionalIOManager, MergeTreeWriterTest,
+                         ::testing::Values(false, true));
 
 }  // namespace paimon::test

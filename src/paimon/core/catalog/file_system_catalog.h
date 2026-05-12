@@ -69,8 +69,8 @@ class FileSystemCatalog : public Catalog {
     static std::string NewDatabasePath(const std::string& warehouse, const std::string& db_name);
     static std::string NewDataTablePath(const std::string& warehouse, const Identifier& identifier);
     static bool IsSystemDatabase(const std::string& db_name);
-    static bool IsSpecifiedSystemTable(const Identifier& identifier);
-    static bool IsSystemTable(const Identifier& identifier);
+    static Result<bool> IsSpecifiedSystemTable(const Identifier& identifier);
+    static Result<bool> IsSystemTable(const Identifier& identifier);
     Result<std::optional<std::shared_ptr<TableSchema>>> TableSchemaExists(
         const Identifier& identifier) const;
 

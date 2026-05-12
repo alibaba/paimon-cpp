@@ -26,15 +26,13 @@ namespace paimon {
 DataEvolutionBatchScan::DataEvolutionBatchScan(
     const std::string& table_path, const std::shared_ptr<SnapshotReader>& snapshot_reader,
     std::unique_ptr<DataTableBatchScan>&& batch_scan,
-    const std::shared_ptr<GlobalIndexResult>& global_index_result,
-    const std::shared_ptr<VectorSearch>& vector_search, const CoreOptions& core_options,
+    const std::shared_ptr<GlobalIndexResult>& global_index_result, const CoreOptions& core_options,
     const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<Executor>& executor)
     : AbstractTableScan(core_options, snapshot_reader),
       pool_(pool),
       table_path_(table_path),
       batch_scan_(std::move(batch_scan)),
       global_index_result_(global_index_result),
-      vector_search_(vector_search),
       executor_(executor) {}
 
 Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::CreatePlan() {
@@ -52,7 +50,12 @@ Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::CreatePlan() {
     if (!row_ranges) {
         return batch_scan_->CreatePlan();
     }
-    batch_scan_->WithRowRanges(row_ranges.value());
+    if (row_ranges.value().empty()) {
+        return PlanImpl::EmptyPlan();
+    }
+    PAIMON_ASSIGN_OR_RAISE(RowRangeIndex row_range_index,
+                           RowRangeIndex::Create(row_ranges.value()));
+    batch_scan_->WithRowRangeIndex(row_range_index);
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Plan> data_plan, batch_scan_->CreatePlan());
     std::map<int64_t, float> id_to_score;
     if (auto scored_result =
@@ -64,14 +67,13 @@ Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::CreatePlan() {
             id_to_score[id] = score;
         }
     }
-    return WrapToIndexedSplits(data_plan, row_ranges.value(), id_to_score);
+    return WrapToIndexedSplits(data_plan, row_range_index, id_to_score);
 }
 
 Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::WrapToIndexedSplits(
-    const std::shared_ptr<Plan>& data_plan, const std::vector<Range>& row_ranges,
+    const std::shared_ptr<Plan>& data_plan, const RowRangeIndex& row_range_index,
     const std::map<int64_t, float>& id_to_score) const {
-    std::vector<Range> sorted_row_ranges =
-        Range::SortAndMergeOverlap(row_ranges, /*adjacent=*/true);
+    // TODO(lisizhuo.lsz): add executor here
     auto data_splits = data_plan->Splits();
     std::vector<std::shared_ptr<Split>> indexed_splits;
     indexed_splits.reserve(data_splits.size());
@@ -80,14 +82,22 @@ Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::WrapToIndexedSplits(
         if (!data_split) {
             return Status::Invalid("Cannot cast split to DataSplit when create IndexedSplit");
         }
-        std::vector<Range> file_ranges;
-        file_ranges.reserve(data_split->DataFiles().size());
-        for (const auto& meta : data_split->DataFiles()) {
-            PAIMON_ASSIGN_OR_RAISE(int64_t first_row_id, meta->NonNullFirstRowId());
-            file_ranges.emplace_back(first_row_id, first_row_id + meta->row_count - 1);
+        const auto& files = data_split->DataFiles();
+        if (files.empty()) {
+            return Status::Invalid("Empty data files in WrapToIndexedSplits");
         }
-        auto sorted_file_ranges = Range::SortAndMergeOverlap(file_ranges, /*adjacent=*/true);
-        std::vector<Range> expected = Range::And(sorted_file_ranges, sorted_row_ranges);
+        PAIMON_ASSIGN_OR_RAISE(int64_t min, files[0]->NonNullFirstRowId());
+        PAIMON_ASSIGN_OR_RAISE(int64_t max, files[files.size() - 1]->NonNullFirstRowId());
+        max += files[files.size() - 1]->row_count - 1;
+
+        std::vector<Range> expected = row_range_index.IntersectedRanges(min, max);
+        if (expected.empty()) {
+            return Status::Invalid(
+                fmt::format("There should be intersected ranges for split with min row id {} and "
+                            "max row id {}.",
+                            min, max));
+        }
+
         std::vector<float> scores;
         if (!id_to_score.empty()) {
             for (const auto& range : expected) {
@@ -108,7 +118,7 @@ Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::WrapToIndexedSplits(
 
 Result<std::shared_ptr<GlobalIndexResult>> DataEvolutionBatchScan::EvalGlobalIndex() const {
     auto predicate = batch_scan_->GetNonPartitionPredicate();
-    if (!predicate && !vector_search_) {
+    if (!predicate) {
         return std::shared_ptr<GlobalIndexResult>(nullptr);
     }
     if (!core_options_.GlobalIndexEnabled()) {
@@ -119,36 +129,14 @@ Result<std::shared_ptr<GlobalIndexResult>> DataEvolutionBatchScan::EvalGlobalInd
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<GlobalIndexScan> index_scan,
         GlobalIndexScan::Create(table_path_, core_options_.GetScanSnapshotId(), partition_filter,
-                                core_options_.ToMap(), core_options_.GetFileSystem(), pool_));
+                                core_options_.ToMap(), core_options_.GetFileSystem(), executor_,
+                                pool_));
     auto index_scan_impl = dynamic_cast<GlobalIndexScanImpl*>(index_scan.get());
     if (!index_scan_impl) {
         return Status::Invalid("invalid GlobalIndexScan, cannot cast to GlobalIndexScanImpl");
     }
-    PAIMON_ASSIGN_OR_RAISE(std::vector<Range> indexed_row_ranges, index_scan->GetRowRangeList());
-    if (indexed_row_ranges.empty()) {
-        return std::shared_ptr<GlobalIndexResult>(nullptr);
-    }
-    const auto& snapshot = index_scan_impl->GetSnapshot();
-    const std::optional<int64_t>& next_row_id = snapshot.NextRowId();
-    if (!next_row_id) {
-        return Status::Invalid("invalid snapshot, next row id is null");
-    }
 
-    std::vector<Range> non_indexed_row_ranges =
-        Range(0, next_row_id.value() - 1).Exclude(indexed_row_ranges);
-    PAIMON_ASSIGN_OR_RAISE(
-        std::shared_ptr<GlobalIndexResult> index_result,
-        index_scan_impl->ParallelScan(indexed_row_ranges, predicate, vector_search_, executor_));
-    if (!index_result) {
-        return std::shared_ptr<GlobalIndexResult>(nullptr);
-    }
-    if (!non_indexed_row_ranges.empty()) {
-        for (const auto& range : non_indexed_row_ranges) {
-            PAIMON_ASSIGN_OR_RAISE(index_result,
-                                   index_result->Or(BitmapGlobalIndexResult::FromRanges({range})));
-        }
-    }
-    return index_result;
+    return index_scan_impl->Scan(predicate);
 }
 
 }  // namespace paimon

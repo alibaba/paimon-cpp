@@ -44,8 +44,8 @@ class DataTableBatchScan : public AbstractTableScan {
         return snapshot_reader_->GetPartitionPredicate();
     }
 
-    DataTableBatchScan* WithRowRanges(const std::vector<Range>& row_ranges) {
-        snapshot_reader_->WithRowRanges(row_ranges);
+    DataTableBatchScan* WithRowRangeIndex(const RowRangeIndex& row_range_index) {
+        snapshot_reader_->WithRowRangeIndex(row_range_index);
         return this;
     }
 

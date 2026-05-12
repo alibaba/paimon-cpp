@@ -80,8 +80,8 @@ class SnapshotReader {
         return this;
     }
 
-    SnapshotReader* WithRowRanges(const std::vector<Range>& row_ranges) {
-        scan_->WithRowRanges(row_ranges);
+    SnapshotReader* WithRowRangeIndex(const RowRangeIndex& row_range_index) {
+        scan_->WithRowRangeIndex(row_range_index);
         return this;
     }
 
