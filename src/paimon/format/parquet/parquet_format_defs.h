@@ -63,11 +63,10 @@ class ParquetMetrics {
     static inline const char WRITE_RECORD_COUNT[] = "parquet.write.record.count";
 
     // read
-    static inline const char READ_ROW_GROUPS_TOTAL[] = "parquet.read.row_groups.total";
-    static inline const char READ_ROW_GROUPS_FILTERED[] = "parquet.read.row_groups.filtered";
+    static inline const char READ_ROW_GROUPS_TOTAL[] = "parquet.read.row-groups.total";
+    static inline const char READ_ROW_GROUPS_FILTERED[] = "parquet.read.row-groups.filtered";
     static inline const char READ_ROWS[] = "parquet.read.rows";
-    static inline const char READ_BATCH_COUNT[] = "parquet.read.batch.count";
-    static inline const char READ_NEXT_BATCH_LATENCY_MS[] = "parquet.read.next_batch.latency.ms";
+    static inline const char READ_BATCH_COUNT[] = "parquet.read.batch-count";
 };
 
 }  // namespace paimon::parquet
