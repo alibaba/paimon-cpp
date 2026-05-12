@@ -832,10 +832,10 @@ TEST(FileSystemCatalogTest, TestDropTableWithBranchExternalPaths) {
     // Original: "file.format" : "orc"
     // Patched:  "file.format" : "orc",
     //           "data-file.external-paths" : "<branch_external_path>"
-    std::string search_str = "\"file.format\" : \"orc\"";
-    std::string replace_str = "\"file.format\" : \"orc\",\n    \"" +
-                              std::string(Options::DATA_FILE_EXTERNAL_PATHS) + "\" : \"" +
-                              branch_external_path + "\"";
+    std::string search_str = R"("file.format" : "orc")";
+    std::string replace_str = R"("file.format" : "orc",\n    ")" +
+                              std::string(Options::DATA_FILE_EXTERNAL_PATHS) + R"(" : ")" +
+                              branch_external_path + R"(")";
     auto pos = schema_content.rfind(search_str);
     ASSERT_NE(pos, std::string::npos);
     schema_content.replace(pos, search_str.length(), replace_str);

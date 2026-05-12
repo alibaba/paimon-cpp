@@ -156,9 +156,9 @@ class BucketedAppendCompactManagerTest : public testing::Test {
 
     void ExpectVectorsEqual(const std::vector<std::shared_ptr<DataFileMeta>>& actual,
                             const std::vector<std::shared_ptr<DataFileMeta>>& expected) {
-        EXPECT_EQ(actual.size(), expected.size());
+        ASSERT_EQ(actual.size(), expected.size());
         for (size_t i = 0; i < actual.size(); ++i) {
-            EXPECT_EQ(*actual[i], *expected[i]);
+            ASSERT_EQ(*actual[i], *expected[i]);
         }
     }
 
@@ -335,7 +335,7 @@ TEST_F(BucketedAppendCompactManagerTest, TestCancelCompactionPropagatesToRewrite
     ASSERT_OK(manager.TriggerCompaction(/*full_compaction=*/true));
     manager.CancelAndWaitCompaction();
 
-    EXPECT_EQ(exit_future.wait_for(std::chrono::seconds(1)), std::future_status::ready);
+    ASSERT_EQ(exit_future.wait_for(std::chrono::seconds(1)), std::future_status::ready);
 }
 
 TEST_F(BucketedAppendCompactManagerTest, TestTriggerCompactionResetsCancelFlag) {
@@ -394,9 +394,9 @@ TEST_F(BucketedAppendCompactManagerTest, TestHasDeletionFileLargeFileWithDvRetai
     // All 3 files should appear in Before().
     const auto& before = result.value()->Before();
     ASSERT_EQ(before.size(), 3);
-    EXPECT_EQ(before[0]->file_name, "big_file");
-    EXPECT_EQ(before[1]->file_name, "small_file1");
-    EXPECT_EQ(before[2]->file_name, "small_file2");
+    ASSERT_EQ(before[0]->file_name, "big_file");
+    ASSERT_EQ(before[1]->file_name, "small_file1");
+    ASSERT_EQ(before[2]->file_name, "small_file2");
 }
 
 TEST_F(BucketedAppendCompactManagerTest, TestHasDeletionFileLargeFileWithoutDvSkipped) {
@@ -434,8 +434,8 @@ TEST_F(BucketedAppendCompactManagerTest, TestHasDeletionFileLargeFileWithoutDvSk
     // Only small files remain in Before().
     const auto& before = result.value()->Before();
     ASSERT_EQ(before.size(), 2);
-    EXPECT_EQ(before[0]->file_name, "small_file1");
-    EXPECT_EQ(before[1]->file_name, "small_file2");
+    ASSERT_EQ(before[0]->file_name, "small_file1");
+    ASSERT_EQ(before[1]->file_name, "small_file2");
 }
 
 TEST_F(BucketedAppendCompactManagerTest, TestDoCompactWithNullDvMaintainerWithLessBigFile) {
@@ -466,9 +466,9 @@ TEST_F(BucketedAppendCompactManagerTest, TestDoCompactWithNullDvMaintainerWithLe
     // Only the 3 small files appear in Before().
     const auto& before = result.value()->Before();
     ASSERT_EQ(before.size(), 3);
-    EXPECT_EQ(before[0]->file_name, "small1");
-    EXPECT_EQ(before[1]->file_name, "small2");
-    EXPECT_EQ(before[2]->file_name, "small3");
+    ASSERT_EQ(before[0]->file_name, "small1");
+    ASSERT_EQ(before[1]->file_name, "small2");
+    ASSERT_EQ(before[2]->file_name, "small3");
 }
 
 TEST_F(BucketedAppendCompactManagerTest, TestDoNoCompact) {
@@ -517,8 +517,8 @@ TEST_F(BucketedAppendCompactManagerTest, TestAllFilesWithoutCompacting) {
     auto all_files = manager.AllFiles();
     // to_compact_ is a min-heap sorted by min_sequence_number, so file1 comes first.
     ASSERT_EQ(all_files.size(), 2);
-    EXPECT_EQ(all_files[0]->file_name, "file1");
-    EXPECT_EQ(all_files[1]->file_name, "file2");
+    ASSERT_EQ(all_files[0]->file_name, "file1");
+    ASSERT_EQ(all_files[1]->file_name, "file2");
 }
 
 TEST_F(BucketedAppendCompactManagerTest, TestAllFilesWithCompacting) {
@@ -562,10 +562,10 @@ TEST_F(BucketedAppendCompactManagerTest, TestAllFilesWithCompacting) {
     // While compaction is in progress, AllFiles should return all files (compacting_ + to_compact_)
     auto all_files = manager.AllFiles();
     ASSERT_EQ(all_files.size(), 4);
-    EXPECT_EQ(all_files[0]->file_name, "file1");
-    EXPECT_EQ(all_files[1]->file_name, "file2");
-    EXPECT_EQ(all_files[2]->file_name, "file3");
-    EXPECT_EQ(all_files[3]->file_name, "file4");
+    ASSERT_EQ(all_files[0]->file_name, "file1");
+    ASSERT_EQ(all_files[1]->file_name, "file2");
+    ASSERT_EQ(all_files[2]->file_name, "file3");
+    ASSERT_EQ(all_files[3]->file_name, "file4");
 
     // Let compaction finish
     proceed_signal->set_value();
@@ -579,7 +579,7 @@ TEST_F(BucketedAppendCompactManagerTest, TestAllFilesWithCompacting) {
     auto all_files_after = manager.AllFiles();
     // file4 (size=100 < compaction_file_size=500) should be put back to to_compact_
     ASSERT_EQ(all_files_after.size(), 1);
-    EXPECT_EQ(all_files_after[0]->file_name, "file4");
+    ASSERT_EQ(all_files_after[0]->file_name, "file4");
 }
 
 }  // namespace paimon::test
