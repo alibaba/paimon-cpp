@@ -29,6 +29,7 @@
 #include "paimon/common/data/columnar/columnar_row_ref.h"
 #include "paimon/common/types/row_kind.h"
 #include "paimon/common/utils/arrow/arrow_utils.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/fields_comparator.h"
 #include "paimon/status.h"
@@ -62,6 +63,7 @@ KeyValueInMemoryRecordReader::KeyValueInMemoryRecordReader(
       user_defined_sequence_fields_(user_defined_sequence_fields),
       sequence_fields_ascending_(sequence_fields_ascending),
       pool_(pool),
+      arrow_pool_(GetArrowPool(pool)),
       value_struct_array_(struct_array),
       row_kinds_(row_kinds),
       key_comparator_(key_comparator) {
@@ -119,9 +121,10 @@ KeyValueInMemoryRecordReader::SortBatch() const {
     }
     auto sort_options =
         arrow::compute::SortOptions(sort_keys, arrow::compute::NullPlacement::AtStart);
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-        std::shared_ptr<arrow::Array> sorted_indices,
-        arrow::compute::SortIndices(arrow::Datum(value_struct_array_), sort_options));
+    arrow::compute::ExecContext exec_context(arrow_pool_.get());
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> sorted_indices,
+                                      arrow::compute::SortIndices(arrow::Datum(value_struct_array_),
+                                                                  sort_options, &exec_context));
     auto typed_indices =
         arrow::internal::checked_pointer_cast<arrow::NumericArray<arrow::UInt64Type>>(
             sorted_indices);

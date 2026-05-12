@@ -184,6 +184,9 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     std::shared_ptr<Metrics> metrics_;
     std::unique_ptr<Logger> logger_;
 
+    uint64_t read_rows_ = 0;
+    uint64_t read_batch_count_ = 0;
+
     // last time set read schema
     std::vector<int32_t> read_row_groups_;
     std::vector<int32_t> read_column_indices_;

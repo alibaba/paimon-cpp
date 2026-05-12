@@ -71,6 +71,12 @@ static constexpr bool DEFAULT_PARQUET_READ_ENABLE_PAGE_INDEX_FILTER = true;
 class ParquetMetrics {
  public:
     static inline const char WRITE_RECORD_COUNT[] = "parquet.write.record.count";
+
+    // read
+    static inline const char READ_ROW_GROUPS_TOTAL[] = "parquet.read.row-groups.total";
+    static inline const char READ_ROW_GROUPS_FILTERED[] = "parquet.read.row-groups.filtered";
+    static inline const char READ_ROWS[] = "parquet.read.rows";
+    static inline const char READ_BATCH_COUNT[] = "parquet.read.batch-count";
 };
 
 }  // namespace paimon::parquet
