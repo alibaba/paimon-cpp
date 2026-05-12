@@ -619,9 +619,8 @@ TEST_F(FieldMappingReaderTest, TestReadWithSchemaEvolutionPureRename) {
             .ValueOrDie());
 
     // Read schema: same field ids, RENAMED names, same types, identity order
-    std::vector<DataField> read_fields = {
-        DataField(0, arrow::field("name_new", arrow::utf8())),
-        DataField(1, arrow::field("age_new", arrow::int32()))};
+    std::vector<DataField> read_fields = {DataField(0, arrow::field("name_new", arrow::utf8())),
+                                          DataField(1, arrow::field("age_new", arrow::int32()))};
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields);
 
     // Expected output uses the post-rename names; verifies mapping actually
