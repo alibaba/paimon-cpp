@@ -88,7 +88,6 @@ class ChangelogBatchReader : public BatchReader {
                                BuildRowKindArray(struct_array));
 
         arrow::ArrayVector output_arrays = {rowkind_array};
-        int32_t field_offset = 1;
         if (include_sequence_number_) {
             std::shared_ptr<arrow::Array> sequence_array =
                 struct_array->GetFieldByName(SpecialFields::SequenceNumber().Name());
@@ -97,11 +96,17 @@ class ChangelogBatchReader : public BatchReader {
             }
             PAIMON_ASSIGN_OR_RAISE(sequence_array, CopyToStablePool(sequence_array));
             output_arrays.push_back(sequence_array);
-            field_offset++;
         }
 
-        for (int32_t i = field_offset; i < struct_array->num_fields(); ++i) {
-            std::shared_ptr<arrow::Array> array = struct_array->field(i);
+        for (const auto& field : output_schema_->fields()) {
+            if (field->name() == "rowkind" ||
+                field->name() == SpecialFields::SequenceNumber().Name()) {
+                continue;
+            }
+            std::shared_ptr<arrow::Array> array = struct_array->GetFieldByName(field->name());
+            if (!array) {
+                return Status::Invalid("cannot find ", field->name(), " in changelog batch");
+            }
             PAIMON_ASSIGN_OR_RAISE(array, converter_->ConvertDataColumn(array, arrow_pool_));
             PAIMON_ASSIGN_OR_RAISE(array, CopyToStablePool(array));
             output_arrays.push_back(array);

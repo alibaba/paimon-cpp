@@ -242,17 +242,26 @@ std::map<std::string, std::string> CollectStringMap(
 }
 
 std::shared_ptr<arrow::StructArray> SingleStructChunk(const SystemTableReadResult& result) {
-    EXPECT_TRUE(result.array);
-    EXPECT_EQ(result.array->num_chunks(), 1);
-    if (!result.array || result.array->num_chunks() != 1) {
+    if (!result.array) {
+        ADD_FAILURE() << "expected non-null system table result";
+        return nullptr;
+    }
+    if (result.array->num_chunks() != 1) {
+        ADD_FAILURE() << "expected one chunk, got " << result.array->num_chunks();
         return nullptr;
     }
     auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(result.array->chunk(0));
-    EXPECT_TRUE(struct_array);
+    if (!struct_array) {
+        ADD_FAILURE() << "expected struct chunk";
+    }
     return struct_array;
 }
 
 std::vector<std::string> StructFieldNames(const std::shared_ptr<arrow::StructArray>& array) {
+    if (!array) {
+        ADD_FAILURE() << "expected non-null struct array";
+        return {};
+    }
     return arrow::schema(array->type()->fields())->field_names();
 }
 
