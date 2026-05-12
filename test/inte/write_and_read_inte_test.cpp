@@ -919,7 +919,7 @@ TEST_P(WriteAndReadInteTest, TestPKWithParquetPageIndexFilter) {
     std::string table_path = test_dir->Str() + "/foo.db/bar";
     int64_t commit_identifier = 0;
 
-    // Write data: 12 rows across 2 partitions, distributed across 4 buckets
+    // Write data: 12 rows across 2 partitions
     std::string data_p1 = R"([
         ["Alice", "p1", 10, 1.1],
         ["Bob", "p1", 20, 2.2],

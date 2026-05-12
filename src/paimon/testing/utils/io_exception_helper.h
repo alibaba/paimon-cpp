@@ -53,30 +53,6 @@ namespace paimon::test {
         }                                                                                    \
     }
 
-// Like CHECK_HOOK_STATUS but also catches exceptions (e.g., from Arrow's PARQUET_THROW_NOT_OK)
-#define CHECK_HOOK_STATUS_WITH_EXCEPTIONS(expr, io_count)                                         \
-    {                                                                                             \
-        try {                                                                                     \
-            auto __s = (expr).status();                                                           \
-            if (!__s.ok()) {                                                                      \
-                if (__s.ToString().find(fmt::format("io hook triggered io error at position {}",  \
-                                                    io_count)) != std::string::npos) {            \
-                    continue;                                                                     \
-                } else {                                                                          \
-                    FAIL() << __s.ToString();                                                     \
-                }                                                                                 \
-            }                                                                                     \
-        } catch (const std::exception& e) {                                                       \
-            std::string __msg = e.what();                                                         \
-            if (__msg.find(fmt::format("io hook triggered io error at position {}", io_count)) != \
-                std::string::npos) {                                                              \
-                continue;                                                                         \
-            } else {                                                                              \
-                FAIL() << "Exception: " << __msg;                                                 \
-            }                                                                                     \
-        }                                                                                         \
-    }
-
 #define CHECK_HOOK_STATUS_WITHOUT_MESSAGE_CHECK(status) \
     {                                                   \
         auto __s = (status);                            \
