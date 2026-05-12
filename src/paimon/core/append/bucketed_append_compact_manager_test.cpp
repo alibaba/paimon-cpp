@@ -172,10 +172,10 @@ TEST_F(BucketedAppendCompactManagerTest, TestFileComparatorWithoutOverlap) {
     auto& file3 = files[2];
 
     auto comparator = BucketedAppendCompactManager::FileComparator(false);
-    EXPECT_TRUE(comparator(file1, file2));
-    EXPECT_FALSE(comparator(file2, file1));
-    EXPECT_TRUE(comparator(file1, file3));
-    EXPECT_FALSE(comparator(file3, file1));
+    ASSERT_TRUE(comparator(file1, file2));
+    ASSERT_FALSE(comparator(file2, file1));
+    ASSERT_TRUE(comparator(file1, file3));
+    ASSERT_FALSE(comparator(file3, file1));
 }
 
 TEST_F(BucketedAppendCompactManagerTest, TestFileComparatorWithOverlap) {
@@ -185,10 +185,10 @@ TEST_F(BucketedAppendCompactManagerTest, TestFileComparatorWithOverlap) {
     auto& file3 = files[2];
 
     auto comparator = BucketedAppendCompactManager::FileComparator(true);
-    EXPECT_TRUE(comparator(file1, file2));
-    EXPECT_FALSE(comparator(file2, file1));
-    EXPECT_TRUE(comparator(file1, file3));
-    EXPECT_FALSE(comparator(file3, file1));
+    ASSERT_TRUE(comparator(file1, file2));
+    ASSERT_FALSE(comparator(file2, file1));
+    ASSERT_TRUE(comparator(file1, file3));
+    ASSERT_FALSE(comparator(file3, file1));
 }
 
 TEST_F(BucketedAppendCompactManagerTest, TestIsOverlap) {
@@ -197,9 +197,9 @@ TEST_F(BucketedAppendCompactManagerTest, TestIsOverlap) {
     auto& file2 = files[1];
     auto& file3 = files[2];
 
-    EXPECT_TRUE(BucketedAppendCompactManager::IsOverlap(file1, file2));
-    EXPECT_FALSE(BucketedAppendCompactManager::IsOverlap(file1, file3));
-    EXPECT_FALSE(BucketedAppendCompactManager::IsOverlap(file2, file3));
+    ASSERT_TRUE(BucketedAppendCompactManager::IsOverlap(file1, file2));
+    ASSERT_FALSE(BucketedAppendCompactManager::IsOverlap(file1, file3));
+    ASSERT_FALSE(BucketedAppendCompactManager::IsOverlap(file2, file3));
 }
 
 TEST_F(BucketedAppendCompactManagerTest, TestPickEmptyAndNotRelease) {
@@ -354,7 +354,7 @@ TEST_F(BucketedAppendCompactManagerTest, TestTriggerCompactionResetsCancelFlag) 
         /*reporter=*/nullptr, cancellation_controller);
 
     ASSERT_OK(manager.TriggerCompaction(/*full_compaction=*/true));
-    EXPECT_FALSE(cancellation_controller->IsCancelled());
+    ASSERT_FALSE(cancellation_controller->IsCancelled());
 }
 
 TEST_F(BucketedAppendCompactManagerTest, TestHasDeletionFileLargeFileWithDvRetained) {
@@ -492,8 +492,8 @@ TEST_F(BucketedAppendCompactManagerTest, TestDoNoCompact) {
     ASSERT_OK(manager.TriggerCompaction(/*full_compaction=*/true));
     ASSERT_OK_AND_ASSIGN(auto result, manager.GetCompactionResult(/*blocking=*/true));
     ASSERT_TRUE(result.has_value());
-    EXPECT_TRUE(result.value()->Before().empty());
-    EXPECT_TRUE(result.value()->After().empty());
+    ASSERT_TRUE(result.value()->Before().empty());
+    ASSERT_TRUE(result.value()->After().empty());
 }
 
 TEST_F(BucketedAppendCompactManagerTest, TestAllFilesWithoutCompacting) {
