@@ -144,8 +144,8 @@ TEST(DataEvolutionRowTest, TestAllFieldTypes) {
         writer.WriteMap(1, *map_obj);
 
         // field 2: row ("Alice", 30)
-        BinaryRow inner_row =
-            BinaryRowGenerator::GenerateRow({std::string("Alice"), int32_t(30)}, pool.get());
+        BinaryRow inner_row = BinaryRowGenerator::GenerateRow(
+            {std::string("Alice"), static_cast<int32_t>(30)}, pool.get());
         writer.WriteRow(2, inner_row);
 
         writer.Complete();
