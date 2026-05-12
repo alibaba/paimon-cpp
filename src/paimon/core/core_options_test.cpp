@@ -709,7 +709,8 @@ TEST(CoreOptionsTest, TestParseChangelogProducer) {
                              CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "LOOKUP"}}));
         ASSERT_EQ(options.GetChangelogProducer(), ChangelogProducer::LOOKUP);
     }
-    { ASSERT_NOK(CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "invalid"}})); }
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "invalid"}}),
+                        "invalid changelog producer: invalid");
 }
 
 TEST(CoreOptionsTest, TestParseExternalPathStrategy) {
@@ -738,7 +739,9 @@ TEST(CoreOptionsTest, TestParseExternalPathStrategy) {
             CoreOptions::FromMap({{Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "ROUND-ROBIN"}}));
         ASSERT_EQ(options.GetExternalPathStrategy(), ExternalPathStrategy::ROUND_ROBIN);
     }
-    { ASSERT_NOK(CoreOptions::FromMap({{Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "invalid"}})); }
+    ASSERT_NOK_WITH_MSG(
+        CoreOptions::FromMap({{Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "invalid"}}),
+        "invalid external path strategy: invalid");
 }
 
 TEST(CoreOptionsTest, TestCopyAssignmentOperator) {
