@@ -42,6 +42,7 @@ class KeyValueProjectionConsumer
     : public RowToArrowArrayConverter<KeyValue, BatchReader::ReadBatch> {
  public:
     static constexpr int32_t kSequenceNumberProjection = SpecialFieldIds::SEQUENCE_NUMBER;
+    static constexpr int32_t kValueKindProjection = SpecialFieldIds::VALUE_KIND;
 
     static Result<std::unique_ptr<KeyValueProjectionConsumer>> Create(
         const std::shared_ptr<arrow::Schema>& target_schema,

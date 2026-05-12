@@ -634,7 +634,7 @@ struct CoreOptions::Impl {
         // Parse table-read.sequence-number.enabled - expose sequence number in system tables
         PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::TABLE_READ_SEQUENCE_NUMBER_ENABLED,
                                                 &table_read_sequence_number_enabled));
-        // Parse key-value.sequence_number.enabled - internal sequence number read switch
+        // Parse key-value.sequence-number.enabled - internal sequence number read switch
         PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::KEY_VALUE_SEQUENCE_NUMBER_ENABLED,
                                                 &key_value_sequence_number_enabled));
         // Parse partial-update.remove-record-on-sequence-group

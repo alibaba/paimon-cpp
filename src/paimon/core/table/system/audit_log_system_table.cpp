@@ -311,7 +311,8 @@ Result<std::unique_ptr<TableRead>> AuditLogSystemTable::NewChangelogRead(
 }
 
 Result<std::shared_ptr<arrow::Schema>> AuditLogSystemTable::BaseReadSchema() const {
-    arrow::FieldVector fields;
+    arrow::FieldVector fields = {
+        DataField::ConvertDataFieldToArrowField(SpecialFields::ValueKind())};
     PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(options_));
     bool include_sequence_number = core_options.TableReadSequenceNumberEnabled();
     if (include_sequence_number) {

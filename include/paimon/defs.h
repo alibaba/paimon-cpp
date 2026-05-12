@@ -377,7 +377,7 @@ struct PAIMON_EXPORT Options {
     /// "table-read.sequence-number.enabled" - Whether the system table read produces the sequence
     /// number column. Default value is "false".
     static const char TABLE_READ_SEQUENCE_NUMBER_ENABLED[];
-    /// "key-value.sequence_number.enabled" - Whether the key-value table read produces the sequence
+    /// "key-value.sequence-number.enabled" - Whether the key-value table read produces the sequence
     /// number column. Default value is "false".
     static const char KEY_VALUE_SEQUENCE_NUMBER_ENABLED[];
 

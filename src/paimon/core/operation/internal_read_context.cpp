@@ -51,6 +51,10 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
                 read_data_fields.push_back(SpecialFields::SequenceNumber());
                 continue;
             }
+            if (field_id == SpecialFields::ValueKind().Id()) {
+                read_data_fields.push_back(SpecialFields::ValueKind());
+                continue;
+            }
             if (core_options.DataEvolutionEnabled() &&
                 field_id == SpecialFields::IndexScore().Id()) {
                 read_data_fields.push_back(SpecialFields::IndexScore());
@@ -71,6 +75,10 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
                  core_options.KeyValueSequenceNumberEnabled()) &&
                 name == SpecialFields::SequenceNumber().Name()) {
                 read_data_fields.push_back(SpecialFields::SequenceNumber());
+                continue;
+            }
+            if (name == SpecialFields::ValueKind().Name()) {
+                read_data_fields.push_back(SpecialFields::ValueKind());
                 continue;
             }
             if (core_options.DataEvolutionEnabled() && name == SpecialFields::IndexScore().Name()) {

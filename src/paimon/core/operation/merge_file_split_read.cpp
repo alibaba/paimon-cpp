@@ -112,6 +112,10 @@ Result<std::unique_ptr<MergeFileSplitRead>> MergeFileSplitRead::Create(
             projection.push_back(KeyValueProjectionConsumer::kSequenceNumberProjection);
             continue;
         }
+        if (field->name() == SpecialFields::ValueKind().Name()) {
+            projection.push_back(KeyValueProjectionConsumer::kValueKindProjection);
+            continue;
+        }
         auto src_field_idx = value_schema->GetFieldIndex(field->name());
         if (src_field_idx < 0) {
             return Status::Invalid(
@@ -329,6 +333,13 @@ Status MergeFileSplitRead::GenerateKeyValueReadSchema(
                                          }),
                           need_fields.end());
     }
+    // _VALUE_KIND is also carried by KeyValue metadata. Keep it out of KeyValue.value so the
+    // projection can inject the actual row kind instead of resolving it as a table field.
+    need_fields.erase(std::remove_if(need_fields.begin(), need_fields.end(),
+                                     [](const DataField& field) {
+                                         return field.Name() == SpecialFields::ValueKind().Name();
+                                     }),
+                      need_fields.end());
     // 2. add user defined sequence field to need_fields
     PAIMON_RETURN_NOT_OK(CompleteSequenceField(table_schema, options, &need_fields));
     if (options.GetMergeEngine() == MergeEngine::PARTIAL_UPDATE) {

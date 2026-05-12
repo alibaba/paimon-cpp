@@ -81,6 +81,14 @@ Result<BatchReader::ReadBatch> KeyValueProjectionConsumer::NextBatch(
                 PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(row.sequence_number));
                 continue;
             }
+            if (target_to_src_mapping_[i] == kValueKindProjection) {
+                auto* builder = dynamic_cast<arrow::Int8Builder*>(array_builder_->field_builder(i));
+                if (builder == nullptr) {
+                    return Status::Invalid("cannot append value kind to non-int8 field");
+                }
+                PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(row.value_kind->ToByteValue()));
+                continue;
+            }
             PAIMON_RETURN_NOT_OK_FROM_ARROW(appenders_[i](*(row.value), target_to_src_mapping_[i]));
         }
     }
