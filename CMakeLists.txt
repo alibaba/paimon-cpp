@@ -365,7 +365,7 @@ if(PAIMON_BUILD_TESTS)
     endif()
     # Adding unit tests part of the "paimon" portion of the test suite
     add_custom_target(paimon-tests)
-    build_gtest()
+    resolve_dependency(GTest)
 
     add_custom_target(unittest
                       ctest
@@ -421,6 +421,8 @@ if(PAIMON_BUILD_TESTS)
         list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--as-needed")
     endif()
 endif()
+
+paimon_print_dependency_resolution_summary()
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(

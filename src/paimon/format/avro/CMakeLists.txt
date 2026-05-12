@@ -29,8 +29,6 @@ if(PAIMON_ENABLE_AVRO)
     add_paimon_lib(paimon_avro_file_format
                    SOURCES
                    ${PAIMON_AVRO_FILE_FORMAT}
-                   EXTRA_INCLUDES
-                   ${AVRO_INCLUDE_DIR}
                    DEPENDENCIES
                    paimon_shared
                    avro
@@ -58,8 +56,6 @@ if(PAIMON_ENABLE_AVRO)
                         avro_schema_converter_test.cpp
                         avro_stats_extractor_test.cpp
                         avro_writer_builder_test.cpp
-                        EXTRA_INCLUDES
-                        ${AVRO_INCLUDE_DIR}
                         STATIC_LINK_LIBS
                         paimon_shared
                         test_utils_static
@@ -67,7 +63,9 @@ if(PAIMON_ENABLE_AVRO)
                         paimon_local_file_system_static
                         paimon_avro_file_format_static
                         "-Wl,--no-whole-archive"
-                        ${GTEST_LINK_TOOLCHAIN})
+                        ${GTEST_LINK_TOOLCHAIN}
+                        EXTRA_LINK_LIBS
+                        avro)
 
     endif()
 

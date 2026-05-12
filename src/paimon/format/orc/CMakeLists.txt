@@ -29,8 +29,6 @@ if(PAIMON_ENABLE_ORC)
     add_paimon_lib(paimon_orc_file_format
                    SOURCES
                    ${PAIMON_ORC_FILE_FORMAT}
-                   EXTRA_INCLUDES
-                   ${ORC_INCLUDE_DIR}
                    DEPENDENCIES
                    paimon_shared
                    orc::orc
@@ -60,8 +58,6 @@ if(PAIMON_ENABLE_ORC)
                         orc_stats_extractor_test.cpp
                         orc_format_writer_test.cpp
                         orc_file_batch_reader_test.cpp
-                        EXTRA_INCLUDES
-                        ${ORC_INCLUDE_DIR}
                         STATIC_LINK_LIBS
                         paimon_shared
                         test_utils_static
@@ -69,6 +65,8 @@ if(PAIMON_ENABLE_ORC)
                         paimon_local_file_system_static
                         paimon_orc_file_format_static
                         "-Wl,--no-whole-archive"
-                        ${GTEST_LINK_TOOLCHAIN})
+                        ${GTEST_LINK_TOOLCHAIN}
+                        EXTRA_LINK_LIBS
+                        orc::orc)
     endif()
 endif()
