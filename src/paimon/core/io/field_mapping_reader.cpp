@@ -65,6 +65,15 @@ FieldMappingReader::FieldMappingReader(int32_t field_count,
         if (non_partition_info_.cast_executors[i] != nullptr) {
             need_casting_ = true;
         }
+        // Field name change (RENAME COLUMN) also requires mapping: data schema
+        // carries the file's physical name while read schema carries the
+        // post-rename logical name. If we skipped mapping, the inner reader's
+        // batch would be passed through with the old physical name and the
+        // consumer's name-based lookup against the read schema would fail.
+        if (non_partition_info_.non_partition_data_schema[i].Name() !=
+            non_partition_info_.non_partition_read_schema[i].Name()) {
+            need_mapping_ = true;
+        }
     }
 }
 
