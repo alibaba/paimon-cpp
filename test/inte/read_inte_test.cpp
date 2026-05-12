@@ -241,10 +241,6 @@ std::map<std::string, std::string> CollectStringMap(
     return values;
 }
 
-std::map<std::string, std::string> CollectStringMap(const SystemTableReadResult& result) {
-    return CollectStringMap(result.array);
-}
-
 std::shared_ptr<arrow::StructArray> SingleStructChunk(const SystemTableReadResult& result) {
     EXPECT_TRUE(result.array);
     EXPECT_EQ(result.array->num_chunks(), 1);
