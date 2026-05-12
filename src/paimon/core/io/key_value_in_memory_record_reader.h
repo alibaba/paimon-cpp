@@ -83,6 +83,7 @@ class KeyValueInMemoryRecordReader : public KeyValueRecordReader {
     std::vector<std::string> user_defined_sequence_fields_;
     bool sequence_fields_ascending_ = true;
     std::shared_ptr<MemoryPool> pool_;
+    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
     std::shared_ptr<arrow::StructArray> value_struct_array_;
     std::vector<RecordBatch::RowKind> row_kinds_;
     std::shared_ptr<FieldsComparator> key_comparator_;
