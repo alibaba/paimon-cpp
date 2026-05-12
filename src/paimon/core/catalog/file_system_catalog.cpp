@@ -338,15 +338,25 @@ Result<std::vector<std::string>> FileSystemCatalog::GetSchemaExternalPaths(
     std::set<std::string> external_paths_set;
     for (const auto& schema : schemas) {
         const auto& options = schema->Options();
-        auto iter = options.find(Options::DATA_FILE_EXTERNAL_PATHS);
-        if (iter != options.end() && !iter->second.empty()) {
-            auto paths = StringUtils::Split(iter->second, ",", /*ignore_empty=*/true);
+        // collect external data file path
+        auto data_iter = options.find(Options::DATA_FILE_EXTERNAL_PATHS);
+        if (data_iter != options.end() && !data_iter->second.empty()) {
+            auto paths = StringUtils::Split(data_iter->second, ",", /*ignore_empty=*/true);
             for (const auto& path : paths) {
                 std::string trimmed_path = path;
                 StringUtils::Trim(&trimmed_path);
                 if (!trimmed_path.empty()) {
                     external_paths_set.insert(trimmed_path);
                 }
+            }
+        }
+        // collect external global index path
+        auto index_iter = options.find(Options::GLOBAL_INDEX_EXTERNAL_PATH);
+        if (index_iter != options.end() && !index_iter->second.empty()) {
+            std::string trimmed_path = index_iter->second;
+            StringUtils::Trim(&trimmed_path);
+            if (!trimmed_path.empty()) {
+                external_paths_set.insert(trimmed_path);
             }
         }
     }

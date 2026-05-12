@@ -744,6 +744,131 @@ TEST(FileSystemCatalogTest, TestDropTableWithMultipleExternalPaths) {
     ArrowSchemaRelease(&schema);
 }
 
+TEST(FileSystemCatalogTest, TestDropTableWithGlobalIndexExternalPathOnMainBranch) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
+
+    // Create external path directory for global index
+    auto global_index_dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(global_index_dir);
+    std::string global_index_path = global_index_dir->Str();
+
+    // Create a file in external path to simulate global index data
+    ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
+    std::string index_file = PathUtil::JoinPath(global_index_path, "index-file.bin");
+    ASSERT_OK(fs->WriteFile(index_file, "index data", /*overwrite=*/true));
+
+    // Verify index file exists
+    ASSERT_OK_AND_ASSIGN(bool index_file_exists, fs->Exists(index_file));
+    ASSERT_TRUE(index_file_exists);
+
+    // Create table with global index external path on main branch
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::utf8()),
+    };
+    arrow::Schema typed_schema(fields);
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+
+    std::map<std::string, std::string> table_options = options;
+    table_options[Options::GLOBAL_INDEX_EXTERNAL_PATH] = global_index_path;
+
+    ASSERT_OK(catalog.CreateTable(Identifier("test_db", "tbl_global_index"), &schema, {}, {},
+                                  table_options, false));
+
+    // Verify table exists
+    ASSERT_OK_AND_ASSIGN(bool table_exists,
+                         catalog.TableExists(Identifier("test_db", "tbl_global_index")));
+    ASSERT_TRUE(table_exists);
+
+    // Drop the table
+    ASSERT_OK(catalog.DropTable(Identifier("test_db", "tbl_global_index"),
+                                /*ignore_if_not_exists=*/false));
+
+    // Verify table is dropped
+    ASSERT_OK_AND_ASSIGN(table_exists,
+                         catalog.TableExists(Identifier("test_db", "tbl_global_index")));
+    ASSERT_FALSE(table_exists);
+
+    // Verify global index external path is also cleaned up
+    ASSERT_OK_AND_ASSIGN(bool global_index_exists, fs->Exists(global_index_path));
+    ASSERT_FALSE(global_index_exists);
+
+    ArrowSchemaRelease(&schema);
+}
+
+TEST(FileSystemCatalogTest, TestDropTableWithGlobalIndexExternalPathOnBranch) {
+    // Copy the real append_table_with_rt_branch.db test data, then patch the
+    // branch-rt schema-1 to include a GLOBAL_INDEX_EXTERNAL_PATH option.
+    // DropTable should discover and clean up that external path.
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+
+    // Copy the real test_data db into a temp directory
+    std::string test_data_path = GetDataDir() + "/orc/append_table_with_rt_branch.db";
+    std::string db_path = dir->Str() + "/test_db.db";
+    ASSERT_TRUE(TestUtil::CopyDirectory(test_data_path, db_path));
+
+    // Create a temporary external directory that represents branch global index data
+    auto branch_external_dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(branch_external_dir);
+    std::string branch_external_path = branch_external_dir->Str();
+
+    ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
+    ASSERT_OK(fs->WriteFile(PathUtil::JoinPath(branch_external_path, "index.bin"),
+                            "branch global index data", /*overwrite=*/true));
+
+    // Patch branch-rt/schema/schema-1: add GLOBAL_INDEX_EXTERNAL_PATH to options
+    std::string branch_schema_path =
+        PathUtil::JoinPath(db_path, "append_table_with_rt_branch/branch/branch-rt/schema/schema-1");
+    std::string schema_content;
+    ASSERT_OK(fs->ReadFile(branch_schema_path, &schema_content));
+
+    // Insert the global index external path option into the JSON options block.
+    // Original: "file.format" : "orc"
+    // Patched:  "file.format" : "orc",
+    //           "global-index.external-path" : "<branch_external_path>"
+    std::string search_str = "\"file.format\" : \"orc\"";
+    std::string replace_str = "\"file.format\" : \"orc\",\n    \"" +
+                              std::string(Options::GLOBAL_INDEX_EXTERNAL_PATH) + "\" : \"" +
+                              branch_external_path + "\"";
+    auto pos = schema_content.rfind(search_str);
+    ASSERT_NE(pos, std::string::npos);
+    schema_content.replace(pos, search_str.length(), replace_str);
+    ASSERT_OK(fs->WriteFile(branch_schema_path, schema_content, /*overwrite=*/true));
+
+    // Verify external path exists before drop
+    ASSERT_OK_AND_ASSIGN(bool external_exists, fs->Exists(branch_external_path));
+    ASSERT_TRUE(external_exists);
+
+    // Drop the table via catalog
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    Identifier identifier("test_db", "append_table_with_rt_branch");
+    ASSERT_OK_AND_ASSIGN(bool table_exists, catalog.TableExists(identifier));
+    ASSERT_TRUE(table_exists);
+
+    ASSERT_OK(catalog.DropTable(identifier, /*ignore_if_not_exists=*/false));
+
+    // Verify table is dropped
+    ASSERT_OK_AND_ASSIGN(table_exists, catalog.TableExists(identifier));
+    ASSERT_FALSE(table_exists);
+
+    // Verify the branch global index external path is cleaned up by DropTable
+    ASSERT_OK_AND_ASSIGN(external_exists, fs->Exists(branch_external_path));
+    ASSERT_FALSE(external_exists);
+}
+
 TEST(FileSystemCatalogTest, TestListSnapshots) {
     std::map<std::string, std::string> options;
     options[Options::FILE_SYSTEM] = "local";
