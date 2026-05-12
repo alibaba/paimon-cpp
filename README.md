@@ -140,6 +140,65 @@ $ cd build
 $ cmake ..
 $ make
 ```
+
+### Third-party dependencies
+
+Paimon C++ can either build selected third-party dependencies from bundled
+sources or use libraries that are already installed on the system. The default
+mode is `AUTO`, which tries system packages first and falls back to bundled
+sources when they are not found.
+
+```
+$ cmake -B build -DPAIMON_DEPENDENCY_SOURCE=AUTO
+```
+
+The supported dependency source values are:
+
+* `AUTO`: use a system package when available, otherwise build bundled sources.
+* `BUNDLED`: always build bundled sources.
+* `SYSTEM`: require system packages and fail if they are not found.
+
+You can also override individual dependencies. The supported dependency set
+includes Arrow/Parquet, ORC, Protobuf, Avro, RE2, fmt, RapidJSON, TBB, glog,
+GoogleTest, and compression libraries.
+
+```
+$ cmake -B build \
+  -DPAIMON_DEPENDENCY_SOURCE=AUTO \
+  -DArrow_SOURCE=SYSTEM \
+  -DArrow_ROOT=/opt/arrow \
+  -Dzstd_SOURCE=BUNDLED
+```
+
+Use `PAIMON_PACKAGE_PREFIX` to provide one common prefix for dependencies whose
+own `<Package>_ROOT` variable is not set.
+
+```
+$ cmake -B build \
+  -DPAIMON_DEPENDENCY_SOURCE=SYSTEM \
+  -DPAIMON_PACKAGE_PREFIX=/opt/paimon-deps
+```
+
+Package-manager-specific modes are intentionally out of scope for this first
+dependency source interface. They can still be used through standard CMake
+mechanisms such as `CMAKE_PREFIX_PATH` or `CMAKE_TOOLCHAIN_FILE`, while Paimon
+keeps the dependency source values limited to `AUTO`, `BUNDLED`, and `SYSTEM`.
+
+When `Arrow_SOURCE` is explicitly set to `SYSTEM` or `BUNDLED`, the compression
+dependencies default to the same source unless individually overridden. Mixing
+system and bundled copies of transitive dependencies can cause ABI conflicts,
+so prefer keeping Arrow and its compression dependencies from the same source
+unless you have a specific reason to override them.
+
+When `ORC_SOURCE` is explicitly set, `Protobuf_SOURCE` defaults to the same
+source unless individually overridden. In `AUTO` mode, Paimon prechecks for a
+system ORC installation and defaults Protobuf to `SYSTEM` only when system ORC
+is found; otherwise Protobuf stays bundled with bundled ORC.
+
+CMake prints a dependency resolution summary during configuration showing the
+requested source, actual source, compatibility target, and search root for each
+resolved dependency.
+
 ## Contributing
 
 Paimon-cpp is an active open-source project and we welcome people who want to contribute or share good ideas!

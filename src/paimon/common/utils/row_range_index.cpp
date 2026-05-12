@@ -17,7 +17,7 @@
 #include "paimon/utils/row_range_index.h"
 
 #include <algorithm>
-#include <cassert>
+#include <utility>
 
 namespace paimon {
 

@@ -1096,6 +1096,26 @@ TEST(DataSplitTest, TestPartialMergedRowCount) {
                                                      .Build()
                                                      .value());
     ASSERT_EQ(0, expected_data_split->PartialMergedRowCount());
+
+    ASSERT_EQ(4, expected_data_split->RowCount());
+    ASSERT_OK_AND_ASSIGN(auto latest_epoch, expected_data_split->LatestFileCreationEpochMillis());
+    ASSERT_TRUE(latest_epoch.has_value());
+    ASSERT_EQ(file_meta2->CreationTimeEpochMillis().value(), latest_epoch.value());
+}
+
+TEST(DataSplitTest, TestRowCountAndLatestFileCreationEpochMillisEmpty) {
+    DataSplitImpl::Builder builder(
+        /*partition=*/BinaryRow::EmptyRow(),
+        /*bucket=*/0, /*bucket_path=*/
+        "fake_table/bucket-0", std::vector<std::shared_ptr<DataFileMeta>>({}));
+
+    auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(
+        builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build().value());
+
+    // Empty data_files: RowCount should be 0, LatestFileCreationEpochMillis should be nullopt
+    ASSERT_EQ(0, data_split->RowCount());
+    ASSERT_OK_AND_ASSIGN(auto latest_epoch, data_split->LatestFileCreationEpochMillis());
+    ASSERT_FALSE(latest_epoch.has_value());
 }
 
 }  // namespace paimon::test

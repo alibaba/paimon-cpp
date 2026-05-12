@@ -25,6 +25,9 @@
 namespace paimon {
 class FieldsComparator;
 
+/// Merges consecutive key-value records with the same primary key from the wrapped reader.
+/// The wrapped reader must return records ordered by primary key, so all records for the same
+/// primary key are contiguous.
 class MergedKeyValueRecordReader : public KeyValueRecordReader {
  public:
     MergedKeyValueRecordReader(
@@ -34,23 +37,24 @@ class MergedKeyValueRecordReader : public KeyValueRecordReader {
 
     class Iterator : public KeyValueRecordReader::Iterator {
      public:
-        static Result<std::unique_ptr<Iterator>> Create(MergedKeyValueRecordReader* reader);
+        explicit Iterator(MergedKeyValueRecordReader* reader) : reader_(reader) {}
 
-        bool HasNext() const override {
-            return next_key_value_.has_value();
-        }
+        Result<bool> HasNext() const override;
 
         Result<KeyValue> Next() override;
 
      private:
-        explicit Iterator(MergedKeyValueRecordReader* reader) : reader_(reader) {}
-
-        Status LoadNextKeyValue();
+        Result<bool> PrepareNextMergedKeyValue() const;
+        Result<bool> MergeNextKey() const;
+        Status LoadNextRawKeyValue() const;
 
      private:
         MergedKeyValueRecordReader* reader_;
-        std::unique_ptr<KeyValueRecordReader::Iterator> current_iterator_;
-        std::optional<KeyValue> next_key_value_;
+        mutable std::unique_ptr<KeyValueRecordReader::Iterator> current_iterator_;
+        // Lookahead raw kv used to detect the boundary between two keys.
+        mutable std::optional<KeyValue> next_raw_key_value_;
+        // Merged kv prepared by HasNext() and consumed by Next().
+        mutable std::optional<KeyValue> merged_key_value_;
     };
 
     Result<std::unique_ptr<KeyValueRecordReader::Iterator>> NextBatch() override;

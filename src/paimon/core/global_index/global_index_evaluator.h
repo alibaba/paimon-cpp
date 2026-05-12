@@ -17,10 +17,10 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 
 #include "paimon/global_index/global_index_result.h"
 #include "paimon/predicate/predicate.h"
-#include "paimon/predicate/vector_search.h"
 #include "paimon/visibility.h"
 
 namespace paimon {
@@ -30,21 +30,14 @@ class PAIMON_EXPORT GlobalIndexEvaluator {
     virtual ~GlobalIndexEvaluator() = default;
     /// Evaluates a predicate against the global index.
     ///
-    /// @param predicate The filter predicate to evaluate.
-    /// @param vector_search The vector similarity search to evaluate.
-    /// @note When both `predicate` and `vector_search` are present, the predicate
-    ///       is used to constrain the vector search space (for example, via a
-    ///       pre-filter callback that may be applied during vector search), so
-    ///       vector similarity scoring is effectively limited to rows that satisfy
-    ///       the predicate.
+    /// @param predicate       The filter predicate to evaluate.
     /// @return A `Result` containing:
     ///         - `nullptr` if the predicate cannot be evaluated by this index (e.g., field has
     ///         no index),
     ///         - A `std::shared_ptr<GlobalIndexResult>` if evaluation succeeds.
     ///         The `GlobalIndexResult` indicates the matching rows (e.g., via row ID bitmaps).
     virtual Result<std::shared_ptr<GlobalIndexResult>> Evaluate(
-        const std::shared_ptr<Predicate>& predicate,
-        const std::shared_ptr<VectorSearch>& vector_search) = 0;
+        const std::shared_ptr<Predicate>& predicate) = 0;
 };
 
 }  // namespace paimon

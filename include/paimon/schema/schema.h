@@ -57,6 +57,16 @@ class PAIMON_EXPORT Schema {
     /// failure.
     virtual Result<FieldType> GetFieldType(const std::string& field_name) const = 0;
 
+    /// Get an optional comment describing the schema object.
+    /// @return The comment if set, or std::nullopt otherwise.
+    virtual std::optional<std::string> Comment() const = 0;
+};
+
+/// Schema contract for data tables.
+class PAIMON_EXPORT DataSchema : public Schema {
+ public:
+    ~DataSchema() override = default;
+
     /// Get the unique identifier of this table schema.
     /// @return The schema id
     virtual int64_t Id() const = 0;
@@ -86,10 +96,12 @@ class PAIMON_EXPORT Schema {
     /// Get the table-level options associated with this schema.
     /// @return A reference to the map of option key-value pairs (e.g., file format, filesystem).
     virtual const std::map<std::string, std::string>& Options() const = 0;
+};
 
-    /// Get an optional comment describing the table.
-    /// @return The table comment if set, or std::nullopt otherwise.
-    virtual std::optional<std::string> Comment() const = 0;
+/// Schema contract for system tables.
+class PAIMON_EXPORT SystemSchema : public Schema {
+ public:
+    ~SystemSchema() override = default;
 };
 
 }  // namespace paimon

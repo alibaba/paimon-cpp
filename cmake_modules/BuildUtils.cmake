@@ -52,11 +52,15 @@ function(add_paimon_lib LIB_NAME)
     # Generate a single "objlib" from all C++ modules and link
     # that "objlib" into each library kind, to avoid compiling twice
     add_library(${LIB_NAME}_objlib OBJECT ${ARG_SOURCES})
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        target_compile_options(${LIB_NAME}_objlib PRIVATE -Wno-global-constructors)
+    endif()
     # Necessary to make static linking into other shared libraries work properly
     set_property(TARGET ${LIB_NAME}_objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
     if(ARG_DEPENDENCIES)
         # In static-only builds, some dependency names are still declared as
         # *_shared. Map them to *_static when the shared target is unavailable.
+        set(_paimon_objlib_link_deps)
         set(_paimon_objlib_deps)
         foreach(_paimon_dep IN LISTS ARG_DEPENDENCIES)
             set(_paimon_mapped_dep "${_paimon_dep}")
@@ -65,14 +69,24 @@ function(add_paimon_lib LIB_NAME)
                                      "${_paimon_dep}")
             endif()
             if(TARGET ${_paimon_mapped_dep})
+                get_target_property(_paimon_is_internal_lib ${_paimon_mapped_dep}
+                                    PAIMON_INTERNAL_LIBRARY)
                 list(APPEND _paimon_objlib_deps ${_paimon_mapped_dep})
+                if(NOT _paimon_is_internal_lib)
+                    list(APPEND _paimon_objlib_link_deps ${_paimon_mapped_dep})
+                endif()
+                unset(_paimon_is_internal_lib)
             endif()
             unset(_paimon_mapped_dep)
         endforeach()
         if(_paimon_objlib_deps)
             add_dependencies(${LIB_NAME}_objlib ${_paimon_objlib_deps})
         endif()
+        if(_paimon_objlib_link_deps)
+            target_link_libraries(${LIB_NAME}_objlib PRIVATE ${_paimon_objlib_link_deps})
+        endif()
         unset(_paimon_objlib_deps)
+        unset(_paimon_objlib_link_deps)
         unset(_paimon_dep)
     endif()
     set(LIB_DEPS $<TARGET_OBJECTS:${LIB_NAME}_objlib>)
@@ -103,6 +117,7 @@ function(add_paimon_lib LIB_NAME)
             target_include_directories(${LIB_NAME}_shared PRIVATE ${ARG_PRIVATE_INCLUDES})
         endif()
 
+        set_property(TARGET ${LIB_NAME}_shared PROPERTY PAIMON_INTERNAL_LIBRARY TRUE)
         set_target_properties(${LIB_NAME}_shared
                               PROPERTIES LIBRARY_OUTPUT_DIRECTORY
                                          "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
@@ -157,6 +172,7 @@ function(add_paimon_lib LIB_NAME)
 
         set(LIB_NAME_STATIC ${LIB_NAME})
 
+        set_property(TARGET ${LIB_NAME}_static PROPERTY PAIMON_INTERNAL_LIBRARY TRUE)
         set_target_properties(${LIB_NAME}_static
                               PROPERTIES ARCHIVE_OUTPUT_DIRECTORY
                                          "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}"

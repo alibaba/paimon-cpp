@@ -53,6 +53,8 @@ set(PAIMON_COMMON_SRCS
     common/fs/resolving_file_system.cpp
     common/fs/file_system_factory.cpp
     common/global_config.cpp
+    common/global_index/union_global_index_reader.cpp
+    common/global_index/offset_global_index_reader.cpp
     common/global_index/complete_index_score_batch_reader.cpp
     common/global_index/bitmap_scored_global_index_result.cpp
     common/global_index/bitmap_global_index_result.cpp
@@ -195,7 +197,6 @@ set(PAIMON_CORE_SRCS
     core/global_index/global_index_evaluator_impl.cpp
     core/global_index/global_index_scan.cpp
     core/global_index/global_index_scan_impl.cpp
-    core/global_index/row_range_global_index_scanner_impl.cpp
     core/global_index/global_index_write_task.cpp
     core/index/index_file_handler.cpp
     core/index/global_index_meta.cpp
@@ -313,6 +314,11 @@ set(PAIMON_CORE_SRCS
     core/table/source/table_read.cpp
     core/table/source/table_scan.cpp
     core/table/source/data_evolution_batch_scan.cpp
+    core/table/system/options_system_table.cpp
+    core/table/system/system_table.cpp
+    core/table/system/system_table_read.cpp
+    core/table/system/system_table_scan.cpp
+    core/table/system/system_table_schema.cpp
     core/tag/tag.cpp
     core/utils/field_mapping.cpp
     core/utils/file_store_path_factory.cpp
@@ -413,6 +419,8 @@ if(PAIMON_BUILD_TESTS)
                     common/global_index/complete_index_score_batch_reader_test.cpp
                     common/global_index/global_index_result_test.cpp
                     common/global_index/global_index_utils_test.cpp
+                    common/global_index/offset_global_index_reader_test.cpp
+                    common/global_index/union_global_index_reader_test.cpp
                     common/global_index/global_indexer_factory_test.cpp
                     common/global_index/bitmap_global_index_result_test.cpp
                     common/global_index/bitmap_scored_global_index_result_test.cpp

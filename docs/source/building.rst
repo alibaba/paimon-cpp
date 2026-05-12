@@ -124,6 +124,55 @@ boolean flags to ``cmake``.
 * ``-DPAIMON_ENABLE_JINDO=ON``: Support for Alibaba Jindo filesystems
 * ``-DPAIMON_ENABLE_LUMINA=ON``: Support for Lumina vector index, lumina is only supported on gcc9 or higher.
 
+Third-party dependency source
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Paimon C++ can either build selected third-party dependencies from bundled
+sources or use libraries already installed on the system. The default mode is
+``AUTO``, which tries system packages first and falls back to bundled sources
+when they are not found.
+
+.. code-block:: shell
+
+   cmake -B build -DPAIMON_DEPENDENCY_SOURCE=AUTO
+
+The supported dependency source values are:
+
+* ``AUTO``: use a system package when available, otherwise build bundled sources.
+* ``BUNDLED``: always build bundled sources.
+* ``SYSTEM``: require system packages and fail if they are not found.
+
+You can override individual dependencies with ``<Dependency>_SOURCE``. The
+supported dependency set includes Arrow/Parquet, ORC, Protobuf, Avro, RE2, fmt,
+RapidJSON, TBB, glog, GoogleTest, and compression libraries.
+
+.. code-block:: shell
+
+   cmake -B build \
+     -DPAIMON_DEPENDENCY_SOURCE=AUTO \
+     -DArrow_SOURCE=SYSTEM \
+     -DArrow_ROOT=/opt/arrow \
+     -Dzstd_SOURCE=BUNDLED
+
+Use ``PAIMON_PACKAGE_PREFIX`` to provide one common prefix for dependencies
+whose own ``<Package>_ROOT`` variable is not set.
+
+.. code-block:: shell
+
+   cmake -B build \
+     -DPAIMON_DEPENDENCY_SOURCE=SYSTEM \
+     -DPAIMON_PACKAGE_PREFIX=/opt/paimon-deps
+
+Package-manager-specific modes are intentionally out of scope for this first
+dependency source interface. They can still be used through standard CMake
+mechanisms such as ``CMAKE_PREFIX_PATH`` or ``CMAKE_TOOLCHAIN_FILE``, while
+Paimon keeps the dependency source values limited to ``AUTO``, ``BUNDLED``, and
+``SYSTEM``.
+
+During configuration, CMake prints a dependency resolution summary showing the
+requested source, actual source, compatibility target, and search root for each
+resolved dependency.
+
 Optional Targets
 ~~~~~~~~~~~~~~~~
 

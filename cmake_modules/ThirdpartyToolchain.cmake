@@ -371,6 +371,324 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.30")
     list(APPEND EP_COMMON_CMAKE_ARGS -DCMAKE_POLICY_VERSION_MINIMUM=3.5)
 endif()
 
+set(PAIMON_DEPENDENCY_SOURCE_VALUES AUTO BUNDLED SYSTEM)
+
+function(paimon_validate_dependency_source SOURCE_VALUE OPTION_NAME)
+    string(TOUPPER "${SOURCE_VALUE}" _source)
+    list(FIND PAIMON_DEPENDENCY_SOURCE_VALUES "${_source}" _source_index)
+    if(_source_index EQUAL -1)
+        message(FATAL_ERROR "${OPTION_NAME} got invalid value '${SOURCE_VALUE}'. "
+                            "Allowed values: AUTO, BUNDLED, SYSTEM.")
+    endif()
+endfunction()
+
+function(paimon_get_dependency_source DEPENDENCY_NAME OUT_VAR)
+    set(_source_option_name "${DEPENDENCY_NAME}_SOURCE")
+    set(_source "${${DEPENDENCY_NAME}_SOURCE}")
+    if("${_source}" STREQUAL "")
+        get_property(_source GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_DERIVED_SOURCE")
+        if("${_source}" STREQUAL "")
+            set(_source "${PAIMON_DEPENDENCY_SOURCE}")
+            set(_source_option_name "PAIMON_DEPENDENCY_SOURCE")
+        else()
+            set(_source_option_name "derived ${DEPENDENCY_NAME}_SOURCE")
+        endif()
+    endif()
+    string(TOUPPER "${_source}" _source)
+    paimon_validate_dependency_source("${_source}" "${_source_option_name}")
+    set(${OUT_VAR}
+        "${_source}"
+        PARENT_SCOPE)
+endfunction()
+
+function(paimon_set_dependency_source_default DEPENDENCY_NAME SOURCE_VALUE REASON)
+    if("${${DEPENDENCY_NAME}_SOURCE}" STREQUAL "")
+        string(TOUPPER "${SOURCE_VALUE}" _source)
+        paimon_validate_dependency_source("${_source}"
+                                          "derived ${DEPENDENCY_NAME}_SOURCE")
+        set_property(GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_DERIVED_SOURCE"
+                                     "${_source}")
+        message(STATUS "Defaulting ${DEPENDENCY_NAME}_SOURCE to ${_source}: ${REASON}")
+    endif()
+endfunction()
+
+function(paimon_apply_dependency_source_defaults)
+    paimon_get_dependency_source(Arrow _arrow_source)
+    if(_arrow_source STREQUAL "SYSTEM" OR _arrow_source STREQUAL "BUNDLED")
+        foreach(_dependency
+                zstd
+                Snappy
+                LZ4
+                ZLIB
+                RE2)
+            paimon_set_dependency_source_default(
+                ${_dependency} ${_arrow_source}
+                "follow Arrow_SOURCE to avoid mixed transitive dependencies")
+        endforeach()
+    elseif(_arrow_source STREQUAL "AUTO")
+        paimon_configure_dependency_root(Arrow "${_arrow_source}" _arrow_resolved_source)
+        find_package(ArrowAlt QUIET MODULE)
+        if(ArrowAlt_FOUND)
+            set(_arrow_dependency_default SYSTEM)
+            set(_arrow_dependency_reason
+                "system Arrow found during AUTO dependency precheck")
+        else()
+            set(_arrow_dependency_default BUNDLED)
+            set(_arrow_dependency_reason
+                "system Arrow not found during AUTO dependency precheck")
+        endif()
+        foreach(_dependency
+                zstd
+                Snappy
+                LZ4
+                ZLIB
+                RE2)
+            paimon_set_dependency_source_default(
+                ${_dependency} ${_arrow_dependency_default} "${_arrow_dependency_reason}")
+        endforeach()
+    endif()
+
+    if(PAIMON_ENABLE_ORC)
+        paimon_get_dependency_source(ORC _orc_source)
+        if(_orc_source STREQUAL "SYSTEM" OR _orc_source STREQUAL "BUNDLED")
+            paimon_set_dependency_source_default(
+                Protobuf ${_orc_source}
+                "follow ORC_SOURCE to avoid mixed transitive dependencies")
+        elseif(_orc_source STREQUAL "AUTO")
+            paimon_configure_dependency_root(ORC "${_orc_source}" _orc_resolved_source)
+            find_package(ORCAlt QUIET MODULE)
+            if(ORCAlt_FOUND)
+                paimon_set_dependency_source_default(
+                    Protobuf SYSTEM "system ORC found during AUTO dependency precheck")
+            else()
+                paimon_set_dependency_source_default(
+                    Protobuf BUNDLED
+                    "system ORC not found during AUTO dependency precheck")
+            endif()
+        endif()
+    endif()
+endfunction()
+
+function(paimon_configure_dependency_root DEPENDENCY_NAME SOURCE_VALUE OUT_SOURCE)
+    set(${OUT_SOURCE}
+        "${SOURCE_VALUE}"
+        PARENT_SCOPE)
+endfunction()
+
+function(paimon_get_dependency_root DEPENDENCY_NAME OUT_VAR)
+    set(_root_var "${DEPENDENCY_NAME}_ROOT")
+    if(DEFINED ${_root_var} AND NOT "${${_root_var}}" STREQUAL "")
+        set(${OUT_VAR}
+            "${${_root_var}}"
+            PARENT_SCOPE)
+    elseif(NOT "${PAIMON_PACKAGE_PREFIX}" STREQUAL "")
+        set(${OUT_VAR}
+            "${PAIMON_PACKAGE_PREFIX}"
+            PARENT_SCOPE)
+    else()
+        set(${OUT_VAR}
+            "<default search paths>"
+            PARENT_SCOPE)
+    endif()
+endfunction()
+
+function(paimon_get_dependency_compat_target DEPENDENCY_NAME OUT_VAR)
+    if("${DEPENDENCY_NAME}" STREQUAL "Arrow")
+        set(_target arrow)
+    elseif("${DEPENDENCY_NAME}" STREQUAL "ORC")
+        set(_target orc::orc)
+    elseif("${DEPENDENCY_NAME}" STREQUAL "Protobuf")
+        set(_target libprotobuf)
+    elseif("${DEPENDENCY_NAME}" STREQUAL "GTest")
+        set(_target GTest::gtest)
+    elseif("${DEPENDENCY_NAME}" STREQUAL "RE2")
+        set(_target re2::re2)
+    elseif("${DEPENDENCY_NAME}" STREQUAL "Snappy")
+        set(_target snappy)
+    elseif("${DEPENDENCY_NAME}" STREQUAL "LZ4")
+        set(_target lz4)
+    elseif("${DEPENDENCY_NAME}" STREQUAL "ZLIB")
+        set(_target zlib)
+    elseif("${DEPENDENCY_NAME}" STREQUAL "TBB")
+        set(_target tbb)
+    elseif("${DEPENDENCY_NAME}" STREQUAL "Avro")
+        set(_target avro)
+    else()
+        set(_target "${DEPENDENCY_NAME}")
+    endif()
+
+    set(${OUT_VAR}
+        "${_target}"
+        PARENT_SCOPE)
+endfunction()
+
+function(paimon_record_dependency_resolution
+         DEPENDENCY_NAME
+         REQUESTED_SOURCE
+         ACTUAL_SOURCE
+         TARGET_NAME)
+    get_property(_dependencies GLOBAL PROPERTY PAIMON_RESOLVED_DEPENDENCIES)
+    list(APPEND _dependencies "${DEPENDENCY_NAME}")
+    list(REMOVE_DUPLICATES _dependencies)
+    set_property(GLOBAL PROPERTY PAIMON_RESOLVED_DEPENDENCIES "${_dependencies}")
+
+    paimon_get_dependency_root("${DEPENDENCY_NAME}" _root)
+    set_property(GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_REQUESTED_SOURCE"
+                                 "${REQUESTED_SOURCE}")
+    set_property(GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE"
+                                 "${ACTUAL_SOURCE}")
+    set_property(GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_ROOT" "${_root}")
+    set_property(GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_TARGET" "${TARGET_NAME}")
+endfunction()
+
+function(paimon_print_dependency_resolution_summary)
+    get_property(_dependencies GLOBAL PROPERTY PAIMON_RESOLVED_DEPENDENCIES)
+    if(NOT _dependencies)
+        return()
+    endif()
+
+    message(STATUS "Dependency resolution summary:")
+    foreach(_dependency IN LISTS _dependencies)
+        get_property(_requested GLOBAL PROPERTY "PAIMON_${_dependency}_REQUESTED_SOURCE")
+        get_property(_actual GLOBAL PROPERTY "PAIMON_${_dependency}_ACTUAL_SOURCE")
+        get_property(_root GLOBAL PROPERTY "PAIMON_${_dependency}_ROOT")
+        get_property(_target GLOBAL PROPERTY "PAIMON_${_dependency}_TARGET")
+        message(STATUS "  ${_dependency}: requested=${_requested}, actual=${_actual}, target=${_target}, root=${_root}"
+        )
+    endforeach()
+endfunction()
+
+macro(paimon_build_dependency DEPENDENCY_NAME)
+    if("${DEPENDENCY_NAME}" STREQUAL "Arrow")
+        build_arrow()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "fmt")
+        build_fmt()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "RapidJSON")
+        build_rapidjson()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "zstd")
+        build_zstd()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "Snappy")
+        build_snappy()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "LZ4")
+        build_lz4()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "ZLIB")
+        build_zlib()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "RE2")
+        build_re2()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "Protobuf")
+        build_protobuf()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "ORC")
+        build_orc()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "TBB")
+        build_tbb()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "glog")
+        build_glog()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "Avro")
+        build_avro()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "GTest")
+        build_gtest()
+    else()
+        message(FATAL_ERROR "No bundled build rule for ${DEPENDENCY_NAME}")
+    endif()
+endmacro()
+
+macro(resolve_dependency DEPENDENCY_NAME)
+    set(options)
+    set(one_value_args FIND_PACKAGE_NAME)
+    set(multi_value_args)
+    cmake_parse_arguments(ARG
+                          "${options}"
+                          "${one_value_args}"
+                          "${multi_value_args}"
+                          ${ARGN})
+
+    if(ARG_FIND_PACKAGE_NAME)
+        set(_paimon_find_package_name "${ARG_FIND_PACKAGE_NAME}")
+    else()
+        set(_paimon_find_package_name "${DEPENDENCY_NAME}")
+    endif()
+    set(_paimon_alt_package_name "${_paimon_find_package_name}Alt")
+    set(_paimon_found_var "${_paimon_alt_package_name}_FOUND")
+
+    paimon_get_dependency_source(${DEPENDENCY_NAME} _paimon_requested_source)
+    paimon_configure_dependency_root(${DEPENDENCY_NAME} "${_paimon_requested_source}"
+                                     _paimon_resolved_source)
+    paimon_get_dependency_compat_target(${DEPENDENCY_NAME} _paimon_target_name)
+
+    if(_paimon_resolved_source STREQUAL "BUNDLED")
+        message(STATUS "Using bundled ${DEPENDENCY_NAME}")
+        paimon_build_dependency(${DEPENDENCY_NAME})
+        set(PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE
+            "BUNDLED"
+            CACHE INTERNAL "Actual source for ${DEPENDENCY_NAME}")
+        paimon_record_dependency_resolution(
+            ${DEPENDENCY_NAME} "${_paimon_requested_source}" "BUNDLED"
+            "${_paimon_target_name}")
+    elseif(_paimon_resolved_source STREQUAL "SYSTEM")
+        message(STATUS "Using system ${DEPENDENCY_NAME}")
+        find_package(${_paimon_alt_package_name} REQUIRED MODULE)
+        set(PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE
+            "${_paimon_requested_source}"
+            CACHE INTERNAL "Actual source for ${DEPENDENCY_NAME}")
+        paimon_record_dependency_resolution(
+            ${DEPENDENCY_NAME} "${_paimon_requested_source}"
+            "${_paimon_requested_source}" "${_paimon_target_name}")
+    elseif(_paimon_resolved_source STREQUAL "AUTO")
+        message(STATUS "Resolving ${DEPENDENCY_NAME} with AUTO source")
+        find_package(${_paimon_alt_package_name} QUIET MODULE)
+        if(${_paimon_found_var})
+            message(STATUS "Using system ${DEPENDENCY_NAME}")
+            set(PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE
+                "SYSTEM"
+                CACHE INTERNAL "Actual source for ${DEPENDENCY_NAME}")
+            paimon_record_dependency_resolution(
+                ${DEPENDENCY_NAME} "${_paimon_requested_source}" "SYSTEM"
+                "${_paimon_target_name}")
+        else()
+            message(STATUS "System ${DEPENDENCY_NAME} not found; using bundled")
+            paimon_build_dependency(${DEPENDENCY_NAME})
+            set(PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE
+                "BUNDLED"
+                CACHE INTERNAL "Actual source for ${DEPENDENCY_NAME}")
+            paimon_record_dependency_resolution(
+                ${DEPENDENCY_NAME} "${_paimon_requested_source}" "BUNDLED"
+                "${_paimon_target_name}")
+        endif()
+    else()
+        message(FATAL_ERROR "Unsupported source ${_paimon_resolved_source} "
+                            "for ${DEPENDENCY_NAME}")
+    endif()
+
+    unset(_paimon_find_package_name)
+    unset(_paimon_alt_package_name)
+    unset(_paimon_found_var)
+    unset(_paimon_requested_source)
+    unset(_paimon_resolved_source)
+    unset(_paimon_target_name)
+endmacro()
+
+function(paimon_warn_if_mixed_arrow_dependencies)
+    if(NOT DEFINED PAIMON_Arrow_ACTUAL_SOURCE)
+        return()
+    endif()
+
+    foreach(_dependency
+            zstd
+            Snappy
+            LZ4
+            ZLIB
+            RE2)
+        if(DEFINED PAIMON_${_dependency}_ACTUAL_SOURCE
+           AND NOT "${PAIMON_${_dependency}_ACTUAL_SOURCE}" STREQUAL
+               "${PAIMON_Arrow_ACTUAL_SOURCE}")
+            message(WARNING "Arrow resolved from ${PAIMON_Arrow_ACTUAL_SOURCE}, but "
+                            "${_dependency} resolved from "
+                            "${PAIMON_${_dependency}_ACTUAL_SOURCE}. Mixing SYSTEM "
+                            "and BUNDLED dependencies can cause ABI conflicts.")
+        endif()
+    endforeach()
+endfunction()
+
 macro(build_lucene)
     message(STATUS "Building lucene from source")
 
@@ -484,8 +802,8 @@ macro(build_jieba)
     # The include directory must exist before it is referenced by a target.
     include_directories(SYSTEM ${JIEBA_INCLUDE_DIR} ${JIEBA_DICT_DIR})
     add_library(jieba INTERFACE IMPORTED)
-    target_include_directories(jieba SYSTEM
-                               INTERFACE "${JIEBA_INCLUDE_DIR} ${JIEBA_DICT_DIR}")
+    target_include_directories(jieba SYSTEM INTERFACE ${JIEBA_INCLUDE_DIR}
+                                                      ${JIEBA_DICT_DIR})
     add_dependencies(jieba_ep limonp_ep)
     add_dependencies(jieba jieba_ep)
 endmacro()
@@ -1438,23 +1756,25 @@ macro(build_glog)
     endif()
 endmacro()
 
-build_fmt()
-build_rapidjson()
-build_re2()
-build_snappy()
-build_zstd()
-build_zlib()
-build_lz4()
-build_arrow()
-build_tbb()
-build_glog()
+resolve_dependency(fmt)
+resolve_dependency(RapidJSON)
+paimon_apply_dependency_source_defaults()
+resolve_dependency(RE2)
+resolve_dependency(Snappy)
+resolve_dependency(zstd)
+resolve_dependency(ZLIB)
+resolve_dependency(LZ4)
+resolve_dependency(Arrow)
+paimon_warn_if_mixed_arrow_dependencies()
+resolve_dependency(TBB)
+resolve_dependency(glog)
 
 if(PAIMON_ENABLE_AVRO)
-    build_avro()
+    resolve_dependency(Avro)
 endif()
 if(PAIMON_ENABLE_ORC)
-    build_protobuf()
-    build_orc()
+    resolve_dependency(Protobuf)
+    resolve_dependency(ORC)
 endif()
 if(PAIMON_ENABLE_JINDO)
     build_jindosdk_c()
