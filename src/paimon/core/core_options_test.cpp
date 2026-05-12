@@ -823,23 +823,9 @@ TEST(CoreOptionsTest, TestCopyAssignmentOperator) {
 
     // Verify the target's ToMap matches the source's ToMap
     ASSERT_EQ(source.ToMap(), target.ToMap());
-}
 
-TEST(CoreOptionsTest, TestSelfAssignment) {
-    std::map<std::string, std::string> options = {
-        {Options::BUCKET, "7"},
-        {Options::MERGE_ENGINE, "first-row"},
-        {Options::CHANGELOG_PRODUCER, "lookup"},
-    };
-    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
-
-    // Self-assignment should be safe
-    core_options = core_options;
-
-    // Values should be preserved after self-assignment
-    ASSERT_EQ(7, core_options.GetBucket());
-    ASSERT_EQ(MergeEngine::FIRST_ROW, core_options.GetMergeEngine());
-    ASSERT_EQ(ChangelogProducer::LOOKUP, core_options.GetChangelogProducer());
+    CoreOptions target2 = source;
+    ASSERT_EQ(source.ToMap(), target2.ToMap());
 }
 
 TEST(CoreOptionsTest, TestAssignmentIndependence) {

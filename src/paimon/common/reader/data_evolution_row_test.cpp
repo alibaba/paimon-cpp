@@ -104,12 +104,16 @@ TEST(DataEvolutionRowTest, TestAllFieldTypes) {
     auto pool = GetDefaultPool();
 
     // Row0: boolean(true), byte(42), short(1024), int(100000), date(19000)
-    BinaryRow row0 = BinaryRowGenerator::GenerateRow(
-        {true, int8_t(42), int16_t(1024), int32_t(100000), int32_t(19000)}, pool.get());
+    BinaryRow row0 =
+        BinaryRowGenerator::GenerateRow({true, static_cast<int8_t>(42), static_cast<int16_t>(1024),
+                                         static_cast<int32_t>(100000), static_cast<int32_t>(19000)},
+                                        pool.get());
 
     // Row1: long(-987654321), float(3.14f), double(-9.87654321)
     BinaryRow row1 = BinaryRowGenerator::GenerateRow(
-        {int64_t(-987654321LL), float(3.14f), double(-9.87654321)}, pool.get());
+        {static_cast<int64_t>(-987654321LL), static_cast<float>(3.14f),
+         static_cast<double>(-9.87654321)},
+        pool.get());
 
     // Row2: string("hello"), string("world")
     BinaryRow row2 =

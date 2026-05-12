@@ -218,8 +218,8 @@ TEST(DataEvolutionArrayTest, TestAllFieldTypes) {
     // --- Row array (array index 13) ---
     BinaryArray row_array;
     {
-        BinaryRow row1 =
-            BinaryRowGenerator::GenerateRow({std::string("Alice"), int32_t(30)}, pool.get());
+        BinaryRow row1 = BinaryRowGenerator::GenerateRow(
+            {std::string("Alice"), static_cast<int32_t>(30)}, pool.get());
         BinaryArrayWriter writer(&row_array, 1, 8, pool.get());
         writer.WriteRow(0, row1);
         writer.Complete();
