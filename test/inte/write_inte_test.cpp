@@ -1836,15 +1836,13 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
         ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
         io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
         ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir->Str(), options));
-        CHECK_HOOK_STATUS(catalog->CreateDatabase("foo", options, /*ignore_if_exists=*/false),
-                          i);
+        CHECK_HOOK_STATUS(catalog->CreateDatabase("foo", options, /*ignore_if_exists=*/false), i);
         ::ArrowSchema c_schema;
         ScopeGuard arrow_guard([&c_schema]() { ArrowSchemaRelease(&c_schema); });
         ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
-        CHECK_HOOK_STATUS(
-            catalog->CreateTable(Identifier("foo", "bar"), &c_schema, partition_keys,
-                                 primary_keys, options, /*ignore_if_exists=*/false),
-            i);
+        CHECK_HOOK_STATUS(catalog->CreateTable(Identifier("foo", "bar"), &c_schema, partition_keys,
+                                               primary_keys, options, /*ignore_if_exists=*/false),
+                          i);
         std::string root_path = PathUtil::JoinPath(dir->Str(), "foo.db/bar");
         SchemaManager schema_manger(file_system_, root_path);
         auto table_schema_result = schema_manger.ReadSchema(/*schema_id=*/0);
@@ -1874,9 +1872,8 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
 
         // write data
         WriteContextBuilder context_builder(root_path, "commit_user_1");
-        ASSERT_OK_AND_ASSIGN(
-            std::unique_ptr<WriteContext> write_context,
-            context_builder.SetOptions(options).WithStreamingMode(true).Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context,
+                             context_builder.SetOptions(options).WithStreamingMode(true).Finish());
         Result<std::unique_ptr<FileStoreWrite>> write =
             FileStoreWrite::Create(std::move(write_context));
         CHECK_HOOK_STATUS(write.status(), i);
@@ -1911,8 +1908,8 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
             /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("David")}, pool_.get()),
             /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David")}, pool_.get()),
             /*key_stats=*/
-            BinaryRowGenerator::GenerateStats({std::string("David")}, {std::string("David")},
-                                              {0}, pool_.get()),
+            BinaryRowGenerator::GenerateStats({std::string("David")}, {std::string("David")}, {0},
+                                              pool_.get()),
             /*value_stats=*/
             BinaryRowGenerator::GenerateStats(
                 {std::string("David"), std::string("20250325"), 21, 13.1},
@@ -1940,8 +1937,8 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
             /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Cathy")}, pool_.get()),
             /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Cathy")}, pool_.get()),
             /*key_stats=*/
-            BinaryRowGenerator::GenerateStats({std::string("Cathy")}, {std::string("Cathy")},
-                                              {0}, pool_.get()),
+            BinaryRowGenerator::GenerateStats({std::string("Cathy")}, {std::string("Cathy")}, {0},
+                                              pool_.get()),
             /*value_stats=*/
             BinaryRowGenerator::GenerateStats(
                 {std::string("Cathy"), std::string("20250325"), 20, 12.1},
@@ -2001,8 +1998,8 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
             /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("David")}, pool_.get()),
             /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David")}, pool_.get()),
             /*key_stats=*/
-            BinaryRowGenerator::GenerateStats({std::string("David")}, {std::string("David")},
-                                              {0}, pool_.get()),
+            BinaryRowGenerator::GenerateStats({std::string("David")}, {std::string("David")}, {0},
+                                              pool_.get()),
             /*value_stats=*/
             BinaryRowGenerator::GenerateStats(
                 {std::string("David"), std::string("20250325"), 22, 24.1},
@@ -2035,8 +2032,7 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
             /*value_stats=*/
             BinaryRowGenerator::GenerateStats(
                 {std::string("Go"), std::string("20250325"), 22, 23.1},
-                {std::string("Hi"), std::string("20250325"), 23, 24.1}, {0, 0, 0, 0},
-                pool_.get()),
+                {std::string("Hi"), std::string("20250325"), 23, 24.1}, {0, 0, 0, 0}, pool_.get()),
             /*min_sequence_number=*/1, /*max_sequence_number=*/2, /*schema_id=*/0,
             /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
             /*creation_time=*/Timestamp(1724090888706ll, 0),

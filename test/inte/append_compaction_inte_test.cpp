@@ -528,9 +528,9 @@ TEST_F(AppendCompactionInteTest, TestAppendTableCompactionWithIOException) {
         auto dir = UniqueTestDirectory::Create();
         ASSERT_TRUE(dir);
 
-        ASSERT_OK_AND_ASSIGN(
-            auto helper, TestHelper::Create(dir->Str(), schema, partition_keys, primary_keys,
-                                            options, /*is_streaming_mode=*/true));
+        ASSERT_OK_AND_ASSIGN(auto helper,
+                             TestHelper::Create(dir->Str(), schema, partition_keys, primary_keys,
+                                                options, /*is_streaming_mode=*/true));
         ASSERT_OK_AND_ASSIGN(std::optional<std::shared_ptr<TableSchema>> table_schema,
                              helper->LatestSchema());
         ASSERT_TRUE(table_schema);
