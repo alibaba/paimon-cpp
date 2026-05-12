@@ -309,4 +309,11 @@ TEST(DateTimeUtilsTest, TestToUTCTimestamp) {
         ASSERT_EQ(utc_ts, Timestamp(-28800000l, 0));
     }
 }
+TEST(DateTimeUtilsTest, TestGetArrowTimeUnitStr) {
+    ASSERT_EQ(DateTimeUtils::GetArrowTimeUnitStr(arrow::TimeUnit::SECOND), "SECOND");
+    ASSERT_EQ(DateTimeUtils::GetArrowTimeUnitStr(arrow::TimeUnit::MILLI), "MILLISECOND");
+    ASSERT_EQ(DateTimeUtils::GetArrowTimeUnitStr(arrow::TimeUnit::MICRO), "MICROSECOND");
+    ASSERT_EQ(DateTimeUtils::GetArrowTimeUnitStr(arrow::TimeUnit::NANO), "NANOSECOND");
+}
+
 }  // namespace paimon::test

@@ -533,6 +533,37 @@ TEST_F(AppendOnlyWriterTest, TestCloseDeletesCompactAfterFiles) {
     ASSERT_TRUE(compact_manager->close_called);
 }
 
+TEST_F(AppendOnlyWriterTest, TestCloseCleansDeletionFile) {
+    auto options = CreateOptions();
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = CreatePathFactory(dir->Str(), "mock_format", options);
+    auto compact_manager = std::make_shared<FakeCompactManager>();
+
+    auto deletion_file = std::make_shared<FakeCompactDeletionFile>("del-close");
+    auto before = NewAppendFile("before-close", 5, 0, 4);
+    auto after = NewAppendFile("after-close", 5, 5, 9);
+    auto result =
+        std::make_shared<CompactResult>(std::vector<std::shared_ptr<DataFileMeta>>{before},
+                                        std::vector<std::shared_ptr<DataFileMeta>>{after});
+    result->SetDeletionFile(deletion_file);
+    compact_manager->queued_results.push_back(
+        std::optional<std::shared_ptr<CompactResult>>(result));
+
+    arrow::FieldVector fields = {arrow::field("f0", arrow::utf8())};
+    auto schema = arrow::schema(fields);
+    AppendOnlyWriter writer(options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
+                            /*max_sequence_number=*/-1, path_factory, compact_manager,
+                            memory_pool_);
+
+    // Sync to consume the compaction result and populate compact_deletion_file_.
+    ASSERT_OK(writer.Sync());
+    ASSERT_FALSE(deletion_file->Cleaned());
+
+    ASSERT_OK(writer.Close());
+    ASSERT_TRUE(deletion_file->Cleaned());
+}
+
 TEST_F(AppendOnlyWriterTest, TestCompactNotCompletedTriggersCompaction) {
     auto options = CreateOptions();
     auto dir = UniqueTestDirectory::Create();
