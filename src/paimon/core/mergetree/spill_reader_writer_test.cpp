@@ -36,7 +36,8 @@ namespace paimon::test {
 class SpillReaderWriterTest : public ::testing::TestWithParam<std::string> {
  public:
     void SetUp() override {
-        pool_ = GetDefaultPool();
+        read_pool_ = GetDefaultPool();
+        write_pool_ = GetDefaultPool();
         test_dir_ = UniqueTestDirectory::Create();
         file_system_ = test_dir_->GetFileSystem();
 
@@ -64,7 +65,8 @@ class SpillReaderWriterTest : public ::testing::TestWithParam<std::string> {
 
     Result<std::unique_ptr<SpillWriter>> CreateSpillWriter() const {
         return SpillWriter::Create(file_system_, write_schema_, channel_enumerator_,
-                                   spill_channel_manager_, GetParam(), /*compression_level=*/1);
+                                   spill_channel_manager_, GetParam(), /*compression_level=*/1,
+                                   write_pool_);
     }
 
     FileIOChannel::ID WriteSpillFile(
@@ -79,11 +81,13 @@ class SpillReaderWriterTest : public ::testing::TestWithParam<std::string> {
 
     Result<std::unique_ptr<SpillReader>> CreateSpillReader(
         const FileIOChannel::ID& channel_id) const {
-        return SpillReader::Create(file_system_, key_schema_, value_schema_, pool_, channel_id);
+        return SpillReader::Create(file_system_, key_schema_, value_schema_, read_pool_,
+                                   channel_id);
     }
 
  protected:
-    std::shared_ptr<MemoryPool> pool_;
+    std::shared_ptr<MemoryPool> read_pool_;
+    std::shared_ptr<MemoryPool> write_pool_;
     std::shared_ptr<FileSystem> file_system_;
     std::unique_ptr<UniqueTestDirectory> test_dir_;
     std::unique_ptr<IOManager> io_manager_;
@@ -116,6 +120,7 @@ TEST_P(SpillReaderWriterTest, TestWriteBatch) {
         ASSERT_GT(file_size, 0);
         ASSERT_OK(writer->Close());
         channel_id_1 = writer->GetChannelId();
+        ASSERT_GT(write_pool_->MaxMemoryUsage(), 0);
     }
     // Second writer
     {
@@ -166,6 +171,7 @@ TEST_P(SpillReaderWriterTest, TestWriteBatch) {
         ASSERT_EQ(batch_count, 1);
         ASSERT_EQ(total_rows, 2);
         reader->Close();
+        ASSERT_GT(read_pool_->MaxMemoryUsage(), 0);
     }
     // Read back second writer's data
     {
