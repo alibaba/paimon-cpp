@@ -1022,6 +1022,59 @@ TEST_P(MergeTreeWriterTest, TestUpdateCompactResultWithFileInCompactBefore) {
     ASSERT_EQ(merge_writer->compact_after_, std::vector<std::shared_ptr<DataFileMeta>>({file_y}));
 }
 
+TEST_P(MergeTreeWriterTest, TestCloseSkipsDeleteForUpgradedFilesInCompactAfter) {
+    // Verifies that DoClose does NOT delete files in compact_after_ that also appear
+    // in compact_before_ (i.e., upgraded files required by previous snapshots).
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = std::make_shared<DataFilePathFactory>();
+    ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
+
+    auto fake_compact_manager = std::make_shared<FakeCompactManager>();
+    ASSERT_OK_AND_ASSIGN(
+        auto merge_writer,
+        CreateMergeWriter(/*last_sequence_number=*/-1, dir->Str(), path_factory, /*schema_id=*/0,
+                          options, /*user_defined_seq_comparator=*/nullptr, fake_compact_manager));
+
+    // Create real files on disk to verify deletion behavior
+    std::string upgraded_file_name = "data-upgraded-0.orc";
+    std::string intermediate_file_name = "data-intermediate-0.orc";
+    std::string upgraded_file_path = dir->Str() + "/" + upgraded_file_name;
+    std::string intermediate_file_path = dir->Str() + "/" + intermediate_file_name;
+
+    // Create placeholder files on disk
+    ASSERT_OK_AND_ASSIGN(auto out1,
+                         options.GetFileSystem()->Create(upgraded_file_path, /*overwrite=*/true));
+    ASSERT_OK(out1->Close());
+    ASSERT_OK_AND_ASSIGN(auto out2, options.GetFileSystem()->Create(intermediate_file_path,
+                                                                    /*overwrite=*/true));
+    ASSERT_OK(out2->Close());
+
+    ASSERT_TRUE(options.GetFileSystem()->Exists(upgraded_file_path).value());
+    ASSERT_TRUE(options.GetFileSystem()->Exists(intermediate_file_path).value());
+
+    auto upgraded_file = CreateMeta(upgraded_file_name, /*level=*/1);
+    auto intermediate_file = CreateMeta(intermediate_file_name, /*level=*/1);
+
+    // Setup: upgraded_file appears in both compact_before_ and compact_after_
+    // (simulating an upgrade operation where the file is promoted to a higher level).
+    // intermediate_file only appears in compact_after_ (normal compaction output).
+    merge_writer->compact_before_ = {upgraded_file};
+    merge_writer->compact_after_ = {upgraded_file, intermediate_file};
+
+    ASSERT_OK(merge_writer->Close());
+
+    // upgraded_file should NOT be deleted (it's in compact_before_)
+    ASSERT_TRUE(options.GetFileSystem()->Exists(upgraded_file_path).value())
+        << "Upgraded file should be preserved because it exists in compact_before_";
+
+    // intermediate_file SHOULD be deleted (it's only in compact_after_)
+    ASSERT_FALSE(options.GetFileSystem()->Exists(intermediate_file_path).value())
+        << "Intermediate file should be deleted because it's not in compact_before_";
+}
+
 INSTANTIATE_TEST_SUITE_P(WithOptionalIOManager, MergeTreeWriterTest,
                          ::testing::Values(false, true));
 

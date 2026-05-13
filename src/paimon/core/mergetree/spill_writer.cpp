@@ -18,6 +18,7 @@
 
 #include "paimon/common/utils/arrow/arrow_output_stream_adapter.h"
 #include "paimon/common/utils/arrow/arrow_utils.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/mergetree/spill_channel_manager.h"
@@ -28,21 +29,25 @@ SpillWriter::SpillWriter(const std::shared_ptr<FileSystem>& fs,
                          const std::shared_ptr<arrow::Schema>& schema,
                          const std::shared_ptr<FileIOChannel::Enumerator>& channel_enumerator,
                          const std::shared_ptr<SpillChannelManager>& spill_channel_manager,
-                         const std::string& compression, int32_t compression_level)
+                         const std::string& compression, int32_t compression_level,
+                         const std::shared_ptr<MemoryPool>& pool)
     : fs_(fs),
       schema_(schema),
       channel_enumerator_(channel_enumerator),
       spill_channel_manager_(spill_channel_manager),
       compression_(compression),
-      compression_level_(compression_level) {}
+      compression_level_(compression_level),
+      arrow_pool_(GetArrowPool(pool)) {}
 
 Result<std::unique_ptr<SpillWriter>> SpillWriter::Create(
     const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<arrow::Schema>& schema,
     const std::shared_ptr<FileIOChannel::Enumerator>& channel_enumerator,
     const std::shared_ptr<SpillChannelManager>& spill_channel_manager,
-    const std::string& compression, int32_t compression_level) {
-    std::unique_ptr<SpillWriter> writer(new SpillWriter(
-        fs, schema, channel_enumerator, spill_channel_manager, compression, compression_level));
+    const std::string& compression, int32_t compression_level,
+    const std::shared_ptr<MemoryPool>& pool) {
+    std::unique_ptr<SpillWriter> writer(new SpillWriter(fs, schema, channel_enumerator,
+                                                        spill_channel_manager, compression,
+                                                        compression_level, pool));
     PAIMON_RETURN_NOT_OK(writer->Open());
     return writer;
 }
@@ -50,6 +55,7 @@ Result<std::unique_ptr<SpillWriter>> SpillWriter::Create(
 Status SpillWriter::Open() {
     channel_id_ = channel_enumerator_->Next();
     auto ipc_write_options = arrow::ipc::IpcWriteOptions::Defaults();
+    ipc_write_options.memory_pool = arrow_pool_.get();
     auto cleanup_guard = ScopeGuard([&]() {
         arrow_writer_.reset();
         arrow_output_stream_adapter_.reset();

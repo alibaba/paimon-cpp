@@ -561,6 +561,7 @@ if(PAIMON_BUILD_TESTS)
                     core/catalog/catalog_test.cpp
                     core/catalog/identifier_test.cpp
                     core/compact/compact_deletion_file_test.cpp
+                    core/compact/compact_future_manager_test.cpp
                     core/compact/noop_compact_manager_test.cpp
                     core/core_options_test.cpp
                     core/options/lookup_strategy_test.cpp

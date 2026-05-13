@@ -597,6 +597,47 @@ TEST_F(FieldMappingReaderTest, TestReadWithSchemaEvolutionWithRenameAndModifyTyp
     CheckResult(read_schema, /*predicate=*/nullptr, expect_data);
 }
 
+TEST_F(FieldMappingReaderTest, TestReadWithSchemaEvolutionPureRename) {
+    // Regression: pure RENAME (same field ids, same types, identity order, no
+    // partition / non-exist) used to leave need_mapping_ false, taking the
+    // FieldMappingReader PASSTHRU path. The inner reader's batch was emitted
+    // unchanged carrying the file's physical column names, so a consumer that
+    // looked columns up by name against the read schema (post-rename logical
+    // names) failed to find them.
+
+    // File schema: physical names f0, f1
+    std::vector<DataField> data_fields = {DataField(0, arrow::field("f0", arrow::utf8())),
+                                          DataField(1, arrow::field("f1", arrow::int32()))};
+    auto data_schema = DataField::ConvertDataFieldsToArrowSchema(data_fields);
+    auto data_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({data_schema->fields()}),
+                                                  R"([
+        ["Alice", 1],
+        ["Bob", 2],
+        ["Carol", 3]
+    ])")
+            .ValueOrDie());
+
+    // Read schema: same field ids, RENAMED names, same types, identity order
+    std::vector<DataField> read_fields = {DataField(0, arrow::field("name_new", arrow::utf8())),
+                                          DataField(1, arrow::field("age_new", arrow::int32()))};
+    auto read_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields);
+
+    // Expected output uses the post-rename names; verifies mapping actually
+    // ran (PASSTHRU would keep f0/f1 and Equals would fail).
+    auto expected = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({read_schema->fields()}),
+                                                  R"([
+        ["Alice", 1],
+        ["Bob", 2],
+        ["Carol", 3]
+    ])")
+            .ValueOrDie());
+
+    CheckResult(data_schema, data_array, read_schema, /*predicate=*/nullptr,
+                /*partition_keys=*/{}, BinaryRow::EmptyRow(), expected);
+}
+
 TEST_F(FieldMappingReaderTest, TestReadWithSchemaEvolutionWithRenameAndModifyTypeAndPredicate) {
     // field_0 and field_3 are rename and modify type
     // result is not filtered by predicate, as DOUBLE->STRING alter table does not support predicate

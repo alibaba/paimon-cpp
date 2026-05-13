@@ -53,6 +53,11 @@ struct PAIMON_EXPORT FullTextSearch {
           search_type(_search_type),
           pre_filter(_pre_filter) {}
 
+    std::shared_ptr<FullTextSearch> ReplacePreFilter(
+        const std::optional<RoaringBitmap64>& _pre_filter) const {
+        return std::make_shared<FullTextSearch>(field_name, limit, query, search_type, _pre_filter);
+    }
+
     /// Name of the field to search within (must be a full-text indexed field).
     std::string field_name;
     /// Maximum number of documents to return. If set, limit ordered by top scores. Otherwise, no
@@ -76,8 +81,8 @@ struct PAIMON_EXPORT FullTextSearch {
     std::string query;
     /// Type of search to perform.
     SearchType search_type;
-    /// A pre-filter based on **local row IDs**, implemented by leveraging another global index.
-    /// Only rows whose local row ID is present in `pre_filter` will be included during search.
+    /// A pre-filter based on **global row IDs**, implemented by leveraging another global index.
+    /// Only rows whose global row ID is present in `pre_filter` will be included during search.
     /// If not set, all rows will be included.
     std::optional<RoaringBitmap64> pre_filter;
 };
