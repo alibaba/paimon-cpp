@@ -28,8 +28,6 @@ namespace paimon {
 
 class ArrowMemPoolAdaptor : public arrow::MemoryPool {
  public:
-    explicit ArrowMemPoolAdaptor(paimon::MemoryPool& pool) : pool_(pool) {}
-
     explicit ArrowMemPoolAdaptor(const std::shared_ptr<paimon::MemoryPool>& pool)
         : pool_(*pool), life_holder_(pool) {}
 
@@ -78,10 +76,6 @@ class ArrowMemPoolAdaptor : public arrow::MemoryPool {
     std::shared_ptr<paimon::MemoryPool> life_holder_;
     arrow::internal::MemoryPoolStats stats_;
 };
-
-std::unique_ptr<arrow::MemoryPool> GetArrowPool(MemoryPool& pool) {
-    return std::make_unique<ArrowMemPoolAdaptor>(pool);
-}
 
 std::unique_ptr<arrow::MemoryPool> GetArrowPool(const std::shared_ptr<MemoryPool>& pool) {
     return std::make_unique<ArrowMemPoolAdaptor>(pool);

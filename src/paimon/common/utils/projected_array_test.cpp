@@ -23,8 +23,11 @@
 #include "gtest/gtest.h"
 #include "paimon/common/data/binary_array.h"
 #include "paimon/common/data/binary_array_writer.h"
+#include "paimon/common/data/binary_map.h"
+#include "paimon/common/data/binary_row.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/testing/utils/binary_row_generator.h"
 
 namespace paimon::test {
 TEST(ProjectedArrayTest, TestSimple) {
@@ -279,4 +282,86 @@ TEST(ProjectedArrayTest, TestSimple) {
         ASSERT_TRUE(projected_array.IsNullAt(2));
     }
 }
+
+TEST(ProjectedArrayTest, TestGetStringView) {
+    auto pool = GetDefaultPool();
+    std::vector<BinaryString> arr;
+    arr.push_back(BinaryString::FromString("hello", pool.get()));
+    arr.push_back(BinaryString::FromString("world", pool.get()));
+    auto array = std::make_shared<BinaryArray>();
+    BinaryArrayWriter writer =
+        BinaryArrayWriter(array.get(), arr.size(), /*element_size=*/8, pool.get());
+    for (size_t i = 0; i < arr.size(); i++) {
+        writer.WriteString(i, arr[i]);
+    }
+    writer.Complete();
+
+    std::vector<int32_t> mapping = {1, 0, -1};
+    ProjectedArray projected_array(array, mapping);
+    ASSERT_EQ(projected_array.GetStringView(0), "world");
+    ASSERT_EQ(projected_array.GetStringView(1), "hello");
+    ASSERT_TRUE(projected_array.IsNullAt(2));
+}
+
+TEST(ProjectedArrayTest, TestGetMap) {
+    auto pool = GetDefaultPool();
+    auto key = BinaryArray::FromIntArray({1, 2, 3}, pool.get());
+    auto value = BinaryArray::FromLongArray({100ll, 200ll, 300ll}, pool.get());
+    auto map1 = BinaryMap::ValueOf(key, value, pool.get());
+
+    auto key2 = BinaryArray::FromIntArray({10, 20}, pool.get());
+    auto value2 = BinaryArray::FromLongArray({1000ll, 2000ll}, pool.get());
+    auto map2 = BinaryMap::ValueOf(key2, value2, pool.get());
+
+    auto array = std::make_shared<BinaryArray>();
+    BinaryArrayWriter writer =
+        BinaryArrayWriter(array.get(), /*num_elements=*/2, /*element_size=*/8, pool.get());
+    writer.WriteMap(0, *map1);
+    writer.WriteMap(1, *map2);
+    writer.Complete();
+
+    std::vector<int32_t> mapping = {1, 0, -1};
+    ProjectedArray projected_array(array, mapping);
+
+    // mapping[0] -> original index 1 -> map2
+    auto result0 = projected_array.GetMap(0);
+    ASSERT_EQ(result0->Size(), 2);
+    ASSERT_EQ(result0->KeyArray()->ToIntArray().value(), (std::vector<int32_t>{10, 20}));
+
+    // mapping[1] -> original index 0 -> map1
+    auto result1 = projected_array.GetMap(1);
+    ASSERT_EQ(result1->Size(), 3);
+    ASSERT_EQ(result1->KeyArray()->ToIntArray().value(), (std::vector<int32_t>{1, 2, 3}));
+
+    ASSERT_TRUE(projected_array.IsNullAt(2));
+}
+
+TEST(ProjectedArrayTest, TestGetRow) {
+    auto pool = GetDefaultPool();
+    BinaryRow row1 = BinaryRowGenerator::GenerateRow({std::string("Alice"), 30}, pool.get());
+    BinaryRow row2 = BinaryRowGenerator::GenerateRow({std::string("Bob"), 40}, pool.get());
+
+    auto array = std::make_shared<BinaryArray>();
+    BinaryArrayWriter writer =
+        BinaryArrayWriter(array.get(), /*num_elements=*/2, /*element_size=*/8, pool.get());
+    writer.WriteRow(0, row1);
+    writer.WriteRow(1, row2);
+    writer.Complete();
+
+    std::vector<int32_t> mapping = {1, 0, -1};
+    ProjectedArray projected_array(array, mapping);
+
+    // mapping[0] -> original index 1 -> row2
+    auto result0 = std::dynamic_pointer_cast<BinaryRow>(projected_array.GetRow(0, 2));
+    ASSERT_TRUE(result0);
+    ASSERT_EQ(*result0, row2);
+
+    // mapping[1] -> original index 0 -> row1
+    auto result1 = std::dynamic_pointer_cast<BinaryRow>(projected_array.GetRow(1, 2));
+    ASSERT_TRUE(result1);
+    ASSERT_EQ(*result1, row1);
+
+    ASSERT_TRUE(projected_array.IsNullAt(2));
+}
+
 }  // namespace paimon::test
