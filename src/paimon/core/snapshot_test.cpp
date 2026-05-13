@@ -20,6 +20,7 @@
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/result.h"
+#include "paimon/snapshot/snapshot_info.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
 
@@ -242,4 +243,162 @@ TEST_F(SnapshotTest, TestSerializeAndDeserialize) {
         se_and_de_from_str(json_str);
     }
 }
+TEST_F(SnapshotTest, TestCommitKindAnalyze) {
+    // Test constructing a Snapshot with CommitKind::Analyze
+    Snapshot snapshot(
+        /*version=*/3, /*id=*/20, /*schema_id=*/5,
+        /*base_manifest_list=*/"base-manifest-analyze",
+        /*base_manifest_list_size=*/100,
+        /*delta_manifest_list=*/"delta-manifest-analyze",
+        /*delta_manifest_list_size=*/200,
+        /*changelog_manifest_list=*/std::nullopt,
+        /*changelog_manifest_list_size=*/std::nullopt,
+        /*index_manifest=*/std::nullopt,
+        /*commit_user=*/"analyze-user",
+        /*commit_identifier=*/42,
+        /*commit_kind=*/Snapshot::CommitKind::Analyze(),
+        /*time_millis=*/1700000000000ll,
+        /*log_offsets=*/std::map<int32_t, int64_t>(),
+        /*total_record_count=*/0,
+        /*delta_record_count=*/0,
+        /*changelog_record_count=*/0,
+        /*watermark=*/std::nullopt,
+        /*statistics=*/"test-statistics",
+        /*properties=*/std::nullopt,
+        /*next_row_id=*/std::nullopt);
+
+    ASSERT_EQ(Snapshot::CommitKind::Analyze(), snapshot.GetCommitKind());
+    ASSERT_EQ("ANALYZE", Snapshot::CommitKind::ToString(snapshot.GetCommitKind()));
+}
+
+TEST_F(SnapshotTest, TestCommitKindAnalyzeSerializeAndDeserialize) {
+    std::string json_str = R"({
+        "version" : 3,
+        "id" : 20,
+        "schemaId" : 5,
+        "baseManifestList" : "base-manifest-analyze",
+        "baseManifestListSize" : 100,
+        "deltaManifestList" : "delta-manifest-analyze",
+        "deltaManifestListSize" : 200,
+        "changelogManifestList" : null,
+        "commitUser" : "analyze-user",
+        "commitIdentifier" : 42,
+        "commitKind" : "ANALYZE",
+        "timeMillis" : 1700000000000,
+        "logOffsets" : { },
+        "totalRecordCount" : 0,
+        "deltaRecordCount" : 0,
+        "changelogRecordCount" : 0,
+        "statistics" : "test-statistics"
+    })";
+
+    ASSERT_OK_AND_ASSIGN(Snapshot snapshot, Snapshot::FromJsonString(json_str));
+
+    // Verify deserialization
+    ASSERT_EQ(20, snapshot.Id());
+    ASSERT_EQ(5, snapshot.SchemaId());
+    ASSERT_EQ(Snapshot::CommitKind::Analyze(), snapshot.GetCommitKind());
+    ASSERT_EQ("test-statistics", snapshot.Statistics().value());
+
+    // Verify round-trip serialization
+    ASSERT_OK_AND_ASSIGN(std::string serialized, snapshot.ToJsonString());
+    ASSERT_EQ(ReplaceAll(json_str), ReplaceAll(serialized));
+
+    // Verify re-deserialization produces equal snapshot
+    ASSERT_OK_AND_ASSIGN(Snapshot deserialized, Snapshot::FromJsonString(serialized));
+    ASSERT_EQ(snapshot, deserialized);
+}
+
+TEST_F(SnapshotTest, TestCommitKindToStringAndFromString) {
+    // Verify all CommitKind values round-trip through ToString/FromString
+    ASSERT_EQ("APPEND", Snapshot::CommitKind::ToString(Snapshot::CommitKind::Append()));
+    ASSERT_EQ("COMPACT", Snapshot::CommitKind::ToString(Snapshot::CommitKind::Compact()));
+    ASSERT_EQ("OVERWRITE", Snapshot::CommitKind::ToString(Snapshot::CommitKind::Overwrite()));
+    ASSERT_EQ("ANALYZE", Snapshot::CommitKind::ToString(Snapshot::CommitKind::Analyze()));
+
+    ASSERT_EQ(Snapshot::CommitKind::Append(), Snapshot::CommitKind::FromString("APPEND"));
+    ASSERT_EQ(Snapshot::CommitKind::Compact(), Snapshot::CommitKind::FromString("COMPACT"));
+    ASSERT_EQ(Snapshot::CommitKind::Overwrite(), Snapshot::CommitKind::FromString("OVERWRITE"));
+    ASSERT_EQ(Snapshot::CommitKind::Analyze(), Snapshot::CommitKind::FromString("ANALYZE"));
+
+    // Verify equality/inequality
+    ASSERT_FALSE(Snapshot::CommitKind::Analyze() == Snapshot::CommitKind::Append());
+    ASSERT_FALSE(Snapshot::CommitKind::Analyze() == Snapshot::CommitKind::Compact());
+    ASSERT_FALSE(Snapshot::CommitKind::Analyze() == Snapshot::CommitKind::Overwrite());
+    ASSERT_TRUE(Snapshot::CommitKind::Analyze() == Snapshot::CommitKind::Analyze());
+}
+
+TEST_F(SnapshotTest, TestSnapshotInfoCommitKindToString) {
+    ASSERT_EQ("APPEND", SnapshotInfo::CommitKindToString(SnapshotInfo::CommitKind::APPEND));
+    ASSERT_EQ("COMPACT", SnapshotInfo::CommitKindToString(SnapshotInfo::CommitKind::COMPACT));
+    ASSERT_EQ("OVERWRITE", SnapshotInfo::CommitKindToString(SnapshotInfo::CommitKind::OVERWRITE));
+    ASSERT_EQ("ANALYZE", SnapshotInfo::CommitKindToString(SnapshotInfo::CommitKind::ANALYZE));
+    ASSERT_EQ("UNKNOWN", SnapshotInfo::CommitKindToString(SnapshotInfo::CommitKind::UNKNOWN));
+}
+
+TEST_F(SnapshotTest, TestChangelogManifestListSerialization) {
+    // Test with changelog_manifest_list set to a non-null value
+    {
+        std::string json_str = R"({
+            "version" : 3,
+            "id" : 1,
+            "schemaId" : 0,
+            "baseManifestList" : "base-manifest-list",
+            "deltaManifestList" : "delta-manifest-list",
+            "changelogManifestList" : "changelog-manifest-list",
+            "changelogManifestListSize" : 42,
+            "commitUser" : "user-01",
+            "commitIdentifier" : 100,
+            "commitKind" : "APPEND",
+            "timeMillis" : 1700000000000,
+            "logOffsets" : { },
+            "totalRecordCount" : 10,
+            "deltaRecordCount" : 5,
+            "changelogRecordCount" : 3
+        })";
+
+        ASSERT_OK_AND_ASSIGN(Snapshot snapshot, Snapshot::FromJsonString(json_str));
+        ASSERT_EQ("changelog-manifest-list", snapshot.ChangelogManifestList().value());
+        ASSERT_EQ(42, snapshot.ChangelogManifestListSize().value());
+
+        ASSERT_OK_AND_ASSIGN(std::string serialized, snapshot.ToJsonString());
+        ASSERT_EQ(ReplaceAll(json_str), ReplaceAll(serialized));
+
+        // Verify round-trip
+        ASSERT_OK_AND_ASSIGN(Snapshot deserialized, Snapshot::FromJsonString(serialized));
+        ASSERT_EQ(snapshot, deserialized);
+    }
+
+    // Test with changelog_manifest_list set to null
+    {
+        std::string json_str = R"({
+            "version" : 3,
+            "id" : 2,
+            "schemaId" : 0,
+            "baseManifestList" : "base-manifest-list",
+            "deltaManifestList" : "delta-manifest-list",
+            "changelogManifestList" : null,
+            "commitUser" : "user-02",
+            "commitIdentifier" : 200,
+            "commitKind" : "COMPACT",
+            "timeMillis" : 1700000001000,
+            "logOffsets" : { },
+            "totalRecordCount" : 20,
+            "deltaRecordCount" : 10,
+            "changelogRecordCount" : 0
+        })";
+
+        ASSERT_OK_AND_ASSIGN(Snapshot snapshot, Snapshot::FromJsonString(json_str));
+        ASSERT_EQ(std::nullopt, snapshot.ChangelogManifestList());
+        ASSERT_EQ(std::nullopt, snapshot.ChangelogManifestListSize());
+
+        ASSERT_OK_AND_ASSIGN(std::string serialized, snapshot.ToJsonString());
+        ASSERT_EQ(ReplaceAll(json_str), ReplaceAll(serialized));
+
+        // Verify round-trip
+        ASSERT_OK_AND_ASSIGN(Snapshot deserialized, Snapshot::FromJsonString(serialized));
+        ASSERT_EQ(snapshot, deserialized);
+    }
+}
+
 }  // namespace paimon::test

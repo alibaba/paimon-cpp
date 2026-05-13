@@ -532,6 +532,8 @@ if(PAIMON_BUILD_TESTS)
                     common/compression/block_compression_factory_test.cpp
                     common/sst/sst_file_io_test.cpp
                     common/sst/block_cache_test.cpp
+                    common/sst/block_meta_test.cpp
+                    common/sst/block_write_read_test.cpp
                     common/utils/crc32c_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared

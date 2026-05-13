@@ -664,4 +664,198 @@ TEST(CoreOptionsTest, TestScanTimestampMillisAndStringMutuallyExclusive) {
 TEST(CoreOptionsTest, TestScanTimestampInvalidString) {
     ASSERT_NOK(CoreOptions::FromMap({{Options::SCAN_TIMESTAMP, "not-a-date"}}));
 }
+
+TEST(CoreOptionsTest, TestOverflowProtection) {
+    std::string max_val = std::to_string(std::numeric_limits<int32_t>::max());
+    ASSERT_OK_AND_ASSIGN(
+        CoreOptions options,
+        CoreOptions::FromMap({{Options::NUM_SORTED_RUNS_COMPACTION_TRIGGER, max_val}}));
+
+    ASSERT_EQ(options.GetNumSortedRunsStopTrigger(), std::numeric_limits<int32_t>::max());
+    ASSERT_EQ(options.GetNumLevels(), std::numeric_limits<int32_t>::max());
+    ASSERT_EQ(options.GetLookupCompactMaxInterval(), std::numeric_limits<int32_t>::max());
+}
+
+TEST(CoreOptionsTest, TestExplicitNumLevels) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({{Options::NUM_LEVELS, "10"}}));
+    ASSERT_EQ(options.GetNumLevels(), 10);
+}
+
+TEST(CoreOptionsTest, TestParseChangelogProducer) {
+    {
+        ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                             CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "none"}}));
+        ASSERT_EQ(options.GetChangelogProducer(), ChangelogProducer::NONE);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                             CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "input"}}));
+        ASSERT_EQ(options.GetChangelogProducer(), ChangelogProducer::INPUT);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "full-compaction"}}));
+        ASSERT_EQ(options.GetChangelogProducer(), ChangelogProducer::FULL_COMPACTION);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                             CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "lookup"}}));
+        ASSERT_EQ(options.GetChangelogProducer(), ChangelogProducer::LOOKUP);
+    }
+    {
+        // case insensitive
+        ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                             CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "LOOKUP"}}));
+        ASSERT_EQ(options.GetChangelogProducer(), ChangelogProducer::LOOKUP);
+    }
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "invalid"}}),
+                        "invalid changelog producer: invalid");
+}
+
+TEST(CoreOptionsTest, TestParseExternalPathStrategy) {
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "none"}}));
+        ASSERT_EQ(options.GetExternalPathStrategy(), ExternalPathStrategy::NONE);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "specific-fs"}}));
+        ASSERT_EQ(options.GetExternalPathStrategy(), ExternalPathStrategy::SPECIFIC_FS);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "round-robin"}}));
+        ASSERT_EQ(options.GetExternalPathStrategy(), ExternalPathStrategy::ROUND_ROBIN);
+    }
+    {
+        // case insensitive
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "ROUND-ROBIN"}}));
+        ASSERT_EQ(options.GetExternalPathStrategy(), ExternalPathStrategy::ROUND_ROBIN);
+    }
+    ASSERT_NOK_WITH_MSG(
+        CoreOptions::FromMap({{Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "invalid"}}),
+        "invalid external path strategy: invalid");
+}
+
+TEST(CoreOptionsTest, TestCopyAssignmentOperator) {
+    // Build a CoreOptions with non-default values
+    std::map<std::string, std::string> options = {
+        {Options::BUCKET, "3"},
+        {Options::PAGE_SIZE, "128 kb"},
+        {Options::TARGET_FILE_SIZE, "512MB"},
+        {Options::FILE_FORMAT, "ORC"},
+        {Options::FILE_COMPRESSION, "lz4"},
+        {Options::FILE_COMPRESSION_ZSTD_LEVEL, "5"},
+        {Options::PARTITION_DEFAULT_NAME, "foo"},
+        {Options::MANIFEST_MERGE_MIN_COUNT, "2"},
+        {Options::READ_BATCH_SIZE, "2048"},
+        {Options::WRITE_BATCH_SIZE, "1234"},
+        {Options::WRITE_BUFFER_SIZE, "16MB"},
+        {Options::WRITE_BUFFER_SPILLABLE, "false"},
+        {Options::COMMIT_FORCE_COMPACT, "true"},
+        {Options::COMMIT_MAX_RETRIES, "20"},
+        {Options::SEQUENCE_FIELD, "f1,f2"},
+        {Options::MERGE_ENGINE, "first-row"},
+        {Options::SORT_ENGINE, "min-heap"},
+        {Options::CHANGELOG_PRODUCER, "lookup"},
+        {Options::DELETION_VECTORS_ENABLED, "true"},
+        {Options::FORCE_LOOKUP, "true"},
+        {Options::IGNORE_DELETE, "true"},
+        {Options::WRITE_ONLY, "true"},
+        {Options::COMPACTION_MIN_FILE_NUM, "10"},
+        {Options::COMPACTION_FORCE_REWRITE_ALL_FILES, "true"},
+        {Options::NUM_SORTED_RUNS_COMPACTION_TRIGGER, "11"},
+        {Options::NUM_SORTED_RUNS_STOP_TRIGGER, "17"},
+        {Options::NUM_LEVELS, "9"},
+        {Options::LOOKUP_COMPACT, "gentle"},
+        {Options::DATA_FILE_PREFIX, "test-data-"},
+        {Options::ROW_TRACKING_ENABLED, "true"},
+        {Options::DATA_EVOLUTION_ENABLED, "true"},
+        {Options::BUCKET_FUNCTION_TYPE, "mod"},
+    };
+    ASSERT_OK_AND_ASSIGN(CoreOptions source, CoreOptions::FromMap(options));
+
+    // Default-constructed target with different values
+    CoreOptions target;
+
+    // Perform copy assignment
+    target = source;
+
+    // Verify all fields are correctly copied
+    ASSERT_EQ(3, target.GetBucket());
+    ASSERT_EQ(128 * 1024L, target.GetPageSize());
+    ASSERT_EQ("orc", target.GetFileFormat()->Identifier());
+    ASSERT_EQ("lz4", target.GetFileCompression());
+    ASSERT_EQ(5, target.GetFileCompressionZstdLevel());
+    ASSERT_EQ("foo", target.GetPartitionDefaultName());
+    ASSERT_EQ(2, target.GetManifestMergeMinCount());
+    ASSERT_EQ(2048, target.GetReadBatchSize());
+    ASSERT_EQ(1234, target.GetWriteBatchSize());
+    ASSERT_EQ(16 * 1024 * 1024L, target.GetWriteBufferSize());
+    ASSERT_FALSE(target.GetWriteBufferSpillable());
+    ASSERT_TRUE(target.CommitForceCompact());
+    ASSERT_EQ(20, target.GetCommitMaxRetries());
+    ASSERT_EQ(std::vector<std::string>({"f1", "f2"}), target.GetSequenceField());
+    ASSERT_EQ(MergeEngine::FIRST_ROW, target.GetMergeEngine());
+    ASSERT_EQ(SortEngine::MIN_HEAP, target.GetSortEngine());
+    ASSERT_EQ(ChangelogProducer::LOOKUP, target.GetChangelogProducer());
+    ASSERT_TRUE(target.DeletionVectorsEnabled());
+    ASSERT_TRUE(target.NeedLookup());
+    ASSERT_TRUE(target.IgnoreDelete());
+    ASSERT_TRUE(target.WriteOnly());
+    ASSERT_EQ(10, target.GetCompactionMinFileNum());
+    ASSERT_TRUE(target.CompactionForceRewriteAllFiles());
+    ASSERT_EQ(11, target.GetNumSortedRunsCompactionTrigger());
+    ASSERT_EQ(17, target.GetNumSortedRunsStopTrigger());
+    ASSERT_EQ(9, target.GetNumLevels());
+    ASSERT_EQ(LookupCompactMode::GENTLE, target.GetLookupCompactMode());
+    ASSERT_EQ("test-data-", target.DataFilePrefix());
+    ASSERT_TRUE(target.RowTrackingEnabled());
+    ASSERT_TRUE(target.DataEvolutionEnabled());
+    ASSERT_EQ(BucketFunctionType::MOD, target.GetBucketFunctionType());
+
+    // Verify the target's ToMap matches the source's ToMap
+    ASSERT_EQ(source.ToMap(), target.ToMap());
+
+    CoreOptions target2 = source;
+    ASSERT_EQ(source.ToMap(), target2.ToMap());
+}
+
+TEST(CoreOptionsTest, TestAssignmentIndependence) {
+    std::map<std::string, std::string> options = {
+        {Options::BUCKET, "5"},
+        {Options::MERGE_ENGINE, "first-row"},
+    };
+    ASSERT_OK_AND_ASSIGN(CoreOptions source, CoreOptions::FromMap(options));
+
+    CoreOptions target;
+    target = source;
+
+    // Verify target matches source
+    ASSERT_EQ(5, target.GetBucket());
+    ASSERT_EQ(MergeEngine::FIRST_ROW, target.GetMergeEngine());
+
+    // Modify source by reassigning a different config
+    std::map<std::string, std::string> new_options = {
+        {Options::BUCKET, "99"},
+        {Options::MERGE_ENGINE, "deduplicate"},
+    };
+    ASSERT_OK_AND_ASSIGN(source, CoreOptions::FromMap(new_options));
+
+    // Target should be unaffected (deep copy)
+    ASSERT_EQ(5, target.GetBucket());
+    ASSERT_EQ(MergeEngine::FIRST_ROW, target.GetMergeEngine());
+
+    // Source should have new values
+    ASSERT_EQ(99, source.GetBucket());
+    ASSERT_EQ(MergeEngine::DEDUPLICATE, source.GetMergeEngine());
+}
+
 }  // namespace paimon::test
