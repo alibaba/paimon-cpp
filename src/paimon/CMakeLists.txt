@@ -334,6 +334,11 @@ set(PAIMON_CORE_SRCS
     core/utils/special_field_ids.cpp
     core/utils/tag_manager.cpp)
 
+set(PAIMON_PRIVATE_LINK_LIBS)
+if(NOT APPLE)
+    list(APPEND PAIMON_PRIVATE_LINK_LIBS dl)
+endif()
+
 add_paimon_lib(paimon
                SOURCES
                ${PAIMON_COMMON_SRCS}
@@ -351,7 +356,7 @@ add_paimon_lib(paimon
                arrow
                tbb
                glog
-               dl
+               ${PAIMON_PRIVATE_LINK_LIBS}
                fmt
                roaring_bitmap
                xxhash

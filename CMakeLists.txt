@@ -349,8 +349,11 @@ add_compile_definitions("GLOG_USE_GLOG_EXPORT")
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-set(PAIMON_VERSION_SCRIPT_FLAGS
-    "-Wl,--version-script=${CMAKE_SOURCE_DIR}/src/paimon/symbols.map")
+set(PAIMON_VERSION_SCRIPT_FLAGS)
+if(NOT APPLE)
+    set(PAIMON_VERSION_SCRIPT_FLAGS
+        "-Wl,--version-script=${CMAKE_SOURCE_DIR}/src/paimon/symbols.map")
+endif()
 
 set(ENV{PAIMON_TEST_DATA} "${CMAKE_SOURCE_DIR}/test/test_data")
 

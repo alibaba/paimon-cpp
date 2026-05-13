@@ -30,7 +30,8 @@ and invoke ``cmake $CMAKE_ARGS ..`` from this directory.
 Building requires:
 
 * A C++17-enabled compiler. On Linux, gcc 8 and higher should be
-  sufficient. Windows and MacOS are not supported for now.
+  sufficient. On macOS, use AppleClang from Xcode Command Line Tools.
+  Windows is not supported for now.
 * At least 2GB of RAM for a minimal build, 8GB for a minimal
   debug build with tests and 16GB for a full build.
 
@@ -86,6 +87,13 @@ Minimal release build (2GB of RAM for building or more recommended):
    $ cmake ..
    $ make -j8       # if you have 8 CPU cores, otherwise adjust
    $ make install
+
+Minimal macOS release build:
+
+.. code-block::
+
+   $ cmake -S . -B build-macos -DPAIMON_DEPENDENCY_SOURCE=BUNDLED -DPAIMON_BUILD_TESTS=OFF
+   $ cmake --build build-macos -j$(sysctl -n hw.ncpu)
 
 Minimal debug build with unit tests (4GB of RAM for building or more recommended):
 

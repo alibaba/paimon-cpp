@@ -1237,6 +1237,7 @@ macro(build_protobuf)
     get_target_property(THIRDPARTY_ZLIB_INCLUDE_DIR zlib INTERFACE_INCLUDE_DIRECTORIES)
     get_filename_component(THIRDPARTY_ZLIB_ROOT "${THIRDPARTY_ZLIB_INCLUDE_DIR}"
                            DIRECTORY)
+    get_target_property(THIRDPARTY_ZLIB_LIBRARY zlib IMPORTED_LOCATION)
 
     # Strip lto flags (which may be added by dh_auto_configure)
     # See https://github.com/protocolbuffers/protobuf/issues/7092
@@ -1254,6 +1255,8 @@ macro(build_protobuf)
         "-DCMAKE_CXX_FLAGS=${PROTOBUF_CXX_FLAGS}"
         "-DCMAKE_C_FLAGS=${PROTOBUF_C_FLAGS}"
         "-DZLIB_ROOT=${THIRDPARTY_ZLIB_ROOT}"
+        "-DZLIB_LIBRARY=${THIRDPARTY_ZLIB_LIBRARY}"
+        "-DZLIB_LIBRARY_RELEASE=${THIRDPARTY_ZLIB_LIBRARY}"
         -Dprotobuf_BUILD_TESTS=OFF
         -Dprotobuf_DEBUG_POSTFIX=)
     set(PROTOBUF_CONFIGURE SOURCE_SUBDIR "cmake" CMAKE_ARGS ${PROTOBUF_CMAKE_ARGS})
@@ -1360,6 +1363,13 @@ macro(build_orc)
     message(STATUS "PAIMON_RPATH value: ${PAIMON_RPATH}")
     set(ORC_RPATH ${PAIMON_RPATH})
     message(STATUS "ORC_RPATH value: ${ORC_RPATH}")
+    set(ORC_LINKER_FLAGS)
+    if(NOT "${ORC_RPATH}" STREQUAL "")
+        list(APPEND ORC_LINKER_FLAGS
+             "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}"
+             "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}"
+             "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}")
+    endif()
 
     string(REPLACE "-Werror" "" EP_CXX_FLAGS ${EP_CXX_FLAGS})
 
@@ -1385,9 +1395,7 @@ macro(build_orc)
         "-DCMAKE_CXX_FLAGS=${ORC_CMAKE_CXX_FLAGS}"
         "-DCMAKE_C_FLAGS=${ORC_CMAKE_C_FLAGS}"
         "-DCMAKE_CXX_FLAGS_${UPPERCASE_BUILD_TYPE}=${ORC_CMAKE_CXX_FLAGS}"
-        "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}"
-        "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}"
-        "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}"
+        ${ORC_LINKER_FLAGS}
         "-DSNAPPY_HOME=${ORC_SNAPPY_ROOT}"
         "-DLZ4_HOME=${ORC_LZ4_ROOT}"
         "-DZSTD_HOME=${ORC_ZSTD_ROOT}"
@@ -1491,6 +1499,7 @@ macro(build_arrow)
         "-DCMAKE_CXX_FLAGS=${ARROW_CMAKE_CXX_FLAGS}"
         "-DCMAKE_C_FLAGS=${ARROW_CMAKE_C_FLAGS}"
         "-DCMAKE_CXX_FLAGS_${UPPERCASE_BUILD_TYPE}=${ARROW_CMAKE_CXX_FLAGS}"
+        -DARROW_DEPENDENCY_SOURCE=BUNDLED
         -DARROW_DEPENDENCY_USE_SHARED=OFF
         -DARROW_BUILD_SHARED=OFF
         -DARROW_BUILD_STATIC=ON
@@ -1545,40 +1554,30 @@ macro(build_arrow)
     add_library(arrow STATIC IMPORTED)
     set_target_properties(arrow
                           PROPERTIES IMPORTED_LOCATION "${ARROW_PREFIX}/lib/libarrow.a"
-                                     INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}"
-                                     INTERFACE_LINK_DIRECTORIES
-                                     "${ARROW_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
+                                     INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}")
 
     add_library(arrow_dataset STATIC IMPORTED)
     set_target_properties(arrow_dataset
                           PROPERTIES IMPORTED_LOCATION
                                      "${ARROW_PREFIX}/lib/libarrow_dataset.a"
-                                     INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}"
-                                     INTERFACE_LINK_DIRECTORIES
-                                     "${ARROW_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
+                                     INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}")
 
     add_library(arrow_acero STATIC IMPORTED)
     set_target_properties(arrow_acero
                           PROPERTIES IMPORTED_LOCATION
                                      "${ARROW_PREFIX}/lib/libarrow_acero.a"
-                                     INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}"
-                                     INTERFACE_LINK_DIRECTORIES
-                                     "${ARROW_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
+                                     INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}")
 
     add_library(parquet STATIC IMPORTED)
     set_target_properties(parquet
                           PROPERTIES IMPORTED_LOCATION "${ARROW_PREFIX}/lib/libparquet.a"
-                                     INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}"
-                                     INTERFACE_LINK_DIRECTORIES
-                                     "${ARROW_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
+                                     INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}")
 
     add_library(arrow_bundled_dependencies STATIC IMPORTED)
     set_target_properties(arrow_bundled_dependencies
                           PROPERTIES IMPORTED_LOCATION
                                      "${ARROW_PREFIX}/lib/libarrow_bundled_dependencies.a"
-                                     INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}"
-                                     INTERFACE_LINK_DIRECTORIES
-                                     "${ARROW_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
+                                     INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}")
 
     add_dependencies(arrow arrow_ep)
     add_dependencies(parquet arrow_ep)
@@ -1713,9 +1712,7 @@ macro(build_tbb)
     add_library(tbb STATIC IMPORTED)
     set_target_properties(tbb
                           PROPERTIES IMPORTED_LOCATION "${TBB_STATIC_LIB}"
-                                     INTERFACE_INCLUDE_DIRECTORIES "${TBB_INCLUDE_DIR}"
-                                     INTERFACE_LINK_DIRECTORIES
-                                     "${TBB_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
+                                     INTERFACE_INCLUDE_DIRECTORIES "${TBB_INCLUDE_DIR}")
     add_dependencies(tbb tbb_ep)
 
 endmacro(build_tbb)

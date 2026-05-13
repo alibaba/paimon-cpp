@@ -36,7 +36,7 @@ Paimon C++ is a high-performance C++ implementation of [Apache Paimon](https://p
 - **Compatibility**: compatibility with Apache Paimon Java format and communication protocols,
   including commit messages, data splits, and manifests.
 
-Note: The current implementation only supports the x86_64 architecture.
+Note: Linux x86_64 and macOS arm64 builds are currently verified.
 
 ## Write And Commit Example
 
