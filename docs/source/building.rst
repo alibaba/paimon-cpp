@@ -95,7 +95,7 @@ Minimal macOS release build:
    $ mkdir build
    $ cd build
    $ cmake -DPAIMON_DEPENDENCY_SOURCE=BUNDLED -DPAIMON_BUILD_TESTS=OFF ..
-   $ make -j$(sysctl -n hw.ncpu)
+   $ make -j8       # if you have 8 CPU cores, otherwise adjust
 
 To build with LLVM clang from Homebrew instead of AppleClang, install LLVM and
 specify the Homebrew compiler paths when configuring:
@@ -111,7 +111,7 @@ specify the Homebrew compiler paths when configuring:
        -DCMAKE_C_COMPILER="$(brew --prefix llvm)/bin/clang" \
        -DCMAKE_CXX_COMPILER="$(brew --prefix llvm)/bin/clang++" \
        ..
-   $ make -j$(sysctl -n hw.ncpu)
+   $ make -j8       # if you have 8 CPU cores, otherwise adjust
 
 When building with upstream Clang on macOS, Paimon uses Apple SDK libc++
 headers by default to avoid incompatibilities in bundled third-party
