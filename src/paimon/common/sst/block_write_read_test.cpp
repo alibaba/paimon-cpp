@@ -35,27 +35,29 @@ class BlockWriteReadTest : public ::testing::Test {
         comparator_ = [](const MemorySlice& a, const MemorySlice& b) -> Result<int32_t> {
             std::string_view va = a.ReadStringView();
             std::string_view vb = b.ReadStringView();
-            if (va < vb) return -1;
-            if (va > vb) return 1;
+            if (va < vb) {
+                return -1;
+            }
+            if (va > vb) {
+                return 1;
+            }
             return 0;
         };
     }
 
-    std::shared_ptr<Bytes> MakeBytes(const std::string& str) {
+    std::shared_ptr<Bytes> MakeBytes(const std::string& str) const {
         return std::make_shared<Bytes>(str, pool_.get());
     }
 
     /// Build a block with the given key-value pairs via BlockWriter.
-    /// BlockWriter::Finish() produces a slice whose tail is [int32 size | char aligned_type],
-    /// which is exactly the layout that BlockReader::Create expects.
-    MemorySlice BuildBlock(BlockWriter& writer,
-                           const std::vector<std::pair<std::string, std::string>>& pairs) {
+    MemorySlice BuildBlock(const std::vector<std::pair<std::string, std::string>>& pairs,
+                           BlockWriter* writer) const {
         for (const auto& [k, v] : pairs) {
             auto key = MakeBytes(k);
             auto value = MakeBytes(v);
-            EXPECT_OK(writer.Write(key, value));
+            EXPECT_OK(writer->Write(key, value));
         }
-        EXPECT_OK_AND_ASSIGN(auto result, writer.Finish());
+        EXPECT_OK_AND_ASSIGN(auto result, writer->Finish());
         return result;
     }
 
@@ -81,7 +83,7 @@ TEST_F(BlockWriteReadTest, AlignedWriteAndRead) {
     ASSERT_OK(writer.Write(key3, val3));
     ASSERT_EQ(writer.Size(), 3);
 
-    auto block = BuildBlock(writer, {});
+    auto block = BuildBlock({}, &writer);
     ASSERT_GT(block.Length(), 0);
     // Last byte should be ALIGNED (0) because all kv pairs are same-size
     ASSERT_EQ(block.ReadByte(block.Length() - 1), static_cast<int8_t>(BlockAlignedType::ALIGNED));
@@ -119,7 +121,7 @@ TEST_F(BlockWriteReadTest, AlignedWriteAndRead) {
 
 TEST_F(BlockWriteReadTest, UnalignedWriteAndRead) {
     BlockWriter writer(1024, pool_, /*aligned=*/false);
-    auto block = BuildBlock(writer, {{"a", "short"}, {"bb", "a_longer_value"}});
+    auto block = BuildBlock({{"a", "short"}, {"bb", "a_longer_value"}}, &writer);
     ASSERT_GT(block.Length(), 0);
     // Last byte should be UNALIGNED (1)
     ASSERT_EQ(block.ReadByte(block.Length() - 1), static_cast<int8_t>(BlockAlignedType::UNALIGNED));
@@ -167,7 +169,7 @@ TEST_F(BlockWriteReadTest, ResetAndRewrite) {
     ASSERT_EQ(writer.Size(), 0);
 
     // Write new data and read back
-    auto block = BuildBlock(writer, {{"new_key", "new_val"}});
+    auto block = BuildBlock({{"new_key", "new_val"}}, &writer);
     ASSERT_OK_AND_ASSIGN(auto reader, BlockReader::Create(block, comparator_));
     ASSERT_EQ(reader->RecordCount(), 1);
 
@@ -200,7 +202,7 @@ TEST_F(BlockWriteReadTest, MemoryAlignedVsUnaligned) {
 
 TEST_F(BlockWriteReadTest, SkipKeyAndReadValue) {
     BlockWriter writer(1024, pool_);
-    auto block = BuildBlock(writer, {{"key1", "val1"}, {"key2", "val2"}});
+    auto block = BuildBlock({{"key1", "val1"}, {"key2", "val2"}}, &writer);
 
     ASSERT_OK_AND_ASSIGN(auto reader, BlockReader::Create(block, comparator_));
     auto iter = reader->Iterator();
@@ -219,7 +221,7 @@ TEST_F(BlockWriteReadTest, SkipKeyAndReadValue) {
 TEST_F(BlockWriteReadTest, IteratorSeekTo) {
     BlockWriter writer(1024, pool_);
     auto block =
-        BuildBlock(writer, {{"apple", "1"}, {"banana", "2"}, {"cherry", "3"}, {"date", "4"}});
+        BuildBlock({{"apple", "1"}, {"banana", "2"}, {"cherry", "3"}, {"date", "4"}}, &writer);
 
     ASSERT_OK_AND_ASSIGN(auto reader, BlockReader::Create(block, comparator_));
 
