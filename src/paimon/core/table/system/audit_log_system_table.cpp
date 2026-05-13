@@ -99,7 +99,7 @@ class ChangelogBatchReader : public BatchReader {
         }
 
         for (const auto& field : output_schema_->fields()) {
-            if (field->name() == "rowkind" ||
+            if (field->name() == SpecialFields::RowKind().Name() ||
                 field->name() == SpecialFields::SequenceNumber().Name()) {
                 continue;
             }
@@ -221,7 +221,10 @@ std::string AuditLogSystemTable::Name() const {
 }
 
 std::shared_ptr<arrow::Schema> AuditLogSystemTable::ArrowSchema() const {
-    arrow::FieldVector fields = {arrow::field("rowkind", arrow::utf8(), /*nullable=*/false)};
+    std::shared_ptr<arrow::Field> rowkind_field =
+        DataField::ConvertDataFieldToArrowField(SpecialFields::RowKind());
+    rowkind_field = rowkind_field->WithNullable(false);
+    arrow::FieldVector fields = {rowkind_field};
     Result<CoreOptions> core_options = CoreOptions::FromMap(options_);
     bool include_sequence_number =
         core_options.ok() && core_options.value().TableReadSequenceNumberEnabled();

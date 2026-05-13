@@ -66,7 +66,10 @@ std::string BinlogSystemTable::Name() const {
 }
 
 std::shared_ptr<arrow::Schema> BinlogSystemTable::ArrowSchema() const {
-    arrow::FieldVector fields = {arrow::field("rowkind", arrow::utf8(), /*nullable=*/false)};
+    std::shared_ptr<arrow::Field> rowkind_field =
+        DataField::ConvertDataFieldToArrowField(SpecialFields::RowKind());
+    rowkind_field = rowkind_field->WithNullable(false);
+    arrow::FieldVector fields = {rowkind_field};
     Result<CoreOptions> core_options = CoreOptions::FromMap(options_);
     bool include_sequence_number =
         core_options.ok() && core_options.value().TableReadSequenceNumberEnabled();

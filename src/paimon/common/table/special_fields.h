@@ -45,6 +45,12 @@ struct SpecialFields {
         return data_field;
     }
 
+    static const DataField& RowKind() {
+        static const DataField data_field =
+            DataField(SpecialFieldIds::ROW_KIND, arrow::field("rowkind", arrow::utf8()));
+        return data_field;
+    }
+
     static const DataField& RowId() {
         static const DataField data_field =
             DataField(SpecialFieldIds::ROW_ID, arrow::field("_ROW_ID", arrow::int64()));

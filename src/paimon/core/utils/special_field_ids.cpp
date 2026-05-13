@@ -21,6 +21,7 @@ namespace paimon {
 const int32_t SpecialFieldIds::CPP_FIELD_ID_END;
 const int32_t SpecialFieldIds::SEQUENCE_NUMBER;
 const int32_t SpecialFieldIds::VALUE_KIND;
+const int32_t SpecialFieldIds::ROW_KIND;
 const int32_t SpecialFieldIds::ROW_ID;
 const int32_t SpecialFieldIds::INDEX_SCORE;
 

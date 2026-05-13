@@ -32,6 +32,8 @@ class SpecialFieldIds {
     static const int32_t SEQUENCE_NUMBER = std::numeric_limits<int32_t>::max() - 1;
     /// Special field ID reserved for value kind. Value: INT32_MAX - 2
     static const int32_t VALUE_KIND = std::numeric_limits<int32_t>::max() - 2;
+    /// Special field ID reserved for row kind. Value: INT32_MAX - 3
+    static const int32_t ROW_KIND = std::numeric_limits<int32_t>::max() - 3;
     /// Special field ID reserved for row ID. Value: INT32_MAX - 5
     static const int32_t ROW_ID = std::numeric_limits<int32_t>::max() - 5;
 
