@@ -644,6 +644,7 @@ TEST(FileSystemCatalogTest, TestDropTableWithExternalPath) {
     auto external_dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(external_dir);
     std::string external_path = external_dir->Str();
+    external_path = "FILE://" + external_path;
 
     // Create a file in external path to simulate external data
     ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
@@ -665,6 +666,7 @@ TEST(FileSystemCatalogTest, TestDropTableWithExternalPath) {
 
     std::map<std::string, std::string> table_options = options;
     table_options[Options::DATA_FILE_EXTERNAL_PATHS] = external_path;
+    table_options[Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY] = "round-robin";
 
     ASSERT_OK(catalog.CreateTable(Identifier("test_db", "tbl_with_external"), &schema, {}, {},
                                   table_options, false));
@@ -707,7 +709,9 @@ TEST(FileSystemCatalogTest, TestDropTableWithMultipleExternalPaths) {
     ASSERT_TRUE(external_dir2);
 
     std::string external_path1 = external_dir1->Str();
+    external_path1 = "FILE://" + external_path1;
     std::string external_path2 = external_dir2->Str();
+    external_path2 = "FILE://" + external_path2;
 
     // Create files in external paths
     ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
@@ -727,6 +731,7 @@ TEST(FileSystemCatalogTest, TestDropTableWithMultipleExternalPaths) {
 
     std::map<std::string, std::string> table_options = options;
     table_options[Options::DATA_FILE_EXTERNAL_PATHS] = external_path1 + "," + external_path2;
+    table_options[Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY] = "round-robin";
 
     ASSERT_OK(catalog.CreateTable(Identifier("test_db", "tbl_multi_external"), &schema, {}, {},
                                   table_options, false));
@@ -758,6 +763,7 @@ TEST(FileSystemCatalogTest, TestDropTableWithGlobalIndexExternalPathOnMainBranch
     auto global_index_dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(global_index_dir);
     std::string global_index_path = global_index_dir->Str();
+    global_index_path = "FILE://" + global_index_path;
 
     // Create a file in external path to simulate global index data
     ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
@@ -824,6 +830,7 @@ TEST(FileSystemCatalogTest, TestDropTableWithGlobalIndexExternalPathOnBranch) {
     auto branch_external_dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(branch_external_dir);
     std::string branch_external_path = branch_external_dir->Str();
+    branch_external_path = "FILE://" + branch_external_path;
 
     ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
     ASSERT_OK(fs->WriteFile(PathUtil::JoinPath(branch_external_path, "index.bin"),
@@ -839,10 +846,10 @@ TEST(FileSystemCatalogTest, TestDropTableWithGlobalIndexExternalPathOnBranch) {
     // Original: "file.format" : "orc"
     // Patched:  "file.format" : "orc",
     //           "global-index.external-path" : "<branch_external_path>"
-    std::string search_str = "\"file.format\" : \"orc\"";
-    std::string replace_str = "\"file.format\" : \"orc\",\n    \"" +
-                              std::string(Options::GLOBAL_INDEX_EXTERNAL_PATH) + "\" : \"" +
-                              branch_external_path + "\"";
+    std::string search_str = R"("file.format" : "orc")";
+    std::string replace_str = R"("file.format" : "orc",
+                              "global-index.external-path" : ")" +
+                              branch_external_path + R"(")";
     auto pos = schema_content.rfind(search_str);
     ASSERT_NE(pos, std::string::npos);
     schema_content.replace(pos, search_str.length(), replace_str);
