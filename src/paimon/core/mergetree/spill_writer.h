@@ -33,6 +33,7 @@ class Schema;
 namespace paimon {
 
 class ArrowOutputStreamAdapter;
+class MemoryPool;
 class SpillChannelManager;
 
 class SpillWriter {
@@ -41,7 +42,8 @@ class SpillWriter {
         const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<arrow::Schema>& schema,
         const std::shared_ptr<FileIOChannel::Enumerator>& channel_enumerator,
         const std::shared_ptr<SpillChannelManager>& spill_channel_manager,
-        const std::string& compression, int32_t compression_level);
+        const std::string& compression, int32_t compression_level,
+        const std::shared_ptr<MemoryPool>& pool);
 
     SpillWriter(const SpillWriter&) = delete;
     SpillWriter& operator=(const SpillWriter&) = delete;
@@ -55,7 +57,8 @@ class SpillWriter {
     SpillWriter(const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<arrow::Schema>& schema,
                 const std::shared_ptr<FileIOChannel::Enumerator>& channel_enumerator,
                 const std::shared_ptr<SpillChannelManager>& spill_channel_manager,
-                const std::string& compression, int32_t compression_level);
+                const std::string& compression, int32_t compression_level,
+                const std::shared_ptr<MemoryPool>& pool);
 
     Status Open();
 
@@ -67,6 +70,7 @@ class SpillWriter {
     int32_t compression_level_;
     std::shared_ptr<OutputStream> out_stream_;
     std::shared_ptr<ArrowOutputStreamAdapter> arrow_output_stream_adapter_;
+    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
     std::shared_ptr<arrow::ipc::RecordBatchWriter> arrow_writer_;
     FileIOChannel::ID channel_id_;
     bool closed_ = false;

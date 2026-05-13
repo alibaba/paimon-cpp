@@ -285,7 +285,11 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestWithSelectedBitmapWithFilePos) {
         auto typed_iter = dynamic_cast<KeyValueDataFileRecordReader::Iterator*>(iter);
         ASSERT_TRUE(typed_iter);
         size_t pos_iter = 0;
-        while (iter->HasNext()) {
+        while (true) {
+            ASSERT_OK_AND_ASSIGN(bool has_next, iter->HasNext());
+            if (!has_next) {
+                break;
+            }
             ASSERT_OK_AND_ASSIGN(auto kv_and_pos, typed_iter->NextWithFilePos());
             const auto& [pos, kv] = kv_and_pos;
             ASSERT_EQ(pos, expected_pos_vector[pos_iter++]);

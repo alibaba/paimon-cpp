@@ -380,7 +380,11 @@ Status LookupLevels<T>::CreateSstFileFromDataFile(const std::shared_ptr<DataFile
         }
         auto typed_iter = dynamic_cast<KeyValueDataFileRecordReader::Iterator*>(iter.get());
         assert(typed_iter);
-        while (typed_iter->HasNext()) {
+        while (true) {
+            PAIMON_ASSIGN_OR_RAISE(bool has_next, typed_iter->HasNext());
+            if (!has_next) {
+                break;
+            }
             std::pair<int64_t, KeyValue> kv_and_pos;
             PAIMON_ASSIGN_OR_RAISE(kv_and_pos, typed_iter->NextWithFilePos());
             const auto& [file_pos, kv] = kv_and_pos;

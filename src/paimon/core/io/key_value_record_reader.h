@@ -20,6 +20,7 @@
 
 #include "paimon/core/key_value.h"
 #include "paimon/metrics.h"
+#include "paimon/result.h"
 namespace paimon {
 class KeyValueRecordReader {
  public:
@@ -28,7 +29,7 @@ class KeyValueRecordReader {
     class Iterator {
      public:
         virtual ~Iterator() = default;
-        virtual bool HasNext() const = 0;
+        virtual Result<bool> HasNext() const = 0;
         virtual Result<KeyValue> Next() = 0;
     };
 
