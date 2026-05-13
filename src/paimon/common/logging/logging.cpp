@@ -17,8 +17,8 @@
 #include "paimon/logging.h"
 
 #include <cerrno>
-#include <cstdlib>
 #include <cstdarg>
+#include <cstdlib>
 #include <mutex>
 #include <optional>
 #include <shared_mutex>

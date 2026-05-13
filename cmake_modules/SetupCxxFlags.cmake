@@ -199,22 +199,17 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STRE
     elseif(APPLE AND PAIMON_USE_APPLE_LIBCXX_WITH_CLANG)
         execute_process(COMMAND xcrun --show-sdk-path
                         OUTPUT_VARIABLE PAIMON_MACOS_SDK_PATH
-                        OUTPUT_STRIP_TRAILING_WHITESPACE
-                        ERROR_QUIET)
+                        OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
         if(NOT PAIMON_MACOS_SDK_PATH)
-            message(FATAL_ERROR
-                    "PAIMON_USE_APPLE_LIBCXX_WITH_CLANG is enabled, but xcrun could not find the macOS SDK"
+            message(FATAL_ERROR "PAIMON_USE_APPLE_LIBCXX_WITH_CLANG is enabled, but xcrun could not find the macOS SDK"
             )
         endif()
-        set(PAIMON_MACOS_LIBCXX_INCLUDE_DIR
-            "${PAIMON_MACOS_SDK_PATH}/usr/include/c++/v1")
+        set(PAIMON_MACOS_LIBCXX_INCLUDE_DIR "${PAIMON_MACOS_SDK_PATH}/usr/include/c++/v1")
         if(NOT EXISTS "${PAIMON_MACOS_LIBCXX_INCLUDE_DIR}/cstdlib")
-            message(FATAL_ERROR
-                    "PAIMON_USE_APPLE_LIBCXX_WITH_CLANG is enabled, but libc++ headers were not found at ${PAIMON_MACOS_LIBCXX_INCLUDE_DIR}"
+            message(FATAL_ERROR "PAIMON_USE_APPLE_LIBCXX_WITH_CLANG is enabled, but libc++ headers were not found at ${PAIMON_MACOS_LIBCXX_INCLUDE_DIR}"
             )
         endif()
-        message(STATUS
-                "Using Apple libc++ headers with Clang: ${PAIMON_MACOS_LIBCXX_INCLUDE_DIR}"
+        message(STATUS "Using Apple libc++ headers with Clang: ${PAIMON_MACOS_LIBCXX_INCLUDE_DIR}"
         )
         set(CMAKE_CXX_FLAGS
             "${CMAKE_CXX_FLAGS} -nostdinc++ -isystem ${PAIMON_MACOS_LIBCXX_INCLUDE_DIR} -include cstdlib"

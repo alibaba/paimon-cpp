@@ -1365,7 +1365,8 @@ macro(build_orc)
     message(STATUS "ORC_RPATH value: ${ORC_RPATH}")
     set(ORC_LINKER_FLAGS)
     if(NOT "${ORC_RPATH}" STREQUAL "")
-        list(APPEND ORC_LINKER_FLAGS
+        list(APPEND
+             ORC_LINKER_FLAGS
              "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}"
              "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}"
              "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}")
