@@ -29,7 +29,7 @@ namespace paimon {
 /// `VectorSearch` to perform vector similarity search.
 struct PAIMON_EXPORT VectorSearch {
     /// `PreFilter`: A lightweight pre-filtering function applied **before** similarity
-    /// scoring. It operates solely on **local row ids** and is typically driven by other global
+    /// scoring. It operates solely on **global row ids** and is typically driven by other global
     /// index, such as bitmap, or range index. This filter enables early pruning of irrelevant
     /// candidates (e.g., "only consider rows with label X"), significantly reducing the search
     /// space. Returns true to include the row in vector search process; false to exclude it.
@@ -63,7 +63,7 @@ struct PAIMON_EXPORT VectorSearch {
     int32_t limit;
     /// The query vector (must match the dimensionality of the indexed vectors).
     std::vector<float> query;
-    /// A pre-filter based on **local row ids**, implemented by leveraging other global index
+    /// A pre-filter based on **global row ids**, implemented by leveraging other global index
     std::function<bool(int64_t)> pre_filter;
     /// A runtime filtering condition that may involve graph traversal of
     /// structured attributes. **Using this parameter often yields better

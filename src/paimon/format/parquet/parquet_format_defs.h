@@ -61,6 +61,12 @@ static constexpr uint32_t DEFAULT_PARQUET_READ_PREDICATE_NODE_COUNT_LIMIT = 512;
 class ParquetMetrics {
  public:
     static inline const char WRITE_RECORD_COUNT[] = "parquet.write.record.count";
+
+    // read
+    static inline const char READ_ROW_GROUPS_TOTAL[] = "parquet.read.row-groups.total";
+    static inline const char READ_ROW_GROUPS_FILTERED[] = "parquet.read.row-groups.filtered";
+    static inline const char READ_ROWS[] = "parquet.read.rows";
+    static inline const char READ_BATCH_COUNT[] = "parquet.read.batch-count";
 };
 
 }  // namespace paimon::parquet
