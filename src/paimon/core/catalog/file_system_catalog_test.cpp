@@ -949,6 +949,7 @@ TEST(FileSystemCatalogTest, TestDropTableWithBranchExternalPaths) {
     auto branch_external_dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(branch_external_dir);
     std::string branch_external_path = branch_external_dir->Str();
+    branch_external_path = "FILE://" + branch_external_path;
 
     ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
     ASSERT_OK(fs->WriteFile(PathUtil::JoinPath(branch_external_path, "data.orc"),
@@ -966,6 +967,7 @@ TEST(FileSystemCatalogTest, TestDropTableWithBranchExternalPaths) {
     //           "data-file.external-paths" : "<branch_external_path>"
     std::string search_str = R"("file.format" : "orc")";
     std::string replace_str = R"("file.format" : "orc",
+                                 "data-file.external-paths.strategy" : "round-robin",
                                  "data-file.external-paths" : ")" +
                               branch_external_path + R"(")";
     auto pos = schema_content.rfind(search_str);
