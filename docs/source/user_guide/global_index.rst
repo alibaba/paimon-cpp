@@ -67,7 +67,7 @@ search modes including match-all, match-any, phrase, prefix, and wildcard querie
   - **Description**: Specifies the temporary directory used during Lucene index writing. No default value; must be explicitly set.
 
 - **Environment Variable**: ``PAIMON_JIEBA_DICT_DIR``
-  
+
   - **Description**: Specifies the directory containing Jieba dictionary files for Chinese text tokenization. At runtime, the system first checks this environment variable; if not set, it falls back to the compile-time ``JIEBA_TEST_DICT_DIR`` macro (only available in test builds). If neither is available, will fail with an error.
 
 Vector Index (Lumina)
