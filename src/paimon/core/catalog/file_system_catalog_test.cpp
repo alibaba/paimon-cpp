@@ -797,4 +797,69 @@ TEST(FileSystemCatalogTest, TestListSnapshotsTableNotExist) {
         "does not exist");
 }
 
+TEST(FileSystemCatalogTest, TestDropTableWithBranchExternalPaths) {
+    // Copy the real append_table_with_rt_branch.db test data, then patch the
+    // branch-rt schema-1 to include a DATA_FILE_EXTERNAL_PATHS option.
+    // DropTable should discover and clean up that external path.
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+
+    // Copy the real test_data db into a temp directory
+    std::string test_data_path = GetDataDir() + "orc/append_table_with_rt_branch.db";
+    std::string db_path = dir->Str() + "/test_db.db";
+    ASSERT_TRUE(TestUtil::CopyDirectory(test_data_path, db_path));
+
+    // Create a temporary external directory that represents branch external data
+    auto branch_external_dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(branch_external_dir);
+    std::string branch_external_path = branch_external_dir->Str();
+
+    ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
+    ASSERT_OK(fs->WriteFile(PathUtil::JoinPath(branch_external_path, "data.orc"),
+                            "branch external data", /*overwrite=*/true));
+
+    // Patch branch-rt/schema/schema-1: add DATA_FILE_EXTERNAL_PATHS to options
+    std::string branch_schema_path =
+        PathUtil::JoinPath(db_path, "append_table_with_rt_branch/branch/branch-rt/schema/schema-1");
+    std::string schema_content;
+    ASSERT_OK(fs->ReadFile(branch_schema_path, &schema_content));
+
+    // Insert the external path option into the JSON options block.
+    // Original: "file.format" : "orc"
+    // Patched:  "file.format" : "orc",
+    //           "data-file.external-paths" : "<branch_external_path>"
+    std::string search_str = R"("file.format" : "orc")";
+    std::string replace_str = R"("file.format" : "orc",
+                                 "data-file.external-paths" : ")" +
+                              branch_external_path + R"(")";
+    auto pos = schema_content.rfind(search_str);
+    ASSERT_NE(pos, std::string::npos);
+    schema_content.replace(pos, search_str.length(), replace_str);
+    ASSERT_OK(fs->WriteFile(branch_schema_path, schema_content, /*overwrite=*/true));
+
+    // Verify external path exists before drop
+    ASSERT_OK_AND_ASSIGN(bool external_exists, fs->Exists(branch_external_path));
+    ASSERT_TRUE(external_exists);
+
+    // Drop the table via catalog
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    Identifier identifier("test_db", "append_table_with_rt_branch");
+    ASSERT_OK_AND_ASSIGN(bool table_exists, catalog.TableExists(identifier));
+    ASSERT_TRUE(table_exists);
+
+    ASSERT_OK(catalog.DropTable(identifier, /*ignore_if_not_exists=*/false));
+
+    // Verify table is dropped
+    ASSERT_OK_AND_ASSIGN(table_exists, catalog.TableExists(identifier));
+    ASSERT_FALSE(table_exists);
+
+    // Verify the branch external path is cleaned up by DropTable
+    ASSERT_OK_AND_ASSIGN(external_exists, fs->Exists(branch_external_path));
+    ASSERT_FALSE(external_exists);
+}
+
 }  // namespace paimon::test
