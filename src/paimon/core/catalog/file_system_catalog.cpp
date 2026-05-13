@@ -29,6 +29,7 @@
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
+#include "paimon/core/core_options.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/core/table/system/system_table.h"
 #include "paimon/core/table/system/system_table_schema.h"
@@ -338,16 +339,18 @@ Result<std::vector<std::string>> FileSystemCatalog::GetSchemaExternalPaths(
     std::set<std::string> external_paths_set;
     for (const auto& schema : schemas) {
         const auto& options = schema->Options();
-        auto iter = options.find(Options::DATA_FILE_EXTERNAL_PATHS);
-        if (iter != options.end() && !iter->second.empty()) {
-            auto paths = StringUtils::Split(iter->second, ",", /*ignore_empty=*/true);
-            for (const auto& path : paths) {
-                std::string trimmed_path = path;
-                StringUtils::Trim(&trimmed_path);
-                if (!trimmed_path.empty()) {
-                    external_paths_set.insert(trimmed_path);
-                }
-            }
+        PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(options));
+        // collect external data file path
+        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> data_external_paths,
+                               core_options.CreateExternalPaths());
+        for (const auto& path : data_external_paths) {
+            external_paths_set.insert(path);
+        }
+        // collect external global index path
+        PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> index_external_path,
+                               core_options.CreateGlobalIndexExternalPath());
+        if (index_external_path != std::nullopt) {
+            external_paths_set.insert(index_external_path.value());
         }
     }
     return std::vector<std::string>(external_paths_set.begin(), external_paths_set.end());
