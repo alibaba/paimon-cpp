@@ -1410,6 +1410,115 @@ TEST_F(PredicateTest, TestLike) {
         StringStatsCheck(*predicate, 1ll, {StringFieldStats(std::nullopt, std::nullopt, 1ll)}));
 }
 
+TEST_F(PredicateTest, TestLikeConsecutivePercent) {
+    // consecutive '%' should be merged into one '%'
+    auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", arrow::utf8())}));
+
+    // "%%" should behave the same as "%"
+    ASSERT_OK_AND_ASSIGN(auto predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "%%", 2)));
+    auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"anything"})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({""})).value());
+
+    // "a%%%b" should behave the same as "a%b"
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "a%%%b", 5)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"axyzb"})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"ab"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"axyzc"})).value());
+}
+
+TEST_F(PredicateTest, TestLikeEmptyField) {
+    auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", arrow::utf8())}));
+
+    // empty field should match "%"
+    ASSERT_OK_AND_ASSIGN(auto predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "%", 1)));
+    auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({""})).value());
+
+    // empty field should NOT match "_"
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "_", 1)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({""})).value());
+
+    // empty field should NOT match a fixed pattern "abc"
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "abc", 3)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({""})).value());
+}
+
+TEST_F(PredicateTest, TestLikeMinLenExceedsField) {
+    auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", arrow::utf8())}));
+
+    // pattern "abcdef" requires 6 literal chars, field "ab" has only 2
+    ASSERT_OK_AND_ASSIGN(auto predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "abcdef", 6)));
+    auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"ab"})).value());
+
+    // pattern "a_b_c" requires 3 literal chars, wildcards = min_len 3, field "ab" has 2
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "a_b_c", 5)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"ab"})).value());
+
+    // field length equals min_len should still be possible to match
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"axbxc"})).value());
+}
+
+TEST_F(PredicateTest, TestLikeLongPatternHeapAlloc) {
+    // pattern length > STACK_LIMIT(128) uses heap allocation
+    auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", arrow::utf8())}));
+
+    // Build a pattern with > 128 characters: "a" + 130 * "_" + "z"
+    std::string long_pattern = "a";
+    for (int i = 0; i < 130; ++i) {
+        long_pattern += '_';
+    }
+    long_pattern += 'z';
+
+    ASSERT_OK_AND_ASSIGN(auto predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, long_pattern.data(), long_pattern.size())));
+    auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+
+    // Build a matching field: "a" + 130 * "x" + "z"
+    std::string matching_field = "a";
+    for (int i = 0; i < 130; ++i) {
+        matching_field += 'x';
+    }
+    matching_field += 'z';
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({matching_field})).value());
+
+    // Non-matching: wrong ending
+    std::string non_matching_field = "a";
+    for (int i = 0; i < 130; ++i) {
+        non_matching_field += 'x';
+    }
+    non_matching_field += 'y';
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({non_matching_field})).value());
+}
+
 TEST_F(PredicateTest, TestCompound) {
     ASSERT_OK_AND_ASSIGN(
         const auto startswith_predicate,
