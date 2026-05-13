@@ -54,6 +54,8 @@ option(PAIMON_ENABLE_LANCE "Whether to enable lance file format" OFF)
 option(PAIMON_ENABLE_JINDO "Whether to enable jindo file system" OFF)
 option(PAIMON_ENABLE_LUMINA "Whether to enable lumina vector index" OFF)
 option(PAIMON_ENABLE_LUCENE "Whether to enable lucene index" OFF)
+option(PAIMON_USE_APPLE_LIBCXX_WITH_CLANG
+       "Use Apple SDK libc++ headers when building with upstream Clang on macOS" ON)
 
 if(PAIMON_ENABLE_ORC)
     add_definitions(-DPAIMON_ENABLE_ORC)

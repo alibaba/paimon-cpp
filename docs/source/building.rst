@@ -30,8 +30,8 @@ and invoke ``cmake $CMAKE_ARGS ..`` from this directory.
 Building requires:
 
 * A C++17-enabled compiler. On Linux, gcc 8 and higher should be
-  sufficient. On macOS, use AppleClang from Xcode Command Line Tools.
-  Windows is not supported for now.
+  sufficient. On macOS, use AppleClang from Xcode Command Line Tools or
+  LLVM clang from Homebrew. Windows is not supported for now.
 * At least 2GB of RAM for a minimal build, 8GB for a minimal
   debug build with tests and 16GB for a full build.
 
@@ -92,8 +92,31 @@ Minimal macOS release build:
 
 .. code-block::
 
-   $ cmake -S . -B build-macos -DPAIMON_DEPENDENCY_SOURCE=BUNDLED -DPAIMON_BUILD_TESTS=OFF
-   $ cmake --build build-macos -j$(sysctl -n hw.ncpu)
+   $ mkdir build-release
+   $ cd build-release
+   $ cmake -DPAIMON_DEPENDENCY_SOURCE=BUNDLED -DPAIMON_BUILD_TESTS=OFF ..
+   $ make -j$(sysctl -n hw.ncpu)
+
+To build with LLVM clang from Homebrew instead of AppleClang, install LLVM and
+specify the Homebrew compiler paths when configuring:
+
+.. code-block::
+
+   $ brew install llvm
+   $ mkdir build-release
+   $ cd build-release
+   $ cmake \
+       -DPAIMON_DEPENDENCY_SOURCE=BUNDLED \
+       -DPAIMON_BUILD_TESTS=OFF \
+       -DCMAKE_C_COMPILER="$(brew --prefix llvm)/bin/clang" \
+       -DCMAKE_CXX_COMPILER="$(brew --prefix llvm)/bin/clang++" \
+       ..
+   $ make -j$(sysctl -n hw.ncpu)
+
+When building with upstream Clang on macOS, Paimon uses Apple SDK libc++
+headers by default to avoid incompatibilities in bundled third-party
+dependencies. Pass ``-DPAIMON_USE_APPLE_LIBCXX_WITH_CLANG=OFF`` to disable
+this behavior.
 
 Minimal debug build with unit tests (4GB of RAM for building or more recommended):
 
