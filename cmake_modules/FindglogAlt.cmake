@@ -18,6 +18,7 @@ if(_PAIMON_GLOG_ROOTS)
     set(_PAIMON_GLOG_FIND_ARGS HINTS ${_PAIMON_GLOG_ROOTS} NO_DEFAULT_PATH)
 endif()
 
+include(FindPackageUtils)
 find_package(glog CONFIG QUIET ${_PAIMON_GLOG_FIND_ARGS})
 
 set(_PAIMON_GLOG_TARGETS glog::glog glog)
@@ -29,17 +30,21 @@ foreach(_target IN LISTS _PAIMON_GLOG_TARGETS)
 endforeach()
 
 if(_PAIMON_GLOG_TARGET)
-    if(NOT TARGET glog)
+    paimon_find_target_headers(GLOG_INCLUDE_DIR
+                               ${_PAIMON_GLOG_TARGET}
+                               NAMES
+                               glog/logging.h
+                               ${_PAIMON_GLOG_FIND_ARGS})
+
+    include(FindPackageHandleStandardArgs)
+    find_package_handle_standard_args(glogAlt REQUIRED_VARS GLOG_INCLUDE_DIR)
+
+    if(glogAlt_FOUND AND NOT TARGET glog)
         add_library(glog INTERFACE IMPORTED)
-        get_target_property(GLOG_INCLUDE_DIR ${_PAIMON_GLOG_TARGET}
-                            INTERFACE_INCLUDE_DIRECTORIES)
-        if(GLOG_INCLUDE_DIR)
-            set_target_properties(glog PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                                  "${GLOG_INCLUDE_DIR}")
-        endif()
+        set_target_properties(glog PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+                                              "${GLOG_INCLUDE_DIR}")
         target_link_libraries(glog INTERFACE ${_PAIMON_GLOG_TARGET})
     endif()
-    set(glogAlt_FOUND TRUE)
 else()
     find_package(PkgConfig QUIET)
     if(PkgConfig_FOUND)

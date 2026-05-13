@@ -18,6 +18,7 @@ if(_PAIMON_PROTOBUF_ROOTS)
     set(_PAIMON_PROTOBUF_FIND_ARGS HINTS ${_PAIMON_PROTOBUF_ROOTS} NO_DEFAULT_PATH)
 endif()
 
+include(FindPackageUtils)
 find_package(Protobuf CONFIG QUIET ${_PAIMON_PROTOBUF_FIND_ARGS})
 
 set(_PAIMON_PROTOBUF_LIBRARY_TARGETS protobuf::libprotobuf Protobuf::libprotobuf)
@@ -52,29 +53,29 @@ if(_PAIMON_PROTOBUF_LIBRARY_TARGET AND NOT PROTOBUF_COMPILER)
 endif()
 
 if(_PAIMON_PROTOBUF_LIBRARY_TARGET)
+    paimon_find_target_headers(PROTOBUF_INCLUDE_DIR
+                               ${_PAIMON_PROTOBUF_LIBRARY_TARGET}
+                               NAMES
+                               google/protobuf/message.h
+                               ${_PAIMON_PROTOBUF_FIND_ARGS})
+
     include(FindPackageHandleStandardArgs)
     find_package_handle_standard_args(
-        ProtobufAlt REQUIRED_VARS _PAIMON_PROTOBUF_LIBRARY_TARGET PROTOBUF_COMPILER)
+        ProtobufAlt REQUIRED_VARS _PAIMON_PROTOBUF_LIBRARY_TARGET PROTOBUF_INCLUDE_DIR
+                                  PROTOBUF_COMPILER)
     if(ProtobufAlt_FOUND)
-        get_target_property(PROTOBUF_INCLUDE_DIR ${_PAIMON_PROTOBUF_LIBRARY_TARGET}
-                            INTERFACE_INCLUDE_DIRECTORIES)
-
         if(NOT TARGET libprotobuf)
             add_library(libprotobuf INTERFACE IMPORTED)
-            if(PROTOBUF_INCLUDE_DIR)
-                set_target_properties(libprotobuf PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                                             "${PROTOBUF_INCLUDE_DIR}")
-            endif()
+            set_target_properties(libprotobuf PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+                                                         "${PROTOBUF_INCLUDE_DIR}")
             target_link_libraries(libprotobuf
                                   INTERFACE ${_PAIMON_PROTOBUF_LIBRARY_TARGET})
         endif()
 
         if(_PAIMON_PROTOC_LIBRARY_TARGET AND NOT TARGET libprotoc)
             add_library(libprotoc INTERFACE IMPORTED)
-            if(PROTOBUF_INCLUDE_DIR)
-                set_target_properties(libprotoc PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                                           "${PROTOBUF_INCLUDE_DIR}")
-            endif()
+            set_target_properties(libprotoc PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+                                                       "${PROTOBUF_INCLUDE_DIR}")
             target_link_libraries(libprotoc INTERFACE ${_PAIMON_PROTOC_LIBRARY_TARGET})
         endif()
 
