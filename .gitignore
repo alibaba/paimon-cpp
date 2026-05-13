@@ -14,8 +14,6 @@
 
 # Build directories
 build
-build-release
-build-debug
 output
 
 # IDE settings

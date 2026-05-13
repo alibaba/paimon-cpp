@@ -24,8 +24,8 @@ System setup
 ============
 
 Paimon uses CMake as a build configuration system. We recommend building
-out-of-source. For example, you could create ``paimon-cpp/build-release``
-and invoke ``cmake $CMAKE_ARGS ..`` from this directory.
+out-of-source. For example, you could create ``paimon-cpp/build`` and invoke
+``cmake $CMAKE_ARGS ..`` from this directory.
 
 Building requires:
 
@@ -82,8 +82,8 @@ Minimal release build (2GB of RAM for building or more recommended):
 
 .. code-block::
 
-   $ mkdir build-release
-   $ cd build-release
+   $ mkdir build
+   $ cd build
    $ cmake ..
    $ make -j8       # if you have 8 CPU cores, otherwise adjust
    $ make install
@@ -92,8 +92,8 @@ Minimal macOS release build:
 
 .. code-block::
 
-   $ mkdir build-release
-   $ cd build-release
+   $ mkdir build
+   $ cd build
    $ cmake -DPAIMON_DEPENDENCY_SOURCE=BUNDLED -DPAIMON_BUILD_TESTS=OFF ..
    $ make -j$(sysctl -n hw.ncpu)
 
@@ -103,8 +103,8 @@ specify the Homebrew compiler paths when configuring:
 .. code-block::
 
    $ brew install llvm
-   $ mkdir build-release
-   $ cd build-release
+   $ mkdir build
+   $ cd build
    $ cmake \
        -DPAIMON_DEPENDENCY_SOURCE=BUNDLED \
        -DPAIMON_BUILD_TESTS=OFF \
@@ -122,8 +122,8 @@ Minimal debug build with unit tests (4GB of RAM for building or more recommended
 
 .. code-block::
 
-   $ mkdir build-debug
-   $ cd build-debug
+   $ mkdir build
+   $ cd build
    $ cmake -DCMAKE_BUILD_TYPE=Debug -DPAIMON_BUILD_TESTS=ON ..
    $ make -j8       # if you have 8 CPU cores, otherwise adjust
    $ make unittest  # to run the tests
