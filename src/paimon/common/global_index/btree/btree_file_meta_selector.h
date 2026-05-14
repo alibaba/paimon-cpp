@@ -22,6 +22,7 @@
 
 #include "paimon/common/global_index/btree/btree_index_meta.h"
 #include "paimon/common/global_index/btree/key_serializer.h"
+#include "paimon/common/memory/memory_slice.h"
 #include "paimon/global_index/global_index_io_meta.h"
 #include "paimon/predicate/function_visitor.h"
 
@@ -55,11 +56,16 @@ class BTreeFileMetaSelector : public FunctionVisitor<std::vector<GlobalIndexIOMe
 
     Result<std::vector<GlobalIndexIOMeta>> Filter(const MetaPredicate& predicate) const;
 
-    Result<Literal> DeserializeKey(const std::shared_ptr<Bytes>& key_bytes) const;
+    Result<MemorySlice> SerializeLiteral(const Literal& literal) const;
+
+    /// Create a non-owning MemorySlice view over the raw bytes of a key,
+    /// avoiding shared_ptr reference-count overhead.
+    static MemorySlice WrapKeySlice(const std::shared_ptr<Bytes>& key);
 
     std::vector<std::pair<GlobalIndexIOMeta, std::shared_ptr<BTreeIndexMeta>>> files_;
     std::shared_ptr<arrow::DataType> key_type_;
     std::shared_ptr<MemoryPool> pool_;
+    MemorySlice::SliceComparator comparator_;
 };
 
 }  // namespace paimon
