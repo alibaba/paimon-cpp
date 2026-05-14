@@ -150,6 +150,30 @@ if(PAIMON_BUILD_TESTS)
                                PRIVATE
                                JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
 
+    # Java → C++ cross-read test. Fixture produced by paimon-java's
+    # `TantivyIndexFixtureGen` (see docs/dev/tantivy_java_cross_read_plan.md)
+    # and checked in under test/test_data/java_tantivy_fixtures/.
+    add_paimon_test(tantivy_java_compat_test
+                    SOURCES
+                    tantivy_java_compat_test.cpp
+                    STATIC_LINK_LIBS
+                    paimon_shared
+                    test_utils_static
+                    "-Wl,--whole-archive"
+                    paimon_local_file_system_static
+                    paimon_tantivy_support_static
+                    "-Wl,--no-whole-archive"
+                    paimon_tantivy_ffi
+                    arrow
+                    glog
+                    fmt
+                    ${GTEST_LINK_TOOLCHAIN})
+    target_compile_definitions(paimon-tantivy-java-compat-test
+                               PRIVATE
+                               JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}"
+                               PAIMON_TANTIVY_JAVA_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/test/test_data/java_tantivy_fixtures"
+                               PAIMON_TANTIVY_CPP_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/test/test_data/cpp_tantivy_fixtures")
+
     # K4 — V3 streaming reader + W1 streaming writer integration coverage:
     # ParseArchiveHeader fuzz, concurrent query on shared reader, concurrent
     # reader create+drop lifecycle, streaming benchmark log.
