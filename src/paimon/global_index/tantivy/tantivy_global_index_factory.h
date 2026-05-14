@@ -1,0 +1,39 @@
+/*
+ * Copyright 2026-present Alibaba Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ */
+
+#pragma once
+
+#include <map>
+#include <memory>
+#include <string>
+
+#include "paimon/global_index/global_indexer.h"
+#include "paimon/global_index/global_indexer_factory.h"
+
+namespace paimon::tantivy {
+
+/// Factory for creating tantivy-fulltext global indexers. Registered into
+/// `FactoryCreator` via `REGISTER_PAIMON_FACTORY` so it is selectable
+/// alongside `lucene-fts-global` by passing `index_type = "tantivy-fulltext"`
+/// (the suffix `-global` is appended automatically by
+/// `GlobalIndexerFactory::Get`).
+class TantivyGlobalIndexFactory : public GlobalIndexerFactory {
+ public:
+    static const char IDENTIFIER[];
+
+    const char* Identifier() const override {
+        return IDENTIFIER;
+    }
+
+    Result<std::unique_ptr<GlobalIndexer>> Create(
+        const std::map<std::string, std::string>& options) const override;
+};
+
+}  // namespace paimon::tantivy

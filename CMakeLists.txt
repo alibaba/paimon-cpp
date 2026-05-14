@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
+# 3.22 是 Corrosion-rs (用于 Rust-C++ FFI 集成,见 third_party/tantivy_ffi) 的
+# 最低要求。Ubuntu 24.04 默认 CMake 3.28,CentOS 8+/RHEL 9+ 默认 3.20+。
+# 如果需要在更老的发行版构建,请参考 docs/dev/tantivy_fts_migration_plan.md。
 message(STATUS "Building using CMake version: ${CMAKE_VERSION}")
 
 # https://cmake.org/cmake/help/latest/policy/CMP0135.html
@@ -55,6 +58,8 @@ option(PAIMON_ENABLE_LANCE "Whether to enable lance file format" OFF)
 option(PAIMON_ENABLE_JINDO "Whether to enable jindo file system" OFF)
 option(PAIMON_ENABLE_LUMINA "Whether to enable lumina vector index" OFF)
 option(PAIMON_ENABLE_LUCENE "Whether to enable lucene index" OFF)
+option(PAIMON_ENABLE_TANTIVY
+       "Whether to enable tantivy-fulltext global index (Rust FFI, experimental)" ON)
 if(PAIMON_ENABLE_ORC)
     add_definitions(-DPAIMON_ENABLE_ORC)
 endif()
@@ -85,6 +90,10 @@ endif()
 
 if(PAIMON_ENABLE_LUCENE)
     add_definitions(-DPAIMON_ENABLE_LUCENE)
+endif()
+
+if(PAIMON_ENABLE_TANTIVY)
+    add_definitions(-DPAIMON_ENABLE_TANTIVY)
 endif()
 
 add_definitions(-DSNAPPY_CODEC_AVAILABLE)
@@ -303,6 +312,25 @@ if(PAIMON_ENABLE_LUMINA)
             DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
 
+# ---- tantivy-fulltext Rust FFI via Corrosion-rs --------------------------------
+# See docs/dev/tantivy_fts_migration_plan.md Stage 1.
+#
+# Corrosion wraps the Cargo crate as a CMake target named `paimon_tantivy_ffi`.
+# `corrosion_experimental_cbindgen` runs cbindgen from CMake and writes the
+# header to a stable path; it also adds that path to the target's INTERFACE
+# include dirs so C++ consumers pick it up via target_link_libraries.
+if(PAIMON_ENABLE_TANTIVY)
+    include(CorrosionFetch)
+    corrosion_import_crate(
+        MANIFEST_PATH third_party/tantivy_ffi/Cargo.toml
+        CRATES paimon_tantivy_ffi
+    )
+    corrosion_experimental_cbindgen(
+        TARGET paimon_tantivy_ffi
+        HEADER_NAME paimon_tantivy_ffi.h
+    )
+endif()
+
 if(PAIMON_ENABLE_LUCENE)
     set(PAIMON_DICT_DEST "share/paimon/dict")
 
@@ -491,6 +519,9 @@ add_subdirectory(src/paimon/format/avro)
 add_subdirectory(src/paimon/format/lance)
 add_subdirectory(src/paimon/global_index/lumina)
 add_subdirectory(src/paimon/global_index/lucene)
+if(PAIMON_ENABLE_TANTIVY)
+    add_subdirectory(src/paimon/global_index/tantivy)
+endif()
 add_subdirectory(src/paimon/testing/mock)
 add_subdirectory(src/paimon/testing/utils)
 add_subdirectory(test/inte)

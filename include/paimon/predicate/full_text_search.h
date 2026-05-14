@@ -60,8 +60,11 @@ struct PAIMON_EXPORT FullTextSearch {
 
     /// Name of the field to search within (must be a full-text indexed field).
     std::string field_name;
-    /// Maximum number of documents to return. If set, limit ordered by top scores. Otherwise, no
-    /// score return.
+    /// Maximum number of documents to return.
+    ///
+    /// **v0.2 contract change**: `limit` is now purely a truncation switch — it is orthogonal
+    /// to `with_score`. Set `with_score = true` if you want BM25 scores in the result; setting
+    /// `limit >= 0` no longer implies scoring.
     std::optional<int32_t> limit;
     /// The query string to search for. The interpretation depends on search_type:
     ///
@@ -85,5 +88,15 @@ struct PAIMON_EXPORT FullTextSearch {
     /// Only rows whose global row ID is present in `pre_filter` will be included during search.
     /// If not set, all rows will be included.
     std::optional<RoaringBitmap64> pre_filter;
+    /// Whether to compute and return BM25 relevance scores.
+    ///
+    /// **v0.2**: Explicit, orthogonal to `limit`. The 4-path matrix:
+    /// - `with_score=false, limit=nullopt` → BitmapGlobalIndexResult (all rows, no score)
+    /// - `with_score=false, limit=N`       → BitmapGlobalIndexResult (top-N by BM25, score dropped)
+    /// - `with_score=true,  limit=nullopt` → BitmapScoredGlobalIndexResult (all rows + all scores)
+    /// - `with_score=true,  limit=N`       → BitmapScoredGlobalIndexResult (top-N + scores)
+    ///
+    /// Default is `false` to avoid silent score computation overhead for callers that don't need it.
+    bool with_score = false;
 };
 }  // namespace paimon

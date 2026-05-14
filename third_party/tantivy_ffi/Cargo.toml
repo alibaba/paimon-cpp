@@ -1,0 +1,33 @@
+[package]
+name = "paimon_tantivy_ffi"
+version = "0.1.0"
+edition = "2021"
+description = "C FFI layer wrapping tantivy + jieba-rs for paimon-cpp tantivy-fts global index"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+name = "paimon_tantivy_ffi"
+# staticlib: 给 CMake + Corrosion 链接成 libpaimon_tantivy_ffi.a
+# rlib:      给 cargo test 生成 test 可执行文件时能用到 Rust 原生 linkage
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+tantivy = "0.22"
+jieba-rs = "0.7"
+croaring = "2.0"
+log = "0.4"
+tempfile = "3"
+
+[build-dependencies]
+cbindgen = "0.29"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+
+[profile.dev]
+# FFI 异常传播通过 status code,Rust 侧 panic 应当 abort 避免穿过 FFI 边界
+panic = "abort"
