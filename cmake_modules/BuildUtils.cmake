@@ -96,6 +96,7 @@ function(add_paimon_lib LIB_NAME)
     endif()
     # Necessary to make static linking into other shared libraries work properly
     set_property(TARGET ${LIB_NAME}_objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
+    target_link_libraries(${LIB_NAME}_objlib PUBLIC paimon_sanitizer_flags)
     if(ARG_DEPENDENCIES)
         # In static-only builds, some dependency names are still declared as
         # *_shared. Map them to *_static when the shared target is unavailable.
@@ -336,6 +337,10 @@ function(add_test_case REL_TEST_NAME)
         target_compile_options(${TEST_NAME} PRIVATE -Wno-global-constructors)
     endif()
     target_compile_options(${TEST_NAME} PRIVATE -fno-access-control)
+    # test 源文件里用 {1, -1, ...} 这样的方式初始化 char/vector<char> 代表原始字节;
+    # aarch64 默认 char 是 unsigned,会触发 -Wnarrowing。这里统一关掉,避免测试
+    # 源文件里大量 static_cast<char>(-1) 污染。生产代码(src/paimon/...)不关。
+    target_compile_options(${TEST_NAME} PRIVATE -Wno-narrowing)
 
     add_test(${TEST_NAME}
              ${BUILD_SUPPORT_DIR}/run-test.sh

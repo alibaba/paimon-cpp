@@ -338,8 +338,9 @@ TEST_F(BinaryRowTest, TestBinary) {
     auto pool = GetDefaultPool();
     BinaryRow row(2);
     BinaryRowWriter writer(&row, 0, pool.get());
-    char chars1[3] = {1, -1, 5};
-    char chars2[8] = {1, -1, 5, 5, 1, 5, 1, 5};
+    // explicit cast to avoid -Wnarrowing on platforms where char is unsigned (e.g. aarch64)
+    char chars1[3] = {1, static_cast<char>(-1), 5};
+    char chars2[8] = {1, static_cast<char>(-1), 5, 5, 1, 5, 1, 5};
     std::string str1(chars1, 3);
     std::string str2(chars2, 8);
     Bytes bytes1(str1, pool.get());

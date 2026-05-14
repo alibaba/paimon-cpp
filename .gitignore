@@ -14,8 +14,7 @@
 
 # Build directories
 build
-build-release
-build-debug
+build-*/
 output
 
 # IDE settings
@@ -24,8 +23,20 @@ output
 .cache
 
 # Devcontainer configuration
+# Track only *.template files (and subdirectory structure that contains them).
 .devcontainer/*
 !.devcontainer/*.template
+!.devcontainer/x86_64/
+.devcontainer/x86_64/*
+!.devcontainer/x86_64/*.template
+# CentOS 7 cross-build image: track raw Dockerfile + helper script (not
+# templated because the image is built from the repo root directly).
+!.devcontainer/centos7/
+.devcontainer/centos7/*
+!.devcontainer/centos7/Dockerfile
+!.devcontainer/centos7/run.sh
+# rustup-init.bin is a 20 MB prefetched binary — not source, don't commit.
+.devcontainer/centos7/rustup-init.bin
 
 # Temporary and backup files
 *~
@@ -48,3 +59,6 @@ FlameGraph
 
 # Third party dependencies archives
 third_party/*.tar.gz
+
+# Rust / Cargo build artifacts
+third_party/tantivy_ffi/target/
