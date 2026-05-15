@@ -260,6 +260,49 @@ TEST_P(SpillReaderWriterTest, TestReadBatch) {
     }
 }
 
+TEST_P(SpillReaderWriterTest, TestWriterCloseIdempotency) {
+    ASSERT_OK_AND_ASSIGN(auto writer, CreateSpillWriter());
+    auto batch = CreateRecordBatch(R"([[0, 1, "Alice", 10]])", 1);
+    ASSERT_OK(writer->WriteBatch(batch));
+    ASSERT_OK(writer->Close());
+    // second close should be idempotent
+    ASSERT_OK(writer->Close());
+
+    auto channel_id = writer->GetChannelId();
+    ASSERT_OK_AND_ASSIGN(auto reader, CreateSpillReader(channel_id));
+
+    // Read and verify data is intact.
+    ASSERT_OK_AND_ASSIGN(auto iter, reader->NextBatch());
+    ASSERT_NE(iter, nullptr);
+    ASSERT_OK_AND_ASSIGN(auto kv, iter->Next());
+    ASSERT_EQ(kv.key->GetStringView(0), "Alice");
+    ASSERT_OK_AND_ASSIGN(bool has_next, iter->HasNext());
+    ASSERT_FALSE(has_next);
+    reader->Close();
+}
+
+TEST_P(SpillReaderWriterTest, TestReaderSchemaMismatchErrors) {
+    auto batch = CreateRecordBatch(R"([[0, 1, "Alice", 10], [1, 1, "Bob", 20]])", 2);
+    auto channel_id = WriteSpillFile({batch});
+    {
+        auto wrong_key_schema = arrow::schema({arrow::field("nonexistent_key", arrow::utf8())});
+        ASSERT_OK_AND_ASSIGN(auto reader,
+                             SpillReader::Create(file_system_, wrong_key_schema, value_schema_,
+                                                 read_pool_, channel_id));
+        ASSERT_NOK_WITH_MSG(reader->NextBatch(),
+                            "cannot find key field nonexistent_key in spill file");
+    }
+    {
+        auto wrong_value_schema = arrow::schema(
+            {arrow::field("f0", arrow::utf8()), arrow::field("nonexistent_value", arrow::int32())});
+        ASSERT_OK_AND_ASSIGN(auto reader,
+                             SpillReader::Create(file_system_, key_schema_, wrong_value_schema,
+                                                 read_pool_, channel_id));
+        ASSERT_NOK_WITH_MSG(reader->NextBatch(),
+                            "cannot find value field nonexistent_value in spill file");
+    }
+}
+
 INSTANTIATE_TEST_SUITE_P(CompressionTypes, SpillReaderWriterTest,
                          ::testing::Values("zstd", "none", "uncompressed", "lz4"));
 
