@@ -40,7 +40,6 @@
 #include "paimon/format/parquet/parquet_format_writer.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/local/local_file_system.h"
-#include "paimon/global_config.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
@@ -395,10 +394,11 @@ TEST_F(ParquetFileBatchReaderTest, TestCreateArrowReaderProperties) {
         ASSERT_EQ(arrow_reader_properties.pre_buffer(), true);
         ASSERT_EQ(arrow_reader_properties.batch_size(), 1024);
         ASSERT_EQ(arrow_reader_properties.use_threads(), true);
+        ASSERT_EQ(arrow::GetCpuThreadPoolCapacity(), 3);
         ASSERT_EQ(arrow_reader_properties.cache_options(), arrow::io::CacheOptions::Defaults());
     }
     {
-        std::map<std::string, std::string> options = {{PARQUET_USE_MULTI_THREAD, "false"}};
+        std::map<std::string, std::string> options = {{PARQUET_READ_EXECUTOR_THREAD_COUNT, "0"}};
         int32_t batch_size = 1024;
         ASSERT_OK_AND_ASSIGN(
             auto arrow_reader_properties,
@@ -406,16 +406,13 @@ TEST_F(ParquetFileBatchReaderTest, TestCreateArrowReaderProperties) {
         ASSERT_EQ(arrow_reader_properties.use_threads(), false);
     }
     {
-        int32_t original_capacity = GetArrowCpuThreadPoolCapacity();
-        ASSERT_OK(SetArrowCpuThreadPoolCapacity(6));
-        std::map<std::string, std::string> options = {{PARQUET_USE_MULTI_THREAD, "true"}};
+        std::map<std::string, std::string> options = {{PARQUET_READ_EXECUTOR_THREAD_COUNT, "6"}};
         int32_t batch_size = 1024;
         ASSERT_OK_AND_ASSIGN(
             auto arrow_reader_properties,
             ParquetFileBatchReader::CreateArrowReaderProperties(pool_, options, batch_size));
         ASSERT_EQ(arrow_reader_properties.use_threads(), true);
-        ASSERT_EQ(GetArrowCpuThreadPoolCapacity(), 6);
-        ASSERT_OK(SetArrowCpuThreadPoolCapacity(original_capacity));
+        ASSERT_EQ(arrow::GetCpuThreadPoolCapacity(), 6);
     }
 }
 
