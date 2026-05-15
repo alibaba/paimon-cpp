@@ -31,7 +31,7 @@ class OptionsSystemTable : public SystemTable {
     OptionsSystemTable(std::string table_path, std::shared_ptr<TableSchema> table_schema);
 
     std::string Name() const override;
-    std::shared_ptr<arrow::Schema> ArrowSchema() const override;
+    Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
     Result<std::unique_ptr<TableScan>> NewScan(
         const std::shared_ptr<ScanContext>& context) const override;
     Result<std::unique_ptr<TableRead>> NewRead(

@@ -45,7 +45,7 @@ class SystemTable : public std::enable_shared_from_this<SystemTable> {
     virtual ~SystemTable() = default;
 
     virtual std::string Name() const = 0;
-    virtual std::shared_ptr<arrow::Schema> ArrowSchema() const = 0;
+    virtual Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const = 0;
     virtual Result<std::unique_ptr<TableScan>> NewScan(
         const std::shared_ptr<ScanContext>& context) const = 0;
     virtual Result<std::unique_ptr<TableRead>> NewRead(

@@ -281,7 +281,9 @@ Result<std::shared_ptr<Schema>> FileSystemCatalog::LoadTableSchema(
                                SystemTableLoader::Load(system_table_name.value(), fs_,
                                                        GetTableLocation(data_identifier),
                                                        latest_schema.value(), dynamic_options));
-        return std::make_shared<SystemTableSchema>(system_table->ArrowSchema());
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> arrow_schema,
+                               system_table->ArrowSchema());
+        return std::make_shared<SystemTableSchema>(std::move(arrow_schema));
     }
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
                            TableSchemaExists(identifier));

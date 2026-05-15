@@ -136,7 +136,7 @@ std::string OptionsSystemTable::Name() const {
     return kName;
 }
 
-std::shared_ptr<arrow::Schema> OptionsSystemTable::ArrowSchema() const {
+Result<std::shared_ptr<arrow::Schema>> OptionsSystemTable::ArrowSchema() const {
     return OptionsSchema();
 }
 

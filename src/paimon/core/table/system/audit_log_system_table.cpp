@@ -220,15 +220,13 @@ std::string AuditLogSystemTable::Name() const {
     return kName;
 }
 
-std::shared_ptr<arrow::Schema> AuditLogSystemTable::ArrowSchema() const {
+Result<std::shared_ptr<arrow::Schema>> AuditLogSystemTable::ArrowSchema() const {
     std::shared_ptr<arrow::Field> rowkind_field =
         DataField::ConvertDataFieldToArrowField(SpecialFields::RowKind());
     rowkind_field = rowkind_field->WithNullable(false);
     arrow::FieldVector fields = {rowkind_field};
-    Result<CoreOptions> core_options = CoreOptions::FromMap(options_);
-    bool include_sequence_number =
-        core_options.ok() && core_options.value().TableReadSequenceNumberEnabled();
-    if (include_sequence_number) {
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(options_));
+    if (core_options.TableReadSequenceNumberEnabled()) {
         fields.push_back(DataField::ConvertDataFieldToArrowField(SpecialFields::SequenceNumber()));
     }
     for (const auto& field : table_schema_->Fields()) {
@@ -308,7 +306,8 @@ Result<std::unique_ptr<TableRead>> AuditLogSystemTable::NewChangelogRead(
     }
     key_value_read->ForceKeepDelete(true);
     bool include_sequence_number = core_options.TableReadSequenceNumberEnabled();
-    return std::make_unique<ChangelogTableRead>(std::move(data_read), ArrowSchema(),
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> output_schema, ArrowSchema());
+    return std::make_unique<ChangelogTableRead>(std::move(data_read), std::move(output_schema),
                                                 include_sequence_number, std::move(converter),
                                                 context->GetMemoryPool());
 }
