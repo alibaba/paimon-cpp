@@ -38,8 +38,9 @@ static inline const char PARQUET_WRITER_MAX_MEMORY_USE[] = "parquet.writer.max.m
 static constexpr uint64_t DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE = 512 * 1024 * 1024;  // 512MB
 
 // read
-static inline const char PARQUET_USE_MULTI_THREAD[] = "parquet.use-multi-thread";
-static inline const bool DEFAULT_PARQUET_USE_MULTI_THREAD = true;
+static inline const char PARQUET_READ_EXECUTOR_THREAD_COUNT[] =
+    "parquet.read.executor.thread-count";
+static constexpr uint32_t DEFAULT_PARQUET_READ_EXECUTOR_THREAD_COUNT = 3;
 static inline const char PARQUET_READ_CACHE_OPTION_LAZY[] = "parquet.read.cache-option.lazy";
 static inline const char PARQUET_READ_CACHE_OPTION_PREFETCH_LIMIT[] =
     "parquet.read.cache-option.prefetch-limit";
