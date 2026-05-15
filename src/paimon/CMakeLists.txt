@@ -52,7 +52,6 @@ set(PAIMON_COMMON_SRCS
     common/fs/file_system.cpp
     common/fs/resolving_file_system.cpp
     common/fs/file_system_factory.cpp
-    common/global_config.cpp
     common/global_index/union_global_index_reader.cpp
     common/global_index/offset_global_index_reader.cpp
     common/global_index/complete_index_score_batch_reader.cpp
@@ -532,6 +531,8 @@ if(PAIMON_BUILD_TESTS)
                     common/compression/block_compression_factory_test.cpp
                     common/sst/sst_file_io_test.cpp
                     common/sst/block_cache_test.cpp
+                    common/sst/block_meta_test.cpp
+                    common/sst/block_write_read_test.cpp
                     common/utils/crc32c_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared
@@ -561,6 +562,7 @@ if(PAIMON_BUILD_TESTS)
                     core/catalog/catalog_test.cpp
                     core/catalog/identifier_test.cpp
                     core/compact/compact_deletion_file_test.cpp
+                    core/compact/compact_future_manager_test.cpp
                     core/compact/noop_compact_manager_test.cpp
                     core/core_options_test.cpp
                     core/options/lookup_strategy_test.cpp

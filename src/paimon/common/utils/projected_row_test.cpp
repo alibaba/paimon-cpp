@@ -76,8 +76,14 @@ TEST(ProjectedRowTest, TestSimple) {
                                     5,  4,  3,  2,  1,  0,  -1, -1, -1, -1};
 
     ProjectedRow projected_row(row, mapping);
-    ASSERT_EQ(projected_row.GetFieldCount(), 20);
+
+    // test row kind
     ASSERT_EQ(projected_row.GetRowKind().value(), RowKind::Insert());
+    projected_row.SetRowKind(RowKind::Delete());
+    ASSERT_EQ(projected_row.GetRowKind().value(), RowKind::Delete());
+    ASSERT_EQ(row->GetRowKind().value(), RowKind::Delete());
+
+    ASSERT_EQ(projected_row.GetFieldCount(), 20);
 
     ASSERT_TRUE(projected_row.IsNullAt(19));
     ASSERT_TRUE(projected_row.IsNullAt(18));
@@ -111,7 +117,7 @@ TEST(ProjectedRowTest, TestSimple) {
     ASSERT_TRUE(projected_row.IsNullAt(0));
 
     ASSERT_EQ(
-        "+I { indexMapping=15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, -1, -1, -1, -1, "
+        "-D { indexMapping=15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, -1, -1, -1, -1, "
         "mutableRow=(true,1,2,3,4,5.100000,6.120000,abcd,efgh,apple,1970-01-01 "
         "00:00:00.100000020,123.45678998765432145678,array,row,map,null) }",
         projected_row.ToString());

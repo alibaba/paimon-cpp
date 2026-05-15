@@ -55,7 +55,7 @@ Result<MemorySlice> BlockWriter::Finish() {
     if (aligned_) {
         block_->WriteValue(aligned_size_);
     } else {
-        for (auto& position : positions_) {
+        for (const auto& position : positions_) {
             block_->WriteValue(position);
         }
         block_->WriteValue(static_cast<int32_t>(positions_.size()));

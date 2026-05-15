@@ -118,8 +118,17 @@ Result<std::shared_ptr<GlobalIndexResult>> OffsetGlobalIndexReader::VisitLike(
 
 Result<std::shared_ptr<ScoredGlobalIndexResult>> OffsetGlobalIndexReader::VisitVectorSearch(
     const std::shared_ptr<VectorSearch>& vector_search) {
+    std::shared_ptr<VectorSearch> rewritten_search = vector_search;
+    if (vector_search && vector_search->pre_filter) {
+        auto original_filter = vector_search->pre_filter;
+        auto offset = offset_;
+        rewritten_search =
+            vector_search->ReplacePreFilter([original_filter, offset](int64_t local_id) -> bool {
+                return original_filter(local_id + offset);
+            });
+    }
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> result,
-                           wrapped_->VisitVectorSearch(vector_search));
+                           wrapped_->VisitVectorSearch(rewritten_search));
     if (result == nullptr) {
         return std::shared_ptr<ScoredGlobalIndexResult>();
     }
@@ -135,8 +144,20 @@ Result<std::shared_ptr<ScoredGlobalIndexResult>> OffsetGlobalIndexReader::VisitV
 
 Result<std::shared_ptr<GlobalIndexResult>> OffsetGlobalIndexReader::VisitFullTextSearch(
     const std::shared_ptr<FullTextSearch>& full_text_search) {
+    // Rewrite pre_filter to convert global ids (used externally) to local ids (used by wrapped_).
+    // The original bitmap contains global ids; subtract offset_ to get local ids for the
+    // underlying reader.
+    std::shared_ptr<FullTextSearch> rewritten_search = full_text_search;
+    if (full_text_search && full_text_search->pre_filter.has_value()) {
+        RoaringBitmap64 local_bitmap;
+        const auto& global_bitmap = full_text_search->pre_filter.value();
+        for (auto iter = global_bitmap.Begin(); iter != global_bitmap.End(); ++iter) {
+            local_bitmap.Add(*iter - offset_);
+        }
+        rewritten_search = full_text_search->ReplacePreFilter(std::move(local_bitmap));
+    }
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> result,
-                           wrapped_->VisitFullTextSearch(full_text_search));
+                           wrapped_->VisitFullTextSearch(rewritten_search));
     return ApplyOffset(result);
 }
 
