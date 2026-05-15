@@ -65,12 +65,16 @@ function(paimon_find_target_headers OUT_VAR TARGET_NAME)
     if(ARG_PATH_SUFFIXES)
         list(APPEND _find_args PATH_SUFFIXES ${ARG_PATH_SUFFIXES})
     endif()
-    if(ARG_NO_DEFAULT_PATH)
-        list(APPEND _find_args NO_DEFAULT_PATH)
-    endif()
+    list(APPEND _find_args NO_DEFAULT_PATH)
 
     unset(${_header_dir_var} CACHE)
     find_path(${_header_dir_var} ${_find_args})
+
+    if(NOT ${_header_dir_var})
+        get_property(_partial_targets GLOBAL PROPERTY PAIMON_PARTIAL_SYSTEM_TARGETS)
+        list(APPEND _partial_targets "${TARGET_NAME}: ${ARG_NAMES}")
+        set_property(GLOBAL PROPERTY PAIMON_PARTIAL_SYSTEM_TARGETS "${_partial_targets}")
+    endif()
 
     set(${OUT_VAR}
         "${${_header_dir_var}}"
@@ -80,6 +84,7 @@ function(paimon_find_target_headers OUT_VAR TARGET_NAME)
     unset(_find_args)
     unset(_header_dir_var)
     unset(_header_var_suffix)
+    unset(_partial_targets)
     unset(_property_value)
     unset(_search_dirs)
     unset(_target_include_dirs)

@@ -457,7 +457,10 @@ function(paimon_configure_dependency_root DEPENDENCY_NAME SOURCE_VALUE OUT_SOURC
         if("${SOURCE_VALUE}" STREQUAL "SYSTEM")
             message(FATAL_ERROR "${DEPENDENCY_NAME}_SOURCE=SYSTEM is not supported "
                                 "because paimon-cpp requires project-specific "
-                                "${DEPENDENCY_NAME} patches. Use BUNDLED instead.")
+                                "${DEPENDENCY_NAME} patches. If this value comes "
+                                "from PAIMON_DEPENDENCY_SOURCE=SYSTEM, set "
+                                "${DEPENDENCY_NAME}_SOURCE=BUNDLED or leave "
+                                "${DEPENDENCY_NAME}_SOURCE=AUTO.")
         elseif("${SOURCE_VALUE}" STREQUAL "AUTO")
             set(${OUT_SOURCE}
                 "BUNDLED"
@@ -631,6 +634,7 @@ macro(resolve_dependency DEPENDENCY_NAME)
             "${_paimon_requested_source}" "${_paimon_target_name}")
     elseif(_paimon_resolved_source STREQUAL "AUTO")
         message(STATUS "Resolving ${DEPENDENCY_NAME} with AUTO source")
+        set_property(GLOBAL PROPERTY PAIMON_PARTIAL_SYSTEM_TARGETS "")
         find_package(${_paimon_alt_package_name} QUIET MODULE)
         if(${_paimon_found_var})
             message(STATUS "Using system ${DEPENDENCY_NAME}")
@@ -641,6 +645,16 @@ macro(resolve_dependency DEPENDENCY_NAME)
                 ${DEPENDENCY_NAME} "${_paimon_requested_source}" "SYSTEM"
                 "${_paimon_target_name}")
         else()
+            get_property(_paimon_partial_system_targets GLOBAL
+                         PROPERTY PAIMON_PARTIAL_SYSTEM_TARGETS)
+            if(_paimon_partial_system_targets)
+                list(REMOVE_DUPLICATES _paimon_partial_system_targets)
+                message(FATAL_ERROR "System ${DEPENDENCY_NAME} was partially found "
+                                    "but is missing required development headers: "
+                                    "${_paimon_partial_system_targets}. Install "
+                                    "the matching development package or set "
+                                    "${DEPENDENCY_NAME}_SOURCE=BUNDLED.")
+            endif()
             message(STATUS "System ${DEPENDENCY_NAME} not found; using bundled")
             paimon_build_dependency(${DEPENDENCY_NAME})
             set(PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE
@@ -661,6 +675,7 @@ macro(resolve_dependency DEPENDENCY_NAME)
     unset(_paimon_requested_source)
     unset(_paimon_resolved_source)
     unset(_paimon_target_name)
+    unset(_paimon_partial_system_targets)
 endmacro()
 
 function(paimon_warn_if_mixed_arrow_dependencies)
