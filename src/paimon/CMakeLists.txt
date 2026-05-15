@@ -52,14 +52,13 @@ set(PAIMON_COMMON_SRCS
     common/fs/file_system.cpp
     common/fs/resolving_file_system.cpp
     common/fs/file_system_factory.cpp
-<<<<<<< HEAD
-    common/global_config.cpp
     common/global_index/union_global_index_reader.cpp
     common/global_index/offset_global_index_reader.cpp
-=======
->>>>>>> parent of d3bb3a9 (feat: Add global config API and optimize Parquet read thread conf (#68))
     common/global_index/complete_index_score_batch_reader.cpp
-    common/global_index/bitmap_vector_search_global_index_result.cpp
+    common/global_index/bitmap_scored_global_index_result.cpp
+    common/global_index/bitmap_global_index_result.cpp
+    common/global_index/global_index_result.cpp
+    common/global_index/global_indexer_factory.cpp
     common/io/buffered_input_stream.cpp
     common/io/byte_array_input_stream.cpp
     common/io/data_input_stream.cpp
