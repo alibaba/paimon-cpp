@@ -103,11 +103,9 @@ class MetadataTableRead : public TableRead {
 }  // namespace
 
 MetadataSystemTable::MetadataSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
-                                         std::shared_ptr<TableSchema> table_schema,
                                          std::string branch)
     : fs_(std::move(fs)),
       table_path_(std::move(table_path)),
-      table_schema_(std::move(table_schema)),
       branch_(BranchManager::NormalizeBranch(branch)) {}
 
 Result<std::unique_ptr<TableScan>> MetadataSystemTable::NewScan(

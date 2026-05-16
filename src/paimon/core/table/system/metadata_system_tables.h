@@ -23,14 +23,13 @@
 
 namespace paimon {
 class FileSystem;
-class TableSchema;
 
 class SnapshotsSystemTable : public MetadataSystemTable {
  public:
     static constexpr const char* kName = "snapshots";
 
     SnapshotsSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
-                         std::shared_ptr<TableSchema> table_schema, std::string branch);
+                         std::string branch);
 
     std::string Name() const override;
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
@@ -42,8 +41,7 @@ class SchemasSystemTable : public MetadataSystemTable {
  public:
     static constexpr const char* kName = "schemas";
 
-    SchemasSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
-                       std::shared_ptr<TableSchema> table_schema, std::string branch);
+    SchemasSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path, std::string branch);
 
     std::string Name() const override;
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
@@ -55,8 +53,7 @@ class TagsSystemTable : public MetadataSystemTable {
  public:
     static constexpr const char* kName = "tags";
 
-    TagsSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
-                    std::shared_ptr<TableSchema> table_schema, std::string branch);
+    TagsSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path, std::string branch);
 
     std::string Name() const override;
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
@@ -68,8 +65,7 @@ class BranchesSystemTable : public MetadataSystemTable {
  public:
     static constexpr const char* kName = "branches";
 
-    BranchesSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
-                        std::shared_ptr<TableSchema> table_schema, std::string branch);
+    BranchesSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path, std::string branch);
 
     std::string Name() const override;
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
@@ -82,7 +78,7 @@ class ConsumersSystemTable : public MetadataSystemTable {
     static constexpr const char* kName = "consumers";
 
     ConsumersSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
-                         std::shared_ptr<TableSchema> table_schema, std::string branch);
+                         std::string branch);
 
     std::string Name() const override;
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;

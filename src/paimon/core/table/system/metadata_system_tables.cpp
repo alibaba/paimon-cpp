@@ -26,17 +26,15 @@
 
 #include "arrow/api.h"
 #include "paimon/common/utils/arrow/status_utils.h"
-#include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/rapidjson_util.h"
-#include "paimon/common/utils/string_utils.h"
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/core/tag/tag.h"
 #include "paimon/core/utils/branch_manager.h"
+#include "paimon/core/utils/consumer_manager.h"
 #include "paimon/core/utils/snapshot_manager.h"
 #include "paimon/core/utils/tag_manager.h"
-#include "paimon/fs/file_system.h"
 #include "paimon/status.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
@@ -92,60 +90,113 @@ Result<std::optional<std::string>> OptionalJson(const std::optional<T>& value) {
     return std::optional<std::string>(std::move(json));
 }
 
-arrow::Status FinishBuilder(arrow::ArrayBuilder* builder, std::shared_ptr<arrow::Array>* out) {
-    return builder->Finish(out);
-}
-
-Result<std::shared_ptr<arrow::RecordBatch>> MakeRecordBatch(
-    const std::shared_ptr<arrow::Schema>& schema, int64_t num_rows,
-    std::vector<std::unique_ptr<arrow::ArrayBuilder>> builders) {
-    std::vector<std::shared_ptr<arrow::Array>> arrays;
-    arrays.reserve(builders.size());
-    for (auto& builder : builders) {
-        std::shared_ptr<arrow::Array> array;
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(FinishBuilder(builder.get(), &array));
-        arrays.push_back(std::move(array));
-    }
-    return arrow::RecordBatch::Make(schema, num_rows, std::move(arrays));
-}
-
-std::string ConsumerDirectory(const std::string& table_path, const std::string& branch) {
-    return PathUtil::JoinPath(BranchManager::BranchPath(table_path, branch), "/consumer");
-}
-
-Result<std::vector<std::string>> ListConsumers(const std::shared_ptr<FileSystem>& fs,
-                                               const std::string& table_path,
-                                               const std::string& branch) {
-    std::vector<std::string> consumers;
-    std::string consumer_dir = ConsumerDirectory(table_path, branch);
-    PAIMON_ASSIGN_OR_RAISE(bool exists, fs->Exists(consumer_dir));
-    if (!exists) {
-        return consumers;
-    }
-
-    std::vector<std::unique_ptr<BasicFileStatus>> file_status_list;
-    PAIMON_RETURN_NOT_OK(fs->ListDir(consumer_dir, &file_status_list));
-    std::string prefix = "consumer-";
-    for (const auto& file_status : file_status_list) {
-        if (file_status->IsDir()) {
-            continue;
-        }
-        std::string file_name = PathUtil::GetName(file_status->GetPath());
-        if (StringUtils::StartsWith(file_name, prefix, /*start_pos=*/0)) {
-            consumers.push_back(file_name.substr(prefix.length()));
+class MetadataRecordBatchBuilder {
+ public:
+    MetadataRecordBatchBuilder(std::shared_ptr<arrow::Schema> schema, arrow::MemoryPool* pool)
+        : schema_(std::move(schema)) {
+        builders_.reserve(schema_->num_fields());
+        for (const auto& field : schema_->fields()) {
+            std::unique_ptr<arrow::ArrayBuilder> builder;
+            init_status_ = ToPaimonStatus(arrow::MakeBuilder(pool, field->type(), &builder));
+            if (!init_status_.ok()) {
+                return;
+            }
+            builders_.push_back(std::move(builder));
         }
     }
-    std::sort(consumers.begin(), consumers.end());
-    return consumers;
-}
+
+    Status InitStatus() const {
+        if (!init_status_.ok()) {
+            return init_status_;
+        }
+        return builders_.size() == static_cast<size_t>(schema_->num_fields())
+                   ? Status::OK()
+                   : Status::Invalid("failed to create metadata system table builders");
+    }
+
+    Status AppendInt64(int32_t index, int64_t value) {
+        auto* builder = dynamic_cast<arrow::Int64Builder*>(builders_.at(index).get());
+        if (builder == nullptr) {
+            return Status::Invalid("metadata field ", schema_->field(index)->name(),
+                                   " is not int64");
+        }
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(value));
+        return Status::OK();
+    }
+
+    Status AppendOptionalInt64(int32_t index, const std::optional<int64_t>& value) {
+        auto* builder = dynamic_cast<arrow::Int64Builder*>(builders_.at(index).get());
+        if (builder == nullptr) {
+            return Status::Invalid("metadata field ", schema_->field(index)->name(),
+                                   " is not int64");
+        }
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(::paimon::AppendOptionalInt64(builder, value));
+        return Status::OK();
+    }
+
+    Status AppendString(int32_t index, const std::string& value) {
+        auto* builder = dynamic_cast<arrow::StringBuilder*>(builders_.at(index).get());
+        if (builder == nullptr) {
+            return Status::Invalid("metadata field ", schema_->field(index)->name(),
+                                   " is not string");
+        }
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(value));
+        return Status::OK();
+    }
+
+    Status AppendOptionalString(int32_t index, const std::optional<std::string>& value) {
+        auto* builder = dynamic_cast<arrow::StringBuilder*>(builders_.at(index).get());
+        if (builder == nullptr) {
+            return Status::Invalid("metadata field ", schema_->field(index)->name(),
+                                   " is not string");
+        }
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(::paimon::AppendOptionalString(builder, value));
+        return Status::OK();
+    }
+
+    Status AppendOptionalDouble(int32_t index, const std::optional<double>& value) {
+        auto* builder = dynamic_cast<arrow::DoubleBuilder*>(builders_.at(index).get());
+        if (builder == nullptr) {
+            return Status::Invalid("metadata field ", schema_->field(index)->name(),
+                                   " is not double");
+        }
+        if (value) {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(value.value()));
+        } else {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->AppendNull());
+        }
+        return Status::OK();
+    }
+
+    Result<std::shared_ptr<arrow::RecordBatch>> Finish() {
+        std::vector<std::shared_ptr<arrow::Array>> arrays;
+        arrays.reserve(builders_.size());
+        int64_t num_rows = 0;
+        for (size_t i = 0; i < builders_.size(); ++i) {
+            std::shared_ptr<arrow::Array> array;
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(builders_[i]->Finish(&array));
+            if (i == 0) {
+                num_rows = array->length();
+            } else if (array->length() != num_rows) {
+                return Status::Invalid("metadata field ", schema_->field(i)->name(),
+                                       " length does not match previous fields");
+            }
+            arrays.push_back(std::move(array));
+        }
+        return arrow::RecordBatch::Make(schema_, num_rows, std::move(arrays));
+    }
+
+ private:
+    std::shared_ptr<arrow::Schema> schema_;
+    std::vector<std::unique_ptr<arrow::ArrayBuilder>> builders_;
+    Status init_status_;
+};
 
 }  // namespace
 
 SnapshotsSystemTable::SnapshotsSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
-                                           std::shared_ptr<TableSchema> table_schema,
                                            std::string branch)
-    : MetadataSystemTable(std::move(fs), std::move(table_path), std::move(table_schema),
-                          std::move(branch)) {}
+    : MetadataSystemTable(std::move(fs), std::move(table_path), std::move(branch)) {}
 
 std::string SnapshotsSystemTable::Name() const {
     return kName;
@@ -173,54 +224,29 @@ Result<std::shared_ptr<arrow::RecordBatch>> SnapshotsSystemTable::BuildRecordBat
     PAIMON_ASSIGN_OR_RAISE(std::vector<Snapshot> snapshots, snapshot_manager.GetAllSnapshots());
     std::sort(snapshots.begin(), snapshots.end(),
               [](const Snapshot& lhs, const Snapshot& rhs) { return lhs.Id() < rhs.Id(); });
-
-    auto snapshot_id = std::make_unique<arrow::Int64Builder>(pool);
-    auto schema_id = std::make_unique<arrow::Int64Builder>(pool);
-    auto commit_user = std::make_unique<arrow::StringBuilder>(pool);
-    auto commit_identifier = std::make_unique<arrow::Int64Builder>(pool);
-    auto commit_kind = std::make_unique<arrow::StringBuilder>(pool);
-    auto commit_time = std::make_unique<arrow::Int64Builder>(pool);
-    auto total_record_count = std::make_unique<arrow::Int64Builder>(pool);
-    auto delta_record_count = std::make_unique<arrow::Int64Builder>(pool);
-    auto changelog_record_count = std::make_unique<arrow::Int64Builder>(pool);
-    auto watermark = std::make_unique<arrow::Int64Builder>(pool);
+    MetadataRecordBatchBuilder rows(schema, pool);
+    PAIMON_RETURN_NOT_OK(rows.InitStatus());
 
     for (const auto& snapshot : snapshots) {
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(snapshot_id->Append(snapshot.Id()));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(schema_id->Append(snapshot.SchemaId()));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(commit_user->Append(snapshot.CommitUser()));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(commit_identifier->Append(snapshot.CommitIdentifier()));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(
-            commit_kind->Append(Snapshot::CommitKind::ToString(snapshot.GetCommitKind())));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(commit_time->Append(snapshot.TimeMillis()));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(
-            AppendOptionalInt64(total_record_count.get(), snapshot.TotalRecordCount()));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(
-            AppendOptionalInt64(delta_record_count.get(), snapshot.DeltaRecordCount()));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(
-            AppendOptionalInt64(changelog_record_count.get(), snapshot.ChangelogRecordCount()));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(AppendOptionalInt64(watermark.get(), snapshot.Watermark()));
+        PAIMON_RETURN_NOT_OK(rows.AppendInt64(0, snapshot.Id()));
+        PAIMON_RETURN_NOT_OK(rows.AppendInt64(1, snapshot.SchemaId()));
+        PAIMON_RETURN_NOT_OK(rows.AppendString(2, snapshot.CommitUser()));
+        PAIMON_RETURN_NOT_OK(rows.AppendInt64(3, snapshot.CommitIdentifier()));
+        PAIMON_RETURN_NOT_OK(
+            rows.AppendString(4, Snapshot::CommitKind::ToString(snapshot.GetCommitKind())));
+        PAIMON_RETURN_NOT_OK(rows.AppendInt64(5, snapshot.TimeMillis()));
+        PAIMON_RETURN_NOT_OK(rows.AppendOptionalInt64(6, snapshot.TotalRecordCount()));
+        PAIMON_RETURN_NOT_OK(rows.AppendOptionalInt64(7, snapshot.DeltaRecordCount()));
+        PAIMON_RETURN_NOT_OK(rows.AppendOptionalInt64(8, snapshot.ChangelogRecordCount()));
+        PAIMON_RETURN_NOT_OK(rows.AppendOptionalInt64(9, snapshot.Watermark()));
     }
 
-    std::vector<std::unique_ptr<arrow::ArrayBuilder>> builders;
-    builders.push_back(std::move(snapshot_id));
-    builders.push_back(std::move(schema_id));
-    builders.push_back(std::move(commit_user));
-    builders.push_back(std::move(commit_identifier));
-    builders.push_back(std::move(commit_kind));
-    builders.push_back(std::move(commit_time));
-    builders.push_back(std::move(total_record_count));
-    builders.push_back(std::move(delta_record_count));
-    builders.push_back(std::move(changelog_record_count));
-    builders.push_back(std::move(watermark));
-    return MakeRecordBatch(schema, static_cast<int64_t>(snapshots.size()), std::move(builders));
+    return rows.Finish();
 }
 
 SchemasSystemTable::SchemasSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
-                                       std::shared_ptr<TableSchema> table_schema,
                                        std::string branch)
-    : MetadataSystemTable(std::move(fs), std::move(table_path), std::move(table_schema),
-                          std::move(branch)) {}
+    : MetadataSystemTable(std::move(fs), std::move(table_path), std::move(branch)) {}
 
 std::string SchemasSystemTable::Name() const {
     return kName;
@@ -243,13 +269,8 @@ Result<std::shared_ptr<arrow::RecordBatch>> SchemasSystemTable::BuildRecordBatch
     SchemaManager schema_manager(fs_, table_path_, branch_);
     PAIMON_ASSIGN_OR_RAISE(std::vector<int64_t> schema_ids, schema_manager.ListAllIds());
     std::sort(schema_ids.begin(), schema_ids.end());
-
-    auto schema_id = std::make_unique<arrow::Int64Builder>(pool);
-    auto fields = std::make_unique<arrow::StringBuilder>(pool);
-    auto partition_keys = std::make_unique<arrow::StringBuilder>(pool);
-    auto primary_keys = std::make_unique<arrow::StringBuilder>(pool);
-    auto options = std::make_unique<arrow::StringBuilder>(pool);
-    auto comment = std::make_unique<arrow::StringBuilder>(pool);
+    MetadataRecordBatchBuilder rows(schema, pool);
+    PAIMON_RETURN_NOT_OK(rows.InitStatus());
 
     for (int64_t id : schema_ids) {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<TableSchema> table_schema,
@@ -261,29 +282,20 @@ Result<std::shared_ptr<arrow::RecordBatch>> SchemasSystemTable::BuildRecordBatch
                                JsonString(table_schema->PrimaryKeys()));
         PAIMON_ASSIGN_OR_RAISE(std::string options_json, JsonString(table_schema->Options()));
 
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(schema_id->Append(table_schema->Id()));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(fields->Append(json_schema));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(partition_keys->Append(partition_keys_json));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(primary_keys->Append(primary_keys_json));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(options->Append(options_json));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(
-            AppendOptionalString(comment.get(), table_schema->Comment()));
+        PAIMON_RETURN_NOT_OK(rows.AppendInt64(0, table_schema->Id()));
+        PAIMON_RETURN_NOT_OK(rows.AppendString(1, json_schema));
+        PAIMON_RETURN_NOT_OK(rows.AppendString(2, partition_keys_json));
+        PAIMON_RETURN_NOT_OK(rows.AppendString(3, primary_keys_json));
+        PAIMON_RETURN_NOT_OK(rows.AppendString(4, options_json));
+        PAIMON_RETURN_NOT_OK(rows.AppendOptionalString(5, table_schema->Comment()));
     }
 
-    std::vector<std::unique_ptr<arrow::ArrayBuilder>> builders;
-    builders.push_back(std::move(schema_id));
-    builders.push_back(std::move(fields));
-    builders.push_back(std::move(partition_keys));
-    builders.push_back(std::move(primary_keys));
-    builders.push_back(std::move(options));
-    builders.push_back(std::move(comment));
-    return MakeRecordBatch(schema, static_cast<int64_t>(schema_ids.size()), std::move(builders));
+    return rows.Finish();
 }
 
 TagsSystemTable::TagsSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
-                                 std::shared_ptr<TableSchema> table_schema, std::string branch)
-    : MetadataSystemTable(std::move(fs), std::move(table_path), std::move(table_schema),
-                          std::move(branch)) {}
+                                 std::string branch)
+    : MetadataSystemTable(std::move(fs), std::move(table_path), std::move(branch)) {}
 
 std::string TagsSystemTable::Name() const {
     return kName;
@@ -304,44 +316,26 @@ Result<std::shared_ptr<arrow::RecordBatch>> TagsSystemTable::BuildRecordBatch(
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     TagManager tag_manager(fs_, table_path_, branch_);
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> tag_names, tag_manager.ListTagNames());
-
-    auto tag_name = std::make_unique<arrow::StringBuilder>(pool);
-    auto snapshot_id = std::make_unique<arrow::Int64Builder>(pool);
-    auto schema_id = std::make_unique<arrow::Int64Builder>(pool);
-    auto tag_create_time = std::make_unique<arrow::StringBuilder>(pool);
-    auto tag_time_retained = std::make_unique<arrow::DoubleBuilder>(pool);
+    MetadataRecordBatchBuilder rows(schema, pool);
+    PAIMON_RETURN_NOT_OK(rows.InitStatus());
 
     for (const auto& name : tag_names) {
         PAIMON_ASSIGN_OR_RAISE(Tag tag, tag_manager.GetOrThrow(name));
         PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> tag_create_time_json,
                                OptionalJson(tag.TagCreateTime()));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(tag_name->Append(name));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(snapshot_id->Append(tag.Id()));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(schema_id->Append(tag.SchemaId()));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(
-            AppendOptionalString(tag_create_time.get(), tag_create_time_json));
-        if (tag.TagTimeRetained()) {
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(
-                tag_time_retained->Append(tag.TagTimeRetained().value()));
-        } else {
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(tag_time_retained->AppendNull());
-        }
+        PAIMON_RETURN_NOT_OK(rows.AppendString(0, name));
+        PAIMON_RETURN_NOT_OK(rows.AppendInt64(1, tag.Id()));
+        PAIMON_RETURN_NOT_OK(rows.AppendInt64(2, tag.SchemaId()));
+        PAIMON_RETURN_NOT_OK(rows.AppendOptionalString(3, tag_create_time_json));
+        PAIMON_RETURN_NOT_OK(rows.AppendOptionalDouble(4, tag.TagTimeRetained()));
     }
 
-    std::vector<std::unique_ptr<arrow::ArrayBuilder>> builders;
-    builders.push_back(std::move(tag_name));
-    builders.push_back(std::move(snapshot_id));
-    builders.push_back(std::move(schema_id));
-    builders.push_back(std::move(tag_create_time));
-    builders.push_back(std::move(tag_time_retained));
-    return MakeRecordBatch(schema, static_cast<int64_t>(tag_names.size()), std::move(builders));
+    return rows.Finish();
 }
 
 BranchesSystemTable::BranchesSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
-                                         std::shared_ptr<TableSchema> table_schema,
                                          std::string branch)
-    : MetadataSystemTable(std::move(fs), std::move(table_path), std::move(table_schema),
-                          std::move(branch)) {}
+    : MetadataSystemTable(std::move(fs), std::move(table_path), std::move(branch)) {}
 
 std::string BranchesSystemTable::Name() const {
     return kName;
@@ -360,10 +354,8 @@ Result<std::shared_ptr<arrow::RecordBatch>> BranchesSystemTable::BuildRecordBatc
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> branches,
                            BranchManager::ListBranches(fs_, table_path_));
-
-    auto branch_name = std::make_unique<arrow::StringBuilder>(pool);
-    auto schema_id = std::make_unique<arrow::Int64Builder>(pool);
-    auto snapshot_id = std::make_unique<arrow::Int64Builder>(pool);
+    MetadataRecordBatchBuilder rows(schema, pool);
+    PAIMON_RETURN_NOT_OK(rows.InitStatus());
 
     for (const auto& name : branches) {
         SchemaManager schema_manager(fs_, table_path_, name);
@@ -373,27 +365,19 @@ Result<std::shared_ptr<arrow::RecordBatch>> BranchesSystemTable::BuildRecordBatc
         PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> latest_snapshot_id,
                                snapshot_manager.LatestSnapshotId());
 
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(branch_name->Append(name));
-        if (latest_schema) {
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(schema_id->Append(latest_schema.value()->Id()));
-        } else {
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(schema_id->AppendNull());
-        }
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(AppendOptionalInt64(snapshot_id.get(), latest_snapshot_id));
+        PAIMON_RETURN_NOT_OK(rows.AppendString(0, name));
+        PAIMON_RETURN_NOT_OK(rows.AppendOptionalInt64(
+            1, latest_schema ? std::optional<int64_t>(latest_schema.value()->Id())
+                             : std::optional<int64_t>()));
+        PAIMON_RETURN_NOT_OK(rows.AppendOptionalInt64(2, latest_snapshot_id));
     }
 
-    std::vector<std::unique_ptr<arrow::ArrayBuilder>> builders;
-    builders.push_back(std::move(branch_name));
-    builders.push_back(std::move(schema_id));
-    builders.push_back(std::move(snapshot_id));
-    return MakeRecordBatch(schema, static_cast<int64_t>(branches.size()), std::move(builders));
+    return rows.Finish();
 }
 
 ConsumersSystemTable::ConsumersSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
-                                           std::shared_ptr<TableSchema> table_schema,
                                            std::string branch)
-    : MetadataSystemTable(std::move(fs), std::move(table_path), std::move(table_schema),
-                          std::move(branch)) {}
+    : MetadataSystemTable(std::move(fs), std::move(table_path), std::move(branch)) {}
 
 std::string ConsumersSystemTable::Name() const {
     return kName;
@@ -409,31 +393,19 @@ Result<std::shared_ptr<arrow::Schema>> ConsumersSystemTable::ArrowSchema() const
 Result<std::shared_ptr<arrow::RecordBatch>> ConsumersSystemTable::BuildRecordBatch(
     arrow::MemoryPool* pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> consumers,
-                           ListConsumers(fs_, table_path_, branch_));
-
-    auto consumer_id = std::make_unique<arrow::StringBuilder>(pool);
-    auto next_snapshot_id = std::make_unique<arrow::Int64Builder>(pool);
-    std::string consumer_dir = ConsumerDirectory(table_path_, branch_);
+    ConsumerManager consumer_manager(fs_, table_path_, branch_);
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> consumers, consumer_manager.ListConsumers());
+    MetadataRecordBatchBuilder rows(schema, pool);
+    PAIMON_RETURN_NOT_OK(rows.InitStatus());
 
     for (const auto& id : consumers) {
-        std::string content;
-        std::string consumer_path = PathUtil::JoinPath(consumer_dir, "consumer-" + id);
-        Status read_status = fs_->ReadFile(consumer_path, &content);
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(consumer_id->Append(id));
-        if (read_status.ok()) {
-            std::optional<int64_t> snapshot_id = StringUtils::StringToValue<int64_t>(content);
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(
-                AppendOptionalInt64(next_snapshot_id.get(), snapshot_id));
-        } else {
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(next_snapshot_id->AppendNull());
-        }
+        PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> snapshot_id,
+                               consumer_manager.GetNextSnapshotId(id));
+        PAIMON_RETURN_NOT_OK(rows.AppendString(0, id));
+        PAIMON_RETURN_NOT_OK(rows.AppendOptionalInt64(1, snapshot_id));
     }
 
-    std::vector<std::unique_ptr<arrow::ArrayBuilder>> builders;
-    builders.push_back(std::move(consumer_id));
-    builders.push_back(std::move(next_snapshot_id));
-    return MakeRecordBatch(schema, static_cast<int64_t>(consumers.size()), std::move(builders));
+    return rows.Finish();
 }
 
 }  // namespace paimon
