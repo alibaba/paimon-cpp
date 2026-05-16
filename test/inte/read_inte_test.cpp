@@ -47,6 +47,7 @@
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/core/table/source/deletion_file.h"
 #include "paimon/core/table/source/fallback_data_split.h"
+#include "paimon/core/tag/tag.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/defs.h"
@@ -612,6 +613,151 @@ TEST(SystemTableReadInteTest, TestReadBranchOptionsSystemTable) {
     std::map<std::string, std::string> expected = {
         {"bucket", "2"}, {"file.format", "parquet"}, {"manifest.format", "avro"}};
     ASSERT_EQ(CollectStringMap(result), expected) << result->ToString();
+}
+
+TEST(SystemTableReadInteTest, TestReadMetadataSystemTables) {
+    arrow::FieldVector fields = {
+        arrow::field("pk", arrow::utf8()),
+        arrow::field("v", arrow::int32()),
+    };
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
+                                                  {Options::FILE_FORMAT, "parquet"},
+                                                  {Options::MANIFEST_FORMAT, "avro"},
+                                                  {Options::BUCKET, "1"}};
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(dir->Str(), schema,
+                                                         /*partition_keys=*/{},
+                                                         /*primary_keys=*/{"pk"}, options,
+                                                         /*is_streaming_mode=*/false));
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch_1,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), R"([["a", 1]])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_1), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch_2,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), R"([["b", 2]])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_2), /*commit_identifier=*/1,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    std::string table_path = PathUtil::JoinPath(dir->Str(), "foo.db/bar");
+    ASSERT_OK_AND_ASSIGN(auto snapshots_result,
+                         ReadSystemTable(table_path + "$snapshots", options));
+    auto snapshots_array = SingleStructChunk(snapshots_result);
+    ASSERT_EQ(
+        StructFieldNames(snapshots_array),
+        (std::vector<std::string>{"snapshot_id", "schema_id", "commit_user", "commit_identifier",
+                                  "commit_kind", "commit_time", "total_record_count",
+                                  "delta_record_count", "changelog_record_count", "watermark"}));
+    ASSERT_EQ(snapshots_array->length(), 2);
+    auto snapshot_id_array =
+        std::dynamic_pointer_cast<arrow::Int64Array>(snapshots_array->field(0));
+    auto commit_kind_array =
+        std::dynamic_pointer_cast<arrow::StringArray>(snapshots_array->field(4));
+    ASSERT_TRUE(snapshot_id_array);
+    ASSERT_TRUE(commit_kind_array);
+    ASSERT_EQ(snapshot_id_array->Value(0), 1);
+    ASSERT_EQ(snapshot_id_array->Value(1), 2);
+    ASSERT_EQ(commit_kind_array->GetString(0), "APPEND");
+    ASSERT_EQ(commit_kind_array->GetString(1), "APPEND");
+
+    ASSERT_OK_AND_ASSIGN(auto schemas_result, ReadSystemTable(table_path + "$schemas", options));
+    auto schemas_array = SingleStructChunk(schemas_result);
+    ASSERT_EQ(StructFieldNames(schemas_array),
+              (std::vector<std::string>{"schema_id", "fields", "partition_keys", "primary_keys",
+                                        "options", "comment"}));
+    ASSERT_EQ(schemas_array->length(), 1);
+    auto schema_id_array = std::dynamic_pointer_cast<arrow::Int64Array>(schemas_array->field(0));
+    auto primary_keys_array =
+        std::dynamic_pointer_cast<arrow::StringArray>(schemas_array->field(3));
+    ASSERT_TRUE(schema_id_array);
+    ASSERT_TRUE(primary_keys_array);
+    ASSERT_EQ(schema_id_array->Value(0), 0);
+    ASSERT_EQ(primary_keys_array->GetString(0), R"(["pk"])");
+
+    ASSERT_OK_AND_ASSIGN(auto branches_result, ReadSystemTable(table_path + "$branches", options));
+    auto branches_array = SingleStructChunk(branches_result);
+    ASSERT_EQ(StructFieldNames(branches_array),
+              (std::vector<std::string>{"branch_name", "schema_id", "snapshot_id"}));
+    ASSERT_EQ(branches_array->length(), 1);
+    auto branch_name_array =
+        std::dynamic_pointer_cast<arrow::StringArray>(branches_array->field(0));
+    ASSERT_TRUE(branch_name_array);
+    ASSERT_EQ(branch_name_array->GetString(0), "main");
+
+    ASSERT_OK_AND_ASSIGN(auto tags_result, ReadSystemTable(table_path + "$tags", options));
+    ASSERT_EQ(SingleStructChunk(tags_result)->length(), 0);
+
+    ASSERT_OK_AND_ASSIGN(auto consumers_result,
+                         ReadSystemTable(table_path + "$consumers", options));
+    ASSERT_EQ(SingleStructChunk(consumers_result)->length(), 0);
+}
+
+TEST(SystemTableReadInteTest, TestReadTagBranchAndConsumerSystemTables) {
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    std::string source_path =
+        GetDataDir() + "/parquet/append_table_with_rt_branch.db/append_table_with_rt_branch";
+    std::string table_path = PathUtil::JoinPath(dir->Str(), "metadata_table");
+    ASSERT_TRUE(TestUtil::CopyDirectory(std::filesystem::path(source_path),
+                                        std::filesystem::path(table_path)));
+
+    auto fs = std::make_shared<LocalFileSystem>();
+    ASSERT_OK_AND_ASSIGN(Tag tag,
+                         Tag::FromPath(fs, GetDataDir() + "/orc/append_table_with_tag.db/"
+                                                          "append_table_with_tag/tag/tag-1"));
+    ASSERT_OK_AND_ASSIGN(std::string tag_json, tag.ToJsonString());
+    ASSERT_OK(fs->Mkdirs(PathUtil::JoinPath(table_path, "tag")));
+    ASSERT_OK(fs->WriteFile(PathUtil::JoinPath(table_path, "tag/tag-release"), tag_json,
+                            /*overwrite=*/true));
+
+    ASSERT_OK(fs->Mkdirs(PathUtil::JoinPath(table_path, "consumer")));
+    ASSERT_OK(fs->WriteFile(PathUtil::JoinPath(table_path, "consumer/consumer-c1"), "3",
+                            /*overwrite=*/true));
+
+    std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
+                                                  {Options::FILE_FORMAT, "parquet"},
+                                                  {Options::MANIFEST_FORMAT, "avro"}};
+
+    ASSERT_OK_AND_ASSIGN(auto branches_result, ReadSystemTable(table_path + "$branches", options));
+    auto branches_array = SingleStructChunk(branches_result);
+    ASSERT_EQ(branches_array->length(), 2);
+    auto branch_name_array =
+        std::dynamic_pointer_cast<arrow::StringArray>(branches_array->field(0));
+    ASSERT_TRUE(branch_name_array);
+    ASSERT_EQ(branch_name_array->GetString(0), "main");
+    ASSERT_EQ(branch_name_array->GetString(1), "rt");
+
+    ASSERT_OK_AND_ASSIGN(auto tags_result, ReadSystemTable(table_path + "$tags", options));
+    auto tags_array = SingleStructChunk(tags_result);
+    ASSERT_EQ(StructFieldNames(tags_array),
+              (std::vector<std::string>{"tag_name", "snapshot_id", "schema_id", "tag_create_time",
+                                        "tag_time_retained"}));
+    ASSERT_EQ(tags_array->length(), 1);
+    auto tag_name_array = std::dynamic_pointer_cast<arrow::StringArray>(tags_array->field(0));
+    auto tag_snapshot_array = std::dynamic_pointer_cast<arrow::Int64Array>(tags_array->field(1));
+    ASSERT_TRUE(tag_name_array);
+    ASSERT_TRUE(tag_snapshot_array);
+    ASSERT_EQ(tag_name_array->GetString(0), "release");
+    ASSERT_EQ(tag_snapshot_array->Value(0), tag.Id());
+
+    ASSERT_OK_AND_ASSIGN(auto consumers_result,
+                         ReadSystemTable(table_path + "$consumers", options));
+    auto consumers_array = SingleStructChunk(consumers_result);
+    ASSERT_EQ(StructFieldNames(consumers_array),
+              (std::vector<std::string>{"consumer_id", "next_snapshot_id"}));
+    ASSERT_EQ(consumers_array->length(), 1);
+    auto consumer_id_array =
+        std::dynamic_pointer_cast<arrow::StringArray>(consumers_array->field(0));
+    auto next_snapshot_array =
+        std::dynamic_pointer_cast<arrow::Int64Array>(consumers_array->field(1));
+    ASSERT_TRUE(consumer_id_array);
+    ASSERT_TRUE(next_snapshot_array);
+    ASSERT_EQ(consumer_id_array->GetString(0), "c1");
+    ASSERT_EQ(next_snapshot_array->Value(0), 3);
 }
 
 TEST(SystemTableReadInteTest, TestReadAuditLogSystemTable) {

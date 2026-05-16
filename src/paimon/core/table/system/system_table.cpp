@@ -28,6 +28,7 @@
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/system/audit_log_system_table.h"
 #include "paimon/core/table/system/binlog_system_table.h"
+#include "paimon/core/table/system/metadata_system_tables.h"
 #include "paimon/core/table/system/options_system_table.h"
 #include "paimon/core/utils/branch_manager.h"
 #include "paimon/status.h"
@@ -38,7 +39,12 @@ bool SystemTableLoader::IsSupported(const std::string& system_table_name) {
     std::string normalized_name = StringUtils::ToLowerCase(system_table_name);
     return normalized_name == OptionsSystemTable::kName ||
            normalized_name == AuditLogSystemTable::kName ||
-           normalized_name == BinlogSystemTable::kName;
+           normalized_name == BinlogSystemTable::kName ||
+           normalized_name == SnapshotsSystemTable::kName ||
+           normalized_name == SchemasSystemTable::kName ||
+           normalized_name == TagsSystemTable::kName ||
+           normalized_name == BranchesSystemTable::kName ||
+           normalized_name == ConsumersSystemTable::kName;
 }
 
 Result<std::shared_ptr<SystemTable>> SystemTableLoader::Load(
@@ -58,6 +64,26 @@ Result<std::shared_ptr<SystemTable>> SystemTableLoader::Load(
     }
     if (normalized_name == BinlogSystemTable::kName) {
         return std::make_shared<BinlogSystemTable>(fs, table_path, table_schema, options);
+    }
+    std::string branch = BranchManager::DEFAULT_MAIN_BRANCH;
+    auto branch_iter = options.find(Options::BRANCH);
+    if (branch_iter != options.end()) {
+        branch = branch_iter->second;
+    }
+    if (normalized_name == SnapshotsSystemTable::kName) {
+        return std::make_shared<SnapshotsSystemTable>(fs, table_path, table_schema, branch);
+    }
+    if (normalized_name == SchemasSystemTable::kName) {
+        return std::make_shared<SchemasSystemTable>(fs, table_path, table_schema, branch);
+    }
+    if (normalized_name == TagsSystemTable::kName) {
+        return std::make_shared<TagsSystemTable>(fs, table_path, table_schema, branch);
+    }
+    if (normalized_name == BranchesSystemTable::kName) {
+        return std::make_shared<BranchesSystemTable>(fs, table_path, table_schema, branch);
+    }
+    if (normalized_name == ConsumersSystemTable::kName) {
+        return std::make_shared<ConsumersSystemTable>(fs, table_path, table_schema, branch);
     }
     return Status::NotImplemented("unsupported system table: ", system_table_name);
 }

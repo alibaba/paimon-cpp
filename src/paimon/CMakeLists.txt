@@ -315,11 +315,14 @@ set(PAIMON_CORE_SRCS
     core/table/source/data_evolution_batch_scan.cpp
     core/table/system/audit_log_system_table.cpp
     core/table/system/binlog_system_table.cpp
+    core/table/system/metadata_system_table.cpp
+    core/table/system/metadata_system_tables.cpp
     core/table/system/options_system_table.cpp
     core/table/system/system_table.cpp
     core/table/system/system_table_scan.cpp
     core/table/system/system_table_schema.cpp
     core/tag/tag.cpp
+    core/utils/branch_manager.cpp
     core/utils/field_mapping.cpp
     core/utils/file_store_path_factory.cpp
     core/utils/file_utils.cpp

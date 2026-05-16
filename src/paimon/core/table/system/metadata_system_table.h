@@ -17,38 +17,32 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <string>
-#include <vector>
 
-#include "paimon/core/tag/tag.h"
+#include "arrow/api.h"
+#include "paimon/core/table/system/system_table.h"
 
 namespace paimon {
-
 class FileSystem;
+class TableSchema;
 
-/// Manager for `Tag`.
-class TagManager {
+class MetadataSystemTable : public SystemTable {
  public:
-    static constexpr char TAG_PREFIX[] = "tag-";
+    MetadataSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
+                        std::shared_ptr<TableSchema> table_schema, std::string branch);
 
-    TagManager(const std::shared_ptr<FileSystem>& fs, const std::string& root_path);
-    TagManager(const std::shared_ptr<FileSystem>& fs, const std::string& root_path,
-               const std::string& branch);
+    Result<std::unique_ptr<TableScan>> NewScan(
+        const std::shared_ptr<ScanContext>& context) const override;
+    Result<std::unique_ptr<TableRead>> NewRead(
+        const std::shared_ptr<ReadContext>& context) const override;
+    virtual Result<std::shared_ptr<arrow::RecordBatch>> BuildRecordBatch(
+        arrow::MemoryPool* pool) const = 0;
 
-    Result<Tag> GetOrThrow(const std::string& tag_name) const;
-
-    Result<std::optional<Tag>> Get(const std::string& tag_name) const;
-
-    Result<std::vector<std::string>> ListTagNames() const;
-
-    std::string TagPath(const std::string& tag_name) const;
-
-    std::string TagDirectory() const;
-
- private:
+ protected:
     std::shared_ptr<FileSystem> fs_;
-    std::string root_path_;
+    std::string table_path_;
+    std::shared_ptr<TableSchema> table_schema_;
     std::string branch_;
 };
+
 }  // namespace paimon

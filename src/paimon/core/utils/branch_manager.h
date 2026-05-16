@@ -15,10 +15,17 @@
  */
 
 #pragma once
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
+#include "paimon/result.h"
+
+namespace paimon {
+class FileSystem;
+}  // namespace paimon
 
 namespace paimon {
 class BranchManager {
@@ -43,5 +50,8 @@ class BranchManager {
     static bool IsMainBranch(const std::string& branch) {
         return branch == DEFAULT_MAIN_BRANCH;
     }
+
+    static Result<std::vector<std::string>> ListBranches(const std::shared_ptr<FileSystem>& fs,
+                                                         const std::string& table_root);
 };
 }  // namespace paimon
