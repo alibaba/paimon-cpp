@@ -25,6 +25,8 @@
 namespace paimon {
 class FileSystem;
 
+// Base class for table metadata system tables backed by Paimon metadata files.
+// Subclasses read metadata from the selected table branch and materialize it in memory.
 class MetadataSystemTable : public InMemorySystemTable {
  public:
     MetadataSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path, std::string branch);

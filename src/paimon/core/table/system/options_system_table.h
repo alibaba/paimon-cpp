@@ -25,6 +25,7 @@
 namespace paimon {
 class TableSchema;
 
+// System table for `T$options`, exposing the latest base table options as key/value rows.
 class OptionsSystemTable : public InMemorySystemTable {
  public:
     static constexpr const char* kName = "options";

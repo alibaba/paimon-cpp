@@ -24,6 +24,8 @@
 
 namespace paimon {
 
+// Base class for system tables whose result can be materialized as a single in-memory
+// RecordBatch. It provides the common singleton split scan and one-shot batch reader.
 class InMemorySystemTable : public SystemTable {
  public:
     explicit InMemorySystemTable(std::string table_path);

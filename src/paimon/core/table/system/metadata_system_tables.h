@@ -24,6 +24,7 @@
 namespace paimon {
 class FileSystem;
 
+// System table for `T$snapshots`, exposing snapshot commit history.
 class SnapshotsSystemTable : public MetadataSystemTable {
  public:
     static constexpr const char* kName = "snapshots";
@@ -37,6 +38,7 @@ class SnapshotsSystemTable : public MetadataSystemTable {
         arrow::MemoryPool* pool) const override;
 };
 
+// System table for `T$schemas`, exposing schema evolution history.
 class SchemasSystemTable : public MetadataSystemTable {
  public:
     static constexpr const char* kName = "schemas";
@@ -49,6 +51,7 @@ class SchemasSystemTable : public MetadataSystemTable {
         arrow::MemoryPool* pool) const override;
 };
 
+// System table for `T$tags`, exposing tags and the snapshots they reference.
 class TagsSystemTable : public MetadataSystemTable {
  public:
     static constexpr const char* kName = "tags";
@@ -61,6 +64,7 @@ class TagsSystemTable : public MetadataSystemTable {
         arrow::MemoryPool* pool) const override;
 };
 
+// System table for `T$branches`, exposing table branches including `main`.
 class BranchesSystemTable : public MetadataSystemTable {
  public:
     static constexpr const char* kName = "branches";
@@ -73,6 +77,7 @@ class BranchesSystemTable : public MetadataSystemTable {
         arrow::MemoryPool* pool) const override;
 };
 
+// System table for `T$consumers`, exposing persisted streaming consumer offsets.
 class ConsumersSystemTable : public MetadataSystemTable {
  public:
     static constexpr const char* kName = "consumers";

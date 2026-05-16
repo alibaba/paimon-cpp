@@ -40,6 +40,8 @@ struct SystemTablePath {
     std::string system_table_name;
 };
 
+// Base interface for table-scoped system tables such as `T$options` and `T$snapshots`.
+// Implementations expose a read-only schema and create their own scan/read objects.
 class SystemTable : public std::enable_shared_from_this<SystemTable> {
  public:
     virtual ~SystemTable() = default;
@@ -52,6 +54,8 @@ class SystemTable : public std::enable_shared_from_this<SystemTable> {
         const std::shared_ptr<ReadContext>& context) const = 0;
 };
 
+// Loads system table implementations from parsed table identifiers or table paths.
+// The loader owns the registry that maps a system table name to its factory.
 class SystemTableLoader {
  public:
     static bool IsSupported(const std::string& system_table_name);
