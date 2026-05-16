@@ -687,13 +687,6 @@ TEST(SystemTableReadInteTest, TestReadMetadataSystemTables) {
         std::dynamic_pointer_cast<arrow::StringArray>(branches_array->field(0));
     ASSERT_TRUE(branch_name_array);
     ASSERT_EQ(branch_name_array->GetString(0), "main");
-
-    ASSERT_OK_AND_ASSIGN(auto tags_result, ReadSystemTable(table_path + "$tags", options));
-    ASSERT_EQ(SingleStructChunk(tags_result)->length(), 0);
-
-    ASSERT_OK_AND_ASSIGN(auto consumers_result,
-                         ReadSystemTable(table_path + "$consumers", options));
-    ASSERT_EQ(SingleStructChunk(consumers_result)->length(), 0);
 }
 
 TEST(SystemTableReadInteTest, TestReadTagBranchAndConsumerSystemTables) {
