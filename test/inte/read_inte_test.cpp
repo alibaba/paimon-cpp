@@ -630,7 +630,7 @@ TEST(SystemTableReadInteTest, TestReadMetadataSystemTables) {
     ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(dir->Str(), schema,
                                                          /*partition_keys=*/{},
                                                          /*primary_keys=*/{"pk"}, options,
-                                                         /*is_streaming_mode=*/false));
+                                                         /*is_streaming_mode=*/true));
 
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch_1,
                          TestHelper::MakeRecordBatch(arrow::struct_(fields), R"([["a", 1]])",
