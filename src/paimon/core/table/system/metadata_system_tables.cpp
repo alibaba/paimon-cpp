@@ -43,32 +43,6 @@
 namespace paimon {
 namespace {
 
-std::shared_ptr<arrow::Field> NotNullField(const std::string& name,
-                                           const std::shared_ptr<arrow::DataType>& type) {
-    return arrow::field(name, type, /*nullable=*/false);
-}
-
-std::shared_ptr<arrow::Field> NullableField(const std::string& name,
-                                            const std::shared_ptr<arrow::DataType>& type) {
-    return arrow::field(name, type, /*nullable=*/true);
-}
-
-arrow::Status AppendOptionalString(arrow::StringBuilder* builder,
-                                   const std::optional<std::string>& value) {
-    if (value) {
-        return builder->Append(value.value());
-    }
-    return builder->AppendNull();
-}
-
-arrow::Status AppendOptionalInt64(arrow::Int64Builder* builder,
-                                  const std::optional<int64_t>& value) {
-    if (value) {
-        return builder->Append(value.value());
-    }
-    return builder->AppendNull();
-}
-
 template <typename T>
 Result<std::string> JsonString(const T& value) {
     rapidjson::Document document;
@@ -130,7 +104,11 @@ class MetadataRecordBatchBuilder {
             return Status::Invalid("metadata field ", schema_->field(index)->name(),
                                    " is not int64");
         }
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(::paimon::AppendOptionalInt64(builder, value));
+        if (value) {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(value.value()));
+        } else {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->AppendNull());
+        }
         return Status::OK();
     }
 
@@ -150,7 +128,11 @@ class MetadataRecordBatchBuilder {
             return Status::Invalid("metadata field ", schema_->field(index)->name(),
                                    " is not string");
         }
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(::paimon::AppendOptionalString(builder, value));
+        if (value) {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(value.value()));
+        } else {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->AppendNull());
+        }
         return Status::OK();
     }
 
@@ -204,16 +186,16 @@ std::string SnapshotsSystemTable::Name() const {
 
 Result<std::shared_ptr<arrow::Schema>> SnapshotsSystemTable::ArrowSchema() const {
     return arrow::schema({
-        NotNullField("snapshot_id", arrow::int64()),
-        NotNullField("schema_id", arrow::int64()),
-        NotNullField("commit_user", arrow::utf8()),
-        NotNullField("commit_identifier", arrow::int64()),
-        NotNullField("commit_kind", arrow::utf8()),
-        NotNullField("commit_time", arrow::int64()),
-        NullableField("total_record_count", arrow::int64()),
-        NullableField("delta_record_count", arrow::int64()),
-        NullableField("changelog_record_count", arrow::int64()),
-        NullableField("watermark", arrow::int64()),
+        arrow::field("snapshot_id", arrow::int64(), /*nullable=*/false),
+        arrow::field("schema_id", arrow::int64(), /*nullable=*/false),
+        arrow::field("commit_user", arrow::utf8(), /*nullable=*/false),
+        arrow::field("commit_identifier", arrow::int64(), /*nullable=*/false),
+        arrow::field("commit_kind", arrow::utf8(), /*nullable=*/false),
+        arrow::field("commit_time", arrow::int64(), /*nullable=*/false),
+        arrow::field("total_record_count", arrow::int64(), /*nullable=*/true),
+        arrow::field("delta_record_count", arrow::int64(), /*nullable=*/true),
+        arrow::field("changelog_record_count", arrow::int64(), /*nullable=*/true),
+        arrow::field("watermark", arrow::int64(), /*nullable=*/true),
     });
 }
 
@@ -254,12 +236,12 @@ std::string SchemasSystemTable::Name() const {
 
 Result<std::shared_ptr<arrow::Schema>> SchemasSystemTable::ArrowSchema() const {
     return arrow::schema({
-        NotNullField("schema_id", arrow::int64()),
-        NotNullField("fields", arrow::utf8()),
-        NotNullField("partition_keys", arrow::utf8()),
-        NotNullField("primary_keys", arrow::utf8()),
-        NotNullField("options", arrow::utf8()),
-        NullableField("comment", arrow::utf8()),
+        arrow::field("schema_id", arrow::int64(), /*nullable=*/false),
+        arrow::field("fields", arrow::utf8(), /*nullable=*/false),
+        arrow::field("partition_keys", arrow::utf8(), /*nullable=*/false),
+        arrow::field("primary_keys", arrow::utf8(), /*nullable=*/false),
+        arrow::field("options", arrow::utf8(), /*nullable=*/false),
+        arrow::field("comment", arrow::utf8(), /*nullable=*/true),
     });
 }
 
@@ -303,11 +285,11 @@ std::string TagsSystemTable::Name() const {
 
 Result<std::shared_ptr<arrow::Schema>> TagsSystemTable::ArrowSchema() const {
     return arrow::schema({
-        NotNullField("tag_name", arrow::utf8()),
-        NotNullField("snapshot_id", arrow::int64()),
-        NotNullField("schema_id", arrow::int64()),
-        NullableField("tag_create_time", arrow::utf8()),
-        NullableField("tag_time_retained", arrow::float64()),
+        arrow::field("tag_name", arrow::utf8(), /*nullable=*/false),
+        arrow::field("snapshot_id", arrow::int64(), /*nullable=*/false),
+        arrow::field("schema_id", arrow::int64(), /*nullable=*/false),
+        arrow::field("tag_create_time", arrow::utf8(), /*nullable=*/true),
+        arrow::field("tag_time_retained", arrow::float64(), /*nullable=*/true),
     });
 }
 
@@ -343,9 +325,9 @@ std::string BranchesSystemTable::Name() const {
 
 Result<std::shared_ptr<arrow::Schema>> BranchesSystemTable::ArrowSchema() const {
     return arrow::schema({
-        NotNullField("branch_name", arrow::utf8()),
-        NullableField("schema_id", arrow::int64()),
-        NullableField("snapshot_id", arrow::int64()),
+        arrow::field("branch_name", arrow::utf8(), /*nullable=*/false),
+        arrow::field("schema_id", arrow::int64(), /*nullable=*/true),
+        arrow::field("snapshot_id", arrow::int64(), /*nullable=*/true),
     });
 }
 
@@ -360,15 +342,16 @@ Result<std::shared_ptr<arrow::RecordBatch>> BranchesSystemTable::BuildRecordBatc
     for (const auto& name : branches) {
         SchemaManager schema_manager(fs_, TablePath(), name);
         SnapshotManager snapshot_manager(fs_, TablePath(), name);
-        PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
-                               schema_manager.Latest());
+        PAIMON_ASSIGN_OR_RAISE(std::vector<int64_t> schema_ids, schema_manager.ListAllIds());
+        std::optional<int64_t> latest_schema_id;
+        if (!schema_ids.empty()) {
+            latest_schema_id = *std::max_element(schema_ids.begin(), schema_ids.end());
+        }
         PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> latest_snapshot_id,
                                snapshot_manager.LatestSnapshotId());
 
         PAIMON_RETURN_NOT_OK(rows.AppendString(0, name));
-        PAIMON_RETURN_NOT_OK(rows.AppendOptionalInt64(
-            1, latest_schema ? std::optional<int64_t>(latest_schema.value()->Id())
-                             : std::optional<int64_t>()));
+        PAIMON_RETURN_NOT_OK(rows.AppendOptionalInt64(1, latest_schema_id));
         PAIMON_RETURN_NOT_OK(rows.AppendOptionalInt64(2, latest_snapshot_id));
     }
 
@@ -385,8 +368,8 @@ std::string ConsumersSystemTable::Name() const {
 
 Result<std::shared_ptr<arrow::Schema>> ConsumersSystemTable::ArrowSchema() const {
     return arrow::schema({
-        NotNullField("consumer_id", arrow::utf8()),
-        NullableField("next_snapshot_id", arrow::int64()),
+        arrow::field("consumer_id", arrow::utf8(), /*nullable=*/false),
+        arrow::field("next_snapshot_id", arrow::int64(), /*nullable=*/true),
     });
 }
 
