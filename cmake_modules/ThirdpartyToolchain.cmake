@@ -1238,6 +1238,22 @@ macro(build_protobuf)
     get_filename_component(THIRDPARTY_ZLIB_ROOT "${THIRDPARTY_ZLIB_INCLUDE_DIR}"
                            DIRECTORY)
     get_target_property(THIRDPARTY_ZLIB_LIBRARY zlib IMPORTED_LOCATION)
+    set(PROTOBUF_ZLIB_LIBRARY_ARGS)
+    foreach(_PAIMON_ZLIB_LOCATION_PROPERTY
+            IMPORTED_LOCATION IMPORTED_LOCATION_NOCONFIG IMPORTED_LOCATION_RELEASE
+            IMPORTED_LOCATION_DEBUG IMPORTED_LOCATION_RELWITHDEBINFO
+            IMPORTED_LOCATION_MINSIZEREL)
+        if(NOT THIRDPARTY_ZLIB_LIBRARY AND TARGET ZLIB::ZLIB)
+            get_target_property(THIRDPARTY_ZLIB_LIBRARY ZLIB::ZLIB
+                                ${_PAIMON_ZLIB_LOCATION_PROPERTY})
+        endif()
+    endforeach()
+    unset(_PAIMON_ZLIB_LOCATION_PROPERTY)
+    if(THIRDPARTY_ZLIB_LIBRARY)
+        set(PROTOBUF_ZLIB_LIBRARY_ARGS
+            "-DZLIB_LIBRARY=${THIRDPARTY_ZLIB_LIBRARY}"
+            "-DZLIB_LIBRARY_RELEASE=${THIRDPARTY_ZLIB_LIBRARY}")
+    endif()
 
     # Strip lto flags (which may be added by dh_auto_configure)
     # See https://github.com/protocolbuffers/protobuf/issues/7092
@@ -1255,10 +1271,9 @@ macro(build_protobuf)
         "-DCMAKE_CXX_FLAGS=${PROTOBUF_CXX_FLAGS}"
         "-DCMAKE_C_FLAGS=${PROTOBUF_C_FLAGS}"
         "-DZLIB_ROOT=${THIRDPARTY_ZLIB_ROOT}"
-        "-DZLIB_LIBRARY=${THIRDPARTY_ZLIB_LIBRARY}"
-        "-DZLIB_LIBRARY_RELEASE=${THIRDPARTY_ZLIB_LIBRARY}"
         -Dprotobuf_BUILD_TESTS=OFF
         -Dprotobuf_DEBUG_POSTFIX=)
+    list(APPEND PROTOBUF_CMAKE_ARGS ${PROTOBUF_ZLIB_LIBRARY_ARGS})
     set(PROTOBUF_CONFIGURE SOURCE_SUBDIR "cmake" CMAKE_ARGS ${PROTOBUF_CMAKE_ARGS})
 
     externalproject_add(protobuf_ep
