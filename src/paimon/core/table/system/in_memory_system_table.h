@@ -20,18 +20,28 @@
 #include <string>
 
 #include "arrow/api.h"
-#include "paimon/core/table/system/in_memory_system_table.h"
+#include "paimon/core/table/system/system_table.h"
 
 namespace paimon {
-class FileSystem;
 
-class MetadataSystemTable : public InMemorySystemTable {
+class InMemorySystemTable : public SystemTable {
  public:
-    MetadataSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path, std::string branch);
+    explicit InMemorySystemTable(std::string table_path);
+
+    Result<std::unique_ptr<TableScan>> NewScan(
+        const std::shared_ptr<ScanContext>& context) const override;
+    Result<std::unique_ptr<TableRead>> NewRead(
+        const std::shared_ptr<ReadContext>& context) const override;
+    virtual Result<std::shared_ptr<arrow::RecordBatch>> BuildRecordBatch(
+        arrow::MemoryPool* pool) const = 0;
 
  protected:
-    std::shared_ptr<FileSystem> fs_;
-    std::string branch_;
+    const std::string& TablePath() const {
+        return table_path_;
+    }
+
+ private:
+    std::string table_path_;
 };
 
 }  // namespace paimon

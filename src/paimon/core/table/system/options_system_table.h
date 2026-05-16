@@ -19,12 +19,13 @@
 #include <memory>
 #include <string>
 
-#include "paimon/core/table/system/system_table.h"
+#include "arrow/api.h"
+#include "paimon/core/table/system/in_memory_system_table.h"
 
 namespace paimon {
 class TableSchema;
 
-class OptionsSystemTable : public SystemTable {
+class OptionsSystemTable : public InMemorySystemTable {
  public:
     static constexpr const char* kName = "options";
 
@@ -32,13 +33,10 @@ class OptionsSystemTable : public SystemTable {
 
     std::string Name() const override;
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
-    Result<std::unique_ptr<TableScan>> NewScan(
-        const std::shared_ptr<ScanContext>& context) const override;
-    Result<std::unique_ptr<TableRead>> NewRead(
-        const std::shared_ptr<ReadContext>& context) const override;
+    Result<std::shared_ptr<arrow::RecordBatch>> BuildRecordBatch(
+        arrow::MemoryPool* pool) const override;
 
  private:
-    std::string table_path_;
     std::shared_ptr<TableSchema> table_schema_;
 };
 

@@ -220,7 +220,7 @@ Result<std::shared_ptr<arrow::Schema>> SnapshotsSystemTable::ArrowSchema() const
 Result<std::shared_ptr<arrow::RecordBatch>> SnapshotsSystemTable::BuildRecordBatch(
     arrow::MemoryPool* pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
-    SnapshotManager snapshot_manager(fs_, table_path_, branch_);
+    SnapshotManager snapshot_manager(fs_, TablePath(), branch_);
     PAIMON_ASSIGN_OR_RAISE(std::vector<Snapshot> snapshots, snapshot_manager.GetAllSnapshots());
     std::sort(snapshots.begin(), snapshots.end(),
               [](const Snapshot& lhs, const Snapshot& rhs) { return lhs.Id() < rhs.Id(); });
@@ -266,7 +266,7 @@ Result<std::shared_ptr<arrow::Schema>> SchemasSystemTable::ArrowSchema() const {
 Result<std::shared_ptr<arrow::RecordBatch>> SchemasSystemTable::BuildRecordBatch(
     arrow::MemoryPool* pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
-    SchemaManager schema_manager(fs_, table_path_, branch_);
+    SchemaManager schema_manager(fs_, TablePath(), branch_);
     PAIMON_ASSIGN_OR_RAISE(std::vector<int64_t> schema_ids, schema_manager.ListAllIds());
     std::sort(schema_ids.begin(), schema_ids.end());
     MetadataRecordBatchBuilder rows(schema, pool);
@@ -314,7 +314,7 @@ Result<std::shared_ptr<arrow::Schema>> TagsSystemTable::ArrowSchema() const {
 Result<std::shared_ptr<arrow::RecordBatch>> TagsSystemTable::BuildRecordBatch(
     arrow::MemoryPool* pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
-    TagManager tag_manager(fs_, table_path_, branch_);
+    TagManager tag_manager(fs_, TablePath(), branch_);
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> tag_names, tag_manager.ListTagNames());
     MetadataRecordBatchBuilder rows(schema, pool);
     PAIMON_RETURN_NOT_OK(rows.InitStatus());
@@ -353,13 +353,13 @@ Result<std::shared_ptr<arrow::RecordBatch>> BranchesSystemTable::BuildRecordBatc
     arrow::MemoryPool* pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> branches,
-                           BranchManager::ListBranches(fs_, table_path_));
+                           BranchManager::ListBranches(fs_, TablePath()));
     MetadataRecordBatchBuilder rows(schema, pool);
     PAIMON_RETURN_NOT_OK(rows.InitStatus());
 
     for (const auto& name : branches) {
-        SchemaManager schema_manager(fs_, table_path_, name);
-        SnapshotManager snapshot_manager(fs_, table_path_, name);
+        SchemaManager schema_manager(fs_, TablePath(), name);
+        SnapshotManager snapshot_manager(fs_, TablePath(), name);
         PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
                                schema_manager.Latest());
         PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> latest_snapshot_id,
@@ -393,7 +393,7 @@ Result<std::shared_ptr<arrow::Schema>> ConsumersSystemTable::ArrowSchema() const
 Result<std::shared_ptr<arrow::RecordBatch>> ConsumersSystemTable::BuildRecordBatch(
     arrow::MemoryPool* pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
-    ConsumerManager consumer_manager(fs_, table_path_, branch_);
+    ConsumerManager consumer_manager(fs_, TablePath(), branch_);
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> consumers, consumer_manager.ListConsumers());
     MetadataRecordBatchBuilder rows(schema, pool);
     PAIMON_RETURN_NOT_OK(rows.InitStatus());

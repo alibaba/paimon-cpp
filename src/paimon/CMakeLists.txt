@@ -315,6 +315,7 @@ set(PAIMON_CORE_SRCS
     core/table/source/data_evolution_batch_scan.cpp
     core/table/system/audit_log_system_table.cpp
     core/table/system/binlog_system_table.cpp
+    core/table/system/in_memory_system_table.cpp
     core/table/system/metadata_system_table.cpp
     core/table/system/metadata_system_tables.cpp
     core/table/system/options_system_table.cpp
