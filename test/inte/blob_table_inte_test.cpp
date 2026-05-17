@@ -1434,7 +1434,7 @@ TEST_P(BlobTableInteTest, TestAppendTableWriteWithMultipleBlobFields) {
     ASSERT_EQ(1, snapshot.value().Id());
     ASSERT_EQ(3, snapshot.value().NextRowId().value());
 
-    // TODO: add scan and read verification for multiple blob fields
+    // TODO(xinyu.lxy): add scan and read verification for multiple blob fields
 }
 
 }  // namespace paimon::test

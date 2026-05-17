@@ -454,7 +454,7 @@ Status SchemaValidation::ValidateBlobFields(const TableSchema& schema, const Cor
     PAIMON_RETURN_NOT_OK(
         Preconditions::CheckState(schema.Fields().size() > configured_blob_names.size(),
                                   "Table with BLOB type column must have other normal columns."));
-    // TODO: validate blob-descriptor-field and blob-view-field
+    // TODO(xinyu.lxy): validate blob-descriptor-field and blob-view-field
     return Status::OK();
 }
 

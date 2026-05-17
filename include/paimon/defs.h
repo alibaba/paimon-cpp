@@ -372,8 +372,10 @@ struct PAIMON_EXPORT Options {
     /// when you want to treat a BYTES column as a BLOB. Comma-separated field names.
     /// Multiple blob fields are supported.
     static const char BLOB_FIELD[];
-    // TODO: support "blob-descriptor-field" - treat fields as BLOB and store as BlobDescriptor
-    // TODO: support "blob-view-field" - treat fields as BLOB and resolve from upstream tables
+    // TODO(xinyu.lxy): support "blob-descriptor-field" - treat fields as BLOB and store as
+    // BlobDescriptor
+    // TODO(xinyu.lxy): support "blob-view-field" - treat fields as BLOB and resolve from upstream
+    // tables
     /// "global-index.enabled" - Whether to enable global index for scan. Default value is "true".
     static const char GLOBAL_INDEX_ENABLED[];
     /// "global-index.thread-num" - The maximum number of concurrent scanner for global index. No
