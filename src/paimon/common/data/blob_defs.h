@@ -20,7 +20,7 @@ namespace paimon {
 
 /// A Blob field uses the 'large_binary' type as its underlying physical storage in Apache Arrow
 /// Schema, and is marked as the Paimon Blob extension type by attaching specific
-/// **KeyValueMetadata**. Only one blob field in one paimon table is allowed.
+/// **KeyValueMetadata**. Multiple blob fields in one paimon table are supported.
 ///
 /// To create a Blob field:
 /// @code

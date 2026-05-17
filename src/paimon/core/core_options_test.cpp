@@ -111,7 +111,9 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(core_options.DataFilePrefix(), "data-");
     ASSERT_FALSE(core_options.IndexFileInDataFileDir());
     ASSERT_FALSE(core_options.RowTrackingEnabled());
+    ASSERT_TRUE(core_options.RowTrackingPartitionGroupOnCommit());
     ASSERT_FALSE(core_options.DataEvolutionEnabled());
+    ASSERT_TRUE(core_options.GetBlobFields().empty());
     ASSERT_TRUE(core_options.LegacyPartitionNameEnabled());
     ASSERT_TRUE(core_options.GlobalIndexEnabled());
     ASSERT_EQ(std::nullopt, core_options.GetGlobalIndexExternalPath());
@@ -209,7 +211,9 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::DATA_FILE_PREFIX, "test-data-"},
         {Options::INDEX_FILE_IN_DATA_FILE_DIR, "true"},
         {Options::ROW_TRACKING_ENABLED, "true"},
+        {Options::ROW_TRACKING_PARTITION_GROUP_ON_COMMIT, "false"},
         {Options::DATA_EVOLUTION_ENABLED, "true"},
+        {Options::BLOB_FIELD, "blob1,blob2"},
         {Options::PARTITION_GENERATE_LEGACY_NAME, "false"},
         {Options::GLOBAL_INDEX_ENABLED, "false"},
         {Options::GLOBAL_INDEX_THREAD_NUM, "4"},
@@ -336,7 +340,9 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(core_options.DataFilePrefix(), "test-data-");
     ASSERT_TRUE(core_options.IndexFileInDataFileDir());
     ASSERT_TRUE(core_options.RowTrackingEnabled());
+    ASSERT_FALSE(core_options.RowTrackingPartitionGroupOnCommit());
     ASSERT_TRUE(core_options.DataEvolutionEnabled());
+    ASSERT_EQ(core_options.GetBlobFields(), std::vector<std::string>({"blob1", "blob2"}));
     ASSERT_FALSE(core_options.LegacyPartitionNameEnabled());
     ASSERT_FALSE(core_options.GlobalIndexEnabled());
     ASSERT_EQ(core_options.GetGlobalIndexThreadNum(), 4);

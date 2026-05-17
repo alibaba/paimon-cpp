@@ -1396,4 +1396,45 @@ TEST_P(BlobTableInteTest, TestWithRowIdsForMultipleBlobFiles) {
     }
 }
 
+TEST_P(BlobTableInteTest, TestAppendTableWriteWithMultipleBlobFields) {
+    auto dir = UniqueTestDirectory::Create();
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int32()),
+        BlobUtils::ToArrowField("blob1", true), BlobUtils::ToArrowField("blob2", true)};
+    auto schema = arrow::schema(fields);
+
+    auto file_format = GetParam();
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "orc"},       {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "700"},      {Options::BUCKET, "-1"},
+        {Options::ROW_TRACKING_ENABLED, "true"}, {Options::DATA_EVOLUTION_ENABLED, "true"},
+        {Options::BLOB_AS_DESCRIPTOR, "false"},  {Options::FILE_SYSTEM, "local"}};
+
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(dir->Str(), schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/true));
+    int64_t commit_identifier = 0;
+
+    std::string data = R"([
+        ["str_0", null, "apple",  "red"],
+        ["str_1", 1,    "banana", "yellow"],
+        ["str_2", 2,    "cat",    "black"]
+    ])";
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
+    ASSERT_EQ(commit_msgs.size(), 1);
+
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot, helper->LatestSnapshot());
+    ASSERT_TRUE(snapshot);
+    ASSERT_EQ(1, snapshot.value().Id());
+    ASSERT_EQ(3, snapshot.value().NextRowId().value());
+
+    // TODO: add scan and read verification for multiple blob fields
+}
+
 }  // namespace paimon::test

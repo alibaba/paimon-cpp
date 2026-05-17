@@ -87,9 +87,12 @@ const char Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY[] = "data-file.external-pa
 const char Options::DATA_FILE_PREFIX[] = "data-file.prefix";
 const char Options::INDEX_FILE_IN_DATA_FILE_DIR[] = "index-file-in-data-file-dir";
 const char Options::ROW_TRACKING_ENABLED[] = "row-tracking.enabled";
+const char Options::ROW_TRACKING_PARTITION_GROUP_ON_COMMIT[] =
+    "row-tracking.partition-group-on-commit";
 const char Options::DATA_EVOLUTION_ENABLED[] = "data-evolution.enabled";
 const char Options::PARTITION_GENERATE_LEGACY_NAME[] = "partition.legacy-name";
 const char Options::BLOB_AS_DESCRIPTOR[] = "blob-as-descriptor";
+const char Options::BLOB_FIELD[] = "blob-field";
 const char Options::GLOBAL_INDEX_ENABLED[] = "global-index.enabled";
 const char Options::GLOBAL_INDEX_THREAD_NUM[] = "global-index.thread-num";
 const char Options::GLOBAL_INDEX_EXTERNAL_PATH[] = "global-index.external-path";
