@@ -54,7 +54,6 @@ class MultipleBlobFileWriter {
 
     /// Constructs a MultipleBlobFileWriter.
     /// @param blob_schema The schema containing only blob fields.
-    /// @param full_data_type The full struct data type of the input data (all blob fields).
     /// @param blob_writer_creator Factory function to create a RollingFileWriter for each blob
     /// field.
     MultipleBlobFileWriter(const std::shared_ptr<arrow::Schema>& blob_schema,
