@@ -2,9 +2,9 @@
 
 ## Overview
 
-This document describes DiskANN configuration and tuning in Lumina. It focuses on builder parameters in
-`BuilderOptions`, searcher parameters in `SearcherOptions`, and per-query parameters in `SearchOptions`. The content
-is aligned with the current release's implementation , including parameter meanings and tuning guidance.
+This guide explains how to configure and tune DiskANN in Lumina. It covers builder parameters in `BuilderOptions`,
+searcher parameters in `SearcherOptions`, and per-query parameters in `SearchOptions`. The content matches the current
+release implementation, including parameter meanings and tuning guidance.
 
 This is an implementation-oriented usage guide, not a separate long-term compatibility contract.
 
@@ -102,8 +102,12 @@ These keys belong to `api::SearchOptions`.
 | `search.parallel_number` | `FieldType::kInt` | Query parallelism. Valid range is `1..1000`; values larger than the index node count are clipped to the node count. |
 | `search.thread_safe_filter` | `FieldType::kBool` | Only meaningful for filtered search. If `parallel_number > 1`, filtered search requires it to be `true`. |
 | `diskann.search.list_size` | `FieldType::kInt` | Required. The effective value is raised to at least `topk` and capped by the index node count. |
-| `diskann.search.io_limit` | `FieldType::kInt` | Upper bound on the number of IO operations allowed for a single query. In normal mode, it is roughly "how many nodes may be read"; with sector-aligned read, it is closer to "how many sectors may be read". The effective value is automatically aligned with `topk` and `list_size`: at least `topk`, at most `list_size`. |
+| `diskann.search.io_limit` | `FieldType::kInt` | Upper bound on the number of IO operations allowed for a single query. In normal mode, it is roughly "how many nodes may be read"; with sector-aligned read, it is closer to "how many sectors may be read". Defaults to the maximum of `topk` and `list_size`. When explicitly configured, the effective value is at least `topk` and never exceeds the index node count. |
 | `diskann.search.beam_width` | `FieldType::kInt` | Kept in schema for compatibility, but the current DiskANN backend does not read it. |
+
+Implementation note: the public validation path of `LuminaSearcher::Search()` only validates the generic `search.*`
+schema. DiskANN-specific query parameters are mainly checked inside the DiskANN backend. Therefore, if you build
+options from a string map, prefer normalized entry points such as [NormalizeSearchOptions](../api/Options.md).
 
 ## Tuning Notes
 
@@ -126,8 +130,10 @@ These keys belong to `api::SearchOptions`.
   `diskann.build.slack_pruning_factor` only when a more precise trade-off is needed.
 - For an already-built graph, if you want higher recall, increase `diskann.search.list_size` first. If you want
   lower query latency, increase `search.parallel_number` first; `2-4` is a common range.
-- If you want to limit per-query disk reads, tune `diskann.search.io_limit`. In practice, start from a value close to
-  `list_size`, then gradually lower it based on the latency/recall trade-off.
+- To limit per-query disk reads, tune `diskann.search.io_limit`. The default equals `max(topk, list_size)`, which
+  is usually a reasonable starting point. Lowering it below `list_size` reduces IO at the potential cost of recall;
+  raising it above `list_size` allows more IO and may improve recall at the cost of higher latency. Adjust
+  incrementally based on the latency/recall trade-off for your workload.
 - For workloads with many repeated queries, try `diskann.search.num_nodes_to_cache` first, and then decide whether to
   increase query parallelism further.
 - For disk-locality tuning, tune `diskann.build.reorder_layout` and `diskann.search.sector_aligned_read` together.
@@ -141,4 +147,4 @@ These keys belong to `api::SearchOptions`.
 
 ## Status
 
-v0.2.1 Release Tag (2026-04-07).
+v0.2.2 Release Tag (2026-05-14).
