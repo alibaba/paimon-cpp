@@ -49,8 +49,8 @@ namespace paimon {
 /// Every time a file is rolled, the writer will close the current normal data file and blob data
 /// files, so one normal data file may correspond to multiple blob data files.
 ///
-/// Normal file1: f1.parquet may including (blob1_1.blob, blob1_2.blob, blob2_1.blob)
-/// Normal file2: f2.parquet may including (blob1_3.blob, blob2_2.blob)
+/// Normal file1: f1.parquet may include (blob1_1.blob, blob1_2.blob, blob2_1.blob)
+/// Normal file2: f2.parquet may include (blob1_3.blob, blob2_2.blob)
 ///
 /// </pre>
 class RollingBlobFileWriter

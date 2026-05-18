@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,9 +71,9 @@ Status MultipleBlobFileWriter::Write(::ArrowArray* record) {
                 arrow::StructArray::Make({slice},
                                          {blob_schema_->field(field_writer.field_index)->name()}));
             ::ArrowArray c_blob_array;
-            ScopeGuard guard([&c_blob_array]() { ArrowArrayRelease(&c_blob_array); });
             PAIMON_RETURN_NOT_OK_FROM_ARROW(
                 arrow::ExportArray(*single_field_struct, &c_blob_array));
+            ScopeGuard guard([&c_blob_array]() { ArrowArrayRelease(&c_blob_array); });
             PAIMON_RETURN_NOT_OK(field_writer.writer->Write(&c_blob_array));
         }
     }
