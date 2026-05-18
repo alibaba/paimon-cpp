@@ -63,6 +63,7 @@ class InMemorySortBuffer : public SortBuffer {
     Result<bool> Write(std::unique_ptr<RecordBatch>&& batch) override;
     Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> CreateReaders() override;
     bool HasData() const override;
+    /// Get the estimated average memory usage per row in bytes.
     uint64_t GetEstimateMemoryUseForEachRow() const;
 
  private:

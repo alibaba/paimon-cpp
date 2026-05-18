@@ -16,8 +16,6 @@
 
 #include "paimon/core/mergetree/leveled_merger.h"
 
-#include <numeric>
-
 #include "gtest/gtest.h"
 #include "paimon/testing/utils/testharness.h"
 
@@ -25,7 +23,7 @@ namespace paimon::test {
 
 class LeveledMergerTest : public ::testing::Test {
  protected:
-    FileChannelInfo MakeFile(int id, int64_t size) {
+    FileChannelInfo MakeFile(int32_t id, int64_t size) {
         return FileChannelInfo{FileIOChannel::ID(std::to_string(id)), size};
     }
 
@@ -117,7 +115,7 @@ TEST_F(LeveledMergerTest, MultiLevelCompaction) {
 TEST_F(LeveledMergerTest, ManyFilesWithFanInTwo) {
     LeveledMerger merger(2);
 
-    for (int i = 0; i < 8; ++i) {
+    for (int32_t i = 0; i < 8; ++i) {
         merger.AddFile(MakeFile(i, 100));
         ASSERT_OK(merger.RunCompactionIfNeeded(CreateMockMergeFn()));
     }
@@ -132,7 +130,7 @@ TEST_F(LeveledMergerTest, FinalCleanupReducesFileCount) {
 
     // Add 5 files (just above fan_in). Level 0 gets compacted once, leaving:
     // level 0: 1 file, level 1: 1 file
-    for (int i = 0; i < 5; ++i) {
+    for (int32_t i = 0; i < 5; ++i) {
         merger.AddFile(MakeFile(i, 100));
         ASSERT_OK(merger.RunCompactionIfNeeded(CreateMockMergeFn()));
     }
@@ -185,7 +183,7 @@ TEST_F(LeveledMergerTest, FinalCleanupConvergesToTarget) {
 
     // Add many files without running compaction (fan_in large enough)
     LeveledMerger merger2(100);
-    for (int i = 0; i < 20; ++i) {
+    for (int32_t i = 0; i < 20; ++i) {
         merger2.AddFile(MakeFile(i, (i + 1) * 10));
     }
     ASSERT_EQ(merger2.GetAllFiles().size(), 20);
@@ -242,7 +240,7 @@ TEST_F(LeveledMergerTest, CompactionOnlyTakesFanInFilesFromLevel) {
     LeveledMerger merger(3);
 
     // Add 5 files to level 0 (exceeds fan_in=3)
-    for (int i = 0; i < 5; ++i) {
+    for (int32_t i = 0; i < 5; ++i) {
         merger.AddFile(MakeFile(i, 100));
     }
 

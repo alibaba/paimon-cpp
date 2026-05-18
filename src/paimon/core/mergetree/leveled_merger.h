@@ -41,9 +41,13 @@ class LeveledMerger {
 
     explicit LeveledMerger(int32_t max_fan_in);
 
+    /// Update the maximum fan-in (merge width) for compaction.
     void SetMaxFanIn(int32_t max_fan_in);
+
+    /// Remove all files from all levels.
     void Clear();
 
+    /// Add a new spill file to level 0.
     void AddFile(const FileChannelInfo& file_info);
 
     /// Compact any single level that has accumulated >= max_fan_in files,
@@ -56,6 +60,7 @@ class LeveledMerger {
     /// max_fan_in files.
     Status RunFinalCleanupIfNeeded(int32_t target_file_count, const MergeFn& merge_fn);
 
+    /// Collect all files across all levels into a flat vector.
     std::vector<FileChannelInfo> GetAllFiles() const;
 
  private:
