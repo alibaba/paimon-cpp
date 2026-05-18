@@ -189,6 +189,7 @@ void RollingBlobFileWriter::Abort() {
     }
     if (blob_writer_ != nullptr) {
         blob_writer_->Abort();
+        blob_writer_.reset();
     }
 }
 
