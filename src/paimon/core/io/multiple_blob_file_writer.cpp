@@ -100,6 +100,7 @@ Status MultipleBlobFileWriter::Close() {
         }
     }
     closed_ = true;
+    blob_field_writers_.clear();
     return Status::OK();
 }
 
