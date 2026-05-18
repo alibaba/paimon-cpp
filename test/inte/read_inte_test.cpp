@@ -647,18 +647,22 @@ TEST(SystemTableReadInteTest, TestReadMetadataSystemTables) {
     ASSERT_OK_AND_ASSIGN(auto snapshots_result,
                          ReadSystemTable(table_path + "$snapshots", options));
     auto snapshots_array = SingleStructChunk(snapshots_result);
-    ASSERT_EQ(
-        StructFieldNames(snapshots_array),
-        (std::vector<std::string>{"snapshot_id", "schema_id", "commit_user", "commit_identifier",
-                                  "commit_kind", "commit_time", "total_record_count",
-                                  "delta_record_count", "changelog_record_count", "watermark"}));
+    ASSERT_EQ(StructFieldNames(snapshots_array),
+              (std::vector<std::string>{
+                  "snapshot_id", "schema_id", "commit_user", "commit_identifier", "commit_kind",
+                  "commit_time", "base_manifest_list", "delta_manifest_list",
+                  "changelog_manifest_list", "total_record_count", "delta_record_count",
+                  "changelog_record_count", "watermark", "next_row_id"}));
     ASSERT_EQ(snapshots_array->length(), 2);
     auto snapshot_id_array =
         std::dynamic_pointer_cast<arrow::Int64Array>(snapshots_array->field(0));
     auto commit_kind_array =
         std::dynamic_pointer_cast<arrow::StringArray>(snapshots_array->field(4));
+    auto commit_time_array =
+        std::dynamic_pointer_cast<arrow::TimestampArray>(snapshots_array->field(5));
     ASSERT_TRUE(snapshot_id_array);
     ASSERT_TRUE(commit_kind_array);
+    ASSERT_TRUE(commit_time_array);
     ASSERT_EQ(snapshot_id_array->Value(0), 1);
     ASSERT_EQ(snapshot_id_array->Value(1), 2);
     ASSERT_EQ(commit_kind_array->GetString(0), "APPEND");
@@ -668,25 +672,31 @@ TEST(SystemTableReadInteTest, TestReadMetadataSystemTables) {
     auto schemas_array = SingleStructChunk(schemas_result);
     ASSERT_EQ(StructFieldNames(schemas_array),
               (std::vector<std::string>{"schema_id", "fields", "partition_keys", "primary_keys",
-                                        "options", "comment"}));
+                                        "options", "comment", "update_time"}));
     ASSERT_EQ(schemas_array->length(), 1);
     auto schema_id_array = std::dynamic_pointer_cast<arrow::Int64Array>(schemas_array->field(0));
     auto primary_keys_array =
         std::dynamic_pointer_cast<arrow::StringArray>(schemas_array->field(3));
+    auto update_time_array =
+        std::dynamic_pointer_cast<arrow::TimestampArray>(schemas_array->field(6));
     ASSERT_TRUE(schema_id_array);
     ASSERT_TRUE(primary_keys_array);
+    ASSERT_TRUE(update_time_array);
     ASSERT_EQ(schema_id_array->Value(0), 0);
     ASSERT_EQ(primary_keys_array->GetString(0), R"(["pk"])");
 
     ASSERT_OK_AND_ASSIGN(auto branches_result, ReadSystemTable(table_path + "$branches", options));
     auto branches_array = SingleStructChunk(branches_result);
     ASSERT_EQ(StructFieldNames(branches_array),
-              (std::vector<std::string>{"branch_name", "schema_id", "snapshot_id"}));
+              (std::vector<std::string>{"branch_name", "create_time"}));
     ASSERT_EQ(branches_array->length(), 1);
     auto branch_name_array =
         std::dynamic_pointer_cast<arrow::StringArray>(branches_array->field(0));
     ASSERT_TRUE(branch_name_array);
     ASSERT_EQ(branch_name_array->GetString(0), "main");
+    auto branch_create_time_array =
+        std::dynamic_pointer_cast<arrow::TimestampArray>(branches_array->field(1));
+    ASSERT_TRUE(branch_create_time_array);
 }
 
 TEST(SystemTableReadInteTest, TestReadTagBranchAndConsumerSystemTables) {
@@ -708,7 +718,8 @@ TEST(SystemTableReadInteTest, TestReadTagBranchAndConsumerSystemTables) {
                             /*overwrite=*/true));
 
     ASSERT_OK(fs->Mkdirs(PathUtil::JoinPath(table_path, "consumer")));
-    ASSERT_OK(fs->WriteFile(PathUtil::JoinPath(table_path, "consumer/consumer-c1"), "3",
+    ASSERT_OK(fs->WriteFile(PathUtil::JoinPath(table_path, "consumer/consumer-c1"),
+                            R"({"nextSnapshot":3})",
                             /*overwrite=*/true));
 
     std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
@@ -727,15 +738,31 @@ TEST(SystemTableReadInteTest, TestReadTagBranchAndConsumerSystemTables) {
     ASSERT_OK_AND_ASSIGN(auto tags_result, ReadSystemTable(table_path + "$tags", options));
     auto tags_array = SingleStructChunk(tags_result);
     ASSERT_EQ(StructFieldNames(tags_array),
-              (std::vector<std::string>{"tag_name", "snapshot_id", "schema_id", "tag_create_time",
-                                        "tag_time_retained"}));
+              (std::vector<std::string>{"tag_name", "snapshot_id", "schema_id", "commit_time",
+                                        "record_count", "create_time", "time_retained"}));
     ASSERT_EQ(tags_array->length(), 1);
     auto tag_name_array = std::dynamic_pointer_cast<arrow::StringArray>(tags_array->field(0));
     auto tag_snapshot_array = std::dynamic_pointer_cast<arrow::Int64Array>(tags_array->field(1));
+    auto tag_commit_time_array =
+        std::dynamic_pointer_cast<arrow::TimestampArray>(tags_array->field(3));
+    auto tag_record_count_array =
+        std::dynamic_pointer_cast<arrow::Int64Array>(tags_array->field(4));
+    auto tag_create_time_array =
+        std::dynamic_pointer_cast<arrow::TimestampArray>(tags_array->field(5));
+    auto tag_time_retained_array =
+        std::dynamic_pointer_cast<arrow::StringArray>(tags_array->field(6));
     ASSERT_TRUE(tag_name_array);
     ASSERT_TRUE(tag_snapshot_array);
+    ASSERT_TRUE(tag_commit_time_array);
+    ASSERT_TRUE(tag_record_count_array);
+    ASSERT_TRUE(tag_create_time_array);
+    ASSERT_TRUE(tag_time_retained_array);
     ASSERT_EQ(tag_name_array->GetString(0), "release");
     ASSERT_EQ(tag_snapshot_array->Value(0), tag.Id());
+    ASSERT_EQ(tag_commit_time_array->Value(0), tag.TimeMillis());
+    ASSERT_EQ(tag_record_count_array->Value(0), tag.TotalRecordCount().value());
+    ASSERT_FALSE(tag_create_time_array->IsNull(0));
+    ASSERT_EQ(tag_time_retained_array->GetString(0), "3.000000");
 
     ASSERT_OK_AND_ASSIGN(auto consumers_result,
                          ReadSystemTable(table_path + "$consumers", options));

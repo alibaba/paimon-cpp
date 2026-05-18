@@ -24,10 +24,8 @@
 
 namespace paimon {
 
-MetadataSystemTable::MetadataSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
-                                         std::string branch)
-    : InMemorySystemTable(std::move(table_path)),
-      fs_(std::move(fs)),
-      branch_(BranchManager::NormalizeBranch(branch)) {}
+MetadataSystemTable::MetadataSystemTable(const std::shared_ptr<FileSystem>& fs,
+                                         const std::string& table_path, const std::string& branch)
+    : InMemorySystemTable(table_path), fs_(fs), branch_(BranchManager::NormalizeBranch(branch)) {}
 
 }  // namespace paimon

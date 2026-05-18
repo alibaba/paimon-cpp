@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -30,7 +31,7 @@ class FileSystem;
 
 class ConsumerManager {
  public:
-    static constexpr char CONSUMER_PREFIX[] = "consumer-";
+    static constexpr char kConsumerPrefix[] = "consumer-";
 
     ConsumerManager(std::shared_ptr<FileSystem> fs, std::string table_path, std::string branch);
 
@@ -38,6 +39,7 @@ class ConsumerManager {
     std::string ConsumerPath(const std::string& consumer_id) const;
     Result<std::vector<std::string>> ListConsumers() const;
     Result<std::optional<int64_t>> GetNextSnapshotId(const std::string& consumer_id) const;
+    Result<std::map<std::string, int64_t>> Consumers() const;
 
  private:
     std::shared_ptr<FileSystem> fs_;

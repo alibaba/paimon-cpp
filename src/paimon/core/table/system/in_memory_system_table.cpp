@@ -36,9 +36,9 @@ namespace {
 
 class InMemorySystemTableBatchReader : public BatchReader {
  public:
-    InMemorySystemTableBatchReader(const InMemorySystemTable& table,
+    InMemorySystemTableBatchReader(std::shared_ptr<const InMemorySystemTable> table,
                                    const std::shared_ptr<MemoryPool>& pool)
-        : table_(table), arrow_pool_(GetArrowPool(pool)) {}
+        : table_(std::move(table)), arrow_pool_(GetArrowPool(pool)) {}
 
     Result<ReadBatch> NextBatch() override {
         if (emitted_) {
@@ -46,10 +46,10 @@ class InMemorySystemTableBatchReader : public BatchReader {
         }
         emitted_ = true;
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::RecordBatch> record_batch,
-                               table_.BuildRecordBatch(arrow_pool_.get()));
-        std::shared_ptr<arrow::StructArray> struct_array =
-            std::make_shared<arrow::StructArray>(arrow::struct_(record_batch->schema()->fields()),
-                                                 record_batch->num_rows(), record_batch->columns());
+                               table_->BuildRecordBatch(arrow_pool_.get()));
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+            std::shared_ptr<arrow::Array> struct_array,
+            arrow::StructArray::Make(record_batch->columns(), record_batch->schema()->fields()));
         auto c_array = std::make_unique<ArrowArray>();
         auto c_schema = std::make_unique<ArrowSchema>();
         PAIMON_RETURN_NOT_OK_FROM_ARROW(
@@ -66,7 +66,7 @@ class InMemorySystemTableBatchReader : public BatchReader {
     }
 
  private:
-    const InMemorySystemTable& table_;
+    std::shared_ptr<const InMemorySystemTable> table_;
     std::unique_ptr<arrow::MemoryPool> arrow_pool_;
     bool emitted_ = false;
 };
@@ -87,7 +87,7 @@ class InMemorySystemTableRead : public TableRead {
                 return Status::Invalid("unsupported split for ", table_->Name(), " system table");
             }
         }
-        return std::make_unique<InMemorySystemTableBatchReader>(*table_, GetMemoryPool());
+        return std::make_unique<InMemorySystemTableBatchReader>(table_, GetMemoryPool());
     }
 
     Result<std::unique_ptr<BatchReader>> CreateReader(

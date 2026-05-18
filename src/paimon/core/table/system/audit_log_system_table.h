@@ -27,7 +27,7 @@ namespace paimon {
 class FileSystem;
 class TableSchema;
 
-// Converts data columns when wrapping the base table changelog reader.
+/// Converts data columns when wrapping the base table changelog reader.
 class ChangelogBatchConverter {
  public:
     virtual ~ChangelogBatchConverter() = default;
@@ -36,7 +36,7 @@ class ChangelogBatchConverter {
         const std::shared_ptr<arrow::Array>& array, arrow::MemoryPool* pool) const = 0;
 };
 
-// System table for `T$audit_log`, exposing row-level changelog records with rowkind.
+/// System table for `T$audit_log`, exposing row-level changelog records with rowkind.
 class AuditLogSystemTable : public SystemTable {
  public:
     static constexpr const char* kName = "audit_log";

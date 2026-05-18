@@ -320,11 +320,13 @@ TEST(FileSystemCatalogTest, TestMetadataSystemTableCatalog) {
                          catalog.LoadTableSchema(Identifier("db1", "tbl1$snapshots")));
     ASSERT_OK_AND_ASSIGN(auto snapshots_c_schema, snapshots_schema->GetArrowSchema());
     auto snapshots_arrow_schema = arrow::ImportSchema(snapshots_c_schema.get()).ValueUnsafe();
-    ASSERT_EQ(
-        snapshots_arrow_schema->field_names(),
-        (std::vector<std::string>{"snapshot_id", "schema_id", "commit_user", "commit_identifier",
-                                  "commit_kind", "commit_time", "total_record_count",
-                                  "delta_record_count", "changelog_record_count", "watermark"}));
+    ASSERT_EQ(snapshots_arrow_schema->field_names(),
+              (std::vector<std::string>{
+                  "snapshot_id", "schema_id", "commit_user", "commit_identifier", "commit_kind",
+                  "commit_time", "base_manifest_list", "delta_manifest_list",
+                  "changelog_manifest_list", "total_record_count", "delta_record_count",
+                  "changelog_record_count", "watermark", "next_row_id"}));
+    ASSERT_EQ(snapshots_arrow_schema->field(5)->type()->id(), arrow::Type::TIMESTAMP);
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> schemas_schema,
                          catalog.LoadTableSchema(Identifier("db1", "tbl1$schemas")));
@@ -332,7 +334,34 @@ TEST(FileSystemCatalogTest, TestMetadataSystemTableCatalog) {
     auto schemas_arrow_schema = arrow::ImportSchema(schemas_c_schema.get()).ValueUnsafe();
     ASSERT_EQ(schemas_arrow_schema->field_names(),
               (std::vector<std::string>{"schema_id", "fields", "partition_keys", "primary_keys",
-                                        "options", "comment"}));
+                                        "options", "comment", "update_time"}));
+    ASSERT_EQ(schemas_arrow_schema->field(6)->type()->id(), arrow::Type::TIMESTAMP);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> tags_schema,
+                         catalog.LoadTableSchema(Identifier("db1", "tbl1$tags")));
+    ASSERT_OK_AND_ASSIGN(auto tags_c_schema, tags_schema->GetArrowSchema());
+    auto tags_arrow_schema = arrow::ImportSchema(tags_c_schema.get()).ValueUnsafe();
+    ASSERT_EQ(tags_arrow_schema->field_names(),
+              (std::vector<std::string>{"tag_name", "snapshot_id", "schema_id", "commit_time",
+                                        "record_count", "create_time", "time_retained"}));
+    ASSERT_EQ(tags_arrow_schema->field(3)->type()->id(), arrow::Type::TIMESTAMP);
+    ASSERT_EQ(tags_arrow_schema->field(5)->type()->id(), arrow::Type::TIMESTAMP);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> branches_schema,
+                         catalog.LoadTableSchema(Identifier("db1", "tbl1$branches")));
+    ASSERT_OK_AND_ASSIGN(auto branches_c_schema, branches_schema->GetArrowSchema());
+    auto branches_arrow_schema = arrow::ImportSchema(branches_c_schema.get()).ValueUnsafe();
+    ASSERT_EQ(branches_arrow_schema->field_names(),
+              (std::vector<std::string>{"branch_name", "create_time"}));
+    ASSERT_EQ(branches_arrow_schema->field(1)->type()->id(), arrow::Type::TIMESTAMP);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> consumers_schema,
+                         catalog.LoadTableSchema(Identifier("db1", "tbl1$consumers")));
+    ASSERT_OK_AND_ASSIGN(auto consumers_c_schema, consumers_schema->GetArrowSchema());
+    auto consumers_arrow_schema = arrow::ImportSchema(consumers_c_schema.get()).ValueUnsafe();
+    ASSERT_EQ(consumers_arrow_schema->field_names(),
+              (std::vector<std::string>{"consumer_id", "next_snapshot_id"}));
+    ASSERT_FALSE(consumers_arrow_schema->field(1)->nullable());
 
     Identifier snapshots_identifier("db1", "tbl1$snapshots");
     ::ArrowSchema system_create_schema;

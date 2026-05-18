@@ -84,6 +84,6 @@ std::string TagManager::TagPath(const std::string& tag_name) const {
 }
 
 std::string TagManager::TagDirectory() const {
-    return PathUtil::JoinPath(BranchManager::BranchPath(root_path_, branch_), "/tag");
+    return PathUtil::JoinPath(BranchManager::BranchPath(root_path_, branch_), "tag");
 }
 }  // namespace paimon

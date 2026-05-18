@@ -47,7 +47,6 @@ Result<std::vector<std::string>> BranchManager::ListBranches(const std::shared_p
         }
     }
     std::sort(branches.begin(), branches.end());
-    branches.erase(std::unique(branches.begin(), branches.end()), branches.end());
     return branches;
 }
 

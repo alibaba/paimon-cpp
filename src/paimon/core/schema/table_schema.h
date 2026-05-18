@@ -110,6 +110,10 @@ class TableSchema : public DataSchema, public Jsonizable<TableSchema> {
 
     bool CrossPartitionUpdate() const;
 
+    int64_t TimeMillis() const {
+        return time_millis_;
+    }
+
  private:
     JSONIZABLE_FRIEND_AND_DEFAULT_CTOR(TableSchema);
 
