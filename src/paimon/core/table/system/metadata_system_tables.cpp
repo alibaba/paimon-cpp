@@ -141,11 +141,21 @@ Result<std::shared_ptr<arrow::RecordBatch>> RowsToRecordBatch(
     return arrow::RecordBatch::Make(schema, struct_array->length(), struct_array->fields());
 }
 
+MetadataSystemTableContext CreateMetadataContext(std::shared_ptr<FileSystem> fs,
+                                                 std::string table_path, std::string branch) {
+    return {
+        std::move(fs),
+        std::move(table_path),
+        BranchManager::NormalizeBranch(branch),
+    };
+}
+
 }  // namespace
 
 SnapshotsSystemTable::SnapshotsSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
                                            std::string branch)
-    : MetadataSystemTable(std::move(fs), std::move(table_path), std::move(branch)) {}
+    : InMemorySystemTable(table_path),
+      context_(CreateMetadataContext(std::move(fs), std::move(table_path), std::move(branch))) {}
 
 std::string SnapshotsSystemTable::Name() const {
     return kName;
@@ -174,7 +184,7 @@ Result<std::shared_ptr<arrow::Schema>> SnapshotsSystemTable::ArrowSchema() const
 Result<std::shared_ptr<arrow::RecordBatch>> SnapshotsSystemTable::BuildRecordBatch(
     arrow::MemoryPool* pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
-    SnapshotManager snapshot_manager(fs_, TablePath(), branch_);
+    SnapshotManager snapshot_manager(context_.fs, context_.table_path, context_.branch);
     PAIMON_ASSIGN_OR_RAISE(std::vector<Snapshot> snapshots, snapshot_manager.GetAllSnapshots());
     std::sort(snapshots.begin(), snapshots.end(),
               [](const Snapshot& lhs, const Snapshot& rhs) { return lhs.Id() < rhs.Id(); });
@@ -205,7 +215,8 @@ Result<std::shared_ptr<arrow::RecordBatch>> SnapshotsSystemTable::BuildRecordBat
 
 SchemasSystemTable::SchemasSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
                                        std::string branch)
-    : MetadataSystemTable(std::move(fs), std::move(table_path), std::move(branch)) {}
+    : InMemorySystemTable(table_path),
+      context_(CreateMetadataContext(std::move(fs), std::move(table_path), std::move(branch))) {}
 
 std::string SchemasSystemTable::Name() const {
     return kName;
@@ -227,7 +238,7 @@ Result<std::shared_ptr<arrow::Schema>> SchemasSystemTable::ArrowSchema() const {
 Result<std::shared_ptr<arrow::RecordBatch>> SchemasSystemTable::BuildRecordBatch(
     arrow::MemoryPool* pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
-    SchemaManager schema_manager(fs_, TablePath(), branch_);
+    SchemaManager schema_manager(context_.fs, context_.table_path, context_.branch);
     PAIMON_ASSIGN_OR_RAISE(std::vector<int64_t> schema_ids, schema_manager.ListAllIds());
     std::sort(schema_ids.begin(), schema_ids.end());
     std::vector<GenericRow> rows;
@@ -259,7 +270,8 @@ Result<std::shared_ptr<arrow::RecordBatch>> SchemasSystemTable::BuildRecordBatch
 
 TagsSystemTable::TagsSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
                                  std::string branch)
-    : MetadataSystemTable(std::move(fs), std::move(table_path), std::move(branch)) {}
+    : InMemorySystemTable(table_path),
+      context_(CreateMetadataContext(std::move(fs), std::move(table_path), std::move(branch))) {}
 
 std::string TagsSystemTable::Name() const {
     return kName;
@@ -282,7 +294,7 @@ Result<std::shared_ptr<arrow::Schema>> TagsSystemTable::ArrowSchema() const {
 Result<std::shared_ptr<arrow::RecordBatch>> TagsSystemTable::BuildRecordBatch(
     arrow::MemoryPool* pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
-    TagManager tag_manager(fs_, TablePath(), branch_);
+    TagManager tag_manager(context_.fs, context_.table_path, context_.branch);
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> tag_names, tag_manager.ListTagNames());
     std::vector<GenericRow> rows;
     rows.reserve(tag_names.size());
@@ -307,7 +319,8 @@ Result<std::shared_ptr<arrow::RecordBatch>> TagsSystemTable::BuildRecordBatch(
 
 BranchesSystemTable::BranchesSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
                                          std::string branch)
-    : MetadataSystemTable(std::move(fs), std::move(table_path), std::move(branch)) {}
+    : InMemorySystemTable(table_path),
+      context_(CreateMetadataContext(std::move(fs), std::move(table_path), std::move(branch))) {}
 
 std::string BranchesSystemTable::Name() const {
     return kName;
@@ -325,13 +338,14 @@ Result<std::shared_ptr<arrow::RecordBatch>> BranchesSystemTable::BuildRecordBatc
     arrow::MemoryPool* pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> branches,
-                           BranchManager::ListBranches(fs_, TablePath()));
+                           BranchManager::ListBranches(context_.fs, context_.table_path));
     std::vector<GenericRow> rows;
     rows.reserve(branches.size());
 
     for (const auto& name : branches) {
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStatus> branch_status,
-                               fs_->GetFileStatus(BranchManager::BranchPath(TablePath(), name)));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::unique_ptr<FileStatus> branch_status,
+            context_.fs->GetFileStatus(BranchManager::BranchPath(context_.table_path, name)));
         GenericRow row(schema->num_fields());
         row.SetField(0, StringValue(name));
         row.SetField(1, TimestampMillisValue(branch_status->GetModificationTime()));
@@ -343,7 +357,8 @@ Result<std::shared_ptr<arrow::RecordBatch>> BranchesSystemTable::BuildRecordBatc
 
 ConsumersSystemTable::ConsumersSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
                                            std::string branch)
-    : MetadataSystemTable(std::move(fs), std::move(table_path), std::move(branch)) {}
+    : InMemorySystemTable(table_path),
+      context_(CreateMetadataContext(std::move(fs), std::move(table_path), std::move(branch))) {}
 
 std::string ConsumersSystemTable::Name() const {
     return kName;
@@ -359,7 +374,7 @@ Result<std::shared_ptr<arrow::Schema>> ConsumersSystemTable::ArrowSchema() const
 Result<std::shared_ptr<arrow::RecordBatch>> ConsumersSystemTable::BuildRecordBatch(
     arrow::MemoryPool* pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
-    ConsumerManager consumer_manager(fs_, TablePath(), branch_);
+    ConsumerManager consumer_manager(context_.fs, context_.table_path, context_.branch);
     PAIMON_ASSIGN_OR_RAISE(auto consumers, consumer_manager.Consumers());
     std::vector<GenericRow> rows;
     rows.reserve(consumers.size());

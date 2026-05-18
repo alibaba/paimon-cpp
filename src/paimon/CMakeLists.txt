@@ -317,7 +317,6 @@ set(PAIMON_CORE_SRCS
     core/table/system/audit_log_system_table.cpp
     core/table/system/binlog_system_table.cpp
     core/table/system/in_memory_system_table.cpp
-    core/table/system/metadata_system_table.cpp
     core/table/system/metadata_system_tables.cpp
     core/table/system/options_system_table.cpp
     core/table/system/system_table.cpp

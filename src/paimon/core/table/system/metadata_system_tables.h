@@ -19,13 +19,20 @@
 #include <memory>
 #include <string>
 
-#include "paimon/core/table/system/metadata_system_table.h"
+#include "paimon/core/table/system/in_memory_system_table.h"
 
 namespace paimon {
 class FileSystem;
 
+/// Shared table metadata location used by metadata system tables.
+struct MetadataSystemTableContext {
+    std::shared_ptr<FileSystem> fs;
+    std::string table_path;
+    std::string branch;
+};
+
 /// System table for `T$snapshots`, exposing snapshot commit history.
-class SnapshotsSystemTable : public MetadataSystemTable {
+class SnapshotsSystemTable : public InMemorySystemTable {
  public:
     static constexpr const char* kName = "snapshots";
 
@@ -36,10 +43,13 @@ class SnapshotsSystemTable : public MetadataSystemTable {
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
     Result<std::shared_ptr<arrow::RecordBatch>> BuildRecordBatch(
         arrow::MemoryPool* pool) const override;
+
+ private:
+    MetadataSystemTableContext context_;
 };
 
 /// System table for `T$schemas`, exposing schema evolution history.
-class SchemasSystemTable : public MetadataSystemTable {
+class SchemasSystemTable : public InMemorySystemTable {
  public:
     static constexpr const char* kName = "schemas";
 
@@ -49,10 +59,13 @@ class SchemasSystemTable : public MetadataSystemTable {
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
     Result<std::shared_ptr<arrow::RecordBatch>> BuildRecordBatch(
         arrow::MemoryPool* pool) const override;
+
+ private:
+    MetadataSystemTableContext context_;
 };
 
 /// System table for `T$tags`, exposing tags and the snapshots they reference.
-class TagsSystemTable : public MetadataSystemTable {
+class TagsSystemTable : public InMemorySystemTable {
  public:
     static constexpr const char* kName = "tags";
 
@@ -62,10 +75,13 @@ class TagsSystemTable : public MetadataSystemTable {
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
     Result<std::shared_ptr<arrow::RecordBatch>> BuildRecordBatch(
         arrow::MemoryPool* pool) const override;
+
+ private:
+    MetadataSystemTableContext context_;
 };
 
 /// System table for `T$branches`, exposing table branches including `main`.
-class BranchesSystemTable : public MetadataSystemTable {
+class BranchesSystemTable : public InMemorySystemTable {
  public:
     static constexpr const char* kName = "branches";
 
@@ -75,10 +91,13 @@ class BranchesSystemTable : public MetadataSystemTable {
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
     Result<std::shared_ptr<arrow::RecordBatch>> BuildRecordBatch(
         arrow::MemoryPool* pool) const override;
+
+ private:
+    MetadataSystemTableContext context_;
 };
 
 /// System table for `T$consumers`, exposing persisted streaming consumer offsets.
-class ConsumersSystemTable : public MetadataSystemTable {
+class ConsumersSystemTable : public InMemorySystemTable {
  public:
     static constexpr const char* kName = "consumers";
 
@@ -89,6 +108,9 @@ class ConsumersSystemTable : public MetadataSystemTable {
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
     Result<std::shared_ptr<arrow::RecordBatch>> BuildRecordBatch(
         arrow::MemoryPool* pool) const override;
+
+ private:
+    MetadataSystemTableContext context_;
 };
 
 }  // namespace paimon
