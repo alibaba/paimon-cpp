@@ -279,14 +279,15 @@ TEST_F(WriteBufferTest, TestSpillDiskQuotaEnforcement) {
         ASSERT_EQ(write_buffer->GetMemoryUsage(), 0);
     }
 
-    // Case 3: Multiple spills exhaust disk quota (quota = 2 spill files).
+    // Case 3: Multiple spills exhaust disk quota.
+    // Use WRITE_BUFFER_SIZE=1 to trigger auto-spill on each Write.
+    // Set quota = spill_file_size so the first Write exhausts it immediately.
     {
-        int64_t quota_for_two_files = spill_file_size * 2;
         ASSERT_OK_AND_ASSIGN(CoreOptions options,
                              CoreOptions::FromMap({{Options::WRITE_BUFFER_SIZE, "1"},
                                                    {Options::WRITE_BUFFER_SPILLABLE, "true"},
                                                    {Options::WRITE_BUFFER_SPILL_MAX_DISK_SIZE,
-                                                    std::to_string(quota_for_two_files)}}));
+                                                    std::to_string(spill_file_size)}}));
         auto write_buffer = CreateWriteBuffer(/*last_sequence_number=*/-1, options);
 
         std::shared_ptr<arrow::Array> array2 =
@@ -295,12 +296,12 @@ TEST_F(WriteBufferTest, TestSpillDiskQuotaEnforcement) {
         ])")
                 .ValueOrDie();
 
-        // Write 1: under quota → true.
+        // Write 1: spill file size == quota → not strictly less → false.
         ASSERT_OK_AND_ASSIGN(bool result1,
                              write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
-        ASSERT_TRUE(result1);
+        ASSERT_FALSE(result1);
 
-        // Write 2: quota exhausted → false.
+        // Write 2: over quota → false.
         ASSERT_OK_AND_ASSIGN(bool result2,
                              write_buffer->Write(CreateBatch(array2, /*row_kinds=*/{})));
         ASSERT_FALSE(result2);
@@ -524,11 +525,11 @@ TEST_F(WriteBufferTest, TestEmptyBufferBehavior) {
 }
 
 TEST_F(WriteBufferTest, TestMergeSpilledFilesSkipsWithSingleFile) {
-    // HANDLES=1: MergeSpilledFiles triggered but skips with only 1 file.
+    // HANDLES=2: with only 1 spill file, compaction is not triggered.
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::WRITE_BUFFER_SIZE, "1"},
                                                {Options::WRITE_BUFFER_SPILLABLE, "true"},
-                                               {Options::LOCAL_SORT_MAX_NUM_FILE_HANDLES, "1"}}));
+                                               {Options::LOCAL_SORT_MAX_NUM_FILE_HANDLES, "2"}}));
     auto write_buffer = CreateWriteBuffer(/*last_sequence_number=*/-1, options);
 
     std::shared_ptr<arrow::Array> array =
