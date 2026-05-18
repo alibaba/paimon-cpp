@@ -27,6 +27,9 @@ namespace paimon {
 /// **KeyValueMetadata**. Multiple blob fields in one paimon table are supported.
 class BlobDefs {
  public:
+    BlobDefs() = delete;
+    ~BlobDefs() = delete;
+
     /// To create a Blob field:
     /// @code
     ///   std::unordered_map<std::string, std::string> blob_metadata_map = {
@@ -52,10 +55,6 @@ class BlobDefs {
     static constexpr int32_t kTotalMetaLength = 16;
     /// Blob file footer length: index_len(4) + version(1) = 5.
     static constexpr uint32_t kFileFooterLength = 5;
-
- private:
-    BlobDefs() = delete;
-    ~BlobDefs() = delete;
 };
 
 }  // namespace paimon
