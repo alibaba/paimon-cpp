@@ -31,7 +31,6 @@
 #include "paimon/core/table/system/audit_log_system_table.h"
 #include "paimon/core/table/system/binlog_system_table.h"
 #include "paimon/core/table/system/metadata_system_tables.h"
-#include "paimon/core/table/system/options_system_table.h"
 #include "paimon/core/utils/branch_manager.h"
 #include "paimon/status.h"
 

@@ -23,6 +23,23 @@
 
 namespace paimon {
 class FileSystem;
+class TableSchema;
+
+/// System table for `T$options`, exposing the latest base table options as key/value rows.
+class OptionsSystemTable : public InMemorySystemTable {
+ public:
+    static constexpr const char* kName = "options";
+
+    OptionsSystemTable(std::string table_path, std::shared_ptr<TableSchema> table_schema);
+
+    std::string Name() const override;
+    Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
+    Result<std::shared_ptr<arrow::RecordBatch>> BuildRecordBatch(
+        arrow::MemoryPool* pool) const override;
+
+ private:
+    std::shared_ptr<TableSchema> table_schema_;
+};
 
 /// Shared table metadata location used by metadata system tables.
 struct MetadataSystemTableContext {

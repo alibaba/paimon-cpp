@@ -152,6 +152,33 @@ MetadataSystemTableContext CreateMetadataContext(std::shared_ptr<FileSystem> fs,
 
 }  // namespace
 
+OptionsSystemTable::OptionsSystemTable(std::string table_path,
+                                       std::shared_ptr<TableSchema> table_schema)
+    : InMemorySystemTable(std::move(table_path)), table_schema_(std::move(table_schema)) {}
+
+std::string OptionsSystemTable::Name() const {
+    return kName;
+}
+
+Result<std::shared_ptr<arrow::Schema>> OptionsSystemTable::ArrowSchema() const {
+    return arrow::schema({arrow::field("key", arrow::utf8(), /*nullable=*/false),
+                          arrow::field("value", arrow::utf8(), /*nullable=*/false)});
+}
+
+Result<std::shared_ptr<arrow::RecordBatch>> OptionsSystemTable::BuildRecordBatch(
+    arrow::MemoryPool* pool) const {
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
+    std::vector<GenericRow> rows;
+    rows.reserve(table_schema_->Options().size());
+    for (const auto& [key, value] : table_schema_->Options()) {
+        GenericRow row(schema->num_fields());
+        row.SetField(0, std::string_view(key));
+        row.SetField(1, std::string_view(value));
+        rows.push_back(std::move(row));
+    }
+    return RowsToRecordBatch(schema, rows, pool);
+}
+
 SnapshotsSystemTable::SnapshotsSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
                                            std::string branch)
     : InMemorySystemTable(table_path),
