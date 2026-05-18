@@ -27,7 +27,6 @@
 #include <vector>
 
 #include "paimon/common/utils/path_util.h"
-#include "paimon/common/utils/rapidjson_util.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/utils/branch_manager.h"
 #include "paimon/fs/file_system.h"
@@ -93,9 +92,10 @@ Result<std::optional<int64_t>> ConsumerManager::GetNextSnapshotId(
         }
 
         rapidjson::Document document;
-        if (RapidJsonUtil::FromJson(content, &document) && document.IsObject() &&
+        document.Parse(content.c_str());
+        if (!document.HasParseError() && document.IsObject() &&
             document.HasMember("nextSnapshot") && document["nextSnapshot"].IsInt64()) {
-            return document["nextSnapshot"].GetInt64();
+            return std::optional<int64_t>(document["nextSnapshot"].GetInt64());
         }
 
         last_error =
