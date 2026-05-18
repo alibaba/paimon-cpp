@@ -704,6 +704,7 @@ if(PAIMON_BUILD_TESTS)
                     core/table/system/system_table_test.cpp
                     core/tag/tag_test.cpp
                     core/utils/branch_manager_test.cpp
+                    core/utils/consumer_manager_test.cpp
                     core/utils/file_store_path_factory_cache_test.cpp
                     core/utils/field_mapping_test.cpp
                     core/utils/file_store_path_factory_test.cpp

@@ -406,7 +406,7 @@ Result<std::shared_ptr<arrow::RecordBatch>> ConsumersSystemTable::BuildRecordBat
     arrow::MemoryPool* pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     ConsumerManager consumer_manager(fs_, TablePath(), branch_);
-    PAIMON_ASSIGN_OR_RAISE(std::map<std::string, int64_t> consumers, consumer_manager.Consumers());
+    PAIMON_ASSIGN_OR_RAISE(auto consumers, consumer_manager.Consumers());
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<MetadataRecordBatchBuilder> rows,
                            MetadataRecordBatchBuilder::Create(schema, pool));
 
