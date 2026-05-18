@@ -51,14 +51,16 @@ Result<std::unique_ptr<BlobFileBatchReader>> BlobFileBatchReader::Create(
     }
 
     PAIMON_ASSIGN_OR_RAISE(uint64_t file_size, input_stream->Length());
-    PAIMON_RETURN_NOT_OK(input_stream->Seek(file_size - kBlobFileHeaderLength, FS_SEEK_SET));
-    int8_t header[kBlobFileHeaderLength];
-    PAIMON_ASSIGN_OR_RAISE(int32_t actual_size, input_stream->Read(reinterpret_cast<char*>(header),
-                                                                   kBlobFileHeaderLength));
-    if (actual_size != kBlobFileHeaderLength) {
+    PAIMON_RETURN_NOT_OK(
+        input_stream->Seek(file_size - BlobDefs::kBlobFileHeaderLength, FS_SEEK_SET));
+    int8_t header[BlobDefs::kBlobFileHeaderLength];
+    PAIMON_ASSIGN_OR_RAISE(
+        int32_t actual_size,
+        input_stream->Read(reinterpret_cast<char*>(header), BlobDefs::kBlobFileHeaderLength));
+    if (actual_size != BlobDefs::kBlobFileHeaderLength) {
         return Status::Invalid(
             fmt::format("actual read size {} not match with expect header length {}", actual_size,
-                        kBlobFileHeaderLength));
+                        BlobDefs::kBlobFileHeaderLength));
     }
     int8_t version = header[4];
     if (version != BlobDefs::kFileVersion) {
@@ -66,8 +68,8 @@ Result<std::unique_ptr<BlobFileBatchReader>> BlobFileBatchReader::Create(
             "create blob format reader failed. unsupported blob file version: {}", version));
     }
     int32_t index_length = GetIndexLength(header, 0);
-    PAIMON_RETURN_NOT_OK(
-        input_stream->Seek(file_size - kBlobFileHeaderLength - index_length, FS_SEEK_SET));
+    PAIMON_RETURN_NOT_OK(input_stream->Seek(
+        file_size - BlobDefs::kBlobFileHeaderLength - index_length, FS_SEEK_SET));
     std::vector<char> index_bytes(index_length, '\0');
     PAIMON_ASSIGN_OR_RAISE(actual_size, input_stream->Read(index_bytes.data(), index_length));
     if (actual_size != index_length) {

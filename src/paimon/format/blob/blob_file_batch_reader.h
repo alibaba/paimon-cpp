@@ -86,8 +86,6 @@ namespace paimon::blob {
 /// - Current version is 1.
 class BlobFileBatchReader : public FileBatchReader {
  public:
-    static constexpr uint32_t kBlobFileHeaderLength = BlobDefs::kFileFooterLength;
-
     static Result<std::unique_ptr<BlobFileBatchReader>> Create(
         const std::shared_ptr<InputStream>& input_stream, int32_t batch_size,
         bool blob_as_descriptor, const std::shared_ptr<MemoryPool>& pool);

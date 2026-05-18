@@ -53,8 +53,8 @@ class BlobDefs {
     static constexpr int32_t kContentStartOffset = 4;
     /// Total metadata length per bin: magic(4) + bin_length(8) + crc32(4) = 16.
     static constexpr int32_t kTotalMetaLength = 16;
-    /// Blob file footer length: index_len(4) + version(1) = 5.
-    static constexpr uint32_t kFileFooterLength = 5;
+    /// Blob file header length: index_len(4) + version(1) = 5.
+    static constexpr uint32_t kBlobFileHeaderLength = 5;
 };
 
 }  // namespace paimon
