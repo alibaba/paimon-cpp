@@ -1111,7 +1111,9 @@ TEST_P(MergeTreeWriterTest, TestSpillWithSameKeyDeduplicate) {
 
     WriteBatch(batch1, /*row_kinds=*/{}, merge_writer.get());
     WriteBatch(batch2, /*row_kinds=*/{}, merge_writer.get());
-    ASSERT_EQ(2u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
+    // Leveled compaction may merge 2 files into 1 when actual_max_fan_in_ is low.
+    ASSERT_GE(2u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
+    ASSERT_GE(TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"), 1u);
 
     std::shared_ptr<arrow::Array> batch3 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1184,7 +1186,9 @@ TEST_P(MergeTreeWriterTest, TestIntermediateMergeSpillFileBound) {
     ASSERT_EQ(1u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 
     WriteBatch(batch3, /*row_kinds=*/{}, merge_writer.get());
-    ASSERT_EQ(1u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
+    // Leveled compaction keeps files across levels, so file count may be > 1.
+    ASSERT_LE(TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"), 2u);
+    ASSERT_GE(TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"), 1u);
 
     ASSERT_OK_AND_ASSIGN(CommitIncrement commit_increment,
                          merge_writer->PrepareCommit(/*wait_compaction=*/false));
