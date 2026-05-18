@@ -273,7 +273,6 @@ Status MergeTreeWriter::FlushWriteBuffer(bool wait_for_latest_compaction,
         ScopeGuard write_guard([&]() -> void {
             rolling_writer->Abort();
             async_key_value_producer_consumer->Close();
-            merge_function_wrapper_->Reset();
         });
         while (true) {
             PAIMON_ASSIGN_OR_RAISE(KeyValueBatch key_value_batch,
