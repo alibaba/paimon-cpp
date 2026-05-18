@@ -29,16 +29,29 @@ namespace paimon {
 
 class FileSystem;
 
+/// Manager for table streaming consumer metadata files.
+///
+/// Consumers are stored under the selected table branch as `consumer/consumer-*` files.
 class ConsumerManager {
  public:
+    /// File name prefix for persisted consumer state files.
     static constexpr char kConsumerPrefix[] = "consumer-";
 
     ConsumerManager(std::shared_ptr<FileSystem> fs, std::string table_path, std::string branch);
 
+    /// Returns the consumer metadata directory for the selected table branch.
     std::string ConsumerDirectory() const;
+
+    /// Returns the metadata file path for a specific consumer id.
     std::string ConsumerPath(const std::string& consumer_id) const;
+
+    /// Lists consumer ids found in the consumer metadata directory.
     Result<std::vector<std::string>> ListConsumers() const;
+
+    /// Reads the next snapshot id persisted for the given consumer id.
     Result<std::optional<int64_t>> GetNextSnapshotId(const std::string& consumer_id) const;
+
+    /// Reads all consumers and their next snapshot ids.
     Result<std::map<std::string, int64_t>> Consumers() const;
 
  private:

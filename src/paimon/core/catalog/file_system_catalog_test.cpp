@@ -90,7 +90,7 @@ TEST(FileSystemCatalogTest, TestCreateSystemDatabaseAndTable) {
                                                    /*ignore_if_exists=*/true),
                             "Cannot create database for system database");
     }
-    // do not support create system table
+    /// Do not support create system table.
     {
         std::map<std::string, std::string> options;
         options[Options::FILE_SYSTEM] = "local";
@@ -719,7 +719,7 @@ TEST(FileSystemCatalogTest, TestDropTable) {
     ASSERT_OK_AND_ASSIGN(bool exist, catalog.TableExists(Identifier("test_db", "tbl1")));
     ASSERT_FALSE(exist);
 
-    // Test 4: Drop system table
+    /// Test 4: Drop system table.
     ASSERT_NOK_WITH_MSG(
         catalog.DropTable(Identifier("test_db", "tbl$system"),
                           /*ignore_if_not_exists=*/false),
@@ -785,7 +785,7 @@ TEST(FileSystemCatalogTest, TestRenameTable) {
                             /*ignore_if_not_exists=*/false),
         "Cannot rename table across databases. Cross-database rename is not supported.");
 
-    // Test 6: Rename system table
+    /// Test 6: Rename system table.
     ASSERT_NOK_WITH_MSG(catalog.RenameTable(Identifier("test_db", "tbl$system"),
                                             Identifier("test_db", "new_system_tbl"),
                                             /*ignore_if_not_exists=*/false),

@@ -26,6 +26,7 @@ namespace paimon {
 class Plan;
 class Split;
 
+/// Singleton split used by in-memory system tables.
 class SystemTableSplit : public Split {
  public:
     explicit SystemTableSplit(const std::string& table_path) : table_path_(table_path) {}
@@ -38,6 +39,7 @@ class SystemTableSplit : public Split {
     std::string table_path_;
 };
 
+/// Scan implementation for system tables that materialize exactly one split.
 class SystemTableScan : public TableScan {
  public:
     explicit SystemTableScan(const std::string& table_path);
