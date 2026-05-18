@@ -200,6 +200,7 @@ set(PAIMON_CORE_SRCS
     core/index/index_file_handler.cpp
     core/index/global_index_meta.cpp
     core/index/index_file_meta_serializer.cpp
+    core/io/generic_row_to_arrow_array_converter.cpp
     core/io/meta_to_arrow_array_converter.cpp
     core/io/async_key_value_producer_and_consumer.cpp
     core/io/data_file_meta_09_serializer.cpp

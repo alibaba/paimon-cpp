@@ -22,7 +22,9 @@
 #include <vector>
 
 #include "arrow/api.h"
-#include "paimon/common/utils/arrow/status_utils.h"
+#include "arrow/util/checked_cast.h"
+#include "paimon/common/data/generic_row.h"
+#include "paimon/core/io/generic_row_to_arrow_array_converter.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -51,24 +53,20 @@ Result<std::shared_ptr<arrow::Schema>> OptionsSystemTable::ArrowSchema() const {
 
 Result<std::shared_ptr<arrow::RecordBatch>> OptionsSystemTable::BuildRecordBatch(
     arrow::MemoryPool* pool) const {
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::unique_ptr<arrow::ArrayBuilder> key_array_builder,
-                                      arrow::MakeBuilder(arrow::utf8(), pool));
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::unique_ptr<arrow::ArrayBuilder> value_array_builder,
-                                      arrow::MakeBuilder(arrow::utf8(), pool));
-    auto* key_builder = dynamic_cast<arrow::StringBuilder*>(key_array_builder.get());
-    auto* value_builder = dynamic_cast<arrow::StringBuilder*>(value_array_builder.get());
-    if (key_builder == nullptr || value_builder == nullptr) {
-        return Status::Invalid("cannot create string builders for options system table");
-    }
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
+    std::vector<GenericRow> rows;
+    rows.reserve(table_schema_->Options().size());
     for (const auto& [key, value] : table_schema_->Options()) {
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(key_builder->Append(key));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(value_builder->Append(value));
+        GenericRow row(schema->num_fields());
+        row.SetField(0, std::string_view(key));
+        row.SetField(1, std::string_view(value));
+        rows.push_back(std::move(row));
     }
-    std::shared_ptr<arrow::Array> key_array;
-    std::shared_ptr<arrow::Array> value_array;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(key_builder->Finish(&key_array));
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(value_builder->Finish(&value_array));
-    return arrow::RecordBatch::Make(OptionsSchema(), key_array->length(), {key_array, value_array});
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<GenericRowToArrowArrayConverter> converter,
+                           GenericRowToArrowArrayConverter::Create(schema, pool));
+    PAIMON_ASSIGN_OR_RAISE(auto array, converter->NextBatch(rows));
+    auto struct_array = arrow::internal::checked_pointer_cast<arrow::StructArray>(array);
+    return arrow::RecordBatch::Make(schema, struct_array->length(), struct_array->fields());
 }
 
 }  // namespace paimon
