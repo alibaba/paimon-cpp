@@ -53,6 +53,7 @@ InMemorySortBuffer::InMemorySortBuffer(int64_t last_sequence_number,
 void InMemorySortBuffer::Clear() {
     buffered_batches_.clear();
     current_memory_in_bytes_ = 0;
+    total_row_count_ = 0;
 }
 
 uint64_t InMemorySortBuffer::GetMemorySize() const {
@@ -82,7 +83,11 @@ Result<bool> InMemorySortBuffer::Write(std::unique_ptr<RecordBatch>&& moved_batc
     buffered_batch.struct_array = std::move(value_struct_array);
     buffered_batch.row_kinds = batch->GetRowKind();
     next_sequence_number_ += buffered_batch.struct_array->length();
+    total_row_count_ += buffered_batch.struct_array->length();
     buffered_batches_.push_back(std::move(buffered_batch));
+    if (total_row_count_ > 0) {
+        estimated_memory_use_for_each_row_ = current_memory_in_bytes_ / total_row_count_;
+    }
     return current_memory_in_bytes_ < write_buffer_size_;
 }
 
@@ -105,6 +110,10 @@ Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> InMemorySortBuffer::C
 
 bool InMemorySortBuffer::HasData() const {
     return !buffered_batches_.empty();
+}
+
+uint64_t InMemorySortBuffer::GetEstimateMemoryUseForEachRow() const {
+    return estimated_memory_use_for_each_row_;
 }
 
 // TODO(jinli.zjw): Consider making the memory estimation more accurate.

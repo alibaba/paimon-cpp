@@ -17,7 +17,6 @@
 #pragma once
 
 #include <cstdint>
-#include <memory>
 #include <random>
 #include <string>
 
@@ -66,6 +65,11 @@ class PAIMON_EXPORT FileIOChannel {
         std::string name_prefix_;
         uint64_t local_counter_{0};
     };
+};
+
+struct FileChannelInfo {
+    FileIOChannel::ID channel_id;
+    int64_t file_size;
 };
 
 }  // namespace paimon

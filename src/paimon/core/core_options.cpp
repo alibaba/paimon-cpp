@@ -498,6 +498,11 @@ struct CoreOptions::Impl {
         // Parse local-sort.max-num-file-handles - spill file handle cap for local merge
         PAIMON_RETURN_NOT_OK(parser.Parse(Options::LOCAL_SORT_MAX_NUM_FILE_HANDLES,
                                           &local_sort_max_num_file_handles));
+        if (local_sort_max_num_file_handles < kLocalSortFileHandlesMinimalLimit) {
+            return Status::Invalid(fmt::format(
+                "invalid '{}': {}, must be at least {}", Options::LOCAL_SORT_MAX_NUM_FILE_HANDLES,
+                local_sort_max_num_file_handles, kLocalSortFileHandlesMinimalLimit));
+        }
         // Parse spill-compression - compression codec for spill files
         PAIMON_RETURN_NOT_OK(
             parser.Parse(Options::SPILL_COMPRESSION, &spill_compress_options.compress));

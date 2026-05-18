@@ -181,6 +181,8 @@ class PAIMON_EXPORT CoreOptions {
 
     const std::map<std::string, std::string>& ToMap() const;
 
+    static constexpr int32_t kLocalSortFileHandlesMinimalLimit = 2;
+
  private:
     std::optional<std::string> GetDataFileExternalPaths() const;
     std::optional<std::string> GetGlobalIndexExternalPath() const;

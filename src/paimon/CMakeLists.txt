@@ -253,6 +253,7 @@ set(PAIMON_CORE_SRCS
     core/mergetree/merge_tree_writer.cpp
     core/mergetree/in_memory_sort_buffer.cpp
     core/mergetree/external_sort_buffer.cpp
+    core/mergetree/leveled_merger.cpp
     core/mergetree/write_buffer.cpp
     core/mergetree/levels.cpp
     core/mergetree/lookup_file.cpp
@@ -648,6 +649,7 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/merge_tree_writer_test.cpp
                     core/mergetree/write_buffer_test.cpp
                     core/mergetree/sort_buffer_test.cpp
+                    core/mergetree/leveled_merger_test.cpp
                     core/mergetree/sorted_run_test.cpp
                     core/mergetree/spill_channel_manager_test.cpp
                     core/mergetree/spill_reader_writer_test.cpp
