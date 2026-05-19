@@ -639,7 +639,7 @@ TEST_F(AppendOnlyWriterTest, TestWriteWithSingleBlobField) {
     ASSERT_OK(writer.Close());
 }
 
-TEST_F(AppendOnlyWriterTest, TestWriteWithMultipleBlobFieldsShouldFail) {
+TEST_F(AppendOnlyWriterTest, TestWriteWithMultipleBlobFields) {
     auto options =
         CreateOptions({{Options::FILE_FORMAT, "orc"}, {Options::MANIFEST_FORMAT, "orc"}});
     auto dir = UniqueTestDirectory::Create();
@@ -663,9 +663,19 @@ TEST_F(AppendOnlyWriterTest, TestWriteWithMultipleBlobFieldsShouldFail) {
     ASSERT_TRUE(blob_builder2.Append("b", 1).ok());
     auto blob_array2 = blob_builder2.Finish().ValueOrDie();
 
-    ASSERT_NOK_WITH_MSG(
-        writer.Write(CreateStructBatch(schema, {int_array, blob_array1, blob_array2})),
-        "Limit exactly one blob field in one paimon table yet.");
+    ASSERT_OK(writer.Write(CreateStructBatch(schema, {int_array, blob_array1, blob_array2})));
+    ASSERT_OK_AND_ASSIGN(CommitIncrement inc, writer.PrepareCommit(/*wait_compaction=*/true));
+
+    ASSERT_EQ(inc.GetNewFilesIncrement().NewFiles().size(), 3);
+    const auto& main_file = inc.GetNewFilesIncrement().NewFiles()[0];
+    const auto& blob_file1 = inc.GetNewFilesIncrement().NewFiles()[1];
+    const auto& blob_file2 = inc.GetNewFilesIncrement().NewFiles()[2];
+    ASSERT_TRUE(
+        options.GetFileSystem()->Exists(path_factory->ToPath(main_file->file_name)).value());
+    ASSERT_TRUE(
+        options.GetFileSystem()->Exists(path_factory->ToPath(blob_file1->file_name)).value());
+    ASSERT_TRUE(
+        options.GetFileSystem()->Exists(path_factory->ToPath(blob_file2->file_name)).value());
     ASSERT_OK(writer.Close());
 }
 

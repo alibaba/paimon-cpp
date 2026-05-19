@@ -24,6 +24,7 @@
 
 #include "arrow/memory_pool.h"
 #include "arrow/type.h"
+#include "paimon/common/data/blob_defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/predicate/predicate.h"
@@ -85,8 +86,6 @@ namespace paimon::blob {
 /// - Current version is 1.
 class BlobFileBatchReader : public FileBatchReader {
  public:
-    static constexpr uint32_t kBlobFileHeaderLength = 5;
-
     static Result<std::unique_ptr<BlobFileBatchReader>> Create(
         const std::shared_ptr<InputStream>& input_stream, int32_t batch_size,
         bool blob_as_descriptor, const std::shared_ptr<MemoryPool>& pool);
@@ -125,8 +124,6 @@ class BlobFileBatchReader : public FileBatchReader {
     }
 
  private:
-    static constexpr int32_t kBlobContentStartOffset = 4;
-    static constexpr int32_t kBlobTotalMetaLength = 16;
     static constexpr uint64_t kDefaultReadChunkSize = 1024 * 1024;
 
     static int32_t GetIndexLength(const int8_t* bytes, int32_t offset);
@@ -136,22 +133,26 @@ class BlobFileBatchReader : public FileBatchReader {
                         const std::vector<int64_t>& blob_offsets, int32_t batch_size,
                         bool blob_as_descriptor, const std::shared_ptr<MemoryPool>& pool);
 
-    Result<std::shared_ptr<arrow::Array>> ToArrowArray(
-        const std::vector<PAIMON_UNIQUE_PTR<Bytes>>& blobs) const;
-
     Status ReadBlobContentAt(const int64_t offset, const int64_t length, uint8_t* content) const;
 
     Result<std::shared_ptr<arrow::Buffer>> NextBlobOffsets(int32_t rows_to_read) const;
     Result<std::shared_ptr<arrow::Buffer>> NextBlobContents(int32_t rows_to_read) const;
+    /// Builds a null bitmap buffer for the given rows. Returns nullptr if no nulls.
+    Result<std::shared_ptr<arrow::Buffer>> BuildNullBitmap(int32_t rows_to_read) const;
     Result<std::shared_ptr<arrow::Array>> BuildContentArray(int32_t rows_to_read) const;
     Result<std::shared_ptr<arrow::Array>> BuildTargetArray(int32_t rows_to_read) const;
 
+    /// Returns true if the blob at the given index is null (bin_length == kNullBinLength).
+    bool IsTargetNull(size_t index) const {
+        return target_blob_lengths_[index] == BlobDefs::kNullBinLength;
+    }
+
     int64_t GetTargetContentOffset(size_t index) const {
-        return target_blob_offsets_[index] + kBlobContentStartOffset;
+        return target_blob_offsets_[index] + BlobDefs::kContentStartOffset;
     }
 
     int64_t GetTargetContentLength(size_t index) const {
-        return target_blob_lengths_[index] - kBlobTotalMetaLength;
+        return target_blob_lengths_[index] - BlobDefs::kTotalMetaLength;
     }
 
     std::shared_ptr<InputStream> input_stream_;

@@ -33,6 +33,7 @@
 #include "paimon/core/io/data_file_path_factory.h"
 #include "paimon/core/io/data_file_writer.h"
 #include "paimon/core/io/data_increment.h"
+#include "paimon/core/io/multiple_blob_file_writer.h"
 #include "paimon/core/io/rolling_blob_file_writer.h"
 #include "paimon/core/io/rolling_file_writer.h"
 #include "paimon/core/io/single_file_writer.h"
@@ -212,35 +213,43 @@ AppendOnlyWriter::SingleFileWriterCreator AppendOnlyWriter::GetBlobFileWriterCre
 
 AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingBlobWriter(
     const BlobUtils::SeparatedSchemas& schemas) const {
-    if (schemas.blob_schema->num_fields() > RollingBlobFileWriter::EXPECTED_BLOB_FIELD_COUNT) {
-        return Status::Invalid("Limit exactly one blob field in one paimon table yet.");
-    }
-    // use a specialized writer that writes blob data to a separate rolling file.
-    ::ArrowSchema arrow_schema;
-    ScopeGuard guard([&arrow_schema]() { ArrowSchemaRelease(&arrow_schema); });
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schemas.blob_schema, &arrow_schema));
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileFormat> format,
-                           FileFormatFactory::Get("blob", options_.ToMap()));
-    PAIMON_ASSIGN_OR_RAISE(
-        std::shared_ptr<WriterBuilder> writer_builder,
-        format->CreateWriterBuilder(&arrow_schema, options_.GetWriteBatchSize()));
-    writer_builder->WithMemoryPool(memory_pool_);
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schemas.blob_schema, &arrow_schema));
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FormatStatsExtractor> stats_extractor,
-                           format->CreateStatsExtractor(&arrow_schema));
-
-    auto single_blob_file_writer_creator = GetBlobFileWriterCreator(
-        writer_builder, stats_extractor, schemas.blob_schema->field_names());
-    auto rolling_blob_file_writer_creator = [this, single_blob_file_writer_creator]()
+    // Multiple blob fields are supported. Each blob field gets its own rolling file writer
+    // via MultipleBlobFileWriter.
+    auto blob_schema = schemas.blob_schema;
+    auto blob_writer_creator = [this, blob_schema](const std::string& blob_field_name)
         -> Result<
             std::unique_ptr<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>> {
+        // Create a single-field schema for this blob field
+        auto field = blob_schema->GetFieldByName(blob_field_name);
+        if (!field) {
+            return Status::Invalid(
+                fmt::format("Blob field '{}' not found in blob schema", blob_field_name));
+        }
+        auto single_field_schema = arrow::schema({field});
+        ::ArrowSchema arrow_schema;
+        ScopeGuard guard([&arrow_schema]() { ArrowSchemaRelease(&arrow_schema); });
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*single_field_schema, &arrow_schema));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileFormat> format,
+                               FileFormatFactory::Get("blob", options_.ToMap()));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<WriterBuilder> writer_builder,
+            format->CreateWriterBuilder(&arrow_schema, options_.GetWriteBatchSize()));
+        writer_builder->WithMemoryPool(memory_pool_);
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*single_field_schema, &arrow_schema));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FormatStatsExtractor> stats_extractor,
+                               format->CreateStatsExtractor(&arrow_schema));
+
+        std::vector<std::string> write_cols = {blob_field_name};
+        auto single_blob_file_writer_creator =
+            GetBlobFileWriterCreator(writer_builder, stats_extractor, write_cols);
         return std::make_unique<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
             options_.GetBlobTargetFileSize(), single_blob_file_writer_creator);
     };
+
     return std::make_unique<RollingBlobFileWriter>(
         options_.GetTargetFileSize(/*has_primary_key=*/false),
         GetDataFileWriterCreator(schemas.main_schema, schemas.main_schema->field_names()),
-        rolling_blob_file_writer_creator, arrow::struct_(write_schema_->fields()));
+        blob_schema, blob_writer_creator, arrow::struct_(write_schema_->fields()));
 }
 
 Status AppendOnlyWriter::Sync() {

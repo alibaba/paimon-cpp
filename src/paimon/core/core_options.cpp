@@ -374,6 +374,7 @@ struct CoreOptions::Impl {
     ExpireConfig expire_config;
     std::vector<std::string> sequence_field;
     std::vector<std::string> remove_record_on_sequence_group;
+    std::vector<std::string> blob_fields;
 
     std::string partition_default_name = "__DEFAULT_PARTITION__";
     StartupMode startup_mode = StartupMode::Default();
@@ -430,6 +431,7 @@ struct CoreOptions::Impl {
     bool enable_adaptive_prefetch_strategy = true;
     bool index_file_in_data_file_dir = false;
     bool row_tracking_enabled = false;
+    bool row_tracking_partition_group_on_commit = true;
     bool data_evolution_enabled = false;
     bool legacy_partition_name_enabled = true;
     bool global_index_enabled = true;
@@ -525,11 +527,17 @@ struct CoreOptions::Impl {
         // Parse row-tracking.enabled - whether to enable unique row id for append table
         PAIMON_RETURN_NOT_OK(
             parser.Parse<bool>(Options::ROW_TRACKING_ENABLED, &row_tracking_enabled));
+        // Parse row-tracking.partition-group-on-commit - whether to group delta files by partition
+        PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::ROW_TRACKING_PARTITION_GROUP_ON_COMMIT,
+                                                &row_tracking_partition_group_on_commit));
         // Parse data-evolution.enabled - whether to enable data evolution for row tracking
         PAIMON_RETURN_NOT_OK(
             parser.Parse<bool>(Options::DATA_EVOLUTION_ENABLED, &data_evolution_enabled));
         // Parse bucket-function - bucket function type, default "DEFAULT"
         PAIMON_RETURN_NOT_OK(parser.ParseBucketFunctionType(&bucket_function_type));
+        // Parse blob-field - column names to store as blob type, comma separated
+        PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
+            Options::BLOB_FIELD, Options::FIELDS_SEPARATOR, &blob_fields));
         return Status::OK();
     }
 
@@ -1279,6 +1287,10 @@ bool CoreOptions::RowTrackingEnabled() const {
     return impl_->row_tracking_enabled;
 }
 
+bool CoreOptions::RowTrackingPartitionGroupOnCommit() const {
+    return impl_->row_tracking_partition_group_on_commit;
+}
+
 bool CoreOptions::DataEvolutionEnabled() const {
     return impl_->data_evolution_enabled;
 }
@@ -1371,6 +1383,10 @@ double CoreOptions::GetLookupCacheHighPrioPoolRatio() const {
 
 BucketFunctionType CoreOptions::GetBucketFunctionType() const {
     return impl_->bucket_function_type;
+}
+
+const std::vector<std::string>& CoreOptions::GetBlobFields() const {
+    return impl_->blob_fields;
 }
 
 int64_t CoreOptions::GetLookupCacheFileRetentionMs() const {

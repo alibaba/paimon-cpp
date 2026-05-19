@@ -29,7 +29,7 @@ class BlobUtilsTest : public ::testing::Test {
  private:
     std::shared_ptr<arrow::KeyValueMetadata> CreateBlobMetadata() {
         std::unordered_map<std::string, std::string> blob_metadata_map = {
-            {BLOB_EXTENSION_TYPE_KEY, BLOB_EXTENSION_TYPE_VALUE}};
+            {BlobDefs::kExtensionTypeKey, BlobDefs::kExtensionTypeValue}};
         return std::make_shared<arrow::KeyValueMetadata>(blob_metadata_map);
     }
 };
@@ -39,11 +39,11 @@ TEST_F(BlobUtilsTest, IsBlobMetadata) {
     EXPECT_TRUE(BlobUtils::IsBlobMetadata(correct_metadata));
     EXPECT_FALSE(BlobUtils::IsBlobMetadata(nullptr));
     std::unordered_map<std::string, std::string> wrong_metadata_map = {
-        {BLOB_EXTENSION_TYPE_KEY, "paimon.type.varchar"}};
+        {BlobDefs::kExtensionTypeKey, "paimon.type.varchar"}};
     auto wrong_metadata = std::make_shared<arrow::KeyValueMetadata>(wrong_metadata_map);
     EXPECT_FALSE(BlobUtils::IsBlobMetadata(wrong_metadata));
     std::unordered_map<std::string, std::string> no_extension_metadata_map = {
-        {"other_key", BLOB_EXTENSION_TYPE_VALUE}};
+        {"other_key", BlobDefs::kExtensionTypeValue}};
     auto no_extension_metadata =
         std::make_shared<arrow::KeyValueMetadata>(no_extension_metadata_map);
     EXPECT_FALSE(BlobUtils::IsBlobMetadata(no_extension_metadata));
