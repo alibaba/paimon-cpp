@@ -1434,17 +1434,6 @@ TEST_F(MergeTreeWriterTest, TestMultiplePrepareCommitWithSpill) {
 }
 
 TEST_F(MergeTreeWriterTest, TestSpillWithIOException) {
-    // This test exercises IO error injection across all spill-related code paths:
-    //   1. SpillToDisk (spill write)
-    //   2. MergeAndReplaceFiles (intermediate merge triggered by SpillFileMerger)
-    //   3. RunFinalCleanupIfNeeded (final merge in CreateReaders/PrepareCommit)
-    //   4. FlushWriteBuffer (reading merged spill data back + writing output data file)
-    //
-    // WRITE_BUFFER_SIZE=1 causes actual_max_fan_in_ to be clamped to 2, so every
-    // 2 spill files at the same level triggers merge.
-    // Each WriteBatch with 2 rows fills the in-memory buffer (write_buffer_size param
-    // in InMemorySortBuffer is controlled via WRITE_BUFFER_SIZE in CoreOptions for
-    // MergeTreeWriter::Create), triggering a spill.
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"},
                                                {Options::WRITE_BUFFER_SIZE, "1"},
@@ -1456,16 +1445,20 @@ TEST_F(MergeTreeWriterTest, TestSpillWithIOException) {
     for (size_t i = 0; i < 2000; i++) {
         auto dir = UniqueTestDirectory::Create();
         ASSERT_TRUE(dir);
-        ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
-        io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
         auto path_factory = std::make_shared<DataFilePathFactory>();
         ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
 
-        auto merge_writer_result = CreateMergeWriter(
-            /*last_sequence_number=*/-1, dir->Str(), path_factory, /*schema_id=*/0, options);
-        CHECK_HOOK_STATUS(merge_writer_result.status(), i);
-        auto merge_writer = std::move(merge_writer_result).value();
+        std::shared_ptr<IOManager> io_manager =
+            std::make_shared<IOManager>(dir->Str() + "/tmp", file_system_);
+        ASSERT_OK_AND_ASSIGN(
+            auto merge_writer,
+            MergeTreeWriter::Create(/*last_sequence_number=*/-1, primary_keys_, path_factory,
+                                    key_comparator_, /*user_defined_seq_comparator=*/nullptr,
+                                    merge_function_wrapper_, /*schema_id=*/0, value_schema_,
+                                    options, noop_compact_manager_, io_manager, pool_));
 
+        ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
+        io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
         // Write 4 batches, each with 2 rows sharing the same key to exercise deduplication.
         // Batch 1: triggers spill file 1
         std::shared_ptr<arrow::Array> batch1 =
