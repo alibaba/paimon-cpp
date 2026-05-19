@@ -18,8 +18,9 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
-#include "arrow/api.h"
+#include "paimon/common/data/generic_row.h"
 #include "paimon/core/table/system/system_table.h"
 
 namespace paimon {
@@ -36,8 +37,7 @@ class InMemorySystemTable : public SystemTable {
         const std::shared_ptr<ScanContext>& context) const override;
     Result<std::unique_ptr<TableRead>> NewRead(
         const std::shared_ptr<ReadContext>& context) const override;
-    virtual Result<std::shared_ptr<arrow::RecordBatch>> BuildRecordBatch(
-        arrow::MemoryPool* pool) const = 0;
+    virtual Result<std::vector<GenericRow>> BuildRows() const = 0;
 
  protected:
     const std::string& TablePath() const {

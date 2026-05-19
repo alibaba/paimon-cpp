@@ -50,7 +50,7 @@ Result<std::unique_ptr<GenericRowToArrowArrayConverter>> GenericRowToArrowArrayC
         reserve_count, std::move(appenders), std::move(struct_builder), nullptr));
 }
 
-Result<std::shared_ptr<arrow::Array>> GenericRowToArrowArrayConverter::NextBatch(
+Result<BatchReader::ReadBatch> GenericRowToArrowArrayConverter::NextBatch(
     const std::vector<GenericRow>& rows) {
     PAIMON_RETURN_NOT_OK(ResetAndReserve());
     PAIMON_RETURN_NOT_OK_FROM_ARROW(
@@ -61,12 +61,7 @@ Result<std::shared_ptr<arrow::Array>> GenericRowToArrowArrayConverter::NextBatch
         }
     }
 
-    std::shared_ptr<arrow::Array> array;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(array_builder_->Finish(&array));
-
-    int32_t reserve_idx = 0;
-    PAIMON_RETURN_NOT_OK(Accumulate(array.get(), &reserve_idx));
-    return array;
+    return FinishAndAccumulate();
 }
 
 }  // namespace paimon

@@ -21,10 +21,9 @@
 #include <utility>
 #include <vector>
 
-#include "arrow/c/bridge.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
-#include "paimon/common/utils/arrow/status_utils.h"
+#include "paimon/core/io/generic_row_to_arrow_array_converter.h"
 #include "paimon/core/table/system/system_table_scan.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/read_context.h"
@@ -45,16 +44,11 @@ class InMemorySystemTableBatchReader : public BatchReader {
             return BatchReader::MakeEofBatch();
         }
         emitted_ = true;
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::RecordBatch> record_batch,
-                               table_->BuildRecordBatch(arrow_pool_.get()));
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-            std::shared_ptr<arrow::Array> struct_array,
-            arrow::StructArray::Make(record_batch->columns(), record_batch->schema()->fields()));
-        auto c_array = std::make_unique<ArrowArray>();
-        auto c_schema = std::make_unique<ArrowSchema>();
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(
-            arrow::ExportArray(*struct_array, c_array.get(), c_schema.get()));
-        return std::make_pair(std::move(c_array), std::move(c_schema));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, table_->ArrowSchema());
+        PAIMON_ASSIGN_OR_RAISE(std::vector<GenericRow> rows, table_->BuildRows());
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<GenericRowToArrowArrayConverter> converter,
+                               GenericRowToArrowArrayConverter::Create(schema, arrow_pool_.get()));
+        return converter->NextBatch(rows);
     }
 
     std::shared_ptr<Metrics> GetReaderMetrics() const override {

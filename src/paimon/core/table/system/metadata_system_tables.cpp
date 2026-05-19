@@ -27,13 +27,10 @@
 #include <utility>
 #include <vector>
 
-#include "arrow/api.h"
-#include "arrow/util/checked_cast.h"
 #include "paimon/common/data/binary_string.h"
 #include "paimon/common/data/generic_row.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/rapidjson_util.h"
-#include "paimon/core/io/generic_row_to_arrow_array_converter.h"
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/snapshot.h"
@@ -43,7 +40,6 @@
 #include "paimon/core/utils/snapshot_manager.h"
 #include "paimon/core/utils/tag_manager.h"
 #include "paimon/fs/file_system.h"
-#include "paimon/memory/memory_pool.h"
 #include "paimon/status.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
@@ -169,16 +165,6 @@ VariantType OptionalTimestampMillisValue(const std::optional<int64_t>& value) {
     return TimestampMillisValue(value.value());
 }
 
-Result<std::shared_ptr<arrow::RecordBatch>> RowsToRecordBatch(
-    const std::shared_ptr<arrow::Schema>& schema, const std::vector<GenericRow>& rows,
-    arrow::MemoryPool* pool) {
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<GenericRowToArrowArrayConverter> converter,
-                           GenericRowToArrowArrayConverter::Create(schema, pool));
-    PAIMON_ASSIGN_OR_RAISE(auto array, converter->NextBatch(rows));
-    auto struct_array = arrow::internal::checked_pointer_cast<arrow::StructArray>(array);
-    return arrow::RecordBatch::Make(schema, struct_array->length(), struct_array->fields());
-}
-
 MetadataSystemTableContext CreateMetadataContext(std::shared_ptr<FileSystem> fs,
                                                  std::string table_path, std::string branch) {
     return {
@@ -203,8 +189,7 @@ Result<std::shared_ptr<arrow::Schema>> OptionsSystemTable::ArrowSchema() const {
                           arrow::field("value", arrow::utf8(), /*nullable=*/false)});
 }
 
-Result<std::shared_ptr<arrow::RecordBatch>> OptionsSystemTable::BuildRecordBatch(
-    arrow::MemoryPool* pool) const {
+Result<std::vector<GenericRow>> OptionsSystemTable::BuildRows() const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     std::vector<GenericRow> rows;
     rows.reserve(table_schema_->Options().size());
@@ -214,7 +199,7 @@ Result<std::shared_ptr<arrow::RecordBatch>> OptionsSystemTable::BuildRecordBatch
         row.SetField(1, std::string_view(value));
         rows.push_back(std::move(row));
     }
-    return RowsToRecordBatch(schema, rows, pool);
+    return rows;
 }
 
 SnapshotsSystemTable::SnapshotsSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
@@ -246,8 +231,7 @@ Result<std::shared_ptr<arrow::Schema>> SnapshotsSystemTable::ArrowSchema() const
     });
 }
 
-Result<std::shared_ptr<arrow::RecordBatch>> SnapshotsSystemTable::BuildRecordBatch(
-    arrow::MemoryPool* pool) const {
+Result<std::vector<GenericRow>> SnapshotsSystemTable::BuildRows() const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     SnapshotManager snapshot_manager(context_.fs, context_.table_path, context_.branch);
     PAIMON_ASSIGN_OR_RAISE(std::vector<Snapshot> snapshots, snapshot_manager.GetAllSnapshots());
@@ -277,7 +261,7 @@ Result<std::shared_ptr<arrow::RecordBatch>> SnapshotsSystemTable::BuildRecordBat
         rows.push_back(std::move(row));
     }
 
-    return RowsToRecordBatch(schema, rows, pool);
+    return rows;
 }
 
 SchemasSystemTable::SchemasSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
@@ -302,8 +286,7 @@ Result<std::shared_ptr<arrow::Schema>> SchemasSystemTable::ArrowSchema() const {
     });
 }
 
-Result<std::shared_ptr<arrow::RecordBatch>> SchemasSystemTable::BuildRecordBatch(
-    arrow::MemoryPool* pool) const {
+Result<std::vector<GenericRow>> SchemasSystemTable::BuildRows() const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     SchemaManager schema_manager(context_.fs, context_.table_path, context_.branch);
     PAIMON_ASSIGN_OR_RAISE(std::vector<int64_t> schema_ids, schema_manager.ListAllIds());
@@ -334,7 +317,7 @@ Result<std::shared_ptr<arrow::RecordBatch>> SchemasSystemTable::BuildRecordBatch
         rows.push_back(std::move(row));
     }
 
-    return RowsToRecordBatch(schema, rows, pool);
+    return rows;
 }
 
 TagsSystemTable::TagsSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
@@ -360,8 +343,7 @@ Result<std::shared_ptr<arrow::Schema>> TagsSystemTable::ArrowSchema() const {
     });
 }
 
-Result<std::shared_ptr<arrow::RecordBatch>> TagsSystemTable::BuildRecordBatch(
-    arrow::MemoryPool* pool) const {
+Result<std::vector<GenericRow>> TagsSystemTable::BuildRows() const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     TagManager tag_manager(context_.fs, context_.table_path, context_.branch);
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> tag_names, tag_manager.ListTagNames());
@@ -385,7 +367,7 @@ Result<std::shared_ptr<arrow::RecordBatch>> TagsSystemTable::BuildRecordBatch(
         rows.push_back(std::move(row));
     }
 
-    return RowsToRecordBatch(schema, rows, pool);
+    return rows;
 }
 
 BranchesSystemTable::BranchesSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
@@ -405,8 +387,7 @@ Result<std::shared_ptr<arrow::Schema>> BranchesSystemTable::ArrowSchema() const 
     });
 }
 
-Result<std::shared_ptr<arrow::RecordBatch>> BranchesSystemTable::BuildRecordBatch(
-    arrow::MemoryPool* pool) const {
+Result<std::vector<GenericRow>> BranchesSystemTable::BuildRows() const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> branches,
                            BranchManager::ListBranches(context_.fs, context_.table_path));
@@ -427,7 +408,7 @@ Result<std::shared_ptr<arrow::RecordBatch>> BranchesSystemTable::BuildRecordBatc
         rows.push_back(std::move(row));
     }
 
-    return RowsToRecordBatch(schema, rows, pool);
+    return rows;
 }
 
 ConsumersSystemTable::ConsumersSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
@@ -446,8 +427,7 @@ Result<std::shared_ptr<arrow::Schema>> ConsumersSystemTable::ArrowSchema() const
     });
 }
 
-Result<std::shared_ptr<arrow::RecordBatch>> ConsumersSystemTable::BuildRecordBatch(
-    arrow::MemoryPool* pool) const {
+Result<std::vector<GenericRow>> ConsumersSystemTable::BuildRows() const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     ConsumerManager consumer_manager(context_.fs, context_.table_path, context_.branch);
     PAIMON_ASSIGN_OR_RAISE(auto consumers, consumer_manager.Consumers());
@@ -461,7 +441,7 @@ Result<std::shared_ptr<arrow::RecordBatch>> ConsumersSystemTable::BuildRecordBat
         rows.push_back(std::move(row));
     }
 
-    return RowsToRecordBatch(schema, rows, pool);
+    return rows;
 }
 
 }  // namespace paimon

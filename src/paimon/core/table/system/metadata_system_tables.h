@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "paimon/core/table/system/in_memory_system_table.h"
 
@@ -34,8 +35,7 @@ class OptionsSystemTable : public InMemorySystemTable {
 
     std::string Name() const override;
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
-    Result<std::shared_ptr<arrow::RecordBatch>> BuildRecordBatch(
-        arrow::MemoryPool* pool) const override;
+    Result<std::vector<GenericRow>> BuildRows() const override;
 
  private:
     std::shared_ptr<TableSchema> table_schema_;
@@ -58,8 +58,7 @@ class SnapshotsSystemTable : public InMemorySystemTable {
 
     std::string Name() const override;
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
-    Result<std::shared_ptr<arrow::RecordBatch>> BuildRecordBatch(
-        arrow::MemoryPool* pool) const override;
+    Result<std::vector<GenericRow>> BuildRows() const override;
 
  private:
     MetadataSystemTableContext context_;
@@ -74,8 +73,7 @@ class SchemasSystemTable : public InMemorySystemTable {
 
     std::string Name() const override;
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
-    Result<std::shared_ptr<arrow::RecordBatch>> BuildRecordBatch(
-        arrow::MemoryPool* pool) const override;
+    Result<std::vector<GenericRow>> BuildRows() const override;
 
  private:
     MetadataSystemTableContext context_;
@@ -90,8 +88,7 @@ class TagsSystemTable : public InMemorySystemTable {
 
     std::string Name() const override;
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
-    Result<std::shared_ptr<arrow::RecordBatch>> BuildRecordBatch(
-        arrow::MemoryPool* pool) const override;
+    Result<std::vector<GenericRow>> BuildRows() const override;
 
  private:
     MetadataSystemTableContext context_;
@@ -106,8 +103,7 @@ class BranchesSystemTable : public InMemorySystemTable {
 
     std::string Name() const override;
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
-    Result<std::shared_ptr<arrow::RecordBatch>> BuildRecordBatch(
-        arrow::MemoryPool* pool) const override;
+    Result<std::vector<GenericRow>> BuildRows() const override;
 
  private:
     MetadataSystemTableContext context_;
@@ -123,8 +119,7 @@ class ConsumersSystemTable : public InMemorySystemTable {
 
     std::string Name() const override;
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
-    Result<std::shared_ptr<arrow::RecordBatch>> BuildRecordBatch(
-        arrow::MemoryPool* pool) const override;
+    Result<std::vector<GenericRow>> BuildRows() const override;
 
  private:
     MetadataSystemTableContext context_;

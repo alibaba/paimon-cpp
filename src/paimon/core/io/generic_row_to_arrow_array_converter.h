@@ -20,9 +20,9 @@
 #include <utility>
 #include <vector>
 
-#include "arrow/api.h"
 #include "paimon/common/data/generic_row.h"
 #include "paimon/core/io/row_to_arrow_array_converter.h"
+#include "paimon/reader/batch_reader.h"
 #include "paimon/result.h"
 
 namespace arrow {
@@ -34,12 +34,12 @@ namespace paimon {
 
 /// Converts in-memory GenericRow values into a struct Arrow array.
 class GenericRowToArrowArrayConverter
-    : public RowToArrowArrayConverter<GenericRow, std::shared_ptr<arrow::Array>> {
+    : public RowToArrowArrayConverter<GenericRow, BatchReader::ReadBatch> {
  public:
     static Result<std::unique_ptr<GenericRowToArrowArrayConverter>> Create(
         const std::shared_ptr<arrow::Schema>& schema, arrow::MemoryPool* pool);
 
-    Result<std::shared_ptr<arrow::Array>> NextBatch(const std::vector<GenericRow>& rows) override;
+    Result<BatchReader::ReadBatch> NextBatch(const std::vector<GenericRow>& rows) override;
 
  private:
     GenericRowToArrowArrayConverter(int32_t reserve_count, std::vector<AppendValueFunc>&& appenders,
