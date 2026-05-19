@@ -74,11 +74,24 @@ TEST(SchemaValidationTest, TestWithBlobField) {
         auto schema = arrow::schema(fields);
         std::vector<std::string> primary_keys = {};
         std::vector<std::string> partition_keys = {"f1"};
-        std::map<std::string, std::string> options = {
-            {Options::BUCKET, "-1"},
-            {Options::ROW_TRACKING_ENABLED, "true"},
-            {Options::DATA_EVOLUTION_ENABLED, "true"},
-        };
+        std::map<std::string, std::string> options = {{Options::BUCKET, "-1"},
+                                                      {Options::ROW_TRACKING_ENABLED, "true"},
+                                                      {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                      {Options::BLOB_FIELD, "f3"}};
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<TableSchema> table_schema,
+            TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
+        ASSERT_OK(SchemaValidation::ValidateTableSchema(*table_schema));
+    }
+    {
+        arrow::FieldVector fields = {f0, f1, f2, f3, f4};
+        auto schema = arrow::schema(fields);
+        std::vector<std::string> primary_keys = {};
+        std::vector<std::string> partition_keys = {"f1"};
+        std::map<std::string, std::string> options = {{Options::BUCKET, "-1"},
+                                                      {Options::ROW_TRACKING_ENABLED, "true"},
+                                                      {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                      {Options::BLOB_FIELD, "f3,f4"}};
         ASSERT_OK_AND_ASSIGN(
             std::shared_ptr<TableSchema> table_schema,
             TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
@@ -89,11 +102,10 @@ TEST(SchemaValidationTest, TestWithBlobField) {
         auto schema = arrow::schema(fields);
         std::vector<std::string> primary_keys = {};
         std::vector<std::string> partition_keys = {"f1"};
-        std::map<std::string, std::string> options = {
-            {Options::BUCKET, "-1"},
-            {Options::ROW_TRACKING_ENABLED, "true"},
-            {Options::DATA_EVOLUTION_ENABLED, "false"},
-        };
+        std::map<std::string, std::string> options = {{Options::BUCKET, "-1"},
+                                                      {Options::ROW_TRACKING_ENABLED, "true"},
+                                                      {Options::DATA_EVOLUTION_ENABLED, "false"},
+                                                      {Options::BLOB_FIELD, "f3"}};
         ASSERT_OK_AND_ASSIGN(
             std::shared_ptr<TableSchema> table_schema,
             TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
@@ -102,36 +114,81 @@ TEST(SchemaValidationTest, TestWithBlobField) {
             "Data evolution config must be enabled for table with BLOB type column.");
     }
     {
-        arrow::FieldVector fields = {f0, f1, f2, f3, f4};
-        auto schema = arrow::schema(fields);
-        std::vector<std::string> primary_keys = {};
-        std::vector<std::string> partition_keys = {"f1"};
-        std::map<std::string, std::string> options = {
-            {Options::BUCKET, "-1"},
-            {Options::ROW_TRACKING_ENABLED, "true"},
-            {Options::DATA_EVOLUTION_ENABLED, "true"},
-        };
-        ASSERT_OK_AND_ASSIGN(
-            std::shared_ptr<TableSchema> table_schema,
-            TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
-        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
-                            "Table with BLOB type column only supports one BLOB column.");
-    }
-    {
         arrow::FieldVector fields = {f3};
         auto schema = arrow::schema(fields);
         std::vector<std::string> primary_keys = {};
         std::vector<std::string> partition_keys = {};
-        std::map<std::string, std::string> options = {
-            {Options::BUCKET, "-1"},
-            {Options::ROW_TRACKING_ENABLED, "true"},
-            {Options::DATA_EVOLUTION_ENABLED, "true"},
-        };
+        std::map<std::string, std::string> options = {{Options::BUCKET, "-1"},
+                                                      {Options::ROW_TRACKING_ENABLED, "true"},
+                                                      {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                      {Options::BLOB_FIELD, "f3"}};
         ASSERT_OK_AND_ASSIGN(
             std::shared_ptr<TableSchema> table_schema,
             TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
         ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
                             "Table with BLOB type column must have other normal columns.");
+    }
+    {
+        arrow::FieldVector fields = {f0, f1, f2, f3};
+        auto schema = arrow::schema(fields);
+        std::vector<std::string> primary_keys = {};
+        std::vector<std::string> partition_keys = {"f1"};
+        std::map<std::string, std::string> options = {{Options::BUCKET, "-1"},
+                                                      {Options::ROW_TRACKING_ENABLED, "true"},
+                                                      {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                      {Options::BLOB_FIELD, "non-exist"}};
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<TableSchema> table_schema,
+            TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "Get field non-exist failed: not exist in table schema");
+    }
+    {
+        arrow::FieldVector fields = {f0, f1, f2, f3};
+        auto schema = arrow::schema(fields);
+        std::vector<std::string> primary_keys = {};
+        std::vector<std::string> partition_keys = {"f1"};
+        std::map<std::string, std::string> options = {{Options::BUCKET, "-1"},
+                                                      {Options::ROW_TRACKING_ENABLED, "true"},
+                                                      {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                      {Options::BLOB_FIELD, "f3,f0"}};
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<TableSchema> table_schema,
+            TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "Field f0 in f3, f0 must be a BLOB field in table schema.");
+    }
+    {
+        arrow::FieldVector fields = {f0, f1, f2, f3};
+        auto schema = arrow::schema(fields);
+        std::vector<std::string> primary_keys = {};
+        std::vector<std::string> partition_keys = {"f3"};
+        std::map<std::string, std::string> options = {{Options::BUCKET, "-1"},
+                                                      {Options::ROW_TRACKING_ENABLED, "true"},
+                                                      {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                      {Options::BLOB_FIELD, "f3"}};
+        ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<TableSchema> table_schema,
+            TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateBlobFields(*table_schema, core_options),
+                            "Blob field f3 cannot be a partition key.");
+    }
+    {
+        arrow::FieldVector fields = {f0, f1, f2, f3};
+        auto schema = arrow::schema(fields);
+        std::vector<std::string> primary_keys = {"f3"};
+        std::vector<std::string> partition_keys = {};
+        std::map<std::string, std::string> options = {{Options::BUCKET, "-1"},
+                                                      {Options::ROW_TRACKING_ENABLED, "true"},
+                                                      {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                      {Options::BLOB_FIELD, "f3"}};
+        ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<TableSchema> table_schema,
+            TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateBlobFields(*table_schema, core_options),
+                            "Blob field f3 cannot be a primary key.");
     }
 }
 
