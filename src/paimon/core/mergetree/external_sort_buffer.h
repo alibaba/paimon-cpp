@@ -25,8 +25,8 @@
 #include "paimon/core/core_options.h"
 #include "paimon/core/disk/file_io_channel.h"
 #include "paimon/core/mergetree/in_memory_sort_buffer.h"
-#include "paimon/core/mergetree/leveled_merger.h"
 #include "paimon/core/mergetree/sort_buffer.h"
+#include "paimon/core/mergetree/spill_file_merger.h"
 #include "paimon/record_batch.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -64,16 +64,17 @@ class ExternalSortBuffer : public SortBuffer {
     bool HasData() const override;
 
  private:
+    static constexpr int32_t kSpillMinFanIn = 2;
     static constexpr int32_t kSpillMinBatchSize = 256;
 
     void DoClear();
-    void EstimateSpillParameters();
+    void UpdateSpillParameters();
     bool HasSpilledData() const;
     Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> CreateSpillReaders(
         const std::vector<FileChannelInfo>& files) const;
     Result<FileChannelInfo> SpillToDisk(
         std::vector<std::unique_ptr<KeyValueRecordReader>>&& readers, int32_t write_batch_size);
-    LeveledMerger::MergeFn CreateMergeFn();
+    SpillFileMerger::MergeFn CreateSpillFileMergeFn();
     Result<FileChannelInfo> MergeAndReplaceFiles(const std::vector<FileChannelInfo>& files);
     Status SpillMemoryBuffer(std::vector<std::unique_ptr<KeyValueRecordReader>>&& readers);
 
@@ -98,7 +99,7 @@ class ExternalSortBuffer : public SortBuffer {
     const int32_t max_fan_in_;
     const std::shared_ptr<SpillChannelManager> spill_channel_manager_;
 
-    std::unique_ptr<LeveledMerger> leveled_merger_;
+    std::unique_ptr<SpillFileMerger> spill_merger_;
     std::shared_ptr<FileIOChannel::Enumerator> spill_channel_enumerator_;
     int64_t total_spill_disk_bytes_ = 0;
     int32_t actual_max_fan_in_;

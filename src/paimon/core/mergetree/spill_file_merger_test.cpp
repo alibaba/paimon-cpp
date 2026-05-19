@@ -14,31 +14,31 @@
  * limitations under the License.
  */
 
-#include "paimon/core/mergetree/leveled_merger.h"
+#include "paimon/core/mergetree/spill_file_merger.h"
 
 #include "gtest/gtest.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
 
-class LeveledMergerTest : public ::testing::Test {
+class SpillFileMergerTest : public ::testing::Test {
  protected:
     FileChannelInfo MakeFile(int32_t id, int64_t size) {
         return FileChannelInfo{FileIOChannel::ID(std::to_string(id)), size};
     }
 
-    LeveledMerger::MergeFn CreateMockMergeFn() {
+    SpillFileMerger::MergeFn CreateMockMergeFn() {
         return [this](const std::vector<FileChannelInfo>& inputs) -> Result<FileChannelInfo> {
             merge_call_count_++;
             int64_t total_size = 0;
-            for (const auto& f : inputs) {
-                total_size += f.file_size;
+            for (const auto& file : inputs) {
+                total_size += file.file_size;
             }
             return MakeFile(next_file_id_++, total_size);
         };
     }
 
-    LeveledMerger::MergeFn CreateFailingMergeFn() {
+    SpillFileMerger::MergeFn CreateFailingMergeFn() {
         return [this](const std::vector<FileChannelInfo>&) -> Result<FileChannelInfo> {
             merge_call_count_++;
             return Status::IOError("simulated write failure");
@@ -49,26 +49,26 @@ class LeveledMergerTest : public ::testing::Test {
     int32_t next_file_id_ = 1000;
 };
 
-TEST_F(LeveledMergerTest, NoCompactionBelowFanIn) {
-    LeveledMerger merger(4);
+TEST_F(SpillFileMergerTest, NoMergeBelowFanIn) {
+    SpillFileMerger merger(4);
 
     merger.AddFile(MakeFile(1, 100));
     merger.AddFile(MakeFile(2, 200));
     merger.AddFile(MakeFile(3, 300));
 
-    ASSERT_OK(merger.RunCompactionIfNeeded(CreateMockMergeFn()));
+    ASSERT_OK(merger.RunMergeIfNeeded(CreateMockMergeFn()));
     ASSERT_EQ(merge_call_count_, 0);
     ASSERT_EQ(merger.GetAllFiles().size(), 3);
 }
 
-TEST_F(LeveledMergerTest, CompactionTriggeredAtFanIn) {
-    LeveledMerger merger(3);
+TEST_F(SpillFileMergerTest, MergeTriggeredAtFanIn) {
+    SpillFileMerger merger(3);
 
     merger.AddFile(MakeFile(1, 100));
     merger.AddFile(MakeFile(2, 200));
     merger.AddFile(MakeFile(3, 300));
 
-    ASSERT_OK(merger.RunCompactionIfNeeded(CreateMockMergeFn()));
+    ASSERT_OK(merger.RunMergeIfNeeded(CreateMockMergeFn()));
     ASSERT_EQ(merge_call_count_, 1);
 
     auto files = merger.GetAllFiles();
@@ -76,13 +76,13 @@ TEST_F(LeveledMergerTest, CompactionTriggeredAtFanIn) {
     ASSERT_EQ(files[0].file_size, 600);
 }
 
-TEST_F(LeveledMergerTest, MinimalFanInTwo) {
-    LeveledMerger merger(2);
+TEST_F(SpillFileMergerTest, MinimalFanInTwo) {
+    SpillFileMerger merger(2);
 
     merger.AddFile(MakeFile(1, 100));
     merger.AddFile(MakeFile(2, 200));
 
-    ASSERT_OK(merger.RunCompactionIfNeeded(CreateMockMergeFn()));
+    ASSERT_OK(merger.RunMergeIfNeeded(CreateMockMergeFn()));
     ASSERT_EQ(merge_call_count_, 1);
 
     auto files = merger.GetAllFiles();
@@ -90,21 +90,21 @@ TEST_F(LeveledMergerTest, MinimalFanInTwo) {
     ASSERT_EQ(files[0].file_size, 300);
 }
 
-TEST_F(LeveledMergerTest, MultiLevelCompaction) {
-    LeveledMerger merger(2);
+TEST_F(SpillFileMergerTest, MultiLevelMerge) {
+    SpillFileMerger merger(2);
 
-    // Adding 4 files with fan_in=2 should trigger multi-level compaction:
-    // Add file 1,2 -> compact to level 1 (1 file at level 1)
-    // Add file 3,4 -> compact level 0 to level 1 (2 files at level 1) -> compact level 1
+    // Adding 4 files with fan_in=2 should trigger multi-level merge:
+    // Add file 1,2 -> merge to level 1 (1 file at level 1)
+    // Add file 3,4 -> merge level 0 to level 1 (2 files at level 1) -> merge level 1
     merger.AddFile(MakeFile(1, 100));
     merger.AddFile(MakeFile(2, 100));
-    ASSERT_OK(merger.RunCompactionIfNeeded(CreateMockMergeFn()));
+    ASSERT_OK(merger.RunMergeIfNeeded(CreateMockMergeFn()));
     ASSERT_EQ(merge_call_count_, 1);
 
     merger.AddFile(MakeFile(3, 100));
     merger.AddFile(MakeFile(4, 100));
-    ASSERT_OK(merger.RunCompactionIfNeeded(CreateMockMergeFn()));
-    // level 0 compaction + level 1 compaction
+    ASSERT_OK(merger.RunMergeIfNeeded(CreateMockMergeFn()));
+    // level 0 merge + level 1 merge
     ASSERT_EQ(merge_call_count_, 3);
 
     auto files = merger.GetAllFiles();
@@ -112,12 +112,12 @@ TEST_F(LeveledMergerTest, MultiLevelCompaction) {
     ASSERT_EQ(files[0].file_size, 400);
 }
 
-TEST_F(LeveledMergerTest, ManyFilesWithFanInTwo) {
-    LeveledMerger merger(2);
+TEST_F(SpillFileMergerTest, ManyFilesWithFanInTwo) {
+    SpillFileMerger merger(2);
 
     for (int32_t i = 0; i < 8; ++i) {
         merger.AddFile(MakeFile(i, 100));
-        ASSERT_OK(merger.RunCompactionIfNeeded(CreateMockMergeFn()));
+        ASSERT_OK(merger.RunMergeIfNeeded(CreateMockMergeFn()));
     }
 
     auto files = merger.GetAllFiles();
@@ -125,27 +125,27 @@ TEST_F(LeveledMergerTest, ManyFilesWithFanInTwo) {
     ASSERT_EQ(files[0].file_size, 800);
 }
 
-TEST_F(LeveledMergerTest, FinalCleanupReducesFileCount) {
-    LeveledMerger merger(4);
+TEST_F(SpillFileMergerTest, FinalCleanupReducesFileCount) {
+    SpillFileMerger merger(4);
 
-    // Add 5 files (just above fan_in). Level 0 gets compacted once, leaving:
+    // Add 5 files (just above fan_in). Level 0 gets merged once, leaving:
     // level 0: 1 file, level 1: 1 file
     for (int32_t i = 0; i < 5; ++i) {
         merger.AddFile(MakeFile(i, 100));
-        ASSERT_OK(merger.RunCompactionIfNeeded(CreateMockMergeFn()));
+        ASSERT_OK(merger.RunMergeIfNeeded(CreateMockMergeFn()));
     }
 
     auto files_before = merger.GetAllFiles();
     ASSERT_EQ(files_before.size(), 2);
 
-    ASSERT_OK(merger.RunFinalCleanupIfNeeded(1, CreateMockMergeFn()));
+    ASSERT_OK(merger.RunFinalMergeIfNeeded(1, CreateMockMergeFn()));
 
     auto files_after = merger.GetAllFiles();
     ASSERT_EQ(files_after.size(), 1);
 }
 
-TEST_F(LeveledMergerTest, FinalCleanupMergesSmallestFirst) {
-    LeveledMerger merger(10);
+TEST_F(SpillFileMergerTest, FinalCleanupMergesSmallestFirst) {
+    SpillFileMerger merger(10);
 
     merger.AddFile(MakeFile(1, 1000));
     merger.AddFile(MakeFile(2, 10));
@@ -153,52 +153,53 @@ TEST_F(LeveledMergerTest, FinalCleanupMergesSmallestFirst) {
     merger.AddFile(MakeFile(4, 500));
 
     // target=2, need to eliminate 2 files, so merge 3 smallest into 1
-    ASSERT_OK(merger.RunFinalCleanupIfNeeded(2, CreateMockMergeFn()));
+    ASSERT_OK(merger.RunFinalMergeIfNeeded(2, CreateMockMergeFn()));
     ASSERT_EQ(merge_call_count_, 1);
 
     auto files = merger.GetAllFiles();
     ASSERT_EQ(files.size(), 2);
 
-    // The merged file should be 10+20+500=530 (3 smallest merged)
-    int64_t total = 0;
-    for (const auto& f : files) {
-        total += f.file_size;
+    // The 3 smallest (10, 20, 500) should be merged into one 530-sized file,
+    // leaving the largest (1000) untouched.
+    std::vector<int64_t> sizes;
+    for (const auto& file : files) {
+        sizes.push_back(file.file_size);
     }
-    ASSERT_EQ(total, 1530);
+    std::sort(sizes.begin(), sizes.end());
+    ASSERT_EQ(sizes[0], 530);
+    ASSERT_EQ(sizes[1], 1000);
 }
 
-TEST_F(LeveledMergerTest, FinalCleanupNoOpWhenAlreadyBelowTarget) {
-    LeveledMerger merger(4);
+TEST_F(SpillFileMergerTest, FinalCleanupNoOpWhenAlreadyBelowTarget) {
+    SpillFileMerger merger(4);
 
     merger.AddFile(MakeFile(1, 100));
     merger.AddFile(MakeFile(2, 200));
 
-    ASSERT_OK(merger.RunFinalCleanupIfNeeded(3, CreateMockMergeFn()));
+    ASSERT_OK(merger.RunFinalMergeIfNeeded(3, CreateMockMergeFn()));
     ASSERT_EQ(merge_call_count_, 0);
     ASSERT_EQ(merger.GetAllFiles().size(), 2);
 }
 
-TEST_F(LeveledMergerTest, FinalCleanupConvergesToTarget) {
-    LeveledMerger merger(3);
-
-    // Add many files without running compaction (fan_in large enough)
-    LeveledMerger merger2(100);
+TEST_F(SpillFileMergerTest, FinalCleanupConvergesToTarget) {
+    // Add many files without running merge (fan_in large enough)
+    SpillFileMerger merger(100);
     for (int32_t i = 0; i < 20; ++i) {
-        merger2.AddFile(MakeFile(i, (i + 1) * 10));
+        merger.AddFile(MakeFile(i, (i + 1) * 10));
     }
-    ASSERT_EQ(merger2.GetAllFiles().size(), 20);
+    ASSERT_EQ(merger.GetAllFiles().size(), 20);
 
-    ASSERT_OK(merger2.RunFinalCleanupIfNeeded(3, CreateMockMergeFn()));
-    ASSERT_LE(static_cast<int32_t>(merger2.GetAllFiles().size()), 3);
+    ASSERT_OK(merger.RunFinalMergeIfNeeded(3, CreateMockMergeFn()));
+    ASSERT_LE(static_cast<int32_t>(merger.GetAllFiles().size()), 3);
 }
 
-TEST_F(LeveledMergerTest, MergeFnFailurePreservesState) {
-    LeveledMerger merger(2);
+TEST_F(SpillFileMergerTest, MergeFnFailurePreservesState) {
+    SpillFileMerger merger(2);
 
     merger.AddFile(MakeFile(1, 100));
     merger.AddFile(MakeFile(2, 200));
 
-    auto status = merger.RunCompactionIfNeeded(CreateFailingMergeFn());
+    auto status = merger.RunMergeIfNeeded(CreateFailingMergeFn());
     ASSERT_FALSE(status.ok());
     ASSERT_EQ(merge_call_count_, 1);
 
@@ -207,8 +208,8 @@ TEST_F(LeveledMergerTest, MergeFnFailurePreservesState) {
     ASSERT_EQ(files.size(), 2);
 }
 
-TEST_F(LeveledMergerTest, ClearRemovesAllFiles) {
-    LeveledMerger merger(4);
+TEST_F(SpillFileMergerTest, ClearRemovesAllFiles) {
+    SpillFileMerger merger(4);
 
     merger.AddFile(MakeFile(1, 100));
     merger.AddFile(MakeFile(2, 200));
@@ -218,35 +219,35 @@ TEST_F(LeveledMergerTest, ClearRemovesAllFiles) {
     ASSERT_EQ(merger.GetAllFiles().size(), 0);
 }
 
-TEST_F(LeveledMergerTest, SetMaxFanInAffectsCompaction) {
-    LeveledMerger merger(4);
+TEST_F(SpillFileMergerTest, SetMaxFanInAffectsMerge) {
+    SpillFileMerger merger(4);
 
     merger.AddFile(MakeFile(1, 100));
     merger.AddFile(MakeFile(2, 200));
     merger.AddFile(MakeFile(3, 300));
 
-    // No compaction at fan_in=4
-    ASSERT_OK(merger.RunCompactionIfNeeded(CreateMockMergeFn()));
+    // No merge at fan_in=4
+    ASSERT_OK(merger.RunMergeIfNeeded(CreateMockMergeFn()));
     ASSERT_EQ(merge_call_count_, 0);
 
-    // Lower fan_in to 3, now compaction should trigger
+    // Lower fan_in to 3, now merge should trigger
     merger.SetMaxFanIn(3);
-    ASSERT_OK(merger.RunCompactionIfNeeded(CreateMockMergeFn()));
+    ASSERT_OK(merger.RunMergeIfNeeded(CreateMockMergeFn()));
     ASSERT_EQ(merge_call_count_, 1);
     ASSERT_EQ(merger.GetAllFiles().size(), 1);
 }
 
-TEST_F(LeveledMergerTest, CompactionOnlyTakesFanInFilesFromLevel) {
-    LeveledMerger merger(3);
+TEST_F(SpillFileMergerTest, MergeOnlyTakesFanInFilesFromLevel) {
+    SpillFileMerger merger(3);
 
     // Add 5 files to level 0 (exceeds fan_in=3)
     for (int32_t i = 0; i < 5; ++i) {
         merger.AddFile(MakeFile(i, 100));
     }
 
-    ASSERT_OK(merger.RunCompactionIfNeeded(CreateMockMergeFn()));
+    ASSERT_OK(merger.RunMergeIfNeeded(CreateMockMergeFn()));
 
-    // First compaction takes 3 from level 0 -> 1 at level 1
+    // First merge takes 3 from level 0 -> 1 at level 1
     // Remaining: 2 at level 0, 1 at level 1 = 3 total
     auto files = merger.GetAllFiles();
     ASSERT_EQ(files.size(), 3);

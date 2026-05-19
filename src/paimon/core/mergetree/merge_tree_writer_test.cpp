@@ -1076,7 +1076,7 @@ TEST_P(MergeTreeWriterTest, TestCloseSkipsDeleteForUpgradedFilesInCompactAfter) 
         << "Intermediate file should be deleted because it's not in compact_before_";
 }
 
-TEST_P(MergeTreeWriterTest, TestSpillWithSameKeyDeduplicate) {
+TEST_F(MergeTreeWriterTest, TestSpillWithSameKeyDeduplicate) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"},
                                                {Options::WRITE_BUFFER_SIZE, "1"},
@@ -1111,9 +1111,8 @@ TEST_P(MergeTreeWriterTest, TestSpillWithSameKeyDeduplicate) {
 
     WriteBatch(batch1, /*row_kinds=*/{}, merge_writer.get());
     WriteBatch(batch2, /*row_kinds=*/{}, merge_writer.get());
-    // Leveled compaction may merge 2 files into 1 when actual_max_fan_in_ is low.
-    ASSERT_GE(2u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
-    ASSERT_GE(TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"), 1u);
+    // actual_max_fan_in_=2 with 1-byte budget, so 2 spill files compact to 1.
+    ASSERT_EQ(1u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 
     std::shared_ptr<arrow::Array> batch3 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1142,7 +1141,7 @@ TEST_P(MergeTreeWriterTest, TestSpillWithSameKeyDeduplicate) {
     CheckFileContent(expected_data_file_path, expected_array);
 }
 
-TEST_P(MergeTreeWriterTest, TestIntermediateMergeSpillFileBound) {
+TEST_F(MergeTreeWriterTest, TestIntermediateMergeSpillFileBound) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"},
                                                {Options::WRITE_BUFFER_SIZE, "1"},
@@ -1186,9 +1185,8 @@ TEST_P(MergeTreeWriterTest, TestIntermediateMergeSpillFileBound) {
     ASSERT_EQ(1u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 
     WriteBatch(batch3, /*row_kinds=*/{}, merge_writer.get());
-    // Leveled compaction keeps files across levels, so file count may be > 1.
-    ASSERT_LE(TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"), 2u);
-    ASSERT_GE(TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"), 1u);
+    // After 3rd spill: 1 file at level 0 (new) + 1 file at level 1 (from prior compact) = 2.
+    ASSERT_EQ(2u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 
     ASSERT_OK_AND_ASSIGN(CommitIncrement commit_increment,
                          merge_writer->PrepareCommit(/*wait_compaction=*/false));
@@ -1207,7 +1205,7 @@ TEST_P(MergeTreeWriterTest, TestIntermediateMergeSpillFileBound) {
     CheckFileContent(expected_data_file_path, expected_array);
 }
 
-TEST_P(MergeTreeWriterTest, TestDiskQuotaExhaustedFallsBackToFlushWriteBuffer) {
+TEST_F(MergeTreeWriterTest, TestDiskQuotaExhaustedFallsBackToFlushWriteBuffer) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"},
                                                {Options::WRITE_BUFFER_SIZE, "1"},
@@ -1281,7 +1279,7 @@ TEST_P(MergeTreeWriterTest, TestDiskQuotaExhaustedFallsBackToFlushWriteBuffer) {
     }
 }
 
-TEST_P(MergeTreeWriterTest, TestFlushMemoryQuotaExhaustedFallsBackToFlushWriteBuffer) {
+TEST_F(MergeTreeWriterTest, TestFlushMemoryQuotaExhaustedFallsBackToFlushWriteBuffer) {
     // WRITE_BUFFER_SIZE is large enough so WriteBatch does NOT auto-spill.
     // SPILL_MAX_DISK_SIZE is tiny so the first FlushMemory() exhausts the quota,
     // triggering the fallback path: FlushMemory() -> quota exhausted -> FlushWriteBuffer.
@@ -1328,7 +1326,7 @@ TEST_P(MergeTreeWriterTest, TestFlushMemoryQuotaExhaustedFallsBackToFlushWriteBu
     ASSERT_OK(merge_writer->Close());
 }
 
-TEST_P(MergeTreeWriterTest, TestCloseDeletesSpillTempFiles) {
+TEST_F(MergeTreeWriterTest, TestCloseDeletesSpillTempFiles) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"},
                                                {Options::WRITE_BUFFER_SIZE, "1"},
@@ -1360,7 +1358,7 @@ TEST_P(MergeTreeWriterTest, TestCloseDeletesSpillTempFiles) {
     ASSERT_EQ(0u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 }
 
-TEST_P(MergeTreeWriterTest, TestMultiplePrepareCommitWithSpill) {
+TEST_F(MergeTreeWriterTest, TestMultiplePrepareCommitWithSpill) {
     ASSERT_OK_AND_ASSIGN(
         CoreOptions options,
         CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}, {Options::WRITE_ONLY, "true"}}));

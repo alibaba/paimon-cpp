@@ -26,22 +26,21 @@
 
 namespace paimon {
 
-/// Manages spill files in a leveled structure (similar to LSM tree) to minimize
-/// read/write amplification during external sort merge operations.
+/// Manages spill files in a leveled structure (similar to LSM tree) to minimize read/write
+/// amplification during external sort merge operations.
 ///
-/// Files are organized into levels. Level 0 contains the original spill files.
-/// When a level accumulates max_fan_in files, they are compacted into a single
-/// file at the next level. Before the final merge, a greedy cleanup merges the
-/// smallest files to reduce total file count to <= max_fan_in.
+/// Files are organized into levels. Level 0 contains the original spill files. When a level
+/// accumulates max_fan_in files, they are merged into a single file at the next level. Before the
+/// final read, a greedy merge reduces the total file count to <= max_fan_in.
 ///
 /// Read/write amplification: O(log_K(N)) vs O(N/K) for naive sequential merge.
-class LeveledMerger {
+class SpillFileMerger {
  public:
     using MergeFn = std::function<Result<FileChannelInfo>(const std::vector<FileChannelInfo>&)>;
 
-    explicit LeveledMerger(int32_t max_fan_in);
+    explicit SpillFileMerger(int32_t max_fan_in);
 
-    /// Update the maximum fan-in (merge width) for compaction.
+    /// Update the maximum fan-in (merge width).
     void SetMaxFanIn(int32_t max_fan_in);
 
     /// Remove all files from all levels.
@@ -50,29 +49,27 @@ class LeveledMerger {
     /// Add a new spill file to level 0.
     void AddFile(const FileChannelInfo& file_info);
 
-    /// Compact any single level that has accumulated >= max_fan_in files,
-    /// merging max_fan_in files into one at the next level. Repeats until
-    /// every level has fewer than max_fan_in files.
-    Status RunCompactionIfNeeded(const MergeFn& merge_fn);
+    /// Merge any single level that has accumulated >= max_fan_in files into one file at the next
+    /// level. Repeats until every level has fewer than max_fan_in files.
+    Status RunMergeIfNeeded(const MergeFn& merge_fn);
 
-    /// Reduce the total file count across all levels to <= target_file_count
-    /// by greedily merging the smallest files first. Each round merges at most
-    /// max_fan_in files.
-    Status RunFinalCleanupIfNeeded(int32_t target_file_count, const MergeFn& merge_fn);
+    /// Reduce the total file count across all levels to <= target_file_count by greedily merging
+    /// the smallest files first. Each round merges at most max_fan_in files.
+    Status RunFinalMergeIfNeeded(int32_t target_file_count, const MergeFn& merge_fn);
 
     /// Collect all files across all levels into a flat vector.
     std::vector<FileChannelInfo> GetAllFiles() const;
 
  private:
-    struct CompactionTask {
+    struct MergeTask {
         int32_t target_level;
         std::vector<FileChannelInfo> input_files;
     };
 
-    bool HasPendingCompaction() const;
-    void ApplyCompactionResult(const CompactionTask& task, const FileChannelInfo& output);
-    CompactionTask PickCompaction() const;
-    CompactionTask PickCleanupBatch(int32_t target_file_count) const;
+    bool NeedMerge() const;
+    void ApplyMergeResult(const MergeTask& task, const FileChannelInfo& output);
+    MergeTask PickMergeTask() const;
+    MergeTask PickFinalMergeBatch(int32_t target_file_count) const;
     int32_t GetTotalFileCount() const;
     void EnsureLevel(int32_t level);
     void RemoveFile(const FileIOChannel::ID& channel_id);

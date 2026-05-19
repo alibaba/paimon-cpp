@@ -48,6 +48,11 @@ Result<std::unique_ptr<ExternalSortBuffer>> ExternalSortBuffer::Create(
     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
     const CoreOptions& options, const std::shared_ptr<IOManager>& io_manager,
     const std::shared_ptr<MemoryPool>& pool) {
+    if (options.GetLocalSortMaxNumFileHandles() < kSpillMinFanIn) {
+        return Status::Invalid(fmt::format(
+            "invalid '{}': {}, must be at least {}", Options::LOCAL_SORT_MAX_NUM_FILE_HANDLES,
+            options.GetLocalSortMaxNumFileHandles(), kSpillMinFanIn));
+    }
     arrow::FieldVector key_fields;
     key_fields.reserve(trimmed_primary_keys.size());
     for (const auto& primary_key : trimmed_primary_keys) {
@@ -84,7 +89,7 @@ ExternalSortBuffer::ExternalSortBuffer(
       max_fan_in_(options.GetLocalSortMaxNumFileHandles()),
       spill_channel_manager_(
           std::make_shared<SpillChannelManager>(options_.GetFileSystem(), max_fan_in_)),
-      leveled_merger_(std::make_unique<LeveledMerger>(max_fan_in_)),
+      spill_merger_(std::make_unique<SpillFileMerger>(max_fan_in_)),
       spill_channel_enumerator_(spill_channel_enumerator),
       actual_max_fan_in_(max_fan_in_),
       spill_batch_size_(options_.GetWriteBatchSize()) {}
@@ -102,7 +107,7 @@ void ExternalSortBuffer::DoClear() {
 
     spill_channel_manager_->Reset();
     total_spill_disk_bytes_ = 0;
-    leveled_merger_->Clear();
+    spill_merger_->Clear();
 }
 
 void ExternalSortBuffer::Clear() {
@@ -113,7 +118,7 @@ uint64_t ExternalSortBuffer::GetMemorySize() const {
     return in_memory_buffer_->GetMemorySize();
 }
 
-void ExternalSortBuffer::EstimateSpillParameters() {
+void ExternalSortBuffer::UpdateSpillParameters() {
     int64_t estimated_row_size = in_memory_buffer_->GetEstimateMemoryUseForEachRow();
     if (estimated_row_size <= 0) {
         return;
@@ -128,14 +133,13 @@ void ExternalSortBuffer::EstimateSpillParameters() {
     spill_batch_size_ = std::clamp(spill_batch_size_, min_batch_size, max_batch_size);
 
     actual_max_fan_in_ = merge_budget / (spill_batch_size_ * estimated_row_size);
-    actual_max_fan_in_ =
-        std::clamp(actual_max_fan_in_, CoreOptions::kLocalSortFileHandlesMinimalLimit, max_fan_in_);
+    actual_max_fan_in_ = std::clamp(actual_max_fan_in_, kSpillMinFanIn, max_fan_in_);
 
     // Re-derive spill_batch_size_ from the clamped actual_max_fan_in_ to stay within merge_budget.
     spill_batch_size_ = merge_budget / (actual_max_fan_in_ * estimated_row_size);
     spill_batch_size_ = std::clamp(spill_batch_size_, 1, max_batch_size);
 
-    leveled_merger_->SetMaxFanIn(actual_max_fan_in_);
+    spill_merger_->SetMaxFanIn(actual_max_fan_in_);
 }
 
 Result<bool> ExternalSortBuffer::FlushMemory() {
@@ -143,7 +147,7 @@ Result<bool> ExternalSortBuffer::FlushMemory() {
         return true;
     }
 
-    EstimateSpillParameters();
+    UpdateSpillParameters();
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::unique_ptr<KeyValueRecordReader>> memory_buffer_readers,
                            in_memory_buffer_->CreateReaders());
     PAIMON_RETURN_NOT_OK(SpillMemoryBuffer(std::move(memory_buffer_readers)));
@@ -168,9 +172,9 @@ Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> ExternalSortBuffer::C
 
     int32_t max_spill_files = actual_max_fan_in_ - 1;
     PAIMON_RETURN_NOT_OK(
-        leveled_merger_->RunFinalCleanupIfNeeded(max_spill_files, CreateMergeFn()));
+        spill_merger_->RunFinalMergeIfNeeded(max_spill_files, CreateSpillFileMergeFn()));
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::unique_ptr<KeyValueRecordReader>> readers,
-                           CreateSpillReaders(leveled_merger_->GetAllFiles()));
+                           CreateSpillReaders(spill_merger_->GetAllFiles()));
     readers.insert(readers.end(), std::make_move_iterator(memory_readers.begin()),
                    std::make_move_iterator(memory_readers.end()));
     return readers;
@@ -242,11 +246,11 @@ Status ExternalSortBuffer::SpillMemoryBuffer(
     PAIMON_ASSIGN_OR_RAISE(FileChannelInfo file_info,
                            SpillToDisk(std::move(readers), spill_batch_size_));
     total_spill_disk_bytes_ += file_info.file_size;
-    leveled_merger_->AddFile(file_info);
-    return leveled_merger_->RunCompactionIfNeeded(CreateMergeFn());
+    spill_merger_->AddFile(file_info);
+    return spill_merger_->RunMergeIfNeeded(CreateSpillFileMergeFn());
 }
 
-LeveledMerger::MergeFn ExternalSortBuffer::CreateMergeFn() {
+SpillFileMerger::MergeFn ExternalSortBuffer::CreateSpillFileMergeFn() {
     return [this](const std::vector<FileChannelInfo>& files) -> Result<FileChannelInfo> {
         return MergeAndReplaceFiles(files);
     };
