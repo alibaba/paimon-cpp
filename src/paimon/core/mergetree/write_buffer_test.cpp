@@ -147,12 +147,12 @@ TEST_F(WriteBufferTest, TestFlushResetsStateAndAdvancesSequenceNumber) {
     ])")
             .ValueOrDie();
 
-    ASSERT_OK_AND_ASSIGN(bool buffered1,
+    ASSERT_OK_AND_ASSIGN(bool has_remaining_quota,
                          write_buffer->Write(CreateBatch(array1, /*row_kinds=*/{})));
-    ASSERT_TRUE(buffered1);
-    ASSERT_OK_AND_ASSIGN(bool buffered2,
+    ASSERT_TRUE(has_remaining_quota);
+    ASSERT_OK_AND_ASSIGN(has_remaining_quota,
                          write_buffer->Write(CreateBatch(array2, /*row_kinds=*/{})));
-    ASSERT_TRUE(buffered2);
+    ASSERT_TRUE(has_remaining_quota);
     ASSERT_FALSE(write_buffer->IsEmpty());
     ASSERT_GT(write_buffer->GetMemoryUsage(), 0);
 
@@ -194,8 +194,9 @@ TEST_F(WriteBufferTest, TestFlushPreservesRowKinds) {
         RecordBatch::RowKind::DELETE,
     };
 
-    ASSERT_OK_AND_ASSIGN(bool buffered, write_buffer->Write(CreateBatch(array, row_kinds)));
-    ASSERT_TRUE(buffered);
+    ASSERT_OK_AND_ASSIGN(bool has_remaining_quota,
+                         write_buffer->Write(CreateBatch(array, row_kinds)));
+    ASSERT_TRUE(has_remaining_quota);
 
     ASSERT_OK_AND_ASSIGN(auto readers, write_buffer->CreateReaders());
     ASSERT_EQ(readers.size(), 1);
@@ -221,8 +222,9 @@ TEST_F(WriteBufferTest, TestWriteRequestsFlushWriteBufferWhenSpillDisabled) {
     ])")
             .ValueOrDie();
 
-    ASSERT_OK_AND_ASSIGN(bool buffered, write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
-    ASSERT_FALSE(buffered);
+    ASSERT_OK_AND_ASSIGN(bool has_remaining_memory,
+                         write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
+    ASSERT_FALSE(has_remaining_memory);
     ASSERT_FALSE(write_buffer->IsEmpty());
     ASSERT_GT(write_buffer->GetMemoryUsage(), 0);
 }
@@ -238,9 +240,7 @@ TEST_F(WriteBufferTest, TestSpillDiskQuotaEnforcement) {
                          CoreOptions::FromMap({{Options::WRITE_BUFFER_SIZE, "1"},
                                                {Options::WRITE_BUFFER_SPILLABLE, "true"}}));
     auto ref_write_buffer = CreateWriteBuffer(/*last_sequence_number=*/-1, ref_options);
-    ASSERT_OK_AND_ASSIGN(bool ref_ok,
-                         ref_write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
-    ASSERT_TRUE(ref_ok);
+    ASSERT_OK(ref_write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
     ASSERT_OK_AND_ASSIGN(int64_t spill_file_size, GetOnlySpillFileSize());
     ref_write_buffer->Clear();
 
@@ -252,11 +252,11 @@ TEST_F(WriteBufferTest, TestSpillDiskQuotaEnforcement) {
                                                     std::to_string(spill_file_size)}}));
         auto write_buffer = CreateWriteBuffer(/*last_sequence_number=*/-1, options);
 
-        ASSERT_OK_AND_ASSIGN(bool has_quota,
+        ASSERT_OK_AND_ASSIGN(bool has_remaining_quota,
                              write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
-        ASSERT_TRUE(has_quota);
-        ASSERT_OK_AND_ASSIGN(has_quota, write_buffer->FlushMemory());
-        ASSERT_FALSE(has_quota);
+        ASSERT_TRUE(has_remaining_quota);
+        ASSERT_OK_AND_ASSIGN(bool has_remaining_disk, write_buffer->FlushMemory());
+        ASSERT_FALSE(has_remaining_disk);
         // write_buffer is not empty because spilled data on disk still belongs to the buffer.
         ASSERT_FALSE(write_buffer->IsEmpty());
         ASSERT_EQ(write_buffer->GetMemoryUsage(), 0);
@@ -271,23 +271,22 @@ TEST_F(WriteBufferTest, TestSpillDiskQuotaEnforcement) {
                                                     std::to_string(spill_file_size)}}));
         auto write_buffer = CreateWriteBuffer(/*last_sequence_number=*/-1, options);
 
-        ASSERT_OK_AND_ASSIGN(bool has_quota,
+        ASSERT_OK_AND_ASSIGN(bool has_remaining_quota,
                              write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
-        ASSERT_FALSE(has_quota);
+        ASSERT_FALSE(has_remaining_quota);
         // write_buffer is not empty because spilled data on disk still belongs to the buffer.
         ASSERT_FALSE(write_buffer->IsEmpty());
         ASSERT_EQ(write_buffer->GetMemoryUsage(), 0);
     }
 
-    // Case 3: Multiple spills exhaust disk quota.
-    // Use WRITE_BUFFER_SIZE=1 to trigger auto-spill on each Write.
-    // Set quota = spill_file_size so the first Write exhausts it immediately.
+    // Case 3: Multiple spills exhaust disk quota (quota = 2 spill files).
     {
+        int64_t quota_for_two_files = spill_file_size * 2;
         ASSERT_OK_AND_ASSIGN(CoreOptions options,
                              CoreOptions::FromMap({{Options::WRITE_BUFFER_SIZE, "1"},
                                                    {Options::WRITE_BUFFER_SPILLABLE, "true"},
                                                    {Options::WRITE_BUFFER_SPILL_MAX_DISK_SIZE,
-                                                    std::to_string(spill_file_size)}}));
+                                                    std::to_string(quota_for_two_files)}}));
         auto write_buffer = CreateWriteBuffer(/*last_sequence_number=*/-1, options);
 
         std::shared_ptr<arrow::Array> array2 =
@@ -296,15 +295,23 @@ TEST_F(WriteBufferTest, TestSpillDiskQuotaEnforcement) {
         ])")
                 .ValueOrDie();
 
-        // Write 1: spill file size == quota → not strictly less → false.
-        ASSERT_OK_AND_ASSIGN(bool result1,
+        // Write 1: under disk quota → true.
+        ASSERT_OK_AND_ASSIGN(bool has_remaining_quota,
                              write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
-        ASSERT_FALSE(result1);
+        ASSERT_TRUE(has_remaining_quota);
 
-        // Write 2: over quota → false.
-        ASSERT_OK_AND_ASSIGN(bool result2,
+        // Write 2: WRITE_BUFFER_SIZE=1 causes UpdateSpillParameters() to clamp actual_max_fan_in_
+        // to 2, triggering intermediate merge which reduces total_spill_disk_bytes_ below disk
+        // quota. So quota is NOT exhausted here.
+        ASSERT_OK_AND_ASSIGN(has_remaining_quota,
                              write_buffer->Write(CreateBatch(array2, /*row_kinds=*/{})));
-        ASSERT_FALSE(result2);
+        ASSERT_TRUE(has_remaining_quota);
+
+        // Write 3: spill adds a new file to level 0, but no merge is triggered (each level has
+        // fewer than fan_in files), so total disk usage exceeds quota → returns false.
+        ASSERT_OK_AND_ASSIGN(has_remaining_quota,
+                             write_buffer->Write(CreateBatch(array2, /*row_kinds=*/{})));
+        ASSERT_FALSE(has_remaining_quota);
 
         ASSERT_FALSE(write_buffer->IsEmpty());
         ASSERT_OK_AND_ASSIGN(auto readers, write_buffer->CreateReaders());
@@ -315,7 +322,7 @@ TEST_F(WriteBufferTest, TestSpillDiskQuotaEnforcement) {
                                         result.sequence_numbers.end());
         }
         std::sort(all_sequence_numbers.begin(), all_sequence_numbers.end());
-        ASSERT_EQ(all_sequence_numbers, (std::vector<int64_t>{0, 1}));
+        ASSERT_EQ(all_sequence_numbers, (std::vector<int64_t>{0, 2}));
     }
 }
 
@@ -331,8 +338,9 @@ TEST_F(WriteBufferTest, TestCreateReadersMergesSingleInMemoryReaderLocally) {
     ])")
             .ValueOrDie();
 
-    ASSERT_OK_AND_ASSIGN(bool buffered, write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
-    ASSERT_TRUE(buffered);
+    ASSERT_OK_AND_ASSIGN(bool has_remaining_memory,
+                         write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
+    ASSERT_TRUE(has_remaining_memory);
 
     ASSERT_OK_AND_ASSIGN(auto readers, write_buffer->CreateReaders());
     ASSERT_EQ(readers.size(), 1);
@@ -363,15 +371,15 @@ TEST_F(WriteBufferTest, TestCreateReadersReturnsBothSpillAndMemoryReaders) {
         ])")
                 .ValueOrDie();
 
-        ASSERT_OK_AND_ASSIGN(bool buffered1,
+        ASSERT_OK_AND_ASSIGN(bool has_remaining_quota,
                              write_buffer->Write(CreateBatch(spill_array, /*row_kinds=*/{})));
-        ASSERT_TRUE(buffered1);
-        ASSERT_OK_AND_ASSIGN(bool flush_result, write_buffer->FlushMemory());
-        ASSERT_TRUE(flush_result);
+        ASSERT_TRUE(has_remaining_quota);
+        ASSERT_OK_AND_ASSIGN(has_remaining_quota, write_buffer->FlushMemory());
+        ASSERT_TRUE(has_remaining_quota);
 
-        ASSERT_OK_AND_ASSIGN(bool buffered2,
+        ASSERT_OK_AND_ASSIGN(has_remaining_quota,
                              write_buffer->Write(CreateBatch(memory_array, /*row_kinds=*/{})));
-        ASSERT_TRUE(buffered2);
+        ASSERT_TRUE(has_remaining_quota);
 
         ASSERT_OK_AND_ASSIGN(auto readers, write_buffer->CreateReaders());
         ASSERT_EQ(readers.size(), 2);
@@ -402,16 +410,18 @@ TEST_F(WriteBufferTest, TestCreateReadersReturnsBothSpillAndMemoryReaders) {
         ])")
                 .ValueOrDie();
 
-        ASSERT_OK_AND_ASSIGN(bool buf1, write_buffer->Write(CreateBatch(array1, /*row_kinds=*/{})));
-        ASSERT_TRUE(buf1);
+        ASSERT_OK_AND_ASSIGN(bool has_remaining_quota,
+                             write_buffer->Write(CreateBatch(array1, /*row_kinds=*/{})));
+        ASSERT_TRUE(has_remaining_quota);
 
-        ASSERT_OK_AND_ASSIGN(bool flush_ok, write_buffer->FlushMemory());
-        ASSERT_TRUE(flush_ok);
+        ASSERT_OK_AND_ASSIGN(has_remaining_quota, write_buffer->FlushMemory());
+        ASSERT_TRUE(has_remaining_quota);
         ASSERT_EQ(write_buffer->GetMemoryUsage(), 0);
         ASSERT_FALSE(write_buffer->IsEmpty());
 
-        ASSERT_OK_AND_ASSIGN(bool buf2, write_buffer->Write(CreateBatch(array2, /*row_kinds=*/{})));
-        ASSERT_TRUE(buf2);
+        ASSERT_OK_AND_ASSIGN(has_remaining_quota,
+                             write_buffer->Write(CreateBatch(array2, /*row_kinds=*/{})));
+        ASSERT_TRUE(has_remaining_quota);
         ASSERT_GT(write_buffer->GetMemoryUsage(), 0);
 
         ASSERT_OK_AND_ASSIGN(auto readers, write_buffer->CreateReaders());
@@ -458,12 +468,15 @@ TEST_F(WriteBufferTest, TestSpillReaderReturnsDataInSortedOrder) {
     ])")
             .ValueOrDie();
 
-    ASSERT_OK_AND_ASSIGN(bool b1, write_buffer->Write(CreateBatch(array1, /*row_kinds=*/{})));
-    ASSERT_TRUE(b1);
-    ASSERT_OK_AND_ASSIGN(bool b2, write_buffer->Write(CreateBatch(array2, /*row_kinds=*/{})));
-    ASSERT_TRUE(b2);
-    ASSERT_OK_AND_ASSIGN(bool b3, write_buffer->Write(CreateBatch(array3, /*row_kinds=*/{})));
-    ASSERT_TRUE(b3);
+    ASSERT_OK_AND_ASSIGN(bool has_remaining_quota,
+                         write_buffer->Write(CreateBatch(array1, /*row_kinds=*/{})));
+    ASSERT_TRUE(has_remaining_quota);
+    ASSERT_OK_AND_ASSIGN(has_remaining_quota,
+                         write_buffer->Write(CreateBatch(array2, /*row_kinds=*/{})));
+    ASSERT_TRUE(has_remaining_quota);
+    ASSERT_OK_AND_ASSIGN(has_remaining_quota,
+                         write_buffer->Write(CreateBatch(array3, /*row_kinds=*/{})));
+    ASSERT_TRUE(has_remaining_quota);
 
     ASSERT_OK_AND_ASSIGN(auto readers, write_buffer->CreateReaders());
 
@@ -490,11 +503,12 @@ TEST_F(WriteBufferTest, TestSpillReaderReturnsDataInSortedOrder) {
     ])")
             .ValueOrDie();
 
-    ASSERT_OK_AND_ASSIGN(bool buf, write_buffer2->Write(CreateBatch(multi_row_array, {})));
-    ASSERT_TRUE(buf);
+    ASSERT_OK_AND_ASSIGN(has_remaining_quota,
+                         write_buffer2->Write(CreateBatch(multi_row_array, {})));
+    ASSERT_TRUE(has_remaining_quota);
 
-    ASSERT_OK_AND_ASSIGN(bool flush_ok, write_buffer2->FlushMemory());
-    ASSERT_TRUE(flush_ok);
+    ASSERT_OK_AND_ASSIGN(has_remaining_quota, write_buffer2->FlushMemory());
+    ASSERT_TRUE(has_remaining_quota);
 
     ASSERT_OK_AND_ASSIGN(auto readers2, write_buffer2->CreateReaders());
     ASSERT_EQ(readers2.size(), 1);
@@ -513,8 +527,8 @@ TEST_F(WriteBufferTest, TestEmptyBufferBehavior) {
 
     ASSERT_TRUE(write_buffer->IsEmpty());
     ASSERT_EQ(write_buffer->GetMemoryUsage(), 0);
-    ASSERT_OK_AND_ASSIGN(bool flush_result, write_buffer->FlushMemory());
-    ASSERT_TRUE(flush_result);
+    ASSERT_OK_AND_ASSIGN(bool has_remaining_disk, write_buffer->FlushMemory());
+    ASSERT_TRUE(has_remaining_disk);
     ASSERT_TRUE(write_buffer->IsEmpty());
     ASSERT_EQ(write_buffer->GetMemoryUsage(), 0);
 
@@ -525,7 +539,7 @@ TEST_F(WriteBufferTest, TestEmptyBufferBehavior) {
 }
 
 TEST_F(WriteBufferTest, TestMergeSpilledFilesSkipsWithSingleFile) {
-    // HANDLES=2: with only 1 spill file, compaction is not triggered.
+    // HANDLES=2: with only 1 spill file, merge is not triggered.
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::WRITE_BUFFER_SIZE, "1"},
                                                {Options::WRITE_BUFFER_SPILLABLE, "true"},
@@ -538,8 +552,9 @@ TEST_F(WriteBufferTest, TestMergeSpilledFilesSkipsWithSingleFile) {
     ])")
             .ValueOrDie();
 
-    ASSERT_OK_AND_ASSIGN(bool buffered, write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
-    ASSERT_TRUE(buffered);
+    ASSERT_OK_AND_ASSIGN(bool has_remaining_quota,
+                         write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
+    ASSERT_TRUE(has_remaining_quota);
     ASSERT_FALSE(write_buffer->IsEmpty());
     ASSERT_OK_AND_ASSIGN(auto readers, write_buffer->CreateReaders());
     ASSERT_FALSE(readers.empty());
@@ -566,11 +581,12 @@ TEST_F(WriteBufferTest, TestMultipleFlushWriteCyclesWorkCorrectly) {
     ])")
             .ValueOrDie();
     // Cycle 1: Write → Flush → Read → Clear.
-    ASSERT_OK_AND_ASSIGN(bool buf1, write_buffer->Write(CreateBatch(array1, /*row_kinds=*/{})));
-    ASSERT_TRUE(buf1);
+    ASSERT_OK_AND_ASSIGN(bool has_remaining_quota,
+                         write_buffer->Write(CreateBatch(array1, /*row_kinds=*/{})));
+    ASSERT_TRUE(has_remaining_quota);
 
-    ASSERT_OK_AND_ASSIGN(bool flush1, write_buffer->FlushMemory());
-    ASSERT_TRUE(flush1);
+    ASSERT_OK_AND_ASSIGN(has_remaining_quota, write_buffer->FlushMemory());
+    ASSERT_TRUE(has_remaining_quota);
 
     ASSERT_OK_AND_ASSIGN(auto readers1, write_buffer->CreateReaders());
     ASSERT_FALSE(readers1.empty());
@@ -592,11 +608,12 @@ TEST_F(WriteBufferTest, TestMultipleFlushWriteCyclesWorkCorrectly) {
         ["Charlie", 30, 2, 15.1]
     ])")
             .ValueOrDie();
-    ASSERT_OK_AND_ASSIGN(bool buf2, write_buffer->Write(CreateBatch(array2, /*row_kinds=*/{})));
-    ASSERT_TRUE(buf2);
+    ASSERT_OK_AND_ASSIGN(has_remaining_quota,
+                         write_buffer->Write(CreateBatch(array2, /*row_kinds=*/{})));
+    ASSERT_TRUE(has_remaining_quota);
 
-    ASSERT_OK_AND_ASSIGN(bool flush2, write_buffer->FlushMemory());
-    ASSERT_TRUE(flush2);
+    ASSERT_OK_AND_ASSIGN(has_remaining_quota, write_buffer->FlushMemory());
+    ASSERT_TRUE(has_remaining_quota);
 
     ASSERT_OK_AND_ASSIGN(auto readers2, write_buffer->CreateReaders());
     ASSERT_FALSE(readers2.empty());
@@ -630,8 +647,9 @@ TEST_F(WriteBufferTest, TestMergeSpilledFilesDeduplicationAndRowKinds) {
         RecordBatch::RowKind::INSERT,
         RecordBatch::RowKind::UPDATE_AFTER,
     };
-    ASSERT_OK_AND_ASSIGN(bool b1, write_buffer->Write(CreateBatch(array1, row_kinds1)));
-    ASSERT_TRUE(b1);
+    ASSERT_OK_AND_ASSIGN(bool has_remaining_quota,
+                         write_buffer->Write(CreateBatch(array1, row_kinds1)));
+    ASSERT_TRUE(has_remaining_quota);
 
     // Bob(DELETE), Alice(UPDATE_AFTER) — cross-file overlap on Alice.
     std::shared_ptr<arrow::Array> array2 =
@@ -644,8 +662,8 @@ TEST_F(WriteBufferTest, TestMergeSpilledFilesDeduplicationAndRowKinds) {
         RecordBatch::RowKind::DELETE,
         RecordBatch::RowKind::UPDATE_AFTER,
     };
-    ASSERT_OK_AND_ASSIGN(bool b2, write_buffer->Write(CreateBatch(array2, row_kinds2)));
-    ASSERT_TRUE(b2);
+    ASSERT_OK_AND_ASSIGN(has_remaining_quota, write_buffer->Write(CreateBatch(array2, row_kinds2)));
+    ASSERT_TRUE(has_remaining_quota);
 
     // Diana(INSERT), Bob(INSERT) — overlap on Bob.
     std::shared_ptr<arrow::Array> array3 =
@@ -658,8 +676,8 @@ TEST_F(WriteBufferTest, TestMergeSpilledFilesDeduplicationAndRowKinds) {
         RecordBatch::RowKind::INSERT,
         RecordBatch::RowKind::INSERT,
     };
-    ASSERT_OK_AND_ASSIGN(bool b3, write_buffer->Write(CreateBatch(array3, row_kinds3)));
-    ASSERT_TRUE(b3);
+    ASSERT_OK_AND_ASSIGN(has_remaining_quota, write_buffer->Write(CreateBatch(array3, row_kinds3)));
+    ASSERT_TRUE(has_remaining_quota);
 
     // After dedup: Alice keeps seq=3, Bob keeps seq=5, Charlie seq=1, Diana seq=4.
     ASSERT_OK_AND_ASSIGN(auto readers, write_buffer->CreateReaders());
@@ -689,11 +707,12 @@ TEST_F(WriteBufferTest, TestSpillPreservesNullValues) {
     ])")
             .ValueOrDie();
 
-    ASSERT_OK_AND_ASSIGN(bool buffered, write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
-    ASSERT_TRUE(buffered);
+    ASSERT_OK_AND_ASSIGN(bool has_remaining_quota,
+                         write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
+    ASSERT_TRUE(has_remaining_quota);
 
-    ASSERT_OK_AND_ASSIGN(bool flush_ok, write_buffer->FlushMemory());
-    ASSERT_TRUE(flush_ok);
+    ASSERT_OK_AND_ASSIGN(has_remaining_quota, write_buffer->FlushMemory());
+    ASSERT_TRUE(has_remaining_quota);
     ASSERT_EQ(write_buffer->GetMemoryUsage(), 0);
 
     ASSERT_OK_AND_ASSIGN(auto readers, write_buffer->CreateReaders());
@@ -736,11 +755,12 @@ TEST_F(WriteBufferTest, TestDestructorCleansUpSpillFiles) {
     ])")
             .ValueOrDie();
 
-    ASSERT_OK_AND_ASSIGN(bool buffered, write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
-    ASSERT_TRUE(buffered);
+    ASSERT_OK_AND_ASSIGN(bool has_remaining_quota,
+                         write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
+    ASSERT_TRUE(has_remaining_quota);
 
-    ASSERT_OK_AND_ASSIGN(bool flush_ok, write_buffer->FlushMemory());
-    ASSERT_TRUE(flush_ok);
+    ASSERT_OK_AND_ASSIGN(has_remaining_quota, write_buffer->FlushMemory());
+    ASSERT_TRUE(has_remaining_quota);
 
     ASSERT_EQ(TestHelper::CountChannelFiles(tmp_dir_->GetFileSystem(), tmp_dir_->Str()), 1);
 

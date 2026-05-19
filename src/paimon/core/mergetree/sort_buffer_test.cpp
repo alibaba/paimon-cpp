@@ -300,9 +300,11 @@ TEST_F(SortBufferTest, TestInMemorySortBufferEstimateMemoryUseForEachRow) {
         ASSERT_EQ(buffer.GetEstimateMemoryUseForEachRow(), cached_memory_use_per_row);
     }
 
+    // Clear does not reset the estimated per-row memory usage.
     buffer.Clear();
     ASSERT_EQ(buffer.GetEstimateMemoryUseForEachRow(), cached_memory_use_per_row);
 
+    // Verify behavior when writing an empty batch.
     std::shared_ptr<arrow::Array> empty_array =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([])").ValueOrDie();
     ::ArrowArray c_array;

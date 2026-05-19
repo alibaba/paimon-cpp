@@ -239,15 +239,15 @@ TEST_F(SpillFileMergerTest, SetMaxFanInAffectsMerge) {
     ASSERT_EQ(merger.GetAllFiles().size(), 1);
 }
 
-TEST_F(SpillFileMergerTest, SetMaxFanInToLargerValueSuppressesCompaction) {
+TEST_F(SpillFileMergerTest, SetMaxFanInToLargerValueSuppressesMerge) {
     SpillFileMerger merger(3);
 
     merger.AddFile(MakeFile(1, 100));
     merger.AddFile(MakeFile(2, 200));
     merger.AddFile(MakeFile(3, 300));
 
-    // At fan_in=3, compaction should trigger
-    // But first, increase fan_in to 5 before running compaction
+    // At fan_in=3, merge should trigger
+    // But first, increase fan_in to 5 before running merge
     merger.SetMaxFanIn(5);
     ASSERT_OK(merger.RunMergeIfNeeded(CreateMockMergeFn()));
     ASSERT_EQ(merge_call_count_, 0);
@@ -256,19 +256,19 @@ TEST_F(SpillFileMergerTest, SetMaxFanInToLargerValueSuppressesCompaction) {
     auto files = merger.GetAllFiles();
     ASSERT_EQ(files.size(), 3);
 
-    // Add more files up to 5, still no compaction
+    // Add more files up to 5, still no merge
     merger.AddFile(MakeFile(4, 400));
     ASSERT_OK(merger.RunMergeIfNeeded(CreateMockMergeFn()));
     ASSERT_EQ(merge_call_count_, 0);
     ASSERT_EQ(merger.GetAllFiles().size(), 4);
 
-    // Add 5th file, now compaction triggers
+    // Add 5th file, now merge triggers
     merger.AddFile(MakeFile(5, 500));
     ASSERT_OK(merger.RunMergeIfNeeded(CreateMockMergeFn()));
     ASSERT_EQ(merge_call_count_, 1);
 }
 
-TEST_F(SpillFileMergerTest, CompactionOnlyTakesFanInFilesFromLevel) {
+TEST_F(SpillFileMergerTest, MergeOnlyTakesFanInFilesFromLevel) {
     SpillFileMerger merger(3);
 
     // Add 5 files to level 0 (exceeds fan_in=3)

@@ -1112,7 +1112,7 @@ TEST_F(MergeTreeWriterTest, TestSpillWithSameKeyDeduplicate) {
     WriteBatch(batch1, /*row_kinds=*/{}, merge_writer.get());
     WriteBatch(batch2, /*row_kinds=*/{}, merge_writer.get());
     // WRITE_BUFFER_SIZE=1 causes UpdateSpillParameters() to clamp actual_max_fan_in_ to 2,
-    // triggering leveled compaction after 2 spill files are produced, merging them into 1.
+    // triggering leveled merge after 2 spill files are produced, merging them into 1.
     ASSERT_EQ(1u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 
     std::shared_ptr<arrow::Array> batch3 =
@@ -1184,7 +1184,7 @@ TEST_F(MergeTreeWriterTest, TestIntermediateMergeSpillFileBound) {
     ASSERT_EQ(1u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 
     WriteBatch(batch2, /*row_kinds=*/{}, merge_writer.get());
-    // Level 0: [A,B] hits max_fan_in=2, compaction -> Level 0: [], Level 1: [C], total = 1
+    // Level 0: [A,B] hits max_fan_in=2, merge -> Level 0: [], Level 1: [C], total = 1
     ASSERT_EQ(1u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 
     WriteBatch(batch3, /*row_kinds=*/{}, merge_writer.get());
@@ -1433,22 +1433,18 @@ TEST_F(MergeTreeWriterTest, TestMultiplePrepareCommitWithSpill) {
     ASSERT_OK(merge_writer->Close());
 }
 
-TEST_P(MergeTreeWriterTest, TestSpillWithIOException) {
+TEST_F(MergeTreeWriterTest, TestSpillWithIOException) {
     // This test exercises IO error injection across all spill-related code paths:
     //   1. SpillToDisk (spill write)
-    //   2. MergeAndReplaceFiles (intermediate compaction triggered by LeveledMerger)
+    //   2. MergeAndReplaceFiles (intermediate merge triggered by SpillFileMerger)
     //   3. RunFinalCleanupIfNeeded (final merge in CreateReaders/PrepareCommit)
     //   4. FlushWriteBuffer (reading merged spill data back + writing output data file)
     //
     // WRITE_BUFFER_SIZE=1 causes actual_max_fan_in_ to be clamped to 2, so every
-    // 2 spill files at the same level triggers compaction.
+    // 2 spill files at the same level triggers merge.
     // Each WriteBatch with 2 rows fills the in-memory buffer (write_buffer_size param
     // in InMemorySortBuffer is controlled via WRITE_BUFFER_SIZE in CoreOptions for
     // MergeTreeWriter::Create), triggering a spill.
-    if (!GetParam()) {
-        return;
-    }
-
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"},
                                                {Options::WRITE_BUFFER_SIZE, "1"},
@@ -1481,7 +1477,7 @@ TEST_P(MergeTreeWriterTest, TestSpillWithIOException) {
         auto b1 = CreateBatch(batch1, {});
         CHECK_HOOK_STATUS(merge_writer->Write(std::move(b1)), i);
 
-        // Batch 2: triggers spill file 2 → intermediate compaction (merge 2 files into 1)
+        // Batch 2: triggers spill file 2 → intermediate merge (merge 2 files into 1)
         std::shared_ptr<arrow::Array> batch2 =
             arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
                 ["Alice", 10, 0, 10.0],
@@ -1501,8 +1497,8 @@ TEST_P(MergeTreeWriterTest, TestSpillWithIOException) {
         auto b3 = CreateBatch(batch3, {});
         CHECK_HOOK_STATUS(merge_writer->Write(std::move(b3)), i);
 
-        // Batch 4: triggers spill file at level 0 → another compaction at level 0,
-        // then level 1 has 2 files → compaction at level 1 as well.
+        // Batch 4: triggers spill file at level 0 → another merge at level 0,
+        // then level 1 has 2 files → merge at level 1 as well.
         std::shared_ptr<arrow::Array> batch4 =
             arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
                 ["Charlie", 30, 0, 30.0],

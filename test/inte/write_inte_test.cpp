@@ -4225,7 +4225,7 @@ TEST_P(WriteInteTest, TestPkSpillableIntermediateMergeWithTempFileTracking) {
         arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Alice", 10, 3]])").ValueOrDie();
 
     // Each write triggers spill. With LOCAL_SORT_MAX_NUM_FILE_HANDLES=2, leveled
-    // compaction merges when a level reaches max_fan_in files.
+    // merge triggers when a level reaches max_fan_in files.
     ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/0, batch1));
     ASSERT_EQ(1, TestHelper::CountChannelFiles(file_system_, tmp_dir));
 
@@ -4234,8 +4234,7 @@ TEST_P(WriteInteTest, TestPkSpillableIntermediateMergeWithTempFileTracking) {
 
     ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/0, batch3));
     // Level 0: 1 file (batch3), Level 1: 1 file (merged batch1+batch2) = 2 files total.
-    // Final cleanup at read time reduces this to <= max_fan_in - 1.
-    ASSERT_LE(TestHelper::CountChannelFiles(file_system_, tmp_dir), 2);
+    ASSERT_EQ(2, TestHelper::CountChannelFiles(file_system_, tmp_dir));
 
     // PrepareCommit should consume all spill files
     ASSERT_OK_AND_ASSIGN(auto commit_messages,
@@ -4311,12 +4310,12 @@ TEST_P(WriteInteTest, TestPkSpillableMultiBucketMultiRoundDataCorrectness) {
 
     ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/0, r1_b0_batch1));
     ASSERT_EQ(1, TestHelper::CountChannelFiles(file_system_, tmp_dir));
-    // Trigger leveled compaction (level 0 reaches max_fan_in=2)
+    // Trigger leveled merge (level 0 reaches max_fan_in=2)
     ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/0, r1_b0_batch2));
     ASSERT_EQ(1, TestHelper::CountChannelFiles(file_system_, tmp_dir));
     // Third write: level 0 has 1 file, level 1 has 1 file = 2 total
     ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/0, r1_b0_batch3));
-    ASSERT_LE(TestHelper::CountChannelFiles(file_system_, tmp_dir), 2);
+    ASSERT_EQ(2, TestHelper::CountChannelFiles(file_system_, tmp_dir));
 
     auto r1_b1_batch1 =
         arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([["Dave", 10, 10]])").ValueOrDie();
@@ -4328,12 +4327,12 @@ TEST_P(WriteInteTest, TestPkSpillableMultiBucketMultiRoundDataCorrectness) {
     int32_t bucket0_files = TestHelper::CountChannelFiles(file_system_, tmp_dir);
     ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/1, r1_b1_batch1));
     ASSERT_EQ(bucket0_files + 1, TestHelper::CountChannelFiles(file_system_, tmp_dir));
-    // Trigger leveled compaction for bucket 1
+    // Trigger leveled merge for bucket 1
     ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/1, r1_b1_batch2));
     ASSERT_EQ(bucket0_files + 1, TestHelper::CountChannelFiles(file_system_, tmp_dir));
     // Third write for bucket 1: same pattern
     ASSERT_OK(write_array_fn(file_store_write.get(), {{"pt", "10"}}, /*bucket=*/1, r1_b1_batch3));
-    ASSERT_LE(TestHelper::CountChannelFiles(file_system_, tmp_dir), bucket0_files + 2);
+    ASSERT_EQ(bucket0_files + 2, TestHelper::CountChannelFiles(file_system_, tmp_dir));
 
     ASSERT_OK_AND_ASSIGN(auto commit_messages_1,
                          file_store_write->PrepareCommit(/*wait_compaction=*/false,
