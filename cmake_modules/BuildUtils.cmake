@@ -18,6 +18,37 @@
 # Borrowed the file from Apache Arrow:
 # https://github.com/apache/arrow/blob/main/cpp/cmake_modules/BuildUtils.cmake
 
+function(paimon_link_libraries_whole_archive OUT_VAR)
+    set(_paimon_whole_archive_libs)
+    if(APPLE)
+        foreach(_paimon_lib IN LISTS ARGN)
+            list(APPEND _paimon_whole_archive_libs
+                 "-Wl,-force_load,$<TARGET_FILE:${_paimon_lib}>" ${_paimon_lib})
+        endforeach()
+    else()
+        list(APPEND _paimon_whole_archive_libs "-Wl,--whole-archive" ${ARGN}
+             "-Wl,--no-whole-archive")
+    endif()
+    set(${OUT_VAR}
+        ${_paimon_whole_archive_libs}
+        PARENT_SCOPE)
+endfunction()
+
+function(paimon_link_libraries_no_as_needed OUT_VAR)
+    set(_paimon_link_libs)
+    foreach(_paimon_lib IN LISTS ARGN)
+        if(APPLE)
+            list(APPEND _paimon_link_libs ${_paimon_lib})
+        else()
+            list(APPEND _paimon_link_libs "-Wl,--no-as-needed" ${_paimon_lib}
+                 "-Wl,--as-needed")
+        endif()
+    endforeach()
+    set(${OUT_VAR}
+        ${_paimon_link_libs}
+        PARENT_SCOPE)
+endfunction()
+
 function(add_paimon_lib LIB_NAME)
     set(options BUILD_SHARED BUILD_STATIC)
     set(one_value_args SHARED_LINK_FLAGS)

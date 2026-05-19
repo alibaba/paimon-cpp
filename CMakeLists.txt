@@ -383,47 +383,71 @@ if(PAIMON_BUILD_TESTS)
     include_directories(SYSTEM ${GTEST_INCLUDE_DIR})
     include_directories("${CMAKE_SOURCE_DIR}/test/")
 
-    set(TEST_STATIC_LINK_LIBS
-        "-Wl,--whole-archive"
+    paimon_link_libraries_whole_archive(
+        TEST_WHOLE_ARCHIVE_LINK_LIBS
         paimon_file_index_static
         paimon_global_index_static
         paimon_local_file_system_static
-        paimon_mock_file_format_static
-        "-Wl,--no-whole-archive"
-        "-Wl,--no-as-needed"
-        paimon_parquet_file_format_shared
-        paimon_blob_file_format_shared
-        "-Wl,--as-needed")
+        paimon_mock_file_format_static)
+    paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
+                                       paimon_parquet_file_format_shared
+                                       paimon_blob_file_format_shared)
+    set(TEST_STATIC_LINK_LIBS ${TEST_WHOLE_ARCHIVE_LINK_LIBS}
+                              ${TEST_PLUGIN_LINK_LIBS})
+    paimon_link_libraries_whole_archive(PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS
+                                        paimon_local_file_system_static)
+    set(PAIMON_LOCAL_FILE_SYSTEM_SHARED_LINK_LIBS paimon_local_file_system_shared)
+    paimon_link_libraries_whole_archive(PAIMON_BLOB_FILE_FORMAT_STATIC_LINK_LIBS
+                                        paimon_local_file_system_static
+                                        paimon_blob_file_format_static)
+    paimon_link_libraries_whole_archive(PAIMON_PARQUET_FILE_FORMAT_STATIC_LINK_LIBS
+                                        paimon_local_file_system_static
+                                        paimon_parquet_file_format_static)
+    paimon_link_libraries_whole_archive(PAIMON_ORC_FILE_FORMAT_STATIC_LINK_LIBS
+                                        paimon_local_file_system_static
+                                        paimon_orc_file_format_static)
+    paimon_link_libraries_whole_archive(PAIMON_AVRO_FILE_FORMAT_STATIC_LINK_LIBS
+                                        paimon_local_file_system_static
+                                        paimon_avro_file_format_static)
+    paimon_link_libraries_whole_archive(PAIMON_LANCE_FILE_FORMAT_STATIC_LINK_LIBS
+                                        paimon_local_file_system_static
+                                        paimon_lance_file_format_static)
+    paimon_link_libraries_whole_archive(PAIMON_LUMINA_INDEX_STATIC_LINK_LIBS
+                                        paimon_local_file_system_static
+                                        paimon_lumina_index_static)
+    paimon_link_libraries_whole_archive(PAIMON_LUCENE_INDEX_STATIC_LINK_LIBS
+                                        paimon_local_file_system_static
+                                        paimon_lucene_index_static)
 
     if(PAIMON_ENABLE_LANCE)
-        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--no-as-needed")
-        list(APPEND TEST_STATIC_LINK_LIBS paimon_lance_file_format_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--as-needed")
+        paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
+                                           paimon_lance_file_format_shared)
+        list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
     endif()
     if(PAIMON_ENABLE_ORC)
-        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--no-as-needed")
-        list(APPEND TEST_STATIC_LINK_LIBS paimon_orc_file_format_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--as-needed")
+        paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
+                                           paimon_orc_file_format_shared)
+        list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
     endif()
     if(PAIMON_ENABLE_AVRO)
-        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--no-as-needed")
-        list(APPEND TEST_STATIC_LINK_LIBS paimon_avro_file_format_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--as-needed")
+        paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
+                                           paimon_avro_file_format_shared)
+        list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
     endif()
     if(PAIMON_ENABLE_JINDO)
-        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--no-as-needed")
-        list(APPEND TEST_STATIC_LINK_LIBS paimon_jindo_file_system_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--as-needed")
+        paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
+                                           paimon_jindo_file_system_shared)
+        list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
     endif()
     if(PAIMON_ENABLE_LUMINA)
-        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--no-as-needed")
-        list(APPEND TEST_STATIC_LINK_LIBS paimon_lumina_index_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--as-needed")
+        paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
+                                           paimon_lumina_index_shared)
+        list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
     endif()
     if(PAIMON_ENABLE_LUCENE)
-        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--no-as-needed")
-        list(APPEND TEST_STATIC_LINK_LIBS paimon_lucene_index_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--as-needed")
+        paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
+                                           paimon_lucene_index_shared)
+        list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
     endif()
 endif()
 

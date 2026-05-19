@@ -773,7 +773,7 @@ macro(build_lucene)
                                     boost_chrono
                                     boost_atomic
                                     pthread
-                                    dl)
+                                    ${CMAKE_DL_LIBS})
     add_dependencies(lucene lucene_ep)
 endmacro()
 
@@ -1215,7 +1215,8 @@ macro(build_jindosdk_nextarch)
                           PROPERTIES IMPORTED_LOCATION "${JINDOSDK_NEXTARCH_STATIC_LIB}"
                                      INTERFACE_INCLUDE_DIRECTORIES
                                      "${JINDOSDK_NEXTARCH_INCLUDE_DIR}")
-    target_link_libraries(jindosdk::nextarch INTERFACE jindosdk::c_sdk pthread dl)
+    target_link_libraries(jindosdk::nextarch
+                          INTERFACE jindosdk::c_sdk pthread ${CMAKE_DL_LIBS})
     list(APPEND JINDOSDK_INCLUDE_DIR ${JINDOSDK_NEXTARCH_INCLUDE_DIR})
 
     add_dependencies(jindosdk::nextarch jindosdk-nextarch_ep)
@@ -1518,6 +1519,7 @@ macro(build_arrow)
         "-DCMAKE_CXX_FLAGS=${ARROW_CMAKE_CXX_FLAGS}"
         "-DCMAKE_C_FLAGS=${ARROW_CMAKE_C_FLAGS}"
         "-DCMAKE_CXX_FLAGS_${UPPERCASE_BUILD_TYPE}=${ARROW_CMAKE_CXX_FLAGS}"
+        -DARROW_DEPENDENCY_SOURCE=BUNDLED
         -DARROW_DEPENDENCY_USE_SHARED=OFF
         -DARROW_BUILD_SHARED=OFF
         -DARROW_BUILD_STATIC=ON

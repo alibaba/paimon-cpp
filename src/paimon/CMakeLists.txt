@@ -335,9 +335,7 @@ set(PAIMON_CORE_SRCS
     core/utils/tag_manager.cpp)
 
 set(PAIMON_PRIVATE_LINK_LIBS)
-if(NOT APPLE)
-    list(APPEND PAIMON_PRIVATE_LINK_LIBS dl)
-endif()
+list(APPEND PAIMON_PRIVATE_LINK_LIBS ${CMAKE_DL_LIBS})
 
 add_paimon_lib(paimon
                SOURCES
@@ -548,9 +546,7 @@ if(PAIMON_BUILD_TESTS)
                     STATIC_LINK_LIBS
                     paimon_shared
                     test_utils_static
-                    "-Wl,--whole-archive"
-                    paimon_local_file_system_static
-                    "-Wl,--no-whole-archive"
+                    ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
                     ${GTEST_LINK_TOOLCHAIN})
 
     add_paimon_test(core_test
@@ -737,10 +733,8 @@ if(PAIMON_BUILD_TESTS)
                     # fs/jindo/jindo_file_system_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared
-                    "-Wl,--whole-archive"
-                    paimon_local_file_system_static
+                    ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
                     # paimon_jindo_file_system_static
-                    "-Wl,--no-whole-archive"
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 
