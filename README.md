@@ -160,13 +160,15 @@ The supported dependency source values are:
 
 You can also override individual dependencies. The supported dependency set
 includes Arrow/Parquet, ORC, Protobuf, Avro, RE2, fmt, RapidJSON, TBB, glog,
-GoogleTest, and compression libraries.
+GoogleTest, and compression libraries. Arrow and ORC require project-specific
+patches, so their supported source values are `AUTO` and `BUNDLED`; `AUTO`
+resolves to bundled sources for them.
 
 ```
 $ cmake -B build \
   -DPAIMON_DEPENDENCY_SOURCE=AUTO \
-  -DArrow_SOURCE=SYSTEM \
-  -DArrow_ROOT=/opt/arrow \
+  -Dfmt_SOURCE=SYSTEM \
+  -Dfmt_ROOT=/opt/fmt \
   -Dzstd_SOURCE=BUNDLED
 ```
 
@@ -184,16 +186,14 @@ dependency source interface. They can still be used through standard CMake
 mechanisms such as `CMAKE_PREFIX_PATH` or `CMAKE_TOOLCHAIN_FILE`, while Paimon
 keeps the dependency source values limited to `AUTO`, `BUNDLED`, and `SYSTEM`.
 
-When `Arrow_SOURCE` is explicitly set to `SYSTEM` or `BUNDLED`, the compression
-dependencies default to the same source unless individually overridden. Mixing
-system and bundled copies of transitive dependencies can cause ABI conflicts,
-so prefer keeping Arrow and its compression dependencies from the same source
-unless you have a specific reason to override them.
+When `Arrow_SOURCE` is explicitly set to `BUNDLED` or left as `AUTO`, the
+compression dependencies default to bundled sources unless individually
+overridden. Mixing system and bundled copies of transitive dependencies can
+cause ABI conflicts, so prefer keeping Arrow and its compression dependencies
+from the same source unless you have a specific reason to override them.
 
-When `ORC_SOURCE` is explicitly set, `Protobuf_SOURCE` defaults to the same
-source unless individually overridden. In `AUTO` mode, Paimon prechecks for a
-system ORC installation and defaults Protobuf to `SYSTEM` only when system ORC
-is found; otherwise Protobuf stays bundled with bundled ORC.
+When `ORC_SOURCE` is explicitly set to `BUNDLED` or left as `AUTO`,
+`Protobuf_SOURCE` defaults to bundled sources unless individually overridden.
 
 CMake prints a dependency resolution summary during configuration showing the
 requested source, actual source, compatibility target, and search root for each

@@ -144,14 +144,16 @@ The supported dependency source values are:
 
 You can override individual dependencies with ``<Dependency>_SOURCE``. The
 supported dependency set includes Arrow/Parquet, ORC, Protobuf, Avro, RE2, fmt,
-RapidJSON, TBB, glog, GoogleTest, and compression libraries.
+RapidJSON, TBB, glog, GoogleTest, and compression libraries. Arrow and ORC
+require project-specific patches, so their supported source values are
+``AUTO`` and ``BUNDLED``; ``AUTO`` resolves to bundled sources for them.
 
 .. code-block:: shell
 
    cmake -B build \
      -DPAIMON_DEPENDENCY_SOURCE=AUTO \
-     -DArrow_SOURCE=SYSTEM \
-     -DArrow_ROOT=/opt/arrow \
+     -Dfmt_SOURCE=SYSTEM \
+     -Dfmt_ROOT=/opt/fmt \
      -Dzstd_SOURCE=BUNDLED
 
 Use ``PAIMON_PACKAGE_PREFIX`` to provide one common prefix for dependencies
@@ -168,6 +170,12 @@ dependency source interface. They can still be used through standard CMake
 mechanisms such as ``CMAKE_PREFIX_PATH`` or ``CMAKE_TOOLCHAIN_FILE``, while
 Paimon keeps the dependency source values limited to ``AUTO``, ``BUNDLED``, and
 ``SYSTEM``.
+
+When ``Arrow_SOURCE`` is explicitly set to ``BUNDLED`` or left as ``AUTO``, the
+compression dependencies default to bundled sources unless individually
+overridden. When ``ORC_SOURCE`` is explicitly set to ``BUNDLED`` or left as
+``AUTO``, ``Protobuf_SOURCE`` defaults to bundled sources unless individually
+overridden.
 
 During configuration, CMake prints a dependency resolution summary showing the
 requested source, actual source, compatibility target, and search root for each
