@@ -16,6 +16,8 @@
 
 #include "paimon/core/mergetree/spill_file_merger.h"
 
+#include <algorithm>
+
 #include "gtest/gtest.h"
 #include "paimon/testing/utils/testharness.h"
 
@@ -237,7 +239,36 @@ TEST_F(SpillFileMergerTest, SetMaxFanInAffectsMerge) {
     ASSERT_EQ(merger.GetAllFiles().size(), 1);
 }
 
-TEST_F(SpillFileMergerTest, MergeOnlyTakesFanInFilesFromLevel) {
+TEST_F(SpillFileMergerTest, SetMaxFanInToLargerValueSuppressesCompaction) {
+    SpillFileMerger merger(3);
+
+    merger.AddFile(MakeFile(1, 100));
+    merger.AddFile(MakeFile(2, 200));
+    merger.AddFile(MakeFile(3, 300));
+
+    // At fan_in=3, compaction should trigger
+    // But first, increase fan_in to 5 before running compaction
+    merger.SetMaxFanIn(5);
+    ASSERT_OK(merger.RunMergeIfNeeded(CreateMockMergeFn()));
+    ASSERT_EQ(merge_call_count_, 0);
+
+    // All 3 files should still be present
+    auto files = merger.GetAllFiles();
+    ASSERT_EQ(files.size(), 3);
+
+    // Add more files up to 5, still no compaction
+    merger.AddFile(MakeFile(4, 400));
+    ASSERT_OK(merger.RunMergeIfNeeded(CreateMockMergeFn()));
+    ASSERT_EQ(merge_call_count_, 0);
+    ASSERT_EQ(merger.GetAllFiles().size(), 4);
+
+    // Add 5th file, now compaction triggers
+    merger.AddFile(MakeFile(5, 500));
+    ASSERT_OK(merger.RunMergeIfNeeded(CreateMockMergeFn()));
+    ASSERT_EQ(merge_call_count_, 1);
+}
+
+TEST_F(SpillFileMergerTest, CompactionOnlyTakesFanInFilesFromLevel) {
     SpillFileMerger merger(3);
 
     // Add 5 files to level 0 (exceeds fan_in=3)

@@ -1111,7 +1111,8 @@ TEST_F(MergeTreeWriterTest, TestSpillWithSameKeyDeduplicate) {
 
     WriteBatch(batch1, /*row_kinds=*/{}, merge_writer.get());
     WriteBatch(batch2, /*row_kinds=*/{}, merge_writer.get());
-    // actual_max_fan_in_=2 with 1-byte budget, so 2 spill files compact to 1.
+    // WRITE_BUFFER_SIZE=1 causes UpdateSpillParameters() to clamp actual_max_fan_in_ to 2,
+    // triggering leveled compaction after 2 spill files are produced, merging them into 1.
     ASSERT_EQ(1u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 
     std::shared_ptr<arrow::Array> batch3 =
@@ -1179,13 +1180,15 @@ TEST_F(MergeTreeWriterTest, TestIntermediateMergeSpillFileBound) {
             .ValueOrDie();
 
     WriteBatch(batch1, /*row_kinds=*/{}, merge_writer.get());
+    // Level 0: [A], total = 1
     ASSERT_EQ(1u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 
     WriteBatch(batch2, /*row_kinds=*/{}, merge_writer.get());
+    // Level 0: [A,B] hits max_fan_in=2, compaction -> Level 0: [], Level 1: [C], total = 1
     ASSERT_EQ(1u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 
     WriteBatch(batch3, /*row_kinds=*/{}, merge_writer.get());
-    // After 3rd spill: 1 file at level 0 (new) + 1 file at level 1 (from prior compact) = 2.
+    // Level 0: [D], Level 1: [C], total = 2 (no single level exceeds max_fan_in)
     ASSERT_EQ(2u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 
     ASSERT_OK_AND_ASSIGN(CommitIncrement commit_increment,
@@ -1428,6 +1431,102 @@ TEST_F(MergeTreeWriterTest, TestMultiplePrepareCommitWithSpill) {
     CheckFileContent(expected_path2, expected_array2);
 
     ASSERT_OK(merge_writer->Close());
+}
+
+TEST_P(MergeTreeWriterTest, TestSpillWithIOException) {
+    // This test exercises IO error injection across all spill-related code paths:
+    //   1. SpillToDisk (spill write)
+    //   2. MergeAndReplaceFiles (intermediate compaction triggered by LeveledMerger)
+    //   3. RunFinalCleanupIfNeeded (final merge in CreateReaders/PrepareCommit)
+    //   4. FlushWriteBuffer (reading merged spill data back + writing output data file)
+    //
+    // WRITE_BUFFER_SIZE=1 causes actual_max_fan_in_ to be clamped to 2, so every
+    // 2 spill files at the same level triggers compaction.
+    // Each WriteBatch with 2 rows fills the in-memory buffer (write_buffer_size param
+    // in InMemorySortBuffer is controlled via WRITE_BUFFER_SIZE in CoreOptions for
+    // MergeTreeWriter::Create), triggering a spill.
+    if (!GetParam()) {
+        return;
+    }
+
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"},
+                                               {Options::WRITE_BUFFER_SIZE, "1"},
+                                               {Options::WRITE_ONLY, "true"},
+                                               {Options::LOCAL_SORT_MAX_NUM_FILE_HANDLES, "2"}}));
+
+    bool run_complete = false;
+    auto io_hook = IOHook::GetInstance();
+    for (size_t i = 0; i < 2000; i++) {
+        auto dir = UniqueTestDirectory::Create();
+        ASSERT_TRUE(dir);
+        ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
+        io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
+        auto path_factory = std::make_shared<DataFilePathFactory>();
+        ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
+
+        auto merge_writer_result = CreateMergeWriter(
+            /*last_sequence_number=*/-1, dir->Str(), path_factory, /*schema_id=*/0, options);
+        CHECK_HOOK_STATUS(merge_writer_result.status(), i);
+        auto merge_writer = std::move(merge_writer_result).value();
+
+        // Write 4 batches, each with 2 rows sharing the same key to exercise deduplication.
+        // Batch 1: triggers spill file 1
+        std::shared_ptr<arrow::Array> batch1 =
+            arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+                ["Alice", 1, 0, 1.0],
+                ["Bob", 2, 0, 2.0]
+            ])")
+                .ValueOrDie();
+        auto b1 = CreateBatch(batch1, {});
+        CHECK_HOOK_STATUS(merge_writer->Write(std::move(b1)), i);
+
+        // Batch 2: triggers spill file 2 → intermediate compaction (merge 2 files into 1)
+        std::shared_ptr<arrow::Array> batch2 =
+            arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+                ["Alice", 10, 0, 10.0],
+                ["Charlie", 3, 0, 3.0]
+            ])")
+                .ValueOrDie();
+        auto b2 = CreateBatch(batch2, {});
+        CHECK_HOOK_STATUS(merge_writer->Write(std::move(b2)), i);
+
+        // Batch 3: triggers spill file at level 0 again
+        std::shared_ptr<arrow::Array> batch3 =
+            arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+                ["Bob", 20, 0, 20.0],
+                ["Dave", 4, 0, 4.0]
+            ])")
+                .ValueOrDie();
+        auto b3 = CreateBatch(batch3, {});
+        CHECK_HOOK_STATUS(merge_writer->Write(std::move(b3)), i);
+
+        // Batch 4: triggers spill file at level 0 → another compaction at level 0,
+        // then level 1 has 2 files → compaction at level 1 as well.
+        std::shared_ptr<arrow::Array> batch4 =
+            arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+                ["Charlie", 30, 0, 30.0],
+                ["Eve", 5, 0, 5.0]
+            ])")
+                .ValueOrDie();
+        auto b4 = CreateBatch(batch4, {});
+        CHECK_HOOK_STATUS(merge_writer->Write(std::move(b4)), i);
+
+        // PrepareCommit: triggers FlushWriteBuffer → CreateReaders (RunFinalCleanupIfNeeded)
+        // → sort merge → write output data file
+        auto commit_increment = merge_writer->PrepareCommit(/*wait_compaction=*/false);
+        CHECK_HOOK_STATUS(commit_increment.status(), i);
+        ASSERT_FALSE(commit_increment.value().GetNewFilesIncrement().NewFiles().empty());
+
+        // Verify deduplication: Alice(seq=2), Bob(seq=4), Charlie(seq=5), Dave(seq=6), Eve(seq=7)
+        ASSERT_EQ(1, commit_increment.value().GetNewFilesIncrement().NewFiles().size());
+        ASSERT_EQ(5, commit_increment.value().GetNewFilesIncrement().NewFiles()[0]->row_count);
+
+        ASSERT_OK(merge_writer->Close());
+        run_complete = true;
+        break;
+    }
+    ASSERT_TRUE(run_complete);
 }
 
 INSTANTIATE_TEST_SUITE_P(WithOptionalIOManager, MergeTreeWriterTest,
