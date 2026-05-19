@@ -26,7 +26,10 @@ function(paimon_link_libraries_whole_archive OUT_VAR)
                  "-Wl,-force_load,$<TARGET_FILE:${_paimon_lib}>" ${_paimon_lib})
         endforeach()
     else()
-        list(APPEND _paimon_whole_archive_libs "-Wl,--whole-archive" ${ARGN}
+        list(APPEND
+             _paimon_whole_archive_libs
+             "-Wl,--whole-archive"
+             ${ARGN}
              "-Wl,--no-whole-archive")
     endif()
     set(${OUT_VAR}
@@ -40,7 +43,10 @@ function(paimon_link_libraries_no_as_needed OUT_VAR)
         if(APPLE)
             list(APPEND _paimon_link_libs ${_paimon_lib})
         else()
-            list(APPEND _paimon_link_libs "-Wl,--no-as-needed" ${_paimon_lib}
+            list(APPEND
+                 _paimon_link_libs
+                 "-Wl,--no-as-needed"
+                 ${_paimon_lib}
                  "-Wl,--as-needed")
         endif()
     endforeach()

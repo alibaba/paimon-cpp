@@ -1215,8 +1215,8 @@ macro(build_jindosdk_nextarch)
                           PROPERTIES IMPORTED_LOCATION "${JINDOSDK_NEXTARCH_STATIC_LIB}"
                                      INTERFACE_INCLUDE_DIRECTORIES
                                      "${JINDOSDK_NEXTARCH_INCLUDE_DIR}")
-    target_link_libraries(jindosdk::nextarch
-                          INTERFACE jindosdk::c_sdk pthread ${CMAKE_DL_LIBS})
+    target_link_libraries(jindosdk::nextarch INTERFACE jindosdk::c_sdk pthread
+                                                       ${CMAKE_DL_LIBS})
     list(APPEND JINDOSDK_INCLUDE_DIR ${JINDOSDK_NEXTARCH_INCLUDE_DIR})
 
     add_dependencies(jindosdk::nextarch jindosdk-nextarch_ep)
