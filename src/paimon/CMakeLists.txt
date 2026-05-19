@@ -277,6 +277,7 @@ set(PAIMON_CORE_SRCS
     core/operation/key_value_file_store_write.cpp
     core/operation/manifest_file_merger.cpp
     core/operation/merge_file_split_read.cpp
+    core/operation/blob_file_context.cpp
     core/operation/orphan_files_cleaner.cpp
     core/operation/orphan_files_cleaner_impl.cpp
     core/operation/raw_file_split_read.cpp
@@ -671,6 +672,7 @@ if(PAIMON_BUILD_TESTS)
                     core/operation/file_store_write_test.cpp
                     core/operation/manifest_file_merger_test.cpp
                     core/operation/merge_file_split_read_test.cpp
+                    core/operation/blob_file_context_test.cpp
                     core/operation/orphan_files_cleaner_test.cpp
                     core/operation/raw_file_split_read_test.cpp
                     core/operation/read_context_test.cpp

@@ -375,6 +375,9 @@ struct CoreOptions::Impl {
     std::vector<std::string> sequence_field;
     std::vector<std::string> remove_record_on_sequence_group;
     std::vector<std::string> blob_fields;
+    std::vector<std::string> blob_descriptor_fields;
+    std::vector<std::string> blob_view_fields;
+    std::vector<std::string> blob_external_storage_fields;
 
     std::string partition_default_name = "__DEFAULT_PARTITION__";
     StartupMode startup_mode = StartupMode::Default();
@@ -387,6 +390,7 @@ struct CoreOptions::Impl {
     std::optional<std::string> field_default_func;
     std::optional<std::string> scan_fallback_branch;
     std::optional<std::string> data_file_external_paths;
+    std::optional<std::string> blob_external_storage_path;
 
     std::map<std::string, std::string> raw_options;
 
@@ -538,6 +542,19 @@ struct CoreOptions::Impl {
         // Parse blob-field - column names to store as blob type, comma separated
         PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
             Options::BLOB_FIELD, Options::FIELDS_SEPARATOR, &blob_fields));
+        // Parse blob-descriptor-field - BLOB fields stored inline as serialized descriptors
+        PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
+            Options::BLOB_DESCRIPTOR_FIELD, Options::FIELDS_SEPARATOR, &blob_descriptor_fields));
+        // Parse blob-view-field - BLOB fields stored inline as serialized view metadata
+        PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
+            Options::BLOB_VIEW_FIELD, Options::FIELDS_SEPARATOR, &blob_view_fields));
+        // Parse blob-external-storage-field - descriptor BLOB fields written to external storage
+        PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(Options::BLOB_EXTERNAL_STORAGE_FIELD,
+                                                           Options::FIELDS_SEPARATOR,
+                                                           &blob_external_storage_fields));
+        // Parse blob-external-storage-path - external storage path for configured BLOB fields
+        PAIMON_RETURN_NOT_OK(
+            parser.Parse(Options::BLOB_EXTERNAL_STORAGE_PATH, &blob_external_storage_path));
         return Status::OK();
     }
 
@@ -1387,6 +1404,29 @@ BucketFunctionType CoreOptions::GetBucketFunctionType() const {
 
 const std::vector<std::string>& CoreOptions::GetBlobFields() const {
     return impl_->blob_fields;
+}
+
+const std::vector<std::string>& CoreOptions::GetBlobDescriptorFields() const {
+    return impl_->blob_descriptor_fields;
+}
+
+const std::vector<std::string>& CoreOptions::GetBlobViewFields() const {
+    return impl_->blob_view_fields;
+}
+
+std::vector<std::string> CoreOptions::GetBlobInlineFields() const {
+    std::vector<std::string> blob_inline_fields = impl_->blob_descriptor_fields;
+    blob_inline_fields.insert(blob_inline_fields.end(), impl_->blob_view_fields.begin(),
+                              impl_->blob_view_fields.end());
+    return blob_inline_fields;
+}
+
+const std::vector<std::string>& CoreOptions::GetBlobExternalStorageFields() const {
+    return impl_->blob_external_storage_fields;
+}
+
+std::optional<std::string> CoreOptions::GetBlobExternalStoragePath() const {
+    return impl_->blob_external_storage_path;
 }
 
 int64_t CoreOptions::GetLookupCacheFileRetentionMs() const {
