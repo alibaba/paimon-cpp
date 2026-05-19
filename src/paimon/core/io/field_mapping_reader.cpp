@@ -112,7 +112,7 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::CastNonPartitionArrayI
             // read and data type may both be string type, but after adapter transform, type may be
             // dictionary, need reconstruct struct type
             casted_array.push_back(struct_array->field(i));
-            casted_field_names.push_back(non_partition_info_.non_partition_data_schema[i].Name());
+            casted_field_names.push_back(non_partition_info_.non_partition_read_schema[i].Name());
         }
     }
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> arrow_array,
