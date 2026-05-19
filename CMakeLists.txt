@@ -54,9 +54,6 @@ option(PAIMON_ENABLE_LANCE "Whether to enable lance file format" OFF)
 option(PAIMON_ENABLE_JINDO "Whether to enable jindo file system" OFF)
 option(PAIMON_ENABLE_LUMINA "Whether to enable lumina vector index" OFF)
 option(PAIMON_ENABLE_LUCENE "Whether to enable lucene index" OFF)
-option(PAIMON_USE_APPLE_LIBCXX_WITH_CLANG
-       "Use Apple SDK libc++ headers when building with upstream Clang on macOS" ON)
-
 if(PAIMON_ENABLE_ORC)
     add_definitions(-DPAIMON_ENABLE_ORC)
 endif()
@@ -298,8 +295,6 @@ if(PAIMON_ENABLE_LANCE)
             DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
 
-list(APPEND PAIMON_LINK_LIBS ${CMAKE_DL_LIBS})
-list(APPEND PAIMON_SHARED_INSTALL_INTERFACE_LIBS ${CMAKE_DL_LIBS})
 if(PAIMON_ENABLE_LUMINA)
     add_subdirectory(third_party/lumina EXCLUDE_FROM_ALL)
     link_directories(third_party/lumina/lib)
