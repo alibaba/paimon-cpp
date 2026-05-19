@@ -1486,4 +1486,141 @@ TEST_P(BlobTableInteTest, TestAppendWriteWithNullBlob) {
     ASSERT_TRUE(success);
 }
 
+TEST_P(BlobTableInteTest, TestReadTableWithMultiBlobFields) {
+    auto file_format = GetParam();
+    if (file_format == "lance" || file_format == "avro") {
+        return;
+    }
+    std::string table_path = paimon::test::GetDataDir() + file_format +
+                             "/append_table_with_multi_blob.db/append_table_with_multi_blob";
+    std::vector<DataField> read_fields = {
+        DataField(5, BlobUtils::ToArrowField("f5")),
+        DataField(1, arrow::field("f1", arrow::int32())),
+        DataField(2, arrow::field("f2", arrow::int32())),
+        DataField(3, arrow::field("f3", arrow::float64())),
+        DataField(4, arrow::field("f4", arrow::utf8())),
+        SpecialFields::RowId(),
+        DataField(6, BlobUtils::ToArrowField("f6")),
+    };
+
+    std::shared_ptr<arrow::DataType> arrow_data_type =
+        DataField::ConvertDataFieldsToArrowStructType(read_fields);
+
+    constexpr int32_t kNumRows = 10;
+    constexpr int32_t kF5Size = 1024;
+    constexpr int32_t kF6Size = 2048;
+
+    // Build expected_array programmatically
+    arrow::LargeBinaryBuilder f5_builder;
+    arrow::Int32Builder f1_builder;
+    arrow::Int32Builder f2_builder;
+    arrow::DoubleBuilder f3_builder;
+    arrow::StringBuilder f4_builder;
+    arrow::Int64Builder row_id_builder;
+    arrow::LargeBinaryBuilder f6_builder;
+
+    for (int32_t i = 0; i < kNumRows; i++) {
+        // f5: null for row 0,1; filled with 'A'+i for row 2..9
+        if (i <= 1) {
+            ASSERT_TRUE(f5_builder.AppendNull().ok());
+        } else {
+            std::string f5_data(kF5Size, static_cast<char>('A' + i));
+            ASSERT_TRUE(f5_builder.Append(f5_data).ok());
+        }
+
+        ASSERT_TRUE(f1_builder.Append(i).ok());
+        ASSERT_TRUE(f2_builder.Append(i * 10).ok());
+        ASSERT_TRUE(f3_builder.Append(i + 0.5).ok());
+        ASSERT_TRUE(f4_builder.Append("desc_" + std::to_string(i)).ok());
+        ASSERT_TRUE(row_id_builder.Append(i).ok());
+
+        // f6: null for row 0,2; filled with 'a'+i for row 1,3..9
+        if (i == 0 || i == 2) {
+            ASSERT_TRUE(f6_builder.AppendNull().ok());
+        } else {
+            std::string f6_data(kF6Size, static_cast<char>('a' + i));
+            ASSERT_TRUE(f6_builder.Append(f6_data).ok());
+        }
+    }
+
+    std::shared_ptr<arrow::Array> f5_arr, f1_arr, f2_arr, f3_arr, f4_arr, row_id_arr, f6_arr;
+    ASSERT_TRUE(f5_builder.Finish(&f5_arr).ok());
+    ASSERT_TRUE(f1_builder.Finish(&f1_arr).ok());
+    ASSERT_TRUE(f2_builder.Finish(&f2_arr).ok());
+    ASSERT_TRUE(f3_builder.Finish(&f3_arr).ok());
+    ASSERT_TRUE(f4_builder.Finish(&f4_arr).ok());
+    ASSERT_TRUE(row_id_builder.Finish(&row_id_arr).ok());
+    ASSERT_TRUE(f6_builder.Finish(&f6_arr).ok());
+
+    auto expected_array = std::make_shared<arrow::StructArray>(
+        arrow_data_type, kNumRows,
+        std::vector<std::shared_ptr<arrow::Array>>{f5_arr, f1_arr, f2_arr, f3_arr, f4_arr,
+                                                   row_id_arr, f6_arr});
+
+    {
+        ASSERT_OK(ScanAndRead(table_path, arrow::schema(arrow_data_type->fields())->field_names(),
+                              expected_array));
+    }
+
+    // Test with row_ranges: select row 0 (both null), row 2 (f5 non-null, f6 null),
+    // row 5 (both non-null) to verify null handling under row range filtering.
+    {
+        arrow::LargeBinaryBuilder f5_rr_builder;
+        arrow::Int32Builder f1_rr_builder;
+        arrow::Int32Builder f2_rr_builder;
+        arrow::DoubleBuilder f3_rr_builder;
+        arrow::StringBuilder f4_rr_builder;
+        arrow::Int64Builder row_id_rr_builder;
+        arrow::LargeBinaryBuilder f6_rr_builder;
+
+        // Row 0: f5=null, f6=null
+        ASSERT_TRUE(f5_rr_builder.AppendNull().ok());
+        ASSERT_TRUE(f1_rr_builder.Append(0).ok());
+        ASSERT_TRUE(f2_rr_builder.Append(0).ok());
+        ASSERT_TRUE(f3_rr_builder.Append(0.5).ok());
+        ASSERT_TRUE(f4_rr_builder.Append("desc_0").ok());
+        ASSERT_TRUE(row_id_rr_builder.Append(0).ok());
+        ASSERT_TRUE(f6_rr_builder.AppendNull().ok());
+
+        // Row 2: f5=1024×'C', f6=null
+        std::string f5_row2(kF5Size, 'C');
+        ASSERT_TRUE(f5_rr_builder.Append(f5_row2).ok());
+        ASSERT_TRUE(f1_rr_builder.Append(2).ok());
+        ASSERT_TRUE(f2_rr_builder.Append(20).ok());
+        ASSERT_TRUE(f3_rr_builder.Append(2.5).ok());
+        ASSERT_TRUE(f4_rr_builder.Append("desc_2").ok());
+        ASSERT_TRUE(row_id_rr_builder.Append(2).ok());
+        ASSERT_TRUE(f6_rr_builder.AppendNull().ok());
+
+        // Row 5: f5=1024×'F', f6=2048×'f'
+        std::string f5_row5(kF5Size, 'F');
+        std::string f6_row5(kF6Size, 'f');
+        ASSERT_TRUE(f5_rr_builder.Append(f5_row5).ok());
+        ASSERT_TRUE(f1_rr_builder.Append(5).ok());
+        ASSERT_TRUE(f2_rr_builder.Append(50).ok());
+        ASSERT_TRUE(f3_rr_builder.Append(5.5).ok());
+        ASSERT_TRUE(f4_rr_builder.Append("desc_5").ok());
+        ASSERT_TRUE(row_id_rr_builder.Append(5).ok());
+        ASSERT_TRUE(f6_rr_builder.Append(f6_row5).ok());
+
+        std::shared_ptr<arrow::Array> f5_rr, f1_rr, f2_rr, f3_rr, f4_rr, row_id_rr, f6_rr;
+        ASSERT_TRUE(f5_rr_builder.Finish(&f5_rr).ok());
+        ASSERT_TRUE(f1_rr_builder.Finish(&f1_rr).ok());
+        ASSERT_TRUE(f2_rr_builder.Finish(&f2_rr).ok());
+        ASSERT_TRUE(f3_rr_builder.Finish(&f3_rr).ok());
+        ASSERT_TRUE(f4_rr_builder.Finish(&f4_rr).ok());
+        ASSERT_TRUE(row_id_rr_builder.Finish(&row_id_rr).ok());
+        ASSERT_TRUE(f6_rr_builder.Finish(&f6_rr).ok());
+
+        auto expected_rr = std::make_shared<arrow::StructArray>(
+            arrow_data_type, /*length=*/3,
+            std::vector<std::shared_ptr<arrow::Array>>{f5_rr, f1_rr, f2_rr, f3_rr, f4_rr, row_id_rr,
+                                                       f6_rr});
+
+        ASSERT_OK(ScanAndRead(table_path, arrow::schema(arrow_data_type->fields())->field_names(),
+                              expected_rr, /*predicate=*/nullptr,
+                              /*row_ranges=*/{Range(0l, 0l), Range(2l, 2l), Range(5l, 5l)}));
+    }
+}
+
 }  // namespace paimon::test
