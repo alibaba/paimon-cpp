@@ -79,10 +79,8 @@ class BlobFormatWriter : public FormatWriter {
     static PAIMON_UNIQUE_PTR<Bytes> IntegerToLittleEndian(T value,
                                                           const std::shared_ptr<MemoryPool>& pool);
 
- private:
-    static constexpr int8_t VERSION = 1;
-    static constexpr int32_t MAGIC_NUMBER = 1481511375;
-    static constexpr uint32_t TMP_BUFFER_SIZE = 1024 * 1024;
+ public:
+    static constexpr uint32_t kTmpBufferSize = 1024 * 1024;
 
  private:
     bool blob_as_descriptor_;

@@ -294,7 +294,7 @@ TEST_P(BlobFormatWriterTest, TestLargeBlob) {
                          file_system_->Create(large_file_path, /*overwrite=*/true));
 
     // Write data larger than TMP_BUFFER_SIZE (1MB)
-    const size_t large_size = BlobFormatWriter::TMP_BUFFER_SIZE * 2 + 1000;  // ~2MB
+    const size_t large_size = BlobFormatWriter::kTmpBufferSize * 2 + 1000;  // ~2MB
     std::vector<char> large_data(large_size, 'A');
     ASSERT_OK_AND_ASSIGN(int32_t written, large_file_stream->Write(large_data.data(), large_size));
     ASSERT_EQ(written, large_size);
@@ -343,35 +343,56 @@ TEST_P(BlobFormatWriterTest, TestAddBatchWithNullValues) {
                          BlobFormatWriter::Create(blob_as_descriptor_, output_stream_, struct_type_,
                                                   file_system_, pool_));
 
-    // Test with null struct array
+    // Write one row with child-level null blob
     arrow::StructBuilder struct_builder(struct_type_, arrow::default_memory_pool(),
-                                        {std::make_shared<arrow::BinaryBuilder>()});
-    ASSERT_TRUE(struct_builder.AppendNull().ok());  // Append null instead of valid value
+                                        {std::make_shared<arrow::LargeBinaryBuilder>()});
+    auto blob_builder = static_cast<arrow::LargeBinaryBuilder*>(struct_builder.field_builder(0));
+    ASSERT_TRUE(struct_builder.Append().ok());
+    ASSERT_TRUE(blob_builder->AppendNull().ok());
+    std::shared_ptr<arrow::Array> null_child_array;
+    ASSERT_TRUE(struct_builder.Finish(&null_child_array).ok());
+    auto c_array = std::make_unique<ArrowArray>();
+    ASSERT_TRUE(arrow::ExportArray(*null_child_array, c_array.get()).ok());
+    ASSERT_OK(writer->AddBatch(c_array.get()));
 
+    ASSERT_OK(writer->Flush());
+    ASSERT_OK(writer->Finish());
+
+    // Read back and verify
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream,
+                         file_system_->Open(dir_->Str() + "/file.blob"));
+    ASSERT_TRUE(input_stream);
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<BlobFileBatchReader> reader,
+        BlobFileBatchReader::Create(input_stream, /*batch_size=*/1024, blob_as_descriptor_, pool_));
+    auto schema = arrow::schema(struct_type_->fields());
+    ::ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
+    ASSERT_OK(
+        reader->SetReadSchema(&c_schema, /*predicate=*/nullptr, /*selection_bitmap=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto chunked_array,
+                         paimon::test::ReadResultCollector::CollectResult(reader.get()));
+
+    auto concat_array = arrow::Concatenate(chunked_array->chunks()).ValueOrDie();
+    auto result_struct = arrow::internal::checked_pointer_cast<arrow::StructArray>(concat_array);
+    ASSERT_TRUE(result_struct);
+    ASSERT_EQ(result_struct->length(), 1);
+    ASSERT_TRUE(result_struct->field(0)->IsNull(0));
+
+    // Struct-level null should still be rejected
+    arrow::StructBuilder struct_builder2(struct_type_, arrow::default_memory_pool(),
+                                         {std::make_shared<arrow::LargeBinaryBuilder>()});
+    ASSERT_TRUE(struct_builder2.AppendNull().ok());
     std::shared_ptr<arrow::Array> null_struct_array;
-    ASSERT_TRUE(struct_builder.Finish(&null_struct_array).ok());
+    ASSERT_TRUE(struct_builder2.Finish(&null_struct_array).ok());
     auto null_c_array = std::make_unique<ArrowArray>();
     ASSERT_TRUE(arrow::ExportArray(*null_struct_array, null_c_array.get()).ok());
-
-    ASSERT_NOK_WITH_MSG(writer->AddBatch(null_c_array.get()),
-                        "BlobFormatWriter only support non-null blob.");
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<BlobFormatWriter> writer2,
+                         BlobFormatWriter::Create(blob_as_descriptor_, output_stream_, struct_type_,
+                                                  file_system_, pool_));
+    ASSERT_NOK_WITH_MSG(writer2->AddBatch(null_c_array.get()),
+                        "BlobFormatWriter does not support struct-level null.");
     ArrowArrayRelease(null_c_array.get());
-
-    // Test with null child array (blob field is null)
-    arrow::StructBuilder struct_builder2(struct_type_, arrow::default_memory_pool(),
-                                         {std::make_shared<arrow::BinaryBuilder>()});
-    auto blob_builder = static_cast<arrow::BinaryBuilder*>(struct_builder2.field_builder(0));
-    ASSERT_TRUE(struct_builder2.Append().ok());
-    ASSERT_TRUE(blob_builder->AppendNull().ok());  // Append null blob
-
-    std::shared_ptr<arrow::Array> null_child_array;
-    ASSERT_TRUE(struct_builder2.Finish(&null_child_array).ok());
-    auto null_child_c_array = std::make_unique<ArrowArray>();
-    ASSERT_TRUE(arrow::ExportArray(*null_child_array, null_child_c_array.get()).ok());
-
-    ASSERT_NOK_WITH_MSG(writer->AddBatch(null_child_c_array.get()),
-                        "BlobFormatWriter only support non-null blob.");
-    ArrowArrayRelease(null_child_c_array.get());
 }
 
 TEST_P(BlobFormatWriterTest, TestAddBatchWithZeroLengthBlob) {

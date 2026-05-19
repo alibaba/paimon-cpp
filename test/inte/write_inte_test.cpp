@@ -231,6 +231,52 @@ class WriteInteTest : public testing::Test, public ::testing::WithParamInterface
         return new_meta;
     }
 
+    /// Build a StructArray with schema (f0:string, f1:int32, blob_field_1, blob_field_2, ...).
+    /// The int (f1) column will be null at rows where i % 3 == 0.
+    /// @param fields The full field vector of the schema.
+    /// @param blob_descriptors_per_field One vector of Bytes per blob field, all same length.
+    std::shared_ptr<arrow::Array> GenerateBlobArray(
+        const arrow::FieldVector& fields,
+        const std::vector<std::vector<PAIMON_UNIQUE_PTR<Bytes>>>& blob_descriptors_per_field)
+        const {
+        size_t num_blob_fields = blob_descriptors_per_field.size();
+        EXPECT_GE(fields.size(), 2 + num_blob_fields);
+        size_t row_count = num_blob_fields > 0 ? blob_descriptors_per_field[0].size() : 0;
+        for (const auto& descriptors : blob_descriptors_per_field) {
+            EXPECT_EQ(descriptors.size(), row_count);
+        }
+
+        std::vector<std::shared_ptr<arrow::ArrayBuilder>> child_builders;
+        child_builders.push_back(std::make_shared<arrow::StringBuilder>());
+        child_builders.push_back(std::make_shared<arrow::Int32Builder>());
+        for (size_t b = 0; b < num_blob_fields; ++b) {
+            child_builders.push_back(std::make_shared<arrow::LargeBinaryBuilder>());
+        }
+        arrow::StructBuilder struct_builder(arrow::struct_(fields), arrow::default_memory_pool(),
+                                            child_builders);
+        auto string_builder = dynamic_cast<arrow::StringBuilder*>(struct_builder.field_builder(0));
+        auto int_builder = dynamic_cast<arrow::Int32Builder*>(struct_builder.field_builder(1));
+
+        for (size_t i = 0; i < row_count; ++i) {
+            EXPECT_TRUE(struct_builder.Append().ok());
+            EXPECT_TRUE(string_builder->Append("str_" + std::to_string(i)).ok());
+            if (i % 3 == 0) {
+                EXPECT_TRUE(int_builder->AppendNull().ok());
+            } else {
+                EXPECT_TRUE(int_builder->Append(static_cast<int32_t>(i)).ok());
+            }
+            for (size_t b = 0; b < num_blob_fields; ++b) {
+                auto blob_builder = dynamic_cast<arrow::LargeBinaryBuilder*>(
+                    struct_builder.field_builder(2 + static_cast<int>(b)));
+                const auto& desc = blob_descriptors_per_field[b][i];
+                EXPECT_TRUE(blob_builder->Append(desc->data(), desc->size()).ok());
+            }
+        }
+        std::shared_ptr<arrow::Array> array;
+        EXPECT_TRUE(struct_builder.Finish(&array).ok());
+        return array;
+    }
+
     void CheckCreationTime(const std::vector<std::shared_ptr<CommitMessage>>& commit_messages) {
         TimezoneGuard guard("Asia/Shanghai");
         for (const auto& msg : commit_messages) {
@@ -3722,34 +3768,6 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithBlobType) {
                                         /*primary_keys=*/{}, options, /*is_streaming_mode=*/true));
     int64_t commit_identifier = 0;
 
-    auto generate_blob_array = [&](const std::vector<PAIMON_UNIQUE_PTR<Bytes>>& blob_descriptors)
-        -> std::shared_ptr<arrow::Array> {
-        arrow::StructBuilder struct_builder(
-            arrow::struct_(fields), arrow::default_memory_pool(),
-            {std::make_shared<arrow::StringBuilder>(), std::make_shared<arrow::Int32Builder>(),
-             std::make_shared<arrow::LargeBinaryBuilder>()});
-        auto string_builder = dynamic_cast<arrow::StringBuilder*>(struct_builder.field_builder(0));
-        auto int_builder = dynamic_cast<arrow::Int32Builder*>(struct_builder.field_builder(1));
-        auto binary_builder =
-            dynamic_cast<arrow::LargeBinaryBuilder*>(struct_builder.field_builder(2));
-        for (size_t i = 0; i < blob_descriptors.size(); ++i) {
-            EXPECT_TRUE(struct_builder.Append().ok());
-            EXPECT_TRUE(string_builder->Append("str_" + std::to_string(i)).ok());
-            if (i % 3 == 0) {
-                // test null
-                EXPECT_TRUE(int_builder->AppendNull().ok());
-            } else {
-                EXPECT_TRUE(int_builder->Append(i).ok());
-            }
-            EXPECT_TRUE(
-                binary_builder->Append(blob_descriptors[i]->data(), blob_descriptors[i]->size())
-                    .ok());
-        }
-        std::shared_ptr<arrow::Array> array;
-        EXPECT_TRUE(struct_builder.Finish(&array).ok());
-        return array;
-    };
-
     std::vector<PAIMON_UNIQUE_PTR<Bytes>> blob_descriptors;
     std::string file1 = paimon::test::GetDataDir() + "/avro/data/avro_with_null";
     ASSERT_OK_AND_ASSIGN(auto blob1, Blob::FromPath(file1));
@@ -3763,7 +3781,9 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithBlobType) {
     ASSERT_OK_AND_ASSIGN(auto blob4, Blob::FromPath(file2, /*offset=*/300, /*length=*/3000));
     blob_descriptors.emplace_back(blob4->ToDescriptor(pool_));
 
-    auto array = generate_blob_array(blob_descriptors);
+    std::vector<std::vector<PAIMON_UNIQUE_PTR<Bytes>>> blob_fields;
+    blob_fields.emplace_back(std::move(blob_descriptors));
+    auto array = GenerateBlobArray(fields, blob_fields);
     ::ArrowArray arrow_array;
     ASSERT_TRUE(arrow::ExportArray(*array, &arrow_array).ok());
     RecordBatchBuilder batch_builder(&arrow_array);
@@ -4536,6 +4556,433 @@ TEST_P(WriteInteTest, TestPkSpillableWithIOException) {
         break;
     }
     ASSERT_TRUE(run_complete);
+}
+TEST_P(WriteInteTest, TestAppendTableWriteWithMultipleBlobFields) {
+    auto dir = UniqueTestDirectory::Create();
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int32()),
+        BlobUtils::ToArrowField("blob1", false), BlobUtils::ToArrowField("blob2", false)};
+    auto schema = arrow::schema(fields);
+
+    auto file_format = GetParam();
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, file_format},
+                                                  {Options::BUCKET, "-1"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::BLOB_AS_DESCRIPTOR, "true"},
+                                                  {Options::BLOB_FIELD, "blob2,blob1"}};
+
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(dir->Str(), schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/true));
+    int64_t commit_identifier = 0;
+
+    // Prepare blob descriptors for both blob fields
+    std::vector<PAIMON_UNIQUE_PTR<Bytes>> blob1_descriptors;
+    std::vector<PAIMON_UNIQUE_PTR<Bytes>> blob2_descriptors;
+
+    std::string file1 = paimon::test::GetDataDir() + "/avro/data/avro_with_null";
+    ASSERT_OK_AND_ASSIGN(auto blob1_a, Blob::FromPath(file1));
+    blob1_descriptors.emplace_back(blob1_a->ToDescriptor(pool_));
+
+    std::string file2 = paimon::test::GetDataDir() + "/xxhash.data";
+    ASSERT_OK_AND_ASSIGN(auto blob1_b, Blob::FromPath(file2, /*offset=*/0, /*length=*/91));
+    blob1_descriptors.emplace_back(blob1_b->ToDescriptor(pool_));
+    ASSERT_OK_AND_ASSIGN(auto blob1_c, Blob::FromPath(file2, /*offset=*/92, /*length=*/85));
+    blob1_descriptors.emplace_back(blob1_c->ToDescriptor(pool_));
+
+    // blob2 field uses different data slices
+    ASSERT_OK_AND_ASSIGN(auto blob2_a, Blob::FromPath(file2, /*offset=*/300, /*length=*/3000));
+    blob2_descriptors.emplace_back(blob2_a->ToDescriptor(pool_));
+    ASSERT_OK_AND_ASSIGN(auto blob2_b, Blob::FromPath(file2, /*offset=*/0, /*length=*/91));
+    blob2_descriptors.emplace_back(blob2_b->ToDescriptor(pool_));
+    ASSERT_OK_AND_ASSIGN(auto blob2_c, Blob::FromPath(file1));
+    blob2_descriptors.emplace_back(blob2_c->ToDescriptor(pool_));
+
+    std::vector<std::vector<PAIMON_UNIQUE_PTR<Bytes>>> blob_fields;
+    blob_fields.emplace_back(std::move(blob1_descriptors));
+    blob_fields.emplace_back(std::move(blob2_descriptors));
+    auto array = GenerateBlobArray(fields, blob_fields);
+    ::ArrowArray arrow_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &arrow_array).ok());
+    RecordBatchBuilder batch_builder(&arrow_array);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch, batch_builder.Finish());
+
+    // Build expected DataFileMeta for verification
+    // main file: 3 rows, write_cols={"f0","f1"}, first_row_id=0
+    auto expected_main = std::make_shared<DataFileMeta>(
+        "data-xxx.xxx", /*file_size=*/0, /*row_count=*/3,
+        /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
+        /*key_stats=*/SimpleStats::EmptyStats(),
+        BinaryRowGenerator::GenerateStats({std::string("str_0"), 1}, {std::string("str_2"), 2},
+                                          std::vector<int64_t>({0, 1}), pool_.get()),
+        /*min_sequence_number=*/1, /*max_sequence_number=*/1, /*schema_id=*/0,
+        /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
+        /*creation_time=*/Timestamp(0, 0),
+        /*delete_row_count=*/0, /*embedded_index=*/nullptr, FileSource::Append(),
+        /*value_stats_cols=*/std::nullopt, /*external_path=*/std::nullopt, /*first_row_id=*/0,
+        /*write_cols=*/std::vector<std::string>({"f0", "f1"}));
+    expected_main = ReconstructDataFileMeta(expected_main);
+
+    // blob1 file: 3 rows, write_cols={"blob1"}, first_row_id=0
+    auto expected_blob1 = std::make_shared<DataFileMeta>(
+        "data-xxx.blob", /*file_size=*/0, /*row_count=*/3,
+        /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
+        /*key_stats=*/SimpleStats::EmptyStats(),
+        BinaryRowGenerator::GenerateStats({NullType()}, {NullType()}, std::vector<int64_t>({0}),
+                                          pool_.get()),
+        /*min_sequence_number=*/1, /*max_sequence_number=*/1, /*schema_id=*/0,
+        /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
+        /*creation_time=*/Timestamp(0, 0),
+        /*delete_row_count=*/0, /*embedded_index=*/nullptr, FileSource::Append(),
+        /*value_stats_cols=*/std::nullopt, /*external_path=*/std::nullopt, /*first_row_id=*/0,
+        /*write_cols=*/std::vector<std::string>({"blob1"}));
+
+    // blob2 file: 3 rows, write_cols={"blob2"}, first_row_id=0
+    auto expected_blob2 = std::make_shared<DataFileMeta>(
+        "data-xxx.blob", /*file_size=*/0, /*row_count=*/3,
+        /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
+        /*key_stats=*/SimpleStats::EmptyStats(),
+        BinaryRowGenerator::GenerateStats({NullType()}, {NullType()}, std::vector<int64_t>({0}),
+                                          pool_.get()),
+        /*min_sequence_number=*/1, /*max_sequence_number=*/1, /*schema_id=*/0,
+        /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
+        /*creation_time=*/Timestamp(0, 0),
+        /*delete_row_count=*/0, /*embedded_index=*/nullptr, FileSource::Append(),
+        /*value_stats_cols=*/std::nullopt, /*external_path=*/std::nullopt, /*first_row_id=*/0,
+        /*write_cols=*/std::vector<std::string>({"blob2"}));
+
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
+    ASSERT_EQ(commit_msgs.size(), 1);
+
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot, helper->LatestSnapshot());
+    ASSERT_TRUE(snapshot);
+    ASSERT_EQ(1, snapshot.value().Id());
+    // 3 rows * 3 files (1 main + 1 blob1 + 1 blob2) = 9 total records
+    ASSERT_EQ(9, snapshot.value().TotalRecordCount().value());
+    ASSERT_EQ(9, snapshot.value().DeltaRecordCount().value());
+    ASSERT_EQ(3, snapshot.value().NextRowId().value());
+
+    // Check data file meta after commit
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_EQ(data_splits.size(), 1);
+    auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(data_splits[0]);
+    ASSERT_EQ(data_split->DataFiles().size(), 3);
+
+    // Verify each file meta by matching write_cols
+    for (const auto& actual_file : data_split->DataFiles()) {
+        if (!BlobUtils::IsBlobFile(actual_file->file_name)) {
+            ASSERT_TRUE(actual_file->TEST_Equal(*expected_main));
+        } else {
+            ASSERT_TRUE(actual_file->write_cols.has_value());
+            if (actual_file->write_cols->at(0) == "blob1") {
+                ASSERT_TRUE(actual_file->TEST_Equal(*expected_blob1));
+            } else if (actual_file->write_cols->at(0) == "blob2") {
+                ASSERT_TRUE(actual_file->TEST_Equal(*expected_blob2));
+            } else {
+                FAIL() << "Unexpected blob field: " << actual_file->write_cols->at(0);
+            }
+        }
+    }
+}
+
+TEST_P(WriteInteTest, TestRowTrackingPartitionGroupOnCommit) {
+    auto dir = UniqueTestDirectory::Create();
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int32()),
+        BlobUtils::ToArrowField("blob1", true), BlobUtils::ToArrowField("blob2", true)};
+    auto schema = arrow::schema(fields);
+
+    auto file_format = GetParam();
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "orc"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::BUCKET, "-1"},
+        {Options::ROW_TRACKING_ENABLED, "true"},
+        {Options::ROW_TRACKING_PARTITION_GROUP_ON_COMMIT, "true"},
+        {Options::DATA_EVOLUTION_ENABLED, "true"},
+        {Options::FILE_SYSTEM, "local"},
+        {Options::BLOB_AS_DESCRIPTOR, "false"}};
+
+    std::vector<std::string> partition_keys = {"f0"};
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(dir->Str(), schema, partition_keys,
+                                                         /*primary_keys=*/{}, options,
+                                                         /*is_streaming_mode=*/true));
+
+    // Write + PrepareCommit in interleaved order: pt1(2 rows) -> pt2(2 rows) -> pt1(1 row)
+    // Each write+prepareCommit produces separate commit messages.
+    // Without partition group, commit would assign row ids in message order: pt1, pt2, pt1
+    // causing pt1's row ids to be non-contiguous (0,1 gap 4).
+    // With partition group, commit regroups by partition first, so pt1 gets 0,1,2 and pt2 gets
+    // 3,4.
+    auto write_and_prepare = [&](const std::string& data,
+                                 const std::map<std::string, std::string>& partition_map,
+                                 int64_t identifier) {
+        EXPECT_OK_AND_ASSIGN(
+            auto batch, TestHelper::MakeRecordBatch(arrow::struct_(fields), data, partition_map,
+                                                    /*bucket=*/0, {}));
+
+        EXPECT_OK(helper->write_->Write(std::move(batch)));
+        EXPECT_OK_AND_ASSIGN(auto messages, helper->write_->PrepareCommit(
+                                                /*wait_compaction=*/false, identifier));
+        return messages;
+    };
+
+    int64_t commit_identifier = 0;
+    auto msgs_pt1_1 =
+        write_and_prepare(R"([["pt1", 1, "apple", "red"], ["pt1", 2, "banana", "yellow"]])",
+                          {{"f0", "pt1"}}, commit_identifier);
+    auto msgs_pt2 =
+        write_and_prepare(R"([["pt2", 10, "cat", "black"], ["pt2", 20, "dog", "white"]])",
+                          {{"f0", "pt2"}}, commit_identifier);
+    auto msgs_pt1_2 =
+        write_and_prepare(R"([["pt1", 3, "eagle", "brown"]])", {{"f0", "pt1"}}, commit_identifier);
+
+    // Merge all commit messages in interleaved order and commit once
+    std::vector<std::shared_ptr<CommitMessage>> all_msgs;
+    all_msgs.insert(all_msgs.end(), msgs_pt1_1.begin(), msgs_pt1_1.end());
+    all_msgs.insert(all_msgs.end(), msgs_pt2.begin(), msgs_pt2.end());
+    all_msgs.insert(all_msgs.end(), msgs_pt1_2.begin(), msgs_pt1_2.end());
+    ASSERT_OK(helper->commit_->Commit(all_msgs, commit_identifier++));
+
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot, helper->LatestSnapshot());
+    ASSERT_TRUE(snapshot);
+    ASSERT_EQ(5, snapshot.value().NextRowId().value());
+
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_EQ(data_splits.size(), 2);
+
+    // Helper to verify a file's first_row_id and row_count
+    auto check_file = [](const std::shared_ptr<DataFileMeta>& file, int64_t expected_row_id,
+                         int64_t expected_row_count) {
+        ASSERT_EQ(expected_row_id, file->first_row_id.value());
+        ASSERT_EQ(expected_row_count, file->row_count);
+    };
+
+    // Partition group order is non-deterministic (unordered_map), so we cannot
+    // assume which partition gets row id 0. Instead, verify:
+    // 1. Within each partition, main files have contiguous row ids
+    // 2. Blob files' first_row_id matches the corresponding main file
+    // 3. The two partitions' row id ranges do not overlap
+    int64_t pt1_start = -1, pt2_start = -1;
+    for (const auto& split : data_splits) {
+        auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
+        auto partition_value = data_split->Partition().GetStringView(0);
+        const auto& files = data_split->DataFiles();
+
+        if (partition_value == "pt1") {
+            // pt1: batch1(2 rows) + batch2(1 row) = 3 rows
+            // files: main1, blob1, blob2, main2, blob1, blob2
+            ASSERT_EQ(6, files.size());
+            pt1_start = files[0]->first_row_id.value();
+            // main1: row_count=2
+            check_file(files[0], pt1_start, 2);
+            check_file(files[1], pt1_start, 2);  // blob1 for main1
+            check_file(files[2], pt1_start, 2);  // blob2 for main1
+            // main2: contiguous after main1
+            check_file(files[3], pt1_start + 2, 1);  // main2
+            check_file(files[4], pt1_start + 2, 1);  // blob1 for main2
+            check_file(files[5], pt1_start + 2, 1);  // blob2 for main2
+        } else {
+            ASSERT_EQ("pt2", partition_value);
+            // pt2: 2 rows
+            ASSERT_EQ(3, files.size());
+            pt2_start = files[0]->first_row_id.value();
+            check_file(files[0], pt2_start, 2);  // main
+            check_file(files[1], pt2_start, 2);  // blob1
+            check_file(files[2], pt2_start, 2);  // blob2
+        }
+    }
+    // Two partitions' row id ranges must not overlap
+    // pt1 occupies [pt1_start, pt1_start+3), pt2 occupies [pt2_start, pt2_start+2)
+    ASSERT_TRUE(pt1_start + 3 <= pt2_start || pt2_start + 2 <= pt1_start)
+        << "pt1 range [" << pt1_start << "," << pt1_start + 3 << ") and pt2 range [" << pt2_start
+        << "," << pt2_start + 2 << ") overlap";
+}
+
+TEST_P(WriteInteTest, TestRowTrackingPartitionGroupOnCommitDisabled) {
+    auto dir = UniqueTestDirectory::Create();
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int32()),
+        BlobUtils::ToArrowField("blob1", true), BlobUtils::ToArrowField("blob2", true)};
+    auto schema = arrow::schema(fields);
+
+    auto file_format = GetParam();
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "orc"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::BUCKET, "-1"},
+        {Options::ROW_TRACKING_ENABLED, "true"},
+        {Options::ROW_TRACKING_PARTITION_GROUP_ON_COMMIT, "false"},
+        {Options::DATA_EVOLUTION_ENABLED, "true"},
+        {Options::FILE_SYSTEM, "local"},
+        {Options::BLOB_AS_DESCRIPTOR, "false"}};
+
+    std::vector<std::string> partition_keys = {"f0"};
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(dir->Str(), schema, partition_keys,
+                                                         /*primary_keys=*/{}, options,
+                                                         /*is_streaming_mode=*/true));
+
+    // Write + PrepareCommit in interleaved order: pt1(2 rows) -> pt2(2 rows) -> pt1(1 row)
+    // Without partition group, row ids are assigned in message order:
+    //   pt1 batch1: row_id 0,1   pt2: row_id 2,3   pt1 batch2: row_id 4
+    // So pt1's row ids are NOT contiguous: [0,1] and [4].
+    auto write_and_prepare = [&](const std::string& data,
+                                 const std::map<std::string, std::string>& partition_map,
+                                 int64_t identifier) {
+        EXPECT_OK_AND_ASSIGN(
+            auto batch, TestHelper::MakeRecordBatch(arrow::struct_(fields), data, partition_map,
+                                                    /*bucket=*/0, {}));
+        EXPECT_OK(helper->write_->Write(std::move(batch)));
+        EXPECT_OK_AND_ASSIGN(auto messages, helper->write_->PrepareCommit(
+                                                /*wait_compaction=*/false, identifier));
+        return messages;
+    };
+
+    int64_t commit_identifier = 0;
+    auto msgs_pt1_1 =
+        write_and_prepare(R"([["pt1", 1, "apple", "red"], ["pt1", 2, "banana", "yellow"]])",
+                          {{"f0", "pt1"}}, commit_identifier);
+    auto msgs_pt2 =
+        write_and_prepare(R"([["pt2", 10, "cat", "black"], ["pt2", 20, "dog", "white"]])",
+                          {{"f0", "pt2"}}, commit_identifier);
+    auto msgs_pt1_2 =
+        write_and_prepare(R"([["pt1", 3, "eagle", "brown"]])", {{"f0", "pt1"}}, commit_identifier);
+
+    std::vector<std::shared_ptr<CommitMessage>> all_msgs;
+    all_msgs.insert(all_msgs.end(), msgs_pt1_1.begin(), msgs_pt1_1.end());
+    all_msgs.insert(all_msgs.end(), msgs_pt2.begin(), msgs_pt2.end());
+    all_msgs.insert(all_msgs.end(), msgs_pt1_2.begin(), msgs_pt1_2.end());
+    ASSERT_OK(helper->commit_->Commit(all_msgs, commit_identifier++));
+
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot, helper->LatestSnapshot());
+    ASSERT_TRUE(snapshot);
+    ASSERT_EQ(5, snapshot.value().NextRowId().value());
+
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_EQ(data_splits.size(), 2);
+
+    auto check_file = [](const std::shared_ptr<DataFileMeta>& file, int64_t expected_row_id,
+                         int64_t expected_row_count) {
+        ASSERT_EQ(expected_row_id, file->first_row_id.value());
+        ASSERT_EQ(expected_row_count, file->row_count);
+    };
+
+    // Without partition group, row ids follow message order: pt1(0,1), pt2(2,3), pt1(4)
+    for (const auto& split : data_splits) {
+        auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
+        auto partition_value = data_split->Partition().GetStringView(0);
+        const auto& files = data_split->DataFiles();
+
+        if (partition_value == "pt1") {
+            // pt1 has two batches with a gap: batch1 at row_id=0, batch2 at row_id=4
+            ASSERT_EQ(6, files.size());
+            check_file(files[0], 0, 2);  // main1
+            check_file(files[1], 0, 2);  // blob1 for main1
+            check_file(files[2], 0, 2);  // blob2 for main1
+            check_file(files[3], 4, 1);  // main2 (gap: pt2 took row_id 2,3)
+            check_file(files[4], 4, 1);  // blob1 for main2
+            check_file(files[5], 4, 1);  // blob2 for main2
+            // Verify row ids are NOT contiguous: main1 ends at 2, main2 starts at 4
+            ASSERT_NE(files[0]->first_row_id.value() + files[0]->row_count,
+                      files[3]->first_row_id.value())
+                << "pt1 row ids should NOT be contiguous when partition group is disabled";
+        } else {
+            ASSERT_EQ("pt2", partition_value);
+            ASSERT_EQ(3, files.size());
+            check_file(files[0], 2, 2);  // main
+            check_file(files[1], 2, 2);  // blob1
+            check_file(files[2], 2, 2);  // blob2
+        }
+    }
+}
+
+TEST_P(WriteInteTest, TestMultipleBlobFieldsSplitByTargetSize) {
+    auto dir = UniqueTestDirectory::Create();
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int32()),
+        BlobUtils::ToArrowField("blob1", true), BlobUtils::ToArrowField("blob2", true)};
+    auto schema = arrow::schema(fields);
+
+    auto file_format = GetParam();
+    // Set a very small blob target file size to force splitting
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, file_format},
+                                                  {Options::BUCKET, "-1"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::BLOB_AS_DESCRIPTOR, "false"},
+                                                  {Options::BLOB_TARGET_FILE_SIZE, "1"}};
+
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(dir->Str(), schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/true));
+    int64_t commit_identifier = 0;
+
+    // Write 3 rows — with target size = 1 byte, each row in each blob field should be a
+    // separate blob file. So we expect: 1 main file + 3 blob1 files + 3 blob2 files = 7 files.
+    std::string data = R"([
+        ["str_0", null, "apple_data_long_enough",  "red_data_long_enough"],
+        ["str_1", 1,    "banana_data_long_enough", "yellow_data_long_enough"],
+        ["str_2", 2,    "cat_data_long_enough",    "black_data_long_enough"]
+    ])";
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
+    ASSERT_EQ(commit_msgs.size(), 1);
+
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot, helper->LatestSnapshot());
+    ASSERT_TRUE(snapshot);
+    ASSERT_EQ(1, snapshot.value().Id());
+    ASSERT_EQ(3, snapshot.value().NextRowId().value());
+
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_EQ(data_splits.size(), 1);
+    auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(data_splits[0]);
+    ASSERT_TRUE(data_split);
+
+    // 1 main file + 3 blob1 files + 3 blob2 files = 7 files total
+    // File order: main, blob1(row0), blob1(row1), blob1(row2), blob2(row0), blob2(row1),
+    // blob2(row2)
+    const auto& files = data_split->DataFiles();
+    ASSERT_EQ(files.size(), 7);
+
+    auto check_file = [](const std::shared_ptr<DataFileMeta>& file, int64_t expected_row_id,
+                         int64_t expected_row_count) {
+        ASSERT_EQ(expected_row_id, file->first_row_id.value());
+        ASSERT_EQ(expected_row_count, file->row_count);
+    };
+
+    // files[0]: main file
+    ASSERT_FALSE(BlobUtils::IsBlobFile(files[0]->file_name));
+    check_file(files[0], 0, 3);
+
+    // files[1..3]: blob1 files, each row_count=1, first_row_id=0,1,2
+    for (int i = 0; i < 3; ++i) {
+        ASSERT_TRUE(BlobUtils::IsBlobFile(files[1 + i]->file_name));
+        ASSERT_EQ("blob1", files[1 + i]->write_cols->at(0));
+        check_file(files[1 + i], i, 1);
+    }
+
+    // files[4..6]: blob2 files, each row_count=1, first_row_id=0,1,2
+    for (int i = 0; i < 3; ++i) {
+        ASSERT_TRUE(BlobUtils::IsBlobFile(files[4 + i]->file_name));
+        ASSERT_EQ("blob2", files[4 + i]->write_cols->at(0));
+        check_file(files[4 + i], i, 1);
+    }
 }
 
 }  // namespace paimon::test

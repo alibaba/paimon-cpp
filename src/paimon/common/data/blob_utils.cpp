@@ -96,11 +96,11 @@ bool BlobUtils::IsBlobMetadata(const std::shared_ptr<const arrow::KeyValueMetada
     if (!metadata) {
         return false;
     }
-    auto extension_name = metadata->Get(BLOB_EXTENSION_TYPE_KEY);
+    auto extension_name = metadata->Get(BlobDefs::kExtensionTypeKey);
     if (!extension_name.ok()) {
         return false;
     }
-    return extension_name.ValueUnsafe() == BLOB_EXTENSION_TYPE_VALUE;
+    return extension_name.ValueUnsafe() == BlobDefs::kExtensionTypeValue;
 }
 
 bool BlobUtils::IsBlobFile(const std::string& file_name) {
@@ -110,7 +110,7 @@ bool BlobUtils::IsBlobFile(const std::string& file_name) {
 std::shared_ptr<arrow::Field> BlobUtils::ToArrowField(
     const std::string& field_name, bool nullable,
     std::unordered_map<std::string, std::string> metadata) {
-    metadata[BLOB_EXTENSION_TYPE_KEY] = BLOB_EXTENSION_TYPE_VALUE;
+    metadata[BlobDefs::kExtensionTypeKey] = BlobDefs::kExtensionTypeValue;
     return arrow::field(field_name, arrow::large_binary(), nullable,
                         std::make_shared<arrow::KeyValueMetadata>(metadata));
 }
