@@ -4571,7 +4571,8 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithMultipleBlobFields) {
                                                   {Options::ROW_TRACKING_ENABLED, "true"},
                                                   {Options::DATA_EVOLUTION_ENABLED, "true"},
                                                   {Options::FILE_SYSTEM, "local"},
-                                                  {Options::BLOB_AS_DESCRIPTOR, "true"}};
+                                                  {Options::BLOB_AS_DESCRIPTOR, "true"},
+                                                  {Options::BLOB_FIELD, "blob2,blob1"}};
 
     ASSERT_OK_AND_ASSIGN(
         auto helper, TestHelper::Create(dir->Str(), schema, /*partition_keys=*/{},

@@ -68,8 +68,7 @@ Status MultipleBlobFileWriter::Write(::ArrowArray* record) {
             // Wrap single field into a StructArray with the same field name
             PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
                 std::shared_ptr<arrow::StructArray> single_field_struct,
-                arrow::StructArray::Make({slice},
-                                         {blob_schema_->field(field_writer.field_index)->name()}));
+                arrow::StructArray::Make({slice}, {field_writer.field_name}));
             ::ArrowArray c_blob_array;
             PAIMON_RETURN_NOT_OK_FROM_ARROW(
                 arrow::ExportArray(*single_field_struct, &c_blob_array));
@@ -100,7 +99,6 @@ Status MultipleBlobFileWriter::Close() {
         }
     }
     closed_ = true;
-    blob_field_writers_.clear();
     return Status::OK();
 }
 
