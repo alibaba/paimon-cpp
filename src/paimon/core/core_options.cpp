@@ -424,6 +424,8 @@ struct CoreOptions::Impl {
     bool lookup_wait = true;
     bool partial_update_remove_record_on_delete = false;
     bool aggregation_remove_record_on_delete = false;
+    bool table_read_sequence_number_enabled = false;
+    bool key_value_sequence_number_enabled = false;
     bool file_index_read_enabled = true;
     bool enable_adaptive_prefetch_strategy = true;
     bool index_file_in_data_file_dir = false;
@@ -629,6 +631,12 @@ struct CoreOptions::Impl {
         // Parse aggregation_remove_record_on_delete
         PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::AGGREGATION_REMOVE_RECORD_ON_DELETE,
                                                 &aggregation_remove_record_on_delete));
+        // Parse table-read.sequence-number.enabled - expose sequence number in system tables
+        PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::TABLE_READ_SEQUENCE_NUMBER_ENABLED,
+                                                &table_read_sequence_number_enabled));
+        // Parse key-value.sequence-number.enabled - internal sequence number read switch
+        PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::KEY_VALUE_SEQUENCE_NUMBER_ENABLED,
+                                                &key_value_sequence_number_enabled));
         // Parse partial-update.remove-record-on-sequence-group
         PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
             Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUP, Options::FIELDS_SEPARATOR,
@@ -1199,6 +1207,14 @@ bool CoreOptions::PartialUpdateRemoveRecordOnDelete() const {
 
 bool CoreOptions::AggregationRemoveRecordOnDelete() const {
     return impl_->aggregation_remove_record_on_delete;
+}
+
+bool CoreOptions::TableReadSequenceNumberEnabled() const {
+    return impl_->table_read_sequence_number_enabled;
+}
+
+bool CoreOptions::KeyValueSequenceNumberEnabled() const {
+    return impl_->key_value_sequence_number_enabled;
 }
 
 std::vector<std::string> CoreOptions::GetPartialUpdateRemoveRecordOnSequenceGroup() const {

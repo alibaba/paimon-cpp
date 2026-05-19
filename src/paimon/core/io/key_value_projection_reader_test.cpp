@@ -39,6 +39,7 @@
 #include "paimon/core/io/async_key_value_projection_reader.h"
 #include "paimon/core/io/concat_key_value_record_reader.h"
 #include "paimon/core/io/key_value_data_file_record_reader.h"
+#include "paimon/core/io/key_value_projection_consumer.h"
 #include "paimon/core/io/key_value_record_reader.h"
 #include "paimon/core/mergetree/compact/deduplicate_merge_function.h"
 #include "paimon/core/mergetree/compact/reducer_merge_function_wrapper.h"
@@ -216,6 +217,33 @@ TEST_P(KeyValueProjectionReaderTest, TestBulkData) {
         arrow::schema(arrow::FieldVector({fields[2]}));
     CheckResult(src_array, target_type, target_to_src_mapping, key_schema, value_schema, expected,
                 expected_sort_schema, /*expected_reserve_count=*/6);
+}
+
+TEST_P(KeyValueProjectionReaderTest, TestProjectKeyValueMetadata) {
+    arrow::FieldVector fields = {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+                                 arrow::field("_VALUE_KIND", arrow::int8()),
+                                 arrow::field("k0", arrow::int32()),
+                                 arrow::field("v0", arrow::int16())};
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
+    std::shared_ptr<arrow::Schema> value_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
+
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(
+                         src_type, R"([[0, 0, 1, 10], [1, 1, 2, 20], [2, 2, 3, 30]])")
+                         .ValueOrDie();
+    auto target_type = std::dynamic_pointer_cast<arrow::StructType>(
+        arrow::struct_({fields[0], fields[1], fields[2], fields[3]}));
+    ASSERT_TRUE(target_type);
+    std::vector<int32_t> target_to_src_mapping = {
+        KeyValueProjectionConsumer::kSequenceNumberProjection,
+        KeyValueProjectionConsumer::kValueKindProjection, 0, 1};
+
+    auto expected_array = arrow::ChunkedArray::Make({src_array}).ValueOrDie();
+    std::shared_ptr<arrow::Schema> expected_sort_schema =
+        arrow::schema(arrow::FieldVector({fields[2]}));
+    CheckResult(src_array, target_type, target_to_src_mapping, key_schema, value_schema,
+                expected_array, expected_sort_schema, /*expected_reserve_count=*/5);
 }
 
 TEST_P(KeyValueProjectionReaderTest, TestSimple) {

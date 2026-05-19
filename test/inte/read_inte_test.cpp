@@ -68,6 +68,7 @@
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/io_exception_helper.h"
 #include "paimon/testing/utils/read_result_collector.h"
+#include "paimon/testing/utils/test_helper.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -203,6 +204,17 @@ class ReadInteTest : public testing::Test, public ::testing::WithParamInterface<
 
 namespace {
 
+struct SystemTableReadResult {
+    SystemTableReadResult(std::unique_ptr<BatchReader> batch_reader,
+                          std::shared_ptr<arrow::ChunkedArray> array)
+        : batch_reader(std::move(batch_reader)), array(std::move(array)) {}
+
+    // Keep BatchReader alive while the returned Arrow arrays are used. Some readers allocate
+    // exported ArrowArray buffers on pools owned by the BatchReader.
+    std::unique_ptr<BatchReader> batch_reader;
+    std::shared_ptr<arrow::ChunkedArray> array;
+};
+
 std::map<std::string, std::string> CollectStringMap(
     const std::shared_ptr<arrow::ChunkedArray>& result) {
     std::map<std::string, std::string> values;
@@ -227,6 +239,62 @@ std::map<std::string, std::string> CollectStringMap(
         values.emplace(key_array->GetString(i), value_array->GetString(i));
     }
     return values;
+}
+
+std::shared_ptr<arrow::StructArray> SingleStructChunk(const SystemTableReadResult& result) {
+    if (!result.array) {
+        ADD_FAILURE() << "expected non-null system table result";
+        return nullptr;
+    }
+    if (result.array->num_chunks() != 1) {
+        ADD_FAILURE() << "expected one chunk, got " << result.array->num_chunks();
+        return nullptr;
+    }
+    auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(result.array->chunk(0));
+    if (!struct_array) {
+        ADD_FAILURE() << "expected struct chunk";
+    }
+    return struct_array;
+}
+
+std::vector<std::string> StructFieldNames(const std::shared_ptr<arrow::StructArray>& array) {
+    if (!array) {
+        ADD_FAILURE() << "expected non-null struct array";
+        return {};
+    }
+    return arrow::schema(array->type()->fields())->field_names();
+}
+
+Result<SystemTableReadResult> ReadSystemTable(const std::string& system_table_path,
+                                              const std::map<std::string, std::string>& options) {
+    ScanContextBuilder scan_context_builder(system_table_path);
+    scan_context_builder.SetOptions(options);
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ScanContext> scan_context,
+                           scan_context_builder.Finish());
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableScan> table_scan,
+                           TableScan::Create(std::move(scan_context)));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Plan> plan, table_scan->CreatePlan());
+
+    ReadContextBuilder read_context_builder(system_table_path);
+    read_context_builder.SetOptions(options);
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
+                           read_context_builder.Finish());
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> table_read,
+                           TableRead::Create(std::move(read_context)));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> batch_reader,
+                           table_read->CreateReader(plan->Splits()));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::ChunkedArray> result,
+                           ReadResultCollector::CollectResult(batch_reader.get()));
+    return SystemTableReadResult(std::move(batch_reader), result);
+}
+
+void AssertStructArrayEqualsJson(const std::shared_ptr<arrow::StructArray>& actual,
+                                 const std::string& expected_json) {
+    ASSERT_TRUE(actual);
+    auto expected =
+        arrow::ipc::internal::json::ArrayFromJSON(actual->type(), expected_json).ValueOrDie();
+    ASSERT_TRUE(actual->Equals(expected))
+        << "expected: " << expected->ToString() << "\nactual: " << actual->ToString();
 }
 
 }  // namespace
@@ -544,6 +612,289 @@ TEST(SystemTableReadInteTest, TestReadBranchOptionsSystemTable) {
     std::map<std::string, std::string> expected = {
         {"bucket", "2"}, {"file.format", "parquet"}, {"manifest.format", "avro"}};
     ASSERT_EQ(CollectStringMap(result), expected) << result->ToString();
+}
+
+TEST(SystemTableReadInteTest, TestReadAuditLogSystemTable) {
+    arrow::FieldVector fields = {
+        arrow::field("pk", arrow::utf8()),
+        arrow::field("v", arrow::int32()),
+    };
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {
+        {Options::FILE_SYSTEM, "local"},
+        {Options::FILE_FORMAT, "parquet"},
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::BUCKET, "1"},
+    };
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(dir->Str(), schema,
+                                                         /*partition_keys=*/{},
+                                                         /*primary_keys=*/{"pk"}, options,
+                                                         /*is_streaming_mode=*/true));
+
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<RecordBatch> batch,
+        TestHelper::MakeRecordBatch(arrow::struct_(fields), R"([["a", 1], ["b", 2]])",
+                                    /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(
+        auto result,
+        ReadSystemTable(PathUtil::JoinPath(dir->Str(), "foo.db/bar$audit_log"), options));
+    auto array = SingleStructChunk(result);
+    ASSERT_EQ(StructFieldNames(array), (std::vector<std::string>{"rowkind", "pk", "v"}));
+    AssertStructArrayEqualsJson(array, R"([
+        ["+I", "a", 1],
+        ["+I", "b", 2]
+    ])");
+}
+
+TEST(SystemTableReadInteTest, TestReadAuditLogSystemTableWithSequenceNumber) {
+    arrow::FieldVector fields = {
+        arrow::field("pk", arrow::utf8()),
+        arrow::field("v", arrow::int32()),
+    };
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {
+        {Options::FILE_SYSTEM, "local"},
+        {Options::FILE_FORMAT, "parquet"},
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::BUCKET, "1"},
+    };
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(dir->Str(), schema,
+                                                         /*partition_keys=*/{},
+                                                         /*primary_keys=*/{"pk"}, options,
+                                                         /*is_streaming_mode=*/true));
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), R"([["a", 1]])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    auto read_options = options;
+    read_options[Options::TABLE_READ_SEQUENCE_NUMBER_ENABLED] = "true";
+    ASSERT_OK_AND_ASSIGN(
+        auto result,
+        ReadSystemTable(PathUtil::JoinPath(dir->Str(), "foo.db/bar$audit_log"), read_options));
+    auto array = SingleStructChunk(result);
+    ASSERT_EQ(StructFieldNames(array),
+              (std::vector<std::string>{"rowkind", "_SEQUENCE_NUMBER", "pk", "v"}));
+    AssertStructArrayEqualsJson(array, R"([
+        ["+I", 0, "a", 1]
+    ])");
+}
+
+TEST(SystemTableReadInteTest, TestReadBinlogSystemTable) {
+    arrow::FieldVector fields = {
+        arrow::field("pk", arrow::utf8()),
+        arrow::field("v", arrow::int32()),
+    };
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {
+        {Options::FILE_SYSTEM, "local"},
+        {Options::FILE_FORMAT, "parquet"},
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::BUCKET, "1"},
+    };
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(dir->Str(), schema,
+                                                         /*partition_keys=*/{},
+                                                         /*primary_keys=*/{"pk"}, options,
+                                                         /*is_streaming_mode=*/true));
+
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<RecordBatch> batch,
+        TestHelper::MakeRecordBatch(arrow::struct_(fields), R"([["a", 1], ["b", 2]])",
+                                    /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(
+        auto result, ReadSystemTable(PathUtil::JoinPath(dir->Str(), "foo.db/bar$binlog"), options));
+    auto array = SingleStructChunk(result);
+    ASSERT_EQ(StructFieldNames(array), (std::vector<std::string>{"rowkind", "pk", "v"}));
+    AssertStructArrayEqualsJson(array, R"([
+        ["+I", ["a"], [1]],
+        ["+I", ["b"], [2]]
+    ])");
+}
+
+TEST(SystemTableReadInteTest, TestReadAuditLogAndBinlogSystemTableWithChangelogRows) {
+    arrow::FieldVector fields = {
+        arrow::field("pk", arrow::utf8()),
+        arrow::field("v", arrow::int32()),
+    };
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {
+        {Options::FILE_SYSTEM, "local"},
+        {Options::FILE_FORMAT, "parquet"},
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::BUCKET, "1"},
+    };
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(dir->Str(), schema,
+                                                         /*partition_keys=*/{},
+                                                         /*primary_keys=*/{"pk"}, options,
+                                                         /*is_streaming_mode=*/true));
+
+    std::vector<RecordBatch::RowKind> row_kinds = {
+        RecordBatch::RowKind::INSERT,
+        RecordBatch::RowKind::UPDATE_BEFORE,
+        RecordBatch::RowKind::UPDATE_AFTER,
+        RecordBatch::RowKind::DELETE,
+    };
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch,
+                         TestHelper::MakeRecordBatch(
+                             arrow::struct_(fields), R"([["a", 1], ["b", 2], ["c", 3], ["d", 4]])",
+                             /*partition_map=*/{}, /*bucket=*/0, row_kinds));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(
+        auto audit_log_result,
+        ReadSystemTable(PathUtil::JoinPath(dir->Str(), "foo.db/bar$audit_log"), options));
+    auto audit_log_array = SingleStructChunk(audit_log_result);
+    ASSERT_EQ(StructFieldNames(audit_log_array), (std::vector<std::string>{"rowkind", "pk", "v"}));
+    AssertStructArrayEqualsJson(audit_log_array, R"([
+        ["+I", "a", 1],
+        ["-U", "b", 2],
+        ["+U", "c", 3],
+        ["-D", "d", 4]
+    ])");
+
+    ASSERT_OK_AND_ASSIGN(
+        auto binlog_result,
+        ReadSystemTable(PathUtil::JoinPath(dir->Str(), "foo.db/bar$binlog"), options));
+    auto binlog_array = SingleStructChunk(binlog_result);
+    ASSERT_EQ(StructFieldNames(binlog_array), (std::vector<std::string>{"rowkind", "pk", "v"}));
+    AssertStructArrayEqualsJson(binlog_array, R"([
+        ["+I", ["a"], [1]],
+        ["-U", ["b"], [2]],
+        ["+U", ["c"], [3]],
+        ["-D", ["d"], [4]]
+    ])");
+}
+
+TEST(SystemTableReadInteTest, TestReadBinlogSystemTableWithNullValue) {
+    arrow::FieldVector fields = {
+        arrow::field("pk", arrow::utf8(), /*nullable=*/false),
+        arrow::field("v", arrow::int32(), /*nullable=*/true),
+    };
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {
+        {Options::FILE_SYSTEM, "local"},
+        {Options::FILE_FORMAT, "parquet"},
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::BUCKET, "1"},
+    };
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(dir->Str(), schema,
+                                                         /*partition_keys=*/{},
+                                                         /*primary_keys=*/{"pk"}, options,
+                                                         /*is_streaming_mode=*/true));
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), R"([["a", null]])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(
+        auto result, ReadSystemTable(PathUtil::JoinPath(dir->Str(), "foo.db/bar$binlog"), options));
+    auto array = SingleStructChunk(result);
+    ASSERT_EQ(StructFieldNames(array), (std::vector<std::string>{"rowkind", "pk", "v"}));
+    AssertStructArrayEqualsJson(array, R"([
+        ["+I", ["a"], [null]]
+    ])");
+}
+
+TEST(SystemTableReadInteTest, TestReadAuditLogAndBinlogSystemTableWithBranch) {
+    arrow::FieldVector fields = {
+        arrow::field("pk", arrow::utf8()),
+        arrow::field("v", arrow::int32()),
+    };
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
+                                                  {Options::FILE_FORMAT, "parquet"},
+                                                  {Options::MANIFEST_FORMAT, "avro"},
+                                                  {Options::BUCKET, "1"}};
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(dir->Str(), schema,
+                                                         /*partition_keys=*/{},
+                                                         /*primary_keys=*/{"pk"}, options,
+                                                         /*is_streaming_mode=*/true));
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> branch_batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), R"([["a", 1]])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(branch_batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    std::string table_path = PathUtil::JoinPath(dir->Str(), "foo.db/bar");
+    std::string branch_path = PathUtil::JoinPath(table_path, "branch/branch-rt");
+    std::filesystem::create_directories(branch_path);
+    ASSERT_TRUE(TestUtil::CopyDirectory(PathUtil::JoinPath(table_path, "schema"),
+                                        PathUtil::JoinPath(branch_path, "schema")));
+    ASSERT_TRUE(TestUtil::CopyDirectory(PathUtil::JoinPath(table_path, "snapshot"),
+                                        PathUtil::JoinPath(branch_path, "snapshot")));
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> main_batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), R"([["b", 2]])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(main_batch), /*commit_identifier=*/1,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto audit_log_result,
+                         ReadSystemTable(table_path + "$branch_rt$audit_log", options));
+    auto audit_log_array = SingleStructChunk(audit_log_result);
+    ASSERT_EQ(StructFieldNames(audit_log_array), (std::vector<std::string>{"rowkind", "pk", "v"}));
+    AssertStructArrayEqualsJson(audit_log_array, R"([
+        ["+I", "a", 1]
+    ])");
+
+    ASSERT_OK_AND_ASSIGN(auto binlog_result,
+                         ReadSystemTable(table_path + "$branch_rt$binlog", options));
+    auto binlog_array = SingleStructChunk(binlog_result);
+    ASSERT_EQ(StructFieldNames(binlog_array), (std::vector<std::string>{"rowkind", "pk", "v"}));
+    AssertStructArrayEqualsJson(binlog_array, R"([
+        ["+I", ["a"], [1]]
+    ])");
+}
+
+TEST(SystemTableReadInteTest, TestReadAuditLogAndBinlogSystemTableWithNonPrimaryKeyTable) {
+    arrow::FieldVector fields = {
+        arrow::field("pk", arrow::utf8()),
+        arrow::field("v", arrow::int32()),
+    };
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {
+        {Options::FILE_SYSTEM, "local"},
+        {Options::FILE_FORMAT, "parquet"},
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::BUCKET, "-1"},
+    };
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(dir->Str(), schema,
+                                                         /*partition_keys=*/{},
+                                                         /*primary_keys=*/{}, options,
+                                                         /*is_streaming_mode=*/false));
+
+    ASSERT_NOK_WITH_MSG(
+        ReadSystemTable(PathUtil::JoinPath(dir->Str(), "foo.db/bar$audit_log"), options),
+        "only supports primary key table");
+    ASSERT_NOK_WITH_MSG(
+        ReadSystemTable(PathUtil::JoinPath(dir->Str(), "foo.db/bar$binlog"), options),
+        "only supports primary key table");
 }
 
 TEST_P(ReadInteTest, TestAppendReadWithMultipleBuckets) {

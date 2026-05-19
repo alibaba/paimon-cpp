@@ -210,6 +210,77 @@ TEST(FileSystemCatalogTest, TestOptionsSystemTableCatalog) {
                         "Cannot rename system table");
 }
 
+TEST(FileSystemCatalogTest, TestAuditLogAndBinlogSystemTableCatalog) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
+
+    auto typed_schema =
+        arrow::schema({arrow::field("pk", arrow::utf8()), arrow::field("v", arrow::int32(), true)});
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &schema).ok());
+    ASSERT_OK(catalog.CreateTable(Identifier("db1", "tbl1"), &schema,
+                                  /*partition_keys=*/{}, /*primary_keys=*/{"pk"}, options,
+                                  /*ignore_if_exists=*/false));
+    ArrowSchemaRelease(&schema);
+
+    Identifier audit_log_identifier("db1", "tbl1$audit_log");
+    Identifier binlog_identifier("db1", "tbl1$binlog");
+    ASSERT_OK_AND_ASSIGN(bool exists, catalog.TableExists(audit_log_identifier));
+    ASSERT_TRUE(exists);
+    ASSERT_OK_AND_ASSIGN(exists, catalog.TableExists(binlog_identifier));
+    ASSERT_TRUE(exists);
+    ASSERT_OK_AND_ASSIGN(exists, catalog.TableExists(Identifier("db1", "tbl1$unknown")));
+    ASSERT_FALSE(exists);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> audit_log_system_schema,
+                         catalog.LoadTableSchema(audit_log_identifier));
+    ASSERT_TRUE(std::dynamic_pointer_cast<SystemTableSchema>(audit_log_system_schema) != nullptr);
+    ASSERT_OK_AND_ASSIGN(auto audit_log_c_schema, audit_log_system_schema->GetArrowSchema());
+    auto audit_log_schema_result = arrow::ImportSchema(audit_log_c_schema.get());
+    ASSERT_TRUE(audit_log_schema_result.ok()) << audit_log_schema_result.status().ToString();
+    auto audit_log_schema = audit_log_schema_result.ValueUnsafe();
+    ASSERT_EQ(audit_log_schema->field_names(), (std::vector<std::string>{"rowkind", "pk", "v"}));
+    ASSERT_EQ(audit_log_schema->field(0)->type()->id(), arrow::Type::STRING);
+    ASSERT_EQ(audit_log_schema->field(1)->type()->id(), arrow::Type::STRING);
+    ASSERT_EQ(audit_log_schema->field(2)->type()->id(), arrow::Type::INT32);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> binlog_system_schema,
+                         catalog.LoadTableSchema(binlog_identifier));
+    ASSERT_TRUE(std::dynamic_pointer_cast<SystemTableSchema>(binlog_system_schema) != nullptr);
+    ASSERT_OK_AND_ASSIGN(auto binlog_c_schema, binlog_system_schema->GetArrowSchema());
+    auto binlog_schema_result = arrow::ImportSchema(binlog_c_schema.get());
+    ASSERT_TRUE(binlog_schema_result.ok()) << binlog_schema_result.status().ToString();
+    auto binlog_schema = binlog_schema_result.ValueUnsafe();
+    ASSERT_EQ(binlog_schema->field_names(), (std::vector<std::string>{"rowkind", "pk", "v"}));
+    ASSERT_EQ(binlog_schema->field(0)->type()->id(), arrow::Type::STRING);
+    ASSERT_EQ(binlog_schema->field(1)->type()->id(), arrow::Type::LIST);
+    ASSERT_EQ(binlog_schema->field(2)->type()->id(), arrow::Type::LIST);
+    auto binlog_pk_type =
+        std::dynamic_pointer_cast<arrow::ListType>(binlog_schema->field(1)->type());
+    auto binlog_v_type =
+        std::dynamic_pointer_cast<arrow::ListType>(binlog_schema->field(2)->type());
+    ASSERT_TRUE(binlog_pk_type);
+    ASSERT_TRUE(binlog_v_type);
+    ASSERT_EQ(binlog_pk_type->value_type()->id(), arrow::Type::STRING);
+    ASSERT_EQ(binlog_v_type->value_type()->id(), arrow::Type::INT32);
+
+    ::ArrowSchema system_create_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &system_create_schema).ok());
+    ASSERT_NOK_WITH_MSG(
+        catalog.CreateTable(audit_log_identifier, &system_create_schema, {}, {}, options, false),
+        "Cannot create table for system table");
+    ArrowSchemaRelease(&system_create_schema);
+    ASSERT_NOK_WITH_MSG(catalog.DropTable(binlog_identifier, false), "Cannot drop system table");
+    ASSERT_NOK_WITH_MSG(catalog.RenameTable(audit_log_identifier, Identifier("db1", "tbl2"), false),
+                        "Cannot rename system table");
+}
+
 TEST(FileSystemCatalogTest, TestCreateTableWithBlob) {
     std::map<std::string, std::string> options;
     options[Options::FILE_SYSTEM] = "local";

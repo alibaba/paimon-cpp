@@ -54,7 +54,7 @@ Result<std::unique_ptr<KeyValueProjectionConsumer>> KeyValueProjectionConsumer::
     appenders.reserve(target_to_src_mapping.size());
     // first is the root struct array
     int32_t reserve_count = 1;
-    for (size_t i = 0; i < target_to_src_mapping.size(); i++) {
+    for (int32_t i = 0; i < static_cast<int32_t>(target_to_src_mapping.size()); i++) {
         PAIMON_ASSIGN_OR_RAISE(
             RowToArrowArrayConverter::AppendValueFunc func,
             AppendField(/*use_view=*/true, struct_builder->field_builder(i), &reserve_count));
@@ -70,8 +70,25 @@ Result<BatchReader::ReadBatch> KeyValueProjectionConsumer::NextBatch(
     PAIMON_RETURN_NOT_OK(ResetAndReserve());
     PAIMON_RETURN_NOT_OK_FROM_ARROW(
         array_builder_->AppendValues(key_value_vec.size(), /*valid_bytes=*/nullptr));
-    for (size_t i = 0; i < target_to_src_mapping_.size(); i++) {
+    for (int32_t i = 0; i < static_cast<int32_t>(target_to_src_mapping_.size()); i++) {
         for (const auto& row : key_value_vec) {
+            if (target_to_src_mapping_[i] == kSequenceNumberProjection) {
+                auto* builder =
+                    dynamic_cast<arrow::Int64Builder*>(array_builder_->field_builder(i));
+                if (builder == nullptr) {
+                    return Status::Invalid("cannot append sequence number to non-int64 field");
+                }
+                PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(row.sequence_number));
+                continue;
+            }
+            if (target_to_src_mapping_[i] == kValueKindProjection) {
+                auto* builder = dynamic_cast<arrow::Int8Builder*>(array_builder_->field_builder(i));
+                if (builder == nullptr) {
+                    return Status::Invalid("cannot append value kind to non-int8 field");
+                }
+                PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(row.value_kind->ToByteValue()));
+                continue;
+            }
             PAIMON_RETURN_NOT_OK_FROM_ARROW(appenders_[i](*(row.value), target_to_src_mapping_[i]));
         }
     }

@@ -16,25 +16,28 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
-#include <vector>
+#include <string>
 
-#include "paimon/table/source/table_read.h"
+#include "paimon/core/table/system/audit_log_system_table.h"
 
 namespace paimon {
-class SystemTable;
+class FileSystem;
+class TableSchema;
 
-class SystemTableRead : public TableRead {
+class BinlogSystemTable : public AuditLogSystemTable {
  public:
-    SystemTableRead(std::shared_ptr<SystemTable> system_table,
-                    const std::shared_ptr<MemoryPool>& memory_pool);
+    static constexpr const char* kName = "binlog";
 
-    Result<std::unique_ptr<BatchReader>> CreateReader(
-        const std::vector<std::shared_ptr<Split>>& splits) override;
-    Result<std::unique_ptr<BatchReader>> CreateReader(const std::shared_ptr<Split>& split) override;
+    BinlogSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
+                      std::shared_ptr<TableSchema> table_schema,
+                      std::map<std::string, std::string> options);
 
- private:
-    std::shared_ptr<SystemTable> system_table_;
+    std::string Name() const override;
+    Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
+    Result<std::unique_ptr<TableRead>> NewRead(
+        const std::shared_ptr<ReadContext>& context) const override;
 };
 
 }  // namespace paimon

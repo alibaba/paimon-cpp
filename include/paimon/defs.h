@@ -374,6 +374,14 @@ struct PAIMON_EXPORT Options {
     /// "aggregation.remove-record-on-delete" - Whether to remove the whole row in aggregation
     /// engine when delete records are received. Default value is "false".
     static const char AGGREGATION_REMOVE_RECORD_ON_DELETE[];
+    /// "table-read.sequence-number.enabled" - Whether to include the _SEQUENCE_NUMBER field when
+    /// reading the audit_log or binlog system tables. This is only valid for primary key tables.
+    /// Default value is "false".
+    static const char TABLE_READ_SEQUENCE_NUMBER_ENABLED[];
+    /// "key-value.sequence-number.enabled" - Whether to include the _SEQUENCE_NUMBER field when
+    /// reading key-value data. This is an internal option used by AuditLogTable and BinlogTable
+    /// when table-read.sequence-number.enabled is set to true. Default value is "false".
+    static const char KEY_VALUE_SEQUENCE_NUMBER_ENABLED[];
 
     /// "scan.timestamp-millis" - Optional timestamp used in case of "from-timestamp" scan mode.
     /// For batch sources, produces the latest snapshot earlier than or equal to the timestamp.

@@ -30,8 +30,10 @@
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/system/system_table_scan.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/read_context.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
+#include "paimon/table/source/table_read.h"
 
 namespace paimon {
 namespace {
@@ -95,6 +97,35 @@ class OptionsBatchReader : public BatchReader {
     bool emitted_ = false;
 };
 
+class OptionsTableRead : public TableRead {
+ public:
+    OptionsTableRead(std::map<std::string, std::string> options,
+                     const std::shared_ptr<MemoryPool>& memory_pool)
+        : TableRead(memory_pool), options_(std::move(options)) {}
+
+    Result<std::unique_ptr<BatchReader>> CreateReader(
+        const std::vector<std::shared_ptr<Split>>& splits) override {
+        if (splits.size() != 1) {
+            return Status::Invalid("options system table expects a single split");
+        }
+        for (const auto& split : splits) {
+            if (!std::dynamic_pointer_cast<SystemTableSplit>(split)) {
+                return Status::Invalid("unsupported split for options system table");
+            }
+        }
+        return std::make_unique<OptionsBatchReader>(options_, GetMemoryPool());
+    }
+
+    Result<std::unique_ptr<BatchReader>> CreateReader(
+        const std::shared_ptr<Split>& split) override {
+        std::vector<std::shared_ptr<Split>> splits = {split};
+        return CreateReader(splits);
+    }
+
+ private:
+    std::map<std::string, std::string> options_;
+};
+
 }  // namespace
 
 OptionsSystemTable::OptionsSystemTable(std::string table_path,
@@ -105,26 +136,18 @@ std::string OptionsSystemTable::Name() const {
     return kName;
 }
 
-std::shared_ptr<arrow::Schema> OptionsSystemTable::ArrowSchema() const {
+Result<std::shared_ptr<arrow::Schema>> OptionsSystemTable::ArrowSchema() const {
     return OptionsSchema();
 }
 
-Result<std::unique_ptr<TableScan>> OptionsSystemTable::NewScan() const {
+Result<std::unique_ptr<TableScan>> OptionsSystemTable::NewScan(
+    const std::shared_ptr<ScanContext>& /*context*/) const {
     return std::make_unique<SystemTableScan>(table_path_);
 }
 
-Result<std::unique_ptr<BatchReader>> OptionsSystemTable::CreateBatchReader(
-    const std::vector<std::shared_ptr<Split>>& splits,
-    const std::shared_ptr<MemoryPool>& pool) const {
-    if (splits.size() != 1) {
-        return Status::Invalid("options system table expects a single split");
-    }
-    for (const auto& split : splits) {
-        if (!std::dynamic_pointer_cast<SystemTableSplit>(split)) {
-            return Status::Invalid("unsupported split for options system table");
-        }
-    }
-    return std::make_unique<OptionsBatchReader>(table_schema_->Options(), pool);
+Result<std::unique_ptr<TableRead>> OptionsSystemTable::NewRead(
+    const std::shared_ptr<ReadContext>& context) const {
+    return std::make_unique<OptionsTableRead>(table_schema_->Options(), context->GetMemoryPool());
 }
 
 }  // namespace paimon

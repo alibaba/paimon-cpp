@@ -17,13 +17,12 @@
 #include "paimon/utils/special_field_ids.h"
 
 namespace paimon {
-const int32_t SpecialFieldIds::CPP_FIELD_ID_END = (std::numeric_limits<int32_t>::max() - 10000);
 
-const int32_t SpecialFieldIds::SEQUENCE_NUMBER = std::numeric_limits<int32_t>::max() - 1;
+const int32_t SpecialFieldIds::CPP_FIELD_ID_END;
+const int32_t SpecialFieldIds::SEQUENCE_NUMBER;
+const int32_t SpecialFieldIds::VALUE_KIND;
+const int32_t SpecialFieldIds::ROW_KIND;
+const int32_t SpecialFieldIds::ROW_ID;
+const int32_t SpecialFieldIds::INDEX_SCORE;
 
-const int32_t SpecialFieldIds::VALUE_KIND = (std::numeric_limits<int32_t>::max() - 2);
-
-const int32_t SpecialFieldIds::ROW_ID(std::numeric_limits<int32_t>::max() - 5);
-
-const int32_t SpecialFieldIds::INDEX_SCORE = (SpecialFieldIds::CPP_FIELD_ID_END - 1);
 }  // namespace paimon
