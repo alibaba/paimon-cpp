@@ -16,6 +16,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <ctime>
 #include <filesystem>
 #include <map>
 #include <memory>
@@ -73,6 +75,32 @@
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
+namespace {
+
+int64_t LocalTimestampMillisForTest(int64_t epoch_millis) {
+    std::time_t seconds = static_cast<std::time_t>(epoch_millis / 1000);
+    int64_t millis_of_second = epoch_millis % 1000;
+    if (millis_of_second < 0) {
+        --seconds;
+        millis_of_second += 1000;
+    }
+    std::tm time_info{};
+    EXPECT_NE(localtime_r(&seconds, &time_info), nullptr);
+    int year = time_info.tm_year + 1900;
+    int month = time_info.tm_mon + 1;
+    int64_t day = time_info.tm_mday;
+    year -= month <= 2 ? 1 : 0;
+    int64_t era = (year >= 0 ? year : year - 399) / 400;
+    uint32_t year_of_era = static_cast<uint32_t>(year - era * 400);
+    uint32_t month_prime = static_cast<uint32_t>(month + (month > 2 ? -3 : 9));
+    uint32_t day_of_year = (153 * month_prime + 2) / 5 + static_cast<uint32_t>(day) - 1;
+    uint32_t day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
+    int64_t epoch_day = era * 146097 + static_cast<int64_t>(day_of_era) - 719468;
+    return epoch_day * 86400000 + time_info.tm_hour * 3600000 + time_info.tm_min * 60000 +
+           time_info.tm_sec * 1000 + millis_of_second;
+}
+
+}  // namespace
 
 struct TestParam {
     bool enable_prefetch;
@@ -700,6 +728,22 @@ TEST(SystemTableReadInteTest, TestReadMetadataSystemTables) {
 }
 
 TEST(SystemTableReadInteTest, TestReadTagBranchAndConsumerSystemTables) {
+    const char* old_tz = std::getenv("TZ");
+    std::optional<std::string> old_timezone;
+    if (old_tz != nullptr) {
+        old_timezone = old_tz;
+    }
+    setenv("TZ", "Asia/Shanghai", /*overwrite=*/1);
+    tzset();
+    ScopeGuard timezone_guard([old_timezone]() {
+        if (old_timezone) {
+            setenv("TZ", old_timezone->c_str(), /*overwrite=*/1);
+        } else {
+            unsetenv("TZ");
+        }
+        tzset();
+    });
+
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
     std::string source_path =
@@ -759,9 +803,10 @@ TEST(SystemTableReadInteTest, TestReadTagBranchAndConsumerSystemTables) {
     ASSERT_TRUE(tag_time_retained_array);
     ASSERT_EQ(tag_name_array->GetString(0), "release");
     ASSERT_EQ(tag_snapshot_array->Value(0), tag.Id());
-    ASSERT_EQ(tag_commit_time_array->Value(0), tag.TimeMillis());
+    ASSERT_EQ(tag_commit_time_array->Value(0), LocalTimestampMillisForTest(tag.TimeMillis()));
     ASSERT_EQ(tag_record_count_array->Value(0), tag.TotalRecordCount().value());
     ASSERT_FALSE(tag_create_time_array->IsNull(0));
+    ASSERT_EQ(tag_create_time_array->Value(0), 1770185290000);
     ASSERT_EQ(tag_time_retained_array->GetString(0), "3.000000");
 
     ASSERT_OK_AND_ASSIGN(auto consumers_result,

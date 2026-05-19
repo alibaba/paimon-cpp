@@ -31,6 +31,7 @@
 #include "arrow/util/checked_cast.h"
 #include "paimon/common/data/binary_string.h"
 #include "paimon/common/data/generic_row.h"
+#include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/rapidjson_util.h"
 #include "paimon/core/io/generic_row_to_arrow_array_converter.h"
 #include "paimon/core/schema/schema_manager.h"
@@ -68,21 +69,35 @@ Result<int64_t> LocalDateTimePartsToTimestampMillis(const std::vector<int64_t>& 
         return Status::Invalid("tag create time requires at least 6 date-time fields");
     }
 
-    std::tm time_info{};
-    time_info.tm_year = static_cast<int>(parts[0] - 1900);
-    time_info.tm_mon = static_cast<int>(parts[1] - 1);
-    time_info.tm_mday = static_cast<int>(parts[2]);
-    time_info.tm_hour = static_cast<int>(parts[3]);
-    time_info.tm_min = static_cast<int>(parts[4]);
-    time_info.tm_sec = static_cast<int>(parts[5]);
-    time_info.tm_isdst = -1;
-
-    std::time_t seconds = std::mktime(&time_info);
-    if (seconds == -1) {
-        return Status::Invalid("failed to convert tag create time to timestamp");
-    }
+    int64_t year = parts[0];
+    int64_t month = parts[1];
+    int64_t day = parts[2];
+    int64_t hour = parts[3];
+    int64_t minute = parts[4];
+    int64_t second = parts[5];
     int64_t nanos = parts.size() > 6 ? parts[6] : 0;
-    return static_cast<int64_t>(seconds) * 1000 + nanos / 1000000;
+    auto is_leap_year = [](int64_t value) {
+        return value % 4 == 0 && (value % 100 != 0 || value % 400 == 0);
+    };
+    int64_t days_in_month[] = {31, is_leap_year(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30,
+                               31};
+    if (month < 1 || month > 12 || day < 1 || day > days_in_month[month - 1] || hour < 0 ||
+        hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59 || nanos < 0 ||
+        nanos > 999999999) {
+        return Status::Invalid("invalid tag create time fields");
+    }
+
+    // Match Java Timestamp.fromLocalDateTime: encode local date-time fields directly instead of
+    // interpreting them as a timezone-aware instant.
+    year -= month <= 2 ? 1 : 0;
+    int64_t era = (year >= 0 ? year : year - 399) / 400;
+    uint32_t year_of_era = static_cast<uint32_t>(year - era * 400);
+    uint32_t month_prime = static_cast<uint32_t>(month + (month > 2 ? -3 : 9));
+    uint32_t day_of_year = (153 * month_prime + 2) / 5 + static_cast<uint32_t>(day) - 1;
+    uint32_t day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
+    int64_t epoch_day = era * 146097 + static_cast<int64_t>(day_of_era) - 719468;
+    return epoch_day * DateTimeUtils::MILLIS_PER_DAY + hour * 3600000 + minute * 60000 +
+           second * 1000 + nanos / 1000000;
 }
 
 Result<std::optional<int64_t>> OptionalLocalDateTimePartsToTimestampMillis(
@@ -122,6 +137,29 @@ VariantType OptionalStringValue(const std::optional<std::string>& value) {
 
 VariantType TimestampMillisValue(int64_t value) {
     return Timestamp::FromEpochMillis(value);
+}
+
+Result<VariantType> LocalTimestampMillisValue(int64_t epoch_millis) {
+    std::time_t seconds = static_cast<std::time_t>(epoch_millis / 1000);
+    int64_t millis_of_second = epoch_millis % 1000;
+    if (millis_of_second < 0) {
+        --seconds;
+        millis_of_second += 1000;
+    }
+
+    std::tm time_info{};
+    if (localtime_r(&seconds, &time_info) == nullptr) {
+        return Status::Invalid("failed to convert epoch millis to local timestamp");
+    }
+    std::vector<int64_t> parts = {static_cast<int64_t>(time_info.tm_year) + 1900,
+                                  static_cast<int64_t>(time_info.tm_mon) + 1,
+                                  static_cast<int64_t>(time_info.tm_mday),
+                                  static_cast<int64_t>(time_info.tm_hour),
+                                  static_cast<int64_t>(time_info.tm_min),
+                                  static_cast<int64_t>(time_info.tm_sec),
+                                  millis_of_second * 1000000};
+    PAIMON_ASSIGN_OR_RAISE(int64_t local_millis, LocalDateTimePartsToTimestampMillis(parts));
+    return TimestampMillisValue(local_millis);
 }
 
 VariantType OptionalTimestampMillisValue(const std::optional<int64_t>& value) {
@@ -225,7 +263,9 @@ Result<std::shared_ptr<arrow::RecordBatch>> SnapshotsSystemTable::BuildRecordBat
         row.SetField(2, StringValue(snapshot.CommitUser()));
         row.SetField(3, snapshot.CommitIdentifier());
         row.SetField(4, StringValue(Snapshot::CommitKind::ToString(snapshot.GetCommitKind())));
-        row.SetField(5, TimestampMillisValue(snapshot.TimeMillis()));
+        PAIMON_ASSIGN_OR_RAISE(VariantType commit_time,
+                               LocalTimestampMillisValue(snapshot.TimeMillis()));
+        row.SetField(5, commit_time);
         row.SetField(6, StringValue(snapshot.BaseManifestList()));
         row.SetField(7, StringValue(snapshot.DeltaManifestList()));
         row.SetField(8, OptionalStringValue(snapshot.ChangelogManifestList()));
@@ -288,7 +328,9 @@ Result<std::shared_ptr<arrow::RecordBatch>> SchemasSystemTable::BuildRecordBatch
         row.SetField(3, StringValue(primary_keys_json));
         row.SetField(4, StringValue(options_json));
         row.SetField(5, OptionalStringValue(table_schema->Comment()));
-        row.SetField(6, TimestampMillisValue(table_schema->TimeMillis()));
+        PAIMON_ASSIGN_OR_RAISE(VariantType update_time,
+                               LocalTimestampMillisValue(table_schema->TimeMillis()));
+        row.SetField(6, update_time);
         rows.push_back(std::move(row));
     }
 
@@ -334,7 +376,9 @@ Result<std::shared_ptr<arrow::RecordBatch>> TagsSystemTable::BuildRecordBatch(
         row.SetField(0, StringValue(name));
         row.SetField(1, tag.Id());
         row.SetField(2, tag.SchemaId());
-        row.SetField(3, TimestampMillisValue(tag.TimeMillis()));
+        PAIMON_ASSIGN_OR_RAISE(VariantType commit_time,
+                               LocalTimestampMillisValue(tag.TimeMillis()));
+        row.SetField(3, commit_time);
         row.SetField(4, OptionalInt64Value(tag.TotalRecordCount()));
         row.SetField(5, OptionalTimestampMillisValue(tag_create_time));
         row.SetField(6, OptionalStringValue(OptionalDoubleToString(tag.TagTimeRetained())));
@@ -375,7 +419,9 @@ Result<std::shared_ptr<arrow::RecordBatch>> BranchesSystemTable::BuildRecordBatc
             context_.fs->GetFileStatus(BranchManager::BranchPath(context_.table_path, name)));
         GenericRow row(schema->num_fields());
         row.SetField(0, StringValue(name));
-        row.SetField(1, TimestampMillisValue(branch_status->GetModificationTime()));
+        PAIMON_ASSIGN_OR_RAISE(VariantType create_time,
+                               LocalTimestampMillisValue(branch_status->GetModificationTime()));
+        row.SetField(1, create_time);
         rows.push_back(std::move(row));
     }
 
