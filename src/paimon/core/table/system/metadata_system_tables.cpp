@@ -414,6 +414,8 @@ Result<std::shared_ptr<arrow::RecordBatch>> BranchesSystemTable::BuildRecordBatc
     rows.reserve(branches.size());
 
     for (const auto& name : branches) {
+        // Match Java BranchesTable: create_time is derived from the branch path
+        // modification time, not from a separately persisted creation timestamp.
         PAIMON_ASSIGN_OR_RAISE(
             std::unique_ptr<FileStatus> branch_status,
             context_.fs->GetFileStatus(BranchManager::BranchPath(context_.table_path, name)));
