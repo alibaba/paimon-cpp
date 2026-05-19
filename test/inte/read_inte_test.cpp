@@ -78,7 +78,7 @@ namespace paimon::test {
 namespace {
 
 int64_t LocalTimestampMillisForTest(int64_t epoch_millis) {
-    std::time_t seconds = static_cast<std::time_t>(epoch_millis / 1000);
+    auto seconds = static_cast<std::time_t>(epoch_millis / 1000);
     int64_t millis_of_second = epoch_millis % 1000;
     if (millis_of_second < 0) {
         --seconds;
@@ -91,8 +91,8 @@ int64_t LocalTimestampMillisForTest(int64_t epoch_millis) {
     int64_t day = time_info.tm_mday;
     year -= month <= 2 ? 1 : 0;
     int64_t era = (year >= 0 ? year : year - 399) / 400;
-    uint32_t year_of_era = static_cast<uint32_t>(year - era * 400);
-    uint32_t month_prime = static_cast<uint32_t>(month + (month > 2 ? -3 : 9));
+    auto year_of_era = static_cast<uint32_t>(year - era * 400);
+    auto month_prime = static_cast<uint32_t>(month + (month > 2 ? -3 : 9));
     uint32_t day_of_year = (153 * month_prime + 2) / 5 + static_cast<uint32_t>(day) - 1;
     uint32_t day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
     int64_t epoch_day = era * 146097 + static_cast<int64_t>(day_of_era) - 719468;
