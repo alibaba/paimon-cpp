@@ -31,10 +31,10 @@ namespace paimon {
 
 Result<std::unique_ptr<BlobDescriptor>> BlobDescriptor::Create(const std::string& uri,
                                                                int64_t offset, int64_t length) {
-    return Create(CURRENT_VERSION, uri, offset, length);
+    return Create(kCurrentVersion, uri, offset, length);
 }
 
-Result<std::unique_ptr<BlobDescriptor>> BlobDescriptor::Create(int64_t version,
+Result<std::unique_ptr<BlobDescriptor>> BlobDescriptor::Create(int8_t version,
                                                                const std::string& uri,
                                                                int64_t offset, int64_t length) {
     if (offset < 0) {
@@ -51,7 +51,7 @@ PAIMON_UNIQUE_PTR<Bytes> BlobDescriptor::Serialize(const std::shared_ptr<MemoryP
     MemorySegmentOutputStream out(MemorySegmentOutputStream::DEFAULT_SEGMENT_SIZE, pool);
     out.SetOrder(ByteOrder::PAIMON_LITTLE_ENDIAN);
     out.WriteValue<int8_t>(version_);
-    out.WriteValue<int64_t>(MAGIC);
+    out.WriteValue<int64_t>(kMagic);
     out.WriteValue<int32_t>(static_cast<int32_t>(uri_.size()));
 
     auto uri_bytes = std::make_shared<Bytes>(uri_, pool.get());
@@ -67,17 +67,17 @@ Result<std::unique_ptr<BlobDescriptor>> BlobDescriptor::Deserialize(const char* 
     DataInputStream in(std::move(input_stream));
     in.SetOrder(ByteOrder::PAIMON_LITTLE_ENDIAN);
     PAIMON_ASSIGN_OR_RAISE(int8_t version, in.ReadValue<int8_t>());
-    if (version > CURRENT_VERSION) {
+    if (version > kCurrentVersion) {
         return Status::Invalid(fmt::format(
             "Expecting BlobDescriptor version to be less than or equal to {}, but found {}.",
-            CURRENT_VERSION, version));
+            kCurrentVersion, version));
     }
     if (version > 1) {
         PAIMON_ASSIGN_OR_RAISE(int64_t magic, in.ReadValue<int64_t>());
-        if (MAGIC != magic) {
-            return Status::Invalid(
+        if (kMagic != magic) {
+            return Status::Invalid(fmt::format(
                 "Invalid BlobDescriptor: missing magic header. Expected magic: {}, but found {}",
-                MAGIC, magic);
+                kMagic, magic));
         }
     }
     PAIMON_ASSIGN_OR_RAISE(int32_t uri_length, in.ReadValue<int32_t>());
@@ -89,18 +89,18 @@ Result<std::unique_ptr<BlobDescriptor>> BlobDescriptor::Deserialize(const char* 
 }
 
 Result<bool> BlobDescriptor::IsBlobDescriptor(const char* buffer, uint64_t size) {
-    if (size < 9) {
+    if (size < kMinDescriptorLength) {
         return false;
     }
     auto input_stream = std::make_shared<ByteArrayInputStream>(buffer, size);
     DataInputStream in(std::move(input_stream));
     in.SetOrder(ByteOrder::PAIMON_LITTLE_ENDIAN);
     PAIMON_ASSIGN_OR_RAISE(int8_t version, in.ReadValue<int8_t>());
-    if (version > CURRENT_VERSION) {
+    if (version > kCurrentVersion) {
         return false;
     }
     PAIMON_ASSIGN_OR_RAISE(int64_t magic, in.ReadValue<int64_t>());
-    return MAGIC == magic;
+    return kMagic == magic;
 }
 
 std::string BlobDescriptor::ToString() const {

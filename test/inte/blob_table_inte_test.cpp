@@ -18,6 +18,7 @@
 #include <cstdlib>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
@@ -1434,7 +1435,21 @@ TEST_P(BlobTableInteTest, TestAppendTableWriteWithMultipleBlobFields) {
     ASSERT_EQ(1, snapshot.value().Id());
     ASSERT_EQ(3, snapshot.value().NextRowId().value());
 
-    // TODO(xinyu.lxy): add scan and read verification for multiple blob fields
+    // Scan and read: verify all fields including multiple blob fields
+    arrow::FieldVector fields_with_row_kind = fields;
+    fields_with_row_kind.insert(fields_with_row_kind.begin(),
+                                arrow::field("_VALUE_KIND", arrow::int8()));
+    auto data_type = arrow::struct_(fields_with_row_kind);
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    std::string expected_data = R"([
+        [0, "str_0", null, "apple",  "red"],
+        [0, "str_1", 1,    "banana", "yellow"],
+        [0, "str_2", 2,    "cat",    "black"]
+    ])";
+    ASSERT_OK_AND_ASSIGN(bool success,
+                         helper->ReadAndCheckResult(data_type, data_splits, expected_data));
+    ASSERT_TRUE(success);
 }
 
 TEST_P(BlobTableInteTest, TestAppendWriteWithNullBlob) {
@@ -1506,58 +1521,46 @@ TEST_P(BlobTableInteTest, TestReadTableWithMultiBlobFields) {
     std::shared_ptr<arrow::DataType> arrow_data_type =
         DataField::ConvertDataFieldsToArrowStructType(read_fields);
 
-    constexpr int32_t kNumRows = 10;
-    constexpr int32_t kF5Size = 1024;
-    constexpr int32_t kF6Size = 2048;
-
-    // Build expected_array programmatically
-    arrow::LargeBinaryBuilder f5_builder;
-    arrow::Int32Builder f1_builder;
-    arrow::Int32Builder f2_builder;
-    arrow::DoubleBuilder f3_builder;
-    arrow::StringBuilder f4_builder;
-    arrow::Int64Builder row_id_builder;
-    arrow::LargeBinaryBuilder f6_builder;
-
-    for (int32_t i = 0; i < kNumRows; i++) {
-        // f5: null for row 0,1; filled with 'A'+i for row 2..9
+    auto make_json_row = [&](int32_t i) -> std::string {
+        std::string f5_json;
         if (i <= 1) {
-            ASSERT_TRUE(f5_builder.AppendNull().ok());
+            f5_json = "null";
         } else {
-            std::string f5_data(kF5Size, static_cast<char>('A' + i));
-            ASSERT_TRUE(f5_builder.Append(f5_data).ok());
+            f5_json = "\"" + std::string(1024, static_cast<char>('A' + i)) + "\"";
         }
 
-        ASSERT_TRUE(f1_builder.Append(i).ok());
-        ASSERT_TRUE(f2_builder.Append(i * 10).ok());
-        ASSERT_TRUE(f3_builder.Append(i + 0.5).ok());
-        ASSERT_TRUE(f4_builder.Append("desc_" + std::to_string(i)).ok());
-        ASSERT_TRUE(row_id_builder.Append(i).ok());
-
-        // f6: null for row 0,2; filled with 'a'+i for row 1,3..9
+        std::string f6_json;
         if (i == 0 || i == 2) {
-            ASSERT_TRUE(f6_builder.AppendNull().ok());
+            f6_json = "null";
         } else {
-            std::string f6_data(kF6Size, static_cast<char>('a' + i));
-            ASSERT_TRUE(f6_builder.Append(f6_data).ok());
+            f6_json = "\"" + std::string(2048, static_cast<char>('a' + i)) + "\"";
         }
-    }
+        // f1=i, f2=i*10, f3=i+0.5, f4="desc_i", row_id=i
+        return "[" + f5_json + ", " + std::to_string(i) + ", " + std::to_string(i * 10) + ", " +
+               std::to_string(i + 0.5) + ", \"desc_" + std::to_string(i) + "\", " +
+               std::to_string(i) + ", " + f6_json + "]";
+    };
 
-    std::shared_ptr<arrow::Array> f5_arr, f1_arr, f2_arr, f3_arr, f4_arr, row_id_arr, f6_arr;
-    ASSERT_TRUE(f5_builder.Finish(&f5_arr).ok());
-    ASSERT_TRUE(f1_builder.Finish(&f1_arr).ok());
-    ASSERT_TRUE(f2_builder.Finish(&f2_arr).ok());
-    ASSERT_TRUE(f3_builder.Finish(&f3_arr).ok());
-    ASSERT_TRUE(f4_builder.Finish(&f4_arr).ok());
-    ASSERT_TRUE(row_id_builder.Finish(&row_id_arr).ok());
-    ASSERT_TRUE(f6_builder.Finish(&f6_arr).ok());
+    auto build_expected =
+        [&](const std::vector<int32_t>& row_indices) -> std::shared_ptr<arrow::StructArray> {
+        std::string json_str = "[";
+        for (size_t idx = 0; idx < row_indices.size(); idx++) {
+            if (idx > 0) {
+                json_str += ",";
+            }
+            json_str += make_json_row(row_indices[idx]);
+        }
+        json_str += "]";
+        return std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow_data_type, json_str).ValueOrDie());
+    };
 
-    auto expected_array = std::make_shared<arrow::StructArray>(
-        arrow_data_type, kNumRows,
-        std::vector<std::shared_ptr<arrow::Array>>{f5_arr, f1_arr, f2_arr, f3_arr, f4_arr,
-                                                   row_id_arr, f6_arr});
-
+    // Full scan: all 10 rows
     {
+        std::vector<int32_t> all_rows;
+        all_rows.reserve(10);
+        std::iota(all_rows.begin(), all_rows.end(), 0);
+        auto expected_array = build_expected(all_rows);
         ASSERT_OK(ScanAndRead(table_path, arrow::schema(arrow_data_type->fields())->field_names(),
                               expected_array));
     }
@@ -1565,58 +1568,7 @@ TEST_P(BlobTableInteTest, TestReadTableWithMultiBlobFields) {
     // Test with row_ranges: select row 0 (both null), row 2 (f5 non-null, f6 null),
     // row 5 (both non-null) to verify null handling under row range filtering.
     {
-        arrow::LargeBinaryBuilder f5_rr_builder;
-        arrow::Int32Builder f1_rr_builder;
-        arrow::Int32Builder f2_rr_builder;
-        arrow::DoubleBuilder f3_rr_builder;
-        arrow::StringBuilder f4_rr_builder;
-        arrow::Int64Builder row_id_rr_builder;
-        arrow::LargeBinaryBuilder f6_rr_builder;
-
-        // Row 0: f5=null, f6=null
-        ASSERT_TRUE(f5_rr_builder.AppendNull().ok());
-        ASSERT_TRUE(f1_rr_builder.Append(0).ok());
-        ASSERT_TRUE(f2_rr_builder.Append(0).ok());
-        ASSERT_TRUE(f3_rr_builder.Append(0.5).ok());
-        ASSERT_TRUE(f4_rr_builder.Append("desc_0").ok());
-        ASSERT_TRUE(row_id_rr_builder.Append(0).ok());
-        ASSERT_TRUE(f6_rr_builder.AppendNull().ok());
-
-        // Row 2: f5=1024×'C', f6=null
-        std::string f5_row2(kF5Size, 'C');
-        ASSERT_TRUE(f5_rr_builder.Append(f5_row2).ok());
-        ASSERT_TRUE(f1_rr_builder.Append(2).ok());
-        ASSERT_TRUE(f2_rr_builder.Append(20).ok());
-        ASSERT_TRUE(f3_rr_builder.Append(2.5).ok());
-        ASSERT_TRUE(f4_rr_builder.Append("desc_2").ok());
-        ASSERT_TRUE(row_id_rr_builder.Append(2).ok());
-        ASSERT_TRUE(f6_rr_builder.AppendNull().ok());
-
-        // Row 5: f5=1024×'F', f6=2048×'f'
-        std::string f5_row5(kF5Size, 'F');
-        std::string f6_row5(kF6Size, 'f');
-        ASSERT_TRUE(f5_rr_builder.Append(f5_row5).ok());
-        ASSERT_TRUE(f1_rr_builder.Append(5).ok());
-        ASSERT_TRUE(f2_rr_builder.Append(50).ok());
-        ASSERT_TRUE(f3_rr_builder.Append(5.5).ok());
-        ASSERT_TRUE(f4_rr_builder.Append("desc_5").ok());
-        ASSERT_TRUE(row_id_rr_builder.Append(5).ok());
-        ASSERT_TRUE(f6_rr_builder.Append(f6_row5).ok());
-
-        std::shared_ptr<arrow::Array> f5_rr, f1_rr, f2_rr, f3_rr, f4_rr, row_id_rr, f6_rr;
-        ASSERT_TRUE(f5_rr_builder.Finish(&f5_rr).ok());
-        ASSERT_TRUE(f1_rr_builder.Finish(&f1_rr).ok());
-        ASSERT_TRUE(f2_rr_builder.Finish(&f2_rr).ok());
-        ASSERT_TRUE(f3_rr_builder.Finish(&f3_rr).ok());
-        ASSERT_TRUE(f4_rr_builder.Finish(&f4_rr).ok());
-        ASSERT_TRUE(row_id_rr_builder.Finish(&row_id_rr).ok());
-        ASSERT_TRUE(f6_rr_builder.Finish(&f6_rr).ok());
-
-        auto expected_rr = std::make_shared<arrow::StructArray>(
-            arrow_data_type, /*length=*/3,
-            std::vector<std::shared_ptr<arrow::Array>>{f5_rr, f1_rr, f2_rr, f3_rr, f4_rr, row_id_rr,
-                                                       f6_rr});
-
+        auto expected_rr = build_expected({0, 2, 5});
         ASSERT_OK(ScanAndRead(table_path, arrow::schema(arrow_data_type->fields())->field_names(),
                               expected_rr, /*predicate=*/nullptr,
                               /*row_ranges=*/{Range(0l, 0l), Range(2l, 2l), Range(5l, 5l)}));

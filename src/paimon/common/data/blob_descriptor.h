@@ -43,7 +43,7 @@ class BlobDescriptor {
     static Result<std::unique_ptr<BlobDescriptor>> Create(const std::string& uri, int64_t offset,
                                                           int64_t length);
 
-    static Result<std::unique_ptr<BlobDescriptor>> Create(int64_t version, const std::string& uri,
+    static Result<std::unique_ptr<BlobDescriptor>> Create(int8_t version, const std::string& uri,
                                                           int64_t offset, int64_t length);
 
     static Result<std::unique_ptr<BlobDescriptor>> Deserialize(const char* buffer, uint64_t size);
@@ -71,14 +71,16 @@ class BlobDescriptor {
     }
 
  private:
-    BlobDescriptor(int64_t version, const std::string& uri, int64_t offset, int64_t length)
+    BlobDescriptor(int8_t version, const std::string& uri, int64_t offset, int64_t length)
         : version_(version), uri_(uri), offset_(offset), length_(length) {}
 
  private:
-    static constexpr int64_t MAGIC = 0x424C4F4244455343l;
-    static constexpr int8_t CURRENT_VERSION = 2;
+    static constexpr int64_t kMagic = 0x424C4F4244455343l;
+    /// one byte for version, eight bytes for magic number.
+    static constexpr uint64_t kMinDescriptorLength = 9;
+    static constexpr int8_t kCurrentVersion = 2;
 
-    const int8_t version_ = CURRENT_VERSION;
+    const int8_t version_ = kCurrentVersion;
     std::string uri_;
     int64_t offset_ = 0;
     int64_t length_ = -1;
