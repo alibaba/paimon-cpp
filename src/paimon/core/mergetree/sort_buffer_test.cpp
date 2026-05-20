@@ -140,7 +140,7 @@ class SortBufferTest : public ::testing::Test {
             /*sequence_fields_ascending=*/true, key_comparator_, write_buffer_size, pool_);
         return ExternalSortBuffer::Create(std::move(in_memory_buffer), value_schema_, primary_keys_,
                                           key_comparator_, sequence_comparator_, options,
-                                          io_manager_, pool_);
+                                          io_manager_, /*enable_multi_thread_spill=*/false, pool_);
     }
 
     void AssertRows(const std::vector<ReaderResult>& actual,

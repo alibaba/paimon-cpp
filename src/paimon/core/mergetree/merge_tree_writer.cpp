@@ -56,13 +56,15 @@ Result<std::shared_ptr<MergeTreeWriter>> MergeTreeWriter::Create(
     const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
     int64_t schema_id, const std::shared_ptr<arrow::Schema>& value_schema,
     const CoreOptions& options, const std::shared_ptr<CompactManager>& compact_manager,
-    const std::shared_ptr<IOManager>& io_manager, const std::shared_ptr<MemoryPool>& pool) {
+    const std::shared_ptr<IOManager>& io_manager, bool enable_multi_thread_spill,
+    const std::shared_ptr<MemoryPool>& pool) {
     auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<WriteBuffer> write_buffer,
         WriteBuffer::Create(last_sequence_number, value_schema, trimmed_primary_keys,
                             options.GetSequenceField(), key_comparator, user_defined_seq_comparator,
-                            merge_function_wrapper, options, io_manager, pool));
+                            merge_function_wrapper, options, io_manager, enable_multi_thread_spill,
+                            pool));
     return std::shared_ptr<MergeTreeWriter>(
         new MergeTreeWriter(pool, trimmed_primary_keys, options, path_factory, key_comparator,
                             user_defined_seq_comparator, merge_function_wrapper, schema_id,

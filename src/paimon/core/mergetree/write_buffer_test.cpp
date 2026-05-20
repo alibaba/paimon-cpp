@@ -78,7 +78,7 @@ class WriteBufferTest : public ::testing::Test {
             WriteBuffer::Create(last_sequence_number, value_schema_, primary_keys_,
                                 /*user_defined_sequence_fields=*/{}, key_comparator_,
                                 /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_,
-                                options, io_manager_, pool_));
+                                options, io_manager_, /*enable_multi_thread_spill=*/false, pool_));
         return write_buffer;
     }
 

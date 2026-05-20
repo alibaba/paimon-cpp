@@ -53,7 +53,7 @@ class ExternalSortBuffer : public SortBuffer {
         const std::shared_ptr<FieldsComparator>& key_comparator,
         const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
         const CoreOptions& options, const std::shared_ptr<IOManager>& io_manager,
-        const std::shared_ptr<MemoryPool>& pool);
+        bool enable_multi_thread_spill, const std::shared_ptr<MemoryPool>& pool);
     ~ExternalSortBuffer() override;
 
     void Clear() override;
@@ -85,6 +85,7 @@ class ExternalSortBuffer : public SortBuffer {
                        const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
                        const CoreOptions& options,
                        const std::shared_ptr<FileIOChannel::Enumerator>& spill_channel_enumerator,
+                       bool enable_multi_thread_spill,
                        const std::shared_ptr<MemoryPool>& pool);
 
     std::unique_ptr<InMemorySortBuffer> in_memory_buffer_;
@@ -97,6 +98,7 @@ class ExternalSortBuffer : public SortBuffer {
     const std::shared_ptr<arrow::Schema> write_schema_;
     const CoreOptions options_;
     const int32_t max_fan_in_;
+    const bool enable_multi_thread_spill_;
     const std::shared_ptr<SpillChannelManager> spill_channel_manager_;
 
     std::unique_ptr<SpillFileMerger> spill_merger_;

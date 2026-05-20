@@ -47,7 +47,7 @@ Result<std::unique_ptr<ExternalSortBuffer>> ExternalSortBuffer::Create(
     const std::shared_ptr<FieldsComparator>& key_comparator,
     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
     const CoreOptions& options, const std::shared_ptr<IOManager>& io_manager,
-    const std::shared_ptr<MemoryPool>& pool) {
+    bool enable_multi_thread_spill, const std::shared_ptr<MemoryPool>& pool) {
     if (options.GetLocalSortMaxNumFileHandles() < kSpillMinFanIn) {
         return Status::Invalid(fmt::format(
             "invalid '{}': {}, must be at least {}", Options::LOCAL_SORT_MAX_NUM_FILE_HANDLES,
@@ -64,9 +64,10 @@ Result<std::unique_ptr<ExternalSortBuffer>> ExternalSortBuffer::Create(
 
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FileIOChannel::Enumerator> spill_channel_enumerator,
                            io_manager->CreateChannelEnumerator());
-    return std::unique_ptr<ExternalSortBuffer>(new ExternalSortBuffer(
-        std::move(in_memory_buffer), key_schema, value_schema, key_comparator,
-        user_defined_seq_comparator, options, spill_channel_enumerator, pool));
+    return std::unique_ptr<ExternalSortBuffer>(
+        new ExternalSortBuffer(std::move(in_memory_buffer), key_schema, value_schema,
+                               key_comparator, user_defined_seq_comparator, options,
+                               spill_channel_enumerator, enable_multi_thread_spill, pool));
 }
 
 ExternalSortBuffer::ExternalSortBuffer(
@@ -77,7 +78,7 @@ ExternalSortBuffer::ExternalSortBuffer(
     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
     const CoreOptions& options,
     const std::shared_ptr<FileIOChannel::Enumerator>& spill_channel_enumerator,
-    const std::shared_ptr<MemoryPool>& pool)
+    bool enable_multi_thread_spill, const std::shared_ptr<MemoryPool>& pool)
     : in_memory_buffer_(std::move(in_memory_buffer)),
       pool_(pool),
       key_schema_(key_schema),
@@ -87,6 +88,7 @@ ExternalSortBuffer::ExternalSortBuffer(
       write_schema_(SpecialFields::CompleteSequenceAndValueKindField(value_schema)),
       options_(options),
       max_fan_in_(options.GetLocalSortMaxNumFileHandles()),
+      enable_multi_thread_spill_(enable_multi_thread_spill),
       spill_channel_manager_(
           std::make_shared<SpillChannelManager>(options_.GetFileSystem(), max_fan_in_)),
       spill_merger_(std::make_unique<SpillFileMerger>(max_fan_in_)),
@@ -189,9 +191,10 @@ Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> ExternalSortBuffer::C
     std::vector<std::unique_ptr<KeyValueRecordReader>> readers;
     readers.reserve(files.size());
     for (const auto& file : files) {
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SpillReader> reader,
-                               SpillReader::Create(options_.GetFileSystem(), key_schema_,
-                                                   value_schema_, pool_, file.channel_id));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::unique_ptr<SpillReader> reader,
+            SpillReader::Create(options_.GetFileSystem(), key_schema_, value_schema_,
+                                enable_multi_thread_spill_, file.channel_id, pool_));
         readers.push_back(std::move(reader));
     }
     return readers;
@@ -204,7 +207,7 @@ Result<FileChannelInfo> ExternalSortBuffer::SpillToDisk(
         std::unique_ptr<SpillWriter> spill_writer,
         SpillWriter::Create(options_.GetFileSystem(), write_schema_, spill_channel_enumerator_,
                             spill_channel_manager_, spill_compress_options.compress,
-                            spill_compress_options.zstd_level, pool_));
+                            spill_compress_options.zstd_level, enable_multi_thread_spill_, pool_));
     auto cleanup_guard = ScopeGuard([&]() {
         [[maybe_unused]] auto status =
             spill_channel_manager_->DeleteChannel(spill_writer->GetChannelId());

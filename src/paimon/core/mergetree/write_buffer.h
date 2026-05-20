@@ -58,7 +58,7 @@ class WriteBuffer {
         const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
         const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
         const CoreOptions& options, const std::shared_ptr<IOManager>& io_manager,
-        const std::shared_ptr<MemoryPool>& pool);
+        bool enable_multi_thread_spill, const std::shared_ptr<MemoryPool>& pool);
 
     /// Import a RecordBatch into the buffer.
     /// Return false when the batch was accepted but the caller should fall back to

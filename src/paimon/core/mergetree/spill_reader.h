@@ -40,8 +40,8 @@ class SpillReader : public KeyValueRecordReader {
  public:
     static Result<std::unique_ptr<SpillReader>> Create(
         const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<arrow::Schema>& key_schema,
-        const std::shared_ptr<arrow::Schema>& value_schema, const std::shared_ptr<MemoryPool>& pool,
-        const FileIOChannel::ID& channel_id);
+        const std::shared_ptr<arrow::Schema>& value_schema, bool use_threads,
+        const FileIOChannel::ID& channel_id, const std::shared_ptr<MemoryPool>& pool);
 
     SpillReader(const SpillReader&) = delete;
     SpillReader& operator=(const SpillReader&) = delete;
@@ -64,7 +64,7 @@ class SpillReader : public KeyValueRecordReader {
  private:
     SpillReader(const std::shared_ptr<FileSystem>& fs,
                 const std::shared_ptr<arrow::Schema>& key_schema,
-                const std::shared_ptr<arrow::Schema>& value_schema,
+                const std::shared_ptr<arrow::Schema>& value_schema, bool use_threads,
                 const std::shared_ptr<MemoryPool>& pool);
 
     Status Open(const FileIOChannel::ID& channel_id);
@@ -75,6 +75,7 @@ class SpillReader : public KeyValueRecordReader {
     std::shared_ptr<arrow::Schema> value_schema_;
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<arrow::MemoryPool> arrow_pool_;
+    bool use_threads_;
     std::shared_ptr<Metrics> metrics_;
 
     std::shared_ptr<InputStream> in_stream_;

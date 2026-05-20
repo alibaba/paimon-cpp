@@ -176,10 +176,10 @@ class MergeTreeWriterTest : public ::testing::TestWithParam<bool> {
             compact_manager ? compact_manager : noop_compact_manager_;
         std::shared_ptr<IOManager> io_manager =
             GetParam() ? std::make_shared<IOManager>(temp_dir + "/tmp", file_system_) : nullptr;
-        return MergeTreeWriter::Create(last_sequence_number, primary_keys_, path_factory,
-                                       key_comparator_, user_defined_seq_comparator,
-                                       merge_function_wrapper_, schema_id, value_schema_, options,
-                                       writer_compact_manager, io_manager, pool_);
+        return MergeTreeWriter::Create(
+            last_sequence_number, primary_keys_, path_factory, key_comparator_,
+            user_defined_seq_comparator, merge_function_wrapper_, schema_id, value_schema_, options,
+            writer_compact_manager, io_manager, /*enable_multi_thread_spill=*/false, pool_);
     }
 
  private:
@@ -1094,7 +1094,8 @@ TEST_F(MergeTreeWriterTest, TestSpillWithSameKeyDeduplicate) {
         MergeTreeWriter::Create(/*last_sequence_number=*/-1, primary_keys_, path_factory,
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
-                                noop_compact_manager_, io_manager, pool_));
+                                noop_compact_manager_, io_manager,
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     std::shared_ptr<arrow::Array> batch1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1161,7 +1162,8 @@ TEST_F(MergeTreeWriterTest, TestIntermediateMergeSpillFileBound) {
         MergeTreeWriter::Create(/*last_sequence_number=*/-1, primary_keys_, path_factory,
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
-                                noop_compact_manager_, io_manager, pool_));
+                                noop_compact_manager_, io_manager,
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     std::shared_ptr<arrow::Array> batch1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1226,7 +1228,8 @@ TEST_F(MergeTreeWriterTest, TestDiskQuotaExhaustedFallsBackToFlushWriteBuffer) {
         MergeTreeWriter::Create(/*last_sequence_number=*/-1, primary_keys_, path_factory,
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
-                                noop_compact_manager_, io_manager, pool_));
+                                noop_compact_manager_, io_manager,
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     // Phase 1: Manual FlushMemory path — disk quota exhausted causes fallback.
     std::shared_ptr<arrow::Array> array1 =
@@ -1303,7 +1306,8 @@ TEST_F(MergeTreeWriterTest, TestFlushMemoryQuotaExhaustedFallsBackToFlushWriteBu
         MergeTreeWriter::Create(/*last_sequence_number=*/-1, primary_keys_, path_factory,
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
-                                noop_compact_manager_, io_manager, pool_));
+                                noop_compact_manager_, io_manager,
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     std::shared_ptr<arrow::Array> array =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1346,7 +1350,8 @@ TEST_F(MergeTreeWriterTest, TestCloseDeletesSpillTempFiles) {
         MergeTreeWriter::Create(/*last_sequence_number=*/-1, primary_keys_, path_factory,
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
-                                noop_compact_manager_, io_manager, pool_));
+                                noop_compact_manager_, io_manager,
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     std::shared_ptr<arrow::Array> array =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1378,7 +1383,8 @@ TEST_F(MergeTreeWriterTest, TestMultiplePrepareCommitWithSpill) {
         MergeTreeWriter::Create(/*last_sequence_number=*/-1, primary_keys_, path_factory,
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
-                                noop_compact_manager_, io_manager, pool_));
+                                noop_compact_manager_, io_manager,
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     std::shared_ptr<arrow::Array> array1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1455,7 +1461,8 @@ TEST_F(MergeTreeWriterTest, TestSpillWithIOException) {
             MergeTreeWriter::Create(/*last_sequence_number=*/-1, primary_keys_, path_factory,
                                     key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                     merge_function_wrapper_, /*schema_id=*/0, value_schema_,
-                                    options, noop_compact_manager_, io_manager, pool_));
+                                    options, noop_compact_manager_, io_manager,
+                                    /*enable_multi_thread_spill=*/false, pool_));
 
         ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
         io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);

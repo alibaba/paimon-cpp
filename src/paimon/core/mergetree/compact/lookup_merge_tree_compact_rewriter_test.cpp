@@ -101,7 +101,8 @@ class LookupMergeTreeCompactRewriterTest : public ::testing::TestWithParam<std::
                 /*last_sequence_number=*/last_sequence_number, std::vector<std::string>({"key"}),
                 data_path_factory, key_comparator, /*user_defined_seq_comparator=*/nullptr,
                 merge_function_wrapper, /*schema_id=*/latest_schema.value()->Id(), arrow_schema_,
-                options, std::make_shared<NoopCompactManager>(), /*io_manager=*/nullptr, pool_));
+                options, std::make_shared<NoopCompactManager>(), /*io_manager=*/nullptr,
+                /*enable_multi_thread_spill=*/false, pool_));
 
         // write data
         ArrowArray c_src_array;
