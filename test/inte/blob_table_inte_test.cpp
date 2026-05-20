@@ -1557,8 +1557,7 @@ TEST_P(BlobTableInteTest, TestReadTableWithMultiBlobFields) {
 
     // Full scan: all 10 rows
     {
-        std::vector<int32_t> all_rows;
-        all_rows.reserve(10);
+        std::vector<int32_t> all_rows(10);
         std::iota(all_rows.begin(), all_rows.end(), 0);
         auto expected_array = build_expected(all_rows);
         ASSERT_OK(ScanAndRead(table_path, arrow::schema(arrow_data_type->fields())->field_names(),
