@@ -18,6 +18,8 @@
 
 #include <utility>
 
+#include "arrow/util/thread_pool.h"
+#include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/utils/branch_manager.h"
 #include "paimon/executor.h"
@@ -29,8 +31,9 @@ namespace paimon {
 
 WriteContext::WriteContext(const std::string& root_path, const std::string& commit_user,
                            bool is_streaming_mode, bool ignore_num_bucket_check,
-                           bool ignore_previous_files, const std::optional<int32_t>& write_id,
-                           const std::string& branch, const std::vector<std::string>& write_schema,
+                           bool ignore_previous_files, bool enable_multi_thread_spill,
+                           const std::optional<int32_t>& write_id, const std::string& branch,
+                           const std::vector<std::string>& write_schema,
                            const std::shared_ptr<MemoryPool>& memory_pool,
                            const std::shared_ptr<Executor>& executor,
                            const std::string& temp_directory,
@@ -43,6 +46,7 @@ WriteContext::WriteContext(const std::string& root_path, const std::string& comm
       is_streaming_mode_(is_streaming_mode),
       ignore_num_bucket_check_(ignore_num_bucket_check),
       ignore_previous_files_(ignore_previous_files),
+      enable_multi_thread_spill_(enable_multi_thread_spill),
       write_id_(write_id),
       write_schema_(write_schema),
       memory_pool_(memory_pool),
@@ -63,6 +67,7 @@ class WriteContextBuilder::Impl {
         is_streaming_mode_ = false;
         ignore_num_bucket_check_ = false;
         ignore_previous_files_ = false;
+        spill_thread_number_ = 0;
         memory_pool_ = GetDefaultPool();
         executor_ = CreateDefaultExecutor();
         temp_directory_.clear();
@@ -81,6 +86,7 @@ class WriteContextBuilder::Impl {
     bool is_streaming_mode_ = false;
     bool ignore_num_bucket_check_ = false;
     bool ignore_previous_files_ = false;
+    int32_t spill_thread_number_ = 0;
     std::vector<std::string> write_schema_;
     std::shared_ptr<MemoryPool> memory_pool_ = GetDefaultPool();
     std::shared_ptr<Executor> executor_ = CreateDefaultExecutor();
@@ -164,6 +170,11 @@ WriteContextBuilder& WriteContextBuilder::WithFileSystemSchemeToIdentifierMap(
     return *this;
 }
 
+WriteContextBuilder& WriteContextBuilder::SetWriteBufferSpillThreadNumber(int32_t thread_number) {
+    impl_->spill_thread_number_ = thread_number;
+    return *this;
+}
+
 WriteContextBuilder& WriteContextBuilder::WithFileSystem(
     const std::shared_ptr<FileSystem>& file_system) {
     impl_->specific_file_system_ = file_system;
@@ -175,12 +186,17 @@ Result<std::unique_ptr<WriteContext>> WriteContextBuilder::Finish() {
     if (impl_->root_path_.empty()) {
         return Status::Invalid("root path is empty");
     }
+    bool enable_multi_thread_spill = impl_->spill_thread_number_ > 0;
+    if (enable_multi_thread_spill) {
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(
+            arrow::SetCpuThreadPoolCapacity(impl_->spill_thread_number_));
+    }
     auto ctx = std::make_unique<WriteContext>(
         impl_->root_path_, impl_->commit_user_, impl_->is_streaming_mode_,
-        impl_->ignore_num_bucket_check_, impl_->ignore_previous_files_, impl_->write_id_,
-        impl_->branch_, impl_->write_schema_, impl_->memory_pool_, impl_->executor_,
-        impl_->temp_directory_, impl_->specific_file_system_, impl_->fs_scheme_to_identifier_map_,
-        impl_->options_);
+        impl_->ignore_num_bucket_check_, impl_->ignore_previous_files_, enable_multi_thread_spill,
+        impl_->write_id_, impl_->branch_, impl_->write_schema_, impl_->memory_pool_,
+        impl_->executor_, impl_->temp_directory_, impl_->specific_file_system_,
+        impl_->fs_scheme_to_identifier_map_, impl_->options_);
     impl_->Reset();
     return ctx;
 }

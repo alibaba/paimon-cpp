@@ -1491,7 +1491,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadAllNull) {
     }
 }
 
-TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadLargeDataWithSmallBlocks) {
+TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadLargeDataWithSmallBlocks) {
     // Use very small block size and cache size to force multiple block evictions
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("int_field", arrow::int32());
@@ -1710,7 +1710,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, CreateReaderWithMultiFieldSchema) {
                         "supposed to have single field");
 }
 
-TEST_P(BTreeGlobalIndexIntegrationTest, CreateWriterWithMissingField) {
+TEST_F(BTreeGlobalIndexIntegrationTest, CreateWriterWithMissingField) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto type = arrow::struct_({arrow::field("existing_field", arrow::int32())});
     auto struct_type = std::dynamic_pointer_cast<arrow::StructType>(type);

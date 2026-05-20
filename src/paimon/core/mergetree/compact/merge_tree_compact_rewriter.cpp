@@ -263,10 +263,10 @@ Result<CompactResult> MergeTreeCompactRewriter::RewriteCompaction(
 
     ScopeGuard write_guard([&]() -> void {
         rolling_writer->Abort();
-        merge_file_split_read_.reset();
         for (const auto& reader : reader_holders) {
             reader->Close();
         }
+        merge_file_split_read_.reset();
     });
 
     for (const auto& section : sections) {

@@ -57,13 +57,14 @@ KeyValueFileStoreWrite::KeyValueFileStoreWrite(
     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
     const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
     const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
-    bool ignore_num_bucket_check, const std::shared_ptr<Executor>& executor,
-    const std::shared_ptr<MemoryPool>& pool)
+    bool ignore_num_bucket_check, bool enable_multi_thread_spill,
+    const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool)
     : AbstractFileStoreWrite(file_store_path_factory, snapshot_manager, schema_manager, commit_user,
                              root_path, table_schema, schema, /*write_schema=*/schema,
                              partition_schema, dv_maintainer_factory, io_manager, options,
                              ignore_previous_files, is_streaming_mode, ignore_num_bucket_check,
                              executor, pool),
+      enable_multi_thread_spill_(enable_multi_thread_spill),
       key_comparator_(key_comparator),
       user_defined_seq_comparator_(user_defined_seq_comparator),
       merge_function_wrapper_(merge_function_wrapper),
@@ -116,7 +117,7 @@ Result<std::shared_ptr<BatchWriter>> KeyValueFileStoreWrite::CreateWriter(
         MergeTreeWriter::Create(
             restore_max_seq_number, trimmed_primary_keys, data_file_path_factory, key_comparator_,
             user_defined_seq_comparator_, merge_function_wrapper_, table_schema_->Id(), schema_,
-            options_, compact_manager, io_manager_, pool_));
+            options_, compact_manager, io_manager_, enable_multi_thread_spill_, pool_));
     return writer;
 }
 

@@ -26,6 +26,7 @@
 #include "paimon/core/disk/file_io_channel.h"
 #include "paimon/core/mergetree/in_memory_sort_buffer.h"
 #include "paimon/core/mergetree/sort_buffer.h"
+#include "paimon/core/mergetree/spill_file_merger.h"
 #include "paimon/record_batch.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -52,7 +53,7 @@ class ExternalSortBuffer : public SortBuffer {
         const std::shared_ptr<FieldsComparator>& key_comparator,
         const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
         const CoreOptions& options, const std::shared_ptr<IOManager>& io_manager,
-        const std::shared_ptr<MemoryPool>& pool);
+        bool enable_multi_thread_spill, const std::shared_ptr<MemoryPool>& pool);
     ~ExternalSortBuffer() override;
 
     void Clear() override;
@@ -63,14 +64,19 @@ class ExternalSortBuffer : public SortBuffer {
     bool HasData() const override;
 
  private:
+    static constexpr int32_t kSpillMinFanIn = 2;
+    static constexpr int32_t kSpillMinBatchSize = 256;
+
     void DoClear();
+    void UpdateSpillParameters();
     bool HasSpilledData() const;
-    Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> CollectSpillReaders() const;
-    Result<int64_t> SpillToDisk(std::vector<std::unique_ptr<KeyValueRecordReader>>&& readers,
-                                int32_t write_batch_size);
-    Status MergeSpilledFiles();
+    Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> CreateSpillReaders(
+        const std::vector<FileChannelInfo>& files) const;
+    Result<FileChannelInfo> SpillToDisk(
+        std::vector<std::unique_ptr<KeyValueRecordReader>>&& readers, int32_t write_batch_size);
+    SpillFileMerger::MergeFn CreateSpillFileMergeFn();
+    Result<FileChannelInfo> MergeAndReplaceFiles(const std::vector<FileChannelInfo>& files);
     Status SpillMemoryBuffer(std::vector<std::unique_ptr<KeyValueRecordReader>>&& readers);
-    void CleanupSpillFiles();
 
     ExternalSortBuffer(std::unique_ptr<InMemorySortBuffer>&& in_memory_buffer,
                        const std::shared_ptr<arrow::Schema>& key_schema,
@@ -79,7 +85,7 @@ class ExternalSortBuffer : public SortBuffer {
                        const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
                        const CoreOptions& options,
                        const std::shared_ptr<FileIOChannel::Enumerator>& spill_channel_enumerator,
-                       const std::shared_ptr<MemoryPool>& pool);
+                       bool enable_multi_thread_spill, const std::shared_ptr<MemoryPool>& pool);
 
     std::unique_ptr<InMemorySortBuffer> in_memory_buffer_;
 
@@ -90,10 +96,15 @@ class ExternalSortBuffer : public SortBuffer {
     const std::shared_ptr<FieldsComparator> user_defined_seq_comparator_;
     const std::shared_ptr<arrow::Schema> write_schema_;
     const CoreOptions options_;
+    const int32_t max_fan_in_;
+    const bool enable_multi_thread_spill_;
     const std::shared_ptr<SpillChannelManager> spill_channel_manager_;
 
+    std::unique_ptr<SpillFileMerger> spill_merger_;
     std::shared_ptr<FileIOChannel::Enumerator> spill_channel_enumerator_;
     int64_t total_spill_disk_bytes_ = 0;
+    int32_t actual_max_fan_in_;
+    int32_t spill_batch_size_;
 };
 
 }  // namespace paimon

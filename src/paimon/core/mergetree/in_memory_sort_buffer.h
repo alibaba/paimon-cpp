@@ -63,11 +63,13 @@ class InMemorySortBuffer : public SortBuffer {
     Result<bool> Write(std::unique_ptr<RecordBatch>&& batch) override;
     Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> CreateReaders() override;
     bool HasData() const override;
+    /// Get the estimated average memory usage per row in bytes.
+    uint64_t GetEstimateMemoryUseForEachRow() const;
 
+ private:
     /// Estimate memory usage of an Arrow array.
     static Result<int64_t> EstimateMemoryUse(const std::shared_ptr<arrow::Array>& array);
 
- private:
     const std::shared_ptr<MemoryPool> pool_;
     const std::shared_ptr<arrow::DataType> value_type_;
     const std::vector<std::string> trimmed_primary_keys_;
@@ -78,6 +80,8 @@ class InMemorySortBuffer : public SortBuffer {
 
     std::vector<BufferedWriteBatch> buffered_batches_;
     uint64_t current_memory_in_bytes_ = 0;
+    uint64_t estimated_memory_use_for_each_row_ = 0;
+    int64_t total_row_count_ = 0;
     int64_t next_sequence_number_ = 0;
 };
 
