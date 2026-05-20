@@ -33,7 +33,7 @@ class BlobDefs {
     /// To create a Blob field:
     /// @code
     ///   std::unordered_map<std::string, std::string> blob_metadata_map = {
-    ///       {Blob::EXTENSION_TYPE_KEY, Blob::EXTENSION_TYPE_VALUE}
+    ///       {Blob::kExtensionTypeKey, Blob::kExtensionTypeValue}
     ///   };
     ///   auto field = arrow::field("my_blob_field", arrow::large_binary(), false,
     ///       std::make_shared<arrow::KeyValueMetadata>(blob_metadata_map));
