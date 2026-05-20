@@ -18,6 +18,7 @@ if(_PAIMON_LZ4_ROOTS)
     set(_PAIMON_LZ4_FIND_ARGS HINTS ${_PAIMON_LZ4_ROOTS} NO_DEFAULT_PATH)
 endif()
 
+include(FindPackageUtils)
 find_package(lz4 CONFIG QUIET ${_PAIMON_LZ4_FIND_ARGS})
 find_package(LZ4 CONFIG QUIET ${_PAIMON_LZ4_FIND_ARGS})
 
@@ -30,18 +31,24 @@ foreach(_target IN LISTS _PAIMON_LZ4_TARGETS)
 endforeach()
 
 if(_PAIMON_LZ4_TARGET)
-    get_target_property(LZ4_INCLUDE_DIR ${_PAIMON_LZ4_TARGET}
-                        INTERFACE_INCLUDE_DIRECTORIES)
-    if(NOT TARGET lz4)
+    paimon_find_target_headers(LZ4_INCLUDE_DIR
+                               ${_PAIMON_LZ4_TARGET}
+                               NAMES
+                               lz4.h
+                               ${_PAIMON_LZ4_FIND_ARGS})
+
+    include(FindPackageHandleStandardArgs)
+    find_package_handle_standard_args(LZ4Alt REQUIRED_VARS LZ4_INCLUDE_DIR)
+
+    if(LZ4Alt_FOUND AND NOT TARGET lz4)
         add_library(lz4 INTERFACE IMPORTED)
-        if(LZ4_INCLUDE_DIR)
-            set_target_properties(lz4 PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                                 "${LZ4_INCLUDE_DIR}")
-        endif()
+        set_target_properties(lz4 PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+                                             "${LZ4_INCLUDE_DIR}")
         target_link_libraries(lz4 INTERFACE ${_PAIMON_LZ4_TARGET})
     endif()
-    set(LZ4_LIBRARIES ${_PAIMON_LZ4_TARGET})
-    set(LZ4Alt_FOUND TRUE)
+    if(LZ4Alt_FOUND)
+        set(LZ4_LIBRARIES ${_PAIMON_LZ4_TARGET})
+    endif()
 else()
     find_package(PkgConfig QUIET)
     if(PkgConfig_FOUND)

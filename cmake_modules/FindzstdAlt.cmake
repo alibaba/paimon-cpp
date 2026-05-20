@@ -18,6 +18,7 @@ if(_PAIMON_ZSTD_ROOTS)
     set(_PAIMON_ZSTD_FIND_ARGS HINTS ${_PAIMON_ZSTD_ROOTS} NO_DEFAULT_PATH)
 endif()
 
+include(FindPackageUtils)
 find_package(zstd CONFIG QUIET ${_PAIMON_ZSTD_FIND_ARGS})
 
 set(_PAIMON_ZSTD_TARGETS)
@@ -38,18 +39,24 @@ foreach(_target IN LISTS _PAIMON_ZSTD_TARGETS)
 endforeach()
 
 if(_PAIMON_ZSTD_TARGET)
-    get_target_property(ZSTD_INCLUDE_DIR ${_PAIMON_ZSTD_TARGET}
-                        INTERFACE_INCLUDE_DIRECTORIES)
-    if(NOT TARGET zstd)
+    paimon_find_target_headers(ZSTD_INCLUDE_DIR
+                               ${_PAIMON_ZSTD_TARGET}
+                               NAMES
+                               zstd.h
+                               ${_PAIMON_ZSTD_FIND_ARGS})
+
+    include(FindPackageHandleStandardArgs)
+    find_package_handle_standard_args(zstdAlt REQUIRED_VARS ZSTD_INCLUDE_DIR)
+
+    if(zstdAlt_FOUND AND NOT TARGET zstd)
         add_library(zstd INTERFACE IMPORTED)
-        if(ZSTD_INCLUDE_DIR)
-            set_target_properties(zstd PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                                  "${ZSTD_INCLUDE_DIR}")
-        endif()
+        set_target_properties(zstd PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+                                              "${ZSTD_INCLUDE_DIR}")
         target_link_libraries(zstd INTERFACE ${_PAIMON_ZSTD_TARGET})
     endif()
-    set(ZSTD_LIBRARIES ${_PAIMON_ZSTD_TARGET})
-    set(zstdAlt_FOUND TRUE)
+    if(zstdAlt_FOUND)
+        set(ZSTD_LIBRARIES ${_PAIMON_ZSTD_TARGET})
+    endif()
 else()
     find_package(PkgConfig QUIET)
     if(PkgConfig_FOUND)

@@ -243,6 +243,7 @@ TEST_F(SnapshotTest, TestSerializeAndDeserialize) {
         se_and_de_from_str(json_str);
     }
 }
+
 TEST_F(SnapshotTest, TestCommitKindAnalyze) {
     // Test constructing a Snapshot with CommitKind::Analyze
     Snapshot snapshot(

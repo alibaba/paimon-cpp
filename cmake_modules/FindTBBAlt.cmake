@@ -18,6 +18,7 @@ if(_PAIMON_TBB_ROOTS)
     set(_PAIMON_TBB_FIND_ARGS HINTS ${_PAIMON_TBB_ROOTS} NO_DEFAULT_PATH)
 endif()
 
+include(FindPackageUtils)
 find_package(TBB CONFIG QUIET ${_PAIMON_TBB_FIND_ARGS})
 
 set(_PAIMON_TBB_TARGETS TBB::tbb tbb)
@@ -29,17 +30,22 @@ foreach(_target IN LISTS _PAIMON_TBB_TARGETS)
 endforeach()
 
 if(_PAIMON_TBB_TARGET)
-    if(NOT TARGET tbb)
+    paimon_find_target_headers(TBB_INCLUDE_DIR
+                               ${_PAIMON_TBB_TARGET}
+                               NAMES
+                               tbb/tbb.h
+                               oneapi/tbb/tbb.h
+                               ${_PAIMON_TBB_FIND_ARGS})
+
+    include(FindPackageHandleStandardArgs)
+    find_package_handle_standard_args(TBBAlt REQUIRED_VARS TBB_INCLUDE_DIR)
+
+    if(TBBAlt_FOUND AND NOT TARGET tbb)
         add_library(tbb INTERFACE IMPORTED)
-        get_target_property(TBB_INCLUDE_DIR ${_PAIMON_TBB_TARGET}
-                            INTERFACE_INCLUDE_DIRECTORIES)
-        if(TBB_INCLUDE_DIR)
-            set_target_properties(tbb PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                                 "${TBB_INCLUDE_DIR}")
-        endif()
+        set_target_properties(tbb PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+                                             "${TBB_INCLUDE_DIR}")
         target_link_libraries(tbb INTERFACE ${_PAIMON_TBB_TARGET})
     endif()
-    set(TBBAlt_FOUND TRUE)
 else()
     find_package(PkgConfig QUIET)
     if(PkgConfig_FOUND)

@@ -18,12 +18,22 @@ if(_PAIMON_RE2_ROOTS)
     set(_PAIMON_RE2_FIND_ARGS HINTS ${_PAIMON_RE2_ROOTS} NO_DEFAULT_PATH)
 endif()
 
+include(FindPackageUtils)
 find_package(re2 CONFIG QUIET ${_PAIMON_RE2_FIND_ARGS})
 
 if(TARGET re2::re2)
-    get_target_property(RE2_INCLUDE_DIR re2::re2 INTERFACE_INCLUDE_DIRECTORIES)
-    set(RE2_LIBRARIES re2::re2)
-    set(RE2Alt_FOUND TRUE)
+    paimon_find_target_headers(RE2_INCLUDE_DIR
+                               re2::re2
+                               NAMES
+                               re2/re2.h
+                               ${_PAIMON_RE2_FIND_ARGS})
+
+    include(FindPackageHandleStandardArgs)
+    find_package_handle_standard_args(RE2Alt REQUIRED_VARS RE2_INCLUDE_DIR)
+
+    if(RE2Alt_FOUND)
+        set(RE2_LIBRARIES re2::re2)
+    endif()
 else()
     find_package(PkgConfig QUIET)
     if(PkgConfig_FOUND)
