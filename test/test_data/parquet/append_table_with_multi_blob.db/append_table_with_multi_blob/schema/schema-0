@@ -1,0 +1,45 @@
+{
+  "version" : 3,
+  "id" : 0,
+  "fields" : [ {
+    "id" : 0,
+    "name" : "f0",
+    "type" : "STRING"
+  }, {
+    "id" : 1,
+    "name" : "f1",
+    "type" : "INT"
+  }, {
+    "id" : 2,
+    "name" : "f2",
+    "type" : "INT"
+  }, {
+    "id" : 3,
+    "name" : "f3",
+    "type" : "DOUBLE"
+  }, {
+    "id" : 4,
+    "name" : "f4",
+    "type" : "STRING"
+  }, {
+    "id" : 5,
+    "name" : "f5",
+    "type" : "BLOB"
+  }, {
+    "id" : 6,
+    "name" : "f6",
+    "type" : "BLOB"
+  } ],
+  "highestFieldId" : 6,
+  "partitionKeys" : [ ],
+  "primaryKeys" : [ ],
+  "options" : {
+    "blob.target-file-size" : "4 kb",
+    "row-tracking.enabled" : "true",
+    "target-file-size" : "256 mb",
+    "data-evolution.enabled" : "true",
+    "manifest.format" : "avro",
+    "file.format" : "parquet"
+  },
+  "timeMillis" : 1779173587849
+}
