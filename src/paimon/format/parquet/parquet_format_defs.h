@@ -65,7 +65,8 @@ class ParquetMetrics {
 
     // read
     static inline const char READ_ROW_GROUPS_TOTAL[] = "parquet.read.row-groups.total";
-    static inline const char READ_ROW_GROUPS_FILTERED[] = "parquet.read.row-groups.filtered";
+    static inline const char READ_ROW_GROUPS_AFTER_FILTER[] =
+        "parquet.read.row-groups.after-filter";
     static inline const char READ_ROWS[] = "parquet.read.rows";
     static inline const char READ_BATCH_COUNT[] = "parquet.read.batch-count";
 };
