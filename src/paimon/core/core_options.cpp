@@ -76,12 +76,15 @@ class ConfigParser {
 
     // Parse list configurations
     template <typename T>
-    Status ParseList(const std::string& key, const std::string& delimiter,
-                     std::vector<T>* list) const {
+    Status ParseList(const std::string& key, const std::string& delimiter, std::vector<T>* list,
+                     bool need_trim = false) const {
         auto iter = config_map_.find(key);
         if (iter != config_map_.end()) {
             auto value_str_vec = StringUtils::Split(iter->second, delimiter, /*ignore_empty=*/true);
-            for (const auto& value_str : value_str_vec) {
+            for (auto& value_str : value_str_vec) {
+                if (need_trim) {
+                    StringUtils::Trim(&value_str);
+                }
                 if constexpr (std::is_same_v<T, std::string>) {
                     list->emplace_back(value_str);
                 } else {
@@ -541,17 +544,24 @@ struct CoreOptions::Impl {
         PAIMON_RETURN_NOT_OK(parser.ParseBucketFunctionType(&bucket_function_type));
         // Parse blob-field - column names to store as blob type, comma separated
         PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
-            Options::BLOB_FIELD, Options::FIELDS_SEPARATOR, &blob_fields));
+            Options::BLOB_FIELD, Options::FIELDS_SEPARATOR, &blob_fields, /*need_trim=*/true));
         // Parse blob-descriptor-field - BLOB fields stored inline as serialized descriptors
-        PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
-            Options::BLOB_DESCRIPTOR_FIELD, Options::FIELDS_SEPARATOR, &blob_descriptor_fields));
+        PAIMON_RETURN_NOT_OK(
+            parser.ParseList<std::string>(Options::BLOB_DESCRIPTOR_FIELD, Options::FIELDS_SEPARATOR,
+                                          &blob_descriptor_fields, /*need_trim=*/true));
+        if (blob_descriptor_fields.empty()) {
+            PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
+                Options::FALLBACK_BLOB_DESCRIPTOR_FIELD, Options::FIELDS_SEPARATOR,
+                &blob_descriptor_fields, /*need_trim=*/true));
+        }
         // Parse blob-view-field - BLOB fields stored inline as serialized view metadata
-        PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
-            Options::BLOB_VIEW_FIELD, Options::FIELDS_SEPARATOR, &blob_view_fields));
-        // Parse blob-external-storage-field - descriptor BLOB fields written to external storage
-        PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(Options::BLOB_EXTERNAL_STORAGE_FIELD,
+        PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(Options::BLOB_VIEW_FIELD,
                                                            Options::FIELDS_SEPARATOR,
-                                                           &blob_external_storage_fields));
+                                                           &blob_view_fields, /*need_trim=*/true));
+        // Parse blob-external-storage-field - descriptor BLOB fields written to external storage
+        PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
+            Options::BLOB_EXTERNAL_STORAGE_FIELD, Options::FIELDS_SEPARATOR,
+            &blob_external_storage_fields, /*need_trim=*/true));
         // Parse blob-external-storage-path - external storage path for configured BLOB fields
         PAIMON_RETURN_NOT_OK(
             parser.Parse(Options::BLOB_EXTERNAL_STORAGE_PATH, &blob_external_storage_path));

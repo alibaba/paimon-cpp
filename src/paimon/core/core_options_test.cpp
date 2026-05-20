@@ -887,4 +887,20 @@ TEST(CoreOptionsTest, TestAssignmentIndependence) {
     ASSERT_EQ(MergeEngine::DEDUPLICATE, source.GetMergeEngine());
 }
 
+TEST(CoreOptionsTest, TestFallback) {
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::FALLBACK_BLOB_DESCRIPTOR_FIELD, "b1,b2"}}));
+        ASSERT_EQ(options.GetBlobDescriptorFields(), std::vector<std::string>({"b1", "b2"}));
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::FALLBACK_BLOB_DESCRIPTOR_FIELD, "b1,b2"},
+                                  {Options::BLOB_DESCRIPTOR_FIELD, "new_b1 , new_b2"}}));
+        ASSERT_EQ(options.GetBlobDescriptorFields(),
+                  std::vector<std::string>({"new_b1", "new_b2"}));
+    }
+}
 }  // namespace paimon::test

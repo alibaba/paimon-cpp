@@ -94,6 +94,7 @@ const char Options::PARTITION_GENERATE_LEGACY_NAME[] = "partition.legacy-name";
 const char Options::BLOB_AS_DESCRIPTOR[] = "blob-as-descriptor";
 const char Options::BLOB_FIELD[] = "blob-field";
 const char Options::BLOB_DESCRIPTOR_FIELD[] = "blob-descriptor-field";
+const char Options::FALLBACK_BLOB_DESCRIPTOR_FIELD[] = "blob.stored-descriptor-fields";
 const char Options::BLOB_VIEW_FIELD[] = "blob-view-field";
 const char Options::BLOB_EXTERNAL_STORAGE_FIELD[] = "blob-external-storage-field";
 const char Options::BLOB_EXTERNAL_STORAGE_PATH[] = "blob-external-storage-path";

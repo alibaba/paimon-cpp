@@ -376,6 +376,8 @@ struct PAIMON_EXPORT Options {
     /// "blob-descriptor-field" - Comma-separated field names to treat as BLOB fields and store as
     /// serialized BlobDescriptor bytes inline in data files. No default value.
     static const char BLOB_DESCRIPTOR_FIELD[];
+    /// @deprecated "blob.stored-descriptor-fields" as a fallback for `BLOB_DESCRIPTOR_FIELD`.
+    static const char FALLBACK_BLOB_DESCRIPTOR_FIELD[];
     /// "blob-view-field" - Comma-separated field names to treat as BLOB fields and store as
     /// serialized BlobViewStruct bytes inline in data files and resolve from upstream tables at
     /// read time. No default value.
