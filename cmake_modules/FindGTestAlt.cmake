@@ -18,6 +18,7 @@ if(_PAIMON_GTEST_ROOTS)
     set(_PAIMON_GTEST_FIND_ARGS HINTS ${_PAIMON_GTEST_ROOTS} NO_DEFAULT_PATH)
 endif()
 
+include(FindPackageUtils)
 find_package(GTest CONFIG QUIET ${_PAIMON_GTEST_FIND_ARGS})
 
 if(NOT TARGET GTest::gtest
@@ -65,8 +66,20 @@ if(NOT TARGET GTest::gtest
         endif()
     endif()
 else()
-    get_target_property(GTEST_INCLUDE_DIR GTest::gtest INTERFACE_INCLUDE_DIRECTORIES)
-    set(GTestAlt_FOUND TRUE)
+    paimon_find_target_headers(GTEST_INCLUDE_DIR
+                               GTest::gtest
+                               NAMES
+                               gtest/gtest.h
+                               ${_PAIMON_GTEST_FIND_ARGS})
+    paimon_find_target_headers(GMOCK_INCLUDE_DIR
+                               GTest::gmock
+                               NAMES
+                               gmock/gmock.h
+                               ${_PAIMON_GTEST_FIND_ARGS})
+
+    include(FindPackageHandleStandardArgs)
+    find_package_handle_standard_args(GTestAlt REQUIRED_VARS GTEST_INCLUDE_DIR
+                                                             GMOCK_INCLUDE_DIR)
 endif()
 
 if(GTestAlt_FOUND)
