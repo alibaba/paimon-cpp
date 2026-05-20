@@ -4316,7 +4316,9 @@ TEST_P(WriteInteTest, TestPkSpillableMultiBucketMultiRoundDataCorrectness) {
     };
 
     WriteContextBuilder write_builder(table_path, "commit_user_1");
-    write_builder.WithStreamingMode(true).WithTempDirectory(tmp_dir);
+    write_builder.WithStreamingMode(true)
+        .WithTempDirectory(tmp_dir)
+        .SetWriteBufferSpillThreadNumber(3);
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context, write_builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
 
