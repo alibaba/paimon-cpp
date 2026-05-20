@@ -610,7 +610,7 @@ TEST_F(FieldMappingReaderTest, TestReadWithSchemaEvolutionPureRename) {
                                           DataField(1, arrow::field("f1", arrow::int32()))};
     auto data_schema = DataField::ConvertDataFieldsToArrowSchema(data_fields);
     auto data_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({data_schema->fields()}),
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(data_schema->fields()),
                                                   R"([
         ["Alice", 1],
         ["Bob", 2],
@@ -626,7 +626,7 @@ TEST_F(FieldMappingReaderTest, TestReadWithSchemaEvolutionPureRename) {
     // Expected output uses the post-rename names; verifies mapping actually
     // ran (PASSTHRU would keep f0/f1 and Equals would fail).
     auto expected = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({read_schema->fields()}),
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(read_schema->fields()),
                                                   R"([
         ["Alice", 1],
         ["Bob", 2],

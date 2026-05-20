@@ -153,7 +153,7 @@ Status ParquetFileBatchReader::SetReadSchema(
     read_column_indices_ = column_indices;
 
     metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_TOTAL, reader_->GetNumberOfRowGroups());
-    metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_FILTERED, row_groups.size());
+    metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_AFTER_FILTER, row_groups.size());
 
     PAIMON_ASSIGN_OR_RAISE(std::set<int32_t> ordered_row_groups,
                            reader_->FilterRowGroupsByReadRanges(read_ranges_, read_row_groups_));
