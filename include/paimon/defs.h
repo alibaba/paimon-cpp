@@ -212,7 +212,7 @@ struct PAIMON_EXPORT Options {
     static const char SNAPSHOT_TIME_RETAINED[];
 
     /// "snapshot.expire.limit" - The maximum number of snapshots allowed to expire at a time.
-    /// Default value is 10.
+    /// Default value is 50.
     static const char SNAPSHOT_EXPIRE_LIMIT[];
 
     /// "snapshot.clean-empty-directories" - Whether to try to clean empty directories when expiring
@@ -391,7 +391,7 @@ struct PAIMON_EXPORT Options {
     /// reading the audit_log or binlog system tables. This is only valid for primary key tables.
     /// Default value is "false".
     static const char TABLE_READ_SEQUENCE_NUMBER_ENABLED[];
-    /// "key-value.sequence-number.enabled" - Whether to include the _SEQUENCE_NUMBER field when
+    /// "key-value.sequence_number.enabled" - Whether to include the _SEQUENCE_NUMBER field when
     /// reading key-value data. This is an internal option used by AuditLogTable and BinlogTable
     /// when table-read.sequence-number.enabled is set to true. Default value is "false".
     static const char KEY_VALUE_SEQUENCE_NUMBER_ENABLED[];

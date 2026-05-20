@@ -583,8 +583,8 @@ struct CoreOptions::Impl {
         int32_t snapshot_num_retain_min = 10;
         // Parse snapshot.num-retained.max - maximum completed snapshots to retain
         int32_t snapshot_num_retain_max = std::numeric_limits<int32_t>::max();
-        // Parse snapshot.expire.limit - maximum snapshots allowed to expire at a time, default 10
-        int32_t snapshot_expire_limit = 10;
+        // Parse snapshot.expire.limit - maximum snapshots allowed to expire at a time, default 50
+        int32_t snapshot_expire_limit = 50;
         // Parse snapshot.time-retained - maximum time of completed snapshots to retain
         int64_t snapshot_time_retained = 1 * 3600 * 1000;  // 1 hour
         PAIMON_RETURN_NOT_OK(
@@ -642,7 +642,7 @@ struct CoreOptions::Impl {
         // Parse table-read.sequence-number.enabled - expose sequence number in system tables
         PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::TABLE_READ_SEQUENCE_NUMBER_ENABLED,
                                                 &table_read_sequence_number_enabled));
-        // Parse key-value.sequence-number.enabled - internal sequence number read switch
+        // Parse key-value.sequence_number.enabled - internal sequence number read switch
         PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::KEY_VALUE_SEQUENCE_NUMBER_ENABLED,
                                                 &key_value_sequence_number_enabled));
         // Parse partial-update.remove-record-on-sequence-group

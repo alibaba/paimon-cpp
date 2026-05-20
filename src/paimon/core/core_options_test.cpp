@@ -71,7 +71,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ExpireConfig expire_config = core_options.GetExpireConfig();
     ASSERT_EQ(10, expire_config.GetSnapshotRetainMin());
     ASSERT_EQ(std::numeric_limits<int32_t>::max(), expire_config.GetSnapshotRetainMax());
-    ASSERT_EQ(10, expire_config.GetSnapshotMaxDeletes());
+    ASSERT_EQ(50, expire_config.GetSnapshotMaxDeletes());
     ASSERT_FALSE(expire_config.CleanEmptyDirectories());
     ASSERT_EQ(1 * 3600 * 1000L, expire_config.GetSnapshotTimeRetainMs());
     ASSERT_EQ(std::vector<std::string>(), core_options.GetSequenceField());
