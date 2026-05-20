@@ -706,4 +706,46 @@ TEST_F(FieldMappingReaderTest, TestSchemaEvolutionWithDictType) {
                 partition, expected_array);
 }
 
+TEST_F(FieldMappingReaderTest, TestReadWithSchemaEvolutionRenameCombinedCast) {
+    // Test all 4 combinations of rename × cast:
+    //   f0: no rename, no cast   (utf8 → utf8, name unchanged)
+    //   f1: rename only           (int32 → int32, f1 → new_f1)
+    //   f2: cast only             (int32 → utf8, name unchanged)
+    //   f3: rename + cast         (int32 → utf8, f3 → new_f2)
+    std::vector<DataField> data_fields = {
+        DataField(0, arrow::field("f0", arrow::utf8())),
+        DataField(1, arrow::field("f1", arrow::int32())),
+        DataField(2, arrow::field("f2", arrow::int32())),
+        DataField(3, arrow::field("f3", arrow::int32())),
+    };
+    auto data_schema = DataField::ConvertDataFieldsToArrowSchema(data_fields);
+    auto data_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(data_schema->fields()),
+                                                  R"([
+        ["Bob", 100, 10, 1],
+        ["Emily", 200, 20, 2],
+        ["Alice", 300, 30, 3]
+    ])")
+            .ValueOrDie());
+
+    std::vector<DataField> read_fields = {
+        DataField(0, arrow::field("f0", arrow::utf8())),
+        DataField(1, arrow::field("new_f1", arrow::int32())),
+        DataField(2, arrow::field("f2", arrow::utf8())),
+        DataField(3, arrow::field("new_f3", arrow::utf8())),
+    };
+    auto read_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields);
+
+    auto expected = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(read_schema->fields()),
+                                                  R"([
+        ["Bob", 100, "10", "1"],
+        ["Emily", 200, "20", "2"],
+        ["Alice", 300, "30", "3"]
+    ])")
+            .ValueOrDie());
+
+    CheckResult(data_schema, data_array, read_schema, /*predicate=*/nullptr,
+                /*partition_keys=*/{}, BinaryRow::EmptyRow(), expected);
+}
 }  // namespace paimon::test

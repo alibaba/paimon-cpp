@@ -107,7 +107,7 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::CastNonPartitionArrayI
                     single_column_array, non_partition_info_.non_partition_read_schema[i].Type(),
                     arrow_pool_.get()));
             casted_array.push_back(casted);
-            casted_field_names.push_back(non_partition_info_.non_partition_read_schema[i].Name());
+            casted_field_names.push_back(non_partition_info_.non_partition_data_schema[i].Name());
         } else {
             // read and data type may both be string type, but after adapter transform, type may be
             // dictionary, need reconstruct struct type
