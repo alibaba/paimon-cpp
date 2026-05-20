@@ -57,10 +57,6 @@ Interface
    :members:
    :undoc-members:
 
-.. doxygenclass:: paimon::RowRangeGlobalIndexScanner
-   :members:
-   :undoc-members:
-
 .. doxygenclass:: paimon::IndexedSplit
    :members:
    :undoc-members:
