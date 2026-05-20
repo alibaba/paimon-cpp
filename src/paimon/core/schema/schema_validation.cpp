@@ -502,28 +502,6 @@ Status SchemaValidation::ValidateBlobFields(const TableSchema& schema, const Cor
                                                Options::BLOB_EXTERNAL_STORAGE_FIELD));
         }
     }
-
-    // Validate blob fields cannot be primary keys or partition keys
-    for (const auto& blob_field_name : configured_blob_like_names) {
-        if (std::find(schema.PrimaryKeys().begin(), schema.PrimaryKeys().end(), blob_field_name) !=
-            schema.PrimaryKeys().end()) {
-            return Status::Invalid(
-                fmt::format("Blob field {} cannot be a primary key.", blob_field_name));
-        }
-        if (std::find(schema.PartitionKeys().begin(), schema.PartitionKeys().end(),
-                      blob_field_name) != schema.PartitionKeys().end()) {
-            return Status::Invalid(
-                fmt::format("Blob field {} cannot be a partition key.", blob_field_name));
-        }
-    }
-
-    // Validate data evolution must be enabled when blob-field is configured
-    PAIMON_RETURN_NOT_OK(Preconditions::CheckState(
-        options.DataEvolutionEnabled(),
-        "Data evolution config must be enabled for table with BLOB type column."));
-    PAIMON_RETURN_NOT_OK(
-        Preconditions::CheckState(schema.Fields().size() > configured_blob_like_names.size(),
-                                  "Table with BLOB type column must have other normal columns."));
     return Status::OK();
 }
 

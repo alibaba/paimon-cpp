@@ -56,8 +56,8 @@ TEST_F(BlobFileContextTest, NoBlobFields) {
 TEST_F(BlobFileContextTest, AllInlineNoExternalStorage) {
     auto schema = MakeSchema({"id"}, {"image", "video"});
     std::map<std::string, std::string> opts_map = {
-        {"blob-descriptor-field", "image"},
-        {"blob-view-field", "video"},
+        {Options::BLOB_DESCRIPTOR_FIELD, "image"},
+        {Options::BLOB_VIEW_FIELD, "video"},
     };
     ASSERT_OK_AND_ASSIGN(auto options, CoreOptions::FromMap(opts_map));
     auto context = BlobFileContext::Create(schema, options);
@@ -72,7 +72,7 @@ TEST_F(BlobFileContextTest, AllInlineNoExternalStorage) {
 TEST_F(BlobFileContextTest, MixedInlineAndBlobFile) {
     auto schema = MakeSchema({"id"}, {"image", "video", "audio"});
     std::map<std::string, std::string> opts_map = {
-        {"blob-descriptor-field", "image"},
+        {Options::BLOB_DESCRIPTOR_FIELD, "image"},
         // video and audio are not configured as inline -> go to .blob files
     };
     ASSERT_OK_AND_ASSIGN(auto options, CoreOptions::FromMap(opts_map));
@@ -111,9 +111,9 @@ TEST_F(BlobFileContextTest, MixedInlineAndBlobFile) {
 TEST_F(BlobFileContextTest, ExternalStorageFields) {
     auto schema = MakeSchema({"id"}, {"image", "video"});
     std::map<std::string, std::string> opts_map = {
-        {"blob-descriptor-field", "image,video"},
-        {"blob-external-storage-field", "image"},
-        {"blob-external-storage-path", "oss://bucket/blob/"},
+        {Options::BLOB_DESCRIPTOR_FIELD, "image,video"},
+        {Options::BLOB_EXTERNAL_STORAGE_FIELD, "image"},
+        {Options::BLOB_EXTERNAL_STORAGE_PATH, "oss://bucket/blob/"},
     };
     ASSERT_OK_AND_ASSIGN(auto options, CoreOptions::FromMap(opts_map));
     auto context = BlobFileContext::Create(schema, options);
@@ -122,6 +122,7 @@ TEST_F(BlobFileContextTest, ExternalStorageFields) {
     ASSERT_EQ(context->GetDescriptorFields(), std::set<std::string>({"image", "video"}));
     ASSERT_EQ(context->GetInlineFields(), std::set<std::string>({"image", "video"}));
     ASSERT_EQ(context->GetExternalStorageFields(), std::set<std::string>({"image"}));
+    ASSERT_TRUE(context->GetExternalStoragePath());
     ASSERT_EQ(context->GetExternalStoragePath(), "oss://bucket/blob/");
     ASSERT_TRUE(context->GetBlobFileFields().empty());
 
@@ -135,7 +136,7 @@ TEST_F(BlobFileContextTest, ExternalStorageFields) {
 TEST_F(BlobFileContextTest, ViewFields) {
     auto schema = MakeSchema({"id"}, {"ref_image", "raw_blob"});
     std::map<std::string, std::string> opts_map = {
-        {"blob-view-field", "ref_image"},
+        {Options::BLOB_VIEW_FIELD, "ref_image"},
         // raw_blob not configured -> goes to .blob file
     };
     ASSERT_OK_AND_ASSIGN(auto options, CoreOptions::FromMap(opts_map));
@@ -158,10 +159,10 @@ TEST_F(BlobFileContextTest, ViewFields) {
 TEST_F(BlobFileContextTest, DescriptorAndViewTogether) {
     auto schema = MakeSchema({"id"}, {"desc_blob", "view_blob", "normal_blob"});
     std::map<std::string, std::string> opts_map = {
-        {"blob-descriptor-field", "desc_blob"},
-        {"blob-view-field", "view_blob"},
-        {"blob-external-storage-field", "desc_blob"},
-        {"blob-external-storage-path", "/tmp/ext/"},
+        {Options::BLOB_DESCRIPTOR_FIELD, "desc_blob"},
+        {Options::BLOB_VIEW_FIELD, "view_blob"},
+        {Options::BLOB_EXTERNAL_STORAGE_FIELD, "desc_blob"},
+        {Options::BLOB_EXTERNAL_STORAGE_PATH, "/tmp/ext/"},
     };
     ASSERT_OK_AND_ASSIGN(auto options, CoreOptions::FromMap(opts_map));
     auto context = BlobFileContext::Create(schema, options);
@@ -171,6 +172,7 @@ TEST_F(BlobFileContextTest, DescriptorAndViewTogether) {
     ASSERT_EQ(context->GetViewFields(), std::set<std::string>({"view_blob"}));
     ASSERT_EQ(context->GetInlineFields(), std::set<std::string>({"desc_blob", "view_blob"}));
     ASSERT_EQ(context->GetExternalStorageFields(), std::set<std::string>({"desc_blob"}));
+    ASSERT_TRUE(context->GetExternalStoragePath());
     ASSERT_EQ(context->GetExternalStoragePath(), "/tmp/ext/");
     ASSERT_EQ(context->GetBlobFileFields(), std::set<std::string>({"normal_blob"}));
 
