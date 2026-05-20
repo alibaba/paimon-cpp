@@ -18,6 +18,7 @@
 #include <cstdlib>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
@@ -1434,7 +1435,21 @@ TEST_P(BlobTableInteTest, TestAppendTableWriteWithMultipleBlobFields) {
     ASSERT_EQ(1, snapshot.value().Id());
     ASSERT_EQ(3, snapshot.value().NextRowId().value());
 
-    // TODO(xinyu.lxy): add scan and read verification for multiple blob fields
+    // Scan and read: verify all fields including multiple blob fields
+    arrow::FieldVector fields_with_row_kind = fields;
+    fields_with_row_kind.insert(fields_with_row_kind.begin(),
+                                arrow::field("_VALUE_KIND", arrow::int8()));
+    auto data_type = arrow::struct_(fields_with_row_kind);
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    std::string expected_data = R"([
+        [0, "str_0", null, "apple",  "red"],
+        [0, "str_1", 1,    "banana", "yellow"],
+        [0, "str_2", 2,    "cat",    "black"]
+    ])";
+    ASSERT_OK_AND_ASSIGN(bool success,
+                         helper->ReadAndCheckResult(data_type, data_splits, expected_data));
+    ASSERT_TRUE(success);
 }
 
 TEST_P(BlobTableInteTest, TestAppendWriteWithNullBlob) {
@@ -1484,6 +1499,79 @@ TEST_P(BlobTableInteTest, TestAppendWriteWithNullBlob) {
     ASSERT_OK_AND_ASSIGN(bool success,
                          helper->ReadAndCheckResult(data_type, data_splits, expected_data));
     ASSERT_TRUE(success);
+}
+
+TEST_P(BlobTableInteTest, TestReadTableWithMultiBlobFields) {
+    auto file_format = GetParam();
+    if (file_format == "lance" || file_format == "avro") {
+        return;
+    }
+    std::string table_path = paimon::test::GetDataDir() + file_format +
+                             "/append_table_with_multi_blob.db/append_table_with_multi_blob";
+    std::vector<DataField> read_fields = {
+        DataField(5, BlobUtils::ToArrowField("f5")),
+        DataField(1, arrow::field("f1", arrow::int32())),
+        DataField(2, arrow::field("f2", arrow::int32())),
+        DataField(3, arrow::field("f3", arrow::float64())),
+        DataField(4, arrow::field("f4", arrow::utf8())),
+        SpecialFields::RowId(),
+        DataField(6, BlobUtils::ToArrowField("f6")),
+    };
+
+    std::shared_ptr<arrow::DataType> arrow_data_type =
+        DataField::ConvertDataFieldsToArrowStructType(read_fields);
+
+    auto make_json_row = [&](int32_t i) -> std::string {
+        std::string f5_json;
+        if (i <= 1) {
+            f5_json = "null";
+        } else {
+            f5_json = "\"" + std::string(1024, static_cast<char>('A' + i)) + "\"";
+        }
+
+        std::string f6_json;
+        if (i == 0 || i == 2) {
+            f6_json = "null";
+        } else {
+            f6_json = "\"" + std::string(2048, static_cast<char>('a' + i)) + "\"";
+        }
+        // f1=i, f2=i*10, f3=i+0.5, f4="desc_i", row_id=i
+        return "[" + f5_json + ", " + std::to_string(i) + ", " + std::to_string(i * 10) + ", " +
+               std::to_string(i + 0.5) + ", \"desc_" + std::to_string(i) + "\", " +
+               std::to_string(i) + ", " + f6_json + "]";
+    };
+
+    auto build_expected =
+        [&](const std::vector<int32_t>& row_indices) -> std::shared_ptr<arrow::StructArray> {
+        std::string json_str = "[";
+        for (size_t idx = 0; idx < row_indices.size(); idx++) {
+            if (idx > 0) {
+                json_str += ",";
+            }
+            json_str += make_json_row(row_indices[idx]);
+        }
+        json_str += "]";
+        return std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow_data_type, json_str).ValueOrDie());
+    };
+
+    // Full scan: all 10 rows
+    {
+        std::vector<int32_t> all_rows(10);
+        std::iota(all_rows.begin(), all_rows.end(), 0);
+        auto expected_array = build_expected(all_rows);
+        ASSERT_OK(ScanAndRead(table_path, arrow::schema(arrow_data_type->fields())->field_names(),
+                              expected_array));
+    }
+
+    // Test with row_ranges: select row 0 (both null), row 2 (f5 non-null, f6 null),
+    // row 5 (both non-null) to verify null handling under row range filtering.
+    {
+        auto expected_rr = build_expected({0, 2, 5});
+        ASSERT_OK(ScanAndRead(table_path, arrow::schema(arrow_data_type->fields())->field_names(),
+                              expected_rr, /*predicate=*/nullptr,
+                              /*row_ranges=*/{Range(0l, 0l), Range(2l, 2l), Range(5l, 5l)}));
+    }
 }
 
 }  // namespace paimon::test

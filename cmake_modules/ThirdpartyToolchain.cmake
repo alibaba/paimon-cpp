@@ -414,7 +414,7 @@ endfunction()
 
 function(paimon_apply_dependency_source_defaults)
     paimon_get_dependency_source(Arrow _arrow_source)
-    if(_arrow_source STREQUAL "SYSTEM" OR _arrow_source STREQUAL "BUNDLED")
+    if(_arrow_source STREQUAL "BUNDLED")
         foreach(_dependency
                 zstd
                 Snappy
@@ -426,17 +426,6 @@ function(paimon_apply_dependency_source_defaults)
                 "follow Arrow_SOURCE to avoid mixed transitive dependencies")
         endforeach()
     elseif(_arrow_source STREQUAL "AUTO")
-        paimon_configure_dependency_root(Arrow "${_arrow_source}" _arrow_resolved_source)
-        find_package(ArrowAlt QUIET MODULE)
-        if(ArrowAlt_FOUND)
-            set(_arrow_dependency_default SYSTEM)
-            set(_arrow_dependency_reason
-                "system Arrow found during AUTO dependency precheck")
-        else()
-            set(_arrow_dependency_default BUNDLED)
-            set(_arrow_dependency_reason
-                "system Arrow not found during AUTO dependency precheck")
-        endif()
         foreach(_dependency
                 zstd
                 Snappy
@@ -444,32 +433,42 @@ function(paimon_apply_dependency_source_defaults)
                 ZLIB
                 RE2)
             paimon_set_dependency_source_default(
-                ${_dependency} ${_arrow_dependency_default} "${_arrow_dependency_reason}")
+                ${_dependency} BUNDLED
+                "Arrow_SOURCE=AUTO uses bundled Arrow with project-specific patches")
         endforeach()
     endif()
 
     if(PAIMON_ENABLE_ORC)
         paimon_get_dependency_source(ORC _orc_source)
-        if(_orc_source STREQUAL "SYSTEM" OR _orc_source STREQUAL "BUNDLED")
+        if(_orc_source STREQUAL "BUNDLED")
             paimon_set_dependency_source_default(
                 Protobuf ${_orc_source}
                 "follow ORC_SOURCE to avoid mixed transitive dependencies")
         elseif(_orc_source STREQUAL "AUTO")
-            paimon_configure_dependency_root(ORC "${_orc_source}" _orc_resolved_source)
-            find_package(ORCAlt QUIET MODULE)
-            if(ORCAlt_FOUND)
-                paimon_set_dependency_source_default(
-                    Protobuf SYSTEM "system ORC found during AUTO dependency precheck")
-            else()
-                paimon_set_dependency_source_default(
-                    Protobuf BUNDLED
-                    "system ORC not found during AUTO dependency precheck")
-            endif()
+            paimon_set_dependency_source_default(
+                Protobuf BUNDLED
+                "ORC_SOURCE=AUTO uses bundled ORC with project-specific patches")
         endif()
     endif()
 endfunction()
 
 function(paimon_configure_dependency_root DEPENDENCY_NAME SOURCE_VALUE OUT_SOURCE)
+    if("${DEPENDENCY_NAME}" STREQUAL "Arrow" OR "${DEPENDENCY_NAME}" STREQUAL "ORC")
+        if("${SOURCE_VALUE}" STREQUAL "SYSTEM")
+            message(FATAL_ERROR "${DEPENDENCY_NAME}_SOURCE=SYSTEM is not supported "
+                                "because paimon-cpp requires project-specific "
+                                "${DEPENDENCY_NAME} patches. If this value comes "
+                                "from PAIMON_DEPENDENCY_SOURCE=SYSTEM, set "
+                                "${DEPENDENCY_NAME}_SOURCE=BUNDLED or leave "
+                                "${DEPENDENCY_NAME}_SOURCE=AUTO.")
+        elseif("${SOURCE_VALUE}" STREQUAL "AUTO")
+            set(${OUT_SOURCE}
+                "BUNDLED"
+                PARENT_SCOPE)
+            return()
+        endif()
+    endif()
+
     set(${OUT_SOURCE}
         "${SOURCE_VALUE}"
         PARENT_SCOPE)
@@ -635,6 +634,7 @@ macro(resolve_dependency DEPENDENCY_NAME)
             "${_paimon_requested_source}" "${_paimon_target_name}")
     elseif(_paimon_resolved_source STREQUAL "AUTO")
         message(STATUS "Resolving ${DEPENDENCY_NAME} with AUTO source")
+        set_property(GLOBAL PROPERTY PAIMON_PARTIAL_SYSTEM_TARGETS "")
         find_package(${_paimon_alt_package_name} QUIET MODULE)
         if(${_paimon_found_var})
             message(STATUS "Using system ${DEPENDENCY_NAME}")
@@ -645,6 +645,16 @@ macro(resolve_dependency DEPENDENCY_NAME)
                 ${DEPENDENCY_NAME} "${_paimon_requested_source}" "SYSTEM"
                 "${_paimon_target_name}")
         else()
+            get_property(_paimon_partial_system_targets GLOBAL
+                         PROPERTY PAIMON_PARTIAL_SYSTEM_TARGETS)
+            if(_paimon_partial_system_targets)
+                list(REMOVE_DUPLICATES _paimon_partial_system_targets)
+                message(FATAL_ERROR "System ${DEPENDENCY_NAME} was partially found "
+                                    "but is missing required development headers: "
+                                    "${_paimon_partial_system_targets}. Install "
+                                    "the matching development package or set "
+                                    "${DEPENDENCY_NAME}_SOURCE=BUNDLED.")
+            endif()
             message(STATUS "System ${DEPENDENCY_NAME} not found; using bundled")
             paimon_build_dependency(${DEPENDENCY_NAME})
             set(PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE
@@ -665,6 +675,7 @@ macro(resolve_dependency DEPENDENCY_NAME)
     unset(_paimon_requested_source)
     unset(_paimon_resolved_source)
     unset(_paimon_target_name)
+    unset(_paimon_partial_system_targets)
 endmacro()
 
 function(paimon_warn_if_mixed_arrow_dependencies)
