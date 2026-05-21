@@ -61,8 +61,8 @@ The writing is divided into two stages:
     // ...
     RecordBatchBuilder batch_builder(&arrow_array);
     batch_builder.SetPartition({{"col1", "20240813"}, {"col2", "23"}}).SetBucket(1);
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RecordBatch> batch, batch_builder.Finish());
-    PAIMON_RETURN_NOT_OK(file_store_write->Write(batch));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<RecordBatch> batch, batch_builder.Finish());
+    PAIMON_RETURN_NOT_OK(file_store_write->Write(std::move(batch)));
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<CommitMessage>> commit_messages,
                            file_store_write->PrepareCommit());
 
@@ -99,7 +99,7 @@ The reading is divided into two stages:
                            TableScan::Create(std::move(scan_context)));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Plan> plan, table_scan->CreatePlan());
 
-    ReadContextBuilder read_context_builder(table_path, /*schema_id=*/0);
+    ReadContextBuilder read_context_builder(table_path);
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
                            read_context_builder.SetReadSchema({"f0", "f1"})
                                .SetPredicate(predicate)
