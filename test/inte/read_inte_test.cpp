@@ -17,7 +17,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <ctime>
 #include <filesystem>
 #include <map>
 #include <memory>
@@ -41,6 +40,7 @@
 #include "paimon/common/reader/concat_batch_reader.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/io/data_file_meta.h"
@@ -75,32 +75,6 @@
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
-namespace {
-
-int64_t LocalTimestampMillisForTest(int64_t epoch_millis) {
-    auto seconds = static_cast<std::time_t>(epoch_millis / 1000);
-    int64_t millis_of_second = epoch_millis % 1000;
-    if (millis_of_second < 0) {
-        --seconds;
-        millis_of_second += 1000;
-    }
-    std::tm time_info{};
-    EXPECT_NE(localtime_r(&seconds, &time_info), nullptr);
-    int year = time_info.tm_year + 1900;
-    int month = time_info.tm_mon + 1;
-    int64_t day = time_info.tm_mday;
-    year -= month <= 2 ? 1 : 0;
-    int64_t era = (year >= 0 ? year : year - 399) / 400;
-    auto year_of_era = static_cast<uint32_t>(year - era * 400);
-    auto month_prime = static_cast<uint32_t>(month + (month > 2 ? -3 : 9));
-    uint32_t day_of_year = (153 * month_prime + 2) / 5 + static_cast<uint32_t>(day) - 1;
-    uint32_t day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
-    int64_t epoch_day = era * 146097 + static_cast<int64_t>(day_of_era) - 719468;
-    return epoch_day * 86400000 + time_info.tm_hour * 3600000 + time_info.tm_min * 60000 +
-           time_info.tm_sec * 1000 + millis_of_second;
-}
-
-}  // namespace
 
 struct TestParam {
     bool enable_prefetch;
@@ -803,7 +777,10 @@ TEST(SystemTableReadInteTest, TestReadTagBranchAndConsumerSystemTables) {
     ASSERT_TRUE(tag_time_retained_array);
     ASSERT_EQ(tag_name_array->GetString(0), "release");
     ASSERT_EQ(tag_snapshot_array->Value(0), tag.Id());
-    ASSERT_EQ(tag_commit_time_array->Value(0), LocalTimestampMillisForTest(tag.TimeMillis()));
+    ASSERT_OK_AND_ASSIGN(
+        Timestamp tag_commit_time,
+        DateTimeUtils::ToLocalTimestamp(Timestamp::FromEpochMillis(tag.TimeMillis())));
+    ASSERT_EQ(tag_commit_time_array->Value(0), tag_commit_time.GetMillisecond());
     ASSERT_EQ(tag_record_count_array->Value(0), tag.TotalRecordCount().value());
     ASSERT_FALSE(tag_create_time_array->IsNull(0));
     ASSERT_EQ(tag_create_time_array->Value(0), 1770185290000);

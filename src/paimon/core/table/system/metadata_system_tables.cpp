@@ -136,26 +136,10 @@ VariantType TimestampMillisValue(int64_t value) {
 }
 
 Result<VariantType> LocalTimestampMillisValue(int64_t epoch_millis) {
-    auto seconds = static_cast<std::time_t>(epoch_millis / 1000);
-    int64_t millis_of_second = epoch_millis % 1000;
-    if (millis_of_second < 0) {
-        --seconds;
-        millis_of_second += 1000;
-    }
-
-    std::tm time_info{};
-    if (localtime_r(&seconds, &time_info) == nullptr) {
-        return Status::Invalid("failed to convert epoch millis to local timestamp");
-    }
-    std::vector<int64_t> parts = {static_cast<int64_t>(time_info.tm_year) + 1900,
-                                  static_cast<int64_t>(time_info.tm_mon) + 1,
-                                  static_cast<int64_t>(time_info.tm_mday),
-                                  static_cast<int64_t>(time_info.tm_hour),
-                                  static_cast<int64_t>(time_info.tm_min),
-                                  static_cast<int64_t>(time_info.tm_sec),
-                                  millis_of_second * 1000000};
-    PAIMON_ASSIGN_OR_RAISE(int64_t local_millis, LocalDateTimePartsToTimestampMillis(parts));
-    return TimestampMillisValue(local_millis);
+    PAIMON_ASSIGN_OR_RAISE(
+        Timestamp local_timestamp,
+        DateTimeUtils::ToLocalTimestamp(Timestamp::FromEpochMillis(epoch_millis)));
+    return TimestampMillisValue(local_timestamp.GetMillisecond());
 }
 
 VariantType OptionalTimestampMillisValue(const std::optional<int64_t>& value) {
