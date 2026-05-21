@@ -109,6 +109,15 @@ impl PaimonTantivyReader {
         // tantivy-builtin "default" / "raw" / "en_stem" etc. are pre-registered
         // by the TokenizerManager — no setup needed for those.
         if tokenizer_name == PAIMON_TOKENIZER_NAME {
+            // `Path::is_empty` is unstable; check via OsStr.
+            if dict_dir.as_os_str().is_empty() {
+                return Err(format!(
+                    "paimon_jieba tokenizer required by archive schema but dict dir \
+                     is empty — set the PAIMON_JIEBA_DICT_DIR env var to a directory \
+                     containing jieba.dict.utf8 / hmm_model.utf8 / user.dict.utf8 / \
+                     idf.utf8 / stop_words.utf8"
+                ));
+            }
             let jieba = PaimonJiebaTokenizer::new(dict_dir, mode, with_position)
                 .map_err(|e| format!("create paimon_jieba tokenizer: {e}"))?;
             index.tokenizers().register(PAIMON_TOKENIZER_NAME, jieba);

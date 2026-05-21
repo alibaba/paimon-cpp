@@ -26,13 +26,21 @@ namespace paimon::tantivy {
 
 namespace {
 
-Result<std::string> GetJiebaDictionaryDir() {
+/// Returns the jieba dictionary dir from the env var, or an empty string if the env
+/// var is missing/empty. We intentionally do NOT error here: paimon-java tantivy
+/// archives use the built-in `"default"` (SimpleTokenizer) and do not need jieba —
+/// the Rust reader's tokenizer-registration branch skips dict_dir entirely in that
+/// case (third_party/tantivy_ffi/src/reader.rs:111 → `let _ = (mode, dict_dir)`).
+/// For archives that DO use jieba (paimon-cpp-written with `tantivy.write.tokenizer
+/// = paimon_jieba`), the Rust side will surface a clear "create paimon_jieba
+/// tokenizer" failure when it tries to load the dictionary from an empty path, so
+/// the error stays actionable.
+std::string GetJiebaDictionaryDir() {
     const char* env_dir = std::getenv(kJiebaDictDirEnv);
     if (env_dir && *env_dir != '\0') {
         return std::string(env_dir);
     }
-    return Status::Invalid(fmt::format(
-        "jieba dictionary dir not found, please set {} env var", kJiebaDictDirEnv));
+    return std::string();
 }
 
 }  // namespace
@@ -42,18 +50,23 @@ Result<std::shared_ptr<TantivyGlobalIndexReader>> TantivyGlobalIndexReader::Crea
     const std::shared_ptr<GlobalIndexFileReader>& file_reader,
     const std::map<std::string, std::string>& options, const std::shared_ptr<MemoryPool>& pool) {
     (void)field_name;  // Rust-side knows the field via the schema embedded in meta.json
-    if (!io_meta.metadata) {
-        return Status::Invalid("Tantivy global index must have meta data");
-    }
 
     std::map<std::string, std::string> write_options;
-    PAIMON_RETURN_NOT_OK(RapidJsonUtil::FromJsonString(
-        std::string(io_meta.metadata->data(), io_meta.metadata->size()), &write_options));
+    if (io_meta.metadata) {
+        PAIMON_RETURN_NOT_OK(RapidJsonUtil::FromJsonString(
+            std::string(io_meta.metadata->data(), io_meta.metadata->size()), &write_options));
+    }
 
     PAIMON_ASSIGN_OR_RAISE(
         std::string tokenize_mode,
         OptionsUtils::GetValueFromMap(options, kJiebaTokenizeMode, std::string("")));
     if (tokenize_mode.empty()) {
+        // Reader-side option not set; look at the (possibly empty) write_options blob.
+        // When write_options is empty (paimon-java-written archive), the value below is
+        // a placeholder that satisfies FFI validation but is discarded at runtime —
+        // see the comment block above. Do NOT treat the placeholder as a real default
+        // for jieba indices; jieba archives written by paimon-cpp always stamp their
+        // chosen mode into metadata, so the placeholder branch never applies to them.
         PAIMON_ASSIGN_OR_RAISE(tokenize_mode, OptionsUtils::GetValueFromMap(
                                                   write_options, kJiebaTokenizeMode,
                                                   std::string(kDefaultJiebaTokenizeMode)));
@@ -62,7 +75,7 @@ Result<std::shared_ptr<TantivyGlobalIndexReader>> TantivyGlobalIndexReader::Crea
         bool omit_term_freq_and_positions,
         OptionsUtils::GetValueFromMap(write_options, kTantivyWriteOmitTermFreqAndPositions, false));
 
-    PAIMON_ASSIGN_OR_RAISE(std::string dict_dir, GetJiebaDictionaryDir());
+    std::string dict_dir = GetJiebaDictionaryDir();
 
     // V3 streaming read path:
     //   1) open stream

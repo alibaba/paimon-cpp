@@ -54,7 +54,7 @@ Result<std::shared_ptr<GlobalIndexReader>> TantivyGlobalIndex::CreateReader(
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> arrow_schema,
                                       arrow::ImportSchema(c_arrow_schema));
     if (files.size() != 1) {
-        return Status::Invalid("tantivy index only has one index file per shard");
+        return Status::Invalid("tantivy index only has one index file per shard, now num: {}" , files.size());
     }
     if (arrow_schema->num_fields() != 1) {
         return Status::Invalid("TantivyGlobalIndex now only support one field");
