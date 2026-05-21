@@ -18,6 +18,7 @@ if(_PAIMON_ZLIB_ROOTS)
     set(_PAIMON_ZLIB_FIND_ARGS HINTS ${_PAIMON_ZLIB_ROOTS} NO_DEFAULT_PATH)
 endif()
 
+include(FindPackageUtils)
 if(_PAIMON_ZLIB_ROOTS)
     find_package(ZLIB CONFIG QUIET ${_PAIMON_ZLIB_FIND_ARGS})
 else()
@@ -25,20 +26,26 @@ else()
 endif()
 
 if(TARGET ZLIB::ZLIB)
-    if(NOT TARGET zlib)
+    paimon_find_target_headers(ZLIB_INCLUDE_DIR
+                               ZLIB::ZLIB
+                               NAMES
+                               zlib.h
+                               HINTS
+                               ${ZLIB_INCLUDE_DIRS}
+                               ${_PAIMON_ZLIB_FIND_ARGS})
+
+    include(FindPackageHandleStandardArgs)
+    find_package_handle_standard_args(ZLIBAlt REQUIRED_VARS ZLIB_INCLUDE_DIR)
+
+    if(ZLIBAlt_FOUND AND NOT TARGET zlib)
         add_library(zlib INTERFACE IMPORTED)
-        get_target_property(ZLIB_INCLUDE_DIR ZLIB::ZLIB INTERFACE_INCLUDE_DIRECTORIES)
-        if(NOT ZLIB_INCLUDE_DIR)
-            set(ZLIB_INCLUDE_DIR ${ZLIB_INCLUDE_DIRS})
-        endif()
-        if(ZLIB_INCLUDE_DIR)
-            set_target_properties(zlib PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                                  "${ZLIB_INCLUDE_DIR}")
-        endif()
+        set_target_properties(zlib PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+                                              "${ZLIB_INCLUDE_DIR}")
         target_link_libraries(zlib INTERFACE ZLIB::ZLIB)
     endif()
-    set(ZLIB_LIBRARIES ZLIB::ZLIB)
-    set(ZLIBAlt_FOUND TRUE)
+    if(ZLIBAlt_FOUND)
+        set(ZLIB_LIBRARIES ZLIB::ZLIB)
+    endif()
 else()
     find_path(ZLIB_INCLUDE_DIR
               NAMES zlib.h ${_PAIMON_ZLIB_FIND_ARGS}

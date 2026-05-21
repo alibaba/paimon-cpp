@@ -62,8 +62,8 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
         const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
         const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
         const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
-        bool ignore_num_bucket_check, const std::shared_ptr<Executor>& executor,
-        const std::shared_ptr<MemoryPool>& pool);
+        bool ignore_num_bucket_check, bool enable_multi_thread_spill,
+        const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool);
 
     Status Close() override;
 
@@ -78,6 +78,7 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
         const std::shared_ptr<ScanFilter>& filter) const override;
 
  private:
+    bool enable_multi_thread_spill_;
     std::shared_ptr<FieldsComparator> key_comparator_;
     std::shared_ptr<FieldsComparator> user_defined_seq_comparator_;
     std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;

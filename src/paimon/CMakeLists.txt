@@ -124,6 +124,7 @@ set(PAIMON_COMMON_SRCS
     common/types/data_type_json_parser.cpp
     common/types/row_kind.cpp
     common/types/row_type.cpp
+    common/utils/file_type.cpp
     common/utils/arrow/arrow_input_stream_adapter.cpp
     common/utils/arrow/arrow_output_stream_adapter.cpp
     common/utils/arrow/arrow_utils.cpp
@@ -221,6 +222,7 @@ set(PAIMON_CORE_SRCS
     core/io/key_value_meta_projection_consumer.cpp
     core/io/key_value_projection_consumer.cpp
     core/io/key_value_projection_reader.cpp
+    core/io/multiple_blob_file_writer.cpp
     core/io/rolling_blob_file_writer.cpp
     core/manifest/file_kind.cpp
     core/manifest/file_source.cpp
@@ -254,6 +256,7 @@ set(PAIMON_CORE_SRCS
     core/mergetree/merge_tree_writer.cpp
     core/mergetree/in_memory_sort_buffer.cpp
     core/mergetree/external_sort_buffer.cpp
+    core/mergetree/spill_file_merger.cpp
     core/mergetree/write_buffer.cpp
     core/mergetree/levels.cpp
     core/mergetree/lookup_file.cpp
@@ -469,6 +472,7 @@ if(PAIMON_BUILD_TESTS)
                     common/types/data_type_json_parser_test.cpp
                     common/types/row_kind_test.cpp
                     common/types/data_type_test.cpp
+                    common/utils/file_type_test.cpp
                     common/utils/row_range_index_test.cpp
                     common/utils/var_length_int_utils_test.cpp
                     common/utils/arrow/arrow_utils_test.cpp
@@ -652,6 +656,7 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/merge_tree_writer_test.cpp
                     core/mergetree/write_buffer_test.cpp
                     core/mergetree/sort_buffer_test.cpp
+                    core/mergetree/spill_file_merger_test.cpp
                     core/mergetree/sorted_run_test.cpp
                     core/mergetree/spill_channel_manager_test.cpp
                     core/mergetree/spill_reader_writer_test.cpp

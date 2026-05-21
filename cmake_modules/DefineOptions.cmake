@@ -156,11 +156,10 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
                   "Prefer shared libraries for system third-party packages" OFF)
 
     define_option_string(Arrow_SOURCE
-                         "Dependency source for Apache Arrow"
+                         "Dependency source for Apache Arrow; SYSTEM is unsupported"
                          ""
                          AUTO
-                         BUNDLED
-                         SYSTEM)
+                         BUNDLED)
     define_option_string(zstd_SOURCE
                          "Dependency source for zstd"
                          ""
@@ -198,11 +197,10 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
                          BUNDLED
                          SYSTEM)
     define_option_string(ORC_SOURCE
-                         "Dependency source for Apache ORC"
+                         "Dependency source for Apache ORC; SYSTEM is unsupported"
                          ""
                          AUTO
-                         BUNDLED
-                         SYSTEM)
+                         BUNDLED)
     define_option_string(fmt_SOURCE
                          "Dependency source for fmt"
                          ""

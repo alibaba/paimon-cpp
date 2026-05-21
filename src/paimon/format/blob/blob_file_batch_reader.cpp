@@ -24,6 +24,7 @@
 #include "arrow/array/builder_dict.h"
 #include "arrow/array/builder_nested.h"
 #include "arrow/c/bridge.h"
+#include "arrow/util/bit_util.h"
 #include "fmt/format.h"
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/executor/future.h"
@@ -50,23 +51,25 @@ Result<std::unique_ptr<BlobFileBatchReader>> BlobFileBatchReader::Create(
     }
 
     PAIMON_ASSIGN_OR_RAISE(uint64_t file_size, input_stream->Length());
-    PAIMON_RETURN_NOT_OK(input_stream->Seek(file_size - kBlobFileHeaderLength, FS_SEEK_SET));
-    int8_t header[kBlobFileHeaderLength];
-    PAIMON_ASSIGN_OR_RAISE(int32_t actual_size, input_stream->Read(reinterpret_cast<char*>(header),
-                                                                   kBlobFileHeaderLength));
-    if (actual_size != kBlobFileHeaderLength) {
+    PAIMON_RETURN_NOT_OK(
+        input_stream->Seek(file_size - BlobDefs::kBlobFileHeaderLength, FS_SEEK_SET));
+    int8_t header[BlobDefs::kBlobFileHeaderLength];
+    PAIMON_ASSIGN_OR_RAISE(
+        int32_t actual_size,
+        input_stream->Read(reinterpret_cast<char*>(header), BlobDefs::kBlobFileHeaderLength));
+    if (actual_size != BlobDefs::kBlobFileHeaderLength) {
         return Status::Invalid(
             fmt::format("actual read size {} not match with expect header length {}", actual_size,
-                        kBlobFileHeaderLength));
+                        BlobDefs::kBlobFileHeaderLength));
     }
     int8_t version = header[4];
-    if (version != 1) {
+    if (version != BlobDefs::kFileVersion) {
         return Status::Invalid(fmt::format(
             "create blob format reader failed. unsupported blob file version: {}", version));
     }
     int32_t index_length = GetIndexLength(header, 0);
-    PAIMON_RETURN_NOT_OK(
-        input_stream->Seek(file_size - kBlobFileHeaderLength - index_length, FS_SEEK_SET));
+    PAIMON_RETURN_NOT_OK(input_stream->Seek(
+        file_size - BlobDefs::kBlobFileHeaderLength - index_length, FS_SEEK_SET));
     std::vector<char> index_bytes(index_length, '\0');
     PAIMON_ASSIGN_OR_RAISE(actual_size, input_stream->Read(index_bytes.data(), index_length));
     if (actual_size != index_length) {
@@ -82,7 +85,10 @@ Result<std::unique_ptr<BlobFileBatchReader>> BlobFileBatchReader::Create(
     int64_t offset = 0;
     for (const auto& blob_length : blob_lengths) {
         blob_offsets.push_back(offset);
-        offset += blob_length;
+        // Null blobs (bin_length == -1) don't occupy file space
+        if (blob_length >= 0) {
+            offset += blob_length;
+        }
     }
     PAIMON_ASSIGN_OR_RAISE(std::string file_path, input_stream->GetUri());
     auto reader = std::unique_ptr<BlobFileBatchReader>(new BlobFileBatchReader(
@@ -165,7 +171,10 @@ Result<std::shared_ptr<arrow::Buffer>> BlobFileBatchReader::NextBlobOffsets(
     int64_t data_length = 0;
     for (int32_t k = 0; k < rows_to_read; ++k) {
         const size_t i = current_pos_ + k;
-        data_length += GetTargetContentLength(i);
+        // Null blobs contribute zero bytes to content
+        if (!IsTargetNull(i)) {
+            data_length += GetTargetContentLength(i);
+        }
         PAIMON_RETURN_NOT_OK_FROM_ARROW(buffer_builder.Append(data_length));
     }
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Buffer> offset_buffer,
@@ -178,13 +187,18 @@ Result<std::shared_ptr<arrow::Buffer>> BlobFileBatchReader::NextBlobContents(
     int64_t total_length = 0;
     for (int32_t k = 0; k < rows_to_read; ++k) {
         const size_t i = current_pos_ + k;
-        total_length += GetTargetContentLength(i);
+        if (!IsTargetNull(i)) {
+            total_length += GetTargetContentLength(i);
+        }
     }
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Buffer> data_buffer,
                                       arrow::AllocateBuffer(total_length, arrow_pool_.get()));
     uint8_t* buffer = data_buffer->mutable_data();
     for (int32_t k = 0; k < rows_to_read; ++k) {
         const size_t i = current_pos_ + k;
+        if (IsTargetNull(i)) {
+            continue;
+        }
         int64_t offset = GetTargetContentOffset(i);
         int64_t length = GetTargetContentLength(i);
         PAIMON_RETURN_NOT_OK(ReadBlobContentAt(offset, length, buffer));
@@ -193,13 +207,40 @@ Result<std::shared_ptr<arrow::Buffer>> BlobFileBatchReader::NextBlobContents(
     return data_buffer;
 }
 
+Result<std::shared_ptr<arrow::Buffer>> BlobFileBatchReader::BuildNullBitmap(
+    int32_t rows_to_read) const {
+    bool has_null = false;
+    for (int32_t k = 0; k < rows_to_read; ++k) {
+        if (IsTargetNull(current_pos_ + k)) {
+            has_null = true;
+            break;
+        }
+    }
+    if (!has_null) {
+        return std::shared_ptr<arrow::Buffer>();
+    }
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Buffer> null_bitmap,
+                                      arrow::AllocateBitmap(rows_to_read, arrow_pool_.get()));
+    // Initialize all bits to 1 (valid), then clear bits for null rows
+    memset(null_bitmap->mutable_data(), 0xFF, null_bitmap->size());
+    for (int32_t k = 0; k < rows_to_read; ++k) {
+        if (IsTargetNull(current_pos_ + k)) {
+            arrow::bit_util::ClearBit(null_bitmap->mutable_data(), k);
+        }
+    }
+    return null_bitmap;
+}
+
 Result<std::shared_ptr<arrow::Array>> BlobFileBatchReader::BuildContentArray(
     int32_t rows_to_read) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Buffer> value_offsets,
                            NextBlobOffsets(rows_to_read));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Buffer> data, NextBlobContents(rows_to_read));
-    auto large_binary_array =
-        std::make_shared<arrow::LargeBinaryArray>(rows_to_read, value_offsets, data);
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Buffer> child_null_bitmap,
+                           BuildNullBitmap(rows_to_read));
+
+    auto large_binary_array = std::make_shared<arrow::LargeBinaryArray>(rows_to_read, value_offsets,
+                                                                        data, child_null_bitmap);
     std::vector<std::shared_ptr<arrow::ArrayData>> child_data;
     child_data.emplace_back(large_binary_array->data());
     std::shared_ptr<arrow::ArrayData> struct_array_data =
@@ -213,22 +254,43 @@ Result<std::shared_ptr<arrow::Array>> BlobFileBatchReader::BuildTargetArray(
     if (!blob_as_descriptor_) {
         return BuildContentArray(rows_to_read);
     }
-    std::vector<PAIMON_UNIQUE_PTR<Bytes>> blobs;
-    blobs.reserve(rows_to_read);
+    // For descriptor mode, build using StructBuilder to handle nulls properly
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::unique_ptr<arrow::ArrayBuilder> array_builder,
+                                      arrow::MakeBuilder(target_type_, arrow_pool_.get()));
+    auto builder = dynamic_cast<arrow::StructBuilder*>(array_builder.get());
+    if (builder == nullptr) {
+        return Status::Invalid("cast to struct builder failed");
+    }
+    auto field_builder = dynamic_cast<arrow::LargeBinaryBuilder*>(builder->field_builder(0));
+    if (field_builder == nullptr) {
+        return Status::Invalid("cast to large binary builder failed");
+    }
     for (int32_t k = 0; k < rows_to_read; ++k) {
         const size_t i = current_pos_ + k;
-        int64_t offset = GetTargetContentOffset(i);
-        int64_t length = GetTargetContentLength(i);
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<Blob> blob,
-                               Blob::FromPath(file_path_, offset, length));
-        blobs.emplace_back(blob->ToDescriptor(pool_));
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append());
+        if (IsTargetNull(i)) {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(field_builder->AppendNull());
+        } else {
+            int64_t offset = GetTargetContentOffset(i);
+            int64_t length = GetTargetContentLength(i);
+            PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<Blob> blob,
+                                   Blob::FromPath(file_path_, offset, length));
+            auto descriptor = blob->ToDescriptor(pool_);
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(
+                field_builder->Append(descriptor->data(), descriptor->size()));
+        }
     }
-    return ToArrowArray(blobs);
+    std::shared_ptr<arrow::Array> array;
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Finish(&array));
+    return array;
 }
 
 Result<BatchReader::ReadBatch> BlobFileBatchReader::NextBatch() {
     if (closed_) {
         return Status::Invalid("blob file batch reader is closed");
+    }
+    if (target_type_ == nullptr) {
+        return Status::Invalid("target type is nullptr, call SetReadSchema first");
     }
     if (current_pos_ >= target_blob_lengths_.size()) {
         PAIMON_ASSIGN_OR_RAISE(previous_batch_first_row_number_, GetNumberOfRows());
@@ -252,30 +314,6 @@ Status BlobFileBatchReader::ReadBlobContentAt(const int64_t offset, const int64_
                            OffsetInputStream::Create(input_stream_, length, offset));
     return StreamUtils::ReadAsyncFully(std::move(offset_input_stream),
                                        reinterpret_cast<char*>(content));
-}
-
-Result<std::shared_ptr<arrow::Array>> BlobFileBatchReader::ToArrowArray(
-    const std::vector<PAIMON_UNIQUE_PTR<Bytes>>& blobs) const {
-    if (target_type_ == nullptr) {
-        return Status::Invalid("target type is nullptr, call SetReadSchema first");
-    }
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::unique_ptr<arrow::ArrayBuilder> array_builder,
-                                      arrow::MakeBuilder(target_type_, arrow_pool_.get()));
-    auto builder = dynamic_cast<arrow::StructBuilder*>(array_builder.get());
-    if (builder == nullptr) {
-        return Status::Invalid("cast to struct builder failed");
-    }
-    auto field_builder = dynamic_cast<arrow::LargeBinaryBuilder*>(builder->field_builder(0));
-    if (field_builder == nullptr) {
-        return Status::Invalid("cast to large binary builder failed");
-    }
-    for (const auto& blob : blobs) {
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append());
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(field_builder->Append(blob->data(), blob->size()));
-    }
-    std::shared_ptr<arrow::Array> array;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Finish(&array));
-    return array;
 }
 
 int32_t BlobFileBatchReader::GetIndexLength(const int8_t* bytes, int32_t offset) {

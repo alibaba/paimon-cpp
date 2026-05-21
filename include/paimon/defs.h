@@ -212,7 +212,7 @@ struct PAIMON_EXPORT Options {
     static const char SNAPSHOT_TIME_RETAINED[];
 
     /// "snapshot.expire.limit" - The maximum number of snapshots allowed to expire at a time.
-    /// Default value is 10.
+    /// Default value is 50.
     static const char SNAPSHOT_EXPIRE_LIMIT[];
 
     /// "snapshot.clean-empty-directories" - Whether to try to clean empty directories when expiring
@@ -354,6 +354,11 @@ struct PAIMON_EXPORT Options {
     /// "row-tracking.enabled" - Whether enable unique row id for append table. Default value is
     /// "false".
     static const char ROW_TRACKING_ENABLED[];
+    /// "row-tracking.partition-group-on-commit" - When row-tracking is enabled, whether to group
+    /// new file metas by partition before commit, so that assigned row IDs are contiguous within
+    /// each partition. This is useful if you want to build global indices on this table. Default
+    /// value is "true".
+    static const char ROW_TRACKING_PARTITION_GROUP_ON_COMMIT[];
     /// "data-evolution.enabled" - Whether enable data evolution for row tracking table. Default
     /// value is "false".
     static const char DATA_EVOLUTION_ENABLED[];
@@ -363,6 +368,14 @@ struct PAIMON_EXPORT Options {
     /// "blob-as-descriptor" - Read and write blob field using blob descriptor rather than blob
     /// bytes. Default value is "false".
     static const char BLOB_AS_DESCRIPTOR[];
+    /// "blob-field" - Specifies column names that should be stored as blob type. This is used
+    /// when you want to treat a BYTES column as a BLOB. Comma-separated field names.
+    /// Multiple blob fields are supported.
+    static const char BLOB_FIELD[];
+    // TODO(xinyu.lxy): support "blob-descriptor-field" - treat fields as BLOB and store as
+    // BlobDescriptor
+    // TODO(xinyu.lxy): support "blob-view-field" - treat fields as BLOB and resolve from upstream
+    // tables
     /// "global-index.enabled" - Whether to enable global index for scan. Default value is "true".
     static const char GLOBAL_INDEX_ENABLED[];
     /// "global-index.thread-num" - The maximum number of concurrent scanner for global index. No
@@ -378,7 +391,7 @@ struct PAIMON_EXPORT Options {
     /// reading the audit_log or binlog system tables. This is only valid for primary key tables.
     /// Default value is "false".
     static const char TABLE_READ_SEQUENCE_NUMBER_ENABLED[];
-    /// "key-value.sequence-number.enabled" - Whether to include the _SEQUENCE_NUMBER field when
+    /// "key-value.sequence_number.enabled" - Whether to include the _SEQUENCE_NUMBER field when
     /// reading key-value data. This is an internal option used by AuditLogTable and BinlogTable
     /// when table-read.sequence-number.enabled is set to true. Default value is "false".
     static const char KEY_VALUE_SEQUENCE_NUMBER_ENABLED[];

@@ -1,0 +1,23 @@
+f0:string f1:int f2:int f3:double f4:string f5:blob f6:blob(all can be null)
+bucket count: -1
+row-tracking.enabled: true
+data-evolution.enabled: true
+blob.target-file-size: 4 kb
+
+Msgs:
+snapshot-1
+Add: (name_0, 0, 0,   0.5, desc_0, null,       null)
+Add: (name_1, 1, 10,  1.5, desc_1, null,       2048×'b')
+Add: (name_2, 2, 20,  2.5, desc_2, 1024×'C',   null)
+Add: (name_3, 3, 30,  3.5, desc_3, 1024×'D',   2048×'d')
+Add: (name_4, 4, 40,  4.5, desc_4, 1024×'E',   2048×'e')
+
+Add: (name_5, 5, 50,  5.5, desc_5, 1024×'F',   2048×'f')
+Add: (name_6, 6, 60,  6.5, desc_6, 1024×'G',   2048×'g')
+Add: (name_7, 7, 70,  7.5, desc_7, 1024×'H',   2048×'h')
+Add: (name_8, 8, 80,  8.5, desc_8, 1024×'I',   2048×'i')
+Add: (name_9, 9, 90,  9.5, desc_9, 1024×'J',   2048×'j')
+
+Commit
+NoCompact
+

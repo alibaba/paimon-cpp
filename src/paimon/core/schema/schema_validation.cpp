@@ -118,6 +118,7 @@ Status SchemaValidation::ValidateTableSchema(const TableSchema& schema) {
     }
 
     PAIMON_RETURN_NOT_OK(ValidateRowTracking(schema, options));
+    PAIMON_RETURN_NOT_OK(ValidateBlobFields(schema, options));
     return Status::OK();
 }
 
@@ -410,22 +411,50 @@ Status SchemaValidation::ValidateRowTracking(const TableSchema& table_schema,
             !options.DeletionVectorsEnabled(),
             "Data evolution config must disabled with deletion-vectors.enabled"));
     }
-    int64_t blob_field_count = 0;
-    for (const auto& field : table_schema.Fields()) {
-        if (BlobUtils::IsBlobField(field.ArrowField())) {
-            blob_field_count += 1;
+    return Status::OK();
+}
+
+Status SchemaValidation::ValidateBlobFields(const TableSchema& schema, const CoreOptions& options) {
+    const auto& configured_blob_names = options.GetBlobFields();
+    if (configured_blob_names.empty()) {
+        return Status::OK();
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> blob_fields,
+                           schema.GetFields(configured_blob_names));
+    for (const auto& blob_field : blob_fields) {
+        if (!BlobUtils::IsBlobField(blob_field.ArrowField())) {
+            return Status::Invalid(
+                fmt::format("Field {} in {} must be a BLOB field in table schema.",
+                            blob_field.Name(), fmt::join(configured_blob_names, ", ")));
         }
     }
-    if (blob_field_count > 0) {
-        PAIMON_RETURN_NOT_OK(Preconditions::CheckState(
-            options.DataEvolutionEnabled(),
-            "Data evolution config must be enabled for table with BLOB type column."));
-        PAIMON_RETURN_NOT_OK(Preconditions::CheckState(
-            blob_field_count == 1, "Table with BLOB type column only supports one BLOB column."));
-        PAIMON_RETURN_NOT_OK(Preconditions::CheckState(
-            table_schema.Fields().size() > 1,
-            "Table with BLOB type column must have other normal columns."));
+
+    // Validate no duplicate blob field names
+    PAIMON_RETURN_NOT_OK(ValidateNoDuplicateField(configured_blob_names, "blob field"));
+
+    // Validate blob fields cannot be primary keys or partition keys
+    for (const auto& blob_field_name : configured_blob_names) {
+        if (std::find(schema.PrimaryKeys().begin(), schema.PrimaryKeys().end(), blob_field_name) !=
+            schema.PrimaryKeys().end()) {
+            return Status::Invalid(
+                fmt::format("Blob field {} cannot be a primary key.", blob_field_name));
+        }
+        if (std::find(schema.PartitionKeys().begin(), schema.PartitionKeys().end(),
+                      blob_field_name) != schema.PartitionKeys().end()) {
+            return Status::Invalid(
+                fmt::format("Blob field {} cannot be a partition key.", blob_field_name));
+        }
     }
+
+    // Validate data evolution must be enabled when blob-field is configured
+    PAIMON_RETURN_NOT_OK(Preconditions::CheckState(
+        options.DataEvolutionEnabled(),
+        "Data evolution config must be enabled for table with BLOB type column."));
+    PAIMON_RETURN_NOT_OK(
+        Preconditions::CheckState(schema.Fields().size() > configured_blob_names.size(),
+                                  "Table with BLOB type column must have other normal columns."));
+    // TODO(xinyu.lxy): validate blob-descriptor-field and blob-view-field
     return Status::OK();
 }
 

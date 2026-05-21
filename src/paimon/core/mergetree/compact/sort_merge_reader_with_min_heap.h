@@ -70,6 +70,9 @@ class SortMergeReaderWithMinHeap : public SortMergeReader {
         for (const auto& reader : readers_holder_) {
             reader->Close();
         }
+        if (merge_function_wrapper_) {
+            merge_function_wrapper_->Reset();
+        }
     }
 
     std::shared_ptr<Metrics> GetReaderMetrics() const override {

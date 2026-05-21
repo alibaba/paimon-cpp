@@ -111,7 +111,7 @@ TEST_F(PersistProcessorTest, TestValueProcessor) {
                         "Not support for PersistToDisk with position");
 }
 
-TEST_F(PersistProcessorTest, TestInvalideValueProcessor) {
+TEST_F(PersistProcessorTest, TestInvalidValueProcessor) {
     std::shared_ptr<arrow::Schema> current_schema =
         arrow::schema({arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int32()),
                        arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float32())});

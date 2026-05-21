@@ -31,6 +31,12 @@ namespace paimon {
 
 Result<std::unique_ptr<BlobDescriptor>> BlobDescriptor::Create(const std::string& uri,
                                                                int64_t offset, int64_t length) {
+    return Create(kCurrentVersion, uri, offset, length);
+}
+
+Result<std::unique_ptr<BlobDescriptor>> BlobDescriptor::Create(int8_t version,
+                                                               const std::string& uri,
+                                                               int64_t offset, int64_t length) {
     if (offset < 0) {
         return Status::Invalid(fmt::format("offset {} is less than 0", offset));
     }
@@ -38,13 +44,14 @@ Result<std::unique_ptr<BlobDescriptor>> BlobDescriptor::Create(const std::string
     if (length < -1) {
         return Status::Invalid(fmt::format("length {} is less than -1", length));
     }
-    return std::unique_ptr<BlobDescriptor>(new BlobDescriptor(uri, offset, length));
+    return std::unique_ptr<BlobDescriptor>(new BlobDescriptor(version, uri, offset, length));
 }
 
 PAIMON_UNIQUE_PTR<Bytes> BlobDescriptor::Serialize(const std::shared_ptr<MemoryPool>& pool) const {
     MemorySegmentOutputStream out(MemorySegmentOutputStream::DEFAULT_SEGMENT_SIZE, pool);
     out.SetOrder(ByteOrder::PAIMON_LITTLE_ENDIAN);
     out.WriteValue<int8_t>(version_);
+    out.WriteValue<int64_t>(kMagic);
     out.WriteValue<int32_t>(static_cast<int32_t>(uri_.size()));
 
     auto uri_bytes = std::make_shared<Bytes>(uri_, pool.get());
@@ -60,16 +67,40 @@ Result<std::unique_ptr<BlobDescriptor>> BlobDescriptor::Deserialize(const char* 
     DataInputStream in(std::move(input_stream));
     in.SetOrder(ByteOrder::PAIMON_LITTLE_ENDIAN);
     PAIMON_ASSIGN_OR_RAISE(int8_t version, in.ReadValue<int8_t>());
-    if (version != CURRENT_VERSION) {
+    if (version > kCurrentVersion) {
         return Status::Invalid(fmt::format(
-            "Expecting BlobDescriptor version to be {}, but found {}.", CURRENT_VERSION, version));
+            "Expecting BlobDescriptor version to be less than or equal to {}, but found {}.",
+            kCurrentVersion, version));
+    }
+    if (version > 1) {
+        PAIMON_ASSIGN_OR_RAISE(int64_t magic, in.ReadValue<int64_t>());
+        if (kMagic != magic) {
+            return Status::Invalid(fmt::format(
+                "Invalid BlobDescriptor: missing magic header. Expected magic: {}, but found {}",
+                kMagic, magic));
+        }
     }
     PAIMON_ASSIGN_OR_RAISE(int32_t uri_length, in.ReadValue<int32_t>());
     std::string uri(uri_length, '\0');
     PAIMON_RETURN_NOT_OK(in.Read(uri.data(), uri.size()));
     PAIMON_ASSIGN_OR_RAISE(int64_t offset, in.ReadValue<int64_t>());
     PAIMON_ASSIGN_OR_RAISE(int64_t length, in.ReadValue<int64_t>());
-    return BlobDescriptor::Create(uri, offset, length);
+    return BlobDescriptor::Create(version, uri, offset, length);
+}
+
+Result<bool> BlobDescriptor::IsBlobDescriptor(const char* buffer, uint64_t size) {
+    if (size < kMinDescriptorLength) {
+        return false;
+    }
+    auto input_stream = std::make_shared<ByteArrayInputStream>(buffer, size);
+    DataInputStream in(std::move(input_stream));
+    in.SetOrder(ByteOrder::PAIMON_LITTLE_ENDIAN);
+    PAIMON_ASSIGN_OR_RAISE(int8_t version, in.ReadValue<int8_t>());
+    if (version > kCurrentVersion) {
+        return false;
+    }
+    PAIMON_ASSIGN_OR_RAISE(int64_t magic, in.ReadValue<int64_t>());
+    return kMagic == magic;
 }
 
 std::string BlobDescriptor::ToString() const {

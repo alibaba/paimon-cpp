@@ -144,6 +144,7 @@ class PAIMON_EXPORT CoreOptions {
     bool IndexFileInDataFileDir() const;
 
     bool RowTrackingEnabled() const;
+    bool RowTrackingPartitionGroupOnCommit() const;
     bool DataEvolutionEnabled() const;
 
     bool LegacyPartitionNameEnabled() const;
@@ -178,6 +179,8 @@ class PAIMON_EXPORT CoreOptions {
 
     BucketFunctionType GetBucketFunctionType() const;
     std::optional<int32_t> GetGlobalIndexThreadNum() const;
+
+    const std::vector<std::string>& GetBlobFields() const;
 
     const std::map<std::string, std::string>& ToMap() const;
 
