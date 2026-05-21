@@ -35,7 +35,7 @@ Paimon C++ is a high-performance C++ implementation of [Apache Paimon](https://p
 - **AI-Oriented Features**: supports RowTracking and DataEvolution mode and provides Global Index capabilities including bitmap index, B-tree index, DiskANN-based vector search with Lumina, and Lucene-based full-text search.
 - **Compatibility**: compatibility with Apache Paimon Java format and communication protocols,
   including commit messages, data splits, and manifests.
-  
+
 Note: The current implementation only supports the x86_64 architecture.
 
 ## Write And Commit Example
