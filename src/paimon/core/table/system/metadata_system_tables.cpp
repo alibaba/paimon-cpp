@@ -83,8 +83,6 @@ Result<int64_t> LocalDateTimePartsToTimestampMillis(const std::vector<int64_t>& 
         return Status::Invalid("invalid tag create time fields");
     }
 
-    // Match Java Timestamp.fromLocalDateTime: encode local date-time fields directly instead of
-    // interpreting them as a timezone-aware instant.
     year -= month <= 2 ? 1 : 0;
     int64_t era = (year >= 0 ? year : year - 399) / 400;
     auto year_of_era = static_cast<uint32_t>(year - era * 400);
@@ -379,8 +377,6 @@ Result<std::vector<GenericRow>> BranchesSystemTable::BuildRows() const {
     rows.reserve(branches.size());
 
     for (const auto& name : branches) {
-        // Match Java BranchesTable: create_time is derived from the branch path
-        // modification time, not from a separately persisted creation timestamp.
         PAIMON_ASSIGN_OR_RAISE(
             std::unique_ptr<FileStatus> branch_status,
             context_.fs->GetFileStatus(BranchManager::BranchPath(context_.table_path, name)));
