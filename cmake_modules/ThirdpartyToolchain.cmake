@@ -1543,6 +1543,12 @@ macro(build_arrow)
         -DARROW_WITH_ZSTD=ON
         -DARROW_WITH_BZ2=OFF
         -DARROW_WITH_BROTLI=ON
+        -Dzstd_SOURCE=SYSTEM
+        -DSnappy_SOURCE=SYSTEM
+        -Dlz4_SOURCE=SYSTEM
+        -DZLIB_SOURCE=SYSTEM
+        -Dre2_SOURCE=SYSTEM
+        -Dzstd_ROOT=${ARROW_ZSTD_ROOT}
         -DZSTD_ROOT=${ARROW_ZSTD_ROOT}
         -DZLIB_ROOT=${ARROW_ZLIB_ROOT}
         -DSnappy_ROOT=${ARROW_SNAPPY_ROOT}
