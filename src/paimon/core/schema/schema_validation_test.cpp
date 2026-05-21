@@ -23,7 +23,6 @@
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/defs.h"
-#include "paimon/result.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -98,6 +97,93 @@ TEST(SchemaValidationTest, TestWithBlobField) {
         ASSERT_OK(SchemaValidation::ValidateTableSchema(*table_schema));
     }
     {
+        arrow::FieldVector fields = {f0, f1, f2, f3, f4};
+        auto schema = arrow::schema(fields);
+        std::vector<std::string> primary_keys = {};
+        std::vector<std::string> partition_keys = {"f1"};
+        std::map<std::string, std::string> options = {
+            {Options::BUCKET, "-1"},
+            {Options::ROW_TRACKING_ENABLED, "true"},
+            {Options::DATA_EVOLUTION_ENABLED, "true"},
+            {Options::BLOB_DESCRIPTOR_FIELD, "f3"},
+            {Options::BLOB_VIEW_FIELD, "f4"},
+            {Options::BLOB_EXTERNAL_STORAGE_FIELD, "f3"},
+            {Options::BLOB_EXTERNAL_STORAGE_PATH, "FILE:///tmp/blob_external_storage/"}};
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<TableSchema> table_schema,
+            TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
+        ASSERT_OK(SchemaValidation::ValidateTableSchema(*table_schema));
+    }
+    {
+        arrow::FieldVector fields = {f0, f1, f2, f3};
+        auto schema = arrow::schema(fields);
+        std::vector<std::string> primary_keys = {};
+        std::vector<std::string> partition_keys = {"f1"};
+        std::map<std::string, std::string> options = {{Options::BUCKET, "-1"},
+                                                      {Options::ROW_TRACKING_ENABLED, "true"},
+                                                      {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                      {Options::BLOB_DESCRIPTOR_FIELD, "f0"}};
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<TableSchema> table_schema,
+            TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
+        ASSERT_NOK_WITH_MSG(
+            SchemaValidation::ValidateTableSchema(*table_schema),
+            "Field 'f0' in 'blob-descriptor-field' must be a BLOB field in table schema.");
+    }
+    {
+        arrow::FieldVector fields = {f0, f1, f2, f3};
+        auto schema = arrow::schema(fields);
+        std::vector<std::string> primary_keys = {};
+        std::vector<std::string> partition_keys = {"f1"};
+        std::map<std::string, std::string> options = {{Options::BUCKET, "-1"},
+                                                      {Options::ROW_TRACKING_ENABLED, "true"},
+                                                      {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                      {Options::BLOB_DESCRIPTOR_FIELD, "f3"},
+                                                      {Options::BLOB_VIEW_FIELD, "f3"}};
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<TableSchema> table_schema,
+            TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
+        ASSERT_NOK_WITH_MSG(
+            SchemaValidation::ValidateTableSchema(*table_schema),
+            "Field 'f3' in 'blob-view-field' can not also be in 'blob-descriptor-field'.");
+    }
+    {
+        arrow::FieldVector fields = {f0, f1, f2, f3, f4};
+        auto schema = arrow::schema(fields);
+        std::vector<std::string> primary_keys = {};
+        std::vector<std::string> partition_keys = {"f1"};
+        std::map<std::string, std::string> options = {
+            {Options::BUCKET, "-1"},
+            {Options::ROW_TRACKING_ENABLED, "true"},
+            {Options::DATA_EVOLUTION_ENABLED, "true"},
+            {Options::BLOB_DESCRIPTOR_FIELD, "f3"},
+            {Options::BLOB_EXTERNAL_STORAGE_FIELD, "f4"},
+            {Options::BLOB_EXTERNAL_STORAGE_PATH, "FILE:///tmp/blob_external_storage/"}};
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<TableSchema> table_schema,
+            TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
+        ASSERT_NOK_WITH_MSG(
+            SchemaValidation::ValidateTableSchema(*table_schema),
+            "Field 'f4' in 'blob-external-storage-field' must also be in 'blob-descriptor-field'.");
+    }
+    {
+        arrow::FieldVector fields = {f0, f1, f2, f3};
+        auto schema = arrow::schema(fields);
+        std::vector<std::string> primary_keys = {};
+        std::vector<std::string> partition_keys = {"f1"};
+        std::map<std::string, std::string> options = {{Options::BUCKET, "-1"},
+                                                      {Options::ROW_TRACKING_ENABLED, "true"},
+                                                      {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                      {Options::BLOB_DESCRIPTOR_FIELD, "f3"},
+                                                      {Options::BLOB_EXTERNAL_STORAGE_FIELD, "f3"}};
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<TableSchema> table_schema,
+            TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "'blob-external-storage-path' must be set when "
+                            "'blob-external-storage-field' is configured.");
+    }
+    {
         arrow::FieldVector fields = {f0, f1, f2, f3};
         auto schema = arrow::schema(fields);
         std::vector<std::string> primary_keys = {};
@@ -156,7 +242,7 @@ TEST(SchemaValidationTest, TestWithBlobField) {
             std::shared_ptr<TableSchema> table_schema,
             TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
         ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
-                            "Field f0 in f3, f0 must be a BLOB field in table schema.");
+                            "Field 'f0' in 'blob-field' must be a BLOB field in table schema.");
     }
     {
         arrow::FieldVector fields = {f0, f1, f2, f3};
@@ -171,24 +257,8 @@ TEST(SchemaValidationTest, TestWithBlobField) {
         ASSERT_OK_AND_ASSIGN(
             std::shared_ptr<TableSchema> table_schema,
             TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
-        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateBlobFields(*table_schema, core_options),
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateRowTracking(*table_schema, core_options),
                             "Blob field f3 cannot be a partition key.");
-    }
-    {
-        arrow::FieldVector fields = {f0, f1, f2, f3};
-        auto schema = arrow::schema(fields);
-        std::vector<std::string> primary_keys = {"f3"};
-        std::vector<std::string> partition_keys = {};
-        std::map<std::string, std::string> options = {{Options::BUCKET, "-1"},
-                                                      {Options::ROW_TRACKING_ENABLED, "true"},
-                                                      {Options::DATA_EVOLUTION_ENABLED, "true"},
-                                                      {Options::BLOB_FIELD, "f3"}};
-        ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
-        ASSERT_OK_AND_ASSIGN(
-            std::shared_ptr<TableSchema> table_schema,
-            TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, options));
-        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateBlobFields(*table_schema, core_options),
-                            "Blob field f3 cannot be a primary key.");
     }
 }
 

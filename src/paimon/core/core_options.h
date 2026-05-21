@@ -181,6 +181,11 @@ class PAIMON_EXPORT CoreOptions {
     std::optional<int32_t> GetGlobalIndexThreadNum() const;
 
     const std::vector<std::string>& GetBlobFields() const;
+    const std::vector<std::string>& GetBlobDescriptorFields() const;
+    const std::vector<std::string>& GetBlobViewFields() const;
+    std::vector<std::string> GetBlobInlineFields() const;
+    const std::vector<std::string>& GetBlobExternalStorageFields() const;
+    std::optional<std::string> GetBlobExternalStoragePath() const;
 
     const std::map<std::string, std::string>& ToMap() const;
 

@@ -23,17 +23,20 @@ Paimon C++ is a high-performance C++ implementation of [Apache Paimon](https://p
 
 ## What's in the Paimon C++ library
 
-* Write: Paimon append table and primary key table write (without compaction).
-* Commit: Paimon append table commit. (Note: Limited support — only works for simple append-only tables; table with compaction, index, changelog, and stats are not supported.)
-* Scan: Paimon append and primary key table batch and stream scan (without changelog).
-* Read: Paimon append table read and primary key table with deletion vector read (raw read) and primary key table with merge on read (merge read).
-* Batch read and write interface using the [Arrow Columnar In-Memory Format](https://arrow.apache.org) to increase throughput.
-* IO interfaces to file system and built-in local and jindo file system implementation.
-* File format interfaces to customize different format and built-in orc, parquet and lance format implementation.
-* Memory pool interfaces and a default implementation.
-* Thread pool executor interfaces and a default implementation.
-* Compatible with Java Paimon format and communication protocol (e.g., commit message, data splits, manifests).
-* Note: The current implementation only supports the x86_64 architecture.
+- **Write**: append table and primary key table write support with compaction.
+- **Commit**: append table commit support for simple append-only tables.
+- **Scan**: batch and stream scan for append tables and primary key tables without changelog.
+- **Read**: append table read, primary key table read with deletion vector, and primary key table
+  merge-on-read.
+- **Arrow integration**: batch read and write interfaces based on the [Arrow Columnar In-Memory Format](https://arrow.apache.org).
+- **File systems**: file system abstraction with built-in local and Jindo file system support.
+- **File formats**: file format abstraction with built-in ORC, Parquet, and Avro support.
+- **Runtime utilities**: memory pool and thread pool abstractions with default implementations.
+- **AI-Oriented Features**: supports RowTracking and DataEvolution mode and provides Global Index capabilities including bitmap index, B-tree index, DiskANN-based vector search with Lumina, and Lucene-based full-text search.
+- **Compatibility**: compatibility with Apache Paimon Java format and communication protocols,
+  including commit messages, data splits, and manifests.
+
+Note: The current implementation only supports the x86_64 architecture.
 
 ## Write And Commit Example
 

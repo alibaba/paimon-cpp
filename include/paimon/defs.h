@@ -369,13 +369,28 @@ struct PAIMON_EXPORT Options {
     /// bytes. Default value is "false".
     static const char BLOB_AS_DESCRIPTOR[];
     /// "blob-field" - Specifies column names that should be stored as blob type. This is used
-    /// when you want to treat a BYTES column as a BLOB. Comma-separated field names.
-    /// Multiple blob fields are supported.
+    /// when you want to treat a BYTES column as a BLOB. Fields listed in blob-descriptor-field or
+    /// blob-view-field are also treated as BLOB fields. Comma-separated field names. Multiple blob
+    /// fields are supported. No default value.
     static const char BLOB_FIELD[];
-    // TODO(xinyu.lxy): support "blob-descriptor-field" - treat fields as BLOB and store as
-    // BlobDescriptor
-    // TODO(xinyu.lxy): support "blob-view-field" - treat fields as BLOB and resolve from upstream
-    // tables
+    /// "blob-descriptor-field" - Comma-separated field names to treat as BLOB fields and store as
+    /// serialized BlobDescriptor bytes inline in data files. No default value.
+    static const char BLOB_DESCRIPTOR_FIELD[];
+    /// "blob.stored-descriptor-fields" deprecated as a fallback for `BLOB_DESCRIPTOR_FIELD`.
+    static const char FALLBACK_BLOB_DESCRIPTOR_FIELD[];
+    /// "blob-view-field" - Comma-separated field names to treat as BLOB fields and store as
+    /// serialized BlobViewStruct bytes inline in data files and resolve from upstream tables at
+    /// read time. No default value.
+    static const char BLOB_VIEW_FIELD[];
+    /// "blob-external-storage-field" - Comma-separated BLOB field names (must be a subset of
+    /// blob-descriptor-field ) whose raw data will be written to external storage at write time.
+    /// The external storage path is configured via blob-external-storage-path. Orphan file cleanup
+    /// is not applied to that path. No default value.
+    static const char BLOB_EXTERNAL_STORAGE_FIELD[];
+    /// "blob-external-storage-path" - The external storage path where raw BLOB data from fields
+    /// configured by 'blob-external-storage-field' is written at write time. Orphan file cleanup is
+    /// not applied to this path. No default value.
+    static const char BLOB_EXTERNAL_STORAGE_PATH[];
     /// "global-index.enabled" - Whether to enable global index for scan. Default value is "true".
     static const char GLOBAL_INDEX_ENABLED[];
     /// "global-index.thread-num" - The maximum number of concurrent scanner for global index. No

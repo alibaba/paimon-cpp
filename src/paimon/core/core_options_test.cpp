@@ -114,6 +114,11 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_TRUE(core_options.RowTrackingPartitionGroupOnCommit());
     ASSERT_FALSE(core_options.DataEvolutionEnabled());
     ASSERT_TRUE(core_options.GetBlobFields().empty());
+    ASSERT_TRUE(core_options.GetBlobDescriptorFields().empty());
+    ASSERT_TRUE(core_options.GetBlobViewFields().empty());
+    ASSERT_TRUE(core_options.GetBlobInlineFields().empty());
+    ASSERT_TRUE(core_options.GetBlobExternalStorageFields().empty());
+    ASSERT_EQ(std::nullopt, core_options.GetBlobExternalStoragePath());
     ASSERT_TRUE(core_options.LegacyPartitionNameEnabled());
     ASSERT_TRUE(core_options.GlobalIndexEnabled());
     ASSERT_EQ(std::nullopt, core_options.GetGlobalIndexExternalPath());
@@ -214,6 +219,10 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::ROW_TRACKING_PARTITION_GROUP_ON_COMMIT, "false"},
         {Options::DATA_EVOLUTION_ENABLED, "true"},
         {Options::BLOB_FIELD, "blob1,blob2"},
+        {Options::BLOB_DESCRIPTOR_FIELD, "blob3,blob4"},
+        {Options::BLOB_VIEW_FIELD, "blob5"},
+        {Options::BLOB_EXTERNAL_STORAGE_FIELD, "blob3,blob4"},
+        {Options::BLOB_EXTERNAL_STORAGE_PATH, "FILE:///tmp/blob_external_storage/"},
         {Options::PARTITION_GENERATE_LEGACY_NAME, "false"},
         {Options::GLOBAL_INDEX_ENABLED, "false"},
         {Options::GLOBAL_INDEX_THREAD_NUM, "4"},
@@ -343,6 +352,14 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_FALSE(core_options.RowTrackingPartitionGroupOnCommit());
     ASSERT_TRUE(core_options.DataEvolutionEnabled());
     ASSERT_EQ(core_options.GetBlobFields(), std::vector<std::string>({"blob1", "blob2"}));
+    ASSERT_EQ(core_options.GetBlobDescriptorFields(), std::vector<std::string>({"blob3", "blob4"}));
+    ASSERT_EQ(core_options.GetBlobViewFields(), std::vector<std::string>({"blob5"}));
+    ASSERT_EQ(core_options.GetBlobInlineFields(),
+              std::vector<std::string>({"blob3", "blob4", "blob5"}));
+    ASSERT_EQ(core_options.GetBlobExternalStorageFields(),
+              std::vector<std::string>({"blob3", "blob4"}));
+    ASSERT_EQ(core_options.GetBlobExternalStoragePath(),
+              std::optional<std::string>("FILE:///tmp/blob_external_storage/"));
     ASSERT_FALSE(core_options.LegacyPartitionNameEnabled());
     ASSERT_FALSE(core_options.GlobalIndexEnabled());
     ASSERT_EQ(core_options.GetGlobalIndexThreadNum(), 4);
@@ -870,4 +887,20 @@ TEST(CoreOptionsTest, TestAssignmentIndependence) {
     ASSERT_EQ(MergeEngine::DEDUPLICATE, source.GetMergeEngine());
 }
 
+TEST(CoreOptionsTest, TestFallback) {
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::FALLBACK_BLOB_DESCRIPTOR_FIELD, "b1,b2"}}));
+        ASSERT_EQ(options.GetBlobDescriptorFields(), std::vector<std::string>({"b1", "b2"}));
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::FALLBACK_BLOB_DESCRIPTOR_FIELD, "b1,b2"},
+                                  {Options::BLOB_DESCRIPTOR_FIELD, "new_b1 , new_b2"}}));
+        ASSERT_EQ(options.GetBlobDescriptorFields(),
+                  std::vector<std::string>({"new_b1", "new_b2"}));
+    }
+}
 }  // namespace paimon::test
