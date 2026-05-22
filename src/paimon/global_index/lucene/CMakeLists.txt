@@ -63,6 +63,7 @@ if(PAIMON_ENABLE_LUCENE)
                         paimon_shared
                         test_utils_static
                         ${PAIMON_LUCENE_INDEX_STATIC_LINK_LIBS}
+                        ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
                         ${GTEST_LINK_TOOLCHAIN})
 
     endif()

@@ -44,6 +44,7 @@ if(PAIMON_ENABLE_LUMINA)
                         paimon_shared
                         test_utils_static
                         ${PAIMON_LUMINA_INDEX_STATIC_LINK_LIBS}
+                        ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
                         lumina::interface
                         ${GTEST_LINK_TOOLCHAIN})
     endif()

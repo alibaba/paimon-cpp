@@ -62,6 +62,7 @@ if(PAIMON_ENABLE_ORC)
                         paimon_shared
                         test_utils_static
                         ${PAIMON_ORC_FILE_FORMAT_STATIC_LINK_LIBS}
+                        ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
                         ${GTEST_LINK_TOOLCHAIN}
                         EXTRA_LINK_LIBS
                         orc::orc)

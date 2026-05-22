@@ -60,6 +60,7 @@ if(PAIMON_ENABLE_AVRO)
                         paimon_shared
                         test_utils_static
                         ${PAIMON_AVRO_FILE_FORMAT_STATIC_LINK_LIBS}
+                        ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
                         ${GTEST_LINK_TOOLCHAIN}
                         EXTRA_LINK_LIBS
                         avro)

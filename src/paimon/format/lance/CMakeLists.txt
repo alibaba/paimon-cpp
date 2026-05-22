@@ -46,6 +46,7 @@ if(PAIMON_ENABLE_LANCE)
                         paimon_shared
                         test_utils_static
                         ${PAIMON_LANCE_FILE_FORMAT_STATIC_LINK_LIBS}
+                        ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
                         lance_lib_rc
                         ${GTEST_LINK_TOOLCHAIN})
     endif()

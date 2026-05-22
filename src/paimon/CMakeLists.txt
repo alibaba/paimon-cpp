@@ -334,9 +334,6 @@ set(PAIMON_CORE_SRCS
     core/utils/special_field_ids.cpp
     core/utils/tag_manager.cpp)
 
-set(PAIMON_PRIVATE_LINK_LIBS)
-list(APPEND PAIMON_PRIVATE_LINK_LIBS ${CMAKE_DL_LIBS})
-
 add_paimon_lib(paimon
                SOURCES
                ${PAIMON_COMMON_SRCS}
@@ -354,7 +351,7 @@ add_paimon_lib(paimon
                arrow
                tbb
                glog
-               ${PAIMON_PRIVATE_LINK_LIBS}
+               ${CMAKE_DL_LIBS}
                fmt
                roaring_bitmap
                xxhash
@@ -734,7 +731,7 @@ if(PAIMON_BUILD_TESTS)
                     STATIC_LINK_LIBS
                     paimon_shared
                     ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
-                    # paimon_jindo_file_system_static
+                    # ${PAIMON_JINDO_FILE_SYSTEM_STATIC_LINK_LIBS}
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 

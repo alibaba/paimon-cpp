@@ -390,55 +390,51 @@ if(PAIMON_BUILD_TESTS)
     set(TEST_STATIC_LINK_LIBS ${TEST_WHOLE_ARCHIVE_LINK_LIBS} ${TEST_PLUGIN_LINK_LIBS})
     paimon_link_libraries_whole_archive(PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS
                                         paimon_local_file_system_static)
-    set(PAIMON_LOCAL_FILE_SYSTEM_SHARED_LINK_LIBS paimon_local_file_system_shared)
-    paimon_link_libraries_whole_archive(
-        PAIMON_BLOB_FILE_FORMAT_STATIC_LINK_LIBS paimon_local_file_system_static
-        paimon_blob_file_format_static)
-    paimon_link_libraries_whole_archive(
-        PAIMON_PARQUET_FILE_FORMAT_STATIC_LINK_LIBS paimon_local_file_system_static
-        paimon_parquet_file_format_static)
-    paimon_link_libraries_whole_archive(
-        PAIMON_ORC_FILE_FORMAT_STATIC_LINK_LIBS paimon_local_file_system_static
-        paimon_orc_file_format_static)
-    paimon_link_libraries_whole_archive(
-        PAIMON_AVRO_FILE_FORMAT_STATIC_LINK_LIBS paimon_local_file_system_static
-        paimon_avro_file_format_static)
-    paimon_link_libraries_whole_archive(
-        PAIMON_LANCE_FILE_FORMAT_STATIC_LINK_LIBS paimon_local_file_system_static
-        paimon_lance_file_format_static)
-    paimon_link_libraries_whole_archive(
-        PAIMON_LUMINA_INDEX_STATIC_LINK_LIBS paimon_local_file_system_static
-        paimon_lumina_index_static)
-    paimon_link_libraries_whole_archive(
-        PAIMON_LUCENE_INDEX_STATIC_LINK_LIBS paimon_local_file_system_static
-        paimon_lucene_index_static)
+    paimon_link_libraries_no_as_needed(PAIMON_LOCAL_FILE_SYSTEM_SHARED_LINK_LIBS
+                                       paimon_local_file_system_shared)
+    paimon_link_libraries_whole_archive(PAIMON_BLOB_FILE_FORMAT_STATIC_LINK_LIBS
+                                        paimon_blob_file_format_static)
+    paimon_link_libraries_whole_archive(PAIMON_PARQUET_FILE_FORMAT_STATIC_LINK_LIBS
+                                        paimon_parquet_file_format_static)
 
     if(PAIMON_ENABLE_LANCE)
+        paimon_link_libraries_whole_archive(PAIMON_LANCE_FILE_FORMAT_STATIC_LINK_LIBS
+                                            paimon_lance_file_format_static)
         paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
                                            paimon_lance_file_format_shared)
         list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
     endif()
     if(PAIMON_ENABLE_ORC)
+        paimon_link_libraries_whole_archive(PAIMON_ORC_FILE_FORMAT_STATIC_LINK_LIBS
+                                            paimon_orc_file_format_static)
         paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
                                            paimon_orc_file_format_shared)
         list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
     endif()
     if(PAIMON_ENABLE_AVRO)
+        paimon_link_libraries_whole_archive(PAIMON_AVRO_FILE_FORMAT_STATIC_LINK_LIBS
+                                            paimon_avro_file_format_static)
         paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
                                            paimon_avro_file_format_shared)
         list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
     endif()
     if(PAIMON_ENABLE_JINDO)
+        paimon_link_libraries_whole_archive(PAIMON_JINDO_FILE_SYSTEM_STATIC_LINK_LIBS
+                                            paimon_jindo_file_system_static)
         paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
                                            paimon_jindo_file_system_shared)
         list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
     endif()
     if(PAIMON_ENABLE_LUMINA)
+        paimon_link_libraries_whole_archive(PAIMON_LUMINA_INDEX_STATIC_LINK_LIBS
+                                            paimon_lumina_index_static)
         paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
                                            paimon_lumina_index_shared)
         list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
     endif()
     if(PAIMON_ENABLE_LUCENE)
+        paimon_link_libraries_whole_archive(PAIMON_LUCENE_INDEX_STATIC_LINK_LIBS
+                                            paimon_lucene_index_static)
         paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
                                            paimon_lucene_index_shared)
         list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
