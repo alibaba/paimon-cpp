@@ -32,3 +32,7 @@ Interface
 .. doxygenclass:: paimon::ReadContext
    :members:
    :undoc-members:
+
+.. doxygenclass:: paimon::BatchReader
+   :members:
+   :undoc-members:

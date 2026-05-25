@@ -32,3 +32,7 @@ Interface
 .. doxygenclass:: paimon::CommitContext
    :members:
    :undoc-members:
+
+.. doxygenclass:: paimon::CommitMessage
+   :members:
+   :undoc-members:
