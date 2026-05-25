@@ -65,8 +65,6 @@ class ExternalStorageBlobWriter {
                               const std::shared_ptr<MemoryPool>& memory_pool,
                               const CoreOptions& options);
 
-    ~ExternalStorageBlobWriter();
-
     /// Transforms a batch by writing external storage fields to .blob files and replacing
     /// the BLOB values with serialized BlobDescriptor bytes.
     Result<std::shared_ptr<arrow::StructArray>> TransformBatch(

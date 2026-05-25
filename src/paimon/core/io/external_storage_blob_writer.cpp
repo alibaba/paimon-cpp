@@ -56,8 +56,6 @@ ExternalStorageBlobWriter::ExternalStorageBlobWriter(
       options_(options),
       logger_(Logger::GetLogger("ExternalStorageBlobWriter")) {}
 
-ExternalStorageBlobWriter::~ExternalStorageBlobWriter() {}
-
 Result<std::unique_ptr<ExternalStorageBlobWriter::BlobRollingWriter>>
 ExternalStorageBlobWriter::CreateFieldRollingWriter(FieldWriter* field_writer) {
     auto field = write_schema_->GetFieldByName(field_writer->field_name);
