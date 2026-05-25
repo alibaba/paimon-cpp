@@ -133,9 +133,12 @@ class PAIMON_EXPORT MemorySegment {
         std::memcpy(MutableData() + index, &value, sizeof(T));
     }
 
-    inline uint64_t GetLongBigEndian(int32_t index) const {
-        auto native_value = GetValue<uint64_t>(index);
-        return EndianSwapValue(native_value);
+inline uint64_t GetLongBigEndian(int32_t index) const {
+        uint64_t value = GetValue<uint64_t>(index);
+        if constexpr (SystemByteOrder() == ByteOrder::PAIMON_LITTLE_ENDIAN) {
+            return EndianSwapValue(value);
+        }
+        return value;
     }
 
     void CopyTo(int32_t offset, MemorySegment* target, int32_t target_offset,
