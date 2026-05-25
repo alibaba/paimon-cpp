@@ -354,8 +354,9 @@ Status FileStoreScan::SplitAndSetFilter(const std::vector<std::string>& partitio
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FieldMappingBuilder> mapping_builder,
                                FieldMappingBuilder::Create(arrow_schema, partition_keys,
                                                            scan_filters->GetPredicate()));
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FieldMapping> mapping,
-                               mapping_builder->CreateFieldMapping(arrow_schema));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::unique_ptr<FieldMapping> mapping,
+            mapping_builder->CreateFieldMapping(arrow_schema, core_options_.GetBlobInlineFields()));
         if (mapping->partition_info != std::nullopt) {
             const auto& partition_info = mapping->partition_info.value();
             partition_schema_ =

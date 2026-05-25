@@ -121,7 +121,7 @@ class FieldMappingReaderTest : public ::testing::Test {
 
         ASSERT_OK_AND_ASSIGN(auto mapping_builder,
                              FieldMappingBuilder::Create(read_schema, partition_keys_, predicate));
-        ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields_));
+        ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields_, {}));
 
         auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(
             mapping->non_partition_info.non_partition_data_schema);
@@ -154,7 +154,8 @@ class FieldMappingReaderTest : public ::testing::Test {
                      const std::shared_ptr<arrow::Schema>& read_schema,
                      const std::shared_ptr<Predicate>& predicate,
                      const std::vector<std::string>& partition_keys, const BinaryRow& partition,
-                     const std::shared_ptr<arrow::Array>& expect_array) const {
+                     const std::shared_ptr<arrow::Array>& expect_array,
+                     const std::vector<std::string>& blob_inline_fields = {}) const {
         auto dir = paimon::test::UniqueTestDirectory::Create();
         ASSERT_TRUE(dir);
         auto fs = dir->GetFileSystem();
@@ -162,7 +163,8 @@ class FieldMappingReaderTest : public ::testing::Test {
 
         ASSERT_OK_AND_ASSIGN(auto mapping_builder,
                              FieldMappingBuilder::Create(read_schema, partition_keys, predicate));
-        ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_schema));
+        ASSERT_OK_AND_ASSIGN(auto mapping,
+                             mapping_builder->CreateFieldMapping(data_schema, blob_inline_fields));
 
         auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(
             mapping->non_partition_info.non_partition_data_schema);
@@ -704,6 +706,38 @@ TEST_F(FieldMappingReaderTest, TestSchemaEvolutionWithDictType) {
             .ValueOrDie());
     CheckResult(data_schema, data_array, read_schema, /*predicate=*/nullptr, partition_keys,
                 partition, expected_array);
+}
+
+TEST_F(FieldMappingReaderTest, TestReadInlineBlobAsBinaryDataFile) {
+    std::vector<DataField> data_fields = {
+        DataField(0, arrow::field("descriptor", arrow::large_binary())),
+    };
+    auto data_schema = DataField::ConvertDataFieldsToArrowSchema(data_fields);
+    auto data_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(data_schema->fields()),
+                                                  R"([
+        ["descriptor-1"],
+        [null],
+        ["descriptor-2"]
+    ])")
+            .ValueOrDie());
+
+    std::vector<DataField> read_fields = {
+        DataField(0, arrow::field("descriptor", arrow::large_binary())),
+    };
+    auto read_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields);
+    auto expected = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(read_schema->fields()),
+                                                  R"([
+        ["descriptor-1"],
+        [null],
+        ["descriptor-2"]
+    ])")
+            .ValueOrDie());
+
+    CheckResult(data_schema, data_array, read_schema, /*predicate=*/nullptr,
+                /*partition_keys=*/{}, BinaryRow::EmptyRow(), expected,
+                /*blob_inline_fields=*/{"descriptor"});
 }
 
 TEST_F(FieldMappingReaderTest, TestReadWithSchemaEvolutionRenameCombinedCast) {

@@ -15,8 +15,6 @@
  */
 
 #pragma once
-#include <algorithm>
-#include <cstdint>
 #include <map>
 #include <memory>
 #include <optional>
@@ -58,9 +56,11 @@ class FieldMappingBuilder {
         const std::shared_ptr<Predicate>& predicate);
 
     Result<std::unique_ptr<FieldMapping>> CreateFieldMapping(
-        const std::vector<DataField>& data_fields) const;
+        const std::vector<DataField>& data_fields,
+        const std::vector<std::string>& blob_inline_fields) const;
     Result<std::unique_ptr<FieldMapping>> CreateFieldMapping(
-        const std::shared_ptr<arrow::Schema>& data_schema) const;
+        const std::shared_ptr<arrow::Schema>& data_schema,
+        const std::vector<std::string>& blob_inline_fields) const;
 
     int32_t GetReadFieldCount() const {
         return read_fields_.size();
@@ -83,6 +83,9 @@ class FieldMappingBuilder {
     std::optional<NonExistFieldInfo> CreateNonExistFieldInfo(
         const std::vector<DataField>& data_fields) const;
     ExistFieldInfo CreateExistFieldInfo(const std::vector<DataField>& data_fields) const;
+    static std::vector<DataField> ConvertBlobInlineDataFields(
+        const std::vector<DataField>& data_fields,
+        const std::vector<std::string>& blob_inline_fields);
 
     Result<NonPartitionInfo> CreateNonPartitionInfo(
         const std::vector<DataField>& data_fields, const ExistFieldInfo& exist_field_info,

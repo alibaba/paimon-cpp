@@ -268,15 +268,16 @@ class TestHelper {
                                           arrow::Concatenate(read_result->chunks()));
         PAIMON_ASSIGN_OR_RAISE(auto reconstruct_array,
                                ReconstructBlobArray(concat_array, all_columns_schema));
-        PAIMON_ASSIGN_OR_RAISE(
-            auto separated_array,
-            BlobUtils::SeparateBlobArray(
-                std::dynamic_pointer_cast<arrow::StructArray>(reconstruct_array)));
+        PAIMON_ASSIGN_OR_RAISE(auto separated_array,
+                               BlobUtils::SeparateBlobArray(
+                                   std::dynamic_pointer_cast<arrow::StructArray>(reconstruct_array),
+                                   /*inline_fields=*/{}));
 
         arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
 
         // check main columns
-        auto separated_schema = BlobUtils::SeparateBlobSchema(all_columns_schema);
+        auto separated_schema =
+            BlobUtils::SeparateBlobSchema(all_columns_schema, /*inline_fields=*/{});
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
             auto main_expected_array,
             arrow::ipc::internal::json::ArrayFromJSON(

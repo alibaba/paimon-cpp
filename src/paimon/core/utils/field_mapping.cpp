@@ -16,10 +16,9 @@
 
 #include "paimon/core/utils/field_mapping.h"
 
-#include <algorithm>
-#include <cassert>
 #include <cstddef>
 #include <set>
+#include <vector>
 
 #include "arrow/type.h"
 #include "fmt/format.h"
@@ -63,19 +62,24 @@ Result<std::unique_ptr<FieldMappingBuilder>> FieldMappingBuilder::Create(
 }
 
 Result<std::unique_ptr<FieldMapping>> FieldMappingBuilder::CreateFieldMapping(
-    const std::shared_ptr<arrow::Schema>& data_schema) const {
+    const std::shared_ptr<arrow::Schema>& data_schema,
+    const std::vector<std::string>& blob_inline_fields) const {
     PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> data_fields,
                            DataField::ConvertArrowSchemaToDataFields(data_schema));
-    return CreateFieldMapping(data_fields);
+    return CreateFieldMapping(data_fields, blob_inline_fields);
 }
 
 Result<std::unique_ptr<FieldMapping>> FieldMappingBuilder::CreateFieldMapping(
-    const std::vector<DataField>& data_fields) const {
+    const std::vector<DataField>& data_fields,
+    const std::vector<std::string>& blob_inline_fields) const {
+    auto converted_data_fields = ConvertBlobInlineDataFields(data_fields, blob_inline_fields);
+
     // generate non-exist field info
-    std::optional<NonExistFieldInfo> non_exist_field_info = CreateNonExistFieldInfo(data_fields);
+    std::optional<NonExistFieldInfo> non_exist_field_info =
+        CreateNonExistFieldInfo(converted_data_fields);
 
     // generate exist field info
-    ExistFieldInfo exist_field_info = CreateExistFieldInfo(data_fields);
+    ExistFieldInfo exist_field_info = CreateExistFieldInfo(converted_data_fields);
 
     // key: partition key, value: partition idx
     std::map<std::string, int32_t> partition_key_to_idx =
@@ -83,10 +87,33 @@ Result<std::unique_ptr<FieldMapping>> FieldMappingBuilder::CreateFieldMapping(
 
     PAIMON_ASSIGN_OR_RAISE(
         NonPartitionInfo non_partition_info,
-        CreateNonPartitionInfo(data_fields, exist_field_info, partition_key_to_idx));
+        CreateNonPartitionInfo(converted_data_fields, exist_field_info, partition_key_to_idx));
     PAIMON_ASSIGN_OR_RAISE(std::optional<PartitionInfo> partition_info,
                            CreatePartitionInfo(exist_field_info, partition_key_to_idx));
     return std::make_unique<FieldMapping>(partition_info, non_partition_info, non_exist_field_info);
+}
+
+std::vector<DataField> FieldMappingBuilder::ConvertBlobInlineDataFields(
+    const std::vector<DataField>& data_fields, const std::vector<std::string>& blob_inline_fields) {
+    if (blob_inline_fields.empty()) {
+        return data_fields;
+    }
+
+    std::set<std::string> blob_inline_field_set(blob_inline_fields.begin(),
+                                                blob_inline_fields.end());
+    std::vector<DataField> converted_fields;
+    converted_fields.reserve(data_fields.size());
+    for (const auto& data_field : data_fields) {
+        if (blob_inline_field_set.find(data_field.Name()) == blob_inline_field_set.end()) {
+            converted_fields.push_back(data_field);
+            continue;
+        }
+
+        auto binary_field = arrow::field(data_field.Name(), arrow::binary(), data_field.Nullable(),
+                                         data_field.ArrowField()->metadata());
+        converted_fields.emplace_back(data_field.Id(), binary_field, data_field.Description());
+    }
+    return converted_fields;
 }
 
 ExistFieldInfo FieldMappingBuilder::CreateExistFieldInfo(

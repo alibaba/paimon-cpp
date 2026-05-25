@@ -18,6 +18,7 @@
 
 #include <utility>
 
+#include "paimon/core/casting/binary_to_blob_cast_executor.h"
 #include "paimon/core/casting/binary_to_string_cast_executor.h"
 #include "paimon/core/casting/boolean_to_decimal_cast_executor.h"
 #include "paimon/core/casting/boolean_to_numeric_cast_executor.h"
@@ -145,6 +146,8 @@ CastExecutorFactory::CastExecutorFactory() {
     REGISTER_CAST_EXECUTOR(BINARY, STRING, StringToBinaryCastExecutor);
 
     REGISTER_CAST_EXECUTOR(STRING, BINARY, BinaryToStringCastExecutor);
+
+    REGISTER_CAST_EXECUTOR(BLOB, BINARY, BinaryToBlobCastExecutor);
 
     REGISTER_CAST_EXECUTOR(STRING, DATE, DateToStringCastExecutor);
 

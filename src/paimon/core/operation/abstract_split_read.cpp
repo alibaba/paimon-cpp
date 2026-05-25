@@ -182,6 +182,10 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingRe
         // load schema to get data schema
         PAIMON_ASSIGN_OR_RAISE(data_schema, schema_manager_->ReadSchema(file_meta->schema_id));
     }
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions data_options,
+                           CoreOptions::FromMap(data_schema->Options(), options_.GetFileSystem()));
+    auto blob_inline_fields = data_options.GetBlobInlineFields();
+
     std::unique_ptr<FieldMapping> field_mapping;
     if (!data_schema->PrimaryKeys().empty()) {
         // for pk table, add special fields to file schema when field mapping
@@ -189,14 +193,14 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingRe
                                               SpecialFields::ValueKind()};
         file_fields.insert(file_fields.end(), data_schema->Fields().begin(),
                            data_schema->Fields().end());
-        PAIMON_ASSIGN_OR_RAISE(field_mapping,
-                               field_mapping_builder->CreateFieldMapping(file_fields));
+        PAIMON_ASSIGN_OR_RAISE(field_mapping, field_mapping_builder->CreateFieldMapping(
+                                                  file_fields, blob_inline_fields));
     } else {
         PAIMON_ASSIGN_OR_RAISE(
             std::vector<DataField> projected_data_fields,
             ProjectFieldsForRowTrackingAndDataEvolution(data_schema, file_meta->write_cols));
-        PAIMON_ASSIGN_OR_RAISE(field_mapping,
-                               field_mapping_builder->CreateFieldMapping(projected_data_fields));
+        PAIMON_ASSIGN_OR_RAISE(field_mapping, field_mapping_builder->CreateFieldMapping(
+                                                  projected_data_fields, blob_inline_fields));
     }
 
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(

@@ -17,6 +17,7 @@
 #pragma once
 
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
 
@@ -38,23 +39,29 @@ class PAIMON_EXPORT BlobUtils {
     ~BlobUtils() = delete;
 
     struct SeparatedSchemas {
-        /// Non-blob fields
+        /// Non-blob fields (includes inline blob fields when inline_fields is provided)
         std::shared_ptr<arrow::Schema> main_schema;
-        /// Blob fields only
+        /// Blob fields that go to separate .blob files
         std::shared_ptr<arrow::Schema> blob_schema;
     };
 
     struct SeparatedStructArrays {
-        /// Non-blob fields
+        /// Non-blob fields (includes inline blob fields when inline_fields is provided)
         std::shared_ptr<arrow::StructArray> main_array;
-        /// Blob fields only
+        /// Blob fields that go to separate .blob files
         std::shared_ptr<arrow::StructArray> blob_array;
     };
 
-    static SeparatedSchemas SeparateBlobSchema(const std::shared_ptr<arrow::Schema>& schema);
+    /// Separates schema with inline field awareness.
+    /// BLOB fields in inline_fields stay in main_schema; others go to blob_schema.
+    static SeparatedSchemas SeparateBlobSchema(const std::shared_ptr<arrow::Schema>& schema,
+                                               const std::set<std::string>& inline_fields);
 
+    /// Separates array with inline field awareness.
+    /// BLOB fields in inline_fields stay in main_array; others go to blob_array.
     static Result<SeparatedStructArrays> SeparateBlobArray(
-        const std::shared_ptr<arrow::StructArray>& struct_array);
+        const std::shared_ptr<arrow::StructArray>& struct_array,
+        const std::set<std::string>& inline_fields);
 
     static bool IsBlobField(const std::shared_ptr<arrow::Field>& field);
     static bool IsBlobMetadata(const std::shared_ptr<const arrow::KeyValueMetadata>& metadata);
@@ -63,6 +70,10 @@ class PAIMON_EXPORT BlobUtils {
     static std::shared_ptr<arrow::Field> ToArrowField(
         const std::string& field_name, bool nullable = false,
         std::unordered_map<std::string, std::string> metadata = {});
+
+    static Status ValidateInlineBlobDescriptors(
+        const std::shared_ptr<arrow::StructArray>& struct_array,
+        const std::set<std::string>& inline_descriptor_fields);
 };
 
 }  // namespace paimon

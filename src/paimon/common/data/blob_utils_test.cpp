@@ -20,7 +20,9 @@
 #include "arrow/c/bridge.h"
 #include "gtest/gtest.h"
 #include "paimon/common/data/blob_defs.h"
+#include "paimon/common/data/blob_descriptor.h"
 #include "paimon/data/blob.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -74,7 +76,8 @@ TEST_F(BlobUtilsTest, SeparateBlobSchema) {
         std::shared_ptr<arrow::Schema> original_schema =
             arrow::schema({int_field, string_field, blob_field_1});
 
-        BlobUtils::SeparatedSchemas schemas = BlobUtils::SeparateBlobSchema(original_schema);
+        BlobUtils::SeparatedSchemas schemas =
+            BlobUtils::SeparateBlobSchema(original_schema, /*inline_fields=*/{});
 
         std::shared_ptr<arrow::Schema> expected_main_schema =
             arrow::schema({int_field, string_field});
@@ -85,16 +88,45 @@ TEST_F(BlobUtilsTest, SeparateBlobSchema) {
     }
     {
         std::shared_ptr<arrow::Schema> no_blob_schema = arrow::schema({int_field, string_field});
-        BlobUtils::SeparatedSchemas no_blob_schemas = BlobUtils::SeparateBlobSchema(no_blob_schema);
+        BlobUtils::SeparatedSchemas no_blob_schemas =
+            BlobUtils::SeparateBlobSchema(no_blob_schema, /*inline_fields=*/{});
         ASSERT_TRUE(no_blob_schemas.main_schema->Equals(*no_blob_schema));
         ASSERT_EQ(no_blob_schemas.blob_schema->num_fields(), 0);
     }
     {
         std::shared_ptr<arrow::Schema> only_blob_schema = arrow::schema({blob_field_1});
         BlobUtils::SeparatedSchemas only_blob_schemas =
-            BlobUtils::SeparateBlobSchema(only_blob_schema);
+            BlobUtils::SeparateBlobSchema(only_blob_schema, /*inline_fields=*/{});
         ASSERT_TRUE(only_blob_schemas.blob_schema->Equals(*only_blob_schema));
         ASSERT_EQ(only_blob_schemas.main_schema->num_fields(), 0);
+    }
+    {
+        // Inline blob field stays in main_schema instead of going to blob_schema
+        auto blob_field_2 = BlobUtils::ToArrowField("f4_blob_2", false);
+        std::shared_ptr<arrow::Schema> schema =
+            arrow::schema({int_field, blob_field_1, blob_field_2, string_field});
+
+        BlobUtils::SeparatedSchemas schemas =
+            BlobUtils::SeparateBlobSchema(schema, /*inline_fields=*/{"f3_blob_1"});
+
+        // f3_blob_1 is inline -> stays in main; f4_blob_2 goes to blob
+        std::shared_ptr<arrow::Schema> expected_main =
+            arrow::schema({int_field, blob_field_1, string_field});
+        ASSERT_TRUE(schemas.main_schema->Equals(*expected_main));
+
+        std::shared_ptr<arrow::Schema> expected_blob = arrow::schema({blob_field_2});
+        ASSERT_TRUE(schemas.blob_schema->Equals(*expected_blob));
+    }
+    {
+        // All blob fields are inline -> blob_schema is empty
+        std::shared_ptr<arrow::Schema> schema =
+            arrow::schema({int_field, blob_field_1, string_field});
+
+        BlobUtils::SeparatedSchemas schemas =
+            BlobUtils::SeparateBlobSchema(schema, /*inline_fields=*/{"f3_blob_1"});
+
+        ASSERT_TRUE(schemas.main_schema->Equals(*schema));
+        ASSERT_EQ(schemas.blob_schema->num_fields(), 0);
     }
 }
 
@@ -125,7 +157,8 @@ TEST_F(BlobUtilsTest, SeparateBlobArray) {
     std::shared_ptr<arrow::StructArray> struct_array =
         std::static_pointer_cast<arrow::StructArray>(raw_struct_array);
 
-    ASSERT_OK_AND_ASSIGN(auto separated, BlobUtils::SeparateBlobArray(struct_array));
+    ASSERT_OK_AND_ASSIGN(auto separated,
+                         BlobUtils::SeparateBlobArray(struct_array, /*inline_fields=*/{}));
 
     std::shared_ptr<arrow::DataType> expected_main_type = arrow::struct_({int_field, string_field});
     ASSERT_TRUE(separated.main_array->type()->Equals(*expected_main_type));
@@ -137,6 +170,153 @@ TEST_F(BlobUtilsTest, SeparateBlobArray) {
     ASSERT_TRUE(separated.blob_array->type()->Equals(*expected_blob_type));
     ASSERT_EQ(separated.blob_array->num_fields(), 1);
     ASSERT_TRUE(separated.blob_array->field(0)->Equals(*blob_array_data));
+
+    // All blob fields are inline -> should return error (no blob field to separate)
+    ASSERT_NOK_WITH_MSG(
+        BlobUtils::SeparateBlobArray(struct_array, /*inline_fields=*/{"f2_blob"}),
+        "SeparateBlobArray expects at least one non-inline blob field, but got none.");
+}
+
+TEST_F(BlobUtilsTest, SeparateBlobArrayWithPartialInline) {
+    auto int_field = arrow::field("f1_int", arrow::int32());
+    std::shared_ptr<arrow::Field> blob_field_1 = BlobUtils::ToArrowField("f2_blob_1", false);
+    std::shared_ptr<arrow::Field> blob_field_2 = BlobUtils::ToArrowField("f3_blob_2", true);
+    auto schema = arrow::schema({int_field, blob_field_1, blob_field_2});
+
+    arrow::Int32Builder int_builder;
+    ASSERT_TRUE(int_builder.AppendValues({1, 2}).ok());
+    auto int_array = int_builder.Finish().ValueOrDie();
+
+    arrow::LargeBinaryBuilder blob_builder_1;
+    ASSERT_TRUE(blob_builder_1.Append("a", 1).ok());
+    ASSERT_TRUE(blob_builder_1.Append("b", 1).ok());
+    auto blob_array_1 = blob_builder_1.Finish().ValueOrDie();
+
+    arrow::LargeBinaryBuilder blob_builder_2;
+    ASSERT_TRUE(blob_builder_2.Append("x", 1).ok());
+    ASSERT_TRUE(blob_builder_2.AppendNull().ok());
+    auto blob_array_2 = blob_builder_2.Finish().ValueOrDie();
+
+    auto raw_struct_array =
+        arrow::StructArray::Make({int_array, blob_array_1, blob_array_2}, schema->fields())
+            .ValueOrDie();
+    auto struct_array = std::static_pointer_cast<arrow::StructArray>(raw_struct_array);
+
+    // f2_blob_1 is inline, f3_blob_2 goes to blob
+    ASSERT_OK_AND_ASSIGN(auto separated, BlobUtils::SeparateBlobArray(
+                                             struct_array, /*inline_fields=*/{"f2_blob_1"}));
+
+    std::shared_ptr<arrow::DataType> expected_main_type = arrow::struct_({int_field, blob_field_1});
+    ASSERT_TRUE(separated.main_array->type()->Equals(*expected_main_type));
+    ASSERT_EQ(separated.main_array->num_fields(), 2);
+    ASSERT_TRUE(separated.main_array->field(0)->Equals(*int_array));
+    ASSERT_TRUE(separated.main_array->field(1)->Equals(*blob_array_1));
+
+    std::shared_ptr<arrow::DataType> expected_blob_type = arrow::struct_({blob_field_2});
+    ASSERT_TRUE(separated.blob_array->type()->Equals(*expected_blob_type));
+    ASSERT_EQ(separated.blob_array->num_fields(), 1);
+    ASSERT_TRUE(separated.blob_array->field(0)->Equals(*blob_array_2));
+}
+
+TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsEmptyFields) {
+    // Empty inline_descriptor_fields -> always OK
+    arrow::LargeBinaryBuilder builder;
+    ASSERT_TRUE(builder.Append("random_data").ok());
+    auto array = builder.Finish().ValueOrDie();
+    auto struct_array =
+        arrow::StructArray::Make({array}, {BlobUtils::ToArrowField("b0")}).ValueOrDie();
+    auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
+    ASSERT_OK(BlobUtils::ValidateInlineBlobDescriptors(sa, {}));
+}
+
+TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsFieldNotPresent) {
+    // Field not in struct_array -> skip, OK
+    arrow::Int32Builder int_builder;
+    ASSERT_TRUE(int_builder.Append(42).ok());
+    auto int_array = int_builder.Finish().ValueOrDie();
+    auto struct_array =
+        arrow::StructArray::Make({int_array}, {arrow::field("f0", arrow::int32())}).ValueOrDie();
+    auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
+    // "b0" does not exist in the struct -> should pass
+    ASSERT_OK(BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0"}));
+}
+
+TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsWithValidDescriptor) {
+    // Valid BlobDescriptor bytes -> OK
+    auto pool = GetDefaultPool();
+    ASSERT_OK_AND_ASSIGN(auto descriptor, BlobDescriptor::Create("file:///tmp/test.bin", 0, 100));
+    auto serialized = descriptor->Serialize(pool);
+
+    arrow::LargeBinaryBuilder builder;
+    ASSERT_TRUE(builder.Append(serialized->data(), serialized->size()).ok());
+    auto blob_array = builder.Finish().ValueOrDie();
+    auto struct_array =
+        arrow::StructArray::Make({blob_array}, {BlobUtils::ToArrowField("b0")}).ValueOrDie();
+    auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
+    ASSERT_OK(BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0"}));
+}
+
+TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsWithNullValue) {
+    // Null values in blob column -> skip, OK
+    arrow::LargeBinaryBuilder builder;
+    ASSERT_TRUE(builder.AppendNull().ok());
+    auto blob_array = builder.Finish().ValueOrDie();
+    auto struct_array =
+        arrow::StructArray::Make({blob_array}, {BlobUtils::ToArrowField("b0")}).ValueOrDie();
+    auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
+    ASSERT_OK(BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0"}));
+}
+
+TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsWithRawBytes) {
+    // Raw bytes (not a descriptor) -> error
+    arrow::LargeBinaryBuilder builder;
+    ASSERT_TRUE(builder.Append("not_a_descriptor_just_raw_data").ok());
+    auto blob_array = builder.Finish().ValueOrDie();
+    auto struct_array =
+        arrow::StructArray::Make({blob_array}, {BlobUtils::ToArrowField("b0")}).ValueOrDie();
+    auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
+    ASSERT_NOK_WITH_MSG(BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0"}),
+                        "BLOB inline fields configured by blob-descriptor-field");
+}
+
+TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsMixedValidAndInvalid) {
+    // First row is valid descriptor, second row is raw bytes -> error on row 1
+    auto pool = GetDefaultPool();
+    ASSERT_OK_AND_ASSIGN(auto descriptor, BlobDescriptor::Create("file:///tmp/test.bin", 0, 100));
+    auto serialized = descriptor->Serialize(pool);
+
+    arrow::LargeBinaryBuilder builder;
+    ASSERT_TRUE(builder.Append(serialized->data(), serialized->size()).ok());
+    ASSERT_TRUE(builder.Append("raw_bytes_not_descriptor").ok());
+    auto blob_array = builder.Finish().ValueOrDie();
+    auto struct_array =
+        arrow::StructArray::Make({blob_array}, {BlobUtils::ToArrowField("b0")}).ValueOrDie();
+    auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
+    ASSERT_NOK_WITH_MSG(BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0"}),
+                        "BLOB inline fields configured by blob-descriptor-field");
+}
+
+TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsMultipleFields) {
+    // Two inline fields: b0 is valid, b1 has raw bytes -> error on b1
+    auto pool = GetDefaultPool();
+    ASSERT_OK_AND_ASSIGN(auto descriptor, BlobDescriptor::Create("file:///tmp/test.bin", 0, 100));
+    auto serialized = descriptor->Serialize(pool);
+
+    arrow::LargeBinaryBuilder b0_builder;
+    ASSERT_TRUE(b0_builder.Append(serialized->data(), serialized->size()).ok());
+    auto b0_array = b0_builder.Finish().ValueOrDie();
+
+    arrow::LargeBinaryBuilder b1_builder;
+    ASSERT_TRUE(b1_builder.Append("invalid_raw_data").ok());
+    auto b1_array = b1_builder.Finish().ValueOrDie();
+
+    auto struct_array =
+        arrow::StructArray::Make({b0_array, b1_array},
+                                 {BlobUtils::ToArrowField("b0"), BlobUtils::ToArrowField("b1")})
+            .ValueOrDie();
+    auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
+    ASSERT_NOK_WITH_MSG(BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0", "b1"}),
+                        "BLOB inline fields configured by blob-descriptor-field");
 }
 
 }  // namespace paimon::test
