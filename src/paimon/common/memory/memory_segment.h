@@ -135,7 +135,7 @@ class PAIMON_EXPORT MemorySegment {
     }
 
     inline uint64_t GetLongBigEndian(int32_t index) const {
-        uint64_t value = GetValue<uint64_t>(index);
+        auto value = GetValue<uint64_t>(index);
         if constexpr (SystemByteOrder() == ByteOrder::PAIMON_LITTLE_ENDIAN) {
             return EndianSwapValue(value);
         }
