@@ -23,6 +23,7 @@
 #include <type_traits>
 
 #include "paimon/common/utils/math.h"
+#include "paimon/io/byte_order.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/visibility.h"
 
@@ -133,7 +134,7 @@ class PAIMON_EXPORT MemorySegment {
         std::memcpy(MutableData() + index, &value, sizeof(T));
     }
 
-inline uint64_t GetLongBigEndian(int32_t index) const {
+    inline uint64_t GetLongBigEndian(int32_t index) const {
         uint64_t value = GetValue<uint64_t>(index);
         if constexpr (SystemByteOrder() == ByteOrder::PAIMON_LITTLE_ENDIAN) {
             return EndianSwapValue(value);
