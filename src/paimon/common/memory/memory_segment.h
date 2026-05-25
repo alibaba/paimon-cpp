@@ -134,8 +134,8 @@ class PAIMON_EXPORT MemorySegment {
     }
 
     inline uint64_t GetLongBigEndian(int32_t index) const {
-        uint64_t native_value = GetValue<uint64_t>(index);
-        return static_cast<uint64_t>(EndianSwapValue(native_value));
+        auto native_value = GetValue<uint64_t>(index);
+        return EndianSwapValue(native_value);
     }
 
     void CopyTo(int32_t offset, MemorySegment* target, int32_t target_offset,
