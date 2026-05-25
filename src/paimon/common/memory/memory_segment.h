@@ -22,6 +22,7 @@
 #include <memory>
 #include <type_traits>
 
+#include "paimon/common/utils/math.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/visibility.h"
 
@@ -130,6 +131,11 @@ class PAIMON_EXPORT MemorySegment {
         static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
 
         std::memcpy(MutableData() + index, &value, sizeof(T));
+    }
+
+    inline uint64_t GetLongBigEndian(int32_t index) const {
+        uint64_t native_value = GetValue<uint64_t>(index);
+        return static_cast<uint64_t>(EndianSwapValue(native_value));
     }
 
     void CopyTo(int32_t offset, MemorySegment* target, int32_t target_offset,
