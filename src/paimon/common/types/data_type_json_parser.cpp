@@ -267,6 +267,7 @@ std::vector<Token> Tokenize(const std::string& chars) {
             case CHAR_END_SUBTYPE:
                 tokens.emplace_back(TokenType::END_SUBTYPE, cursor,
                                     std::to_string(CHAR_END_SUBTYPE));
+                break;
             case CHAR_BEGIN_PARAMETER:
                 tokens.emplace_back(TokenType::BEGIN_PARAMETER, cursor,
                                     std::to_string(CHAR_BEGIN_PARAMETER));
