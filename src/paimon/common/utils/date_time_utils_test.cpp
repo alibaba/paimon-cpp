@@ -281,6 +281,21 @@ TEST(DateTimeUtilsTest, TestGetCurrentLocalTimeUs) {
     ASSERT_GE(local_ts - utc_ts, 28800000000l);
 }
 
+TEST(DateTimeUtilsTest, TestToLocalTimestamp) {
+    {
+        TimezoneGuard guard("Asia/Shanghai");
+        ASSERT_OK_AND_ASSIGN(Timestamp timestamp, DateTimeUtils::ToLocalTimestamp(
+                                                      Timestamp::FromEpochMillis(1700000000123L)));
+        ASSERT_EQ(timestamp, Timestamp::FromEpochMillis(1700028800123L));
+    }
+    {
+        TimezoneGuard guard("UTC");
+        ASSERT_OK_AND_ASSIGN(Timestamp timestamp, DateTimeUtils::ToLocalTimestamp(
+                                                      Timestamp::FromEpochMillis(1700000000123L)));
+        ASSERT_EQ(timestamp, Timestamp::FromEpochMillis(1700000000123L));
+    }
+}
+
 TEST(DateTimeUtilsTest, TestGetCurrentLocalHour) {
     int32_t shanghai_hour = 0;
     int32_t utc_hour = 0;

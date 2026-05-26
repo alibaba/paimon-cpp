@@ -158,6 +158,32 @@ TEST(MemorySegmentTest, TestCompare) {
     seg2.Put(i + 8, static_cast<char>(10));
     ASSERT_EQ(seg1.Compare(seg2, i, i, 7, 7), 0);
     ASSERT_LT(seg1.Compare(seg2, i, i, 9, 9), 0);
+
+    // Verify big-endian byte-order comparison semantics within a single 8-byte block.
+    // On little-endian machines, naive native-endian uint64 comparison would give wrong results.
+    MemorySegment seg3 = MemorySegment::AllocateHeapMemory(16, pool.get());
+    MemorySegment seg4 = MemorySegment::AllocateHeapMemory(16, pool.get());
+    Bytes zeros(16, pool.get());
+    seg3.Put(0, zeros);
+    seg4.Put(0, zeros);
+
+    // seg3: [0x00, 0x01, 0, 0, 0, 0, 0, 0] at offset 0
+    // seg4: [0x01, 0x00, 0, 0, 0, 0, 0, 0] at offset 0
+    // Lexicographic (byte-order) comparison: first byte 0x00 < 0x01, so seg3 < seg4.
+    seg3.Put(1, static_cast<char>(0x01));
+    seg4.Put(0, static_cast<char>(0x01));
+    ASSERT_LT(seg3.Compare(seg4, 0, 0, 8), 0);
+    ASSERT_GT(seg4.Compare(seg3, 0, 0, 8), 0);
+
+    // seg3: [0x01, 0x02, 0, 0, 0, 0, 0, 0]
+    // seg4: [0x01, 0x01, 0, 0, 0, 0, 0, 0]
+    // First bytes equal (0x01 == 0x01), second byte 0x02 > 0x01, so seg3 > seg4.
+    seg3.Put(0, static_cast<char>(0x01));
+    seg3.Put(1, static_cast<char>(0x02));
+    seg4.Put(0, static_cast<char>(0x01));
+    seg4.Put(1, static_cast<char>(0x01));
+    ASSERT_GT(seg3.Compare(seg4, 0, 0, 8), 0);
+    ASSERT_LT(seg4.Compare(seg3, 0, 0, 8), 0);
 }
 
 TEST(MemorySegmentTest, TestCharAccess) {

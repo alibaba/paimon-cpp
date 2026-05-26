@@ -26,6 +26,7 @@ namespace paimon {
 class FileSystem;
 class TableSchema;
 
+/// System table for `T$binlog`, exposing changelog records with list-wrapped data columns.
 class BinlogSystemTable : public AuditLogSystemTable {
  public:
     static constexpr const char* kName = "binlog";

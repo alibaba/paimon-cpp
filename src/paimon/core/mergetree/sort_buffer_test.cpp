@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "arrow/api.h"
+#include "arrow/c/bridge.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
@@ -139,7 +140,7 @@ class SortBufferTest : public ::testing::Test {
             /*sequence_fields_ascending=*/true, key_comparator_, write_buffer_size, pool_);
         return ExternalSortBuffer::Create(std::move(in_memory_buffer), value_schema_, primary_keys_,
                                           key_comparator_, sequence_comparator_, options,
-                                          io_manager_, pool_);
+                                          io_manager_, /*enable_multi_thread_spill=*/false, pool_);
     }
 
     void AssertRows(const std::vector<ReaderResult>& actual,
@@ -278,6 +279,43 @@ TEST_F(SortBufferTest, TestInMemorySortBufferSimple) {
     buffer.Clear();
     ASSERT_FALSE(buffer.HasData());
     ASSERT_EQ(buffer.GetMemorySize(), 0);
+}
+
+TEST_F(SortBufferTest, TestInMemorySortBufferEstimateMemoryUseForEachRow) {
+    InMemorySortBuffer buffer(/*last_sequence_number=*/9, value_type_, primary_keys_,
+                              sequence_fields_, /*sequence_fields_ascending=*/true, key_comparator_,
+                              /*write_buffer_size=*/1024 * 1024, pool_);
+
+    ASSERT_EQ(buffer.GetEstimateMemoryUseForEachRow(), 0);
+
+    uint64_t cached_memory_use_per_row = 0;
+    for (int32_t index = 0; index < 3; ++index) {
+        std::vector<BinaryRow> input_rows;
+        input_rows.push_back(MakeRow(RowKind::Insert(), std::string(index + 1, 'a'), index, index));
+
+        ASSERT_OK_AND_ASSIGN(bool has_remaining_quota, buffer.Write(MakeBatch(input_rows)));
+        ASSERT_TRUE(has_remaining_quota);
+
+        cached_memory_use_per_row = buffer.GetMemorySize() / (index + 1);
+        ASSERT_EQ(buffer.GetEstimateMemoryUseForEachRow(), cached_memory_use_per_row);
+    }
+
+    // Clear does not reset the estimated per-row memory usage.
+    buffer.Clear();
+    ASSERT_EQ(buffer.GetEstimateMemoryUseForEachRow(), cached_memory_use_per_row);
+
+    // Verify behavior when writing an empty batch.
+    std::shared_ptr<arrow::Array> empty_array =
+        arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([])").ValueOrDie();
+    ::ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*empty_array, &c_array).ok());
+    RecordBatchBuilder batch_builder(&c_array);
+    batch_builder.SetRowKinds({});
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> empty_batch, batch_builder.Finish());
+
+    ASSERT_OK_AND_ASSIGN(bool has_remaining_quota, buffer.Write(std::move(empty_batch)));
+    ASSERT_TRUE(has_remaining_quota);
+    ASSERT_EQ(buffer.GetEstimateMemoryUseForEachRow(), cached_memory_use_per_row);
 }
 
 TEST_F(SortBufferTest, TestExternalSortBufferWithInMemoryDataAndNoSpill) {

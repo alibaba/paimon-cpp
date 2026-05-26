@@ -42,7 +42,7 @@ class SpillWriter {
         const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<arrow::Schema>& schema,
         const std::shared_ptr<FileIOChannel::Enumerator>& channel_enumerator,
         const std::shared_ptr<SpillChannelManager>& spill_channel_manager,
-        const std::string& compression, int32_t compression_level,
+        const std::string& compression, int32_t compression_level, bool use_threads,
         const std::shared_ptr<MemoryPool>& pool);
 
     SpillWriter(const SpillWriter&) = delete;
@@ -57,7 +57,7 @@ class SpillWriter {
     SpillWriter(const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<arrow::Schema>& schema,
                 const std::shared_ptr<FileIOChannel::Enumerator>& channel_enumerator,
                 const std::shared_ptr<SpillChannelManager>& spill_channel_manager,
-                const std::string& compression, int32_t compression_level,
+                const std::string& compression, int32_t compression_level, bool use_threads,
                 const std::shared_ptr<MemoryPool>& pool);
 
     Status Open();
@@ -68,6 +68,7 @@ class SpillWriter {
     std::shared_ptr<SpillChannelManager> spill_channel_manager_;
     std::string compression_;
     int32_t compression_level_;
+    bool use_threads_;
     std::shared_ptr<OutputStream> out_stream_;
     std::shared_ptr<ArrowOutputStreamAdapter> arrow_output_stream_adapter_;
     std::unique_ptr<arrow::MemoryPool> arrow_pool_;

@@ -133,8 +133,8 @@ class ChangelogBatchReader : public BatchReader {
  private:
     Result<std::shared_ptr<arrow::Array>> CopyToStablePool(
         const std::shared_ptr<arrow::Array>& array) const {
-        // The imported data batch may release its C Arrow buffers after this wrapper returns.
-        // Keep returned system-table arrays independent of that input batch lifetime.
+        /// The imported data batch may release its C Arrow buffers after this wrapper returns.
+        /// Keep returned system-table arrays independent of that input batch lifetime.
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> result,
                                           arrow::Concatenate({array}, arrow_pool_));
         return result;

@@ -66,7 +66,7 @@ class SpillReaderWriterTest : public ::testing::TestWithParam<std::string> {
     Result<std::unique_ptr<SpillWriter>> CreateSpillWriter() const {
         return SpillWriter::Create(file_system_, write_schema_, channel_enumerator_,
                                    spill_channel_manager_, GetParam(), /*compression_level=*/1,
-                                   write_pool_);
+                                   /*use_threads=*/false, write_pool_);
     }
 
     FileIOChannel::ID WriteSpillFile(
@@ -81,8 +81,8 @@ class SpillReaderWriterTest : public ::testing::TestWithParam<std::string> {
 
     Result<std::unique_ptr<SpillReader>> CreateSpillReader(
         const FileIOChannel::ID& channel_id) const {
-        return SpillReader::Create(file_system_, key_schema_, value_schema_, read_pool_,
-                                   channel_id);
+        return SpillReader::Create(file_system_, key_schema_, value_schema_, /*use_threads=*/false,
+                                   channel_id, read_pool_);
     }
 
  protected:
@@ -288,7 +288,7 @@ TEST_P(SpillReaderWriterTest, TestReaderSchemaMismatchErrors) {
         auto wrong_key_schema = arrow::schema({arrow::field("nonexistent_key", arrow::utf8())});
         ASSERT_OK_AND_ASSIGN(auto reader,
                              SpillReader::Create(file_system_, wrong_key_schema, value_schema_,
-                                                 read_pool_, channel_id));
+                                                 /*use_threads=*/false, channel_id, read_pool_));
         ASSERT_NOK_WITH_MSG(reader->NextBatch(),
                             "cannot find key field nonexistent_key in spill file");
     }
@@ -297,7 +297,7 @@ TEST_P(SpillReaderWriterTest, TestReaderSchemaMismatchErrors) {
             {arrow::field("f0", arrow::utf8()), arrow::field("nonexistent_value", arrow::int32())});
         ASSERT_OK_AND_ASSIGN(auto reader,
                              SpillReader::Create(file_system_, key_schema_, wrong_value_schema,
-                                                 read_pool_, channel_id));
+                                                 /*use_threads=*/false, channel_id, read_pool_));
         ASSERT_NOK_WITH_MSG(reader->NextBatch(),
                             "cannot find value field nonexistent_value in spill file");
     }

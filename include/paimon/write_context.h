@@ -40,8 +40,8 @@ class PAIMON_EXPORT WriteContext {
  public:
     WriteContext(const std::string& root_path, const std::string& commit_user,
                  bool is_streaming_mode, bool ignore_num_bucket_check, bool ignore_previous_files,
-                 const std::optional<int32_t>& write_id, const std::string& branch,
-                 const std::vector<std::string>& write_schema,
+                 bool enable_multi_thread_spill, const std::optional<int32_t>& write_id,
+                 const std::string& branch, const std::vector<std::string>& write_schema,
                  const std::shared_ptr<MemoryPool>& memory_pool,
                  const std::shared_ptr<Executor>& executor, const std::string& temp_directory,
                  const std::shared_ptr<FileSystem>& specific_file_system,
@@ -106,6 +106,10 @@ class PAIMON_EXPORT WriteContext {
         return specific_file_system_;
     }
 
+    bool EnableMultiThreadSpill() const {
+        return enable_multi_thread_spill_;
+    }
+
  private:
     std::string root_path_;
     std::string commit_user_;
@@ -113,6 +117,7 @@ class PAIMON_EXPORT WriteContext {
     bool is_streaming_mode_;
     bool ignore_num_bucket_check_;
     bool ignore_previous_files_;
+    bool enable_multi_thread_spill_;
     std::optional<int32_t> write_id_;
     std::vector<std::string> write_schema_;
     std::shared_ptr<MemoryPool> memory_pool_;
@@ -221,6 +226,13 @@ class PAIMON_EXPORT WriteContextBuilder {
     ///
     WriteContextBuilder& WithFileSystemSchemeToIdentifierMap(
         const std::map<std::string, std::string>& fs_scheme_to_identifier_map);
+
+    /// Set the thread number for write buffer spill operations. (default is 0)
+    /// If <= 0, threading is disabled for spill IPC read/write.
+    /// If > 0, sets arrow CPU thread pool capacity for spill operations.
+    /// @param thread_number The thread number to use for spill operations.
+    /// @return Reference to this builder for method chaining.
+    WriteContextBuilder& SetWriteBufferSpillThreadNumber(int32_t thread_number);
 
     /// Build and return a `WriteContext` instance with input validation.
     /// @return Result containing the constructed `WriteContext` or an error status.

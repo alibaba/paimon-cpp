@@ -18,6 +18,7 @@ if(_PAIMON_RAPIDJSON_ROOTS)
     set(_PAIMON_RAPIDJSON_FIND_ARGS HINTS ${_PAIMON_RAPIDJSON_ROOTS} NO_DEFAULT_PATH)
 endif()
 
+include(FindPackageUtils)
 find_package(RapidJSON CONFIG QUIET ${_PAIMON_RAPIDJSON_FIND_ARGS})
 
 set(_PAIMON_RAPIDJSON_TARGETS RapidJSON RapidJSON::RapidJSON)
@@ -29,12 +30,20 @@ foreach(_target IN LISTS _PAIMON_RAPIDJSON_TARGETS)
 endforeach()
 
 if(_PAIMON_RAPIDJSON_TARGET)
-    if(NOT TARGET RapidJSON)
+    paimon_find_target_headers(RAPIDJSON_INCLUDE_DIR
+                               ${_PAIMON_RAPIDJSON_TARGET}
+                               NAMES
+                               rapidjson/rapidjson.h
+                               ${_PAIMON_RAPIDJSON_FIND_ARGS})
+
+    include(FindPackageHandleStandardArgs)
+    find_package_handle_standard_args(RapidJSONAlt REQUIRED_VARS RAPIDJSON_INCLUDE_DIR)
+
+    if(RapidJSONAlt_FOUND AND NOT TARGET RapidJSON)
         add_library(RapidJSON INTERFACE IMPORTED)
+        target_include_directories(RapidJSON INTERFACE "${RAPIDJSON_INCLUDE_DIR}")
         target_link_libraries(RapidJSON INTERFACE ${_PAIMON_RAPIDJSON_TARGET})
     endif()
-    get_target_property(RAPIDJSON_INCLUDE_DIR RapidJSON INTERFACE_INCLUDE_DIRECTORIES)
-    set(RapidJSONAlt_FOUND TRUE)
 else()
     find_path(RAPIDJSON_INCLUDE_DIR
               NAMES rapidjson/rapidjson.h ${_PAIMON_RAPIDJSON_FIND_ARGS}

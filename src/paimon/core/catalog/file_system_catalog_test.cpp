@@ -90,7 +90,7 @@ TEST(FileSystemCatalogTest, TestCreateSystemDatabaseAndTable) {
                                                    /*ignore_if_exists=*/true),
                             "Cannot create database for system database");
     }
-    // do not support create system table
+    /// Do not support create system table.
     {
         std::map<std::string, std::string> options;
         options[Options::FILE_SYSTEM] = "local";
@@ -278,6 +278,100 @@ TEST(FileSystemCatalogTest, TestAuditLogAndBinlogSystemTableCatalog) {
     ArrowSchemaRelease(&system_create_schema);
     ASSERT_NOK_WITH_MSG(catalog.DropTable(binlog_identifier, false), "Cannot drop system table");
     ASSERT_NOK_WITH_MSG(catalog.RenameTable(audit_log_identifier, Identifier("db1", "tbl2"), false),
+                        "Cannot rename system table");
+}
+
+TEST(FileSystemCatalogTest, TestMetadataSystemTableCatalog) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
+
+    auto typed_schema =
+        arrow::schema({arrow::field("pk", arrow::utf8()), arrow::field("v", arrow::int32())});
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &schema).ok());
+    ASSERT_OK(catalog.CreateTable(Identifier("db1", "tbl1"), &schema,
+                                  /*partition_keys=*/{}, /*primary_keys=*/{"pk"}, options,
+                                  /*ignore_if_exists=*/false));
+    ArrowSchemaRelease(&schema);
+
+    std::vector<std::string> metadata_tables = {"snapshots", "schemas", "tags", "branches",
+                                                "consumers"};
+    for (const auto& table_name : metadata_tables) {
+        Identifier system_identifier("db1", "tbl1$" + table_name);
+        ASSERT_OK_AND_ASSIGN(bool exists, catalog.TableExists(system_identifier));
+        ASSERT_TRUE(exists) << table_name;
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> system_schema,
+                             catalog.LoadTableSchema(system_identifier));
+        ASSERT_TRUE(std::dynamic_pointer_cast<SystemTableSchema>(system_schema) != nullptr)
+            << table_name;
+        ASSERT_OK_AND_ASSIGN(auto c_schema, system_schema->GetArrowSchema());
+        auto loaded_schema_result = arrow::ImportSchema(c_schema.get());
+        ASSERT_TRUE(loaded_schema_result.ok()) << loaded_schema_result.status().ToString();
+        ASSERT_GT(loaded_schema_result.ValueUnsafe()->num_fields(), 0) << table_name;
+    }
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> snapshots_schema,
+                         catalog.LoadTableSchema(Identifier("db1", "tbl1$snapshots")));
+    ASSERT_OK_AND_ASSIGN(auto snapshots_c_schema, snapshots_schema->GetArrowSchema());
+    auto snapshots_arrow_schema = arrow::ImportSchema(snapshots_c_schema.get()).ValueUnsafe();
+    ASSERT_EQ(snapshots_arrow_schema->field_names(),
+              (std::vector<std::string>{
+                  "snapshot_id", "schema_id", "commit_user", "commit_identifier", "commit_kind",
+                  "commit_time", "base_manifest_list", "delta_manifest_list",
+                  "changelog_manifest_list", "total_record_count", "delta_record_count",
+                  "changelog_record_count", "watermark", "next_row_id"}));
+    ASSERT_EQ(snapshots_arrow_schema->field(5)->type()->id(), arrow::Type::TIMESTAMP);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> schemas_schema,
+                         catalog.LoadTableSchema(Identifier("db1", "tbl1$schemas")));
+    ASSERT_OK_AND_ASSIGN(auto schemas_c_schema, schemas_schema->GetArrowSchema());
+    auto schemas_arrow_schema = arrow::ImportSchema(schemas_c_schema.get()).ValueUnsafe();
+    ASSERT_EQ(schemas_arrow_schema->field_names(),
+              (std::vector<std::string>{"schema_id", "fields", "partition_keys", "primary_keys",
+                                        "options", "comment", "update_time"}));
+    ASSERT_EQ(schemas_arrow_schema->field(6)->type()->id(), arrow::Type::TIMESTAMP);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> tags_schema,
+                         catalog.LoadTableSchema(Identifier("db1", "tbl1$tags")));
+    ASSERT_OK_AND_ASSIGN(auto tags_c_schema, tags_schema->GetArrowSchema());
+    auto tags_arrow_schema = arrow::ImportSchema(tags_c_schema.get()).ValueUnsafe();
+    ASSERT_EQ(tags_arrow_schema->field_names(),
+              (std::vector<std::string>{"tag_name", "snapshot_id", "schema_id", "commit_time",
+                                        "record_count", "create_time", "time_retained"}));
+    ASSERT_EQ(tags_arrow_schema->field(3)->type()->id(), arrow::Type::TIMESTAMP);
+    ASSERT_EQ(tags_arrow_schema->field(5)->type()->id(), arrow::Type::TIMESTAMP);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> branches_schema,
+                         catalog.LoadTableSchema(Identifier("db1", "tbl1$branches")));
+    ASSERT_OK_AND_ASSIGN(auto branches_c_schema, branches_schema->GetArrowSchema());
+    auto branches_arrow_schema = arrow::ImportSchema(branches_c_schema.get()).ValueUnsafe();
+    ASSERT_EQ(branches_arrow_schema->field_names(),
+              (std::vector<std::string>{"branch_name", "create_time"}));
+    ASSERT_EQ(branches_arrow_schema->field(1)->type()->id(), arrow::Type::TIMESTAMP);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> consumers_schema,
+                         catalog.LoadTableSchema(Identifier("db1", "tbl1$consumers")));
+    ASSERT_OK_AND_ASSIGN(auto consumers_c_schema, consumers_schema->GetArrowSchema());
+    auto consumers_arrow_schema = arrow::ImportSchema(consumers_c_schema.get()).ValueUnsafe();
+    ASSERT_EQ(consumers_arrow_schema->field_names(),
+              (std::vector<std::string>{"consumer_id", "next_snapshot_id"}));
+    ASSERT_FALSE(consumers_arrow_schema->field(1)->nullable());
+
+    Identifier snapshots_identifier("db1", "tbl1$snapshots");
+    ::ArrowSchema system_create_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &system_create_schema).ok());
+    ASSERT_NOK_WITH_MSG(
+        catalog.CreateTable(snapshots_identifier, &system_create_schema, {}, {}, options, false),
+        "Cannot create table for system table");
+    ArrowSchemaRelease(&system_create_schema);
+    ASSERT_NOK_WITH_MSG(catalog.DropTable(snapshots_identifier, false), "Cannot drop system table");
+    ASSERT_NOK_WITH_MSG(catalog.RenameTable(snapshots_identifier, Identifier("db1", "tbl2"), false),
                         "Cannot rename system table");
 }
 
@@ -625,7 +719,7 @@ TEST(FileSystemCatalogTest, TestDropTable) {
     ASSERT_OK_AND_ASSIGN(bool exist, catalog.TableExists(Identifier("test_db", "tbl1")));
     ASSERT_FALSE(exist);
 
-    // Test 4: Drop system table
+    /// Test 4: Drop system table.
     ASSERT_NOK_WITH_MSG(
         catalog.DropTable(Identifier("test_db", "tbl$system"),
                           /*ignore_if_not_exists=*/false),
@@ -691,7 +785,7 @@ TEST(FileSystemCatalogTest, TestRenameTable) {
                             /*ignore_if_not_exists=*/false),
         "Cannot rename table across databases. Cross-database rename is not supported.");
 
-    // Test 6: Rename system table
+    /// Test 6: Rename system table.
     ASSERT_NOK_WITH_MSG(catalog.RenameTable(Identifier("test_db", "tbl$system"),
                                             Identifier("test_db", "new_system_tbl"),
                                             /*ignore_if_not_exists=*/false),

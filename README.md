@@ -23,17 +23,20 @@ Paimon C++ is a high-performance C++ implementation of [Apache Paimon](https://p
 
 ## What's in the Paimon C++ library
 
-* Write: Paimon append table and primary key table write (without compaction).
-* Commit: Paimon append table commit. (Note: Limited support — only works for simple append-only tables; table with compaction, index, changelog, and stats are not supported.)
-* Scan: Paimon append and primary key table batch and stream scan (without changelog).
-* Read: Paimon append table read and primary key table with deletion vector read (raw read) and primary key table with merge on read (merge read).
-* Batch read and write interface using the [Arrow Columnar In-Memory Format](https://arrow.apache.org) to increase throughput.
-* IO interfaces to file system and built-in local and jindo file system implementation.
-* File format interfaces to customize different format and built-in orc, parquet and lance format implementation.
-* Memory pool interfaces and a default implementation.
-* Thread pool executor interfaces and a default implementation.
-* Compatible with Java Paimon format and communication protocol (e.g., commit message, data splits, manifests).
-* Note: The current implementation only supports the x86_64 architecture.
+- **Write**: append table and primary key table write support with compaction.
+- **Commit**: append table commit support for simple append-only tables.
+- **Scan**: batch and stream scan for append tables and primary key tables without changelog.
+- **Read**: append table read, primary key table read with deletion vector, and primary key table
+  merge-on-read.
+- **Arrow integration**: batch read and write interfaces based on the [Arrow Columnar In-Memory Format](https://arrow.apache.org).
+- **File systems**: file system abstraction with built-in local and Jindo file system support.
+- **File formats**: file format abstraction with built-in ORC, Parquet, and Avro support.
+- **Runtime utilities**: memory pool and thread pool abstractions with default implementations.
+- **AI-Oriented Features**: supports RowTracking and DataEvolution mode and provides Global Index capabilities including bitmap index, B-tree index, DiskANN-based vector search with Lumina, and Lucene-based full-text search.
+- **Compatibility**: compatibility with Apache Paimon Java format and communication protocols,
+  including commit messages, data splits, and manifests.
+
+Note: The current implementation only supports the x86_64 architecture.
 
 ## Write And Commit Example
 
@@ -58,8 +61,8 @@ The writing is divided into two stages:
     // ...
     RecordBatchBuilder batch_builder(&arrow_array);
     batch_builder.SetPartition({{"col1", "20240813"}, {"col2", "23"}}).SetBucket(1);
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RecordBatch> batch, batch_builder.Finish());
-    PAIMON_RETURN_NOT_OK(file_store_write->Write(batch));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<RecordBatch> batch, batch_builder.Finish());
+    PAIMON_RETURN_NOT_OK(file_store_write->Write(std::move(batch)));
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<CommitMessage>> commit_messages,
                            file_store_write->PrepareCommit());
 
@@ -96,7 +99,7 @@ The reading is divided into two stages:
                            TableScan::Create(std::move(scan_context)));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Plan> plan, table_scan->CreatePlan());
 
-    ReadContextBuilder read_context_builder(table_path, /*schema_id=*/0);
+    ReadContextBuilder read_context_builder(table_path);
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
                            read_context_builder.SetReadSchema({"f0", "f1"})
                                .SetPredicate(predicate)
@@ -160,13 +163,15 @@ The supported dependency source values are:
 
 You can also override individual dependencies. The supported dependency set
 includes Arrow/Parquet, ORC, Protobuf, Avro, RE2, fmt, RapidJSON, TBB, glog,
-GoogleTest, and compression libraries.
+GoogleTest, and compression libraries. Arrow and ORC require project-specific
+patches, so their supported source values are `AUTO` and `BUNDLED`; `AUTO`
+resolves to bundled sources for them.
 
 ```
 $ cmake -B build \
   -DPAIMON_DEPENDENCY_SOURCE=AUTO \
-  -DArrow_SOURCE=SYSTEM \
-  -DArrow_ROOT=/opt/arrow \
+  -Dfmt_SOURCE=SYSTEM \
+  -Dfmt_ROOT=/opt/fmt \
   -Dzstd_SOURCE=BUNDLED
 ```
 
@@ -184,16 +189,14 @@ dependency source interface. They can still be used through standard CMake
 mechanisms such as `CMAKE_PREFIX_PATH` or `CMAKE_TOOLCHAIN_FILE`, while Paimon
 keeps the dependency source values limited to `AUTO`, `BUNDLED`, and `SYSTEM`.
 
-When `Arrow_SOURCE` is explicitly set to `SYSTEM` or `BUNDLED`, the compression
-dependencies default to the same source unless individually overridden. Mixing
-system and bundled copies of transitive dependencies can cause ABI conflicts,
-so prefer keeping Arrow and its compression dependencies from the same source
-unless you have a specific reason to override them.
+When `Arrow_SOURCE` is explicitly set to `BUNDLED` or left as `AUTO`, the
+compression dependencies default to bundled sources unless individually
+overridden. Mixing system and bundled copies of transitive dependencies can
+cause ABI conflicts, so prefer keeping Arrow and its compression dependencies
+from the same source unless you have a specific reason to override them.
 
-When `ORC_SOURCE` is explicitly set, `Protobuf_SOURCE` defaults to the same
-source unless individually overridden. In `AUTO` mode, Paimon prechecks for a
-system ORC installation and defaults Protobuf to `SYSTEM` only when system ORC
-is found; otherwise Protobuf stays bundled with bundled ORC.
+When `ORC_SOURCE` is explicitly set to `BUNDLED` or left as `AUTO`,
+`Protobuf_SOURCE` defaults to bundled sources unless individually overridden.
 
 CMake prints a dependency resolution summary during configuration showing the
 requested source, actual source, compatibility target, and search root for each

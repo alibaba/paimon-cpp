@@ -28,20 +28,22 @@ namespace paimon {
 
 SpillReader::SpillReader(const std::shared_ptr<FileSystem>& fs,
                          const std::shared_ptr<arrow::Schema>& key_schema,
-                         const std::shared_ptr<arrow::Schema>& value_schema,
+                         const std::shared_ptr<arrow::Schema>& value_schema, bool use_threads,
                          const std::shared_ptr<MemoryPool>& pool)
     : fs_(fs),
       key_schema_(key_schema),
       value_schema_(value_schema),
       pool_(pool),
       arrow_pool_(GetArrowPool(pool)),
+      use_threads_(use_threads),
       metrics_(std::make_shared<MetricsImpl>()) {}
 
 Result<std::unique_ptr<SpillReader>> SpillReader::Create(
     const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<arrow::Schema>& key_schema,
-    const std::shared_ptr<arrow::Schema>& value_schema, const std::shared_ptr<MemoryPool>& pool,
-    const FileIOChannel::ID& channel_id) {
-    std::unique_ptr<SpillReader> reader(new SpillReader(fs, key_schema, value_schema, pool));
+    const std::shared_ptr<arrow::Schema>& value_schema, bool use_threads,
+    const FileIOChannel::ID& channel_id, const std::shared_ptr<MemoryPool>& pool) {
+    std::unique_ptr<SpillReader> reader(
+        new SpillReader(fs, key_schema, value_schema, use_threads, pool));
     PAIMON_RETURN_NOT_OK(reader->Open(channel_id));
     return reader;
 }
@@ -55,6 +57,7 @@ Status SpillReader::Open(const FileIOChannel::ID& channel_id) {
         std::make_shared<ArrowInputStreamAdapter>(in_stream_, arrow_pool_, file_len);
     auto ipc_read_options = arrow::ipc::IpcReadOptions::Defaults();
     ipc_read_options.memory_pool = arrow_pool_.get();
+    ipc_read_options.use_threads = use_threads_;
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
         arrow_reader_,
         arrow::ipc::RecordBatchFileReader::Open(arrow_input_stream_adapter_, ipc_read_options));

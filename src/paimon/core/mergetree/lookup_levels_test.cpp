@@ -81,12 +81,12 @@ class LookupLevelsTest : public testing::Test {
             std::make_shared<ReducerMergeFunctionWrapper>(std::move(mfunc));
 
         PAIMON_ASSIGN_OR_RAISE(
-            auto writer,
-            MergeTreeWriter::Create(/*last_sequence_number=*/last_sequence_number,
-                                    std::vector<std::string>({"key"}), data_path_factory,
-                                    key_comparator, /*user_defined_seq_comparator=*/nullptr,
-                                    merge_function_wrapper, /*schema_id=*/0, arrow_schema_, options,
-                                    noop_compact_manager_, /*io_manager=*/nullptr, pool_));
+            auto writer, MergeTreeWriter::Create(
+                             /*last_sequence_number=*/last_sequence_number,
+                             std::vector<std::string>({"key"}), data_path_factory, key_comparator,
+                             /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper,
+                             /*schema_id=*/0, arrow_schema_, options, noop_compact_manager_,
+                             /*io_manager=*/nullptr, /*enable_multi_thread_spill=*/false, pool_));
 
         // write data
         ArrowArray c_src_array;

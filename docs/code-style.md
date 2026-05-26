@@ -28,6 +28,21 @@ This document defines the coding conventions for the paimon-cpp project. All pul
 
 ---
 
+## Integer Types
+
+Use **fixed-width integer types** from `<cstdint>`. Do **not** use plain `int`, `long`, `short`, or `unsigned`.
+
+| Use | Instead of |
+|-----|-----------|
+| `int8_t` / `uint8_t` | `char` (for numeric data) |
+| `int16_t` / `uint16_t` | `short` |
+| `int32_t` / `uint32_t` | `int` / `unsigned int` |
+| `int64_t` / `uint64_t` | `long` / `long long` |
+
+**Exception**: Loop variables iterating over small, bounded ranges (e.g. `for (int32_t i = 0; i < n; ++i)`) must still use `int32_t`, not `int`.
+
+---
+
 ## Formatting
 
 Formatting is based on **Google C++ Style** with the following overrides (defined in `.clang-format`):

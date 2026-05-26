@@ -411,50 +411,97 @@ Status SchemaValidation::ValidateRowTracking(const TableSchema& table_schema,
             !options.DeletionVectorsEnabled(),
             "Data evolution config must disabled with deletion-vectors.enabled"));
     }
+
+    std::vector<std::string> blob_names;
+    for (const auto& field : table_schema.Fields()) {
+        if (BlobUtils::IsBlobField(field.ArrowField())) {
+            blob_names.push_back(field.Name());
+        }
+    }
+    if (!blob_names.empty()) {
+        // Validate blob fields cannot be partition keys
+        for (const auto& blob_field_name : blob_names) {
+            if (std::find(table_schema.PartitionKeys().begin(), table_schema.PartitionKeys().end(),
+                          blob_field_name) != table_schema.PartitionKeys().end()) {
+                return Status::Invalid(
+                    fmt::format("Blob field {} cannot be a partition key.", blob_field_name));
+            }
+        }
+
+        // Validate data evolution must be enabled when blob-field is configured
+        PAIMON_RETURN_NOT_OK(Preconditions::CheckState(
+            options.DataEvolutionEnabled(),
+            "Data evolution config must be enabled for table with BLOB type column."));
+        PAIMON_RETURN_NOT_OK(Preconditions::CheckState(
+            table_schema.Fields().size() > blob_names.size(),
+            "Table with BLOB type column must have other normal columns."));
+    }
     return Status::OK();
 }
 
 Status SchemaValidation::ValidateBlobFields(const TableSchema& schema, const CoreOptions& options) {
     const auto& configured_blob_names = options.GetBlobFields();
-    if (configured_blob_names.empty()) {
+    const auto& blob_descriptor_names = options.GetBlobDescriptorFields();
+    const auto& blob_view_names = options.GetBlobViewFields();
+    const auto& blob_external_storage_names = options.GetBlobExternalStorageFields();
+    std::vector<std::string> configured_blob_like_names = configured_blob_names;
+    configured_blob_like_names.insert(configured_blob_like_names.end(),
+                                      blob_descriptor_names.begin(), blob_descriptor_names.end());
+    configured_blob_like_names.insert(configured_blob_like_names.end(), blob_view_names.begin(),
+                                      blob_view_names.end());
+    if (configured_blob_like_names.empty() && blob_external_storage_names.empty()) {
         return Status::OK();
     }
 
-    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> blob_fields,
-                           schema.GetFields(configured_blob_names));
-    for (const auto& blob_field : blob_fields) {
-        if (!BlobUtils::IsBlobField(blob_field.ArrowField())) {
-            return Status::Invalid(
-                fmt::format("Field {} in {} must be a BLOB field in table schema.",
-                            blob_field.Name(), fmt::join(configured_blob_names, ", ")));
+    auto validate_blob_fields = [&](const std::vector<std::string>& field_names,
+                                    const std::string& option_key) -> Status {
+        if (field_names.empty()) {
+            return Status::OK();
         }
-    }
-
-    // Validate no duplicate blob field names
-    PAIMON_RETURN_NOT_OK(ValidateNoDuplicateField(configured_blob_names, "blob field"));
-
-    // Validate blob fields cannot be primary keys or partition keys
-    for (const auto& blob_field_name : configured_blob_names) {
-        if (std::find(schema.PrimaryKeys().begin(), schema.PrimaryKeys().end(), blob_field_name) !=
-            schema.PrimaryKeys().end()) {
-            return Status::Invalid(
-                fmt::format("Blob field {} cannot be a primary key.", blob_field_name));
+        PAIMON_RETURN_NOT_OK(ValidateNoDuplicateField(field_names, option_key));
+        PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> blob_fields, schema.GetFields(field_names));
+        for (const auto& blob_field : blob_fields) {
+            if (!BlobUtils::IsBlobField(blob_field.ArrowField())) {
+                return Status::Invalid(
+                    fmt::format("Field '{}' in '{}' must be a BLOB field in table schema.",
+                                blob_field.Name(), option_key));
+            }
         }
-        if (std::find(schema.PartitionKeys().begin(), schema.PartitionKeys().end(),
-                      blob_field_name) != schema.PartitionKeys().end()) {
-            return Status::Invalid(
-                fmt::format("Blob field {} cannot be a partition key.", blob_field_name));
-        }
-    }
+        return Status::OK();
+    };
 
-    // Validate data evolution must be enabled when blob-field is configured
-    PAIMON_RETURN_NOT_OK(Preconditions::CheckState(
-        options.DataEvolutionEnabled(),
-        "Data evolution config must be enabled for table with BLOB type column."));
+    PAIMON_RETURN_NOT_OK(validate_blob_fields(configured_blob_names, Options::BLOB_FIELD));
     PAIMON_RETURN_NOT_OK(
-        Preconditions::CheckState(schema.Fields().size() > configured_blob_names.size(),
-                                  "Table with BLOB type column must have other normal columns."));
-    // TODO(xinyu.lxy): validate blob-descriptor-field and blob-view-field
+        validate_blob_fields(blob_descriptor_names, Options::BLOB_DESCRIPTOR_FIELD));
+    PAIMON_RETURN_NOT_OK(validate_blob_fields(blob_view_names, Options::BLOB_VIEW_FIELD));
+    PAIMON_RETURN_NOT_OK(
+        validate_blob_fields(blob_external_storage_names, Options::BLOB_EXTERNAL_STORAGE_FIELD));
+
+    std::set<std::string> blob_descriptor_name_set(blob_descriptor_names.begin(),
+                                                   blob_descriptor_names.end());
+    for (const auto& blob_view_name : blob_view_names) {
+        if (blob_descriptor_name_set.count(blob_view_name) > 0) {
+            return Status::Invalid(fmt::format("Field '{}' in '{}' can not also be in '{}'.",
+                                               blob_view_name, Options::BLOB_VIEW_FIELD,
+                                               Options::BLOB_DESCRIPTOR_FIELD));
+        }
+    }
+
+    for (const auto& blob_external_storage_name : blob_external_storage_names) {
+        if (blob_descriptor_name_set.count(blob_external_storage_name) == 0) {
+            return Status::Invalid(
+                fmt::format("Field '{}' in '{}' must also be in '{}'.", blob_external_storage_name,
+                            Options::BLOB_EXTERNAL_STORAGE_FIELD, Options::BLOB_DESCRIPTOR_FIELD));
+        }
+    }
+    if (!blob_external_storage_names.empty()) {
+        auto external_storage_path = options.GetBlobExternalStoragePath();
+        if (!external_storage_path || external_storage_path->empty()) {
+            return Status::Invalid(fmt::format("'{}' must be set when '{}' is configured.",
+                                               Options::BLOB_EXTERNAL_STORAGE_PATH,
+                                               Options::BLOB_EXTERNAL_STORAGE_FIELD));
+        }
+    }
     return Status::OK();
 }
 

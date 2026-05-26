@@ -173,7 +173,7 @@ class FileSystemTest : public ::testing::Test, public ::testing::WithParamInterf
     std::string test_root_;
 };
 
-TEST_P(FileSystemTest, TestNoneFileSystemFactory) {
+TEST(FileSystemStaticTest, TestNoneFileSystemFactory) {
     std::map<std::string, std::string> fs_options;
     Result<std::unique_ptr<FileSystem>> fs =
         FileSystemFactory::Get("not exist", "/tmp", fs_options);
@@ -516,7 +516,7 @@ TEST_P(FileSystemTest, TestReadAndWriteAndAtomicStoreFile) {
     ASSERT_EQ(read_content, new_content);
 }
 
-TEST_P(FileSystemTest, TestIsObjectStore) {
+TEST(FileSystemStaticTest, TestIsObjectStore) {
     ASSERT_OK_AND_ASSIGN(bool is_object_store, FileSystem::IsObjectStore("file:///tmp/test.txt"));
     ASSERT_FALSE(is_object_store);
     ASSERT_OK_AND_ASSIGN(is_object_store, FileSystem::IsObjectStore("/tmp/test.txt"));

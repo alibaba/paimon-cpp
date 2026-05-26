@@ -176,10 +176,10 @@ class MergeTreeWriterTest : public ::testing::TestWithParam<bool> {
             compact_manager ? compact_manager : noop_compact_manager_;
         std::shared_ptr<IOManager> io_manager =
             GetParam() ? std::make_shared<IOManager>(temp_dir + "/tmp", file_system_) : nullptr;
-        return MergeTreeWriter::Create(last_sequence_number, primary_keys_, path_factory,
-                                       key_comparator_, user_defined_seq_comparator,
-                                       merge_function_wrapper_, schema_id, value_schema_, options,
-                                       writer_compact_manager, io_manager, pool_);
+        return MergeTreeWriter::Create(
+            last_sequence_number, primary_keys_, path_factory, key_comparator_,
+            user_defined_seq_comparator, merge_function_wrapper_, schema_id, value_schema_, options,
+            writer_compact_manager, io_manager, /*enable_multi_thread_spill=*/false, pool_);
     }
 
  private:
@@ -1076,7 +1076,7 @@ TEST_P(MergeTreeWriterTest, TestCloseSkipsDeleteForUpgradedFilesInCompactAfter) 
         << "Intermediate file should be deleted because it's not in compact_before_";
 }
 
-TEST_P(MergeTreeWriterTest, TestSpillWithSameKeyDeduplicate) {
+TEST_F(MergeTreeWriterTest, TestSpillWithSameKeyDeduplicate) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"},
                                                {Options::WRITE_BUFFER_SIZE, "1"},
@@ -1094,7 +1094,8 @@ TEST_P(MergeTreeWriterTest, TestSpillWithSameKeyDeduplicate) {
         MergeTreeWriter::Create(/*last_sequence_number=*/-1, primary_keys_, path_factory,
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
-                                noop_compact_manager_, io_manager, pool_));
+                                noop_compact_manager_, io_manager,
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     std::shared_ptr<arrow::Array> batch1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1111,7 +1112,9 @@ TEST_P(MergeTreeWriterTest, TestSpillWithSameKeyDeduplicate) {
 
     WriteBatch(batch1, /*row_kinds=*/{}, merge_writer.get());
     WriteBatch(batch2, /*row_kinds=*/{}, merge_writer.get());
-    ASSERT_EQ(2u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
+    // WRITE_BUFFER_SIZE=1 causes UpdateSpillParameters() to clamp actual_max_fan_in_ to 2,
+    // triggering leveled merge after 2 spill files are produced, merging them into 1.
+    ASSERT_EQ(1u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 
     std::shared_ptr<arrow::Array> batch3 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1140,7 +1143,7 @@ TEST_P(MergeTreeWriterTest, TestSpillWithSameKeyDeduplicate) {
     CheckFileContent(expected_data_file_path, expected_array);
 }
 
-TEST_P(MergeTreeWriterTest, TestIntermediateMergeSpillFileBound) {
+TEST_F(MergeTreeWriterTest, TestIntermediateMergeSpillFileBound) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"},
                                                {Options::WRITE_BUFFER_SIZE, "1"},
@@ -1159,7 +1162,8 @@ TEST_P(MergeTreeWriterTest, TestIntermediateMergeSpillFileBound) {
         MergeTreeWriter::Create(/*last_sequence_number=*/-1, primary_keys_, path_factory,
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
-                                noop_compact_manager_, io_manager, pool_));
+                                noop_compact_manager_, io_manager,
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     std::shared_ptr<arrow::Array> batch1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1178,13 +1182,16 @@ TEST_P(MergeTreeWriterTest, TestIntermediateMergeSpillFileBound) {
             .ValueOrDie();
 
     WriteBatch(batch1, /*row_kinds=*/{}, merge_writer.get());
+    // Level 0: [A], total = 1
     ASSERT_EQ(1u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 
     WriteBatch(batch2, /*row_kinds=*/{}, merge_writer.get());
+    // Level 0: [A,B] hits max_fan_in=2, merge -> Level 0: [], Level 1: [C], total = 1
     ASSERT_EQ(1u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 
     WriteBatch(batch3, /*row_kinds=*/{}, merge_writer.get());
-    ASSERT_EQ(1u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
+    // Level 0: [D], Level 1: [C], total = 2 (no single level exceeds max_fan_in)
+    ASSERT_EQ(2u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 
     ASSERT_OK_AND_ASSIGN(CommitIncrement commit_increment,
                          merge_writer->PrepareCommit(/*wait_compaction=*/false));
@@ -1203,7 +1210,7 @@ TEST_P(MergeTreeWriterTest, TestIntermediateMergeSpillFileBound) {
     CheckFileContent(expected_data_file_path, expected_array);
 }
 
-TEST_P(MergeTreeWriterTest, TestDiskQuotaExhaustedFallsBackToFlushWriteBuffer) {
+TEST_F(MergeTreeWriterTest, TestDiskQuotaExhaustedFallsBackToFlushWriteBuffer) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"},
                                                {Options::WRITE_BUFFER_SIZE, "1"},
@@ -1221,7 +1228,8 @@ TEST_P(MergeTreeWriterTest, TestDiskQuotaExhaustedFallsBackToFlushWriteBuffer) {
         MergeTreeWriter::Create(/*last_sequence_number=*/-1, primary_keys_, path_factory,
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
-                                noop_compact_manager_, io_manager, pool_));
+                                noop_compact_manager_, io_manager,
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     // Phase 1: Manual FlushMemory path — disk quota exhausted causes fallback.
     std::shared_ptr<arrow::Array> array1 =
@@ -1277,7 +1285,7 @@ TEST_P(MergeTreeWriterTest, TestDiskQuotaExhaustedFallsBackToFlushWriteBuffer) {
     }
 }
 
-TEST_P(MergeTreeWriterTest, TestFlushMemoryQuotaExhaustedFallsBackToFlushWriteBuffer) {
+TEST_F(MergeTreeWriterTest, TestFlushMemoryQuotaExhaustedFallsBackToFlushWriteBuffer) {
     // WRITE_BUFFER_SIZE is large enough so WriteBatch does NOT auto-spill.
     // SPILL_MAX_DISK_SIZE is tiny so the first FlushMemory() exhausts the quota,
     // triggering the fallback path: FlushMemory() -> quota exhausted -> FlushWriteBuffer.
@@ -1298,7 +1306,8 @@ TEST_P(MergeTreeWriterTest, TestFlushMemoryQuotaExhaustedFallsBackToFlushWriteBu
         MergeTreeWriter::Create(/*last_sequence_number=*/-1, primary_keys_, path_factory,
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
-                                noop_compact_manager_, io_manager, pool_));
+                                noop_compact_manager_, io_manager,
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     std::shared_ptr<arrow::Array> array =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1324,7 +1333,7 @@ TEST_P(MergeTreeWriterTest, TestFlushMemoryQuotaExhaustedFallsBackToFlushWriteBu
     ASSERT_OK(merge_writer->Close());
 }
 
-TEST_P(MergeTreeWriterTest, TestCloseDeletesSpillTempFiles) {
+TEST_F(MergeTreeWriterTest, TestCloseDeletesSpillTempFiles) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"},
                                                {Options::WRITE_BUFFER_SIZE, "1"},
@@ -1341,7 +1350,8 @@ TEST_P(MergeTreeWriterTest, TestCloseDeletesSpillTempFiles) {
         MergeTreeWriter::Create(/*last_sequence_number=*/-1, primary_keys_, path_factory,
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
-                                noop_compact_manager_, io_manager, pool_));
+                                noop_compact_manager_, io_manager,
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     std::shared_ptr<arrow::Array> array =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1356,7 +1366,7 @@ TEST_P(MergeTreeWriterTest, TestCloseDeletesSpillTempFiles) {
     ASSERT_EQ(0u, TestHelper::CountChannelFiles(file_system_, dir->Str() + "/tmp"));
 }
 
-TEST_P(MergeTreeWriterTest, TestMultiplePrepareCommitWithSpill) {
+TEST_F(MergeTreeWriterTest, TestMultiplePrepareCommitWithSpill) {
     ASSERT_OK_AND_ASSIGN(
         CoreOptions options,
         CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}, {Options::WRITE_ONLY, "true"}}));
@@ -1373,7 +1383,8 @@ TEST_P(MergeTreeWriterTest, TestMultiplePrepareCommitWithSpill) {
         MergeTreeWriter::Create(/*last_sequence_number=*/-1, primary_keys_, path_factory,
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
-                                noop_compact_manager_, io_manager, pool_));
+                                noop_compact_manager_, io_manager,
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     std::shared_ptr<arrow::Array> array1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1426,6 +1437,92 @@ TEST_P(MergeTreeWriterTest, TestMultiplePrepareCommitWithSpill) {
     CheckFileContent(expected_path2, expected_array2);
 
     ASSERT_OK(merge_writer->Close());
+}
+
+TEST_F(MergeTreeWriterTest, TestSpillWithIOException) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"},
+                                               {Options::WRITE_BUFFER_SIZE, "1"},
+                                               {Options::WRITE_ONLY, "true"},
+                                               {Options::LOCAL_SORT_MAX_NUM_FILE_HANDLES, "2"}}));
+
+    bool run_complete = false;
+    auto io_hook = IOHook::GetInstance();
+    for (size_t i = 0; i < 2000; i++) {
+        auto dir = UniqueTestDirectory::Create();
+        ASSERT_TRUE(dir);
+        auto path_factory = std::make_shared<DataFilePathFactory>();
+        ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
+
+        std::shared_ptr<IOManager> io_manager =
+            std::make_shared<IOManager>(dir->Str() + "/tmp", file_system_);
+        ASSERT_OK_AND_ASSIGN(
+            auto merge_writer,
+            MergeTreeWriter::Create(/*last_sequence_number=*/-1, primary_keys_, path_factory,
+                                    key_comparator_, /*user_defined_seq_comparator=*/nullptr,
+                                    merge_function_wrapper_, /*schema_id=*/0, value_schema_,
+                                    options, noop_compact_manager_, io_manager,
+                                    /*enable_multi_thread_spill=*/false, pool_));
+
+        ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
+        io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
+        // Write 4 batches, each with 2 rows sharing the same key to exercise deduplication.
+        // Batch 1: triggers spill file 1
+        std::shared_ptr<arrow::Array> batch1 =
+            arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+                ["Alice", 1, 0, 1.0],
+                ["Bob", 2, 0, 2.0]
+            ])")
+                .ValueOrDie();
+        auto b1 = CreateBatch(batch1, {});
+        CHECK_HOOK_STATUS(merge_writer->Write(std::move(b1)), i);
+
+        // Batch 2: triggers spill file 2 → intermediate merge (merge 2 files into 1)
+        std::shared_ptr<arrow::Array> batch2 =
+            arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+                ["Alice", 10, 0, 10.0],
+                ["Charlie", 3, 0, 3.0]
+            ])")
+                .ValueOrDie();
+        auto b2 = CreateBatch(batch2, {});
+        CHECK_HOOK_STATUS(merge_writer->Write(std::move(b2)), i);
+
+        // Batch 3: triggers spill file at level 0 again
+        std::shared_ptr<arrow::Array> batch3 =
+            arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+                ["Bob", 20, 0, 20.0],
+                ["Dave", 4, 0, 4.0]
+            ])")
+                .ValueOrDie();
+        auto b3 = CreateBatch(batch3, {});
+        CHECK_HOOK_STATUS(merge_writer->Write(std::move(b3)), i);
+
+        // Batch 4: triggers spill file at level 0 → another merge at level 0,
+        // then level 1 has 2 files → merge at level 1 as well.
+        std::shared_ptr<arrow::Array> batch4 =
+            arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+                ["Charlie", 30, 0, 30.0],
+                ["Eve", 5, 0, 5.0]
+            ])")
+                .ValueOrDie();
+        auto b4 = CreateBatch(batch4, {});
+        CHECK_HOOK_STATUS(merge_writer->Write(std::move(b4)), i);
+
+        // PrepareCommit: triggers FlushWriteBuffer → CreateReaders (RunFinalCleanupIfNeeded)
+        // → sort merge → write output data file
+        auto commit_increment = merge_writer->PrepareCommit(/*wait_compaction=*/false);
+        CHECK_HOOK_STATUS(commit_increment.status(), i);
+        ASSERT_FALSE(commit_increment.value().GetNewFilesIncrement().NewFiles().empty());
+
+        // Verify deduplication: Alice(seq=2), Bob(seq=4), Charlie(seq=5), Dave(seq=6), Eve(seq=7)
+        ASSERT_EQ(1, commit_increment.value().GetNewFilesIncrement().NewFiles().size());
+        ASSERT_EQ(5, commit_increment.value().GetNewFilesIncrement().NewFiles()[0]->row_count);
+
+        ASSERT_OK(merge_writer->Close());
+        run_complete = true;
+        break;
+    }
+    ASSERT_TRUE(run_complete);
 }
 
 INSTANTIATE_TEST_SUITE_P(WithOptionalIOManager, MergeTreeWriterTest,
