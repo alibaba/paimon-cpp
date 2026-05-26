@@ -218,7 +218,6 @@ This product includes code from Apache Arrow.
 
 * Core utilities:
   * docs utilities in docs/ directory
-  * build support utilities in build_support/ directory
   * orc adapter in src/paimon/format/orc/orc_adapter.cpp and src/paimon/format/orc/orc_adapter.h
   * parquet schema convertor in src/paimon/format/parquet/parquet_schema_util.cpp and src/paimon/format/parquet/parquet_schema_util.h
   * basic utilities in
@@ -228,6 +227,20 @@ This product includes code from Apache Arrow.
     - include/paimon/string_builder.h
     - src/paimon/common/utils/status.cpp
   * Arrow C Data Interface in include/paimon/arrow/abi.h
+* Build support utilities:
+  * build_support/asan-suppressions.txt
+  * build_support/get-upstream-commit.sh
+  * build_support/iwyu/iwyu-filter.awk
+  * build_support/iwyu/iwyu.sh
+  * build_support/iwyu/mappings/*.imp
+  * build_support/lint_exclusions.txt
+  * build_support/lintutils.py
+  * build_support/lsan-suppressions.txt
+  * build_support/run_clang_format.py
+  * build_support/run_clang_tidy.py
+  * build_support/sanitizer-disallowed-entries.txt
+  * build_support/tsan-suppressions.txt
+  * build_support/ubsan-suppressions.txt
 * Build system modules:
   * cmake_modules/BuildUtils.cmake
   * cmake_modules/DefineOptions.cmake
@@ -239,6 +252,78 @@ This product includes code from Apache Arrow.
 Copyright: 2016-2024 The Apache Software Foundation.
 Home page: https://arrow.apache.org/
 License: https://www.apache.org/licenses/LICENSE-2.0
+
+--------------------------------------------------------------------------------
+
+This product includes code from LLVM compiler-rt.
+
+* AddressSanitizer symbolization utility:
+   * build_support/asan_symbolize.py
+
+Copyright: University of Illinois / LLVM contributors.
+License: University of Illinois/NCSA Open Source License.
+
+--------------------------------------------------------------------------------
+
+This product includes code from include-what-you-use.
+
+* IWYU driver utility:
+   * build_support/iwyu/iwyu_tool.py
+
+Copyright: 2003-2010 University of Illinois at Urbana-Champaign.
+License: University of Illinois/NCSA Open Source License.
+
+The University of Illinois/NCSA Open Source License
+
+Copyright (c) 2003-2010 University of Illinois at Urbana-Champaign.
+All rights reserved.
+
+Developed by:
+
+      LLVM Team
+
+      University of Illinois at Urbana-Champaign
+
+      http://llvm.org
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal with
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+      * Redistributions of source code must retain the above copyright notice,
+         this list of conditions and the following disclaimers.
+
+      * Redistributions in binary form must reproduce the above copyright notice,
+         this list of conditions and the following disclaimers in the
+         documentation and/or other materials provided with the distribution.
+
+      * Neither the names of the LLVM Team, University of Illinois at
+         Urbana-Champaign, nor the names of its contributors may be used to
+         endorse or promote products derived from this Software without specific
+         prior written permission.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+This product includes code from Apache Kudu / Cloudera build support utilities.
+
+* Test and stacktrace utilities:
+   * build_support/run-test.sh
+   * build_support/stacktrace_addr2line.pl
+
+Copyright: 2014 Cloudera, Inc.
+License: https://www.apache.org/licenses/LICENSE-2.0
+
 --------------------------------------------------------------------------------
 
 This product includes code from Apache ORC.
