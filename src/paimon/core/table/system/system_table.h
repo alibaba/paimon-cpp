@@ -16,56 +16,66 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
-#include <vector>
 
 #include "arrow/api.h"
-#include "paimon/reader/batch_reader.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 #include "paimon/type_fwd.h"
 
 namespace paimon {
 class FileSystem;
-class MemoryPool;
-class Split;
-class SystemTableRead;
+class ReadContext;
+class ScanContext;
 class TableScan;
+class TableRead;
 class TableSchema;
 
+/// Parsed information for a table-scoped system table path.
 struct SystemTablePath {
+    /// Base data table path without the system table suffix.
     std::string table_path;
+    /// Optional branch parsed from identifiers such as `T$branch_dev$options`.
     std::optional<std::string> branch;
+    /// System table name, for example `options` or `snapshots`.
     std::string system_table_name;
 };
 
+/// Base interface for table-scoped system tables such as `T$options` and `T$snapshots`.
+///
+/// Implementations expose a read-only schema and create their own scan/read objects.
 class SystemTable : public std::enable_shared_from_this<SystemTable> {
  public:
     virtual ~SystemTable() = default;
 
     virtual std::string Name() const = 0;
-    virtual std::shared_ptr<arrow::Schema> ArrowSchema() const = 0;
-    virtual Result<std::unique_ptr<TableScan>> NewScan() const = 0;
-    Result<std::unique_ptr<SystemTableRead>> NewRead(const std::shared_ptr<MemoryPool>& pool) const;
-    virtual Result<std::unique_ptr<BatchReader>> CreateBatchReader(
-        const std::vector<std::shared_ptr<Split>>& splits,
-        const std::shared_ptr<MemoryPool>& pool) const = 0;
+    virtual Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const = 0;
+    virtual Result<std::unique_ptr<TableScan>> NewScan(
+        const std::shared_ptr<ScanContext>& context) const = 0;
+    virtual Result<std::unique_ptr<TableRead>> NewRead(
+        const std::shared_ptr<ReadContext>& context) const = 0;
 };
 
+/// Loads system table implementations from parsed table identifiers or table paths.
+///
+/// The loader owns the registry that maps a system table name to its factory.
 class SystemTableLoader {
  public:
     static bool IsSupported(const std::string& system_table_name);
 
     static Result<std::shared_ptr<SystemTable>> Load(
         const std::string& system_table_name, const std::shared_ptr<FileSystem>& fs,
-        const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema);
+        const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
+        const std::map<std::string, std::string>& dynamic_options);
 
     static Result<std::optional<SystemTablePath>> TryParsePath(const std::string& path);
 
-    static Result<std::shared_ptr<SystemTable>> LoadFromPath(const std::shared_ptr<FileSystem>& fs,
-                                                             const std::string& path);
+    static Result<std::shared_ptr<SystemTable>> LoadFromPath(
+        const std::shared_ptr<FileSystem>& fs, const std::string& path,
+        const std::map<std::string, std::string>& dynamic_options);
 };
 
 }  // namespace paimon

@@ -49,6 +49,16 @@ Result<std::unique_ptr<TableRead>> KeyValueTableRead::Create(
     return std::unique_ptr<TableRead>(new KeyValueTableRead(std::move(split_reads), memory_pool));
 }
 
+void KeyValueTableRead::ForceKeepDelete(bool force_keep_delete) {
+    force_keep_delete_ = force_keep_delete;
+    for (const auto& read : split_reads_) {
+        auto* merge_read = dynamic_cast<MergeFileSplitRead*>(read.get());
+        if (merge_read != nullptr) {
+            merge_read->ForceKeepDelete(force_keep_delete);
+        }
+    }
+}
+
 Result<std::unique_ptr<BatchReader>> KeyValueTableRead::CreateReader(
     const std::shared_ptr<Split>& split) {
     auto data_split = std::dynamic_pointer_cast<DataSplit>(split);

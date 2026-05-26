@@ -25,6 +25,7 @@
 #include "arrow/c/bridge.h"
 #include "arrow/result.h"
 #include "paimon/common/metrics/metrics_impl.h"
+#include "paimon/core/io/multiple_blob_file_writer.h"
 #include "paimon/core/io/rolling_file_writer.h"
 #include "paimon/metrics.h"
 #include "paimon/record_batch.h"
@@ -35,34 +36,33 @@ namespace paimon {
 /// files for normal columns and blob columns, managing their lifecycle and ensuring consistency
 /// between them.
 ///
+/// Multiple blob fields are supported. Each blob field is written to its own set of blob files
+/// independently via MultipleBlobFileWriter.
+///
 /// <pre>
 /// For example,
-/// given a table schema with normal columns (id INT, name STRING) and a blob column (data BLOB),
-/// this writer will create separate files for (id, name) and (data).
+/// given a table schema with normal columns (id INT, name STRING) and blob columns (data1 BLOB,
+/// data2 BLOB), this writer will create separate files for (id, name), (data1), and (data2).
 /// It will roll files based on the specified target file size, ensuring that both normal and blob
 /// files are rolled simultaneously.
 ///
 /// Every time a file is rolled, the writer will close the current normal data file and blob data
 /// files, so one normal data file may correspond to multiple blob data files.
 ///
-/// Normal file1: f1.parquet may including (b1.blob, b2.blob, b3.blob)
-/// Normal file2: f1-2.parquet may including (b4.blob, b5.blob)
+/// Normal file1: f1.parquet may include (blob1_1.blob, blob1_2.blob, blob2_1.blob)
+/// Normal file2: f2.parquet may include (blob1_3.blob, blob2_2.blob)
 ///
 /// </pre>
 class RollingBlobFileWriter
     : public RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>> {
  public:
     using MainWriter = SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>;
-    using BlobWriter = RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>;
 
-    // Expected number of blob fields in a table.
-    static constexpr int32_t EXPECTED_BLOB_FIELD_COUNT = 1;
-
-    RollingBlobFileWriter(
-        int64_t target_file_size,
-        std::function<Result<std::unique_ptr<MainWriter>>()> create_file_writer,
-        std::function<Result<std::unique_ptr<BlobWriter>>()> create_blob_file_writer,
-        const std::shared_ptr<arrow::DataType>& data_type);
+    RollingBlobFileWriter(int64_t target_file_size,
+                          std::function<Result<std::unique_ptr<MainWriter>>()> create_file_writer,
+                          const std::shared_ptr<arrow::Schema>& blob_schema,
+                          MultipleBlobFileWriter::BlobWriterCreator blob_writer_creator,
+                          const std::shared_ptr<arrow::DataType>& data_type);
     ~RollingBlobFileWriter() override = default;
 
     Status Write(::ArrowArray* record) override;
@@ -73,15 +73,17 @@ class RollingBlobFileWriter
  private:
     static Status ValidateFileConsistency(
         const std::shared_ptr<DataFileMeta>& main_data_file_meta,
-        const std::vector<std::shared_ptr<DataFileMeta>>& blob_tagged_metas);
+        const std::vector<std::shared_ptr<DataFileMeta>>& blob_tagged_metas,
+        int32_t blob_field_count);
 
     Status CloseCurrentWriter();
 
     Result<std::shared_ptr<DataFileMeta>> CloseMainWriter();
     Result<std::vector<std::shared_ptr<DataFileMeta>>> CloseBlobWriter();
 
-    std::function<Result<std::unique_ptr<BlobWriter>>()> create_blob_file_writer_;
-    std::unique_ptr<BlobWriter> blob_writer_;
+    std::shared_ptr<arrow::Schema> blob_schema_;
+    MultipleBlobFileWriter::BlobWriterCreator blob_writer_creator_;
+    std::unique_ptr<MultipleBlobFileWriter> blob_writer_;
     std::shared_ptr<arrow::DataType> data_type_;
 
     std::unique_ptr<Logger> logger_;

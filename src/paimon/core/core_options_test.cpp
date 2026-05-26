@@ -71,7 +71,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ExpireConfig expire_config = core_options.GetExpireConfig();
     ASSERT_EQ(10, expire_config.GetSnapshotRetainMin());
     ASSERT_EQ(std::numeric_limits<int32_t>::max(), expire_config.GetSnapshotRetainMax());
-    ASSERT_EQ(10, expire_config.GetSnapshotMaxDeletes());
+    ASSERT_EQ(50, expire_config.GetSnapshotMaxDeletes());
     ASSERT_FALSE(expire_config.CleanEmptyDirectories());
     ASSERT_EQ(1 * 3600 * 1000L, expire_config.GetSnapshotTimeRetainMs());
     ASSERT_EQ(std::vector<std::string>(), core_options.GetSequenceField());
@@ -111,7 +111,14 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(core_options.DataFilePrefix(), "data-");
     ASSERT_FALSE(core_options.IndexFileInDataFileDir());
     ASSERT_FALSE(core_options.RowTrackingEnabled());
+    ASSERT_TRUE(core_options.RowTrackingPartitionGroupOnCommit());
     ASSERT_FALSE(core_options.DataEvolutionEnabled());
+    ASSERT_TRUE(core_options.GetBlobFields().empty());
+    ASSERT_TRUE(core_options.GetBlobDescriptorFields().empty());
+    ASSERT_TRUE(core_options.GetBlobViewFields().empty());
+    ASSERT_TRUE(core_options.GetBlobInlineFields().empty());
+    ASSERT_TRUE(core_options.GetBlobExternalStorageFields().empty());
+    ASSERT_EQ(std::nullopt, core_options.GetBlobExternalStoragePath());
     ASSERT_TRUE(core_options.LegacyPartitionNameEnabled());
     ASSERT_TRUE(core_options.GlobalIndexEnabled());
     ASSERT_EQ(std::nullopt, core_options.GetGlobalIndexExternalPath());
@@ -138,6 +145,8 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(256 * 1024 * 1024, core_options.GetLookupCacheMaxMemory());
     ASSERT_EQ(0.25, core_options.GetLookupCacheHighPrioPoolRatio());
     ASSERT_EQ(1 * 3600 * 1000, core_options.GetLookupCacheFileRetentionMs());
+    ASSERT_FALSE(core_options.TableReadSequenceNumberEnabled());
+    ASSERT_FALSE(core_options.KeyValueSequenceNumberEnabled());
     ASSERT_EQ(INT64_MAX, core_options.GetLookupCacheMaxDiskSize());
     ASSERT_FALSE(core_options.LookupRemoteFileEnabled());
     ASSERT_EQ(core_options.GetLookupRemoteLevelThreshold(), INT32_MIN);
@@ -207,7 +216,13 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::DATA_FILE_PREFIX, "test-data-"},
         {Options::INDEX_FILE_IN_DATA_FILE_DIR, "true"},
         {Options::ROW_TRACKING_ENABLED, "true"},
+        {Options::ROW_TRACKING_PARTITION_GROUP_ON_COMMIT, "false"},
         {Options::DATA_EVOLUTION_ENABLED, "true"},
+        {Options::BLOB_FIELD, "blob1,blob2"},
+        {Options::BLOB_DESCRIPTOR_FIELD, "blob3,blob4"},
+        {Options::BLOB_VIEW_FIELD, "blob5"},
+        {Options::BLOB_EXTERNAL_STORAGE_FIELD, "blob3,blob4"},
+        {Options::BLOB_EXTERNAL_STORAGE_PATH, "FILE:///tmp/blob_external_storage/"},
         {Options::PARTITION_GENERATE_LEGACY_NAME, "false"},
         {Options::GLOBAL_INDEX_ENABLED, "false"},
         {Options::GLOBAL_INDEX_THREAD_NUM, "4"},
@@ -243,6 +258,8 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::LOOKUP_CACHE_MAX_DISK_SIZE, "10GB"},
         {Options::LOOKUP_REMOTE_FILE_ENABLED, "True"},
         {Options::LOOKUP_REMOTE_LEVEL_THRESHOLD, "2"},
+        {Options::TABLE_READ_SEQUENCE_NUMBER_ENABLED, "true"},
+        {Options::KEY_VALUE_SEQUENCE_NUMBER_ENABLED, "true"},
         {Options::BUCKET_FUNCTION_TYPE, "mod"}};
 
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
@@ -332,7 +349,17 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(core_options.DataFilePrefix(), "test-data-");
     ASSERT_TRUE(core_options.IndexFileInDataFileDir());
     ASSERT_TRUE(core_options.RowTrackingEnabled());
+    ASSERT_FALSE(core_options.RowTrackingPartitionGroupOnCommit());
     ASSERT_TRUE(core_options.DataEvolutionEnabled());
+    ASSERT_EQ(core_options.GetBlobFields(), std::vector<std::string>({"blob1", "blob2"}));
+    ASSERT_EQ(core_options.GetBlobDescriptorFields(), std::vector<std::string>({"blob3", "blob4"}));
+    ASSERT_EQ(core_options.GetBlobViewFields(), std::vector<std::string>({"blob5"}));
+    ASSERT_EQ(core_options.GetBlobInlineFields(),
+              std::vector<std::string>({"blob3", "blob4", "blob5"}));
+    ASSERT_EQ(core_options.GetBlobExternalStorageFields(),
+              std::vector<std::string>({"blob3", "blob4"}));
+    ASSERT_EQ(core_options.GetBlobExternalStoragePath(),
+              std::optional<std::string>("FILE:///tmp/blob_external_storage/"));
     ASSERT_FALSE(core_options.LegacyPartitionNameEnabled());
     ASSERT_FALSE(core_options.GlobalIndexEnabled());
     ASSERT_EQ(core_options.GetGlobalIndexThreadNum(), 4);
@@ -368,6 +395,8 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(0.35, core_options.GetLookupCacheHighPrioPoolRatio());
     ASSERT_EQ(30 * 60 * 1000, core_options.GetLookupCacheFileRetentionMs());
     ASSERT_EQ(10L * 1024 * 1024 * 1024, core_options.GetLookupCacheMaxDiskSize());
+    ASSERT_TRUE(core_options.TableReadSequenceNumberEnabled());
+    ASSERT_TRUE(core_options.KeyValueSequenceNumberEnabled());
     ASSERT_TRUE(core_options.LookupRemoteFileEnabled());
     ASSERT_EQ(core_options.GetLookupRemoteLevelThreshold(), 2);
     ASSERT_EQ(BucketFunctionType::MOD, core_options.GetBucketFunctionType());
@@ -663,5 +692,215 @@ TEST(CoreOptionsTest, TestScanTimestampMillisAndStringMutuallyExclusive) {
 
 TEST(CoreOptionsTest, TestScanTimestampInvalidString) {
     ASSERT_NOK(CoreOptions::FromMap({{Options::SCAN_TIMESTAMP, "not-a-date"}}));
+}
+
+TEST(CoreOptionsTest, TestOverflowProtection) {
+    std::string max_val = std::to_string(std::numeric_limits<int32_t>::max());
+    ASSERT_OK_AND_ASSIGN(
+        CoreOptions options,
+        CoreOptions::FromMap({{Options::NUM_SORTED_RUNS_COMPACTION_TRIGGER, max_val}}));
+
+    ASSERT_EQ(options.GetNumSortedRunsStopTrigger(), std::numeric_limits<int32_t>::max());
+    ASSERT_EQ(options.GetNumLevels(), std::numeric_limits<int32_t>::max());
+    ASSERT_EQ(options.GetLookupCompactMaxInterval(), std::numeric_limits<int32_t>::max());
+}
+
+TEST(CoreOptionsTest, TestExplicitNumLevels) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({{Options::NUM_LEVELS, "10"}}));
+    ASSERT_EQ(options.GetNumLevels(), 10);
+}
+
+TEST(CoreOptionsTest, TestParseChangelogProducer) {
+    {
+        ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                             CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "none"}}));
+        ASSERT_EQ(options.GetChangelogProducer(), ChangelogProducer::NONE);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                             CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "input"}}));
+        ASSERT_EQ(options.GetChangelogProducer(), ChangelogProducer::INPUT);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "full-compaction"}}));
+        ASSERT_EQ(options.GetChangelogProducer(), ChangelogProducer::FULL_COMPACTION);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                             CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "lookup"}}));
+        ASSERT_EQ(options.GetChangelogProducer(), ChangelogProducer::LOOKUP);
+    }
+    {
+        // case insensitive
+        ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                             CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "LOOKUP"}}));
+        ASSERT_EQ(options.GetChangelogProducer(), ChangelogProducer::LOOKUP);
+    }
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "invalid"}}),
+                        "invalid changelog producer: invalid");
+}
+
+TEST(CoreOptionsTest, TestParseExternalPathStrategy) {
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "none"}}));
+        ASSERT_EQ(options.GetExternalPathStrategy(), ExternalPathStrategy::NONE);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "specific-fs"}}));
+        ASSERT_EQ(options.GetExternalPathStrategy(), ExternalPathStrategy::SPECIFIC_FS);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "round-robin"}}));
+        ASSERT_EQ(options.GetExternalPathStrategy(), ExternalPathStrategy::ROUND_ROBIN);
+    }
+    {
+        // case insensitive
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "ROUND-ROBIN"}}));
+        ASSERT_EQ(options.GetExternalPathStrategy(), ExternalPathStrategy::ROUND_ROBIN);
+    }
+    ASSERT_NOK_WITH_MSG(
+        CoreOptions::FromMap({{Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "invalid"}}),
+        "invalid external path strategy: invalid");
+}
+
+TEST(CoreOptionsTest, TestCopyAssignmentOperator) {
+    // Build a CoreOptions with non-default values
+    std::map<std::string, std::string> options = {
+        {Options::BUCKET, "3"},
+        {Options::PAGE_SIZE, "128 kb"},
+        {Options::TARGET_FILE_SIZE, "512MB"},
+        {Options::FILE_FORMAT, "ORC"},
+        {Options::FILE_COMPRESSION, "lz4"},
+        {Options::FILE_COMPRESSION_ZSTD_LEVEL, "5"},
+        {Options::PARTITION_DEFAULT_NAME, "foo"},
+        {Options::MANIFEST_MERGE_MIN_COUNT, "2"},
+        {Options::READ_BATCH_SIZE, "2048"},
+        {Options::WRITE_BATCH_SIZE, "1234"},
+        {Options::WRITE_BUFFER_SIZE, "16MB"},
+        {Options::WRITE_BUFFER_SPILLABLE, "false"},
+        {Options::COMMIT_FORCE_COMPACT, "true"},
+        {Options::COMMIT_MAX_RETRIES, "20"},
+        {Options::SEQUENCE_FIELD, "f1,f2"},
+        {Options::MERGE_ENGINE, "first-row"},
+        {Options::SORT_ENGINE, "min-heap"},
+        {Options::CHANGELOG_PRODUCER, "lookup"},
+        {Options::DELETION_VECTORS_ENABLED, "true"},
+        {Options::FORCE_LOOKUP, "true"},
+        {Options::IGNORE_DELETE, "true"},
+        {Options::WRITE_ONLY, "true"},
+        {Options::COMPACTION_MIN_FILE_NUM, "10"},
+        {Options::COMPACTION_FORCE_REWRITE_ALL_FILES, "true"},
+        {Options::NUM_SORTED_RUNS_COMPACTION_TRIGGER, "11"},
+        {Options::NUM_SORTED_RUNS_STOP_TRIGGER, "17"},
+        {Options::NUM_LEVELS, "9"},
+        {Options::LOOKUP_COMPACT, "gentle"},
+        {Options::DATA_FILE_PREFIX, "test-data-"},
+        {Options::ROW_TRACKING_ENABLED, "true"},
+        {Options::DATA_EVOLUTION_ENABLED, "true"},
+        {Options::BUCKET_FUNCTION_TYPE, "mod"},
+    };
+    ASSERT_OK_AND_ASSIGN(CoreOptions source, CoreOptions::FromMap(options));
+
+    // Default-constructed target with different values
+    CoreOptions target;
+
+    // Perform copy assignment
+    target = source;
+
+    // Verify all fields are correctly copied
+    ASSERT_EQ(3, target.GetBucket());
+    ASSERT_EQ(128 * 1024L, target.GetPageSize());
+    ASSERT_EQ("orc", target.GetFileFormat()->Identifier());
+    ASSERT_EQ("lz4", target.GetFileCompression());
+    ASSERT_EQ(5, target.GetFileCompressionZstdLevel());
+    ASSERT_EQ("foo", target.GetPartitionDefaultName());
+    ASSERT_EQ(2, target.GetManifestMergeMinCount());
+    ASSERT_EQ(2048, target.GetReadBatchSize());
+    ASSERT_EQ(1234, target.GetWriteBatchSize());
+    ASSERT_EQ(16 * 1024 * 1024L, target.GetWriteBufferSize());
+    ASSERT_FALSE(target.GetWriteBufferSpillable());
+    ASSERT_TRUE(target.CommitForceCompact());
+    ASSERT_EQ(20, target.GetCommitMaxRetries());
+    ASSERT_EQ(std::vector<std::string>({"f1", "f2"}), target.GetSequenceField());
+    ASSERT_EQ(MergeEngine::FIRST_ROW, target.GetMergeEngine());
+    ASSERT_EQ(SortEngine::MIN_HEAP, target.GetSortEngine());
+    ASSERT_EQ(ChangelogProducer::LOOKUP, target.GetChangelogProducer());
+    ASSERT_TRUE(target.DeletionVectorsEnabled());
+    ASSERT_TRUE(target.NeedLookup());
+    ASSERT_TRUE(target.IgnoreDelete());
+    ASSERT_TRUE(target.WriteOnly());
+    ASSERT_EQ(10, target.GetCompactionMinFileNum());
+    ASSERT_TRUE(target.CompactionForceRewriteAllFiles());
+    ASSERT_EQ(11, target.GetNumSortedRunsCompactionTrigger());
+    ASSERT_EQ(17, target.GetNumSortedRunsStopTrigger());
+    ASSERT_EQ(9, target.GetNumLevels());
+    ASSERT_EQ(LookupCompactMode::GENTLE, target.GetLookupCompactMode());
+    ASSERT_EQ("test-data-", target.DataFilePrefix());
+    ASSERT_TRUE(target.RowTrackingEnabled());
+    ASSERT_TRUE(target.DataEvolutionEnabled());
+    ASSERT_EQ(BucketFunctionType::MOD, target.GetBucketFunctionType());
+
+    // Verify the target's ToMap matches the source's ToMap
+    ASSERT_EQ(source.ToMap(), target.ToMap());
+
+    CoreOptions target2 = source;
+    ASSERT_EQ(source.ToMap(), target2.ToMap());
+}
+
+TEST(CoreOptionsTest, TestAssignmentIndependence) {
+    std::map<std::string, std::string> options = {
+        {Options::BUCKET, "5"},
+        {Options::MERGE_ENGINE, "first-row"},
+    };
+    ASSERT_OK_AND_ASSIGN(CoreOptions source, CoreOptions::FromMap(options));
+
+    CoreOptions target;
+    target = source;
+
+    // Verify target matches source
+    ASSERT_EQ(5, target.GetBucket());
+    ASSERT_EQ(MergeEngine::FIRST_ROW, target.GetMergeEngine());
+
+    // Modify source by reassigning a different config
+    std::map<std::string, std::string> new_options = {
+        {Options::BUCKET, "99"},
+        {Options::MERGE_ENGINE, "deduplicate"},
+    };
+    ASSERT_OK_AND_ASSIGN(source, CoreOptions::FromMap(new_options));
+
+    // Target should be unaffected (deep copy)
+    ASSERT_EQ(5, target.GetBucket());
+    ASSERT_EQ(MergeEngine::FIRST_ROW, target.GetMergeEngine());
+
+    // Source should have new values
+    ASSERT_EQ(99, source.GetBucket());
+    ASSERT_EQ(MergeEngine::DEDUPLICATE, source.GetMergeEngine());
+}
+
+TEST(CoreOptionsTest, TestFallback) {
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::FALLBACK_BLOB_DESCRIPTOR_FIELD, "b1,b2"}}));
+        ASSERT_EQ(options.GetBlobDescriptorFields(), std::vector<std::string>({"b1", "b2"}));
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::FALLBACK_BLOB_DESCRIPTOR_FIELD, "b1,b2"},
+                                  {Options::BLOB_DESCRIPTOR_FIELD, "new_b1 , new_b2"}}));
+        ASSERT_EQ(options.GetBlobDescriptorFields(),
+                  std::vector<std::string>({"new_b1", "new_b2"}));
+    }
 }
 }  // namespace paimon::test

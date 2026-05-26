@@ -105,15 +105,28 @@ class DateTimeUtils {
         return static_cast<uint64_t>(ts.tv_sec) * 1000000ULL + static_cast<uint64_t>(ts.tv_usec);
     }
 
-    static inline Result<uint64_t> GetCurrentLocalTimeUs() {
-        uint64_t utc_micro = GetCurrentUTCTimeUs();
+    static inline Result<Timestamp> ToLocalTimestamp(const Timestamp& utc_timestamp) {
+        int64_t utc_micro = utc_timestamp.ToMicrosecond();
         auto utc_ts_scalar = std::make_shared<arrow::TimestampScalar>(
-            static_cast<int64_t>(utc_micro), arrow::TimeUnit::MICRO, GetLocalTimezoneName());
+            utc_micro, arrow::TimeUnit::MICRO, GetLocalTimezoneName());
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
             arrow::Datum local_micro, arrow::compute::LocalTimestamp(arrow::Datum(utc_ts_scalar)));
         auto local_ts_scalar =
             std::dynamic_pointer_cast<arrow::TimestampScalar>(local_micro.scalar());
-        return *(static_cast<const int64_t*>(local_ts_scalar->data()));
+        auto [millisecond, nano_of_millisecond] = DateTimeUtils::TimestampConverter(
+            *(static_cast<const int64_t*>(local_ts_scalar->data())),
+            DateTimeUtils::TimeType::MICROSECOND, DateTimeUtils::TimeType::MILLISECOND,
+            DateTimeUtils::TimeType::NANOSECOND);
+        return Timestamp(millisecond, nano_of_millisecond);
+    }
+
+    static inline Result<uint64_t> GetCurrentLocalTimeUs() {
+        auto [millisecond, nano_of_millisecond] = DateTimeUtils::TimestampConverter(
+            GetCurrentUTCTimeUs(), DateTimeUtils::TimeType::MICROSECOND,
+            DateTimeUtils::TimeType::MILLISECOND, DateTimeUtils::TimeType::NANOSECOND);
+        Timestamp utc_timestamp(millisecond, nano_of_millisecond);
+        PAIMON_ASSIGN_OR_RAISE(Timestamp local_timestamp, ToLocalTimestamp(utc_timestamp));
+        return local_timestamp.ToMicrosecond();
     }
 
     static inline Result<int32_t> GetCurrentLocalHour() {

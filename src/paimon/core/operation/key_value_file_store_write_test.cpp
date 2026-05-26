@@ -33,6 +33,7 @@
 #include "paimon/catalog/catalog.h"
 #include "paimon/catalog/identifier.h"
 #include "paimon/common/utils/path_util.h"
+#include "paimon/core/table/sink/commit_message_impl.h"
 #include "paimon/file_store_write.h"
 #include "paimon/record_batch.h"
 #include "paimon/status.h"
@@ -272,6 +273,117 @@ TEST_F(KeyValueFileStoreWriteTest, TestSpillSimple) {
     ASSERT_EQ(TestHelper::CountChannelFiles(dir->GetFileSystem(), dir->Str()), 0);
     ASSERT_EQ(get_writer(0)->GetMemoryUsage(), 0);
     ASSERT_EQ(get_writer(1)->GetMemoryUsage(), 0);
+}
+
+TEST_F(KeyValueFileStoreWriteTest, TestSpillDiskQuotaExhaustedFallsBackToFlushDataFile) {
+    auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false)};
+    arrow::Schema typed_schema(fields);
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir->Str(), {}));
+    ASSERT_OK(catalog->CreateDatabase("foo", {}, /*ignore_if_exists=*/false));
+    ASSERT_OK(catalog->CreateTable(Identifier("foo", "bar"), &schema,
+                                   /*partition_keys=*/{}, /*primary_keys=*/{"f0"},
+                                   {{Options::BUCKET, "1"},
+                                    {Options::WRITE_BUFFER_SIZE, "1"},
+                                    {Options::WRITE_BUFFER_SPILLABLE, "true"},
+                                    {Options::WRITE_BUFFER_SPILL_MAX_DISK_SIZE, "1b"}},
+                                   /*ignore_if_exists=*/false));
+    ArrowSchemaRelease(&schema);
+    WriteContextBuilder context_builder(PathUtil::JoinPath(dir->Str(), "foo.db/bar"), "test");
+    context_builder.WithTempDirectory(dir->Str());
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
+
+    // Disk quota is 1 byte, so spill will exhaust quota immediately and fall back to
+    // FlushWriteBuffer (writing data files directly instead of spill temp files).
+    ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "alice"));
+    ASSERT_EQ(TestHelper::CountChannelFiles(dir->GetFileSystem(), dir->Str()), 0);
+
+    ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "bob"));
+    ASSERT_EQ(TestHelper::CountChannelFiles(dir->GetFileSystem(), dir->Str()), 0);
+
+    ASSERT_OK_AND_ASSIGN(auto commit_messages,
+                         file_store_write->PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_EQ(commit_messages.size(), 1);
+
+    // Verify all rows are committed correctly despite disk quota exhaustion.
+    auto* commit_impl = dynamic_cast<CommitMessageImpl*>(commit_messages[0].get());
+    ASSERT_NE(commit_impl, nullptr);
+    const auto& new_files = commit_impl->GetNewFilesIncrement().NewFiles();
+    ASSERT_FALSE(new_files.empty());
+
+    int64_t total_row_count = 0;
+    for (const auto& file : new_files) {
+        total_row_count += file->row_count;
+    }
+    ASSERT_EQ(total_row_count, 2);
+}
+
+TEST_F(KeyValueFileStoreWriteTest, TestMultiRoundSpillWithSameKeyDeduplication) {
+    auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false)};
+    arrow::Schema typed_schema(fields);
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir->Str(), {}));
+    ASSERT_OK(catalog->CreateDatabase("foo", {}, /*ignore_if_exists=*/false));
+    ASSERT_OK(catalog->CreateTable(Identifier("foo", "bar"), &schema,
+                                   /*partition_keys=*/{}, /*primary_keys=*/{"f0"},
+                                   {{Options::BUCKET, "1"},
+                                    {Options::WRITE_BUFFER_SIZE, "1"},
+                                    {Options::WRITE_BUFFER_SPILLABLE, "true"}},
+                                   /*ignore_if_exists=*/false));
+    ArrowSchemaRelease(&schema);
+    WriteContextBuilder context_builder(PathUtil::JoinPath(dir->Str(), "foo.db/bar"), "test");
+    context_builder.WithTempDirectory(dir->Str()).WithStreamingMode(true);
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
+
+    // Round 1: alice, bob, alice (duplicate key) → after dedup: alice + bob = 2 rows
+    ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "alice"));
+    ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "bob"));
+    ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "alice"));
+
+    ASSERT_OK_AND_ASSIGN(auto commit_messages_1,
+                         file_store_write->PrepareCommit(/*wait_compaction=*/true, 0));
+    ASSERT_EQ(commit_messages_1.size(), 1);
+    {
+        auto* commit_impl = dynamic_cast<CommitMessageImpl*>(commit_messages_1[0].get());
+        ASSERT_NE(commit_impl, nullptr);
+        int64_t total_row_count = 0;
+        for (const auto& file : commit_impl->GetNewFilesIncrement().NewFiles()) {
+            total_row_count += file->row_count;
+        }
+        ASSERT_EQ(total_row_count, 2);
+    }
+    ASSERT_EQ(TestHelper::CountChannelFiles(dir->GetFileSystem(), dir->Str()), 0);
+
+    // Round 2: bob, charlie, charlie (duplicate key) → after dedup: bob + charlie = 2 rows
+    ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "bob"));
+    ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "charlie"));
+    ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "charlie"));
+
+    ASSERT_OK_AND_ASSIGN(auto commit_messages_2,
+                         file_store_write->PrepareCommit(/*wait_compaction=*/true, 1));
+    ASSERT_EQ(commit_messages_2.size(), 1);
+    {
+        auto* commit_impl = dynamic_cast<CommitMessageImpl*>(commit_messages_2[0].get());
+        ASSERT_NE(commit_impl, nullptr);
+        int64_t total_row_count = 0;
+        for (const auto& file : commit_impl->GetNewFilesIncrement().NewFiles()) {
+            total_row_count += file->row_count;
+        }
+        ASSERT_EQ(total_row_count, 2);
+    }
+    ASSERT_EQ(TestHelper::CountChannelFiles(dir->GetFileSystem(), dir->Str()), 0);
 }
 
 }  // namespace paimon::test

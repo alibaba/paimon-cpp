@@ -533,6 +533,37 @@ TEST_F(AppendOnlyWriterTest, TestCloseDeletesCompactAfterFiles) {
     ASSERT_TRUE(compact_manager->close_called);
 }
 
+TEST_F(AppendOnlyWriterTest, TestCloseCleansDeletionFile) {
+    auto options = CreateOptions();
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = CreatePathFactory(dir->Str(), "mock_format", options);
+    auto compact_manager = std::make_shared<FakeCompactManager>();
+
+    auto deletion_file = std::make_shared<FakeCompactDeletionFile>("del-close");
+    auto before = NewAppendFile("before-close", 5, 0, 4);
+    auto after = NewAppendFile("after-close", 5, 5, 9);
+    auto result =
+        std::make_shared<CompactResult>(std::vector<std::shared_ptr<DataFileMeta>>{before},
+                                        std::vector<std::shared_ptr<DataFileMeta>>{after});
+    result->SetDeletionFile(deletion_file);
+    compact_manager->queued_results.push_back(
+        std::optional<std::shared_ptr<CompactResult>>(result));
+
+    arrow::FieldVector fields = {arrow::field("f0", arrow::utf8())};
+    auto schema = arrow::schema(fields);
+    AppendOnlyWriter writer(options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
+                            /*max_sequence_number=*/-1, path_factory, compact_manager,
+                            memory_pool_);
+
+    // Sync to consume the compaction result and populate compact_deletion_file_.
+    ASSERT_OK(writer.Sync());
+    ASSERT_FALSE(deletion_file->Cleaned());
+
+    ASSERT_OK(writer.Close());
+    ASSERT_TRUE(deletion_file->Cleaned());
+}
+
 TEST_F(AppendOnlyWriterTest, TestCompactNotCompletedTriggersCompaction) {
     auto options = CreateOptions();
     auto dir = UniqueTestDirectory::Create();
@@ -608,7 +639,7 @@ TEST_F(AppendOnlyWriterTest, TestWriteWithSingleBlobField) {
     ASSERT_OK(writer.Close());
 }
 
-TEST_F(AppendOnlyWriterTest, TestWriteWithMultipleBlobFieldsShouldFail) {
+TEST_F(AppendOnlyWriterTest, TestWriteWithMultipleBlobFields) {
     auto options =
         CreateOptions({{Options::FILE_FORMAT, "orc"}, {Options::MANIFEST_FORMAT, "orc"}});
     auto dir = UniqueTestDirectory::Create();
@@ -632,9 +663,19 @@ TEST_F(AppendOnlyWriterTest, TestWriteWithMultipleBlobFieldsShouldFail) {
     ASSERT_TRUE(blob_builder2.Append("b", 1).ok());
     auto blob_array2 = blob_builder2.Finish().ValueOrDie();
 
-    ASSERT_NOK_WITH_MSG(
-        writer.Write(CreateStructBatch(schema, {int_array, blob_array1, blob_array2})),
-        "Limit exactly one blob field in one paimon table yet.");
+    ASSERT_OK(writer.Write(CreateStructBatch(schema, {int_array, blob_array1, blob_array2})));
+    ASSERT_OK_AND_ASSIGN(CommitIncrement inc, writer.PrepareCommit(/*wait_compaction=*/true));
+
+    ASSERT_EQ(inc.GetNewFilesIncrement().NewFiles().size(), 3);
+    const auto& main_file = inc.GetNewFilesIncrement().NewFiles()[0];
+    const auto& blob_file1 = inc.GetNewFilesIncrement().NewFiles()[1];
+    const auto& blob_file2 = inc.GetNewFilesIncrement().NewFiles()[2];
+    ASSERT_TRUE(
+        options.GetFileSystem()->Exists(path_factory->ToPath(main_file->file_name)).value());
+    ASSERT_TRUE(
+        options.GetFileSystem()->Exists(path_factory->ToPath(blob_file1->file_name)).value());
+    ASSERT_TRUE(
+        options.GetFileSystem()->Exists(path_factory->ToPath(blob_file2->file_name)).value());
     ASSERT_OK(writer.Close());
 }
 

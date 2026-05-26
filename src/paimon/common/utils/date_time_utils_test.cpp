@@ -281,6 +281,21 @@ TEST(DateTimeUtilsTest, TestGetCurrentLocalTimeUs) {
     ASSERT_GE(local_ts - utc_ts, 28800000000l);
 }
 
+TEST(DateTimeUtilsTest, TestToLocalTimestamp) {
+    {
+        TimezoneGuard guard("Asia/Shanghai");
+        ASSERT_OK_AND_ASSIGN(Timestamp timestamp, DateTimeUtils::ToLocalTimestamp(
+                                                      Timestamp::FromEpochMillis(1700000000123L)));
+        ASSERT_EQ(timestamp, Timestamp::FromEpochMillis(1700028800123L));
+    }
+    {
+        TimezoneGuard guard("UTC");
+        ASSERT_OK_AND_ASSIGN(Timestamp timestamp, DateTimeUtils::ToLocalTimestamp(
+                                                      Timestamp::FromEpochMillis(1700000000123L)));
+        ASSERT_EQ(timestamp, Timestamp::FromEpochMillis(1700000000123L));
+    }
+}
+
 TEST(DateTimeUtilsTest, TestGetCurrentLocalHour) {
     int32_t shanghai_hour = 0;
     int32_t utc_hour = 0;
@@ -309,4 +324,11 @@ TEST(DateTimeUtilsTest, TestToUTCTimestamp) {
         ASSERT_EQ(utc_ts, Timestamp(-28800000l, 0));
     }
 }
+TEST(DateTimeUtilsTest, TestGetArrowTimeUnitStr) {
+    ASSERT_EQ(DateTimeUtils::GetArrowTimeUnitStr(arrow::TimeUnit::SECOND), "SECOND");
+    ASSERT_EQ(DateTimeUtils::GetArrowTimeUnitStr(arrow::TimeUnit::MILLI), "MILLISECOND");
+    ASSERT_EQ(DateTimeUtils::GetArrowTimeUnitStr(arrow::TimeUnit::MICRO), "MICROSECOND");
+    ASSERT_EQ(DateTimeUtils::GetArrowTimeUnitStr(arrow::TimeUnit::NANO), "NANOSECOND");
+}
+
 }  // namespace paimon::test

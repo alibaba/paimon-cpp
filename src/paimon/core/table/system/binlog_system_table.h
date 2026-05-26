@@ -19,29 +19,26 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <vector>
 
-#include "paimon/core/table/system/system_table.h"
+#include "paimon/core/table/system/audit_log_system_table.h"
 
 namespace paimon {
+class FileSystem;
 class TableSchema;
 
-class OptionsSystemTable : public SystemTable {
+/// System table for `T$binlog`, exposing changelog records with list-wrapped data columns.
+class BinlogSystemTable : public AuditLogSystemTable {
  public:
-    static constexpr const char* kName = "options";
+    static constexpr const char* kName = "binlog";
 
-    OptionsSystemTable(std::string table_path, std::shared_ptr<TableSchema> table_schema);
+    BinlogSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
+                      std::shared_ptr<TableSchema> table_schema,
+                      std::map<std::string, std::string> options);
 
     std::string Name() const override;
-    std::shared_ptr<arrow::Schema> ArrowSchema() const override;
-    Result<std::unique_ptr<TableScan>> NewScan() const override;
-    Result<std::unique_ptr<BatchReader>> CreateBatchReader(
-        const std::vector<std::shared_ptr<Split>>& splits,
-        const std::shared_ptr<MemoryPool>& pool) const override;
-
- private:
-    std::string table_path_;
-    std::shared_ptr<TableSchema> table_schema_;
+    Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
+    Result<std::unique_ptr<TableRead>> NewRead(
+        const std::shared_ptr<ReadContext>& context) const override;
 };
 
 }  // namespace paimon

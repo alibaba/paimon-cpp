@@ -20,6 +20,7 @@
 
 #include "arrow/api.h"
 #include "arrow/c/bridge.h"
+#include "paimon/common/data/blob_defs.h"
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/memory/memory_segment_utils.h"
 #include "paimon/common/metrics/metrics_impl.h"
@@ -41,7 +42,7 @@ BlobFormatWriter::BlobFormatWriter(bool blob_as_descriptor,
       fs_(fs),
       pool_(pool) {
     metrics_ = std::make_shared<MetricsImpl>();
-    tmp_buffer_ = Bytes::AllocateBytes(TMP_BUFFER_SIZE, pool_.get());
+    tmp_buffer_ = Bytes::AllocateBytes(kTmpBufferSize, pool_.get());
 }
 
 Result<std::unique_ptr<BlobFormatWriter>> BlobFormatWriter::Create(
@@ -82,9 +83,17 @@ Status BlobFormatWriter::AddBatch(ArrowArray* batch) {
     assert(arrow_array->num_fields() == 1);
     auto struct_array = arrow::internal::checked_pointer_cast<arrow::StructArray>(arrow_array);
     auto child_array = struct_array->field(0);
-    if (arrow_array->null_count() != 0 || child_array->null_count() != 0) {
-        return Status::Invalid("BlobFormatWriter only support non-null blob.");
+
+    // Struct-level null is not supported (caller should not pass null struct rows)
+    if (struct_array->IsNull(0)) {
+        return Status::Invalid("BlobFormatWriter does not support struct-level null.");
     }
+    // Child-level null: record kNullBinLength, skip data writing (aligned with Java)
+    if (child_array->IsNull(0)) {
+        bin_lengths_.push_back(BlobDefs::kNullBinLength);
+        return Status::OK();
+    }
+
     if (child_array->type_id() != arrow::Type::type::LARGE_BINARY) {
         return Status::Invalid("BlobFormatWriter only support large binary type.");
     }
@@ -110,7 +119,8 @@ Status BlobFormatWriter::Finish() {
     PAIMON_UNIQUE_PTR<Bytes> index_length_bytes =
         IntegerToLittleEndian<int32_t>(static_cast<int32_t>(index_bytes.size()), pool_);
     PAIMON_RETURN_NOT_OK(WriteBytes(index_length_bytes->data(), index_length_bytes->size()));
-    PAIMON_RETURN_NOT_OK(WriteBytes(reinterpret_cast<const char*>(&VERSION), sizeof(VERSION)));
+    PAIMON_RETURN_NOT_OK(WriteBytes(reinterpret_cast<const char*>(&BlobDefs::kFileVersion),
+                                    sizeof(BlobDefs::kFileVersion)));
 
     PAIMON_RETURN_NOT_OK(Flush());
 
@@ -123,9 +133,9 @@ Status BlobFormatWriter::WriteBlob(std::string_view blob_data) {
     PAIMON_ASSIGN_OR_RAISE(int64_t previous_pos, out_->GetPos());
 
     // write magic number
-    static PAIMON_UNIQUE_PTR<Bytes> MAGIC_NUMBER_BYTES =
-        IntegerToLittleEndian<int32_t>(MAGIC_NUMBER, pool_);
-    PAIMON_RETURN_NOT_OK(WriteWithCrc32(MAGIC_NUMBER_BYTES->data(), MAGIC_NUMBER_BYTES->size()));
+    static PAIMON_UNIQUE_PTR<Bytes> kMagicNumberBytes =
+        IntegerToLittleEndian<int32_t>(BlobDefs::kMagicNumber, pool_);
+    PAIMON_RETURN_NOT_OK(WriteWithCrc32(kMagicNumberBytes->data(), kMagicNumberBytes->size()));
 
     // write blob content
     std::unique_ptr<InputStream> in;

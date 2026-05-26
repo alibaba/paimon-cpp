@@ -29,6 +29,7 @@
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
+#include "paimon/core/core_options.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/core/table/system/system_table.h"
 #include "paimon/core/table/system/system_table_schema.h"
@@ -271,11 +272,18 @@ Result<std::shared_ptr<Schema>> FileSystemCatalog::LoadTableSchema(
         if (!latest_schema) {
             return Status::NotExist(fmt::format("{} not exist", data_identifier.ToString()));
         }
-        PAIMON_ASSIGN_OR_RAISE(
-            std::shared_ptr<SystemTable> system_table,
-            SystemTableLoader::Load(system_table_name.value(), fs_, GetTableLocation(identifier),
-                                    latest_schema.value()));
-        return std::make_shared<SystemTableSchema>(system_table->ArrowSchema());
+        std::map<std::string, std::string> dynamic_options;
+        PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> branch, identifier.GetBranchName());
+        if (branch) {
+            dynamic_options[Options::BRANCH] = branch.value();
+        }
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<SystemTable> system_table,
+                               SystemTableLoader::Load(system_table_name.value(), fs_,
+                                                       GetTableLocation(data_identifier),
+                                                       latest_schema.value(), dynamic_options));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> arrow_schema,
+                               system_table->ArrowSchema());
+        return std::make_shared<SystemTableSchema>(std::move(arrow_schema));
     }
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
                            TableSchemaExists(identifier));
@@ -338,16 +346,18 @@ Result<std::vector<std::string>> FileSystemCatalog::GetSchemaExternalPaths(
     std::set<std::string> external_paths_set;
     for (const auto& schema : schemas) {
         const auto& options = schema->Options();
-        auto iter = options.find(Options::DATA_FILE_EXTERNAL_PATHS);
-        if (iter != options.end() && !iter->second.empty()) {
-            auto paths = StringUtils::Split(iter->second, ",", /*ignore_empty=*/true);
-            for (const auto& path : paths) {
-                std::string trimmed_path = path;
-                StringUtils::Trim(&trimmed_path);
-                if (!trimmed_path.empty()) {
-                    external_paths_set.insert(trimmed_path);
-                }
-            }
+        PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(options));
+        // collect external data file path
+        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> data_external_paths,
+                               core_options.CreateExternalPaths());
+        for (const auto& path : data_external_paths) {
+            external_paths_set.insert(path);
+        }
+        // collect external global index path
+        PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> index_external_path,
+                               core_options.CreateGlobalIndexExternalPath());
+        if (index_external_path != std::nullopt) {
+            external_paths_set.insert(index_external_path.value());
         }
     }
     return std::vector<std::string>(external_paths_set.begin(), external_paths_set.end());
@@ -355,27 +365,11 @@ Result<std::vector<std::string>> FileSystemCatalog::GetSchemaExternalPaths(
 
 Result<std::vector<std::string>> FileSystemCatalog::GetTableBranches(
     const std::string& table_path) const {
-    std::vector<std::string> branches;
-    std::string branch_dir = PathUtil::JoinPath(table_path, "branch");
-    PAIMON_ASSIGN_OR_RAISE(bool branch_dir_exists, fs_->Exists(branch_dir));
-    if (!branch_dir_exists) {
-        return branches;
-    }
-
-    std::vector<std::unique_ptr<BasicFileStatus>> file_status_list;
-    PAIMON_RETURN_NOT_OK(fs_->ListDir(branch_dir, &file_status_list));
-
-    for (const auto& file_status : file_status_list) {
-        if (file_status->IsDir()) {
-            std::string dir_name = PathUtil::GetName(file_status->GetPath());
-            // Branch directory name format: branch-{branch_name}
-            const std::string branch_prefix = BranchManager::BRANCH_PREFIX;
-            if (StringUtils::StartsWith(dir_name, branch_prefix, /*start_pos=*/0)) {
-                std::string branch_name = dir_name.substr(branch_prefix.length());
-                branches.push_back(branch_name);
-            }
-        }
-    }
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> branches,
+                           BranchManager::ListBranches(fs_, table_path));
+    branches.erase(
+        std::remove(branches.begin(), branches.end(), BranchManager::DEFAULT_MAIN_BRANCH),
+        branches.end());
     return branches;
 }
 

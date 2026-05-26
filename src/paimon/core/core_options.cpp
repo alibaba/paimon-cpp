@@ -76,12 +76,15 @@ class ConfigParser {
 
     // Parse list configurations
     template <typename T>
-    Status ParseList(const std::string& key, const std::string& delimiter,
-                     std::vector<T>* list) const {
+    Status ParseList(const std::string& key, const std::string& delimiter, std::vector<T>* list,
+                     bool need_trim = false) const {
         auto iter = config_map_.find(key);
         if (iter != config_map_.end()) {
             auto value_str_vec = StringUtils::Split(iter->second, delimiter, /*ignore_empty=*/true);
-            for (const auto& value_str : value_str_vec) {
+            for (auto& value_str : value_str_vec) {
+                if (need_trim) {
+                    StringUtils::Trim(&value_str);
+                }
                 if constexpr (std::is_same_v<T, std::string>) {
                     list->emplace_back(value_str);
                 } else {
@@ -374,6 +377,10 @@ struct CoreOptions::Impl {
     ExpireConfig expire_config;
     std::vector<std::string> sequence_field;
     std::vector<std::string> remove_record_on_sequence_group;
+    std::vector<std::string> blob_fields;
+    std::vector<std::string> blob_descriptor_fields;
+    std::vector<std::string> blob_view_fields;
+    std::vector<std::string> blob_external_storage_fields;
 
     std::string partition_default_name = "__DEFAULT_PARTITION__";
     StartupMode startup_mode = StartupMode::Default();
@@ -386,6 +393,7 @@ struct CoreOptions::Impl {
     std::optional<std::string> field_default_func;
     std::optional<std::string> scan_fallback_branch;
     std::optional<std::string> data_file_external_paths;
+    std::optional<std::string> blob_external_storage_path;
 
     std::map<std::string, std::string> raw_options;
 
@@ -424,10 +432,13 @@ struct CoreOptions::Impl {
     bool lookup_wait = true;
     bool partial_update_remove_record_on_delete = false;
     bool aggregation_remove_record_on_delete = false;
+    bool table_read_sequence_number_enabled = false;
+    bool key_value_sequence_number_enabled = false;
     bool file_index_read_enabled = true;
     bool enable_adaptive_prefetch_strategy = true;
     bool index_file_in_data_file_dir = false;
     bool row_tracking_enabled = false;
+    bool row_tracking_partition_group_on_commit = true;
     bool data_evolution_enabled = false;
     bool legacy_partition_name_enabled = true;
     bool global_index_enabled = true;
@@ -523,11 +534,37 @@ struct CoreOptions::Impl {
         // Parse row-tracking.enabled - whether to enable unique row id for append table
         PAIMON_RETURN_NOT_OK(
             parser.Parse<bool>(Options::ROW_TRACKING_ENABLED, &row_tracking_enabled));
+        // Parse row-tracking.partition-group-on-commit - whether to group delta files by partition
+        PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::ROW_TRACKING_PARTITION_GROUP_ON_COMMIT,
+                                                &row_tracking_partition_group_on_commit));
         // Parse data-evolution.enabled - whether to enable data evolution for row tracking
         PAIMON_RETURN_NOT_OK(
             parser.Parse<bool>(Options::DATA_EVOLUTION_ENABLED, &data_evolution_enabled));
         // Parse bucket-function - bucket function type, default "DEFAULT"
         PAIMON_RETURN_NOT_OK(parser.ParseBucketFunctionType(&bucket_function_type));
+        // Parse blob-field - column names to store as blob type, comma separated
+        PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
+            Options::BLOB_FIELD, Options::FIELDS_SEPARATOR, &blob_fields, /*need_trim=*/true));
+        // Parse blob-descriptor-field - BLOB fields stored inline as serialized descriptors
+        PAIMON_RETURN_NOT_OK(
+            parser.ParseList<std::string>(Options::BLOB_DESCRIPTOR_FIELD, Options::FIELDS_SEPARATOR,
+                                          &blob_descriptor_fields, /*need_trim=*/true));
+        if (blob_descriptor_fields.empty()) {
+            PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
+                Options::FALLBACK_BLOB_DESCRIPTOR_FIELD, Options::FIELDS_SEPARATOR,
+                &blob_descriptor_fields, /*need_trim=*/true));
+        }
+        // Parse blob-view-field - BLOB fields stored inline as serialized view metadata
+        PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(Options::BLOB_VIEW_FIELD,
+                                                           Options::FIELDS_SEPARATOR,
+                                                           &blob_view_fields, /*need_trim=*/true));
+        // Parse blob-external-storage-field - descriptor BLOB fields written to external storage
+        PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
+            Options::BLOB_EXTERNAL_STORAGE_FIELD, Options::FIELDS_SEPARATOR,
+            &blob_external_storage_fields, /*need_trim=*/true));
+        // Parse blob-external-storage-path - external storage path for configured BLOB fields
+        PAIMON_RETURN_NOT_OK(
+            parser.Parse(Options::BLOB_EXTERNAL_STORAGE_PATH, &blob_external_storage_path));
         return Status::OK();
     }
 
@@ -573,8 +610,8 @@ struct CoreOptions::Impl {
         int32_t snapshot_num_retain_min = 10;
         // Parse snapshot.num-retained.max - maximum completed snapshots to retain
         int32_t snapshot_num_retain_max = std::numeric_limits<int32_t>::max();
-        // Parse snapshot.expire.limit - maximum snapshots allowed to expire at a time, default 10
-        int32_t snapshot_expire_limit = 10;
+        // Parse snapshot.expire.limit - maximum snapshots allowed to expire at a time, default 50
+        int32_t snapshot_expire_limit = 50;
         // Parse snapshot.time-retained - maximum time of completed snapshots to retain
         int64_t snapshot_time_retained = 1 * 3600 * 1000;  // 1 hour
         PAIMON_RETURN_NOT_OK(
@@ -629,6 +666,11 @@ struct CoreOptions::Impl {
         // Parse aggregation_remove_record_on_delete
         PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::AGGREGATION_REMOVE_RECORD_ON_DELETE,
                                                 &aggregation_remove_record_on_delete));
+        // Parse table-read.sequence-number.enabled - expose sequence number in system tables
+        PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::TABLE_READ_SEQUENCE_NUMBER_ENABLED,
+                                                &table_read_sequence_number_enabled));
+        PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::KEY_VALUE_SEQUENCE_NUMBER_ENABLED,
+                                                &key_value_sequence_number_enabled));
         // Parse partial-update.remove-record-on-sequence-group
         PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
             Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUP, Options::FIELDS_SEPARATOR,
@@ -1201,6 +1243,14 @@ bool CoreOptions::AggregationRemoveRecordOnDelete() const {
     return impl_->aggregation_remove_record_on_delete;
 }
 
+bool CoreOptions::TableReadSequenceNumberEnabled() const {
+    return impl_->table_read_sequence_number_enabled;
+}
+
+bool CoreOptions::KeyValueSequenceNumberEnabled() const {
+    return impl_->key_value_sequence_number_enabled;
+}
+
 std::vector<std::string> CoreOptions::GetPartialUpdateRemoveRecordOnSequenceGroup() const {
     return impl_->remove_record_on_sequence_group;
 }
@@ -1261,6 +1311,10 @@ bool CoreOptions::IndexFileInDataFileDir() const {
 
 bool CoreOptions::RowTrackingEnabled() const {
     return impl_->row_tracking_enabled;
+}
+
+bool CoreOptions::RowTrackingPartitionGroupOnCommit() const {
+    return impl_->row_tracking_partition_group_on_commit;
 }
 
 bool CoreOptions::DataEvolutionEnabled() const {
@@ -1355,6 +1409,33 @@ double CoreOptions::GetLookupCacheHighPrioPoolRatio() const {
 
 BucketFunctionType CoreOptions::GetBucketFunctionType() const {
     return impl_->bucket_function_type;
+}
+
+const std::vector<std::string>& CoreOptions::GetBlobFields() const {
+    return impl_->blob_fields;
+}
+
+const std::vector<std::string>& CoreOptions::GetBlobDescriptorFields() const {
+    return impl_->blob_descriptor_fields;
+}
+
+const std::vector<std::string>& CoreOptions::GetBlobViewFields() const {
+    return impl_->blob_view_fields;
+}
+
+std::vector<std::string> CoreOptions::GetBlobInlineFields() const {
+    std::vector<std::string> blob_inline_fields = impl_->blob_descriptor_fields;
+    blob_inline_fields.insert(blob_inline_fields.end(), impl_->blob_view_fields.begin(),
+                              impl_->blob_view_fields.end());
+    return blob_inline_fields;
+}
+
+const std::vector<std::string>& CoreOptions::GetBlobExternalStorageFields() const {
+    return impl_->blob_external_storage_fields;
+}
+
+std::optional<std::string> CoreOptions::GetBlobExternalStoragePath() const {
+    return impl_->blob_external_storage_path;
 }
 
 int64_t CoreOptions::GetLookupCacheFileRetentionMs() const {

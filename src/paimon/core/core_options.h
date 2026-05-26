@@ -128,6 +128,8 @@ class PAIMON_EXPORT CoreOptions {
     std::map<std::string, std::string> GetFieldsSequenceGroups() const;
     bool PartialUpdateRemoveRecordOnDelete() const;
     bool AggregationRemoveRecordOnDelete() const;
+    bool TableReadSequenceNumberEnabled() const;
+    bool KeyValueSequenceNumberEnabled() const;
     std::vector<std::string> GetPartialUpdateRemoveRecordOnSequenceGroup() const;
 
     std::optional<std::string> GetScanFallbackBranch() const;
@@ -142,6 +144,7 @@ class PAIMON_EXPORT CoreOptions {
     bool IndexFileInDataFileDir() const;
 
     bool RowTrackingEnabled() const;
+    bool RowTrackingPartitionGroupOnCommit() const;
     bool DataEvolutionEnabled() const;
 
     bool LegacyPartitionNameEnabled() const;
@@ -176,6 +179,13 @@ class PAIMON_EXPORT CoreOptions {
 
     BucketFunctionType GetBucketFunctionType() const;
     std::optional<int32_t> GetGlobalIndexThreadNum() const;
+
+    const std::vector<std::string>& GetBlobFields() const;
+    const std::vector<std::string>& GetBlobDescriptorFields() const;
+    const std::vector<std::string>& GetBlobViewFields() const;
+    std::vector<std::string> GetBlobInlineFields() const;
+    const std::vector<std::string>& GetBlobExternalStorageFields() const;
+    std::optional<std::string> GetBlobExternalStoragePath() const;
 
     const std::map<std::string, std::string>& ToMap() const;
 

@@ -31,6 +31,7 @@
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/executor/future.h"
 #include "paimon/common/metrics/metrics_impl.h"
+#include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/binary_row_partition_computer.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/scope_guard.h"
@@ -653,6 +654,17 @@ Result<bool> FileStoreCommitImpl::TryCommitOnce(
     PAIMON_ASSIGN_OR_RAISE(base_manifest_list, manifest_list_->Write(merge_after_manifests));
 
     if (options_.RowTrackingEnabled()) {
+        if (options_.RowTrackingPartitionGroupOnCommit()) {
+            std::unordered_map<BinaryRow, std::vector<ManifestEntry>> delta_files_by_partition;
+            for (auto& entry : delta_files) {
+                delta_files_by_partition[entry.Partition()].push_back(std::move(entry));
+            }
+            delta_files.clear();
+            for (auto& [_, entries] : delta_files_by_partition) {
+                delta_files.insert(delta_files.end(), std::make_move_iterator(entries.begin()),
+                                   std::make_move_iterator(entries.end()));
+            }
+        }
         // assigned snapshot id to delta files
         AssignSnapshotId(new_snapshot_id, &delta_files);
         // assign row id for new files
@@ -753,28 +765,47 @@ Result<int64_t> FileStoreCommitImpl::AssignRowTrackingMeta(
     }
     // assign row id for new files
     int64_t start = first_row_id_start;
-    int64_t blob_start = first_row_id_start;
+    int64_t blob_start_default = first_row_id_start;
+    // Per-blob-field row id tracking: each blob field maintains its own start position,
+    // keyed by the blob field name (from write_cols[0]).
+    std::map<std::string, int64_t> blob_starts;
+    // TODO(xinyu.lxy): support vector store file row tracking when vector store is implemented
     for (auto& entry : *delta_files) {
         if (entry.File()->file_source == std::nullopt) {
             return Status::Invalid(
                 "This is a bug, file source field for row-tracking table must present.");
         }
+        bool contains_row_id =
+            entry.File()->write_cols.has_value() &&
+            std::find(entry.File()->write_cols->begin(), entry.File()->write_cols->end(),
+                      SpecialFields::RowId().Name()) != entry.File()->write_cols->end();
         if (entry.File()->file_source.value() == FileSource::Append() &&
-            entry.File()->first_row_id == std::nullopt) {
+            entry.File()->first_row_id == std::nullopt && !contains_row_id) {
+            int64_t row_count = entry.File()->row_count;
             if (BlobUtils::IsBlobFile(entry.File()->file_name)) {
+                // Use the first write_col as the blob field name to support
+                // independent row tracking per blob field.
+                std::string blob_field_name;
+                if (!entry.File()->write_cols || entry.File()->write_cols->empty()) {
+                    return Status::Invalid(fmt::format(
+                        "invalid blob file {}: does not have write_cols", entry.File()->file_name));
+                }
+                blob_field_name = entry.File()->write_cols->at(0);
+                int64_t blob_start = blob_starts.count(blob_field_name)
+                                         ? blob_starts[blob_field_name]
+                                         : blob_start_default;
                 if (blob_start >= start) {
                     return Status::Invalid(fmt::format(
                         "This is a bug, blob start {} should be less than start {} when "
                         "assigning a blob entry file.",
                         blob_start, start));
                 }
-                int64_t row_count = entry.File()->row_count;
                 entry.AssignFirstRowId(blob_start);
-                blob_start += row_count;
+                blob_starts[blob_field_name] = blob_start + row_count;
             } else {
-                int64_t row_count = entry.File()->row_count;
                 entry.AssignFirstRowId(start);
-                blob_start = start;
+                blob_start_default = start;
+                blob_starts.clear();
                 start += row_count;
             }
         }

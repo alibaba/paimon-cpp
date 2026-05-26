@@ -52,7 +52,6 @@ set(PAIMON_COMMON_SRCS
     common/fs/file_system.cpp
     common/fs/resolving_file_system.cpp
     common/fs/file_system_factory.cpp
-    common/global_config.cpp
     common/global_index/union_global_index_reader.cpp
     common/global_index/offset_global_index_reader.cpp
     common/global_index/complete_index_score_batch_reader.cpp
@@ -125,6 +124,7 @@ set(PAIMON_COMMON_SRCS
     common/types/data_type_json_parser.cpp
     common/types/row_kind.cpp
     common/types/row_type.cpp
+    common/utils/file_type.cpp
     common/utils/arrow/arrow_input_stream_adapter.cpp
     common/utils/arrow/arrow_output_stream_adapter.cpp
     common/utils/arrow/arrow_utils.cpp
@@ -201,6 +201,7 @@ set(PAIMON_CORE_SRCS
     core/index/index_file_handler.cpp
     core/index/global_index_meta.cpp
     core/index/index_file_meta_serializer.cpp
+    core/io/generic_row_to_arrow_array_converter.cpp
     core/io/meta_to_arrow_array_converter.cpp
     core/io/async_key_value_producer_and_consumer.cpp
     core/io/data_file_meta_09_serializer.cpp
@@ -221,6 +222,7 @@ set(PAIMON_CORE_SRCS
     core/io/key_value_meta_projection_consumer.cpp
     core/io/key_value_projection_consumer.cpp
     core/io/key_value_projection_reader.cpp
+    core/io/multiple_blob_file_writer.cpp
     core/io/rolling_blob_file_writer.cpp
     core/manifest/file_kind.cpp
     core/manifest/file_source.cpp
@@ -254,6 +256,7 @@ set(PAIMON_CORE_SRCS
     core/mergetree/merge_tree_writer.cpp
     core/mergetree/in_memory_sort_buffer.cpp
     core/mergetree/external_sort_buffer.cpp
+    core/mergetree/spill_file_merger.cpp
     core/mergetree/write_buffer.cpp
     core/mergetree/levels.cpp
     core/mergetree/lookup_file.cpp
@@ -277,6 +280,7 @@ set(PAIMON_CORE_SRCS
     core/operation/key_value_file_store_write.cpp
     core/operation/manifest_file_merger.cpp
     core/operation/merge_file_split_read.cpp
+    core/operation/blob_file_context.cpp
     core/operation/orphan_files_cleaner.cpp
     core/operation/orphan_files_cleaner_impl.cpp
     core/operation/raw_file_split_read.cpp
@@ -314,12 +318,16 @@ set(PAIMON_CORE_SRCS
     core/table/source/table_read.cpp
     core/table/source/table_scan.cpp
     core/table/source/data_evolution_batch_scan.cpp
-    core/table/system/options_system_table.cpp
+    core/table/system/audit_log_system_table.cpp
+    core/table/system/binlog_system_table.cpp
+    core/table/system/in_memory_system_table.cpp
+    core/table/system/metadata_system_tables.cpp
     core/table/system/system_table.cpp
-    core/table/system/system_table_read.cpp
     core/table/system/system_table_scan.cpp
     core/table/system/system_table_schema.cpp
     core/tag/tag.cpp
+    core/utils/branch_manager.cpp
+    core/utils/consumer_manager.cpp
     core/utils/field_mapping.cpp
     core/utils/file_store_path_factory.cpp
     core/utils/file_utils.cpp
@@ -465,6 +473,7 @@ if(PAIMON_BUILD_TESTS)
                     common/types/data_type_json_parser_test.cpp
                     common/types/row_kind_test.cpp
                     common/types/data_type_test.cpp
+                    common/utils/file_type_test.cpp
                     common/utils/row_range_index_test.cpp
                     common/utils/var_length_int_utils_test.cpp
                     common/utils/arrow/arrow_utils_test.cpp
@@ -532,6 +541,8 @@ if(PAIMON_BUILD_TESTS)
                     common/compression/block_compression_factory_test.cpp
                     common/sst/sst_file_io_test.cpp
                     common/sst/block_cache_test.cpp
+                    common/sst/block_meta_test.cpp
+                    common/sst/block_write_read_test.cpp
                     common/utils/crc32c_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared
@@ -561,6 +572,7 @@ if(PAIMON_BUILD_TESTS)
                     core/catalog/catalog_test.cpp
                     core/catalog/identifier_test.cpp
                     core/compact/compact_deletion_file_test.cpp
+                    core/compact/compact_future_manager_test.cpp
                     core/compact/noop_compact_manager_test.cpp
                     core/core_options_test.cpp
                     core/options/lookup_strategy_test.cpp
@@ -645,6 +657,7 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/merge_tree_writer_test.cpp
                     core/mergetree/write_buffer_test.cpp
                     core/mergetree/sort_buffer_test.cpp
+                    core/mergetree/spill_file_merger_test.cpp
                     core/mergetree/sorted_run_test.cpp
                     core/mergetree/spill_channel_manager_test.cpp
                     core/mergetree/spill_reader_writer_test.cpp
@@ -667,6 +680,7 @@ if(PAIMON_BUILD_TESTS)
                     core/operation/file_store_write_test.cpp
                     core/operation/manifest_file_merger_test.cpp
                     core/operation/merge_file_split_read_test.cpp
+                    core/operation/blob_file_context_test.cpp
                     core/operation/orphan_files_cleaner_test.cpp
                     core/operation/raw_file_split_read_test.cpp
                     core/operation/read_context_test.cpp
@@ -693,8 +707,10 @@ if(PAIMON_BUILD_TESTS)
                     core/table/source/split_generator_test.cpp
                     core/table/source/startup_mode_test.cpp
                     core/table/source/table_scan_test.cpp
+                    core/table/system/system_table_test.cpp
                     core/tag/tag_test.cpp
                     core/utils/branch_manager_test.cpp
+                    core/utils/consumer_manager_test.cpp
                     core/utils/file_store_path_factory_cache_test.cpp
                     core/utils/field_mapping_test.cpp
                     core/utils/file_store_path_factory_test.cpp

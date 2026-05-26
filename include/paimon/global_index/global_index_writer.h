@@ -34,7 +34,7 @@ class PAIMON_EXPORT GlobalIndexWriter {
     ///
     /// @param arrow_array A valid C ArrowArray pointer representing a struct array.
     ///                    Must not be nullptr, and must conform to the expected schema.
-    /// @param relative_row_ids local row id calculated by {@code row_id - range.from}.
+    /// @param relative_row_ids local row id calculated by `row_id - range.from`.
     /// @return `Status::OK()` on success; otherwise, an error indicating malformed
     ///         input, I/O failure, or unsupported type, etc.
     virtual Status AddBatch(::ArrowArray* arrow_array, std::vector<int64_t>&& relative_row_ids) = 0;

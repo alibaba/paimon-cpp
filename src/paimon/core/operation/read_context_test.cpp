@@ -20,13 +20,15 @@
 
 #include "gtest/gtest.h"
 #include "paimon/defs.h"
+#include "paimon/executor.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/status.h"
 #include "paimon/testing/mock/mock_file_system.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
-TEST(ReadContextTest, TestSimple) {
+TEST(ReadContextTest, TestDefaultValue) {
     ReadContextBuilder builder("table_root_path");
     ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
     ASSERT_EQ(ctx->GetPath(), "table_root_path");
@@ -50,6 +52,11 @@ TEST(ReadContextTest, TestSimple) {
 
 TEST(ReadContextTest, TestSetContent) {
     ReadContextBuilder builder("table_root_path");
+    std::shared_ptr<MemoryPool> memory_pool = GetDefaultPool();
+    std::shared_ptr<Executor> executor = CreateDefaultExecutor();
+    CacheConfig cache_config(/*buffer_size_limit=*/1024, /*range_size_limit=*/512,
+                             /*hole_size_limit=*/128, /*pre_buffer_limit=*/2048);
+
     builder.AddOption("key", "value");
     builder.SetReadSchema({"f1", "f2"});
     builder.SetReadFieldIds({0, 1});
@@ -63,7 +70,11 @@ TEST(ReadContextTest, TestSetContent) {
     builder.SetPrefetchMaxParallelNum(6);
     builder.EnableMultiThreadRowToBatch(true);
     builder.SetRowToBatchThreadNumber(9);
+    builder.WithMemoryPool(memory_pool);
+    builder.WithExecutor(executor);
+    builder.SetTableSchema("table-schema-json");
     builder.WithBranch("rt");
+    builder.WithCacheConfig(cache_config);
     builder.WithFileSystemSchemeToIdentifierMap({{"file", "local"}});
     auto fs = std::make_shared<MockFileSystem>();
     builder.WithFileSystem(fs);
@@ -83,12 +94,31 @@ TEST(ReadContextTest, TestSetContent) {
     ASSERT_EQ(6, ctx->GetPrefetchMaxParallelNum());
     ASSERT_TRUE(ctx->EnableMultiThreadRowToBatch());
     ASSERT_EQ(9, ctx->GetRowToBatchThreadNumber());
+    ASSERT_EQ(memory_pool, ctx->GetMemoryPool());
+    ASSERT_EQ(executor, ctx->GetExecutor());
+    ASSERT_TRUE(ctx->GetSpecificTableSchema().has_value());
+    ASSERT_EQ("table-schema-json", ctx->GetSpecificTableSchema().value());
     ASSERT_EQ("rt", ctx->GetBranch());
+    ASSERT_EQ(1024U, ctx->GetCacheConfig().GetBufferSizeLimit());
+    ASSERT_EQ(512U, ctx->GetCacheConfig().GetRangeSizeLimit());
+    ASSERT_EQ(128U, ctx->GetCacheConfig().GetHoleSizeLimit());
+    ASSERT_EQ(2048U, ctx->GetCacheConfig().GetPreBufferLimit());
     std::map<std::string, std::string> expected_fs_map = {{"file", "local"}};
     ASSERT_EQ(expected_fs_map, ctx->GetFileSystemSchemeToIdentifierMap());
     std::map<std::string, std::string> expected_options = {{"key", "value"}};
     ASSERT_EQ(expected_options, ctx->GetOptions());
     ASSERT_EQ(ctx->GetSpecificFileSystem(), fs);
+}
+
+TEST(ReadContextTest, TestSetOptionsOverridesAddedOptions) {
+    ReadContextBuilder builder("table_root_path");
+    builder.AddOption("old", "value");
+    builder.SetOptions({{"key1", "value1"}, {"key2", "value2"}});
+
+    ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
+
+    std::map<std::string, std::string> expected_options = {{"key1", "value1"}, {"key2", "value2"}};
+    ASSERT_EQ(expected_options, ctx->GetOptions());
 }
 
 }  // namespace paimon::test

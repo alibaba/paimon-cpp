@@ -90,7 +90,7 @@ TEST(FileSystemCatalogTest, TestCreateSystemDatabaseAndTable) {
                                                    /*ignore_if_exists=*/true),
                             "Cannot create database for system database");
     }
-    // do not support create system table
+    /// Do not support create system table.
     {
         std::map<std::string, std::string> options;
         options[Options::FILE_SYSTEM] = "local";
@@ -207,6 +207,171 @@ TEST(FileSystemCatalogTest, TestOptionsSystemTableCatalog) {
     ArrowSchemaRelease(&system_create_schema);
     ASSERT_NOK_WITH_MSG(catalog.DropTable(options_identifier, false), "Cannot drop system table");
     ASSERT_NOK_WITH_MSG(catalog.RenameTable(options_identifier, Identifier("db1", "tbl2"), false),
+                        "Cannot rename system table");
+}
+
+TEST(FileSystemCatalogTest, TestAuditLogAndBinlogSystemTableCatalog) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
+
+    auto typed_schema =
+        arrow::schema({arrow::field("pk", arrow::utf8()), arrow::field("v", arrow::int32(), true)});
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &schema).ok());
+    ASSERT_OK(catalog.CreateTable(Identifier("db1", "tbl1"), &schema,
+                                  /*partition_keys=*/{}, /*primary_keys=*/{"pk"}, options,
+                                  /*ignore_if_exists=*/false));
+    ArrowSchemaRelease(&schema);
+
+    Identifier audit_log_identifier("db1", "tbl1$audit_log");
+    Identifier binlog_identifier("db1", "tbl1$binlog");
+    ASSERT_OK_AND_ASSIGN(bool exists, catalog.TableExists(audit_log_identifier));
+    ASSERT_TRUE(exists);
+    ASSERT_OK_AND_ASSIGN(exists, catalog.TableExists(binlog_identifier));
+    ASSERT_TRUE(exists);
+    ASSERT_OK_AND_ASSIGN(exists, catalog.TableExists(Identifier("db1", "tbl1$unknown")));
+    ASSERT_FALSE(exists);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> audit_log_system_schema,
+                         catalog.LoadTableSchema(audit_log_identifier));
+    ASSERT_TRUE(std::dynamic_pointer_cast<SystemTableSchema>(audit_log_system_schema) != nullptr);
+    ASSERT_OK_AND_ASSIGN(auto audit_log_c_schema, audit_log_system_schema->GetArrowSchema());
+    auto audit_log_schema_result = arrow::ImportSchema(audit_log_c_schema.get());
+    ASSERT_TRUE(audit_log_schema_result.ok()) << audit_log_schema_result.status().ToString();
+    auto audit_log_schema = audit_log_schema_result.ValueUnsafe();
+    ASSERT_EQ(audit_log_schema->field_names(), (std::vector<std::string>{"rowkind", "pk", "v"}));
+    ASSERT_EQ(audit_log_schema->field(0)->type()->id(), arrow::Type::STRING);
+    ASSERT_EQ(audit_log_schema->field(1)->type()->id(), arrow::Type::STRING);
+    ASSERT_EQ(audit_log_schema->field(2)->type()->id(), arrow::Type::INT32);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> binlog_system_schema,
+                         catalog.LoadTableSchema(binlog_identifier));
+    ASSERT_TRUE(std::dynamic_pointer_cast<SystemTableSchema>(binlog_system_schema) != nullptr);
+    ASSERT_OK_AND_ASSIGN(auto binlog_c_schema, binlog_system_schema->GetArrowSchema());
+    auto binlog_schema_result = arrow::ImportSchema(binlog_c_schema.get());
+    ASSERT_TRUE(binlog_schema_result.ok()) << binlog_schema_result.status().ToString();
+    auto binlog_schema = binlog_schema_result.ValueUnsafe();
+    ASSERT_EQ(binlog_schema->field_names(), (std::vector<std::string>{"rowkind", "pk", "v"}));
+    ASSERT_EQ(binlog_schema->field(0)->type()->id(), arrow::Type::STRING);
+    ASSERT_EQ(binlog_schema->field(1)->type()->id(), arrow::Type::LIST);
+    ASSERT_EQ(binlog_schema->field(2)->type()->id(), arrow::Type::LIST);
+    auto binlog_pk_type =
+        std::dynamic_pointer_cast<arrow::ListType>(binlog_schema->field(1)->type());
+    auto binlog_v_type =
+        std::dynamic_pointer_cast<arrow::ListType>(binlog_schema->field(2)->type());
+    ASSERT_TRUE(binlog_pk_type);
+    ASSERT_TRUE(binlog_v_type);
+    ASSERT_EQ(binlog_pk_type->value_type()->id(), arrow::Type::STRING);
+    ASSERT_EQ(binlog_v_type->value_type()->id(), arrow::Type::INT32);
+
+    ::ArrowSchema system_create_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &system_create_schema).ok());
+    ASSERT_NOK_WITH_MSG(
+        catalog.CreateTable(audit_log_identifier, &system_create_schema, {}, {}, options, false),
+        "Cannot create table for system table");
+    ArrowSchemaRelease(&system_create_schema);
+    ASSERT_NOK_WITH_MSG(catalog.DropTable(binlog_identifier, false), "Cannot drop system table");
+    ASSERT_NOK_WITH_MSG(catalog.RenameTable(audit_log_identifier, Identifier("db1", "tbl2"), false),
+                        "Cannot rename system table");
+}
+
+TEST(FileSystemCatalogTest, TestMetadataSystemTableCatalog) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
+
+    auto typed_schema =
+        arrow::schema({arrow::field("pk", arrow::utf8()), arrow::field("v", arrow::int32())});
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &schema).ok());
+    ASSERT_OK(catalog.CreateTable(Identifier("db1", "tbl1"), &schema,
+                                  /*partition_keys=*/{}, /*primary_keys=*/{"pk"}, options,
+                                  /*ignore_if_exists=*/false));
+    ArrowSchemaRelease(&schema);
+
+    std::vector<std::string> metadata_tables = {"snapshots", "schemas", "tags", "branches",
+                                                "consumers"};
+    for (const auto& table_name : metadata_tables) {
+        Identifier system_identifier("db1", "tbl1$" + table_name);
+        ASSERT_OK_AND_ASSIGN(bool exists, catalog.TableExists(system_identifier));
+        ASSERT_TRUE(exists) << table_name;
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> system_schema,
+                             catalog.LoadTableSchema(system_identifier));
+        ASSERT_TRUE(std::dynamic_pointer_cast<SystemTableSchema>(system_schema) != nullptr)
+            << table_name;
+        ASSERT_OK_AND_ASSIGN(auto c_schema, system_schema->GetArrowSchema());
+        auto loaded_schema_result = arrow::ImportSchema(c_schema.get());
+        ASSERT_TRUE(loaded_schema_result.ok()) << loaded_schema_result.status().ToString();
+        ASSERT_GT(loaded_schema_result.ValueUnsafe()->num_fields(), 0) << table_name;
+    }
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> snapshots_schema,
+                         catalog.LoadTableSchema(Identifier("db1", "tbl1$snapshots")));
+    ASSERT_OK_AND_ASSIGN(auto snapshots_c_schema, snapshots_schema->GetArrowSchema());
+    auto snapshots_arrow_schema = arrow::ImportSchema(snapshots_c_schema.get()).ValueUnsafe();
+    ASSERT_EQ(snapshots_arrow_schema->field_names(),
+              (std::vector<std::string>{
+                  "snapshot_id", "schema_id", "commit_user", "commit_identifier", "commit_kind",
+                  "commit_time", "base_manifest_list", "delta_manifest_list",
+                  "changelog_manifest_list", "total_record_count", "delta_record_count",
+                  "changelog_record_count", "watermark", "next_row_id"}));
+    ASSERT_EQ(snapshots_arrow_schema->field(5)->type()->id(), arrow::Type::TIMESTAMP);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> schemas_schema,
+                         catalog.LoadTableSchema(Identifier("db1", "tbl1$schemas")));
+    ASSERT_OK_AND_ASSIGN(auto schemas_c_schema, schemas_schema->GetArrowSchema());
+    auto schemas_arrow_schema = arrow::ImportSchema(schemas_c_schema.get()).ValueUnsafe();
+    ASSERT_EQ(schemas_arrow_schema->field_names(),
+              (std::vector<std::string>{"schema_id", "fields", "partition_keys", "primary_keys",
+                                        "options", "comment", "update_time"}));
+    ASSERT_EQ(schemas_arrow_schema->field(6)->type()->id(), arrow::Type::TIMESTAMP);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> tags_schema,
+                         catalog.LoadTableSchema(Identifier("db1", "tbl1$tags")));
+    ASSERT_OK_AND_ASSIGN(auto tags_c_schema, tags_schema->GetArrowSchema());
+    auto tags_arrow_schema = arrow::ImportSchema(tags_c_schema.get()).ValueUnsafe();
+    ASSERT_EQ(tags_arrow_schema->field_names(),
+              (std::vector<std::string>{"tag_name", "snapshot_id", "schema_id", "commit_time",
+                                        "record_count", "create_time", "time_retained"}));
+    ASSERT_EQ(tags_arrow_schema->field(3)->type()->id(), arrow::Type::TIMESTAMP);
+    ASSERT_EQ(tags_arrow_schema->field(5)->type()->id(), arrow::Type::TIMESTAMP);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> branches_schema,
+                         catalog.LoadTableSchema(Identifier("db1", "tbl1$branches")));
+    ASSERT_OK_AND_ASSIGN(auto branches_c_schema, branches_schema->GetArrowSchema());
+    auto branches_arrow_schema = arrow::ImportSchema(branches_c_schema.get()).ValueUnsafe();
+    ASSERT_EQ(branches_arrow_schema->field_names(),
+              (std::vector<std::string>{"branch_name", "create_time"}));
+    ASSERT_EQ(branches_arrow_schema->field(1)->type()->id(), arrow::Type::TIMESTAMP);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> consumers_schema,
+                         catalog.LoadTableSchema(Identifier("db1", "tbl1$consumers")));
+    ASSERT_OK_AND_ASSIGN(auto consumers_c_schema, consumers_schema->GetArrowSchema());
+    auto consumers_arrow_schema = arrow::ImportSchema(consumers_c_schema.get()).ValueUnsafe();
+    ASSERT_EQ(consumers_arrow_schema->field_names(),
+              (std::vector<std::string>{"consumer_id", "next_snapshot_id"}));
+    ASSERT_FALSE(consumers_arrow_schema->field(1)->nullable());
+
+    Identifier snapshots_identifier("db1", "tbl1$snapshots");
+    ::ArrowSchema system_create_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &system_create_schema).ok());
+    ASSERT_NOK_WITH_MSG(
+        catalog.CreateTable(snapshots_identifier, &system_create_schema, {}, {}, options, false),
+        "Cannot create table for system table");
+    ArrowSchemaRelease(&system_create_schema);
+    ASSERT_NOK_WITH_MSG(catalog.DropTable(snapshots_identifier, false), "Cannot drop system table");
+    ASSERT_NOK_WITH_MSG(catalog.RenameTable(snapshots_identifier, Identifier("db1", "tbl2"), false),
                         "Cannot rename system table");
 }
 
@@ -554,7 +719,7 @@ TEST(FileSystemCatalogTest, TestDropTable) {
     ASSERT_OK_AND_ASSIGN(bool exist, catalog.TableExists(Identifier("test_db", "tbl1")));
     ASSERT_FALSE(exist);
 
-    // Test 4: Drop system table
+    /// Test 4: Drop system table.
     ASSERT_NOK_WITH_MSG(
         catalog.DropTable(Identifier("test_db", "tbl$system"),
                           /*ignore_if_not_exists=*/false),
@@ -620,7 +785,7 @@ TEST(FileSystemCatalogTest, TestRenameTable) {
                             /*ignore_if_not_exists=*/false),
         "Cannot rename table across databases. Cross-database rename is not supported.");
 
-    // Test 6: Rename system table
+    /// Test 6: Rename system table.
     ASSERT_NOK_WITH_MSG(catalog.RenameTable(Identifier("test_db", "tbl$system"),
                                             Identifier("test_db", "new_system_tbl"),
                                             /*ignore_if_not_exists=*/false),
@@ -644,6 +809,7 @@ TEST(FileSystemCatalogTest, TestDropTableWithExternalPath) {
     auto external_dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(external_dir);
     std::string external_path = external_dir->Str();
+    external_path = "FILE://" + external_path;
 
     // Create a file in external path to simulate external data
     ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
@@ -665,6 +831,7 @@ TEST(FileSystemCatalogTest, TestDropTableWithExternalPath) {
 
     std::map<std::string, std::string> table_options = options;
     table_options[Options::DATA_FILE_EXTERNAL_PATHS] = external_path;
+    table_options[Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY] = "round-robin";
 
     ASSERT_OK(catalog.CreateTable(Identifier("test_db", "tbl_with_external"), &schema, {}, {},
                                   table_options, false));
@@ -707,7 +874,9 @@ TEST(FileSystemCatalogTest, TestDropTableWithMultipleExternalPaths) {
     ASSERT_TRUE(external_dir2);
 
     std::string external_path1 = external_dir1->Str();
+    external_path1 = "FILE://" + external_path1;
     std::string external_path2 = external_dir2->Str();
+    external_path2 = "FILE://" + external_path2;
 
     // Create files in external paths
     ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
@@ -727,6 +896,7 @@ TEST(FileSystemCatalogTest, TestDropTableWithMultipleExternalPaths) {
 
     std::map<std::string, std::string> table_options = options;
     table_options[Options::DATA_FILE_EXTERNAL_PATHS] = external_path1 + "," + external_path2;
+    table_options[Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY] = "round-robin";
 
     ASSERT_OK(catalog.CreateTable(Identifier("test_db", "tbl_multi_external"), &schema, {}, {},
                                   table_options, false));
@@ -742,6 +912,133 @@ TEST(FileSystemCatalogTest, TestDropTableWithMultipleExternalPaths) {
     ASSERT_FALSE(exists2);
 
     ArrowSchemaRelease(&schema);
+}
+
+TEST(FileSystemCatalogTest, TestDropTableWithGlobalIndexExternalPathOnMainBranch) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
+
+    // Create external path directory for global index
+    auto global_index_dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(global_index_dir);
+    std::string global_index_path = global_index_dir->Str();
+    global_index_path = "FILE://" + global_index_path;
+
+    // Create a file in external path to simulate global index data
+    ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
+    std::string index_file = PathUtil::JoinPath(global_index_path, "index-file.bin");
+    ASSERT_OK(fs->WriteFile(index_file, "index data", /*overwrite=*/true));
+
+    // Verify index file exists
+    ASSERT_OK_AND_ASSIGN(bool index_file_exists, fs->Exists(index_file));
+    ASSERT_TRUE(index_file_exists);
+
+    // Create table with global index external path on main branch
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::utf8()),
+    };
+    arrow::Schema typed_schema(fields);
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+
+    std::map<std::string, std::string> table_options = options;
+    table_options[Options::GLOBAL_INDEX_EXTERNAL_PATH] = global_index_path;
+
+    ASSERT_OK(catalog.CreateTable(Identifier("test_db", "tbl_global_index"), &schema, {}, {},
+                                  table_options, false));
+
+    // Verify table exists
+    ASSERT_OK_AND_ASSIGN(bool table_exists,
+                         catalog.TableExists(Identifier("test_db", "tbl_global_index")));
+    ASSERT_TRUE(table_exists);
+
+    // Drop the table
+    ASSERT_OK(catalog.DropTable(Identifier("test_db", "tbl_global_index"),
+                                /*ignore_if_not_exists=*/false));
+
+    // Verify table is dropped
+    ASSERT_OK_AND_ASSIGN(table_exists,
+                         catalog.TableExists(Identifier("test_db", "tbl_global_index")));
+    ASSERT_FALSE(table_exists);
+
+    // Verify global index external path is also cleaned up
+    ASSERT_OK_AND_ASSIGN(bool global_index_exists, fs->Exists(global_index_path));
+    ASSERT_FALSE(global_index_exists);
+
+    ArrowSchemaRelease(&schema);
+}
+
+TEST(FileSystemCatalogTest, TestDropTableWithGlobalIndexExternalPathOnBranch) {
+    // Copy the real append_table_with_rt_branch.db test data, then patch the
+    // branch-rt schema-1 to include a GLOBAL_INDEX_EXTERNAL_PATH option.
+    // DropTable should discover and clean up that external path.
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+
+    // Copy the real test_data db into a temp directory
+    std::string test_data_path = GetDataDir() + "/orc/append_table_with_rt_branch.db";
+    std::string db_path = dir->Str() + "/test_db.db";
+    ASSERT_TRUE(TestUtil::CopyDirectory(test_data_path, db_path));
+
+    // Create a temporary external directory that represents branch global index data
+    auto branch_external_dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(branch_external_dir);
+    std::string branch_external_path = branch_external_dir->Str();
+    branch_external_path = "FILE://" + branch_external_path;
+
+    ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
+    ASSERT_OK(fs->WriteFile(PathUtil::JoinPath(branch_external_path, "index.bin"),
+                            "branch global index data", /*overwrite=*/true));
+
+    // Patch branch-rt/schema/schema-1: add GLOBAL_INDEX_EXTERNAL_PATH to options
+    std::string branch_schema_path =
+        PathUtil::JoinPath(db_path, "append_table_with_rt_branch/branch/branch-rt/schema/schema-1");
+    std::string schema_content;
+    ASSERT_OK(fs->ReadFile(branch_schema_path, &schema_content));
+
+    // Insert the global index external path option into the JSON options block.
+    // Original: "file.format" : "orc"
+    // Patched:  "file.format" : "orc",
+    //           "global-index.external-path" : "<branch_external_path>"
+    std::string search_str = R"("file.format" : "orc")";
+    std::string replace_str = R"("file.format" : "orc",
+                              "global-index.external-path" : ")" +
+                              branch_external_path + R"(")";
+    auto pos = schema_content.rfind(search_str);
+    ASSERT_NE(pos, std::string::npos);
+    schema_content.replace(pos, search_str.length(), replace_str);
+    ASSERT_OK(fs->WriteFile(branch_schema_path, schema_content, /*overwrite=*/true));
+
+    // Verify external path exists before drop
+    ASSERT_OK_AND_ASSIGN(bool external_exists, fs->Exists(branch_external_path));
+    ASSERT_TRUE(external_exists);
+
+    // Drop the table via catalog
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    Identifier identifier("test_db", "append_table_with_rt_branch");
+    ASSERT_OK_AND_ASSIGN(bool table_exists, catalog.TableExists(identifier));
+    ASSERT_TRUE(table_exists);
+
+    ASSERT_OK(catalog.DropTable(identifier, /*ignore_if_not_exists=*/false));
+
+    // Verify table is dropped
+    ASSERT_OK_AND_ASSIGN(table_exists, catalog.TableExists(identifier));
+    ASSERT_FALSE(table_exists);
+
+    // Verify the branch global index external path is cleaned up by DropTable
+    ASSERT_OK_AND_ASSIGN(external_exists, fs->Exists(branch_external_path));
+    ASSERT_FALSE(external_exists);
 }
 
 TEST(FileSystemCatalogTest, TestListSnapshots) {
@@ -795,6 +1092,73 @@ TEST(FileSystemCatalogTest, TestListSnapshotsTableNotExist) {
     ASSERT_NOK_WITH_MSG(
         catalog.ListSnapshots(Identifier("non_existent_db", "non_existent_table"), ""),
         "does not exist");
+}
+
+TEST(FileSystemCatalogTest, TestDropTableWithBranchExternalPaths) {
+    // Copy the real append_table_with_rt_branch.db test data, then patch the
+    // branch-rt schema-1 to include a DATA_FILE_EXTERNAL_PATHS option.
+    // DropTable should discover and clean up that external path.
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+
+    // Copy the real test_data db into a temp directory
+    std::string test_data_path = GetDataDir() + "orc/append_table_with_rt_branch.db";
+    std::string db_path = dir->Str() + "/test_db.db";
+    ASSERT_TRUE(TestUtil::CopyDirectory(test_data_path, db_path));
+
+    // Create a temporary external directory that represents branch external data
+    auto branch_external_dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(branch_external_dir);
+    std::string branch_external_path = branch_external_dir->Str();
+    branch_external_path = "FILE://" + branch_external_path;
+
+    ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
+    ASSERT_OK(fs->WriteFile(PathUtil::JoinPath(branch_external_path, "data.orc"),
+                            "branch external data", /*overwrite=*/true));
+
+    // Patch branch-rt/schema/schema-1: add DATA_FILE_EXTERNAL_PATHS to options
+    std::string branch_schema_path =
+        PathUtil::JoinPath(db_path, "append_table_with_rt_branch/branch/branch-rt/schema/schema-1");
+    std::string schema_content;
+    ASSERT_OK(fs->ReadFile(branch_schema_path, &schema_content));
+
+    // Insert the external path option into the JSON options block.
+    // Original: "file.format" : "orc"
+    // Patched:  "file.format" : "orc",
+    //           "data-file.external-paths" : "<branch_external_path>"
+    std::string search_str = R"("file.format" : "orc")";
+    std::string replace_str = R"("file.format" : "orc",
+                                 "data-file.external-paths.strategy" : "round-robin",
+                                 "data-file.external-paths" : ")" +
+                              branch_external_path + R"(")";
+    auto pos = schema_content.rfind(search_str);
+    ASSERT_NE(pos, std::string::npos);
+    schema_content.replace(pos, search_str.length(), replace_str);
+    ASSERT_OK(fs->WriteFile(branch_schema_path, schema_content, /*overwrite=*/true));
+
+    // Verify external path exists before drop
+    ASSERT_OK_AND_ASSIGN(bool external_exists, fs->Exists(branch_external_path));
+    ASSERT_TRUE(external_exists);
+
+    // Drop the table via catalog
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    Identifier identifier("test_db", "append_table_with_rt_branch");
+    ASSERT_OK_AND_ASSIGN(bool table_exists, catalog.TableExists(identifier));
+    ASSERT_TRUE(table_exists);
+
+    ASSERT_OK(catalog.DropTable(identifier, /*ignore_if_not_exists=*/false));
+
+    // Verify table is dropped
+    ASSERT_OK_AND_ASSIGN(table_exists, catalog.TableExists(identifier));
+    ASSERT_FALSE(table_exists);
+
+    // Verify the branch external path is cleaned up by DropTable
+    ASSERT_OK_AND_ASSIGN(external_exists, fs->Exists(branch_external_path));
+    ASSERT_FALSE(external_exists);
 }
 
 }  // namespace paimon::test

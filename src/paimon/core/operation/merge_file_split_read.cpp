@@ -27,11 +27,11 @@
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "arrow/type.h"
+#include "fmt/format.h"
 #include "paimon/common/reader/complete_row_kind_batch_reader.h"
 #include "paimon/common/reader/concat_batch_reader.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
-#include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/object_utils.h"
 #include "paimon/core/core_options.h"
@@ -42,6 +42,7 @@
 #include "paimon/core/io/concat_key_value_record_reader.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/io/key_value_data_file_record_reader.h"
+#include "paimon/core/io/key_value_projection_consumer.h"
 #include "paimon/core/io/key_value_projection_reader.h"
 #include "paimon/core/mergetree/compact/interval_partition.h"
 #include "paimon/core/mergetree/compact/lookup_merge_function.h"
@@ -102,9 +103,26 @@ Result<std::unique_ptr<MergeFileSplitRead>> MergeFileSplitRead::Create(
                            table_schema->TrimmedPrimaryKeySchema());
 
     // projection is the mapping from value_schema in KeyValue object to raw_read_schema
-    PAIMON_ASSIGN_OR_RAISE(
-        std::vector<int32_t> projection,
-        ArrowUtils::CreateProjection(value_schema, context->GetReadSchema()->fields()));
+    std::vector<int32_t> projection;
+    projection.reserve(context->GetReadSchema()->num_fields());
+    bool project_sequence_number =
+        core_options.RowTrackingEnabled() || core_options.KeyValueSequenceNumberEnabled();
+    for (const auto& field : context->GetReadSchema()->fields()) {
+        if (field->name() == SpecialFields::SequenceNumber().Name() && project_sequence_number) {
+            projection.push_back(KeyValueProjectionConsumer::kSequenceNumberProjection);
+            continue;
+        }
+        if (field->name() == SpecialFields::ValueKind().Name()) {
+            projection.push_back(KeyValueProjectionConsumer::kValueKindProjection);
+            continue;
+        }
+        auto src_field_idx = value_schema->GetFieldIndex(field->name());
+        if (src_field_idx < 0) {
+            return Status::Invalid(
+                fmt::format("Field '{}' not found or duplicate in value schema", field->name()));
+        }
+        projection.push_back(src_field_idx);
+    }
 
     return std::unique_ptr<MergeFileSplitRead>(new MergeFileSplitRead(
         path_factory, context,
@@ -305,6 +323,23 @@ Status MergeFileSplitRead::GenerateKeyValueReadSchema(
     // 1. add user raw read schema to need_fields
     PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> need_fields,
                            DataField::ConvertArrowSchemaToDataFields(raw_read_schema));
+    if (options.RowTrackingEnabled() || options.KeyValueSequenceNumberEnabled()) {
+        // _SEQUENCE_NUMBER is carried by KeyValue metadata, not by KeyValue.value. Remove it before
+        // splitting key/value fields so the value projection can inject it from KeyValue directly.
+        need_fields.erase(std::remove_if(need_fields.begin(), need_fields.end(),
+                                         [](const DataField& field) {
+                                             return field.Name() ==
+                                                    SpecialFields::SequenceNumber().Name();
+                                         }),
+                          need_fields.end());
+    }
+    // _VALUE_KIND is also carried by KeyValue metadata. Keep it out of KeyValue.value so the
+    // projection can inject the actual row kind instead of resolving it as a table field.
+    need_fields.erase(std::remove_if(need_fields.begin(), need_fields.end(),
+                                     [](const DataField& field) {
+                                         return field.Name() == SpecialFields::ValueKind().Name();
+                                     }),
+                      need_fields.end());
     // 2. add user defined sequence field to need_fields
     PAIMON_RETURN_NOT_OK(CompleteSequenceField(table_schema, options, &need_fields));
     if (options.GetMergeEngine() == MergeEngine::PARTIAL_UPDATE) {
@@ -409,10 +444,10 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateReaderForSection(
     } else {
         predicate = context_->GetPredicate();
     }
-    PAIMON_ASSIGN_OR_RAISE(
-        std::unique_ptr<SortMergeReader> sort_merge_reader,
-        CreateSortMergeReaderForSection(section, partition, dv_factory, predicate,
-                                        data_file_path_factory, /*drop_delete=*/true));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortMergeReader> sort_merge_reader,
+                           CreateSortMergeReaderForSection(section, partition, dv_factory,
+                                                           predicate, data_file_path_factory,
+                                                           /*drop_delete=*/!force_keep_delete_));
     // KeyValueProjectionReader converts KeyValue objects to arrow array according to projection
     if (!context_->EnableMultiThreadRowToBatch()) {
         return KeyValueProjectionReader::Create(std::move(sort_merge_reader), raw_read_schema_,

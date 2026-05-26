@@ -34,3 +34,4 @@ User Guide
    user_guide/clean
    user_guide/prefetch
    user_guide/arrow
+   user_guide/global_index

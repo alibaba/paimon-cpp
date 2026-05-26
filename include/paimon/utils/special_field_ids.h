@@ -25,18 +25,20 @@ namespace paimon {
 class SpecialFieldIds {
  protected:
     /// System defined constant for field id boundary. Value: INT32_MAX - 10000
-    static const int32_t CPP_FIELD_ID_END;
+    static const int32_t CPP_FIELD_ID_END = std::numeric_limits<int32_t>::max() - 10000;
 
  public:
     /// Special field ID reserved for sequence number. Value: INT32_MAX - 1
-    static const int32_t SEQUENCE_NUMBER;
+    static const int32_t SEQUENCE_NUMBER = std::numeric_limits<int32_t>::max() - 1;
     /// Special field ID reserved for value kind. Value: INT32_MAX - 2
-    static const int32_t VALUE_KIND;
+    static const int32_t VALUE_KIND = std::numeric_limits<int32_t>::max() - 2;
+    /// Special field ID reserved for row kind. Value: INT32_MAX - 3
+    static const int32_t ROW_KIND = std::numeric_limits<int32_t>::max() - 3;
     /// Special field ID reserved for row ID. Value: INT32_MAX - 5
-    static const int32_t ROW_ID;
+    static const int32_t ROW_ID = std::numeric_limits<int32_t>::max() - 5;
 
     /// Special field ID reserved for index score. Value: CPP_FIELD_ID_END - 1
-    static const int32_t INDEX_SCORE;
+    static const int32_t INDEX_SCORE = CPP_FIELD_ID_END - 1;
 };
 
 }  // namespace paimon

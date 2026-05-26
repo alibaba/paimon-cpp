@@ -36,7 +36,7 @@ Result<std::unique_ptr<WriteBuffer>> WriteBuffer::Create(
     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
     const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
     const CoreOptions& options, const std::shared_ptr<IOManager>& io_manager,
-    const std::shared_ptr<MemoryPool>& pool) {
+    bool enable_multi_thread_spill, const std::shared_ptr<MemoryPool>& pool) {
     auto value_type = arrow::struct_(value_schema->fields());
     auto in_memory_buffer = std::make_unique<InMemorySortBuffer>(
         last_sequence_number, value_type, trimmed_primary_keys, user_defined_sequence_fields,
@@ -47,10 +47,10 @@ Result<std::unique_ptr<WriteBuffer>> WriteBuffer::Create(
         sort_buffer = std::move(in_memory_buffer);
     } else {
         PAIMON_ASSIGN_OR_RAISE(
-            sort_buffer,
-            ExternalSortBuffer::Create(std::move(in_memory_buffer), value_schema,
-                                       trimmed_primary_keys, key_comparator,
-                                       user_defined_seq_comparator, options, io_manager, pool));
+            sort_buffer, ExternalSortBuffer::Create(std::move(in_memory_buffer), value_schema,
+                                                    trimmed_primary_keys, key_comparator,
+                                                    user_defined_seq_comparator, options,
+                                                    io_manager, enable_multi_thread_spill, pool));
     }
     return std::unique_ptr<WriteBuffer>(
         new WriteBuffer(std::move(sort_buffer), key_comparator, merge_function_wrapper));

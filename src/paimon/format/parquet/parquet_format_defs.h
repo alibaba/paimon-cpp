@@ -43,8 +43,9 @@ static inline const char PARQUET_WRITE_ENABLE_PAGE_INDEX[] = "parquet.write.enab
 static constexpr bool DEFAULT_PARQUET_WRITE_ENABLE_PAGE_INDEX = true;
 
 // read
-static inline const char PARQUET_USE_MULTI_THREAD[] = "parquet.use-multi-thread";
-static inline const bool DEFAULT_PARQUET_USE_MULTI_THREAD = true;
+static inline const char PARQUET_READ_EXECUTOR_THREAD_COUNT[] =
+    "parquet.read.executor.thread-count";
+static constexpr uint32_t DEFAULT_PARQUET_READ_EXECUTOR_THREAD_COUNT = 3;
 static inline const char PARQUET_READ_CACHE_OPTION_LAZY[] = "parquet.read.cache-option.lazy";
 static inline const char PARQUET_READ_CACHE_OPTION_PREFETCH_LIMIT[] =
     "parquet.read.cache-option.prefetch-limit";
@@ -74,7 +75,8 @@ class ParquetMetrics {
 
     // read
     static inline const char READ_ROW_GROUPS_TOTAL[] = "parquet.read.row-groups.total";
-    static inline const char READ_ROW_GROUPS_FILTERED[] = "parquet.read.row-groups.filtered";
+    static inline const char READ_ROW_GROUPS_AFTER_FILTER[] =
+        "parquet.read.row-groups.after-filter";
     static inline const char READ_ROWS[] = "parquet.read.rows";
     static inline const char READ_BATCH_COUNT[] = "parquet.read.batch-count";
 };

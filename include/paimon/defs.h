@@ -212,7 +212,7 @@ struct PAIMON_EXPORT Options {
     static const char SNAPSHOT_TIME_RETAINED[];
 
     /// "snapshot.expire.limit" - The maximum number of snapshots allowed to expire at a time.
-    /// Default value is 10.
+    /// Default value is 50.
     static const char SNAPSHOT_EXPIRE_LIMIT[];
 
     /// "snapshot.clean-empty-directories" - Whether to try to clean empty directories when expiring
@@ -354,6 +354,11 @@ struct PAIMON_EXPORT Options {
     /// "row-tracking.enabled" - Whether enable unique row id for append table. Default value is
     /// "false".
     static const char ROW_TRACKING_ENABLED[];
+    /// "row-tracking.partition-group-on-commit" - When row-tracking is enabled, whether to group
+    /// new file metas by partition before commit, so that assigned row IDs are contiguous within
+    /// each partition. This is useful if you want to build global indices on this table. Default
+    /// value is "true".
+    static const char ROW_TRACKING_PARTITION_GROUP_ON_COMMIT[];
     /// "data-evolution.enabled" - Whether enable data evolution for row tracking table. Default
     /// value is "false".
     static const char DATA_EVOLUTION_ENABLED[];
@@ -363,6 +368,29 @@ struct PAIMON_EXPORT Options {
     /// "blob-as-descriptor" - Read and write blob field using blob descriptor rather than blob
     /// bytes. Default value is "false".
     static const char BLOB_AS_DESCRIPTOR[];
+    /// "blob-field" - Specifies column names that should be stored as blob type. This is used
+    /// when you want to treat a BYTES column as a BLOB. Fields listed in blob-descriptor-field or
+    /// blob-view-field are also treated as BLOB fields. Comma-separated field names. Multiple blob
+    /// fields are supported. No default value.
+    static const char BLOB_FIELD[];
+    /// "blob-descriptor-field" - Comma-separated field names to treat as BLOB fields and store as
+    /// serialized BlobDescriptor bytes inline in data files. No default value.
+    static const char BLOB_DESCRIPTOR_FIELD[];
+    /// "blob.stored-descriptor-fields" deprecated as a fallback for `BLOB_DESCRIPTOR_FIELD`.
+    static const char FALLBACK_BLOB_DESCRIPTOR_FIELD[];
+    /// "blob-view-field" - Comma-separated field names to treat as BLOB fields and store as
+    /// serialized BlobViewStruct bytes inline in data files and resolve from upstream tables at
+    /// read time. No default value.
+    static const char BLOB_VIEW_FIELD[];
+    /// "blob-external-storage-field" - Comma-separated BLOB field names (must be a subset of
+    /// blob-descriptor-field ) whose raw data will be written to external storage at write time.
+    /// The external storage path is configured via blob-external-storage-path. Orphan file cleanup
+    /// is not applied to that path. No default value.
+    static const char BLOB_EXTERNAL_STORAGE_FIELD[];
+    /// "blob-external-storage-path" - The external storage path where raw BLOB data from fields
+    /// configured by 'blob-external-storage-field' is written at write time. Orphan file cleanup is
+    /// not applied to this path. No default value.
+    static const char BLOB_EXTERNAL_STORAGE_PATH[];
     /// "global-index.enabled" - Whether to enable global index for scan. Default value is "true".
     static const char GLOBAL_INDEX_ENABLED[];
     /// "global-index.thread-num" - The maximum number of concurrent scanner for global index. No
@@ -374,6 +402,14 @@ struct PAIMON_EXPORT Options {
     /// "aggregation.remove-record-on-delete" - Whether to remove the whole row in aggregation
     /// engine when delete records are received. Default value is "false".
     static const char AGGREGATION_REMOVE_RECORD_ON_DELETE[];
+    /// "table-read.sequence-number.enabled" - Whether to include the _SEQUENCE_NUMBER field when
+    /// reading the audit_log or binlog system tables. This is only valid for primary key tables.
+    /// Default value is "false".
+    static const char TABLE_READ_SEQUENCE_NUMBER_ENABLED[];
+    /// "key-value.sequence_number.enabled" - Whether to include the _SEQUENCE_NUMBER field when
+    /// reading key-value data. This is an internal option used by AuditLogTable and BinlogTable
+    /// when table-read.sequence-number.enabled is set to true. Default value is "false".
+    static const char KEY_VALUE_SEQUENCE_NUMBER_ENABLED[];
 
     /// "scan.timestamp-millis" - Optional timestamp used in case of "from-timestamp" scan mode.
     /// For batch sources, produces the latest snapshot earlier than or equal to the timestamp.

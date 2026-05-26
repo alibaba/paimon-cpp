@@ -112,4 +112,4 @@ Current behavior:
 
 ## Status
 
-v0.2.1 Release Tag (2026-04-07).
+v0.2.2 Release Tag (2026-05-14).

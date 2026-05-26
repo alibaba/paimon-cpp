@@ -18,6 +18,7 @@ if(_PAIMON_FMT_ROOTS)
     set(_PAIMON_FMT_FIND_ARGS HINTS ${_PAIMON_FMT_ROOTS} NO_DEFAULT_PATH)
 endif()
 
+include(FindPackageUtils)
 find_package(fmt CONFIG QUIET ${_PAIMON_FMT_FIND_ARGS})
 
 set(_PAIMON_FMT_TARGETS fmt::fmt fmt::fmt-header-only)
@@ -29,18 +30,24 @@ foreach(_target IN LISTS _PAIMON_FMT_TARGETS)
 endforeach()
 
 if(_PAIMON_FMT_TARGET)
-    if(NOT TARGET fmt)
+    paimon_find_target_headers(FMT_INCLUDE_DIR
+                               ${_PAIMON_FMT_TARGET}
+                               NAMES
+                               fmt/core.h
+                               ${_PAIMON_FMT_FIND_ARGS})
+
+    include(FindPackageHandleStandardArgs)
+    find_package_handle_standard_args(fmtAlt REQUIRED_VARS FMT_INCLUDE_DIR)
+
+    if(fmtAlt_FOUND AND NOT TARGET fmt)
         add_library(fmt INTERFACE IMPORTED)
-        get_target_property(FMT_INCLUDE_DIR ${_PAIMON_FMT_TARGET}
-                            INTERFACE_INCLUDE_DIRECTORIES)
-        if(FMT_INCLUDE_DIR)
-            set_target_properties(fmt PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                                 "${FMT_INCLUDE_DIR}")
-        endif()
+        set_target_properties(fmt PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+                                             "${FMT_INCLUDE_DIR}")
         target_link_libraries(fmt INTERFACE ${_PAIMON_FMT_TARGET})
     endif()
-    set(FMT_LIBRARIES ${_PAIMON_FMT_TARGET})
-    set(fmtAlt_FOUND TRUE)
+    if(fmtAlt_FOUND)
+        set(FMT_LIBRARIES ${_PAIMON_FMT_TARGET})
+    endif()
 else()
     find_package(PkgConfig QUIET)
     if(PkgConfig_FOUND)

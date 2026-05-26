@@ -213,7 +213,7 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
             ctx->GetRootPath(), schema, arrow_schema, partition_schema, dv_maintainer_factory,
             io_manager, key_comparator, sequence_fields_comparator, merge_function_wrapper, options,
             ignore_previous_files, ctx->IsStreamingMode(), ctx->IgnoreNumBucketCheck(),
-            ctx->GetExecutor(), ctx->GetMemoryPool());
+            ctx->EnableMultiThreadSpill(), ctx->GetExecutor(), ctx->GetMemoryPool());
     }
 }
 

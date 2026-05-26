@@ -35,6 +35,12 @@ TEST(SpecialFieldsTest, TestValueKindField) {
     ASSERT_EQ(SpecialFields::ValueKind().Type()->id(), arrow::Type::INT8);
 }
 
+TEST(SpecialFieldsTest, TestRowKindField) {
+    ASSERT_EQ(SpecialFields::RowKind().Id(), std::numeric_limits<int32_t>::max() - 3);
+    ASSERT_EQ(SpecialFields::RowKind().Name(), "rowkind");
+    ASSERT_EQ(SpecialFields::RowKind().Type()->id(), arrow::Type::STRING);
+}
+
 TEST(SpecialFieldsTest, TestRowIdField) {
     ASSERT_EQ(SpecialFields::RowId().Id(), std::numeric_limits<int32_t>::max() - 5);
     ASSERT_EQ(SpecialFields::RowId().Name(), "_ROW_ID");

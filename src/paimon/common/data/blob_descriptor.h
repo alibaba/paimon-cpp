@@ -25,19 +25,38 @@
 #include "paimon/result.h"
 
 namespace paimon {
+/// Blob descriptor to describe a blob reference.
+/// Memory Layout Description: All multi-byte numerical values (int/long) are stored using Little
+/// Endian byte order.
+///
+/// | Offset | Field Name    | Type      | Size |
+/// |--------|---------------|-----------|------|
+/// | 0      | version       | byte      | 1    |
+/// | 1      | magic_number  | long      | 8    |
+/// | 9      | uri_length    | int       | 4    |
+/// | 13     | uri_bytes     | byte[N]   | N    |
+/// | 13 + N | offset        | long      | 8    |
+/// | 21 + N | length        | long      | 8    |
 
 class BlobDescriptor {
  public:
     static Result<std::unique_ptr<BlobDescriptor>> Create(const std::string& uri, int64_t offset,
                                                           int64_t length);
 
-    ~BlobDescriptor() = default;
+    static Result<std::unique_ptr<BlobDescriptor>> Create(int8_t version, const std::string& uri,
+                                                          int64_t offset, int64_t length);
 
     static Result<std::unique_ptr<BlobDescriptor>> Deserialize(const char* buffer, uint64_t size);
+
+    static Result<bool> IsBlobDescriptor(const char* buffer, uint64_t size);
 
     PAIMON_UNIQUE_PTR<Bytes> Serialize(const std::shared_ptr<MemoryPool>& pool) const;
 
     std::string ToString() const;
+
+    int8_t Version() const {
+        return version_;
+    }
 
     const std::string& Uri() const {
         return uri_;
@@ -52,13 +71,16 @@ class BlobDescriptor {
     }
 
  private:
-    BlobDescriptor(const std::string& uri, int64_t offset, int64_t length)
-        : uri_(uri), offset_(offset), length_(length) {}
+    BlobDescriptor(int8_t version, const std::string& uri, int64_t offset, int64_t length)
+        : version_(version), uri_(uri), offset_(offset), length_(length) {}
 
  private:
-    static constexpr int8_t CURRENT_VERSION = 1;
+    static constexpr int64_t kMagic = 0x424C4F4244455343l;
+    /// one byte for version, eight bytes for magic number.
+    static constexpr uint64_t kMinDescriptorLength = 9;
+    static constexpr int8_t kCurrentVersion = 2;
 
-    const int8_t version_ = CURRENT_VERSION;
+    const int8_t version_ = kCurrentVersion;
     std::string uri_;
     int64_t offset_ = 0;
     int64_t length_ = -1;

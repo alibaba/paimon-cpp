@@ -26,7 +26,7 @@
 
 namespace paimon::test {
 
-TEST(WriteContextTest, TestSimple) {
+TEST(WriteContextTest, TestDefaultValue) {
     WriteContextBuilder builder("table_root_path", "commit_user_1");
     ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
     ASSERT_EQ(ctx->GetRootPath(), "table_root_path");
@@ -34,6 +34,7 @@ TEST(WriteContextTest, TestSimple) {
     ASSERT_FALSE(ctx->IsStreamingMode());
     ASSERT_FALSE(ctx->IgnoreNumBucketCheck());
     ASSERT_FALSE(ctx->IgnorePreviousFiles());
+    ASSERT_FALSE(ctx->EnableMultiThreadSpill());
     ASSERT_EQ(ctx->GetWriteId(), std::nullopt);
     ASSERT_EQ(ctx->GetBranch(), "main");
     ASSERT_TRUE(ctx->GetWriteSchema().empty());
@@ -42,9 +43,10 @@ TEST(WriteContextTest, TestSimple) {
     ASSERT_TRUE(ctx->GetTempDirectory().empty());
     ASSERT_TRUE(ctx->GetOptions().empty());
     ASSERT_TRUE(ctx->GetFileSystemSchemeToIdentifierMap().empty());
+    ASSERT_FALSE(ctx->GetSpecificFileSystem());
 }
 
-TEST(WriteContextTest, TestAllWithMethods) {
+TEST(WriteContextTest, TestSetContent) {
     WriteContextBuilder builder("table_root_path", "commit_user_1");
 
     auto memory_pool = GetDefaultPool();
@@ -66,11 +68,13 @@ TEST(WriteContextTest, TestAllWithMethods) {
                              .WithWriteSchema(write_schema)
                              .WithFileSystemSchemeToIdentifierMap(fs_scheme_to_identifier_map)
                              .WithFileSystem(file_system)
+                             .AddOption("key", "value")
                              .Finish());
 
     ASSERT_TRUE(ctx->IsStreamingMode());
     ASSERT_TRUE(ctx->IgnoreNumBucketCheck());
     ASSERT_TRUE(ctx->IgnorePreviousFiles());
+    ASSERT_FALSE(ctx->EnableMultiThreadSpill());
     ASSERT_EQ(ctx->GetMemoryPool(), memory_pool);
     ASSERT_EQ(ctx->GetExecutor(), executor);
     ASSERT_EQ(ctx->GetTempDirectory(), "/tmp/with-all");
@@ -79,6 +83,28 @@ TEST(WriteContextTest, TestAllWithMethods) {
     ASSERT_EQ(ctx->GetWriteSchema(), write_schema);
     ASSERT_EQ(ctx->GetFileSystemSchemeToIdentifierMap(), fs_scheme_to_identifier_map);
     ASSERT_EQ(ctx->GetSpecificFileSystem(), file_system);
+    std::map<std::string, std::string> expected_options = {{"key", "value"}};
+    ASSERT_EQ(expected_options, ctx->GetOptions());
+}
+
+TEST(WriteContextTest, TestSetOptionsOverridesAddedOptions) {
+    WriteContextBuilder builder("table_root_path", "commit_user_1");
+    builder.AddOption("old", "value");
+    builder.SetOptions({{"key1", "value1"}, {"key2", "value2"}});
+
+    ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
+
+    std::map<std::string, std::string> expected_options = {{"key1", "value1"}, {"key2", "value2"}};
+    ASSERT_EQ(expected_options, ctx->GetOptions());
+}
+
+TEST(WriteContextTest, TestSetWriteBufferSpillThreadNumber) {
+    WriteContextBuilder builder("table_root_path", "commit_user_1");
+    builder.SetWriteBufferSpillThreadNumber(2);
+
+    ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
+
+    ASSERT_TRUE(ctx->EnableMultiThreadSpill());
 }
 
 }  // namespace paimon::test

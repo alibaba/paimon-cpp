@@ -16,12 +16,14 @@
 
 #include "paimon/core/utils/tag_manager.h"
 
+#include <algorithm>
 #include <memory>
-#include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "fmt/format.h"
 #include "paimon/common/utils/path_util.h"
+#include "paimon/common/utils/string_utils.h"
 #include "paimon/core/tag/tag.h"
 #include "paimon/core/utils/branch_manager.h"
 #include "paimon/fs/file_system.h"
@@ -53,8 +55,35 @@ Result<std::optional<Tag>> TagManager::Get(const std::string& tag_name) const {
     return std::optional<Tag>(std::move(tag));
 }
 
+Result<std::vector<std::string>> TagManager::ListTagNames() const {
+    std::vector<std::string> tag_names;
+    std::string tag_dir = TagDirectory();
+    PAIMON_ASSIGN_OR_RAISE(bool is_exist, fs_->Exists(tag_dir));
+    if (!is_exist) {
+        return tag_names;
+    }
+
+    std::vector<std::unique_ptr<BasicFileStatus>> file_status_list;
+    PAIMON_RETURN_NOT_OK(fs_->ListDir(tag_dir, &file_status_list));
+    std::string tag_prefix = TAG_PREFIX;
+    for (const auto& file_status : file_status_list) {
+        if (file_status->IsDir()) {
+            continue;
+        }
+        std::string file_name = PathUtil::GetName(file_status->GetPath());
+        if (StringUtils::StartsWith(file_name, tag_prefix, /*start_pos=*/0)) {
+            tag_names.push_back(file_name.substr(tag_prefix.length()));
+        }
+    }
+    std::sort(tag_names.begin(), tag_names.end());
+    return tag_names;
+}
+
 std::string TagManager::TagPath(const std::string& tag_name) const {
-    return PathUtil::JoinPath(BranchManager::BranchPath(root_path_, branch_),
-                              "/tag/" + std::string(TAG_PREFIX) + tag_name);
+    return PathUtil::JoinPath(TagDirectory(), std::string(TAG_PREFIX) + tag_name);
+}
+
+std::string TagManager::TagDirectory() const {
+    return PathUtil::JoinPath(BranchManager::BranchPath(root_path_, branch_), "tag");
 }
 }  // namespace paimon

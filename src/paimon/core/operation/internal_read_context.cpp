@@ -45,9 +45,14 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
                 read_data_fields.push_back(SpecialFields::RowId());
                 continue;
             }
-            if (core_options.RowTrackingEnabled() &&
+            if ((core_options.RowTrackingEnabled() ||
+                 core_options.KeyValueSequenceNumberEnabled()) &&
                 field_id == SpecialFields::SequenceNumber().Id()) {
                 read_data_fields.push_back(SpecialFields::SequenceNumber());
+                continue;
+            }
+            if (field_id == SpecialFields::ValueKind().Id()) {
+                read_data_fields.push_back(SpecialFields::ValueKind());
                 continue;
             }
             if (core_options.DataEvolutionEnabled() &&
@@ -66,9 +71,14 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
                 read_data_fields.push_back(SpecialFields::RowId());
                 continue;
             }
-            if (core_options.RowTrackingEnabled() &&
+            if ((core_options.RowTrackingEnabled() ||
+                 core_options.KeyValueSequenceNumberEnabled()) &&
                 name == SpecialFields::SequenceNumber().Name()) {
                 read_data_fields.push_back(SpecialFields::SequenceNumber());
+                continue;
+            }
+            if (name == SpecialFields::ValueKind().Name()) {
+                read_data_fields.push_back(SpecialFields::ValueKind());
                 continue;
             }
             if (core_options.DataEvolutionEnabled() && name == SpecialFields::IndexScore().Name()) {

@@ -51,6 +51,9 @@ class SortMergeReaderWithLoserTree : public SortMergeReader {
 
     void Close() override {
         loser_tree_->Close();
+        if (merge_function_wrapper_) {
+            merge_function_wrapper_->Reset();
+        }
     }
 
     class Iterator : public SortMergeReader::Iterator {

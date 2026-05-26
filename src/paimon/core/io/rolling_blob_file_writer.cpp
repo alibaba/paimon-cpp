@@ -42,11 +42,13 @@ namespace paimon {
 RollingBlobFileWriter::RollingBlobFileWriter(
     int64_t target_file_size,
     std::function<Result<std::unique_ptr<MainWriter>>()> create_file_writer,
-    std::function<Result<std::unique_ptr<BlobWriter>>()> create_blob_file_writer,
+    const std::shared_ptr<arrow::Schema>& blob_schema,
+    MultipleBlobFileWriter::BlobWriterCreator blob_writer_creator,
     const std::shared_ptr<arrow::DataType>& data_type)
     : RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>(target_file_size,
                                                                       create_file_writer),
-      create_blob_file_writer_(create_blob_file_writer),
+      blob_schema_(blob_schema),
+      blob_writer_creator_(std::move(blob_writer_creator)),
       data_type_(data_type),
       logger_(Logger::GetLogger("RollingBlobFileWriter")) {}
 
@@ -57,7 +59,7 @@ Status RollingBlobFileWriter::Write(::ArrowArray* record) {
         PAIMON_RETURN_NOT_OK(OpenCurrentWriter());
     }
     if (PAIMON_UNLIKELY(blob_writer_ == nullptr)) {
-        PAIMON_ASSIGN_OR_RAISE(blob_writer_, create_blob_file_writer_());
+        blob_writer_ = std::make_unique<MultipleBlobFileWriter>(blob_schema_, blob_writer_creator_);
     }
     int64_t record_count = record->length;
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> arrow_array,
@@ -66,20 +68,21 @@ Status RollingBlobFileWriter::Write(::ArrowArray* record) {
 
     PAIMON_ASSIGN_OR_RAISE(BlobUtils::SeparatedStructArrays separated_arrays,
                            BlobUtils::SeparateBlobArray(struct_array));
+    // Write main (non-blob) data
     ::ArrowArray c_main_array;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(
         arrow::ExportArray(*separated_arrays.main_array, &c_main_array));
     ScopeGuard array_lifecycle_guard(
         [&c_main_array]() -> void { ArrowArrayRelease(&c_main_array); });
     PAIMON_RETURN_NOT_OK(current_writer_->Write(&c_main_array));
-    for (auto i = 0; i < separated_arrays.blob_array->length(); i++) {
-        std::shared_ptr<arrow::Array> slice_array = separated_arrays.blob_array->Slice(i, 1);
-        ::ArrowArray c_blob_array;
-        ScopeGuard array_lifecycle_guard(
-            [&c_blob_array]() -> void { ArrowArrayRelease(&c_blob_array); });
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*slice_array, &c_blob_array));
-        PAIMON_RETURN_NOT_OK(blob_writer_->Write(&c_blob_array));
-    }
+
+    // Write blob data via MultipleBlobFileWriter (each blob field independently)
+    ::ArrowArray c_blob_array;
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(
+        arrow::ExportArray(*separated_arrays.blob_array, &c_blob_array));
+    ScopeGuard blob_array_guard([&c_blob_array]() -> void { ArrowArrayRelease(&c_blob_array); });
+    PAIMON_RETURN_NOT_OK(blob_writer_->Write(&c_blob_array));
+
     record_count_ += record_count;
     PAIMON_ASSIGN_OR_RAISE(bool need_rolling_file, NeedRollingFile());
     if (need_rolling_file) {
@@ -99,7 +102,8 @@ Status RollingBlobFileWriter::CloseCurrentWriter() {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFileMeta> main_data_file_meta, CloseMainWriter());
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<DataFileMeta>> blob_metas,
                            CloseBlobWriter());
-    PAIMON_RETURN_NOT_OK(ValidateFileConsistency(main_data_file_meta, blob_metas));
+    PAIMON_RETURN_NOT_OK(
+        ValidateFileConsistency(main_data_file_meta, blob_metas, blob_schema_->num_fields()));
 
     results_.push_back(main_data_file_meta);
     results_.insert(results_.end(), blob_metas.begin(), blob_metas.end());
@@ -126,28 +130,35 @@ Result<std::vector<std::shared_ptr<DataFileMeta>>> RollingBlobFileWriter::CloseB
     PAIMON_RETURN_NOT_OK(blob_writer_->Close());
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<DataFileMeta>> results,
                            blob_writer_->GetResult());
-    blob_writer_ = nullptr;
+    blob_writer_.reset();
     return results;
 }
 
 Status RollingBlobFileWriter::ValidateFileConsistency(
     const std::shared_ptr<DataFileMeta>& main_data_file_meta,
-    const std::vector<std::shared_ptr<DataFileMeta>>& blob_tagged_metas) {
-    int64_t main_row_count = main_data_file_meta->row_count;
-    int64_t blob_row_count = 0;
-    for (const auto& blob_tagged_meta : blob_tagged_metas) {
-        blob_row_count += blob_tagged_meta->row_count;
+    const std::vector<std::shared_ptr<DataFileMeta>>& blob_tagged_metas, int32_t blob_field_count) {
+    if (blob_tagged_metas.empty()) {
+        return Status::OK();
     }
-    if (main_row_count != blob_row_count) {
+    // With multiple blob fields, each blob field produces its own set of files.
+    // total_blob_row_count should be exactly main_row_count * blob_field_count.
+    int64_t main_row_count = main_data_file_meta->row_count;
+    int64_t expected_blob_row_count = main_row_count * blob_field_count;
+    int64_t total_blob_row_count = 0;
+    for (const auto& blob_tagged_meta : blob_tagged_metas) {
+        total_blob_row_count += blob_tagged_meta->row_count;
+    }
+    if (total_blob_row_count != expected_blob_row_count) {
         std::vector<std::string> blob_file_names;
         for (const auto& blob_tagged_meta : blob_tagged_metas) {
             blob_file_names.push_back(blob_tagged_meta->file_name);
         }
-        return Status::Invalid(
-            fmt::format("This is a bug: The row count of main file and blob files does not match. "
-                        "Main file: {} (row count: {}), blob files: {} (total row count: {})",
-                        main_data_file_meta->file_name, main_row_count,
-                        fmt::join(blob_file_names, ", "), blob_row_count));
+        return Status::Invalid(fmt::format(
+            "This is a bug: The row count of main file and blob files does not match. "
+            "Main file: {} (row count: {}), blob field count: {}, "
+            "expected blob row count: {}, blob files: {} (actual total row count: {})",
+            main_data_file_meta->file_name, main_row_count, blob_field_count,
+            expected_blob_row_count, fmt::join(blob_file_names, ", "), total_blob_row_count));
     }
     return Status::OK();
 }
