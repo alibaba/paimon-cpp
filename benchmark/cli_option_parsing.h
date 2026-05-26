@@ -41,6 +41,7 @@ inline std::vector<std::string> ParseCsvColumns(const std::string& csv,
 
     std::vector<std::string> columns;
     std::string current;
+    bool last_delimiter_was_comma = false;
     for (char c : csv) {
         if (c == ',') {
             if (current.empty()) {
@@ -48,15 +49,28 @@ inline std::vector<std::string> ParseCsvColumns(const std::string& csv,
             }
             columns.push_back(current);
             current.clear();
+            last_delimiter_was_comma = true;
             continue;
         }
-        if (c != ' ' && c != '\t') {
-            current.push_back(c);
+        if (c == ' ' || c == '\t') {
+            if (!current.empty()) {
+                columns.push_back(current);
+                current.clear();
+            }
+            continue;
         }
+
+        current.push_back(c);
+        last_delimiter_was_comma = false;
     }
+
     if (current.empty()) {
+        if (!columns.empty() && !last_delimiter_was_comma) {
+            return columns;
+        }
         throw std::runtime_error("invalid " + option_name + ": empty column name");
     }
+
     columns.push_back(current);
     return columns;
 }
