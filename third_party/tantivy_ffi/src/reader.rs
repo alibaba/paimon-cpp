@@ -22,6 +22,7 @@ use std::path::Path;
 
 use croaring::{Portable, Treemap};
 use tantivy::collector::{Collector, DocSetCollector, SegmentCollector};
+// [BUG_QPLEAK_RUST] DEBUG LOG — see LoggingDocSetCollector below
 use tantivy::query::{BooleanQuery, Occur, PhraseQuery, Query, RegexQuery, TermQuery};
 use tantivy::schema::{Field, IndexRecordOption};
 use tantivy::{DocAddress, DocId, Index, IndexReader, ReloadPolicy, Score, SegmentOrdinal,
@@ -307,15 +308,18 @@ impl PaimonTantivyReader {
             // 250M-row table with tens of millions of hits) spend hours in this loop
             // and balloon SR's query_pool MemTracker counter.
             (false, None) => {
+                // [BUG_QPLEAK_RUST] use logging collector instead of stock DocSetCollector
                 let docset = searcher
-                    .search(&*q, &DocSetCollector)
+                    .search(&*q, &LoggingDocSetCollector)
                     .map_err(|e| format!("tantivy search: {e}"))?;
+                log::warn!("[BUG_QPLEAK_RUST] path A search done, docset.len={}", docset.len());
                 let mut by_segment: std::collections::HashMap<SegmentOrdinal, Vec<DocId>> =
                     std::collections::HashMap::new();
                 for addr in docset.into_iter() {
                     by_segment.entry(addr.segment_ord).or_default().push(addr.doc_id);
                 }
                 let mut row_ids: Vec<u64> = Vec::new();
+                let mut processed: u64 = 0;
                 for (segment_ord, doc_ids) in by_segment.iter() {
                     let segment_reader = searcher.segment_reader(*segment_ord);
                     let fast = segment_reader
@@ -325,8 +329,15 @@ impl PaimonTantivyReader {
                                              segment_ord))?;
                     for &doc_id in doc_ids {
                         row_ids.push(fast.first(doc_id).unwrap_or(0));
+                        processed += 1;
+                        if processed % 500_000 == 0 {
+                            log::warn!("[BUG_QPLEAK_RUST] path A row_ids progress={} cap={}",
+                                       processed, row_ids.capacity());
+                        }
                     }
                 }
+                log::warn!("[BUG_QPLEAK_RUST] path A row_ids done total={} cap={}",
+                           row_ids.len(), row_ids.capacity());
                 if let Some(filter) = pre_filter {
                     row_ids.retain(|id| filter.contains(*id));
                 }
@@ -451,6 +462,65 @@ fn wildcard_to_regex(input: &str) -> String {
         }
     }
     out
+}
+
+/// [BUG_QPLEAK_RUST] Mimics tantivy's `DocSetCollector` (returns `HashSet<DocAddress>`)
+/// but logs progress every 1M docs collected per segment + on harvest + on merge.
+/// Lets us watch query_pool growth correlate with real docset accumulation.
+struct LoggingDocSetCollector;
+
+struct LoggingDocSetSegmentCollector {
+    segment_ord: SegmentOrdinal,
+    docs: Vec<DocId>,
+    count: u64,
+}
+
+impl SegmentCollector for LoggingDocSetSegmentCollector {
+    type Fruit = Vec<DocAddress>;
+
+    fn collect(&mut self, doc: DocId, _score: Score) {
+        self.docs.push(doc);
+        self.count += 1;
+        if self.count % 1_000_000 == 0 {
+            log::warn!(
+                "[BUG_QPLEAK_RUST] seg={} progress count={} cap={} mem~{}MB",
+                self.segment_ord, self.count, self.docs.capacity(),
+                self.docs.capacity() * 4 / 1024 / 1024
+            );
+        }
+    }
+
+    fn harvest(self) -> Self::Fruit {
+        let segment_ord = self.segment_ord;
+        log::warn!(
+            "[BUG_QPLEAK_RUST] seg={} HARVEST count={} cap={}",
+            segment_ord, self.count, self.docs.capacity()
+        );
+        self.docs.into_iter().map(|d| DocAddress::new(segment_ord, d)).collect()
+    }
+}
+
+impl Collector for LoggingDocSetCollector {
+    type Fruit = std::collections::HashSet<DocAddress>;
+    type Child = LoggingDocSetSegmentCollector;
+
+    fn for_segment(
+        &self, segment_ord: SegmentOrdinal, _segment: &SegmentReader,
+    ) -> tantivy::Result<Self::Child> {
+        log::warn!("[BUG_QPLEAK_RUST] seg={} STARTING", segment_ord);
+        Ok(LoggingDocSetSegmentCollector { segment_ord, docs: Vec::new(), count: 0 })
+    }
+
+    fn requires_scoring(&self) -> bool { false }
+
+    fn merge_fruits(
+        &self, segment_fruits: Vec<Vec<DocAddress>>,
+    ) -> tantivy::Result<std::collections::HashSet<DocAddress>> {
+        let mut result = std::collections::HashSet::new();
+        for f in segment_fruits { for a in f { result.insert(a); } }
+        log::warn!("[BUG_QPLEAK_RUST] MERGE total={}", result.len());
+        Ok(result)
+    }
 }
 
 /// Custom Collector that returns ALL matching (score, DocAddress) tuples,

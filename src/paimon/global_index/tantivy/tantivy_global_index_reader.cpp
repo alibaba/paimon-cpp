@@ -13,18 +13,27 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <mutex>  // [BUG_QPLEAK_RUST]
 #include <vector>
 
 #include "fmt/format.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/rapidjson_util.h"
 #include "paimon/global_index/tantivy/tantivy_archive_layout.h"
+#include "paimon/global_index/tantivy/tantivy_ffi_log.h"  // [BUG_QPLEAK_RUST]
 #include "paimon/global_index/tantivy/tantivy_ffi_status.h"
 #include "paimon/global_index/tantivy/tantivy_stream_ctx.h"
 
 namespace paimon::tantivy {
 
 namespace {
+
+// [BUG_QPLEAK_RUST] one-shot install of Rust log bridge so log::warn! in Rust
+// surfaces in BE's cn.WARNING via glog.
+void EnsureTantivyLogBridge() {
+    static std::once_flag flag;
+    std::call_once(flag, [] { InstallTantivyLogBridge(); });
+}
 
 /// Returns the jieba dictionary dir from the env var, or an empty string if the env
 /// var is missing/empty. We intentionally do NOT error here: paimon-java tantivy
@@ -50,6 +59,7 @@ Result<std::shared_ptr<TantivyGlobalIndexReader>> TantivyGlobalIndexReader::Crea
     const std::shared_ptr<GlobalIndexFileReader>& file_reader,
     const std::map<std::string, std::string>& options, const std::shared_ptr<MemoryPool>& pool) {
     (void)field_name;  // Rust-side knows the field via the schema embedded in meta.json
+    EnsureTantivyLogBridge();  // [BUG_QPLEAK_RUST]
 
     std::map<std::string, std::string> write_options;
     if (io_meta.metadata) {
