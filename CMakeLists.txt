@@ -45,6 +45,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(PAIMON_BUILD_STATIC "Build static library" ON)
 option(PAIMON_BUILD_SHARED "Build shared library" ON)
 option(PAIMON_BUILD_TESTS "Build tests" OFF)
+option(PAIMON_BUILD_BENCHMARKS "Build benchmarks" OFF)
 option(PAIMON_USE_ASAN "Use Address Sanitizer" OFF)
 option(PAIMON_USE_UBSAN "Use Undefined Behavior Sanitizer" OFF)
 option(PAIMON_USE_CXX11_ABI "Use C++11 ABI" ON)
@@ -441,6 +442,22 @@ if(PAIMON_BUILD_TESTS)
     endif()
 endif()
 
+if(PAIMON_BUILD_BENCHMARKS)
+    add_custom_target(paimon-benchmarks)
+    add_custom_target(benchmark
+                      ctest
+                      -j4
+                      -L
+                      benchmark
+                      --output-on-failure)
+    add_dependencies(benchmark paimon-benchmarks)
+
+    set(PAIMON_BENCHMARK_LINK_TOOLCHAIN benchmark::benchmark)
+    if(TARGET benchmark::benchmark_main)
+        list(APPEND PAIMON_BENCHMARK_LINK_TOOLCHAIN benchmark::benchmark_main)
+    endif()
+endif()
+
 paimon_print_dependency_resolution_summary()
 
 include(CMakePackageConfigHelpers)
@@ -472,3 +489,4 @@ add_subdirectory(src/paimon/global_index/lucene)
 add_subdirectory(src/paimon/testing/mock)
 add_subdirectory(src/paimon/testing/utils)
 add_subdirectory(test/inte)
+add_subdirectory(benchmark)
