@@ -67,7 +67,7 @@ std::shared_ptr<InternalArray> ColumnarRowRef::GetArray(int32_t pos) const {
     assert(list_array);
     int32_t offset = list_array->value_offset(row_id_);
     int32_t length = list_array->value_length(row_id_);
-    return std::make_shared<ColumnarArray>(list_array->values(), ctx_->pool, offset, length);
+    return std::make_shared<ColumnarArray>(list_array->values().get(), ctx_->pool, offset, length);
 }
 
 std::shared_ptr<InternalMap> ColumnarRowRef::GetMap(int32_t pos) const {

@@ -35,10 +35,10 @@ ColumnarMap::ColumnarMap(const std::shared_ptr<arrow::Array>& key_array,
       length_(length) {}
 
 std::shared_ptr<InternalArray> ColumnarMap::KeyArray() const {
-    return std::make_shared<ColumnarArray>(key_array_, pool_, offset_, length_);
+    return std::make_shared<ColumnarArray>(key_array_.get(), pool_, offset_, length_);
 }
 std::shared_ptr<InternalArray> ColumnarMap::ValueArray() const {
-    return std::make_shared<ColumnarArray>(value_array_, pool_, offset_, length_);
+    return std::make_shared<ColumnarArray>(value_array_.get(), pool_, offset_, length_);
 }
 
 }  // namespace paimon

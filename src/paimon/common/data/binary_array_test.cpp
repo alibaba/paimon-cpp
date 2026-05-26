@@ -332,7 +332,7 @@ TEST(BinaryArrayTest, TestFromLongArray) {
                                                         R"([[123, null], [789], [12345], [12]])")
                   .ValueOrDie();
     auto list_array = arrow::internal::checked_pointer_cast<arrow::ListArray>(f1);
-    auto array = ColumnarArray(list_array->values(), pool, /*offset=*/0, 2);
+    auto array = ColumnarArray(list_array->values().get(), pool, /*offset=*/0, 2);
 
     BinaryArray ret = BinaryArray::FromLongArray(&array, pool.get());
 
@@ -363,7 +363,7 @@ TEST(BinaryArrayTest, TestFromAllNullLongArray) {
                                                         R"([[null, null], [789], [12345], [12]])")
                   .ValueOrDie();
     auto list_array = arrow::internal::checked_pointer_cast<arrow::ListArray>(f1);
-    auto array = ColumnarArray(list_array->values(), pool, /*offset=*/0, 2);
+    auto array = ColumnarArray(list_array->values().get(), pool, /*offset=*/0, 2);
 
     BinaryArray ret = BinaryArray::FromLongArray(&array, pool.get());
 
