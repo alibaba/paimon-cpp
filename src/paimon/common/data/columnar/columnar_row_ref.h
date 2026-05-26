@@ -37,10 +37,11 @@ namespace paimon {
 class Bytes;
 
 /// Columnar row view which shares batch-level context to reduce per-row overhead.
+/// Uses pre-cached column metadata for fast field access without virtual function calls.
 class ColumnarRowRef : public InternalRow {
  public:
     ColumnarRowRef(std::shared_ptr<ColumnarBatchContext> ctx, int64_t row_id)
-        : ctx_(std::move(ctx)), row_id_(row_id) {}
+        : ctx_(std::move(ctx)), cached_meta_ptr_(ctx_->cached_meta.data()), row_id_(row_id) {}
 
     Result<const RowKind*> GetRowKind() const override {
         return row_kind_;
@@ -55,47 +56,39 @@ class ColumnarRowRef : public InternalRow {
     }
 
     bool IsNullAt(int32_t pos) const override {
-        return ctx_->array_vec[pos]->IsNull(row_id_);
+        return cached_meta_ptr_[pos].IsNull(row_id_);
     }
 
     bool GetBoolean(int32_t pos) const override {
-        return ColumnarUtils::GetGenericValue<arrow::BooleanType, bool>(ctx_->array_vec[pos].get(),
-                                                                        row_id_);
+        return cached_meta_ptr_[pos].GetBool(row_id_);
     }
 
     char GetByte(int32_t pos) const override {
-        return ColumnarUtils::GetGenericValue<arrow::Int8Type, char>(ctx_->array_vec[pos].get(),
-                                                                     row_id_);
+        return static_cast<char>(cached_meta_ptr_[pos].GetFixed<int8_t>(row_id_));
     }
 
     int16_t GetShort(int32_t pos) const override {
-        return ColumnarUtils::GetGenericValue<arrow::Int16Type, int16_t>(ctx_->array_vec[pos].get(),
-                                                                         row_id_);
+        return cached_meta_ptr_[pos].GetFixed<int16_t>(row_id_);
     }
 
     int32_t GetInt(int32_t pos) const override {
-        return ColumnarUtils::GetGenericValue<arrow::Int32Type, int32_t>(ctx_->array_vec[pos].get(),
-                                                                         row_id_);
+        return cached_meta_ptr_[pos].GetFixed<int32_t>(row_id_);
     }
 
     int32_t GetDate(int32_t pos) const override {
-        return ColumnarUtils::GetGenericValue<arrow::Date32Type, int32_t>(
-            ctx_->array_vec[pos].get(), row_id_);
+        return cached_meta_ptr_[pos].GetFixed<int32_t>(row_id_);
     }
 
     int64_t GetLong(int32_t pos) const override {
-        return ColumnarUtils::GetGenericValue<arrow::Int64Type, int64_t>(ctx_->array_vec[pos].get(),
-                                                                         row_id_);
+        return cached_meta_ptr_[pos].GetFixed<int64_t>(row_id_);
     }
 
     float GetFloat(int32_t pos) const override {
-        return ColumnarUtils::GetGenericValue<arrow::FloatType, float>(ctx_->array_vec[pos].get(),
-                                                                       row_id_);
+        return cached_meta_ptr_[pos].GetFixed<float>(row_id_);
     }
 
     double GetDouble(int32_t pos) const override {
-        return ColumnarUtils::GetGenericValue<arrow::DoubleType, double>(ctx_->array_vec[pos].get(),
-                                                                         row_id_);
+        return cached_meta_ptr_[pos].GetFixed<double>(row_id_);
     }
 
     BinaryString GetString(int32_t pos) const override {
@@ -105,6 +98,11 @@ class ColumnarRowRef : public InternalRow {
     }
 
     std::string_view GetStringView(int32_t pos) const override {
+        auto& meta = cached_meta_ptr_[pos];
+        if (meta.values_data && meta.offsets) {
+            return meta.GetVarLenView(row_id_);
+        }
+        // Fallback for dictionary-encoded or uncached types
         return ColumnarUtils::GetView(ctx_->array_vec[pos].get(), row_id_);
     }
 
@@ -129,6 +127,7 @@ class ColumnarRowRef : public InternalRow {
 
  private:
     std::shared_ptr<ColumnarBatchContext> ctx_;
+    const CachedColumnMeta* cached_meta_ptr_;
     const RowKind* row_kind_ = RowKind::Insert();
     int64_t row_id_;
 };

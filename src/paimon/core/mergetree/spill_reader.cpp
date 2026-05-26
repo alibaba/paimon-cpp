@@ -76,7 +76,7 @@ Result<KeyValue> SpillReader::Iterator::Next() {
     PAIMON_ASSIGN_OR_RAISE(const RowKind* row_kind,
                            RowKind::FromByteValue(reader_->row_kind_array_->Value(cursor_)));
     int64_t sequence_number = reader_->sequence_number_array_->Value(cursor_);
-    auto key = std::make_unique<ColumnarRowRef>(reader_->key_ctx_, cursor_);
+    std::shared_ptr<InternalRow> key = std::make_shared<ColumnarRowRef>(reader_->key_ctx_, cursor_);
     auto value = std::make_unique<ColumnarRowRef>(reader_->value_ctx_, cursor_);
     cursor_++;
     return KeyValue(row_kind, sequence_number, KeyValue::UNKNOWN_LEVEL, std::move(key),
