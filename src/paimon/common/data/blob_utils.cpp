@@ -35,7 +35,7 @@ BlobUtils::SeparatedSchemas BlobUtils::SeparateBlobSchema(
     const std::shared_ptr<arrow::Schema>& schema, const std::set<std::string>& inline_fields) {
     std::vector<std::shared_ptr<arrow::Field>> main_fields;
     std::vector<std::shared_ptr<arrow::Field>> blob_fields;
-    for (int i = 0; i < schema->num_fields(); i++) {
+    for (int32_t i = 0; i < schema->num_fields(); i++) {
         auto field = schema->field(i);
         if (IsBlobField(field) && inline_fields.count(field->name()) == 0) {
             // Non-inline BLOB -> goes to blob file
