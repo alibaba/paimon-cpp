@@ -14,15 +14,11 @@
  * limitations under the License.
  */
 
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-
 #include <atomic>
-#include <cerrno>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <iostream>
 #include <limits>
 #include <map>
@@ -154,22 +150,32 @@ void PrintPaimonBenchmarkCliHelpImpl() {
 
 struct BenchmarkWorkspace {
     explicit BenchmarkWorkspace(const std::string& prefix) {
-        root_path = "/tmp/" + prefix + "_" + std::to_string(NextId());
-        EnsureDirectory(root_path);
+        std::error_code ec;
+        const std::filesystem::path temp_dir = std::filesystem::temp_directory_path(ec);
+        if (ec) {
+            throw std::runtime_error("failed to get system temp directory: " + ec.message());
+        }
+
+        const std::filesystem::path workspace_dir =
+            temp_dir / (prefix + "_" + std::to_string(NextId()));
+        root_path = workspace_dir.string();
+        EnsureDirectory(workspace_dir);
     }
 
     ~BenchmarkWorkspace() {
-        const std::string cleanup_cmd = "rm -rf '" + root_path + "'";
-        std::system(cleanup_cmd.c_str());
+        std::error_code ec;
+        std::filesystem::remove_all(std::filesystem::path(root_path), ec);
     }
 
     std::string root_path;
 
  private:
-    static void EnsureDirectory(const std::string& path) {
-        if (mkdir(path.c_str(), 0755) != 0 && errno != EEXIST) {
-            throw std::runtime_error("failed to create benchmark workspace: " + path +
-                                     ", errno=" + std::to_string(errno));
+    static void EnsureDirectory(const std::filesystem::path& path) {
+        std::error_code ec;
+        std::filesystem::create_directories(path, ec);
+        if (ec) {
+            throw std::runtime_error("failed to create benchmark workspace: " + path.string() +
+                                     ", error=" + ec.message());
         }
     }
 

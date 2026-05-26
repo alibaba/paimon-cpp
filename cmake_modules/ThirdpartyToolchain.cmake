@@ -1764,8 +1764,12 @@ macro(build_benchmark)
 
     set(BENCHMARK_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/benchmark_ep-install")
     set(BENCHMARK_INCLUDE_DIR "${BENCHMARK_PREFIX}/include")
-    set(BENCHMARK_STATIC_LIB "${BENCHMARK_PREFIX}/lib/libbenchmark.a")
-    set(BENCHMARK_MAIN_STATIC_LIB "${BENCHMARK_PREFIX}/lib/libbenchmark_main.a")
+    set(BENCHMARK_STATIC_LIB
+        "${BENCHMARK_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}benchmark${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    )
+    set(BENCHMARK_MAIN_STATIC_LIB
+        "${BENCHMARK_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}benchmark_main${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    )
 
     set(BENCHMARK_CMAKE_ARGS
         ${EP_COMMON_CMAKE_ARGS}
@@ -1776,6 +1780,7 @@ macro(build_benchmark)
 
     externalproject_add(benchmark_ep
                         URL ${BENCHMARK_SOURCE_URL}
+                        URL_HASH "SHA256=${PAIMON_BENCHMARK_BUILD_SHA256_CHECKSUM}"
                         CMAKE_ARGS ${BENCHMARK_CMAKE_ARGS}
                         BUILD_BYPRODUCTS "${BENCHMARK_STATIC_LIB}" "${BENCHMARK_MAIN_STATIC_LIB}")
 

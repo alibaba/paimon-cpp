@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(_PAIMON_BENCHMARK_ROOTS ${Benchmark_ROOT} ${benchmark_ROOT} ${PAIMON_PACKAGE_PREFIX})
+set(_PAIMON_BENCHMARK_ROOTS ${benchmark_ROOT} ${BENCHMARK_ROOT} ${PAIMON_PACKAGE_PREFIX})
 list(REMOVE_ITEM _PAIMON_BENCHMARK_ROOTS "")
 if(_PAIMON_BENCHMARK_ROOTS)
     set(_PAIMON_BENCHMARK_FIND_ARGS HINTS ${_PAIMON_BENCHMARK_ROOTS} NO_DEFAULT_PATH)

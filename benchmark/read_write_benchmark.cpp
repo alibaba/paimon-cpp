@@ -30,6 +30,7 @@ int main(int argc, char** argv) {
 
     if (paimon::benchmark::HasHelpFlag(argc, argv)) {
         paimon::benchmark::PrintPaimonBenchmarkCliHelp();
+        return 0;
     }
 
     benchmark::Initialize(&argc, argv);
