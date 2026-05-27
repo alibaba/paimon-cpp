@@ -48,13 +48,13 @@ class PAIMON_EXPORT BinarySection {
     /// This is used to decide whether the data is stored in fixed-length part or
     /// variable-length part. see `MAX_FIX_PART_DATA_SIZE` for more information.
 
-    static constexpr int64_t HIGHEST_FIRST_BIT = 0x80L << 56;
+    static constexpr int64_t HIGHEST_FIRST_BIT = static_cast<int64_t>(0x80ULL << 56);
     /// To get the 7 bits length in second bit to eighth bit out of a int64_t. Form:
     /// 01111111 00000000... (8 bytes)
     /// This is used to get the length of the data which is stored in this int64_t. see
     /// `MAX_FIX_PART_DATA_SIZE` for more information.
 
-    static constexpr int64_t HIGHEST_SECOND_TO_EIGHTH_BIT = 0x7FL << 56;
+    static constexpr int64_t HIGHEST_SECOND_TO_EIGHTH_BIT = static_cast<int64_t>(0x7FULL << 56);
 
     /// Get binary, if len less than 8, will be include in variable_part_offset_and_len.
     /// @note Need to consider the ByteOrder.

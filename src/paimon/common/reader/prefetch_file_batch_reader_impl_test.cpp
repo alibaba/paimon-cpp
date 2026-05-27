@@ -16,6 +16,7 @@
 
 #include "paimon/common/reader/prefetch_file_batch_reader_impl.h"
 
+#include <atomic>
 #include <set>
 
 #include "arrow/compute/api.h"
@@ -90,7 +91,7 @@ class ControlledMockFormatReaderBuilder : public ReaderBuilder {
 
     Result<std::unique_ptr<FileBatchReader>> Build(
         const std::shared_ptr<InputStream>& path) const override {
-        size_t index = build_count_++;
+        size_t index = build_count_.fetch_add(1);
         Status set_read_ranges_status = index < set_read_ranges_statuses_.size()
                                             ? set_read_ranges_statuses_[index]
                                             : Status::OK();
@@ -109,7 +110,7 @@ class ControlledMockFormatReaderBuilder : public ReaderBuilder {
     std::vector<std::pair<uint64_t, uint64_t>> read_ranges_;
     bool need_prefetch_ = true;
     std::vector<Status> set_read_ranges_statuses_;
-    mutable size_t build_count_ = 0;
+    mutable std::atomic<size_t> build_count_{0};
 };
 
 struct TestParam {

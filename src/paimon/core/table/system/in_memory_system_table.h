@@ -18,28 +18,34 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
+#include "paimon/common/data/generic_row.h"
 #include "paimon/core/table/system/system_table.h"
 
 namespace paimon {
-class TableSchema;
 
-class OptionsSystemTable : public SystemTable {
+/// Base class for system tables whose result can be materialized as a single in-memory
+/// RecordBatch.
+///
+/// It provides the common singleton split scan and one-shot batch reader.
+class InMemorySystemTable : public SystemTable {
  public:
-    static constexpr const char* kName = "options";
+    explicit InMemorySystemTable(std::string table_path);
 
-    OptionsSystemTable(std::string table_path, std::shared_ptr<TableSchema> table_schema);
-
-    std::string Name() const override;
-    Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
     Result<std::unique_ptr<TableScan>> NewScan(
         const std::shared_ptr<ScanContext>& context) const override;
     Result<std::unique_ptr<TableRead>> NewRead(
         const std::shared_ptr<ReadContext>& context) const override;
+    virtual Result<std::vector<GenericRow>> BuildRows() const = 0;
+
+ protected:
+    const std::string& TablePath() const {
+        return table_path_;
+    }
 
  private:
     std::string table_path_;
-    std::shared_ptr<TableSchema> table_schema_;
 };
 
 }  // namespace paimon

@@ -365,27 +365,11 @@ Result<std::vector<std::string>> FileSystemCatalog::GetSchemaExternalPaths(
 
 Result<std::vector<std::string>> FileSystemCatalog::GetTableBranches(
     const std::string& table_path) const {
-    std::vector<std::string> branches;
-    std::string branch_dir = PathUtil::JoinPath(table_path, "branch");
-    PAIMON_ASSIGN_OR_RAISE(bool branch_dir_exists, fs_->Exists(branch_dir));
-    if (!branch_dir_exists) {
-        return branches;
-    }
-
-    std::vector<std::unique_ptr<BasicFileStatus>> file_status_list;
-    PAIMON_RETURN_NOT_OK(fs_->ListDir(branch_dir, &file_status_list));
-
-    for (const auto& file_status : file_status_list) {
-        if (file_status->IsDir()) {
-            std::string dir_name = PathUtil::GetName(file_status->GetPath());
-            // Branch directory name format: branch-{branch_name}
-            const std::string branch_prefix = BranchManager::BRANCH_PREFIX;
-            if (StringUtils::StartsWith(dir_name, branch_prefix, /*start_pos=*/0)) {
-                std::string branch_name = dir_name.substr(branch_prefix.length());
-                branches.push_back(branch_name);
-            }
-        }
-    }
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> branches,
+                           BranchManager::ListBranches(fs_, table_path));
+    branches.erase(
+        std::remove(branches.begin(), branches.end(), BranchManager::DEFAULT_MAIN_BRANCH),
+        branches.end());
     return branches;
 }
 

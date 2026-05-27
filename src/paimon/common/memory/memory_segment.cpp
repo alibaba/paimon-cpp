@@ -23,11 +23,8 @@ namespace paimon {
 int32_t MemorySegment::Compare(const MemorySegment& seg2, int32_t offset1, int32_t offset2,
                                int32_t len) const {
     while (len >= 8) {
-        // TODO(yonghao.fyh): support big endian, decide SmallEndian or BigEndian
-        // long l1 = GetLongBigEndian(offset1);
-        // long l2 = seg2.getLongBigEndian(offset2);
-        uint64_t l1 = GetValue<int64_t>(offset1);
-        uint64_t l2 = seg2.GetValue<int64_t>(offset2);
+        uint64_t l1 = GetLongBigEndian(offset1);
+        uint64_t l2 = seg2.GetLongBigEndian(offset2);
 
         if (l1 != l2) {
             return (l1 < l2) ? -1 : 1;

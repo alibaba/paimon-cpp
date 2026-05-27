@@ -36,6 +36,15 @@ Interface
 .. doxygenclass:: paimon::Plan
    :members:
    :undoc-members:
+
+.. doxygenclass:: paimon::Split
+   :members:
+   :undoc-members:
+
 .. doxygenclass:: paimon::DataSplit
+   :members:
+   :undoc-members:
+
+.. doxygenclass:: paimon::ScanFilter
    :members:
    :undoc-members:

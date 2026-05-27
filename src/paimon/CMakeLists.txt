@@ -201,6 +201,7 @@ set(PAIMON_CORE_SRCS
     core/index/index_file_handler.cpp
     core/index/global_index_meta.cpp
     core/index/index_file_meta_serializer.cpp
+    core/io/generic_row_to_arrow_array_converter.cpp
     core/io/meta_to_arrow_array_converter.cpp
     core/io/async_key_value_producer_and_consumer.cpp
     core/io/data_file_meta_09_serializer.cpp
@@ -319,11 +320,14 @@ set(PAIMON_CORE_SRCS
     core/table/source/data_evolution_batch_scan.cpp
     core/table/system/audit_log_system_table.cpp
     core/table/system/binlog_system_table.cpp
-    core/table/system/options_system_table.cpp
+    core/table/system/in_memory_system_table.cpp
+    core/table/system/metadata_system_tables.cpp
     core/table/system/system_table.cpp
     core/table/system/system_table_scan.cpp
     core/table/system/system_table_schema.cpp
     core/tag/tag.cpp
+    core/utils/branch_manager.cpp
+    core/utils/consumer_manager.cpp
     core/utils/field_mapping.cpp
     core/utils/file_store_path_factory.cpp
     core/utils/file_utils.cpp
@@ -704,6 +708,7 @@ if(PAIMON_BUILD_TESTS)
                     core/table/system/system_table_test.cpp
                     core/tag/tag_test.cpp
                     core/utils/branch_manager_test.cpp
+                    core/utils/consumer_manager_test.cpp
                     core/utils/file_store_path_factory_cache_test.cpp
                     core/utils/field_mapping_test.cpp
                     core/utils/file_store_path_factory_test.cpp
