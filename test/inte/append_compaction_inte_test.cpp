@@ -506,9 +506,6 @@ TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteCompactionWithExterna
 }
 
 TEST_F(AppendCompactionInteTest, TestAppendTableCompactionWithIOException) {
-    // Skip this test: even with prebuffer disabled, parquet's IO patterns differ
-    // from orc, making it impossible to find "safe" IO positions for error recovery testing.
-    GTEST_SKIP() << "Skipping parquet IOException test - IO patterns differ from orc";
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int32()),
         arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
