@@ -720,7 +720,7 @@ TEST(SystemTableReadInteTest, TestReadMetadataSystemTables) {
     ASSERT_TRUE(manifest_file_size_array);
     ASSERT_TRUE(manifest_num_added_files_array);
     ASSERT_TRUE(manifest_schema_id_array);
-    ASSERT_TRUE(manifest_file_name_array->GetString(0).find("manifest-") == 0);
+    ASSERT_EQ(manifest_file_name_array->GetString(0).find("manifest-"), 0);
     ASSERT_GT(manifest_file_size_array->Value(0), 0);
     ASSERT_GE(manifest_num_added_files_array->Value(0), 1);
     ASSERT_EQ(manifest_schema_id_array->Value(0), 0);

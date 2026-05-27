@@ -320,11 +320,19 @@ set(PAIMON_CORE_SRCS
     core/table/source/data_evolution_batch_scan.cpp
     core/table/system/audit_log_system_table.cpp
     core/table/system/binlog_system_table.cpp
+    core/table/system/branches_system_table.cpp
+    core/table/system/consumers_system_table.cpp
+    core/table/system/files_system_table.cpp
     core/table/system/in_memory_system_table.cpp
-    core/table/system/metadata_system_tables.cpp
+    core/table/system/manifests_system_table.cpp
+    core/table/system/options_system_table.cpp
+    core/table/system/schemas_system_table.cpp
+    core/table/system/snapshots_system_table.cpp
     core/table/system/system_table.cpp
     core/table/system/system_table_scan.cpp
     core/table/system/system_table_schema.cpp
+    core/table/system/system_table_utils.cpp
+    core/table/system/tags_system_table.cpp
     core/tag/tag.cpp
     core/utils/branch_manager.cpp
     core/utils/consumer_manager.cpp
