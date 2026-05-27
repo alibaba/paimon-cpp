@@ -38,7 +38,7 @@ if(PAIMON_ENABLE_ORC)
                    fmt
                    orc::orc
                    tbb
-                   dl
+                   ${CMAKE_DL_LIBS}
                    Threads::Threads
                    SHARED_LINK_LIBS
                    paimon_shared
@@ -61,10 +61,8 @@ if(PAIMON_ENABLE_ORC)
                         STATIC_LINK_LIBS
                         paimon_shared
                         test_utils_static
-                        "-Wl,--whole-archive"
-                        paimon_local_file_system_static
-                        paimon_orc_file_format_static
-                        "-Wl,--no-whole-archive"
+                        ${PAIMON_ORC_FILE_FORMAT_STATIC_LINK_LIBS}
+                        ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
                         ${GTEST_LINK_TOOLCHAIN}
                         EXTRA_LINK_LIBS
                         orc::orc)

@@ -24,7 +24,7 @@ if(PAIMON_ENABLE_LUMINA)
                    arrow
                    glog
                    fmt
-                   dl
+                   ${CMAKE_DL_LIBS}
                    Threads::Threads
                    SHARED_LINK_LIBS
                    lumina::interface
@@ -43,10 +43,8 @@ if(PAIMON_ENABLE_LUMINA)
                         STATIC_LINK_LIBS
                         paimon_shared
                         test_utils_static
-                        "-Wl,--whole-archive"
-                        paimon_local_file_system_static
-                        paimon_lumina_index_static
-                        "-Wl,--no-whole-archive"
+                        ${PAIMON_LUMINA_INDEX_STATIC_LINK_LIBS}
+                        ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
                         lumina::interface
                         ${GTEST_LINK_TOOLCHAIN})
     endif()

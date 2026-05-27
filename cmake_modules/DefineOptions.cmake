@@ -98,6 +98,10 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
 
     define_option(PAIMON_USE_CCACHE "Use ccache when compiling (if available)" ON)
 
+    define_option(PAIMON_USE_APPLE_LIBCXX_WITH_CLANG
+                  "Use Apple SDK libc++ headers when building with upstream Clang on macOS"
+                  ON)
+
     #----------------------------------------------------------------------
     set_option_category("Test")
 

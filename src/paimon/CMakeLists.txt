@@ -355,7 +355,7 @@ add_paimon_lib(paimon
                arrow
                tbb
                glog
-               dl
+               ${CMAKE_DL_LIBS}
                fmt
                roaring_bitmap
                xxhash
@@ -547,9 +547,7 @@ if(PAIMON_BUILD_TESTS)
                     STATIC_LINK_LIBS
                     paimon_shared
                     test_utils_static
-                    "-Wl,--whole-archive"
-                    paimon_local_file_system_static
-                    "-Wl,--no-whole-archive"
+                    ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
                     ${GTEST_LINK_TOOLCHAIN})
 
     add_paimon_test(core_test
@@ -737,10 +735,8 @@ if(PAIMON_BUILD_TESTS)
                     # fs/jindo/jindo_file_system_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared
-                    "-Wl,--whole-archive"
-                    paimon_local_file_system_static
-                    # paimon_jindo_file_system_static
-                    "-Wl,--no-whole-archive"
+                    ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
+                    # ${PAIMON_JINDO_FILE_SYSTEM_STATIC_LINK_LIBS}
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 
