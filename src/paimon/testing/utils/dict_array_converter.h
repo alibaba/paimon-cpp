@@ -28,7 +28,8 @@ class DictArrayConverter {
     DictArrayConverter() = delete;
     ~DictArrayConverter() = delete;
 
-    // deep copy dictionary array to string array/binary array
+    // Decode dictionary string arrays to plain StringArray so test comparisons are stable across
+    // Arrow dictionary index types and string/large_string dictionary values.
     static Result<std::shared_ptr<arrow::Array>> ConvertDictArray(
         const std::shared_ptr<arrow::Array>& array, arrow::MemoryPool* pool) {
         arrow::Type::type kind = array->type_id();
@@ -91,21 +92,15 @@ class DictArrayConverter {
                 auto dict_type = arrow::internal::checked_pointer_cast<arrow::DictionaryType>(
                     dict_array->type());
                 auto value_type_id = dict_type->value_type()->id();
-                auto index_type_id = dict_type->index_type()->id();
-                if (value_type_id == arrow::Type::type::STRING &&
-                    index_type_id == arrow::Type::type::INT32) {
-                    return ConvertDictionaryArrayToBinaryArray<
-                        arrow::StringArray, arrow::Int32Array, arrow::StringBuilder>(dict_array,
-                                                                                     pool);
-                } else if (value_type_id == arrow::Type::type::LARGE_STRING &&
-                           index_type_id == arrow::Type::type::INT64) {
-                    return ConvertDictionaryArrayToBinaryArray<
-                        arrow::LargeStringArray, arrow::Int64Array, arrow::StringBuilder>(
-                        dict_array, pool);
+                if (value_type_id == arrow::Type::type::STRING) {
+                    return ConvertDictionaryArrayToStringArray<arrow::StringArray>(dict_array,
+                                                                                   pool);
+                } else if (value_type_id == arrow::Type::type::LARGE_STRING) {
+                    return ConvertDictionaryArrayToStringArray<arrow::LargeStringArray>(dict_array,
+                                                                                        pool);
                 } else {
                     return Status::Invalid(
-                        "only support [STRING, INT32] or [LARGE_STRING, INT64] for "
-                        "DictionaryArray");
+                        "only support STRING or LARGE_STRING value type for DictionaryArray");
                 }
             }
             default: {
@@ -115,23 +110,25 @@ class DictArrayConverter {
     }
 
  private:
-    template <typename DictArrayType, typename IndicesArrayType, typename BuilderType>
-    static Result<std::shared_ptr<arrow::Array>> ConvertDictionaryArrayToBinaryArray(
+    template <typename DictArrayType>
+    static Result<std::shared_ptr<arrow::Array>> ConvertDictionaryArrayToStringArray(
         const std::shared_ptr<arrow::DictionaryArray>& dict_array, arrow::MemoryPool* pool) {
         auto dictionary = std::dynamic_pointer_cast<DictArrayType>(dict_array->dictionary());
-        auto indices = std::dynamic_pointer_cast<IndicesArrayType>(dict_array->indices());
-        auto string_builder = std::make_shared<BuilderType>(pool);
+        if (!dictionary) {
+            return Status::Invalid("dictionary value array type does not match dictionary type");
+        }
+
+        arrow::StringBuilder string_builder(pool);
         for (int64_t i = 0; i < dict_array->length(); ++i) {
             if (dict_array->IsNull(i)) {
-                PAIMON_RETURN_NOT_OK_FROM_ARROW(string_builder->AppendNull());
+                PAIMON_RETURN_NOT_OK_FROM_ARROW(string_builder.AppendNull());
             } else {
-                int64_t dict_index = indices->Value(i);
                 PAIMON_RETURN_NOT_OK_FROM_ARROW(
-                    string_builder->Append(dictionary->GetString(dict_index)));
+                    string_builder.Append(dictionary->GetString(dict_array->GetValueIndex(i))));
             }
         }
         std::shared_ptr<arrow::Array> string_array;
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(string_builder->Finish(&string_array));
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(string_builder.Finish(&string_array));
         return string_array;
     }
 };

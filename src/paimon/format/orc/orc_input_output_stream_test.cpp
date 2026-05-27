@@ -30,6 +30,7 @@
 #include "orc/Type.hh"
 #include "orc/Vector.hh"
 #include "orc/Writer.hh"
+#include "paimon/common/utils/path_util.h"
 #include "paimon/format/orc/orc_format_defs.h"
 #include "paimon/format/orc/orc_input_stream_impl.h"
 #include "paimon/format/orc/orc_output_stream_impl.h"
@@ -53,7 +54,8 @@ TEST(OrcInputOutputStreamTest, TestInOutStream) {
                          file_system->Create(file_name, /*overwrite=*/true));
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<OrcOutputStreamImpl> out_stream,
                          OrcOutputStreamImpl::Create(out));
-    ASSERT_EQ(out_stream->getName(), file_name);
+    ASSERT_OK_AND_ASSIGN(auto normalized_file_name, PathUtil::NormalizePath(file_name));
+    ASSERT_EQ(out_stream->getName(), normalized_file_name);
     ASSERT_EQ(out_stream->getNaturalWriteSize(), 128 * 1024);
     ASSERT_EQ(out_stream->getLength(), 0);
 
@@ -84,7 +86,8 @@ TEST(OrcInputOutputStreamTest, TestSimple) {
                          file_system->Create(file_name, /*overwrite=*/true));
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<OrcOutputStreamImpl> out_stream,
                          OrcOutputStreamImpl::Create(out));
-    ASSERT_EQ(out_stream->getName(), file_name);
+    ASSERT_OK_AND_ASSIGN(auto normalized_file_name, PathUtil::NormalizePath(file_name));
+    ASSERT_EQ(out_stream->getName(), normalized_file_name);
     ASSERT_EQ(out_stream->getNaturalWriteSize(), 128 * 1024);
     ASSERT_EQ(out_stream->getLength(), 0);
 
@@ -131,7 +134,7 @@ TEST(OrcInputOutputStreamTest, TestSimple) {
     ASSERT_OK_AND_ASSIGN(auto in_stream,
                          OrcInputStreamImpl::Create(input_stream, DEFAULT_NATURAL_READ_SIZE));
     auto length = file_system->GetFileStatus(file_name).value()->GetLen();
-    ASSERT_EQ(in_stream->getName(), file_name);
+    ASSERT_EQ(in_stream->getName(), normalized_file_name);
     ASSERT_EQ(in_stream->getLength(), length);
     ASSERT_EQ(in_stream->getNaturalReadSize(), 1024 * 1024);
 
