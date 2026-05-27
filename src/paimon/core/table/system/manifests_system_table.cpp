@@ -19,7 +19,9 @@
 #include <utility>
 
 #include "arrow/api.h"
+#include "paimon/common/data/binary_row.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/binary_row_partition_computer.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/manifest/manifest_file_meta.h"
 #include "paimon/core/schema/table_schema.h"
@@ -29,6 +31,29 @@
 #include "paimon/memory/memory_pool.h"
 
 namespace paimon {
+namespace {
+
+constexpr int32_t kMaxPartitionStatsLength = 255;
+
+Result<std::optional<std::string>> OptionalPartitionString(
+    const BinaryRow& row, const std::shared_ptr<arrow::Schema>& partition_schema) {
+    if (row.GetFieldCount() <= 0) {
+        return std::optional<std::string>();
+    }
+    PAIMON_ASSIGN_OR_RAISE(std::string value,
+                           BinaryRowPartitionComputer::PartToSimpleString(
+                               partition_schema, row, ",", kMaxPartitionStatsLength));
+    return std::optional<std::string>(value);
+}
+
+Result<VariantType> OptionalPartitionStringValue(
+    const BinaryRow& row, const std::shared_ptr<arrow::Schema>& partition_schema) {
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> value,
+                           OptionalPartitionString(row, partition_schema));
+    return SystemTableUtils::OptionalStringValue(value);
+}
+
+}  // namespace
 
 ManifestsSystemTable::ManifestsSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
                                            std::string branch,
@@ -87,12 +112,12 @@ Result<std::vector<GenericRow>> ManifestsSystemTable::BuildRows() const {
         row.SetField(2, manifest.NumAddedFiles());
         row.SetField(3, manifest.NumDeletedFiles());
         row.SetField(4, manifest.SchemaId());
-        PAIMON_ASSIGN_OR_RAISE(VariantType min_partition,
-                               SystemTableUtils::OptionalPartitionStringValue(
-                                   manifest.PartitionStats().MinValues(), partition_schema));
-        PAIMON_ASSIGN_OR_RAISE(VariantType max_partition,
-                               SystemTableUtils::OptionalPartitionStringValue(
-                                   manifest.PartitionStats().MaxValues(), partition_schema));
+        PAIMON_ASSIGN_OR_RAISE(
+            VariantType min_partition,
+            OptionalPartitionStringValue(manifest.PartitionStats().MinValues(), partition_schema));
+        PAIMON_ASSIGN_OR_RAISE(
+            VariantType max_partition,
+            OptionalPartitionStringValue(manifest.PartitionStats().MaxValues(), partition_schema));
         row.SetField(5, min_partition);
         row.SetField(6, max_partition);
         row.SetField(7, SystemTableUtils::OptionalInt64Value(manifest.MinRowId()));
