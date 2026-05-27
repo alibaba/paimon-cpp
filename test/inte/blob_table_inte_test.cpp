@@ -2363,10 +2363,10 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorFieldWriteRawBytesDirectly) {
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), raw_json).ValueOrDie());
 
     auto schema = arrow::schema(fields);
-    ASSERT_NOK_WITH_MSG(
-        WriteArray(table_path, {}, schema->field_names(), {raw_array}),
-        "BLOB inline fields configured by blob-descriptor-field or blob-view-field require values "
-        "to be a BlobDescriptor or BlobViewStruct.");
+    ASSERT_NOK_WITH_MSG(WriteArray(table_path, {}, schema->field_names(), {raw_array}),
+                        "BLOB inline field b0 configured by blob-descriptor-field or "
+                        "blob-view-field require values "
+                        "to be a BlobDescriptor or BlobViewStruct.");
 }
 
 }  // namespace paimon::test

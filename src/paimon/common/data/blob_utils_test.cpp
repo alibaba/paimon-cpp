@@ -275,8 +275,10 @@ TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsWithRawBytes) {
     auto struct_array =
         arrow::StructArray::Make({blob_array}, {BlobUtils::ToArrowField("b0")}).ValueOrDie();
     auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
-    ASSERT_NOK_WITH_MSG(BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0"}),
-                        "BLOB inline fields configured by blob-descriptor-field");
+    ASSERT_NOK_WITH_MSG(
+        BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0"}),
+        "BLOB inline field b0 configured by blob-descriptor-field or blob-view-field "
+        "require values to be a BlobDescriptor or BlobViewStruct.");
 }
 
 TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsMixedValidAndInvalid) {
@@ -292,8 +294,10 @@ TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsMixedValidAndInvalid) {
     auto struct_array =
         arrow::StructArray::Make({blob_array}, {BlobUtils::ToArrowField("b0")}).ValueOrDie();
     auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
-    ASSERT_NOK_WITH_MSG(BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0"}),
-                        "BLOB inline fields configured by blob-descriptor-field");
+    ASSERT_NOK_WITH_MSG(
+        BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0"}),
+        "BLOB inline field b0 configured by blob-descriptor-field or blob-view-field "
+        "require values to be a BlobDescriptor or BlobViewStruct.");
 }
 
 TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsMultipleFields) {
@@ -315,8 +319,10 @@ TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsMultipleFields) {
                                  {BlobUtils::ToArrowField("b0"), BlobUtils::ToArrowField("b1")})
             .ValueOrDie();
     auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
-    ASSERT_NOK_WITH_MSG(BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0", "b1"}),
-                        "BLOB inline fields configured by blob-descriptor-field");
+    ASSERT_NOK_WITH_MSG(
+        BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0", "b1"}),
+        "BLOB inline field b1 configured by blob-descriptor-field or blob-view-field "
+        "require values to be a BlobDescriptor or BlobViewStruct.");
 }
 
 }  // namespace paimon::test

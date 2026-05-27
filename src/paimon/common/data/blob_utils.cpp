@@ -149,9 +149,10 @@ Status BlobUtils::ValidateInlineBlobDescriptors(
             PAIMON_ASSIGN_OR_RAISE(bool is_descriptor,
                                    BlobDescriptor::IsBlobDescriptor(value.data(), value.size()));
             if (!is_descriptor) {
-                return Status::Invalid(
-                    "BLOB inline fields configured by blob-descriptor-field or blob-view-field "
-                    "require values to be a BlobDescriptor or BlobViewStruct.");
+                return Status::Invalid(fmt::format(
+                    "BLOB inline field {} configured by blob-descriptor-field or blob-view-field "
+                    "require values to be a BlobDescriptor or BlobViewStruct.",
+                    field_name));
             }
         }
     }
