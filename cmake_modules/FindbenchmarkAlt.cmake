@@ -33,7 +33,7 @@ if(NOT TARGET benchmark::benchmark)
 
     include(FindPackageHandleStandardArgs)
     find_package_handle_standard_args(benchmarkAlt REQUIRED_VARS BENCHMARK_INCLUDE_DIR
-                                                              BENCHMARK_LIBRARY)
+                                                                 BENCHMARK_LIBRARY)
 
     if(benchmarkAlt_FOUND)
         if(NOT TARGET benchmark::benchmark)

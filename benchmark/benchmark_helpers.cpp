@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "benchmark_helpers.h"
+#include "benchmark/benchmark_helpers.h"
 
 #include <iostream>
 
@@ -23,8 +23,8 @@
 namespace paimon::benchmark {
 
 bool BenchmarkHelpers::ValidateFileFormatOrSkip(::benchmark::State& state,
-                                                const std::string& file_format,
-                                                bool is_supported, SkipFn skip) {
+                                                const std::string& file_format, bool is_supported,
+                                                SkipFn skip) {
     if (!is_supported) {
         skip(state, "file format is not supported in this build: " + file_format);
         return false;
@@ -34,8 +34,7 @@ bool BenchmarkHelpers::ValidateFileFormatOrSkip(::benchmark::State& state,
 
 bool BenchmarkHelpers::ValidateSourcePresenceOrSkip(::benchmark::State& state,
                                                     const std::string& source_path,
-                                                    const std::string& message,
-                                                    SkipFn skip) {
+                                                    const std::string& message, SkipFn skip) {
     if (source_path.empty()) {
         skip(state, message);
         return false;
@@ -48,16 +47,14 @@ bool BenchmarkHelpers::ValidateSourceSupportOrSkip(::benchmark::State& state,
                                                    bool is_supported, SkipFn skip) {
     if (!is_supported) {
         skip(state,
-             "source data mode requires reader support in this build for format: " +
-                 source_format);
+             "source data mode requires reader support in this build for format: " + source_format);
         return false;
     }
     return true;
 }
 
 bool BenchmarkHelpers::ValidatePrefetchParallelOrSkip(::benchmark::State& state,
-                                                      int32_t prefetch_parallel_num,
-                                                      SkipFn skip) {
+                                                      int32_t prefetch_parallel_num, SkipFn skip) {
     if (prefetch_parallel_num <= 0) {
         skip(state, "prefetch_parallel must be greater than 0");
         return false;
@@ -82,8 +79,8 @@ bool BenchmarkHelpers::TryRunExternalReadMode(::benchmark::State& state,
         return false;
     }
 
-    std::cout << "[benchmark][" << benchmark_name
-              << "] external_table_path=" << external_table_path << std::endl;
+    std::cout << "[benchmark][" << benchmark_name << "] external_table_path=" << external_table_path
+              << std::endl;
     const int64_t rows_read = RunReadIterations(state, read_once);
     state.SetItemsProcessed(state.iterations() * rows_read);
     return true;

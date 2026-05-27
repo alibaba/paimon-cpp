@@ -57,13 +57,17 @@ if(PAIMON_BUILD_BENCHMARKS)
                          Threads::Threads
                          ${CMAKE_DL_LIBS}
                          rt
-                         ${PAIMON_BENCHMARK_LINK_TOOLCHAIN})
+                         ${PAIMON_BENCHMARK_LINK_TOOLCHAIN}
+                         EXTRA_INCLUDES
+                         ${CMAKE_SOURCE_DIR})
 endif()
 
 if(PAIMON_BUILD_TESTS)
     add_paimon_test(cli_option_parsing_test
                     SOURCES
                     cli_option_parsing_test.cpp
+                    EXTRA_INCLUDES
+                    ${CMAKE_SOURCE_DIR}
                     STATIC_LINK_LIBS
                     ${GTEST_LINK_TOOLCHAIN})
 endif()

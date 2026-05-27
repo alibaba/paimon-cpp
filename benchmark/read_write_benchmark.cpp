@@ -18,7 +18,7 @@
 #include <iostream>
 
 #include "benchmark/benchmark.h"
-#include "benchmark_suite.h"
+#include "benchmark/benchmark_suite.h"
 
 int main(int argc, char** argv) {
     try {

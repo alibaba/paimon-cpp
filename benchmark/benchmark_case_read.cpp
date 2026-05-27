@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "benchmark_suite.h"
+#include "benchmark/benchmark_suite.h"
 
 namespace {
 

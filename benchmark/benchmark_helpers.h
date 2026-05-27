@@ -31,8 +31,7 @@ class BenchmarkHelpers {
     using ReadOnceFn = std::function<int64_t()>;
     using SkipFn = void (*)(::benchmark::State&, const std::string&);
 
-    static bool ValidateFileFormatOrSkip(::benchmark::State& state,
-                                         const std::string& file_format,
+    static bool ValidateFileFormatOrSkip(::benchmark::State& state, const std::string& file_format,
                                          bool is_supported, SkipFn skip);
 
     static bool ValidateSourcePresenceOrSkip(::benchmark::State& state,
@@ -40,17 +39,15 @@ class BenchmarkHelpers {
                                              const std::string& message, SkipFn skip);
 
     static bool ValidateSourceSupportOrSkip(::benchmark::State& state,
-                                            const std::string& source_format,
-                                            bool is_supported, SkipFn skip);
+                                            const std::string& source_format, bool is_supported,
+                                            SkipFn skip);
 
     static bool ValidatePrefetchParallelOrSkip(::benchmark::State& state,
-                                               int32_t prefetch_parallel_num,
-                                               SkipFn skip);
+                                               int32_t prefetch_parallel_num, SkipFn skip);
 
     static int64_t RunReadIterations(::benchmark::State& state, const ReadOnceFn& read_once);
 
-    static bool TryRunExternalReadMode(::benchmark::State& state,
-                                       const std::string& benchmark_name,
+    static bool TryRunExternalReadMode(::benchmark::State& state, const std::string& benchmark_name,
                                        const std::string& external_table_path,
                                        const ReadOnceFn& read_once);
 };

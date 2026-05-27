@@ -1782,7 +1782,8 @@ macro(build_benchmark)
                         URL ${BENCHMARK_SOURCE_URL}
                         URL_HASH "SHA256=${PAIMON_BENCHMARK_BUILD_SHA256_CHECKSUM}"
                         CMAKE_ARGS ${BENCHMARK_CMAKE_ARGS}
-                        BUILD_BYPRODUCTS "${BENCHMARK_STATIC_LIB}" "${BENCHMARK_MAIN_STATIC_LIB}")
+                        BUILD_BYPRODUCTS "${BENCHMARK_STATIC_LIB}"
+                                         "${BENCHMARK_MAIN_STATIC_LIB}")
 
     file(MAKE_DIRECTORY "${BENCHMARK_INCLUDE_DIR}")
 

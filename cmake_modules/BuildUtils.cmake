@@ -408,7 +408,13 @@ endfunction()
 function(add_benchmark_case REL_BENCHMARK_NAME)
     set(options ENABLED)
     set(one_value_args)
-    set(multi_value_args SOURCES STATIC_LINK_LIBS EXTRA_LINK_LIBS EXTRA_INCLUDES LABELS PREFIX)
+    set(multi_value_args
+        SOURCES
+        STATIC_LINK_LIBS
+        EXTRA_LINK_LIBS
+        EXTRA_INCLUDES
+        LABELS
+        PREFIX)
     cmake_parse_arguments(ARG
                           "${options}"
                           "${one_value_args}"

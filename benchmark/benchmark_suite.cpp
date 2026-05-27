@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "benchmark/benchmark_suite.h"
+
 #include <atomic>
 #include <cstdint>
 #include <cstdlib>
@@ -33,9 +35,8 @@
 #include "arrow/api.h"
 #include "arrow/c/bridge.h"
 #include "arrow/io/api.h"
-#include "benchmark_helpers.h"
-#include "benchmark_suite.h"
-#include "cli_option_parsing.h"
+#include "benchmark/benchmark_helpers.h"
+#include "benchmark/cli_option_parsing.h"
 #include "paimon/api.h"
 #include "paimon/catalog/catalog.h"
 
@@ -665,14 +666,13 @@ void RunBMWrite(::benchmark::State& state) {
             state, source_spec.path, "--paimon_source_parquet is required", &SkipWithMessage)) {
         return;
     }
-    if (!BenchmarkHelpers::ValidateSourceSupportOrSkip(
-            state, source_spec.format, SupportsSourceDataMode(source_spec.format),
-            &SkipWithMessage)) {
+    if (!BenchmarkHelpers::ValidateSourceSupportOrSkip(state, source_spec.format,
+                                                       SupportsSourceDataMode(source_spec.format),
+                                                       &SkipWithMessage)) {
         return;
     }
-    if (!BenchmarkHelpers::ValidateFileFormatOrSkip(state, file_format,
-                                                    IsFileFormatSupported(file_format),
-                                                    &SkipWithMessage)) {
+    if (!BenchmarkHelpers::ValidateFileFormatOrSkip(
+            state, file_format, IsFileFormatSupported(file_format), &SkipWithMessage)) {
         return;
     }
 
@@ -703,9 +703,8 @@ void RunBMRead(::benchmark::State& state) {
     if (!TryGetSourceSpec(state, &source_spec)) {
         return;
     }
-    if (!BenchmarkHelpers::ValidateFileFormatOrSkip(state, file_format,
-                                                    IsFileFormatSupported(file_format),
-                                                    &SkipWithMessage)) {
+    if (!BenchmarkHelpers::ValidateFileFormatOrSkip(
+            state, file_format, IsFileFormatSupported(file_format), &SkipWithMessage)) {
         return;
     }
 
@@ -716,9 +715,9 @@ void RunBMRead(::benchmark::State& state) {
 
     auto options = BuildOptions(file_format);
 
-    if (BenchmarkHelpers::TryRunExternalReadMode(
-            state, "read", external_table_path,
-            [&]() { return ReadRows(external_table_path, options, prefetch_parallel_num); })) {
+    if (BenchmarkHelpers::TryRunExternalReadMode(state, "read", external_table_path, [&]() {
+            return ReadRows(external_table_path, options, prefetch_parallel_num);
+        })) {
         return;
     }
 
@@ -728,9 +727,9 @@ void RunBMRead(::benchmark::State& state) {
             &SkipWithMessage)) {
         return;
     }
-    if (!BenchmarkHelpers::ValidateSourceSupportOrSkip(
-            state, source_spec.format, SupportsSourceDataMode(source_spec.format),
-            &SkipWithMessage)) {
+    if (!BenchmarkHelpers::ValidateSourceSupportOrSkip(state, source_spec.format,
+                                                       SupportsSourceDataMode(source_spec.format),
+                                                       &SkipWithMessage)) {
         return;
     }
 
@@ -742,8 +741,9 @@ void RunBMRead(::benchmark::State& state) {
         return;
     }
 
-    const int64_t rows_read = BenchmarkHelpers::RunReadIterations(
-        state, [&]() { return ReadRows(shared_table->table_path, options, prefetch_parallel_num); });
+    const int64_t rows_read = BenchmarkHelpers::RunReadIterations(state, [&]() {
+        return ReadRows(shared_table->table_path, options, prefetch_parallel_num);
+    });
 
     state.SetItemsProcessed(state.iterations() * rows_read);
 }
@@ -758,14 +758,13 @@ void RunBMPkWrite(::benchmark::State& state) {
             state, source_spec.path, "--paimon_source_parquet is required", &SkipWithMessage)) {
         return;
     }
-    if (!BenchmarkHelpers::ValidateSourceSupportOrSkip(
-            state, source_spec.format, SupportsSourceDataMode(source_spec.format),
-            &SkipWithMessage)) {
+    if (!BenchmarkHelpers::ValidateSourceSupportOrSkip(state, source_spec.format,
+                                                       SupportsSourceDataMode(source_spec.format),
+                                                       &SkipWithMessage)) {
         return;
     }
-    if (!BenchmarkHelpers::ValidateFileFormatOrSkip(state, file_format,
-                                                    IsFileFormatSupported(file_format),
-                                                    &SkipWithMessage)) {
+    if (!BenchmarkHelpers::ValidateFileFormatOrSkip(
+            state, file_format, IsFileFormatSupported(file_format), &SkipWithMessage)) {
         return;
     }
     const std::vector<std::string>& pk_columns = GetPkColumns();
@@ -802,9 +801,8 @@ void RunBMMorRead(::benchmark::State& state) {
     if (!TryGetSourceSpec(state, &source_spec)) {
         return;
     }
-    if (!BenchmarkHelpers::ValidateFileFormatOrSkip(state, file_format,
-                                                    IsFileFormatSupported(file_format),
-                                                    &SkipWithMessage)) {
+    if (!BenchmarkHelpers::ValidateFileFormatOrSkip(
+            state, file_format, IsFileFormatSupported(file_format), &SkipWithMessage)) {
         return;
     }
     if (!BenchmarkHelpers::ValidatePrefetchParallelOrSkip(state, prefetch_parallel_num,
@@ -813,12 +811,9 @@ void RunBMMorRead(::benchmark::State& state) {
     }
 
     const auto external_read_options = BuildOptions(file_format);
-    if (BenchmarkHelpers::TryRunExternalReadMode(
-            state, "mor-read", external_table_path,
-            [&]() {
-                return ReadRows(external_table_path, external_read_options,
-                                prefetch_parallel_num);
-            })) {
+    if (BenchmarkHelpers::TryRunExternalReadMode(state, "mor-read", external_table_path, [&]() {
+            return ReadRows(external_table_path, external_read_options, prefetch_parallel_num);
+        })) {
         return;
     }
 
@@ -828,9 +823,9 @@ void RunBMMorRead(::benchmark::State& state) {
             &SkipWithMessage)) {
         return;
     }
-    if (!BenchmarkHelpers::ValidateSourceSupportOrSkip(
-            state, source_spec.format, SupportsSourceDataMode(source_spec.format),
-            &SkipWithMessage)) {
+    if (!BenchmarkHelpers::ValidateSourceSupportOrSkip(state, source_spec.format,
+                                                       SupportsSourceDataMode(source_spec.format),
+                                                       &SkipWithMessage)) {
         return;
     }
     if (GetPkColumns().empty()) {
@@ -847,8 +842,9 @@ void RunBMMorRead(::benchmark::State& state) {
         return;
     }
 
-    const int64_t rows_read = BenchmarkHelpers::RunReadIterations(
-        state, [&]() { return ReadRows(shared_table->table_path, options, prefetch_parallel_num); });
+    const int64_t rows_read = BenchmarkHelpers::RunReadIterations(state, [&]() {
+        return ReadRows(shared_table->table_path, options, prefetch_parallel_num);
+    });
     state.SetItemsProcessed(state.iterations() * rows_read);
 }
 

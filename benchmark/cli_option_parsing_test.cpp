@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
+#include "benchmark/cli_option_parsing.h"
+
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "cli_option_parsing.h"
 
 namespace paimon::testing {
 namespace {
@@ -59,13 +60,11 @@ TEST(CliOptionParsingTest, ParseCsvColumnsWorks) {
 
 TEST(CliOptionParsingTest, ParseCsvColumnsRejectsInvalidInput) {
     EXPECT_THROW((void)paimon::benchmark::ParseCsvColumns("", "--cols"), std::runtime_error);
-    EXPECT_THROW((void)paimon::benchmark::ParseCsvColumns("id,", "--cols"),
-                 std::runtime_error);
+    EXPECT_THROW((void)paimon::benchmark::ParseCsvColumns("id,", "--cols"), std::runtime_error);
 }
 
 TEST(CliOptionParsingTest, ParseDelimitedOptionsWorks) {
-    const auto parsed =
-        paimon::benchmark::ParseDelimitedOptions("k1:v1;k2:v2", "--paimon_option");
+    const auto parsed = paimon::benchmark::ParseDelimitedOptions("k1:v1;k2:v2", "--paimon_option");
     ASSERT_EQ(parsed.size(), 2U);
     EXPECT_EQ(parsed[0], std::make_pair(std::string("k1"), std::string("v1")));
     EXPECT_EQ(parsed[1], std::make_pair(std::string("k2"), std::string("v2")));
@@ -84,8 +83,7 @@ TEST(CliOptionParsingTest, ParseStringOptionArgWorksForEqualsAndSeparatedForms) 
         int i = 1;
         std::string value;
         EXPECT_TRUE(paimon::benchmark::ParseStringOptionArg(
-            &i, argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[i], "--foo",
-            &value));
+            &i, argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[i], "--foo", &value));
         EXPECT_EQ(i, 1);
         EXPECT_EQ(value, "bar");
     }
@@ -95,8 +93,7 @@ TEST(CliOptionParsingTest, ParseStringOptionArgWorksForEqualsAndSeparatedForms) 
         int i = 1;
         std::string value;
         EXPECT_TRUE(paimon::benchmark::ParseStringOptionArg(
-            &i, argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[i], "--foo",
-            &value));
+            &i, argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[i], "--foo", &value));
         EXPECT_EQ(i, 2);
         EXPECT_EQ(value, "bar");
     }
@@ -106,10 +103,10 @@ TEST(CliOptionParsingTest, ParseStringOptionArgRejectsMissingValue) {
     ArgvHolder argv_holder({"prog", "--foo"});
     int i = 1;
     std::string value;
-    EXPECT_THROW((void)paimon::benchmark::ParseStringOptionArg(
-                     &i, argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[i],
-                     "--foo", &value),
-                 std::runtime_error);
+    EXPECT_THROW(
+        (void)paimon::benchmark::ParseStringOptionArg(
+            &i, argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[i], "--foo", &value),
+        std::runtime_error);
 }
 
 TEST(CliOptionParsingTest, ParseCsvOptionArgAndDelimitedRepeatableOptionArgWorks) {
@@ -119,8 +116,7 @@ TEST(CliOptionParsingTest, ParseCsvOptionArgAndDelimitedRepeatableOptionArgWorks
         std::vector<std::string> columns;
         EXPECT_TRUE(paimon::benchmark::ParseCsvOptionArg(&i, argv_holder.argc(),
                                                          argv_holder.argv.data(),
-                                                         argv_holder.args[i], "--cols",
-                                                         &columns));
+                                                         argv_holder.args[i], "--cols", &columns));
         EXPECT_EQ(i, 2);
         ASSERT_EQ(columns.size(), 2U);
         EXPECT_EQ(columns[0], "id");
@@ -132,8 +128,8 @@ TEST(CliOptionParsingTest, ParseCsvOptionArgAndDelimitedRepeatableOptionArgWorks
         int i = 1;
         std::vector<std::pair<std::string, std::string>> options;
         EXPECT_TRUE(paimon::benchmark::ParseDelimitedRepeatableOptionArg(
-            &i, argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[i],
-            "--paimon_option", &options));
+            &i, argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[i], "--paimon_option",
+            &options));
         EXPECT_EQ(i, 2);
         ASSERT_EQ(options.size(), 2U);
         EXPECT_EQ(options[0], std::make_pair(std::string("k1"), std::string("v1")));
