@@ -70,7 +70,7 @@ std::shared_ptr<InternalArray> ColumnarArray::GetArray(int32_t pos) const {
     assert(list_array);
     int32_t offset = list_array->value_offset(offset_ + pos);
     int32_t length = list_array->value_length(offset_ + pos);
-    return std::make_shared<ColumnarArray>(list_array->values(), pool_, offset, length);
+    return std::make_shared<ColumnarArray>(list_array->values().get(), pool_, offset, length);
 }
 
 std::shared_ptr<InternalMap> ColumnarArray::GetMap(int32_t pos) const {
