@@ -46,10 +46,10 @@ const int64_t Decimal::POWERS_OF_TEN[MAX_COMPACT_PRECISION + 1] = {1,
                                                                    10000000000000000l,
                                                                    100000000000000000l,
                                                                    1000000000000000000l};
-const Decimal::int128_t Decimal::INT128_MAXIMUM_VALUE =
-    static_cast<Decimal::int128_t>(0x7fffffffffffffff) << 64 | 0xffffffffffffffff;
+const Decimal::int128_t Decimal::INT128_MAXIMUM_VALUE = static_cast<Decimal::int128_t>(
+    static_cast<Decimal::uint128_t>(0x7fffffffffffffffULL) << 64 | 0xffffffffffffffff);
 const Decimal::int128_t Decimal::INT128_MINIMUM_VALUE =
-    static_cast<Decimal::int128_t>(0x8000000000000000) << 64;
+    static_cast<Decimal::int128_t>(static_cast<Decimal::uint128_t>(0x8000000000000000ULL) << 64);
 
 std::string Decimal::ToString() const {
     auto type = arrow::decimal128(Precision(), Scale());

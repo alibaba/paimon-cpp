@@ -94,13 +94,19 @@ Result<FastHash::HashFunction> FastHash::GetHashFunction(
 }
 
 int64_t FastHash::GetLongHash(int64_t key) {
-    key = (~key) + (key << 21);  // key = (key << 21) - key - 1;
+    // NOTE: This hash function must produce results identical to the Java implementation.
+    // Java uses arithmetic right-shift (>>) and wrapping arithmetic for +/<<.
+    // We use signed for right-shift (arithmetic, well-defined in C++20 and de facto in all
+    // compilers) and cast to unsigned only for left-shift/addition to avoid signed overflow UB.
+    auto u = [](int64_t v) { return static_cast<uint64_t>(v); };
+    auto s = [](uint64_t v) { return static_cast<int64_t>(v); };
+    key = s(~u(key) + (u(key) << 21));  // key = (key << 21) - key - 1;
     key = key ^ (key >> 24);
-    key = (key + (key << 3)) + (key << 8);  // key * 265
+    key = s(u(key) + (u(key) << 3) + (u(key) << 8));  // key * 265
     key = key ^ (key >> 14);
-    key = (key + (key << 2)) + (key << 4);  // key * 21
+    key = s(u(key) + (u(key) << 2) + (u(key) << 4));  // key * 21
     key = key ^ (key >> 28);
-    key = key + (key << 31);
+    key = s(u(key) + (u(key) << 31));
     return key;
 }
 
