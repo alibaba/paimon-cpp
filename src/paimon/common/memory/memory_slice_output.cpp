@@ -91,9 +91,11 @@ void MemorySliceOutput::EnsureSize(int32_t size) {
     if (size <= segment_.Size()) {
         return;
     }
-    auto capacity = static_cast<uint32_t>(segment_.Size());
-    auto min_capacity = static_cast<uint32_t>(segment_.Size() + size);
+    int32_t capacity = segment_.Size();
+    int32_t min_capacity = segment_.Size() + size;
     while (capacity < min_capacity) {
+        // capacity is always a power-of-two and <= INT32_MAX/2 in practice,
+        // so this shift does not overflow.
         capacity <<= 1;
     }
 
