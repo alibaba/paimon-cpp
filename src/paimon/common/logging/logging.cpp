@@ -18,6 +18,7 @@
 
 #include <cerrno>
 #include <cstdarg>
+#include <cstdlib>
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
@@ -27,6 +28,16 @@
 #include "glog/raw_logging.h"
 
 namespace paimon {
+
+static const char* GetProgramName() {
+#if defined(__APPLE__)
+    return getprogname();
+#elif defined(__GLIBC__)
+    return program_invocation_name;
+#else
+    return "paimon-cpp";
+#endif
+}
 
 static std::optional<Logger::LoggerCreator>& getLoggerCreator() {
     static std::optional<Logger::LoggerCreator> _loggerCreator;
@@ -83,7 +94,7 @@ std::unique_ptr<Logger> Logger::GetLogger(const std::string& path) {
     }
     std::unique_lock<std::shared_mutex> ulock(getRegistryLock());
     if (!google::IsGoogleLoggingInitialized()) {
-        google::InitGoogleLogging(program_invocation_name);
+        google::InitGoogleLogging(GetProgramName());
     }
     return std::make_unique<GlogAdaptor>();
 }

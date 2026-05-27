@@ -50,11 +50,16 @@ class Bytes;
 class MemoryPool;
 
 /// Columnar array to support access to vector column data.
+///
+/// NOTE: This class holds a non-owning raw pointer to the underlying arrow::Array for efficiency.
+/// The caller must ensure that the pointed-to Array outlives this ColumnarArray instance.
+/// Typically, lifetime is guaranteed by the owning ColumnarBatchContext or the parent
+/// arrow container (e.g., ListArray, MapArray) that holds the shared_ptr.
 class ColumnarArray : public InternalArray {
  public:
-    ColumnarArray(const std::shared_ptr<arrow::Array>& array,
-                  const std::shared_ptr<MemoryPool>& pool, int32_t offset, int32_t length)
-        : pool_(pool), array_(array.get()), offset_(offset), length_(length) {
+    ColumnarArray(const arrow::Array* array, const std::shared_ptr<MemoryPool>& pool,
+                  int32_t offset, int32_t length)
+        : pool_(pool), array_(array), offset_(offset), length_(length) {
         assert(array_);
         assert(array_->length() >= offset + length);
     }

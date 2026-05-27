@@ -211,3 +211,15 @@ diff --git a/cpp/cmake_modules/ThirdpartyToolchain.cmake b/cpp/cmake_modules/Thi
  # and crosscompiling emulator (for try_run() )
  if(CMAKE_CROSSCOMPILING_EMULATOR)
    string(REPLACE ";" ${EP_LIST_SEPARATOR} EP_CMAKE_CROSSCOMPILING_EMULATOR
+diff --git a/cpp/cmake_modules/BuildUtils.cmake b/cpp/cmake_modules/BuildUtils.cmake
+--- a/cpp/cmake_modules/BuildUtils.cmake
++++ b/cpp/cmake_modules/BuildUtils.cmake
+@@ -112,7 +112,7 @@ function(arrow_create_merged_static_lib output_target)
+     execute_process(COMMAND ${LIBTOOL_MACOS} -V
+                     OUTPUT_VARIABLE LIBTOOL_V_OUTPUT
+                     OUTPUT_STRIP_TRAILING_WHITESPACE)
+-    if(NOT "${LIBTOOL_V_OUTPUT}" MATCHES ".*cctools-([0-9.]+).*")
++    if(NOT "${LIBTOOL_V_OUTPUT}" MATCHES ".*cctools(_ld)?-([0-9.]+).*")
+       message(FATAL_ERROR "libtool found appears to be the incompatible GNU libtool: ${LIBTOOL_MACOS}"
+       )
+     endif()
