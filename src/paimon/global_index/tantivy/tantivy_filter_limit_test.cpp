@@ -275,12 +275,9 @@ TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitNone_AllRowsNoScore) {
     EXPECT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{0, 1, 2}));
 }
 
-// Path B (new in v0.2): with_score=false, limit=N → BitmapGlobalIndexResult,
-// top-N rows by BM25 score but the score values themselves are dropped.
-TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitN_TopNNoScore) {
-    // doc 1 has highest TF for "doc" so it must be in the top-2;
-    // exactly which other doc (0 or 2) is second depends on BM25,
-    // but we only verify the count and the absence of score.
+// Path B: with_score=false, limit=N → BitmapGlobalIndexResult, any N matches,
+// no scoring (no BM25 sort). Used by `WHERE MATCH ... LIMIT N` without ORDER BY.
+TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitN_AnyNNoScore) {
     auto array = arrow::ipc::internal::json::ArrayFromJSON(DataType(), R"([
         ["doc"],
         ["doc doc doc doc doc"],
@@ -296,14 +293,19 @@ TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitN_TopNNoScore) {
     fts->with_score = false;
     auto res = reader->VisitFullTextSearch(fts);
     ASSERT_TRUE(res.ok()) << res.status().ToString();
-    // Must NOT be scored, even though limit is set.
+    // Must NOT be scored.
     EXPECT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value()));
     auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res.value());
     ASSERT_TRUE(plain);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, plain->GetBitmap());
+    // Only cardinality matters — selection order is arbitrary and depends on
+    // tantivy's posting iteration; the two returned row_ids must each be one
+    // of the three input docs.
     EXPECT_EQ(bitmap->Cardinality(), 2u);
-    // doc 1 (highest TF) must be one of the two.
-    EXPECT_TRUE(bitmap->Contains(1));
+    auto vec = BitmapToVec(*bitmap);
+    for (auto id : vec) {
+        EXPECT_TRUE(id == 0 || id == 1 || id == 2);
+    }
 }
 
 // Path C (new in v0.2): with_score=true, limit=None → BitmapScoredGlobalIndexResult,

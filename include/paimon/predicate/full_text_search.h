@@ -90,11 +90,16 @@ struct PAIMON_EXPORT FullTextSearch {
     std::optional<RoaringBitmap64> pre_filter;
     /// Whether to compute and return BM25 relevance scores.
     ///
-    /// **v0.2**: Explicit, orthogonal to `limit`. The 4-path matrix:
+    /// The 4-path matrix:
     /// - `with_score=false, limit=nullopt` → BitmapGlobalIndexResult (all rows, no score)
-    /// - `with_score=false, limit=N`       → BitmapGlobalIndexResult (top-N by BM25, score dropped)
+    /// - `with_score=false, limit=N`       → BitmapGlobalIndexResult (any N matches, unscored)
     /// - `with_score=true,  limit=nullopt` → BitmapScoredGlobalIndexResult (all rows + all scores)
-    /// - `with_score=true,  limit=N`       → BitmapScoredGlobalIndexResult (top-N + scores)
+    /// - `with_score=true,  limit=N`       → BitmapScoredGlobalIndexResult (top-N by BM25 + scores)
+    ///
+    /// For plain `LIMIT N` without ORDER BY (the common case in SR's predicate
+    /// pushdown) set `with_score=false, limit=N` — the unscored fast path. If
+    /// you want top-N by relevance, use `with_score=true, limit=N` and drop the
+    /// scores in the caller if not needed.
     ///
     /// Default is `false` to avoid silent score computation overhead for callers that don't need it.
     bool with_score = false;

@@ -297,14 +297,43 @@ impl PaimonTantivyReader {
                 row_ids.dedup();
                 Ok(row_ids.into_iter().map(|id| (id, None)).collect())
             }
-            // Path B: top-N by BM25, but drop the score values from the output.
+            // Path B: any N matches, unscored. Used by SR's `WHERE MATCH ... LIMIT N` (no
+            // ORDER BY): pushes the limit down so each shard stops collecting once N hits
+            // are gathered per segment instead of materialising the full posting list.
+            // If the caller wants top-N by BM25 they should set `with_score=true` (Path D)
+            // and ignore the score values.
             (false, Some(n)) => {
                 if n == 0 {
                     return Ok(Vec::new());
                 }
-                let filtered = self.collect_scored(&*q, &searcher, pre_filter)?;
-                let truncated = Self::sort_by_score_desc_truncate(filtered, n);
-                Ok(truncated.into_iter().map(|(_, id)| (id, None)).collect())
+                let collector = LimitedDocSetCollector::new(n);
+                let mut docset = searcher
+                    .search(&*q, &collector)
+                    .map_err(|e| format!("tantivy search: {e}"))?;
+                let mut by_segment: std::collections::HashMap<SegmentOrdinal, Vec<DocId>> =
+                    std::collections::HashMap::new();
+                for addr in docset.drain(..) {
+                    by_segment.entry(addr.segment_ord).or_default().push(addr.doc_id);
+                }
+                let mut row_ids: Vec<u64> = Vec::new();
+                for (segment_ord, doc_ids) in by_segment.iter() {
+                    let segment_reader = searcher.segment_reader(*segment_ord);
+                    let fast = segment_reader
+                        .fast_fields()
+                        .u64(PAIMON_ROW_ID_FIELD_NAME)
+                        .map_err(|e| format!("fast_fields().u64('row_id') on segment {}: {e}",
+                                             segment_ord))?;
+                    for &doc_id in doc_ids {
+                        row_ids.push(fast.first(doc_id).unwrap_or(0));
+                    }
+                }
+                if let Some(filter) = pre_filter {
+                    row_ids.retain(|id| filter.contains(*id));
+                }
+                row_ids.sort_unstable();
+                row_ids.dedup();
+                row_ids.truncate(n);
+                Ok(row_ids.into_iter().map(|id| (id, None)).collect())
             }
             // Path C: all rows + all scores, sorted by row_id asc to match the
             // BitmapScoredGlobalIndexResult contract (bitmap iter order == score order).
@@ -455,6 +484,71 @@ impl Collector for RowIdCollector {
 
     fn merge_fruits(&self, segs: Vec<Vec<u64>>) -> tantivy::Result<Vec<u64>> {
         Ok(segs.into_iter().flatten().collect())
+    }
+}
+
+/// Collector that returns at most `limit` DocAddresses across all segments,
+/// no scoring. Shared atomic counter caps the global total so per-shard
+/// transfer stays bounded for plain `LIMIT N` queries (no ORDER BY).
+struct LimitedDocSetCollector {
+    limit: usize,
+    counter: std::sync::Arc<std::sync::atomic::AtomicU64>,
+}
+
+impl LimitedDocSetCollector {
+    fn new(limit: usize) -> Self {
+        Self { limit, counter: std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0)) }
+    }
+}
+
+struct LimitedDocSetSegmentCollector {
+    segment_ord: SegmentOrdinal,
+    docs: Vec<DocId>,
+    counter: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    limit: u64,
+}
+
+impl SegmentCollector for LimitedDocSetSegmentCollector {
+    type Fruit = Vec<DocAddress>;
+
+    fn collect(&mut self, doc: DocId, _score: Score) {
+        // Best-effort cap: if multiple segments are scanned concurrently the
+        // atomic ensures we never accept more than `limit` rows total.
+        let prev = self.counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        if prev < self.limit {
+            self.docs.push(doc);
+        }
+    }
+
+    fn harvest(self) -> Self::Fruit {
+        let segment_ord = self.segment_ord;
+        self.docs.into_iter().map(|d| DocAddress::new(segment_ord, d)).collect()
+    }
+}
+
+impl Collector for LimitedDocSetCollector {
+    type Fruit = Vec<DocAddress>;
+    type Child = LimitedDocSetSegmentCollector;
+
+    fn for_segment(
+        &self, segment_ord: SegmentOrdinal, _segment: &SegmentReader,
+    ) -> tantivy::Result<Self::Child> {
+        Ok(LimitedDocSetSegmentCollector {
+            segment_ord,
+            docs: Vec::new(),
+            counter: self.counter.clone(),
+            limit: self.limit as u64,
+        })
+    }
+
+    fn requires_scoring(&self) -> bool { false }
+
+    fn merge_fruits(
+        &self, segment_fruits: Vec<Vec<DocAddress>>,
+    ) -> tantivy::Result<Vec<DocAddress>> {
+        let mut result: Vec<DocAddress> = segment_fruits.into_iter().flatten().collect();
+        result.truncate(self.limit);
+        Ok(result)
     }
 }
 
