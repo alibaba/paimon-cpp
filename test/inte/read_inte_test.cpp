@@ -699,6 +699,151 @@ TEST(SystemTableReadInteTest, TestReadMetadataSystemTables) {
     auto branch_create_time_array =
         std::dynamic_pointer_cast<arrow::TimestampArray>(branches_array->field(1));
     ASSERT_TRUE(branch_create_time_array);
+
+    ASSERT_OK_AND_ASSIGN(auto manifests_result,
+                         ReadSystemTable(table_path + "$manifests", options));
+    auto manifests_array = SingleStructChunk(manifests_result);
+    ASSERT_EQ(StructFieldNames(manifests_array),
+              (std::vector<std::string>{"file_name", "file_size", "num_added_files",
+                                        "num_deleted_files", "schema_id", "min_partition_stats",
+                                        "max_partition_stats", "min_row_id", "max_row_id"}));
+    ASSERT_GT(manifests_array->length(), 0);
+    auto manifest_file_name_array =
+        std::dynamic_pointer_cast<arrow::StringArray>(manifests_array->field(0));
+    auto manifest_file_size_array =
+        std::dynamic_pointer_cast<arrow::Int64Array>(manifests_array->field(1));
+    auto manifest_num_added_files_array =
+        std::dynamic_pointer_cast<arrow::Int64Array>(manifests_array->field(2));
+    auto manifest_schema_id_array =
+        std::dynamic_pointer_cast<arrow::Int64Array>(manifests_array->field(4));
+    ASSERT_TRUE(manifest_file_name_array);
+    ASSERT_TRUE(manifest_file_size_array);
+    ASSERT_TRUE(manifest_num_added_files_array);
+    ASSERT_TRUE(manifest_schema_id_array);
+    ASSERT_TRUE(manifest_file_name_array->GetString(0).find("manifest-") == 0);
+    ASSERT_GT(manifest_file_size_array->Value(0), 0);
+    ASSERT_GE(manifest_num_added_files_array->Value(0), 1);
+    ASSERT_EQ(manifest_schema_id_array->Value(0), 0);
+
+    ASSERT_OK_AND_ASSIGN(auto files_result, ReadSystemTable(table_path + "$files", options));
+    auto files_array = SingleStructChunk(files_result);
+    ASSERT_EQ(StructFieldNames(files_array), (std::vector<std::string>{"partition",
+                                                                       "bucket",
+                                                                       "file_path",
+                                                                       "file_format",
+                                                                       "schema_id",
+                                                                       "level",
+                                                                       "record_count",
+                                                                       "file_size_in_bytes",
+                                                                       "min_key",
+                                                                       "max_key",
+                                                                       "null_value_counts",
+                                                                       "min_value_stats",
+                                                                       "max_value_stats",
+                                                                       "min_sequence_number",
+                                                                       "max_sequence_number",
+                                                                       "creation_time",
+                                                                       "deleteRowCount",
+                                                                       "file_source",
+                                                                       "first_row_id",
+                                                                       "write_cols"}));
+    ASSERT_GT(files_array->length(), 0);
+    auto partition_array = std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(0));
+    auto bucket_array = std::dynamic_pointer_cast<arrow::Int32Array>(files_array->field(1));
+    auto file_path_array = std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(2));
+    auto file_format_array = std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(3));
+    auto file_schema_id_array = std::dynamic_pointer_cast<arrow::Int64Array>(files_array->field(4));
+    auto record_count_array = std::dynamic_pointer_cast<arrow::Int64Array>(files_array->field(6));
+    auto file_size_array = std::dynamic_pointer_cast<arrow::Int64Array>(files_array->field(7));
+    auto min_sequence_number_array =
+        std::dynamic_pointer_cast<arrow::Int64Array>(files_array->field(13));
+    auto max_sequence_number_array =
+        std::dynamic_pointer_cast<arrow::Int64Array>(files_array->field(14));
+    auto creation_time_array =
+        std::dynamic_pointer_cast<arrow::TimestampArray>(files_array->field(15));
+    ASSERT_TRUE(partition_array);
+    ASSERT_TRUE(bucket_array);
+    ASSERT_TRUE(file_path_array);
+    ASSERT_TRUE(file_format_array);
+    ASSERT_TRUE(file_schema_id_array);
+    ASSERT_TRUE(record_count_array);
+    ASSERT_TRUE(file_size_array);
+    ASSERT_TRUE(min_sequence_number_array);
+    ASSERT_TRUE(max_sequence_number_array);
+    ASSERT_TRUE(creation_time_array);
+    ASSERT_TRUE(partition_array->IsNull(0));
+    ASSERT_EQ(bucket_array->Value(0), 0);
+    ASSERT_NE(file_path_array->GetString(0).find("/bucket-0/"), std::string::npos);
+    ASSERT_EQ(file_format_array->GetString(0), "parquet");
+    ASSERT_EQ(file_schema_id_array->Value(0), 0);
+    ASSERT_EQ(record_count_array->Value(0), 1);
+    ASSERT_GT(file_size_array->Value(0), 0);
+    ASSERT_GE(min_sequence_number_array->Value(0), 0);
+    ASSERT_GE(max_sequence_number_array->Value(0), min_sequence_number_array->Value(0));
+    ASSERT_FALSE(creation_time_array->IsNull(0));
+}
+
+TEST(SystemTableReadInteTest, TestReadFilesSystemTableForPartitionedTable) {
+    arrow::FieldVector fields = {
+        arrow::field("dt", arrow::utf8()),
+        arrow::field("pk", arrow::utf8()),
+        arrow::field("v", arrow::int32()),
+    };
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
+                                                  {Options::FILE_FORMAT, "orc"},
+                                                  {Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::BUCKET, "1"}};
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(dir->Str(), schema,
+                                                         /*partition_keys=*/{"dt"},
+                                                         /*primary_keys=*/{"dt", "pk"}, options,
+                                                         /*is_streaming_mode=*/true));
+
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<RecordBatch> batch,
+        TestHelper::MakeRecordBatch(arrow::struct_(fields), R"([["20260527", "a", 1]])",
+                                    /*partition_map=*/{{"dt", "20260527"}}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    std::string table_path = PathUtil::JoinPath(dir->Str(), "foo.db/bar");
+    ASSERT_OK_AND_ASSIGN(auto files_result, ReadSystemTable(table_path + "$files", options));
+    auto files_array = SingleStructChunk(files_result);
+    ASSERT_EQ(files_array->length(), 1);
+    auto partition_array = std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(0));
+    auto file_path_array = std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(2));
+    ASSERT_TRUE(partition_array);
+    ASSERT_TRUE(file_path_array);
+    ASSERT_EQ(partition_array->GetString(0), "dt=20260527/");
+    ASSERT_NE(file_path_array->GetString(0).find("/dt=20260527/bucket-0/"), std::string::npos);
+}
+
+TEST(SystemTableReadInteTest, TestReadManifestAndFilesSystemTablesForEmptyTable) {
+    std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
+                                                  {Options::FILE_FORMAT, "orc"},
+                                                  {Options::MANIFEST_FORMAT, "orc"}};
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    std::string warehouse = PathUtil::JoinPath(dir->Str(), "warehouse");
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(warehouse, options));
+    ASSERT_OK(catalog->CreateDatabase("db1", options, /*ignore_if_exists=*/false));
+
+    auto typed_schema = arrow::schema({arrow::field("f0", arrow::int32())});
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &schema).ok());
+    ASSERT_OK(catalog->CreateTable(Identifier("db1", "tbl1"), &schema,
+                                   /*partition_keys=*/{}, /*primary_keys=*/{}, options,
+                                   /*ignore_if_exists=*/false));
+    ArrowSchemaRelease(&schema);
+
+    std::string table_path = catalog->GetTableLocation(Identifier("db1", "tbl1"));
+    ASSERT_OK_AND_ASSIGN(auto manifests_result,
+                         ReadSystemTable(table_path + "$manifests", options));
+    ASSERT_EQ(manifests_result.array, nullptr);
+    ASSERT_OK_AND_ASSIGN(auto files_result, ReadSystemTable(table_path + "$files", options));
+    ASSERT_EQ(files_result.array, nullptr);
 }
 
 TEST(SystemTableReadInteTest, TestReadTagBranchAndConsumerSystemTables) {

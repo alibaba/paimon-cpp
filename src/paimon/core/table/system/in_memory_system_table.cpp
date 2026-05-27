@@ -46,6 +46,9 @@ class InMemorySystemTableBatchReader : public BatchReader {
         emitted_ = true;
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, table_->ArrowSchema());
         PAIMON_ASSIGN_OR_RAISE(std::vector<GenericRow> rows, table_->BuildRows());
+        if (rows.empty()) {
+            return BatchReader::MakeEofBatch();
+        }
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<GenericRowToArrowArrayConverter> converter,
                                GenericRowToArrowArrayConverter::Create(schema, arrow_pool_.get()));
         return converter->NextBatch(rows);

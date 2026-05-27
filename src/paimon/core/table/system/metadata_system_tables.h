@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -46,6 +47,8 @@ struct MetadataSystemTableContext {
     std::shared_ptr<FileSystem> fs;
     std::string table_path;
     std::string branch;
+    std::shared_ptr<TableSchema> table_schema;
+    std::map<std::string, std::string> options;
 };
 
 /// System table for `T$snapshots`, exposing snapshot commit history.
@@ -116,6 +119,40 @@ class ConsumersSystemTable : public InMemorySystemTable {
 
     ConsumersSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
                          std::string branch);
+
+    std::string Name() const override;
+    Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
+    Result<std::vector<GenericRow>> BuildRows() const override;
+
+ private:
+    MetadataSystemTableContext context_;
+};
+
+/// System table for `T$manifests`, exposing data manifest metadata in the latest snapshot.
+class ManifestsSystemTable : public InMemorySystemTable {
+ public:
+    static constexpr const char* kName = "manifests";
+
+    ManifestsSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path, std::string branch,
+                         std::shared_ptr<TableSchema> table_schema,
+                         std::map<std::string, std::string> options);
+
+    std::string Name() const override;
+    Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
+    Result<std::vector<GenericRow>> BuildRows() const override;
+
+ private:
+    MetadataSystemTableContext context_;
+};
+
+/// System table for `T$files`, exposing data file metadata in the latest snapshot.
+class FilesSystemTable : public InMemorySystemTable {
+ public:
+    static constexpr const char* kName = "files";
+
+    FilesSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path, std::string branch,
+                     std::shared_ptr<TableSchema> table_schema,
+                     std::map<std::string, std::string> options);
 
     std::string Name() const override;
     Result<std::shared_ptr<arrow::Schema>> ArrowSchema() const override;
