@@ -210,7 +210,7 @@ void AbstractBinaryWriter::WriteBytesToFixLenPart(MemorySegment* segment, int32_
             seven_bytes |= (static_cast<uint64_t>(static_cast<uint8_t>(bytes[i])) << ((6 - i) * 8));
         }
     }
-    const int64_t offset_and_size = static_cast<int64_t>(first_byte << 56 | seven_bytes);
+    const auto offset_and_size = static_cast<int64_t>(first_byte << 56 | seven_bytes);
     segment->PutValue<int64_t>(field_offset, offset_and_size);
 }
 

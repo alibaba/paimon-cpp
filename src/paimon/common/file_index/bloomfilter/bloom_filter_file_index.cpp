@@ -60,7 +60,7 @@ Result<std::shared_ptr<BloomFilterFileIndexReader>> BloomFilterFileIndexReader::
     const std::shared_ptr<arrow::DataType>& arrow_type, const std::shared_ptr<Bytes>& bytes) {
     // compatible with java, little endian
     const char* data = bytes->data();
-    int32_t num_hash_functions =
+    auto num_hash_functions =
         static_cast<int32_t>((static_cast<uint32_t>(static_cast<uint8_t>(data[0])) << 24) |
                              (static_cast<uint32_t>(static_cast<uint8_t>(data[1])) << 16) |
                              (static_cast<uint32_t>(static_cast<uint8_t>(data[2])) << 8) |

@@ -91,8 +91,8 @@ void MemorySliceOutput::EnsureSize(int32_t size) {
     if (size <= segment_.Size()) {
         return;
     }
-    uint32_t capacity = static_cast<uint32_t>(segment_.Size());
-    uint32_t min_capacity = static_cast<uint32_t>(segment_.Size() + size);
+    auto capacity = static_cast<uint32_t>(segment_.Size());
+    auto min_capacity = static_cast<uint32_t>(segment_.Size() + size);
     while (capacity < min_capacity) {
         capacity <<= 1;
     }
