@@ -90,6 +90,7 @@ class LuminaIndexWriter : public GlobalIndexWriter {
 
  private:
     int64_t count_ = 0;
+    int64_t indexed_count_ = 0;
     std::shared_ptr<LuminaMemoryPool> pool_;
     std::string field_name_;
     std::shared_ptr<arrow::DataType> arrow_type_;
@@ -99,6 +100,7 @@ class LuminaIndexWriter : public GlobalIndexWriter {
     ::lumina::api::IOOptions io_options_;
     std::map<std::string, std::string> lumina_options_;
     std::vector<std::shared_ptr<arrow::FloatArray>> array_vec_;
+    std::vector<int64_t> array_start_ids_;
 };
 
 class LuminaIndexReader : public GlobalIndexReader {
