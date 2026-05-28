@@ -50,6 +50,7 @@
 #include "paimon/scan_context.h"
 #include "paimon/status.h"
 #include "paimon/table/source/plan.h"
+#include "paimon/table/source/startup_mode.h"
 #include "paimon/table/source/table_read.h"
 #include "paimon/table/source/table_scan.h"
 #include "paimon/testing/utils/io_exception_helper.h"
