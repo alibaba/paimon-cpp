@@ -99,6 +99,15 @@ Result<std::shared_ptr<::parquet::WriterProperties>> ParquetWriterBuilder::Prepa
     PAIMON_ASSIGN_OR_RAISE(::parquet::ParquetVersion::type version,
                            ConvertWriterVersion(writer_version));
     builder.version(version);
+
+    // Enable writing page index (ColumnIndex + OffsetIndex) for page-level filtering
+    PAIMON_ASSIGN_OR_RAISE(bool enable_page_index, OptionsUtils::GetValueFromMap<bool>(
+                                                       options_, PARQUET_WRITE_ENABLE_PAGE_INDEX,
+                                                       DEFAULT_PARQUET_WRITE_ENABLE_PAGE_INDEX));
+    if (enable_page_index) {
+        builder.enable_write_page_index();
+    }
+
     return builder.build();
 }
 

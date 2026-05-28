@@ -265,9 +265,11 @@ Result<std::unique_ptr<ColumnStats>> OrcStatsExtractor::FetchColumnStatistics(
             }
             auto min_decimal = typed_stats->getMinimum();
             Decimal min_value(precision, min_decimal.scale,
-                              static_cast<Decimal::int128_t>(min_decimal.value.getHighBits())
+                              static_cast<Decimal::int128_t>(
+                                  static_cast<Decimal::uint128_t>(
+                                      static_cast<uint64_t>(min_decimal.value.getHighBits()))
                                       << 64 |
-                                  min_decimal.value.getLowBits());
+                                  min_decimal.value.getLowBits()));
             std::shared_ptr<arrow::DataType> target_type = arrow::decimal128(precision, scale);
             auto cast_executor = std::make_shared<DecimalToDecimalCastExecutor>();
             if (min_decimal.scale != scale) {
@@ -278,9 +280,11 @@ Result<std::unique_ptr<ColumnStats>> OrcStatsExtractor::FetchColumnStatistics(
             }
             auto max_decimal = typed_stats->getMaximum();
             Decimal max_value(precision, max_decimal.scale,
-                              static_cast<Decimal::int128_t>(max_decimal.value.getHighBits())
+                              static_cast<Decimal::int128_t>(
+                                  static_cast<Decimal::uint128_t>(
+                                      static_cast<uint64_t>(max_decimal.value.getHighBits()))
                                       << 64 |
-                                  max_decimal.value.getLowBits());
+                                  max_decimal.value.getLowBits()));
             if (max_decimal.scale != scale) {
                 // need casting
                 PAIMON_ASSIGN_OR_RAISE(Literal converted_max_value,
