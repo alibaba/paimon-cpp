@@ -227,8 +227,11 @@ static Result<WriteFunction> WriteBucketRow(int32_t col_id,
                 }
                 arrow::Decimal128 decimal128(typed_array->GetValue(row_id));
                 Decimal decimal(precision, scale,
-                                static_cast<Decimal::int128_t>(decimal128.high_bits()) << 64 |
-                                    decimal128.low_bits());
+                                static_cast<Decimal::int128_t>(
+                                    static_cast<Decimal::uint128_t>(
+                                        static_cast<uint64_t>(decimal128.high_bits()))
+                                        << 64 |
+                                    decimal128.low_bits()));
                 row_writer->WriteDecimal(col_id, decimal, precision);
             };
             return writer_func;

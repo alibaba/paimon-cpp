@@ -26,7 +26,9 @@
 #include "arrow/util/checked_cast.h"
 #include "arrow/util/decimal.h"
 #include "paimon/common/data/columnar/columnar_array.h"
+#include "paimon/common/data/columnar/columnar_batch_context.h"
 #include "paimon/common/data/columnar/columnar_map.h"
+#include "paimon/common/data/columnar/columnar_row_ref.h"
 #include "paimon/common/utils/date_time_utils.h"
 
 namespace paimon {
@@ -35,8 +37,11 @@ Decimal ColumnarRow::GetDecimal(int32_t pos, int32_t precision, int32_t scale) c
     auto array = arrow::internal::checked_cast<const ArrayType*>(array_vec_[pos]);
     assert(array);
     arrow::Decimal128 decimal(array->GetValue(row_id_));
-    return Decimal(precision, scale,
-                   static_cast<Decimal::int128_t>(decimal.high_bits()) << 64 | decimal.low_bits());
+    return Decimal(
+        precision, scale,
+        static_cast<Decimal::int128_t>(
+            static_cast<Decimal::uint128_t>(static_cast<uint64_t>(decimal.high_bits())) << 64 |
+            decimal.low_bits()));
 }
 
 Timestamp ColumnarRow::GetTimestamp(int32_t pos, int32_t precision) const {
@@ -57,6 +62,9 @@ Timestamp ColumnarRow::GetTimestamp(int32_t pos, int32_t precision) const {
 std::shared_ptr<InternalRow> ColumnarRow::GetRow(int32_t pos, int32_t num_fields) const {
     auto struct_array = arrow::internal::checked_cast<const arrow::StructArray*>(array_vec_[pos]);
     assert(struct_array);
+    // NOTE: For performance, the returned nested row does NOT hold shared ownership of the parent
+    // StructArray. Callers must ensure the parent ColumnarRow (or its underlying RecordBatch)
+    // outlives the returned row to avoid dangling pointers.
     return std::make_shared<ColumnarRow>(struct_array->fields(), pool_, row_id_);
 }
 

@@ -46,10 +46,19 @@ class MemoryPool;
 /// Columnar row to support access to vector column data. It is a row view in arrow::Array.
 class ColumnarRow : public InternalRow {
  public:
+    /// @brief Construct a ColumnarRow without holding ownership of the underlying arrays.
+    /// @warning The caller MUST ensure the data source (e.g., RecordBatch or parent StructArray)
+    /// outlives this ColumnarRow. The internal array_vec_ stores raw pointers only; if the
+    /// source is freed first, these pointers will dangle. This design is intentional for
+    /// performance—avoiding per-row shared_ptr ref-count overhead on the hot read path.
     ColumnarRow(const arrow::ArrayVector& array_vec, const std::shared_ptr<MemoryPool>& pool,
                 int64_t row_id)
         : ColumnarRow(/*struct_array holder*/ nullptr, array_vec, pool, row_id) {}
 
+    /// @brief Construct a ColumnarRow that holds shared ownership of a StructArray.
+    /// @note When struct_array is non-null it keeps the underlying buffers alive, making it safe
+    /// to outlive the original batch. Prefer this overload when the row may escape the scope of
+    /// its parent container.
     ColumnarRow(const std::shared_ptr<arrow::StructArray>& struct_array,
                 const arrow::ArrayVector& array_vec, const std::shared_ptr<MemoryPool>& pool,
                 int64_t row_id)
