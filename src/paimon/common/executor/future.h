@@ -99,7 +99,7 @@ std::vector<T> CollectAll(std::vector<std::future<T>>& futures) {
     std::vector<T> results;
     results.reserve(futures.size());  // Reserve space to avoid reallocation.
     for (auto& future : futures) {
-        results.push_back(future.get());
+        results.push_back(future.get());  // Wait for each future and collect the result.
     }
 
     return results;
