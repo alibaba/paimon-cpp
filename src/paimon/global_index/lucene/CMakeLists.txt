@@ -36,7 +36,7 @@ if(PAIMON_ENABLE_LUCENE)
                    lucene
                    arrow
                    fmt
-                   dl
+                   ${CMAKE_DL_LIBS}
                    Threads::Threads
                    SHARED_LINK_LIBS
                    paimon_shared
@@ -62,10 +62,8 @@ if(PAIMON_ENABLE_LUCENE)
                         STATIC_LINK_LIBS
                         paimon_shared
                         test_utils_static
-                        "-Wl,--whole-archive"
-                        paimon_local_file_system_static
-                        paimon_lucene_index_static
-                        "-Wl,--no-whole-archive"
+                        ${PAIMON_LUCENE_INDEX_STATIC_LINK_LIBS}
+                        ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
                         ${GTEST_LINK_TOOLCHAIN})
 
     endif()
