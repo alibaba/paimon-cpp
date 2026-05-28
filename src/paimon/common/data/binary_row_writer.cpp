@@ -158,6 +158,7 @@ Result<BinaryRowWriter::FieldSetterFunc> BinaryRowWriter::CreateFieldSetter(
                 }
                 auto decimal_value = DataDefine::GetVariantValue<Decimal>(field);
                 assert(decimal_value.Scale() == scale);
+                (void)scale;
                 return writer->WriteDecimal(field_idx, decimal_value, precision);
             };
             return field_setter;
