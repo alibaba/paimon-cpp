@@ -28,7 +28,8 @@ find_package(jindosdk_c REQUIRED)
 file(GLOB_RECURSE JINDOSDK_SOURCES src/*.cpp)
 
 add_library(jindosdk-nextarch STATIC ${JINDOSDK_SOURCES})
-target_link_libraries(jindosdk-nextarch PUBLIC pthread dl JINDOSDK::JINDOSDK)
+target_link_libraries(jindosdk-nextarch PUBLIC pthread ${CMAKE_DL_LIBS}
+                                                 JINDOSDK::JINDOSDK)
 target_include_directories(jindosdk-nextarch
                            PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
                                   $<INSTALL_INTERFACE:include>)

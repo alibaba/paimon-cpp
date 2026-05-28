@@ -30,6 +30,16 @@
 
 namespace paimon::orc::test {
 
+namespace {
+
+// Use an explicit int64_t literal for BIGINT predicates. On macOS arm64, `long` and
+// `int64_t` are distinct types, so `Literal(5l)` may instantiate `Literal<long>`.
+Literal BigIntLiteral(int64_t value) {
+    return Literal(value);
+}
+
+}  // namespace
+
 TEST(PredicateConverterTest, TestSimple) {
     std::string orc_schema =
         "struct<f0:bigint,f1:double,f2:string,f3:int,f4:tinyint,f5:decimal(6,2)>";
@@ -48,7 +58,7 @@ TEST(PredicateConverterTest, TestSimple) {
     }
     {
         auto predicate = PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0",
-                                                 FieldType::BIGINT, Literal(5l));
+                                                 FieldType::BIGINT, BigIntLiteral(5));
         ASSERT_OK_AND_ASSIGN(auto search_arg, PredicateConverter::Convert(*orc_type, predicate));
         ASSERT_EQ("leaf-0 = (column(id=1) = 5), expr = leaf-0", search_arg->toString());
     }
@@ -69,19 +79,19 @@ TEST(PredicateConverterTest, TestSimple) {
     }
     {
         auto predicate = PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0",
-                                                    FieldType::BIGINT, Literal(5l));
+                                                    FieldType::BIGINT, BigIntLiteral(5));
         ASSERT_OK_AND_ASSIGN(auto search_arg, PredicateConverter::Convert(*orc_type, predicate));
         ASSERT_EQ("leaf-0 = (column(id=1) = 5), expr = (not leaf-0)", search_arg->toString());
     }
     {
         auto predicate = PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f0",
-                                                       FieldType::BIGINT, Literal(5l));
+                                                       FieldType::BIGINT, BigIntLiteral(5));
         ASSERT_OK_AND_ASSIGN(auto search_arg, PredicateConverter::Convert(*orc_type, predicate));
         ASSERT_EQ("leaf-0 = (column(id=1) <= 5), expr = (not leaf-0)", search_arg->toString());
     }
     {
         auto predicate = PredicateBuilder::GreaterOrEqual(/*field_index=*/0, /*field_name=*/"f0",
-                                                          FieldType::BIGINT, Literal(5l));
+                                                          FieldType::BIGINT, BigIntLiteral(5));
         ASSERT_OK_AND_ASSIGN(auto search_arg, PredicateConverter::Convert(*orc_type, predicate));
         ASSERT_EQ("leaf-0 = (column(id=1) < 5), expr = (not leaf-0)", search_arg->toString());
     }
@@ -94,20 +104,20 @@ TEST(PredicateConverterTest, TestSimple) {
     }
     {
         auto predicate = PredicateBuilder::LessThan(/*field_index=*/0, /*field_name=*/"f0",
-                                                    FieldType::BIGINT, Literal(5l));
+                                                    FieldType::BIGINT, BigIntLiteral(5));
         ASSERT_OK_AND_ASSIGN(auto search_arg, PredicateConverter::Convert(*orc_type, predicate));
         ASSERT_EQ("leaf-0 = (column(id=1) < 5), expr = leaf-0", search_arg->toString());
     }
     {
         auto predicate = PredicateBuilder::LessOrEqual(/*field_index=*/0, /*field_name=*/"f0",
-                                                       FieldType::BIGINT, Literal(5l));
+                                                       FieldType::BIGINT, BigIntLiteral(5));
         ASSERT_OK_AND_ASSIGN(auto search_arg, PredicateConverter::Convert(*orc_type, predicate));
         ASSERT_EQ("leaf-0 = (column(id=1) <= 5), expr = leaf-0", search_arg->toString());
     }
     {
-        auto predicate =
-            PredicateBuilder::In(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
-                                 {Literal(1l), Literal(3l), Literal(5l)});
+        auto predicate = PredicateBuilder::In(
+            /*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+            {BigIntLiteral(1), BigIntLiteral(3), BigIntLiteral(5)});
         ASSERT_OK_AND_ASSIGN(auto search_arg, PredicateConverter::Convert(*orc_type, predicate));
         ASSERT_EQ("leaf-0 = (column(id=1) in [1, 3, 5]), expr = leaf-0", search_arg->toString());
     }
@@ -144,9 +154,9 @@ TEST(PredicateConverterTest, TestSimple) {
         ASSERT_EQ("expr = YES", search_arg->toString());
     }
     {
-        auto predicate =
-            PredicateBuilder::NotIn(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
-                                    {Literal(1l), Literal(3l), Literal(5l)});
+        auto predicate = PredicateBuilder::NotIn(
+            /*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+            {BigIntLiteral(1), BigIntLiteral(3), BigIntLiteral(5)});
         ASSERT_OK_AND_ASSIGN(auto search_arg, PredicateConverter::Convert(*orc_type, predicate));
         ASSERT_EQ("leaf-0 = (column(id=1) in [1, 3, 5]), expr = (not leaf-0)",
                   search_arg->toString());
@@ -186,7 +196,7 @@ TEST(PredicateConverterTest, TestCompound) {
             auto predicate,
             PredicateBuilder::And({
                 PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
-                                        Literal(3l)),
+                                        BigIntLiteral(3)),
                 PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
                                         Literal(static_cast<float>(5.0))),
                 PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2", FieldType::STRING,
@@ -220,7 +230,7 @@ TEST(PredicateConverterTest, TestCompound) {
             auto predicate,
             PredicateBuilder::Or({
                 PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
-                                        Literal(3l)),
+                                        BigIntLiteral(3)),
                 PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
                                         Literal(static_cast<float>(5.0))),
                 PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2", FieldType::STRING,
@@ -244,7 +254,7 @@ TEST(PredicateConverterTest, TestCompound) {
                      {PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3",
                                               FieldType::BOOLEAN, Literal(true)),
                       PredicateBuilder::LessThan(/*field_index=*/0, /*field_name=*/"f0",
-                                                 FieldType::BIGINT, Literal(3l))})
+                                                 FieldType::BIGINT, BigIntLiteral(3))})
                      .value(),
                  PredicateBuilder::And(
                      {PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3",

@@ -31,9 +31,7 @@ if(PAIMON_BUILD_TESTS)
                     data_generator_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared
-                    "-Wl,--whole-archive"
-                    paimon_local_file_system_shared
-                    "-Wl,--no-whole-archive"
+                    ${PAIMON_LOCAL_FILE_SYSTEM_SHARED_LINK_LIBS}
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 
