@@ -24,7 +24,9 @@ int main(int argc, char** argv) {
     try {
         paimon::benchmark::ParsePaimonBenchmarkCliArgs(&argc, argv);
     } catch (const std::exception& e) {
-        std::cerr << "[benchmark][cli] " << e.what() << std::endl;
+        std::cerr << "paimon-read-write-benchmark: " << e.what() << std::endl;
+        std::cerr << "Try 'paimon-read-write-benchmark --help' for more information."
+                  << std::endl;
         return 1;
     }
 
