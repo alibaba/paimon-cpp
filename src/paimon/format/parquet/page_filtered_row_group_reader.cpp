@@ -138,9 +138,10 @@ std::pair<RowRanges, int64_t> PageFilteredRowGroupReader::ComputeCompressedRowRa
 Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFilteredColumn(
     const std::shared_ptr<::parquet::RowGroupReader>& row_group_reader,
     ::parquet::ParquetFileReader* parquet_reader,
-    const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader, int32_t row_group_index,
-    int32_t column_index, const RowRanges& row_ranges, const std::shared_ptr<arrow::Field>& field,
-    int64_t row_group_row_count, ::arrow::MemoryPool* pool) {
+    const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
+    int32_t row_group_index, int32_t column_index, const RowRanges& row_ranges,
+    const std::shared_ptr<arrow::Field>& field, int64_t row_group_row_count,
+    ::arrow::MemoryPool* pool) {
     auto file_metadata = parquet_reader->metadata();
     const auto* col_descriptor = file_metadata->schema()->Column(column_index);
 
@@ -260,7 +261,8 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
     int64_t row_group_row_count = rg_metadata->num_rows();
     auto page_index_reader = parquet_reader->GetPageIndexReader();
 
-    // reuse RowGroupPageIndexReader for multiple columns in the same row group to avoid redundant metadata reads
+    // reuse RowGroupPageIndexReader for multiple columns in the same row group to avoid redundant
+    // metadata reads
     std::shared_ptr<::parquet::RowGroupPageIndexReader> rg_page_index_reader;
     if (page_index_reader) {
         rg_page_index_reader = page_index_reader->RowGroup(row_group_index);
@@ -273,8 +275,8 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
     for (size_t i = 0; i < column_indices.size(); ++i) {
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<arrow::ChunkedArray> chunked_array,
-            ReadFilteredColumn(row_group_reader, parquet_reader, rg_page_index_reader, row_group_index,
-                               column_indices[i], row_ranges,
+            ReadFilteredColumn(row_group_reader, parquet_reader, rg_page_index_reader,
+                               row_group_index, column_indices[i], row_ranges,
                                arrow_schema->field(static_cast<int>(i)), row_group_row_count,
                                pool));
 
