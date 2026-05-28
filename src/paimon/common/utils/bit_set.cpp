@@ -39,7 +39,7 @@ Status BitSet::Set(uint32_t index) {
     }
     uint32_t byte_index = index >> 3;
     auto val = segment_.Get(offset_ + byte_index);
-    val |= (1 << (index & BYTE_INDEX_MASK));
+    val |= static_cast<char>(1u << (index & BYTE_INDEX_MASK));
     segment_.PutValue(offset_ + byte_index, val);
     return Status::OK();
 }
@@ -50,7 +50,7 @@ bool BitSet::Get(uint32_t index) {
     }
     uint32_t byte_index = index >> 3;
     auto val = segment_.Get(offset_ + byte_index);
-    return (val & (1 << (index & BYTE_INDEX_MASK))) != 0;
+    return (val & static_cast<char>(1u << (index & BYTE_INDEX_MASK))) != 0;
 }
 
 void BitSet::Clear() {

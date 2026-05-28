@@ -55,10 +55,12 @@ Result<Literal> BooleanToDecimalCastExecutor::Cast(
     if (scaled_decimal == std::nullopt) {
         return Literal(FieldType::DECIMAL);
     }
-    return Literal(
-        Decimal(decimal_type->precision(), decimal_type->scale(),
-                static_cast<Decimal::int128_t>(scaled_decimal.value().high_bits()) << 64 |
-                    scaled_decimal.value().low_bits()));
+    return Literal(Decimal(
+        decimal_type->precision(), decimal_type->scale(),
+        static_cast<Decimal::int128_t>(static_cast<Decimal::uint128_t>(static_cast<uint64_t>(
+                                           scaled_decimal.value().high_bits()))
+                                           << 64 |
+                                       scaled_decimal.value().low_bits())));
 }
 
 Result<std::shared_ptr<arrow::Array>> BooleanToDecimalCastExecutor::Cast(

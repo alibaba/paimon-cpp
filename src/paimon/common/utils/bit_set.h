@@ -30,7 +30,8 @@ class MemoryPool;
 /// BitSet based on MemorySegment.
 class PAIMON_EXPORT BitSet {
  public:
-    explicit BitSet(int64_t byte_length) : byte_length_(byte_length), bit_size_(byte_length << 3) {}
+    explicit BitSet(int64_t byte_length)
+        : byte_length_(byte_length), bit_size_(static_cast<uint64_t>(byte_length) << 3) {}
 
     Status SetMemorySegment(MemorySegment segment, int32_t offset = 0);
     void UnsetMemorySegment();
