@@ -601,4 +601,70 @@ TEST_F(LuminaGlobalIndexTest, TestWriteWithNullAndFilter) {
     }
 }
 
+TEST_F(LuminaGlobalIndexTest, TestWriteWithNullAcrossMultipleBatches) {
+    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    std::string test_root = test_root_dir->Str();
+
+    // Batch 1: rows 0-2, null at row 1 → indexed ids: {0, 2}
+    std::shared_ptr<arrow::Array> batch1 = arrow::ipc::internal::json::ArrayFromJSON(data_type_,
+                                                                                     R"([
+        [[0.0, 0.0, 0.0, 0.0]],
+        [null],
+        [[1.0, 0.0, 1.0, 0.0]]
+    ])")
+                                               .ValueOrDie();
+
+    // Batch 2: rows 3-5, null at row 3 → indexed ids: {4, 5}
+    std::shared_ptr<arrow::Array> batch2 = arrow::ipc::internal::json::ArrayFromJSON(data_type_,
+                                                                                     R"([
+        [null],
+        [[1.0, 1.0, 1.0, 1.0]],
+        [[0.0, 1.0, 0.0, 1.0]]
+    ])")
+                                               .ValueOrDie();
+
+    auto global_index = std::make_shared<LuminaGlobalIndex>(options_);
+    auto path_factory = std::make_shared<FakeIndexPathFactory>(test_root);
+    auto file_writer = std::make_shared<GlobalIndexFileManager>(fs_, path_factory);
+
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<GlobalIndexWriter> global_writer,
+        global_index->CreateWriter("f0", CreateArrowSchema(data_type_).get(), file_writer, pool_));
+
+    // AddBatch 1: row_ids {0, 1, 2}
+    {
+        ArrowArray c_array;
+        ASSERT_TRUE(arrow::ExportArray(*batch1, &c_array).ok());
+        std::vector<int64_t> row_ids = {0, 1, 2};
+        ASSERT_OK(global_writer->AddBatch(&c_array, std::move(row_ids)));
+    }
+    // AddBatch 2: row_ids {3, 4, 5}
+    {
+        ArrowArray c_array;
+        ASSERT_TRUE(arrow::ExportArray(*batch2, &c_array).ok());
+        std::vector<int64_t> row_ids = {3, 4, 5};
+        ASSERT_OK(global_writer->AddBatch(&c_array, std::move(row_ids)));
+    }
+
+    ASSERT_OK_AND_ASSIGN(auto result_metas, global_writer->Finish());
+    ASSERT_EQ(result_metas.size(), 1);
+
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         CreateGlobalIndexReader(test_root, data_type_, options_, result_metas[0]));
+    {
+        // Search all: should return ids {0, 2, 4, 5}, never {1, 3}
+        ASSERT_OK_AND_ASSIGN(
+            auto scored_result,
+            reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+                /*field_name=*/"f0", /*limit=*/10, query_, /*filter=*/nullptr,
+                /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/options_)));
+        // id 0: [0,0,0,0] → L2 dist to [1,1,1,1.1] = 4.21
+        // id 2: [1,0,1,0] → L2 dist = 2.21
+        // id 4: [1,1,1,1] → L2 dist = 0.01
+        // id 5: [0,1,0,1] → L2 dist = 2.01
+        CheckResult(scored_result, {4l, 5l, 2l, 0l}, {0.01f, 2.01f, 2.21f, 4.21f});
+    }
+}
+
 }  // namespace paimon::lumina::test
