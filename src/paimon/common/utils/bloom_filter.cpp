@@ -50,8 +50,8 @@ std::shared_ptr<BloomFilter> BloomFilter::Create(int64_t expect_entries, double 
 
 BloomFilter::BloomFilter(int64_t expected_entries, int32_t byte_length)
     : expected_entries_(expected_entries) {
-    num_hash_functions_ =
-        OptimalNumOfHashFunctions(expected_entries, static_cast<int64_t>(byte_length) << 3);
+    num_hash_functions_ = OptimalNumOfHashFunctions(
+        expected_entries, static_cast<int64_t>(static_cast<uint64_t>(byte_length) << 3));
     bit_set_ = std::make_shared<BitSet>(byte_length);
 }
 

@@ -65,7 +65,17 @@ class ColumnarUtils {
             auto value_type_id = dict_type->value_type()->id();
             auto index_type_id = dict_type->index_type()->id();
             int64_t dict_index = -1;
-            if (index_type_id == arrow::Type::type::INT32) {
+            if (index_type_id == arrow::Type::type::INT8) {
+                auto indices =
+                    arrow::internal::checked_cast<arrow::Int8Array*>(typed_array->indices().get());
+                assert(indices);
+                dict_index = indices->Value(pos);
+            } else if (index_type_id == arrow::Type::type::INT16) {
+                auto indices =
+                    arrow::internal::checked_cast<arrow::Int16Array*>(typed_array->indices().get());
+                assert(indices);
+                dict_index = indices->Value(pos);
+            } else if (index_type_id == arrow::Type::type::INT32) {
                 auto indices =
                     arrow::internal::checked_cast<arrow::Int32Array*>(typed_array->indices().get());
                 assert(indices);

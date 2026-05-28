@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <type_traits>
 #include <vector>
 
 #include "fmt/format.h"
@@ -429,22 +430,31 @@ template <typename T>
 inline T MemorySegmentUtils::GetValueSlowly(const std::vector<MemorySegment>& segments,
                                             int32_t seg_size, int32_t seg_num, int32_t seg_offset) {
     MemorySegment segment = segments[seg_num];
-    T ret = 0;
-    for (size_t i = 0; i < sizeof(T); i++) {
+    if constexpr (std::is_same_v<T, bool>) {
         if (seg_offset == seg_size) {
             segment = segments[++seg_num];
             seg_offset = 0;
         }
-        T unsigned_byte = segment.Get(seg_offset) & 0xff;
-        if (SystemByteOrder() == ByteOrder::PAIMON_LITTLE_ENDIAN) {
-            ret |= (unsigned_byte << (i * 8));
-        } else {
-            int32_t shift_count = sizeof(T) - 1;
-            ret |= (unsigned_byte << ((shift_count - i) * 8));
+        return static_cast<bool>(static_cast<uint8_t>(segment.Get(seg_offset)));
+    } else {
+        using UnsignedT = std::make_unsigned_t<T>;
+        UnsignedT ret = 0;
+        for (size_t i = 0; i < sizeof(T); i++) {
+            if (seg_offset == seg_size) {
+                segment = segments[++seg_num];
+                seg_offset = 0;
+            }
+            UnsignedT unsigned_byte = static_cast<uint8_t>(segment.Get(seg_offset));
+            if (SystemByteOrder() == ByteOrder::PAIMON_LITTLE_ENDIAN) {
+                ret |= (unsigned_byte << (i * 8));
+            } else {
+                int32_t shift_count = sizeof(T) - 1;
+                ret |= (unsigned_byte << ((shift_count - i) * 8));
+            }
+            seg_offset++;
         }
-        seg_offset++;
+        return static_cast<T>(ret);
     }
-    return ret;
 }
 
 inline Status MemorySegmentUtils::CopyToStream(const std::vector<MemorySegment>& segments,
