@@ -95,19 +95,38 @@ Result<FastHash::HashFunction> FastHash::GetHashFunction(
 
 int64_t FastHash::GetLongHash(int64_t key) {
     // NOTE: This hash function must produce results identical to the Java implementation.
-    // Java uses arithmetic right-shift (>>) and wrapping arithmetic for +/<<.
-    // We use signed for right-shift (arithmetic, well-defined in C++20 and de facto in all
-    // compilers) and cast to unsigned only for left-shift/addition to avoid signed overflow UB.
-    auto u = [](int64_t v) { return static_cast<uint64_t>(v); };
-    auto s = [](uint64_t v) { return static_cast<int64_t>(v); };
-    key = s(~u(key) + (u(key) << 21));  // key = (key << 21) - key - 1;
-    key = key ^ (key >> 24);
-    key = s(u(key) + (u(key) << 3) + (u(key) << 8));  // key * 265
-    key = key ^ (key >> 14);
-    key = s(u(key) + (u(key) << 2) + (u(key) << 4));  // key * 21
-    key = key ^ (key >> 28);
-    key = s(u(key) + (u(key) << 31));
-    return key;
+    // Java uses two's-complement wrapping arithmetic and arithmetic right-shift (>>).
+
+    auto to_unsigned = [](int64_t v) -> uint64_t {
+        uint64_t result;
+        std::memcpy(&result, &v, sizeof(result));
+        return result;
+    };
+    auto to_signed = [](uint64_t v) -> int64_t {
+        int64_t result;
+        std::memcpy(&result, &v, sizeof(result));
+        return result;
+    };
+    // Arithmetic right-shift: shift unsigned then sign-extend from the top.
+    auto asr = [](uint64_t v, int32_t shift) -> uint64_t {
+        bool sign = (v >> 63) != 0;
+        uint64_t shifted = v >> shift;
+        if (sign) {
+            // Fill the top `shift` bits with 1s.
+            shifted |= ~(~static_cast<uint64_t>(0) >> shift);
+        }
+        return shifted;
+    };
+
+    uint64_t k = to_unsigned(key);
+    k = (~k) + (k << 21);  // key = (key << 21) - key - 1;
+    k = k ^ asr(k, 24);
+    k = (k + (k << 3)) + (k << 8);  // key * 265
+    k = k ^ asr(k, 14);
+    k = (k + (k << 2)) + (k << 4);  // key * 21
+    k = k ^ asr(k, 28);
+    k = k + (k << 31);
+    return to_signed(k);
 }
 
 int64_t FastHash::Hash64(const char* data, size_t length) {
