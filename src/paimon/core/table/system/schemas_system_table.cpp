@@ -20,30 +20,10 @@
 #include <utility>
 
 #include "arrow/api.h"
-#include "paimon/common/utils/rapidjson_util.h"
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
-#include "paimon/status.h"
-#include "rapidjson/document.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/writer.h"
 
 namespace paimon {
-namespace {
-
-template <typename T>
-Result<std::string> JsonString(const T& value) {
-    rapidjson::Document document;
-    auto json_value = RapidJsonUtil::SerializeValue(value, &document.GetAllocator());
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    if (!json_value.Accept(writer)) {
-        return Status::Invalid("failed to serialize schemas system table value");
-    }
-    return std::string(buffer.GetString(), buffer.GetSize());
-}
-
-}  // namespace
 
 SchemasSystemTable::SchemasSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
                                        std::string branch)
@@ -79,12 +59,14 @@ Result<std::vector<GenericRow>> SchemasSystemTable::BuildRows() const {
     for (int64_t id : schema_ids) {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<TableSchema> table_schema,
                                schema_manager.ReadSchema(id));
-        PAIMON_ASSIGN_OR_RAISE(std::string fields_json, JsonString(table_schema->Fields()));
+        PAIMON_ASSIGN_OR_RAISE(std::string fields_json,
+                               SystemTableUtils::JsonString(table_schema->Fields()));
         PAIMON_ASSIGN_OR_RAISE(std::string partition_keys_json,
-                               JsonString(table_schema->PartitionKeys()));
+                               SystemTableUtils::JsonString(table_schema->PartitionKeys()));
         PAIMON_ASSIGN_OR_RAISE(std::string primary_keys_json,
-                               JsonString(table_schema->PrimaryKeys()));
-        PAIMON_ASSIGN_OR_RAISE(std::string options_json, JsonString(table_schema->Options()));
+                               SystemTableUtils::JsonString(table_schema->PrimaryKeys()));
+        PAIMON_ASSIGN_OR_RAISE(std::string options_json,
+                               SystemTableUtils::JsonString(table_schema->Options()));
 
         GenericRow row(schema->num_fields());
         row.SetField(0, table_schema->Id());
