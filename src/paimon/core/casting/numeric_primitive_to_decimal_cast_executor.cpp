@@ -59,20 +59,24 @@ Result<Literal> NumericPrimitiveToDecimalCastExecutor::Cast(
         auto decimal_result = arrow::Decimal128::FromReal(src_value, decimal_type->precision(),
                                                           decimal_type->scale());
         if (decimal_result.ok()) {
-            return Literal{Decimal(
-                decimal_type->precision(), decimal_type->scale(),
-                static_cast<Decimal::int128_t>(decimal_result.ValueUnsafe().high_bits()) << 64 |
-                    decimal_result.ValueUnsafe().low_bits())};
+            return Literal{Decimal(decimal_type->precision(), decimal_type->scale(),
+                                   static_cast<Decimal::int128_t>(
+                                       static_cast<Decimal::uint128_t>(static_cast<uint64_t>(
+                                           decimal_result.ValueUnsafe().high_bits()))
+                                           << 64 |
+                                       decimal_result.ValueUnsafe().low_bits()))};
         }
     } else {
         auto scaled_decimal = DecimalUtils::RescaleDecimalWithOverflowCheck(
             arrow::Decimal128(src_value), /*src_scale=*/0, decimal_type->precision(),
             decimal_type->scale());
         if (scaled_decimal != std::nullopt) {
-            return Literal(
-                Decimal(decimal_type->precision(), decimal_type->scale(),
-                        static_cast<Decimal::int128_t>(scaled_decimal.value().high_bits()) << 64 |
-                            scaled_decimal.value().low_bits()));
+            return Literal(Decimal(decimal_type->precision(), decimal_type->scale(),
+                                   static_cast<Decimal::int128_t>(
+                                       static_cast<Decimal::uint128_t>(static_cast<uint64_t>(
+                                           scaled_decimal.value().high_bits()))
+                                           << 64 |
+                                       scaled_decimal.value().low_bits())));
         }
     }
     return Literal(FieldType::DECIMAL);
