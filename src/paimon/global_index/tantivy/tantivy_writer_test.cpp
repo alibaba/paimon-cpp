@@ -150,7 +150,9 @@ class TantivyGlobalIndexWriterTest : public ::testing::Test {
             TantivyGlobalIndexWriter::Create("f0", data_type, file_writer, options, pool_));
         ::ArrowArray c_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &c_array));
-        PAIMON_RETURN_NOT_OK(writer->AddBatch(&c_array));
+        std::vector<int64_t> relative_row_ids(array->length());
+        for (int64_t i = 0; i < array->length(); ++i) relative_row_ids[i] = i;
+        PAIMON_RETURN_NOT_OK(writer->AddBatch(&c_array, std::move(relative_row_ids)));
         return writer->Finish();
     }
 
@@ -188,7 +190,6 @@ TEST_F(TantivyGlobalIndexWriterTest, EnglishCorpusProducesValidPackedIndex) {
     EXPECT_TRUE(StringUtils::StartsWith(file_name, "tantivy-fulltext-global-index-"))
         << "file_name=" << file_name;
     EXPECT_TRUE(StringUtils::EndsWith(file_name, ".index"));
-    EXPECT_EQ(meta.range_end, 3);  // 4 docs, 0-based inclusive
     ASSERT_TRUE(meta.metadata);
     EXPECT_EQ(std::string(meta.metadata->data(), meta.metadata->size()),
               R"({"write.omit-term-freq-and-position":"false"})");
@@ -224,7 +225,6 @@ TEST_F(TantivyGlobalIndexWriterTest, ChineseCorpusProducesValidPackedIndex) {
     ASSERT_OK_AND_ASSIGN(auto metas, WriteIndex(root, data_type_, options, array));
     ASSERT_EQ(metas.size(), 1u);
     const auto& meta = metas[0];
-    EXPECT_EQ(meta.range_end, 1);
     auto bytes = ReadFile(meta.file_path);
     ASSERT_EQ(static_cast<int64_t>(bytes.size()), meta.file_size);
     auto entries = ParsePacked(bytes);
@@ -246,7 +246,6 @@ TEST_F(TantivyGlobalIndexWriterTest, NullStringRowsBecomeEmptyDocuments) {
             .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto metas, WriteIndex(root, data_type_, options, array));
     ASSERT_EQ(metas.size(), 1u);
-    EXPECT_EQ(metas[0].range_end, 2);
 }
 
 TEST_F(TantivyGlobalIndexWriterTest, RejectsHmmTokenizeMode) {

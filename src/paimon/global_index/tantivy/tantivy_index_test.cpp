@@ -86,7 +86,7 @@ class TantivyGlobalIndexIntegrationTest : public ::testing::Test {
                                                const std::shared_ptr<arrow::DataType>& data_type,
                                                const std::map<std::string, std::string>& options,
                                                const std::shared_ptr<arrow::Array>& array,
-                                               int64_t expected_range_end) const {
+                                               int64_t /*unused_expected_range_end*/) const {
         auto global_index = std::make_shared<TantivyGlobalIndex>(options);
         auto path_factory = std::make_shared<FakeIndexPathFactory>(root);
         auto file_writer = std::make_shared<GlobalIndexFileManager>(fs_, path_factory);
@@ -95,14 +95,15 @@ class TantivyGlobalIndexIntegrationTest : public ::testing::Test {
                                                           file_writer, pool_));
         ::ArrowArray c_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &c_array));
-        PAIMON_RETURN_NOT_OK(w->AddBatch(&c_array));
+        std::vector<int64_t> relative_row_ids(array->length());
+        for (int64_t i = 0; i < array->length(); ++i) relative_row_ids[i] = i;
+        PAIMON_RETURN_NOT_OK(w->AddBatch(&c_array, std::move(relative_row_ids)));
         PAIMON_ASSIGN_OR_RAISE(auto metas, w->Finish());
         EXPECT_EQ(metas.size(), 1u);
         auto file_name = PathUtil::GetName(metas[0].file_path);
         EXPECT_TRUE(StringUtils::StartsWith(file_name, "tantivy-fulltext-global-index-"))
             << file_name;
         EXPECT_TRUE(StringUtils::EndsWith(file_name, ".index"));
-        EXPECT_EQ(metas[0].range_end, expected_range_end);
         EXPECT_TRUE(metas[0].metadata);
         return metas[0];
     }
@@ -168,8 +169,11 @@ TEST_F(TantivyGlobalIndexIntegrationTest, EnglishCorpus) {
     auto run = [&](const std::string& q, FullTextSearch::SearchType t,
                    std::optional<int32_t> limit = std::nullopt,
                    std::optional<RoaringBitmap64> filter = std::nullopt) {
-        auto res = t_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-            "f0", limit, q, t, filter));
+        // Use scored path so `limit` returns top-N by BM25, matching test
+        // expectations (otherwise unscored Path B returns any-N, non-deterministic).
+        auto fts = std::make_shared<FullTextSearch>("f0", limit, q, t, filter);
+        fts->with_score = true;
+        auto res = t_reader->VisitFullTextSearch(fts);
         EXPECT_TRUE(res.ok()) << res.status().ToString();
         return res.value();
     };
@@ -234,8 +238,11 @@ TEST_F(TantivyGlobalIndexIntegrationTest, ChineseCorpus) {
     auto run = [&](const std::string& q, FullTextSearch::SearchType t,
                    std::optional<int32_t> limit = std::nullopt,
                    std::optional<RoaringBitmap64> filter = std::nullopt) {
-        auto res = t_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-            "f0", limit, q, t, filter));
+        // Use scored path so `limit` returns top-N by BM25, matching test
+        // expectations (otherwise unscored Path B returns any-N, non-deterministic).
+        auto fts = std::make_shared<FullTextSearch>("f0", limit, q, t, filter);
+        fts->with_score = true;
+        auto res = t_reader->VisitFullTextSearch(fts);
         EXPECT_TRUE(res.ok()) << res.status().ToString();
         return res.value();
     };

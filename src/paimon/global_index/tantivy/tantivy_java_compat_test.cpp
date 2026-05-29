@@ -103,8 +103,7 @@ class JavaCompatTest : public ::testing::Test {
         std::string metadata_json = "{}";
         auto meta_bytes = std::make_shared<Bytes>(metadata_json, pool_.get());
 
-        // range_end = 9 (10 docs, row_ids 0..9 inclusive)
-        GlobalIndexIOMeta io_meta(archive_path, file_size, /*range_end=*/9, meta_bytes);
+        GlobalIndexIOMeta io_meta(archive_path, file_size, meta_bytes);
 
         std::map<std::string, std::string> options;
         auto global_index = std::make_shared<TantivyGlobalIndex>(options);
@@ -460,16 +459,16 @@ TEST_F(JavaCompatTest, CppWriteDefaultTokenizerForJavaCrossRead) {
     auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, json).ValueOrDie();
     ::ArrowArray c_array;
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
-    ASSERT_TRUE(writer->AddBatch(&c_array).ok());
+    std::vector<int64_t> relative_row_ids(array->length());
+    for (int64_t i = 0; i < array->length(); ++i) relative_row_ids[i] = i;
+    ASSERT_TRUE(writer->AddBatch(&c_array, std::move(relative_row_ids)).ok());
     auto metas_res = writer->Finish();
     ASSERT_TRUE(metas_res.ok()) << metas_res.status().ToString();
     ASSERT_EQ(metas_res.value().size(), 1u);
     const auto& meta = metas_res.value().front();
     const std::string archive_path = meta.file_path;
     std::cerr << "[CPP-WRITE] archive_path=" << archive_path
-              << " file_size=" << meta.file_size
-              << " range_end=" << meta.range_end << "\n";
-    ASSERT_EQ(meta.range_end, 9);
+              << " file_size=" << meta.file_size << "\n";
 
     // 2) Archive header sanity: 16+ files, meta.json present, tokenizer in schema.
     auto stream_res = fs_->Open(archive_path);
@@ -493,7 +492,7 @@ TEST_F(JavaCompatTest, CppWriteDefaultTokenizerForJavaCrossRead) {
     auto file_status = fs_->GetFileStatus(archive_path).value();
     int64_t file_size = file_status->GetLen();
     auto meta_bytes = std::make_shared<Bytes>(std::string("{}"), pool_.get());
-    GlobalIndexIOMeta io_meta(archive_path, file_size, /*range_end=*/9, meta_bytes);
+    GlobalIndexIOMeta io_meta(archive_path, file_size, meta_bytes);
     auto reader_factory = std::make_shared<TantivyGlobalIndex>(
         std::map<std::string, std::string>{});
     auto reader_path_factory = std::make_shared<FixturePathFactory>(out_dir);

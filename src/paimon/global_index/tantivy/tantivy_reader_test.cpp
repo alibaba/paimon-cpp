@@ -91,7 +91,9 @@ class TantivyReaderTest : public ::testing::Test {
         auto writer = writer_res.value();
         ::ArrowArray c_array;
         EXPECT_TRUE(arrow::ExportArray(*array, &c_array).ok());
-        EXPECT_TRUE(writer->AddBatch(&c_array).ok());
+        std::vector<int64_t> relative_row_ids(array->length());
+        for (int64_t i = 0; i < array->length(); ++i) relative_row_ids[i] = i;
+        EXPECT_TRUE(writer->AddBatch(&c_array, std::move(relative_row_ids)).ok());
         auto metas_res = writer->Finish();
         EXPECT_TRUE(metas_res.ok()) << metas_res.status().ToString();
         return {fm, metas_res.value()[0]};

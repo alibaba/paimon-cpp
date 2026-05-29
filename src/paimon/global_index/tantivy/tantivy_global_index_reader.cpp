@@ -18,6 +18,7 @@
 
 #include "fmt/format.h"
 #include "paimon/common/utils/options_utils.h"
+#include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/common/utils/rapidjson_util.h"
 #include "paimon/global_index/tantivy/tantivy_archive_layout.h"
 #include "paimon/global_index/tantivy/tantivy_ffi_log.h"  // [BUG_QPLEAK_RUST]
@@ -132,7 +133,7 @@ Result<std::shared_ptr<TantivyGlobalIndexReader>> TantivyGlobalIndexReader::Crea
         PAIMON_TANTIVY_RETURN_NOT_OK(st);
     }
     return std::shared_ptr<TantivyGlobalIndexReader>(
-        new TantivyGlobalIndexReader(io_meta.range_end, ReaderPtr(raw), pool));
+        new TantivyGlobalIndexReader(ReaderPtr(raw), pool));
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> TantivyGlobalIndexReader::VisitFullTextSearch(

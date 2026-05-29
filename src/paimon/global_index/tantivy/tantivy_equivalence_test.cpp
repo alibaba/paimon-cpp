@@ -121,7 +121,9 @@ class TantivyEquivalenceTest : public ::testing::Test {
         EXPECT_TRUE(writer_res.ok()) << writer_res.status().ToString();
         ::ArrowArray c_array;
         EXPECT_TRUE(arrow::ExportArray(*array, &c_array).ok());
-        EXPECT_TRUE(writer_res.value()->AddBatch(&c_array).ok());
+        std::vector<int64_t> relative_row_ids(array->length());
+        for (int64_t i = 0; i < array->length(); ++i) relative_row_ids[i] = i;
+        EXPECT_TRUE(writer_res.value()->AddBatch(&c_array, std::move(relative_row_ids)).ok());
         auto metas_res = writer_res.value()->Finish();
         EXPECT_TRUE(metas_res.ok()) << metas_res.status().ToString();
         return metas_res.value()[0];
@@ -142,11 +144,13 @@ class TantivyEquivalenceTest : public ::testing::Test {
     /// Returns an opened-reader pair plus owning UniqueTestDirectory handles.
     ReaderPair WriteAndOpenBoth(const std::shared_ptr<arrow::DataType>& data_type,
                                 const std::shared_ptr<arrow::Array>& array,
-                                const std::map<std::string, std::string>& lucene_opts,
+                                std::map<std::string, std::string> lucene_opts,
                                 const std::map<std::string, std::string>& tantivy_opts) {
         auto lroot = paimon::test::UniqueTestDirectory::Create();
         auto troot = paimon::test::UniqueTestDirectory::Create();
         EXPECT_TRUE(lroot && troot);
+        // lucene requires a tmp directory option; reuse lroot if caller didn't set one.
+        lucene_opts.emplace("lucene-fts.write.tmp.directory", lroot->Str());
         auto lmeta =
             WriteOne("lucene-fts", data_type, lucene_opts, array, lroot->Str());
         auto tmeta =
@@ -347,10 +351,12 @@ TEST_F(TantivyEquivalenceTest, BenchmarkBuildAndQuery) {
 
     // -------- Lucene: write + open + queries --------
     auto lroot = paimon::test::UniqueTestDirectory::Create();
-    GlobalIndexIOMeta lmeta{"", 0, 0, nullptr};
+    std::map<std::string, std::string> lopt = {
+        {"lucene-fts.write.tmp.directory", lroot->Str()}};
+    GlobalIndexIOMeta lmeta{"", 0, nullptr};
     auto lwrite_ms =
-        time_ms([&] { lmeta = WriteOne("lucene-fts", data_type, {}, array, lroot->Str()); });
-    auto lreader = OpenOne("lucene-fts", data_type, {}, lmeta, lroot->Str());
+        time_ms([&] { lmeta = WriteOne("lucene-fts", data_type, lopt, array, lroot->Str()); });
+    auto lreader = OpenOne("lucene-fts", data_type, lopt, lmeta, lroot->Str());
 
     auto lquery_ms = time_ms([&] {
         for (int i = 0; i < kQueryCount; ++i) {
@@ -363,7 +369,7 @@ TEST_F(TantivyEquivalenceTest, BenchmarkBuildAndQuery) {
 
     // -------- Tantivy: write + open + queries --------
     auto troot = paimon::test::UniqueTestDirectory::Create();
-    GlobalIndexIOMeta tmeta{"", 0, 0, nullptr};
+    GlobalIndexIOMeta tmeta{"", 0, nullptr};
     auto twrite_ms =
         time_ms([&] { tmeta = WriteOne("tantivy-fulltext", data_type, {}, array, troot->Str()); });
     auto treader = OpenOne("tantivy-fulltext", data_type, {}, tmeta, troot->Str());

@@ -14,6 +14,7 @@
 
 #include "arrow/c/bridge.h"
 #include "fmt/format.h"
+#include "paimon/common/global_index/global_index_utils.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/rapidjson_util.h"
 #include "paimon/global_index/tantivy/tantivy_ffi_status.h"
@@ -89,7 +90,12 @@ TantivyGlobalIndexWriter::TantivyGlobalIndexWriter(
       file_writer_(file_writer),
       options_(options) {}
 
-Status TantivyGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array) {
+Status TantivyGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array,
+                                          std::vector<int64_t>&& relative_row_ids) {
+    // First-element check mirrors lucene; trust caller to feed sequential ids
+    // within a batch (same contract LuceneGlobalIndexWriter relies on).
+    PAIMON_RETURN_NOT_OK(
+        GlobalIndexUtils::CheckRelativeRowIds(arrow_array, relative_row_ids, row_id_));
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,
                                       arrow::ImportArray(arrow_array, arrow_type_));
     auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(array);
@@ -163,7 +169,7 @@ Result<std::vector<GlobalIndexIOMeta>> TantivyGlobalIndexWriter::Finish() {
     PAIMON_RETURN_NOT_OK(RapidJsonUtil::ToJsonString(options_, &options_json));
     auto meta_bytes = std::make_shared<Bytes>(options_json, pool_.get());
     GlobalIndexIOMeta meta(file_writer_->ToPath(index_file_name), file_size,
-                           /*range_end=*/row_id_ - 1, /*metadata=*/meta_bytes);
+                           /*metadata=*/meta_bytes);
     return std::vector<GlobalIndexIOMeta>({meta});
 }
 

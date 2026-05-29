@@ -111,7 +111,9 @@ class StreamingTestFixture : public ::testing::Test {
         auto w = global_index->CreateWriter("f0", c_schema.get(), file_writer, pool_).value();
         ::ArrowArray c_array;
         EXPECT_TRUE(arrow::ExportArray(*struct_array, &c_array).ok());
-        EXPECT_TRUE(w->AddBatch(&c_array).ok());
+        std::vector<int64_t> relative_row_ids(struct_array->length());
+        for (int64_t i = 0; i < struct_array->length(); ++i) relative_row_ids[i] = i;
+        EXPECT_TRUE(w->AddBatch(&c_array, std::move(relative_row_ids)).ok());
         auto metas = w->Finish().value();
         EXPECT_EQ(metas.size(), 1u);
 

@@ -13,6 +13,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "arrow/type.h"
 #include "paimon/global_index/global_index_writer.h"
@@ -43,7 +44,8 @@ class TantivyGlobalIndexWriter : public GlobalIndexWriter {
 
     ~TantivyGlobalIndexWriter() override = default;
 
-    Status AddBatch(::ArrowArray* arrow_array) override;
+    Status AddBatch(::ArrowArray* arrow_array,
+                    std::vector<int64_t>&& relative_row_ids) override;
 
     Result<std::vector<GlobalIndexIOMeta>> Finish() override;
 
@@ -62,7 +64,7 @@ class TantivyGlobalIndexWriter : public GlobalIndexWriter {
     WriterPtr writer_;
     std::shared_ptr<GlobalIndexFileWriter> file_writer_;
     std::map<std::string, std::string> options_;
-    /// Last document index processed; range_end in the returned IOMeta = row_id_ - 1.
+    /// Last document index processed (matches caller-passed relative_row_ids).
     int64_t row_id_ = 0;
 };
 

@@ -14,7 +14,6 @@
 #include <memory>
 #include <string>
 
-#include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/global_index/bitmap_scored_global_index_result.h"
 #include "paimon/global_index/global_index_io_meta.h"
 #include "paimon/global_index/global_index_reader.h"
@@ -23,7 +22,6 @@
 #include "paimon/global_index/tantivy/tantivy_ffi_handle.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/full_text_search.h"
-#include "paimon/utils/range.h"
 
 namespace paimon::tantivy {
 
@@ -34,8 +32,9 @@ namespace paimon::tantivy {
 /// SearchTypes (MATCH_ALL, MATCH_ANY, PHRASE, PREFIX, WILDCARD) without limit
 /// or pre_filter — both of which Stage 7 layers on.
 ///
-/// All non-FullTextSearch visit methods return the full row range, matching
-/// LuceneGlobalIndexReader behavior (an FTS index can't filter on equality).
+/// All non-FullTextSearch visit methods return nullptr (matches
+/// LuceneGlobalIndexReader): the FTS index has no contribution for non-FTS
+/// predicates, framework treats nullptr as "no filter constraint".
 class TantivyGlobalIndexReader : public GlobalIndexReader {
  public:
     static Result<std::shared_ptr<TantivyGlobalIndexReader>> Create(
@@ -107,15 +106,13 @@ class TantivyGlobalIndexReader : public GlobalIndexReader {
     }
 
  private:
-    TantivyGlobalIndexReader(int64_t range_end, ReaderPtr reader,
-                             std::shared_ptr<MemoryPool> pool)
-        : range_end_(range_end), reader_(std::move(reader)), pool_(std::move(pool)) {}
+    TantivyGlobalIndexReader(ReaderPtr reader, std::shared_ptr<MemoryPool> pool)
+        : reader_(std::move(reader)), pool_(std::move(pool)) {}
 
     std::shared_ptr<GlobalIndexResult> CreateAllResult() const {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return nullptr;
     }
 
-    int64_t range_end_;
     /// Owning handle to the Rust-side reader.
     ReaderPtr reader_;
     /// MemoryPool used for serializing pre-filter bitmaps to bytes for FFI.

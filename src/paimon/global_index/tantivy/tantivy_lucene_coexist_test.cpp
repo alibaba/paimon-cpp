@@ -118,7 +118,9 @@ class TantivyLuceneCoexistTest : public ::testing::Test {
                                                      file_writer, pool_));
         ::ArrowArray c_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &c_array));
-        PAIMON_RETURN_NOT_OK(w->AddBatch(&c_array));
+        std::vector<int64_t> relative_row_ids(array->length());
+        for (int64_t i = 0; i < array->length(); ++i) relative_row_ids[i] = i;
+        PAIMON_RETURN_NOT_OK(w->AddBatch(&c_array, std::move(relative_row_ids)));
         PAIMON_ASSIGN_OR_RAISE(auto metas, w->Finish());
         EXPECT_EQ(metas.size(), 1u);
         EXPECT_TRUE(StringUtils::StartsWith(PathUtil::GetName(metas[0].file_path),
@@ -197,13 +199,15 @@ TEST_F(TantivyLuceneCoexistTest, SideBySideEnglishCorpusReturnsSameDocIds) {
     auto tantivy_root = paimon::test::UniqueTestDirectory::Create();
     ASSERT_TRUE(lucene_root && tantivy_root);
 
+    // Lucene requires a tmp directory option; tantivy ignores unknown keys.
+    std::map<std::string, std::string> lucene_options = {
+        {"lucene-fts.write.tmp.directory", lucene_root->Str()}};
+
     // Write through BOTH factories side by side in the same process.
     ASSERT_OK_AND_ASSIGN(auto lucene_meta,
-                         WriteWith(kLucene, lucene_root->Str(), data_type, {}, array));
+                         WriteWith(kLucene, lucene_root->Str(), data_type, lucene_options, array));
     ASSERT_OK_AND_ASSIGN(auto tantivy_meta,
                          WriteWith(kTantivy, tantivy_root->Str(), data_type, {}, array));
-    EXPECT_EQ(lucene_meta.range_end, tantivy_meta.range_end);
-    EXPECT_EQ(lucene_meta.range_end, 3);
 
     ASSERT_OK_AND_ASSIGN(auto lucene_reader,
                          OpenReader(kLucene, lucene_root->Str(), data_type, {}, lucene_meta));
@@ -263,7 +267,9 @@ TEST_F(TantivyLuceneCoexistTest, IndependentLifecycleNoStateLeakage) {
         auto troot = paimon::test::UniqueTestDirectory::Create();
         ASSERT_TRUE(lroot && troot);
 
-        ASSERT_OK_AND_ASSIGN(auto lm, WriteWith(kLucene, lroot->Str(), data_type, {}, array));
+        std::map<std::string, std::string> lopt = {
+            {"lucene-fts.write.tmp.directory", lroot->Str()}};
+        ASSERT_OK_AND_ASSIGN(auto lm, WriteWith(kLucene, lroot->Str(), data_type, lopt, array));
         ASSERT_OK_AND_ASSIGN(auto tm, WriteWith(kTantivy, troot->Str(), data_type, {}, array));
         ASSERT_OK_AND_ASSIGN(auto lr, OpenReader(kLucene, lroot->Str(), data_type, {}, lm));
         ASSERT_OK_AND_ASSIGN(auto tr, OpenReader(kTantivy, troot->Str(), data_type, {}, tm));
