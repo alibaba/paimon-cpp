@@ -17,6 +17,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -93,14 +94,17 @@ class DataSplitImpl : public DataSplit {
     bool operator==(const DataSplitImpl& other) const;
     bool TEST_Equal(const DataSplitImpl& other) const;
 
-    /// Obtain merged row count as much as possible. There are two scenarios where accurate row
-    /// count
-    /// can be calculated:
+    /// Obtain merged row count for raw-convertible split when metadata is sufficient.
+    ///
+    /// Returns std::nullopt when row count cannot be computed exactly from metadata, e.g. some
+    /// deletion files do not provide cardinality.
+    ///
+    /// There are two scenarios where accurate row count can be calculated:
     ///
     /// 1. raw file and no deletion file.
     ///
     /// 2. raw file + deletion file with cardinality.
-    int64_t PartialMergedRowCount() const;
+    std::optional<int64_t> PartialMergedRowCount() const;
 
     // Builder
     /// Builder for `DataSplitImpl`.

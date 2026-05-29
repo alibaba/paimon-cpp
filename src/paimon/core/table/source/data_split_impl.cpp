@@ -109,9 +109,9 @@ bool DataSplitImpl::TEST_Equal(const DataSplitImpl& other) const {
            is_streaming_ == other.is_streaming_ && raw_convertible_ == other.raw_convertible_;
 }
 
-int64_t DataSplitImpl::PartialMergedRowCount() const {
+std::optional<int64_t> DataSplitImpl::PartialMergedRowCount() const {
     if (!raw_convertible_) {
-        return 0;
+        return std::nullopt;
     }
     int64_t sum = 0;
     for (size_t i = 0; i < data_files_.size(); i++) {
@@ -120,9 +120,12 @@ int64_t DataSplitImpl::PartialMergedRowCount() const {
             sum += data_file->row_count;
         } else if (data_deletion_files_[i].value().cardinality != std::nullopt) {
             sum += data_file->row_count - data_deletion_files_[i].value().cardinality.value();
+        } else {
+            // Cannot derive exact row count from metadata when cardinality is missing.
+            return std::nullopt;
         }
     }
-    return sum;
+    return std::optional<int64_t>(sum);
 }
 
 Result<std::unique_ptr<ObjectSerializer<std::shared_ptr<DataFileMeta>>>>

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,14 +99,13 @@ Result<int64_t> CountSplitRead::CountRows(const std::shared_ptr<DataSplitImpl>& 
 // =============================================================================
 
 Result<int64_t> CountSplitRead::MetadataCount(const std::shared_ptr<DataSplitImpl>& split) {
-    int64_t count = split->PartialMergedRowCount();
-    if (count > 0) {
-        // Successfully computed from metadata alone
-        return count;
+    std::optional<int64_t> count = split->PartialMergedRowCount();
+    if (count.has_value()) {
+        // Successfully computed from metadata alone, including true zero.
+        return count.value();
     }
 
-    // PartialMergedRowCount returns 0 when DV cardinality is not available.
-    // This happens with old-format files that lack the cardinality field.
+    // Metadata is insufficient (e.g. missing DV cardinality in old-format files).
     // Fallback to MergeCount which handles this case correctly.
     return MergeCount(split);
 }
