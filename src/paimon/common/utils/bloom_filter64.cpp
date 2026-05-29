@@ -35,13 +35,13 @@ BloomFilter64::BitSet::BitSet(const std::shared_ptr<Bytes>& bytes, int32_t offse
 void BloomFilter64::BitSet::Set(int32_t index) {
     char* data = bytes_->data();
     data[(static_cast<uint32_t>(index) >> 3) + offset_] |=
-        static_cast<int8_t>(static_cast<int8_t>(1) << (index & BloomFilter64::BitSet::MASK));
+        static_cast<char>(1u << (index & BloomFilter64::BitSet::MASK));
 }
 
 bool BloomFilter64::BitSet::Get(int32_t index) const {
     const char* data = bytes_->data();
     return (data[(static_cast<uint32_t>(index) >> 3) + offset_] &
-            (static_cast<int8_t>(1) << (index & BloomFilter64::BitSet::MASK))) != 0;
+            static_cast<char>(1u << (index & BloomFilter64::BitSet::MASK))) != 0;
 }
 
 int32_t BloomFilter64::BitSet::BitSize() const {

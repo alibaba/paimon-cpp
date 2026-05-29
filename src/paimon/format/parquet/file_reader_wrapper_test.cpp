@@ -115,7 +115,8 @@ class FileReaderWrapperTest : public ::testing::Test {
         ASSERT_OK(format_writer->AddBatch(batch->GetData()));
     }
 
-    Result<std::unique_ptr<FileReaderWrapper>> PrepareReaderWrapper(const std::string& file_path) {
+    Result<std::unique_ptr<FileReaderWrapper>> PrepareReaderWrapper(
+        const std::string& file_path, int64_t wrapper_batch_size = 0) {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> in, fs_->Open(file_path));
         PAIMON_ASSIGN_OR_RAISE(uint64_t file_length, in->Length());
         auto input_stream = std::make_unique<ArrowInputStreamAdapter>(in, arrow_pool_, file_length);
@@ -134,10 +135,12 @@ class FileReaderWrapperTest : public ::testing::Test {
         PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(arrow_pool_.get())
                                             ->properties(arrow_reader_props)
                                             ->Build(&file_reader));
-        return FileReaderWrapper::Create(std::move(file_reader));
+        return FileReaderWrapper::Create(std::move(file_reader), ::arrow::default_memory_pool(),
+                                         wrapper_batch_size);
     }
 
-    void PrepareParquetFile(const std::string& file_path, int32_t row_count) {
+    void PrepareParquetFile(const std::string& file_path, int32_t row_count,
+                            bool enable_page_index = false, int32_t write_batch_size = 10) {
         auto schema_pair = PrepareArrowSchema();
         const auto& arrow_schema = schema_pair.first;
         const auto& struct_type = schema_pair.second;
@@ -145,9 +148,14 @@ class FileReaderWrapperTest : public ::testing::Test {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
                              fs_->Create(file_path, /*overwrite=*/false));
         ::parquet::WriterProperties::Builder builder;
-        builder.write_batch_size(10);
+        builder.write_batch_size(write_batch_size);
         builder.max_row_group_length(1000);
         builder.enable_store_decimal_as_integer();
+        if (enable_page_index) {
+            builder.enable_write_page_index();
+            builder.disable_dictionary();
+            builder.data_pagesize(1);
+        }
         auto writer_properties = builder.build();
         ASSERT_OK_AND_ASSIGN(
             std::shared_ptr<ParquetFormatWriter> format_writer,
@@ -188,7 +196,8 @@ TEST_F(FileReaderWrapperTest, EmptyFile) {
 }
 
 TEST_F(FileReaderWrapperTest, NullFileReader) {
-    ASSERT_NOK_WITH_MSG(FileReaderWrapper::Create(nullptr),
+    ASSERT_NOK_WITH_MSG(FileReaderWrapper::Create(nullptr, ::arrow::default_memory_pool(),
+                                                  /*batch_size=*/0),
                         "file reader wrapper create failed. file reader is nullptr");
 }
 
@@ -236,6 +245,126 @@ TEST_F(FileReaderWrapperTest, Simple) {
     ASSERT_FALSE(record_batch);
     ASSERT_EQ(5500, reader_wrapper->GetNextRowToRead());
     ASSERT_EQ(5500, reader_wrapper->GetPreviousBatchFirstRowNumber().value());
+}
+
+/// Regression: when batch_size_ is 0 (the default) and a row group is consumed via
+/// the page-filtered streaming path, we must not pass 0 to TableBatchReader::set_chunksize
+/// — that would make ReadNext spin forever on zero-row batches. The wrapper now
+/// translates 0 to int64_max so the reader produces one batch covering all matched rows.
+TEST_F(FileReaderWrapperTest, PageFilteredZeroBatchSizeDoesNotHang) {
+    std::string file_path = PathUtil::JoinPath(dir_->Str(), "page_zero_batch.parquet");
+    PrepareParquetFile(file_path, /*row_count=*/200, /*enable_page_index=*/true);
+    ASSERT_OK_AND_ASSIGN(auto reader_wrapper, PrepareReaderWrapper(file_path));
+    ASSERT_EQ(1, reader_wrapper->GetNumberOfRowGroups());
+
+    // Inject a per-RG RowRanges to drive the page-filtered streaming path. Two non-
+    // contiguous ranges keep the test honest about RowRanges semantics; the actual
+    // numbers don't matter as long as their total falls inside the row group.
+    RowRanges rr({RowRanges::Range(0, 49), RowRanges::Range(100, 149)});
+    reader_wrapper->SetRowGroupRowRanges({{0, rr}});
+
+    std::vector<int32_t> all_columns = {0, 1, 2};
+    ASSERT_OK(reader_wrapper->PrepareForReading({0}, all_columns));
+
+    int64_t total = 0;
+    int64_t batch_count = 0;
+    while (true) {
+        ASSERT_OK_AND_ASSIGN(auto batch, reader_wrapper->Next());
+        if (!batch) break;
+        total += batch->num_rows();
+        ++batch_count;
+        ASSERT_LT(batch_count, 1000) << "Next() did not converge — likely an infinite loop";
+    }
+    ASSERT_EQ(100, total);
+    ASSERT_GE(batch_count, 1);
+}
+
+/// SeekToRow back to a previously-consumed page-filtered row group must rebuild the
+/// per-RG streaming reader from row_group_row_ranges_ and re-yield the same rows.
+/// The page-filter path holds no per-RG cache that consumption could destroy; the
+/// reader is constructed on demand each time, mirroring Arrow's stateless
+/// GetRecordBatchReader for the fully-matched path.
+TEST_F(FileReaderWrapperTest, SeekBackToConsumedPageFilteredRowGroup) {
+    std::string file_path = PathUtil::JoinPath(dir_->Str(), "seek_back.parquet");
+    // 2000 rows produces 2 row groups (max_row_group_length=1000) with page index enabled.
+    PrepareParquetFile(file_path, /*row_count=*/2000, /*enable_page_index=*/true);
+    ASSERT_OK_AND_ASSIGN(auto reader_wrapper, PrepareReaderWrapper(file_path));
+    ASSERT_EQ(2, reader_wrapper->GetNumberOfRowGroups());
+
+    // Both RGs page-filtered. RowRanges are RG-local: RG0 keeps 40 rows, RG1 keeps 50.
+    std::map<int32_t, RowRanges> row_ranges_map;
+    row_ranges_map[0] = RowRanges(RowRanges::Range(10, 49));
+    row_ranges_map[1] = RowRanges(RowRanges::Range(100, 149));
+    reader_wrapper->SetRowGroupRowRanges(row_ranges_map);
+
+    std::vector<int32_t> all_columns = {0, 1, 2};
+    ASSERT_OK(reader_wrapper->PrepareForReading({0, 1}, all_columns));
+
+    auto count_all_rows = [&](int64_t* out_total) {
+        int64_t total = 0;
+        while (true) {
+            auto next = reader_wrapper->Next();
+            if (!next.ok()) return next.status();
+            auto batch = std::move(next).value();
+            if (!batch) break;
+            total += batch->num_rows();
+        }
+        *out_total = total;
+        return Status::OK();
+    };
+
+    int64_t first_total = 0;
+    ASSERT_OK(count_all_rows(&first_total));
+    ASSERT_EQ(90, first_total);  // 40 + 50
+
+    // Seek back to row 0 (start of RG0). The on-demand reader construction means RG0
+    // is read again from scratch, producing the same 90 rows total.
+    ASSERT_OK(reader_wrapper->SeekToRow(0));
+
+    int64_t second_total = 0;
+    ASSERT_OK(count_all_rows(&second_total));
+    ASSERT_EQ(90, second_total);
+}
+
+/// When the page-level predicate matches more rows than the wrapper's batch_size,
+/// the page-filtered streaming path must split the filtered rows across multiple
+/// Next() calls. Pages are written 3 rows wide (write_batch_size=3 with
+/// data_pagesize=1) so that filtered rows span multiple page-sized chunks; the
+/// emitted batches must (a) sum to the RowRanges row count and (b) never exceed
+/// the configured batch_size — TableBatchReader additionally caps each batch at
+/// the underlying chunk boundary, which is fine as long as the cap holds.
+TEST_F(FileReaderWrapperTest, PageFilteredRespectsBatchSize) {
+    constexpr int32_t kRowCount = 60;
+    constexpr int32_t kPageRowCount = 3;
+    constexpr int64_t kExpectedTotal = 30;
+
+    std::string file_path = PathUtil::JoinPath(dir_->Str(), "page_split.parquet");
+    PrepareParquetFile(file_path, kRowCount, /*enable_page_index=*/true,
+                       /*write_batch_size=*/kPageRowCount);
+
+    // Keep rows [0, 29] — the first 10 pages of the row group.
+    RowRanges rr({RowRanges::Range(0, kExpectedTotal - 1)});
+
+    for (int64_t batch_size : {int64_t{1}, int64_t{2}, int64_t{3}, int64_t{5}, int64_t{10}}) {
+        SCOPED_TRACE("batch_size=" + std::to_string(batch_size));
+        ASSERT_OK_AND_ASSIGN(auto reader_wrapper, PrepareReaderWrapper(file_path, batch_size));
+        reader_wrapper->SetRowGroupRowRanges({{0, rr}});
+        ASSERT_OK(reader_wrapper->PrepareForReading({0}, {0, 1, 2}));
+
+        int64_t total = 0;
+        int64_t batch_count = 0;
+        while (true) {
+            ASSERT_OK_AND_ASSIGN(auto batch, reader_wrapper->Next());
+            if (!batch) break;
+            ASSERT_GT(batch->num_rows(), 0);
+            ASSERT_LE(batch->num_rows(), batch_size);
+            total += batch->num_rows();
+            ++batch_count;
+        }
+        ASSERT_EQ(kExpectedTotal, total);
+        const int64_t min_batches = (kExpectedTotal + batch_size - 1) / batch_size;
+        ASSERT_GE(batch_count, min_batches);
+    }
 }
 
 TEST_F(FileReaderWrapperTest, GetRowGroupRanges) {

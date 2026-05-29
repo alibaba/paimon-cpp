@@ -45,6 +45,9 @@ namespace paimon {
 /// execution.
 ///
 /// @note If `func` returns `void`, the returned future is of type `std::future<void>`.
+///
+/// TODO: Since paimon-cpp uses `Status`/`Result` for error handling throughout, the exception
+/// capture logic (try/catch + set_exception) in `Via()` will be removed in the future.
 template <typename Func>
 auto Via(Executor* executor, Func&& func) -> std::future<decltype(func())> {
     using ResultType = decltype(func());
