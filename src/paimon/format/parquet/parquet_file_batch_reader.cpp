@@ -16,6 +16,7 @@
 
 #include "paimon/format/parquet/parquet_file_batch_reader.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <unordered_map>
 
@@ -47,6 +48,17 @@
 #include "parquet/arrow/reader.h"
 #include "parquet/properties.h"
 
+// Convert any std::exception thrown by underlying Parquet/Arrow APIs into a
+// Status. Used as the trailing catch clauses of a try block in every public
+// method that calls into the parquet C++ API, so the read layer never throws.
+#define PAIMON_PARQUET_CATCH_AND_RETURN_STATUS(context)                     \
+    catch (const std::exception& e) {                                       \
+        return Status::Invalid(fmt::format("{}: {}", (context), e.what())); \
+    }                                                                       \
+    catch (...) {                                                           \
+        return Status::UnknownError((context), ": unknown error");          \
+    }
+
 namespace arrow {
 class MemoryPool;
 }  // namespace arrow
@@ -65,99 +77,149 @@ ParquetFileBatchReader::ParquetFileBatchReader(
       input_stream_(std::move(input_stream)),
       reader_(std::move(reader)),
       read_ranges_(reader_->GetAllRowGroupRanges()),
-      metrics_(std::make_shared<MetricsImpl>()) {}
+      metrics_(std::make_shared<MetricsImpl>()),
+      logger_(Logger::GetLogger("ParquetFileBatchReader")) {}
 
 Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
     std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
     const std::shared_ptr<arrow::MemoryPool>& pool,
     const std::map<std::string, std::string>& options, int32_t batch_size) {
-    assert(input_stream);
-    PAIMON_ASSIGN_OR_RAISE(::parquet::ReaderProperties reader_properties,
-                           CreateReaderProperties(pool, options));
-    PAIMON_ASSIGN_OR_RAISE(::parquet::ArrowReaderProperties arrow_reader_properties,
-                           CreateArrowReaderProperties(pool, options, batch_size));
+    try {
+        assert(input_stream);
+        PAIMON_ASSIGN_OR_RAISE(::parquet::ReaderProperties reader_properties,
+                               CreateReaderProperties(pool, options));
 
-    ::parquet::arrow::FileReaderBuilder file_reader_builder;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.Open(input_stream, reader_properties));
+        PAIMON_ASSIGN_OR_RAISE(::parquet::ArrowReaderProperties arrow_reader_properties,
+                               CreateArrowReaderProperties(pool, options, batch_size));
 
-    std::unique_ptr<::parquet::arrow::FileReader> file_reader;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(pool.get())
-                                        ->properties(arrow_reader_properties)
-                                        ->Build(&file_reader));
+        ::parquet::arrow::FileReaderBuilder file_reader_builder;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.Open(input_stream, reader_properties));
 
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileReaderWrapper> reader,
-                           FileReaderWrapper::Create(std::move(file_reader)));
-    auto parquet_file_batch_reader = std::unique_ptr<ParquetFileBatchReader>(
-        new ParquetFileBatchReader(std::move(input_stream), std::move(reader), options, pool));
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::ArrowSchema> file_schema,
-                           parquet_file_batch_reader->GetFileSchema());
-    PAIMON_RETURN_NOT_OK(parquet_file_batch_reader->SetReadSchema(
-        file_schema.get(), /*predicate=*/nullptr, /*selection_bitmap=*/std::nullopt));
-    return parquet_file_batch_reader;
+        std::unique_ptr<::parquet::arrow::FileReader> file_reader;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(pool.get())
+                                            ->properties(arrow_reader_properties)
+                                            ->Build(&file_reader));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileReaderWrapper> reader,
+                               FileReaderWrapper::Create(std::move(file_reader), pool.get(),
+                                                         static_cast<int64_t>(batch_size)));
+        auto parquet_file_batch_reader = std::unique_ptr<ParquetFileBatchReader>(
+            new ParquetFileBatchReader(std::move(input_stream), std::move(reader), options, pool));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::ArrowSchema> file_schema,
+                               parquet_file_batch_reader->GetFileSchema());
+        PAIMON_RETURN_NOT_OK(parquet_file_batch_reader->SetReadSchema(
+            file_schema.get(), /*predicate=*/nullptr, /*selection_bitmap=*/std::nullopt));
+        return parquet_file_batch_reader;
+    }
+    PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetFileBatchReader::Create")
 }
 
 Result<std::unique_ptr<::ArrowSchema>> ParquetFileBatchReader::GetFileSchema() const {
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> file_schema, reader_->GetSchema());
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> new_schema,
-                           ParquetFieldIdConverter::GetPaimonIdsFromParquetIds(file_schema));
-    PAIMON_ASSIGN_OR_RAISE(
-        std::shared_ptr<arrow::DataType> new_type,
-        ParquetTimestampConverter::AdjustTimezone(arrow::struct_(new_schema->fields())));
+    try {
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> file_schema, reader_->GetSchema());
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> new_schema,
+                               ParquetFieldIdConverter::GetPaimonIdsFromParquetIds(file_schema));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<arrow::DataType> new_type,
+            ParquetTimestampConverter::AdjustTimezone(arrow::struct_(new_schema->fields())));
 
-    auto c_schema = std::make_unique<::ArrowSchema>();
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportType(*new_type, c_schema.get()));
-    return c_schema;
+        auto c_schema = std::make_unique<::ArrowSchema>();
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportType(*new_type, c_schema.get()));
+        return c_schema;
+    }
+    PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetFileBatchReader::GetFileSchema")
 }
 
 Status ParquetFileBatchReader::SetReadSchema(
     ::ArrowSchema* schema, const std::shared_ptr<Predicate>& predicate,
     const std::optional<RoaringBitmap32>& selection_bitmap) {
-    if (!schema) {
-        return Status::Invalid("SetReadSchema failed: read schema cannot be nullptr");
-    }
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> read_schema,
-                                      arrow::ImportSchema(schema));
-
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> file_schema, reader_->GetSchema());
-    std::unordered_map<std::string, std::vector<int32_t>> field_index_map;
-    int32_t i = 0;
-    for (const auto& field : file_schema->fields()) {
-        std::vector<int32_t> v;
-        FlattenSchema(field->type(), &i, &v);
-        field_index_map[field->name()] = v;
-    }
-
-    std::vector<int32_t> column_indices;
-    for (const auto& field : read_schema->field_names()) {
-        if (field_index_map.find(field) != field_index_map.end()) {
-            for (int32_t index : field_index_map[field]) {
-                column_indices.push_back(index);
-            }
-        } else {
-            return Status::Invalid(fmt::format("Field {} is not found in schema.", field));
+    try {
+        if (!schema) {
+            return Status::Invalid("SetReadSchema failed: read schema cannot be nullptr");
         }
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> read_schema,
+                                          arrow::ImportSchema(schema));
+
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> file_schema, reader_->GetSchema());
+        std::unordered_map<std::string, std::vector<int32_t>> field_index_map;
+        int32_t i = 0;
+        for (const auto& field : file_schema->fields()) {
+            std::vector<int32_t> v;
+            FlattenSchema(field->type(), &i, &v);
+            field_index_map[field->name()] = v;
+        }
+
+        std::vector<int32_t> column_indices;
+        for (const auto& field : read_schema->field_names()) {
+            if (field_index_map.find(field) != field_index_map.end()) {
+                for (int32_t index : field_index_map[field]) {
+                    column_indices.push_back(index);
+                }
+            } else {
+                return Status::Invalid(fmt::format("Field {} is not found in schema.", field));
+            }
+        }
+
+        // Build column name to index map for page-level filtering.
+        // For leaf columns, indices[0] is the correct leaf column index in Parquet.
+        // For nested types (struct/list/map), FlattenSchema produces multiple leaf indices,
+        // but predicate pushdown only targets leaf columns with simple types, so indices[0]
+        // is always the correct single leaf index for predicate evaluation.
+        std::map<std::string, int32_t> column_name_to_index;
+        for (const auto& [name, indices] : field_index_map) {
+            if (!indices.empty()) {
+                column_name_to_index[name] = indices[0];
+            }
+        }
+
+        std::vector<int32_t> row_groups = arrow::internal::Iota(reader_->GetNumberOfRowGroups());
+        if (predicate) {
+            PAIMON_ASSIGN_OR_RAISE(row_groups,
+                                   FilterRowGroupsByPredicate(predicate, file_schema, row_groups));
+        }
+        if (selection_bitmap) {
+            PAIMON_ASSIGN_OR_RAISE(row_groups,
+                                   FilterRowGroupsByBitmap(selection_bitmap.value(), row_groups));
+        }
+        // Apply page-level filtering after bitmap pruning so we don't read page index
+        // pages for row groups that the bitmap already excluded.
+        if (predicate && !row_groups.empty()) {
+            PAIMON_ASSIGN_OR_RAISE(
+                bool enable_page_index_filter,
+                OptionsUtils::GetValueFromMap<bool>(options_, PARQUET_READ_ENABLE_PAGE_INDEX_FILTER,
+                                                    DEFAULT_PARQUET_READ_ENABLE_PAGE_INDEX_FILTER));
+            if (enable_page_index_filter) {
+                PAIMON_ASSIGN_OR_RAISE(
+                    auto page_filter_result,
+                    FilterRowGroupsByPageIndex(predicate, column_name_to_index, row_groups));
+                row_groups = std::move(page_filter_result.first);
+                reader_->SetRowGroupRowRanges(page_filter_result.second);
+            }
+        }
+
+        read_data_type_ = arrow::struct_(read_schema->fields());
+        read_row_groups_ = row_groups;
+        read_column_indices_ = column_indices;
+
+        metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_TOTAL,
+                             reader_->GetNumberOfRowGroups());
+        metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_AFTER_FILTER, row_groups.size());
+
+        PAIMON_ASSIGN_OR_RAISE(
+            std::set<int32_t> ordered_row_groups,
+            reader_->FilterRowGroupsByReadRanges(read_ranges_, read_row_groups_));
+
+        // When predicate or selection is applied, prepare eagerly so PreBuffer I/O
+        // starts immediately. All file readers are created before consumption begins,
+        // so eager preparation allows I/O for multiple files to overlap.
+        Status ret;
+        if (predicate || selection_bitmap) {
+            ret = reader_->PrepareForReading(ordered_row_groups, read_column_indices_);
+        } else {
+            ret = reader_->PrepareForReadingLazy(ordered_row_groups, read_column_indices_);
+        }
+        return ret;
     }
-
-    std::vector<int32_t> row_groups = arrow::internal::Iota(reader_->GetNumberOfRowGroups());
-    if (predicate) {
-        PAIMON_ASSIGN_OR_RAISE(row_groups,
-                               FilterRowGroupsByPredicate(predicate, file_schema, row_groups));
-    }
-    if (selection_bitmap) {
-        PAIMON_ASSIGN_OR_RAISE(row_groups,
-                               FilterRowGroupsByBitmap(selection_bitmap.value(), row_groups));
-    }
-
-    read_data_type_ = arrow::struct_(read_schema->fields());
-    read_row_groups_ = row_groups;
-    read_column_indices_ = column_indices;
-
-    metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_TOTAL, reader_->GetNumberOfRowGroups());
-    metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_AFTER_FILTER, row_groups.size());
-
-    PAIMON_ASSIGN_OR_RAISE(std::set<int32_t> ordered_row_groups,
-                           reader_->FilterRowGroupsByReadRanges(read_ranges_, read_row_groups_));
-    return reader_->PrepareForReadingLazy(ordered_row_groups, read_column_indices_);
+    PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetFileBatchReader::SetReadSchema")
 }
 
 Result<std::vector<int32_t>> ParquetFileBatchReader::FilterRowGroupsByPredicate(
@@ -224,42 +286,100 @@ Result<std::vector<int32_t>> ParquetFileBatchReader::FilterRowGroupsByBitmap(
     return target_row_groups;
 }
 
+// Uses page-level column index statistics to filter row groups and store per-row-group
+// RowRanges for true page-level skipping. A row group is excluded if ALL its pages are
+// determined to not match the predicate. For partially matched row groups, RowRanges
+// are stored for page-level filtering during reading.
+Result<std::pair<std::vector<int32_t>, std::map<int32_t, RowRanges>>>
+ParquetFileBatchReader::FilterRowGroupsByPageIndex(
+    const std::shared_ptr<Predicate>& predicate,
+    const std::map<std::string, int32_t>& column_name_to_index,
+    const std::vector<int32_t>& src_row_groups) {
+    std::map<int32_t, RowRanges> rg_row_ranges;
+
+    if (!predicate) {
+        return std::make_pair(src_row_groups, rg_row_ranges);
+    }
+
+    auto page_index_reader = reader_->GetPageIndexReader();
+    if (!page_index_reader) {
+        PAIMON_LOG_DEBUG(logger_,
+                         "Page index not available in file, skipping page-level filtering (%s)",
+                         PARQUET_WRITE_ENABLE_PAGE_INDEX);
+        return std::make_pair(src_row_groups, rg_row_ranges);
+    }
+
+    auto file_metadata = reader_->GetFileReader()->parquet_reader()->metadata();
+
+    std::vector<int32_t> target_row_groups;
+    target_row_groups.reserve(src_row_groups.size());
+
+    for (int32_t row_group_idx : src_row_groups) {
+        auto result =
+            reader_->CalculateFilteredRowRanges(row_group_idx, predicate, column_name_to_index);
+
+        if (!result.ok()) {
+            target_row_groups.push_back(row_group_idx);
+            continue;
+        }
+
+        const auto& row_ranges = result.value();
+        if (!row_ranges.IsEmpty()) {
+            target_row_groups.push_back(row_group_idx);
+
+            int64_t rg_row_count = file_metadata->RowGroup(row_group_idx)->num_rows();
+            if (row_ranges.RowCount() < rg_row_count) {
+                rg_row_ranges[row_group_idx] = row_ranges;
+            }
+        }
+    }
+
+    return std::make_pair(std::move(target_row_groups), std::move(rg_row_ranges));
+}
+
 Result<BatchReader::ReadBatch> ParquetFileBatchReader::NextBatch() {
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::RecordBatch> batch, reader_->Next());
-    if (batch == nullptr) {
-        return BatchReader::MakeEofBatch();
-    }
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array, batch->ToStructArray());
-    PAIMON_ASSIGN_OR_RAISE(bool need_cast, ParquetTimestampConverter::NeedCastArrayForTimestamp(
-                                               array->type(), read_data_type_));
-    if (need_cast) {
-        PAIMON_ASSIGN_OR_RAISE(array, ParquetTimestampConverter::CastArrayForTimestamp(
-                                          array, read_data_type_, arrow_pool_));
-    }
-    PAIMON_ASSIGN_OR_RAISE(need_cast, ParquetTimestampConverter::NeedCastArrayForTimestamp(
-                                          array->type(), read_data_type_));
-    if (need_cast) {
-        return Status::Invalid(
-            fmt::format("unexpected: in parquet, after CastArrayForTimestamp, output type {} not "
-                        "equal with read schema {}",
-                        array->type()->ToString(), read_data_type_->ToString()));
-    }
-    std::unique_ptr<ArrowArray> c_array = std::make_unique<ArrowArray>();
-    std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, c_array.get(), c_schema.get()));
+    try {
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::RecordBatch> batch, reader_->Next());
+        if (batch == nullptr) {
+            return BatchReader::MakeEofBatch();
+        }
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,
+                                          batch->ToStructArray());
+        PAIMON_ASSIGN_OR_RAISE(bool need_cast, ParquetTimestampConverter::NeedCastArrayForTimestamp(
+                                                   array->type(), read_data_type_));
+        if (need_cast) {
+            PAIMON_ASSIGN_OR_RAISE(array, ParquetTimestampConverter::CastArrayForTimestamp(
+                                              array, read_data_type_, arrow_pool_));
+        }
+        PAIMON_ASSIGN_OR_RAISE(need_cast, ParquetTimestampConverter::NeedCastArrayForTimestamp(
+                                              array->type(), read_data_type_));
+        if (need_cast) {
+            return Status::Invalid(fmt::format(
+                "unexpected: in parquet, after CastArrayForTimestamp, output type {} not "
+                "equal with read schema {}",
+                array->type()->ToString(), read_data_type_->ToString()));
+        }
+        std::unique_ptr<ArrowArray> c_array = std::make_unique<ArrowArray>();
+        std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, c_array.get(), c_schema.get()));
 
-    read_rows_ += array->length();
-    read_batch_count_++;
-    metrics_->SetCounter(ParquetMetrics::READ_ROWS, read_rows_);
-    metrics_->SetCounter(ParquetMetrics::READ_BATCH_COUNT, read_batch_count_);
+        read_rows_ += array->length();
+        read_batch_count_++;
+        metrics_->SetCounter(ParquetMetrics::READ_ROWS, read_rows_);
+        metrics_->SetCounter(ParquetMetrics::READ_BATCH_COUNT, read_batch_count_);
 
-    return make_pair(std::move(c_array), std::move(c_schema));
+        return make_pair(std::move(c_array), std::move(c_schema));
+    }
+    PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetFileBatchReader::NextBatch")
 }
 
 Result<std::vector<std::pair<uint64_t, uint64_t>>> ParquetFileBatchReader::GenReadRanges(
     bool* need_prefetch) const {
-    *need_prefetch = true;
-    return reader_->GetAllRowGroupRanges();
+    try {
+        *need_prefetch = true;
+        return reader_->GetAllRowGroupRanges();
+    }
+    PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetFileBatchReader::GenReadRanges")
 }
 
 Result<::parquet::ReaderProperties> ParquetFileBatchReader::CreateReaderProperties(
