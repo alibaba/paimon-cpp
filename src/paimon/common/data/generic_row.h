@@ -206,7 +206,9 @@ class GenericRow : public InternalRow {
         if (this == &other) {
             return true;
         }
-        return *kind_ == *other.kind_ && fields_ == other.fields_;
+        bool kind_equal =
+            (kind_ == other.kind_) || (kind_ && other.kind_ && *kind_ == *other.kind_);
+        return kind_equal && fields_ == other.fields_;
     }
 
     /// Creates an instance of GenericRow with given field values.
