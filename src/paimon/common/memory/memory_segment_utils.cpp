@@ -237,8 +237,7 @@ bool MemorySegmentUtils::EqualsMultiSegments(const std::vector<MemorySegment>& s
     int32_t seg_offset2 = offset2 - seg_size2 * seg_index2;  // equal to %
 
     while (len > 0) {
-        int32_t equal_len =
-            std::min(std::min(len, seg_size1 - seg_offset1), seg_size2 - seg_offset2);
+        int32_t equal_len = std::min({len, seg_size1 - seg_offset1, seg_size2 - seg_offset2});
         if (!segments1[seg_index1].EqualTo(segments2[seg_index2], seg_offset1, seg_offset2,
                                            equal_len)) {
             return false;
