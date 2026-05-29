@@ -264,6 +264,7 @@ set(PAIMON_CORE_SRCS
     core/mergetree/lookup_file.cpp
     core/mergetree/lookup_levels.cpp
     core/mergetree/lookup/remote_lookup_file_manager.cpp
+    core/mergetree/row_count_accumulator.cpp
     core/migrate/file_meta_utils.cpp
     core/operation/data_evolution_file_store_scan.cpp
     core/operation/data_evolution_split_read.cpp
@@ -277,6 +278,7 @@ set(PAIMON_CORE_SRCS
     core/operation/file_store_commit_impl.cpp
     core/operation/file_store_scan.cpp
     core/operation/file_store_write.cpp
+    core/operation/count_split_read.cpp
     core/operation/internal_read_context.cpp
     core/operation/key_value_file_store_scan.cpp
     core/operation/key_value_file_store_write.cpp

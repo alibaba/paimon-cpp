@@ -18,8 +18,10 @@
 
 #include <utility>
 
+#include "paimon/core/operation/count_split_read.h"
 #include "paimon/core/operation/merge_file_split_read.h"
 #include "paimon/core/operation/raw_file_split_read.h"
+#include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/status.h"
 
 namespace paimon {
@@ -29,9 +31,51 @@ class FileStorePathFactory;
 class InternalReadContext;
 class MemoryPool;
 
+namespace {
+
+class PkCountReader : public CountReader {
+ public:
+    PkCountReader(std::vector<std::shared_ptr<Split>> splits,
+              std::unique_ptr<CountSplitRead>&& count_split_read)
+        : splits_(std::move(splits)),
+      count_split_read_(std::move(count_split_read)) {}
+
+    Result<int64_t> CountRows() override {
+        int64_t total = 0;
+        for (const auto& split : splits_) {
+            PAIMON_ASSIGN_OR_RAISE(int64_t split_count, CountSingleSplit(split));
+            total += split_count;
+        }
+        return total;
+    }
+
+ private:
+    Result<int64_t> CountSingleSplit(const std::shared_ptr<Split>& split) {
+        auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
+        if (!data_split) {
+            return Status::Invalid("split cannot be cast to DataSplitImpl");
+        }
+
+        return count_split_read_->CountRows(data_split);
+    }
+
+ private:
+    std::vector<std::shared_ptr<Split>> splits_;
+    std::unique_ptr<CountSplitRead> count_split_read_;
+};
+
+}  // namespace
+
 KeyValueTableRead::KeyValueTableRead(std::vector<std::unique_ptr<SplitRead>>&& split_reads,
-                                     const std::shared_ptr<MemoryPool>& memory_pool)
-    : TableRead(memory_pool), split_reads_(std::move(split_reads)) {}
+                                     const std::shared_ptr<FileStorePathFactory>& path_factory,
+                                     const std::shared_ptr<InternalReadContext>& context,
+                                     const std::shared_ptr<MemoryPool>& memory_pool,
+                                     const std::shared_ptr<Executor>& executor)
+    : TableRead(memory_pool),
+      split_reads_(std::move(split_reads)),
+      path_factory_(path_factory),
+      context_(context),
+      executor_(executor) {}
 
 Result<std::unique_ptr<TableRead>> KeyValueTableRead::Create(
     const std::shared_ptr<FileStorePathFactory>& path_factory,
@@ -46,7 +90,9 @@ Result<std::unique_ptr<TableRead>> KeyValueTableRead::Create(
         MergeFileSplitRead::Create(path_factory, context, memory_pool, executor));
     split_reads.emplace_back(std::move(merge_file_split_read));
 
-    return std::unique_ptr<TableRead>(new KeyValueTableRead(std::move(split_reads), memory_pool));
+    return std::unique_ptr<TableRead>(
+        new KeyValueTableRead(std::move(split_reads), path_factory, context, memory_pool,
+                              executor));
 }
 
 void KeyValueTableRead::ForceKeepDelete(bool force_keep_delete) {
@@ -72,6 +118,24 @@ Result<std::unique_ptr<BatchReader>> KeyValueTableRead::CreateReader(
         }
     }
     return Status::Invalid("create reader failed, not read match with data split.");
+}
+
+Result<std::unique_ptr<CountReader>> KeyValueTableRead::CreateCountReader(
+    const std::vector<std::shared_ptr<Split>>& splits) {
+    if (context_->GetPredicate() != nullptr) {
+        return Status::NotImplemented(
+            "CreateCountReader with predicate pushdown is not supported yet");
+    }
+
+    if (force_keep_delete_) {
+        return Status::NotImplemented("CreateCountReader with force_keep_delete is not supported");
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<CountSplitRead> count_split_read,
+        CountSplitRead::Create(path_factory_, context_, GetMemoryPool(), executor_));
+
+    return std::make_unique<PkCountReader>(splits, std::move(count_split_read));
 }
 
 }  // namespace paimon

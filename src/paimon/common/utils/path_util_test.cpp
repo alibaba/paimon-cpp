@@ -37,6 +37,23 @@ TEST(PathUtilsTest, TestNormalizePathWithEmptyString) {
     ASSERT_NOK_WITH_MSG(PathUtil::NormalizePath(test_path), "path is an empty string.");
 }
 
+TEST(PathUtilsTest, TestNormalizePathWithScheme) {
+    {
+        // hdfs with no authority: triple slash collapses to single slash
+        std::string test_path = "hdfs:///warehouse";
+        ASSERT_OK_AND_ASSIGN(std::string normalize_path, PathUtil::NormalizePath(test_path));
+        ASSERT_EQ(normalize_path, "hdfs:/warehouse");
+        std::cout << normalize_path << std::endl;
+    }
+    {
+        // file with no authority: triple slash collapses to single slash
+        std::string test_path = "file:///tmp";
+        ASSERT_OK_AND_ASSIGN(std::string normalize_path, PathUtil::NormalizePath(test_path));
+        ASSERT_EQ(normalize_path, "file:/tmp");
+        ASSERT_TRUE(true);
+    }
+}
+
 TEST(PathUtilsTest, TestNormalizePathWithNoScheme) {
     std::string test_path = "//tmp////index";
     ASSERT_OK_AND_ASSIGN(std::string normalize_path, PathUtil::NormalizePath(test_path));

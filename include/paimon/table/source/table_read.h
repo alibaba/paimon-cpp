@@ -23,6 +23,7 @@
 #include "paimon/memory/memory_pool.h"
 #include "paimon/read_context.h"
 #include "paimon/reader/batch_reader.h"
+#include "paimon/reader/count_reader.h"
 #include "paimon/result.h"
 #include "paimon/table/source/split.h"
 #include "paimon/visibility.h"
@@ -62,6 +63,12 @@ class PAIMON_EXPORT TableRead {
     /// @return A Result containing a unique pointer to the `BatchReader` instance.
     virtual Result<std::unique_ptr<BatchReader>> CreateReader(
         const std::shared_ptr<Split>& split) = 0;
+
+    /// Creates a `CountReader` for count queries on the specified splits.
+    ///
+    /// Implementations may override this to provide a more efficient count path.
+    virtual Result<std::unique_ptr<CountReader>> CreateCountReader(
+        const std::vector<std::shared_ptr<Split>>& splits);
 
  protected:
     explicit TableRead(const std::shared_ptr<MemoryPool>& memory_pool);
