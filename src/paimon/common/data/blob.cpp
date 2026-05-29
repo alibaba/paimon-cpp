@@ -35,7 +35,8 @@ class MemoryPool;
 
 class Blob::Impl {
  public:
-    Impl(std::unique_ptr<BlobDescriptor>&& descriptor) : descriptor_(std::move(descriptor)) {}
+    explicit Impl(std::unique_ptr<BlobDescriptor>&& descriptor)
+        : descriptor_(std::move(descriptor)) {}
 
     PAIMON_UNIQUE_PTR<Bytes> SerializeDescriptor(const std::shared_ptr<MemoryPool>& pool) const {
         return descriptor_->Serialize(pool);
