@@ -132,21 +132,21 @@ int32_t MemorySegmentUtils::ByteIndex(int32_t bit_index) {
 void MemorySegmentUtils::BitUnSet(MemorySegment* segment, int32_t base_offset, int32_t index) {
     int32_t offset = base_offset + ByteIndex(index);
     char current = segment->Get(offset);
-    current &= ~(1 << (index & BIT_BYTE_INDEX_MASK));
+    current &= static_cast<char>(~(1u << (index & BIT_BYTE_INDEX_MASK)));
     segment->Put(offset, current);
 }
 
 void MemorySegmentUtils::BitSet(MemorySegment* segment, int32_t base_offset, int32_t index) {
     int32_t offset = base_offset + ByteIndex(index);
     char current = segment->Get(offset);
-    current |= (1 << (index & BIT_BYTE_INDEX_MASK));
+    current |= static_cast<char>(1u << (index & BIT_BYTE_INDEX_MASK));
     segment->Put(offset, current);
 }
 
 bool MemorySegmentUtils::BitGet(const MemorySegment& segment, int32_t base_offset, int32_t index) {
     int32_t offset = base_offset + ByteIndex(index);
     char current = segment.Get(offset);
-    return (current & (1 << (index & BIT_BYTE_INDEX_MASK))) != 0;
+    return (current & static_cast<char>(1u << (index & BIT_BYTE_INDEX_MASK))) != 0;
 }
 
 void MemorySegmentUtils::BitSet(std::vector<MemorySegment>* segments, int32_t base_offset,
@@ -155,7 +155,7 @@ void MemorySegmentUtils::BitSet(std::vector<MemorySegment>* segments, int32_t ba
         int32_t offset = base_offset + ByteIndex(index);
         MemorySegment& segment = (*segments)[0];
         char current = segment.Get(offset);
-        current |= (1 << (index & BIT_BYTE_INDEX_MASK));
+        current |= static_cast<char>(1u << (index & BIT_BYTE_INDEX_MASK));
         segment.Put(offset, current);
     } else {
         BitSetMultiSegments(segments, base_offset, index);
@@ -171,7 +171,7 @@ void MemorySegmentUtils::BitSetMultiSegments(std::vector<MemorySegment>* segment
     MemorySegment& segment = (*segments)[seg_index];
 
     char current = segment.Get(seg_offset);
-    current |= (1 << (index & BIT_BYTE_INDEX_MASK));
+    current |= static_cast<char>(1u << (index & BIT_BYTE_INDEX_MASK));
     segment.Put(seg_offset, current);
 }
 
@@ -179,7 +179,7 @@ bool MemorySegmentUtils::BitGet(const std::vector<MemorySegment>& segments, int3
                                 int32_t index) {
     int32_t offset = base_offset + ByteIndex(index);
     char current = GetValue<char>(segments, offset);
-    return (current & (1 << (index & BIT_BYTE_INDEX_MASK))) != 0;
+    return (current & static_cast<char>(1u << (index & BIT_BYTE_INDEX_MASK))) != 0;
 }
 
 void MemorySegmentUtils::BitUnSet(std::vector<MemorySegment>* segments, int32_t base_offset,
@@ -188,7 +188,7 @@ void MemorySegmentUtils::BitUnSet(std::vector<MemorySegment>* segments, int32_t 
         MemorySegment& segment = (*segments)[0];
         int32_t offset = base_offset + ByteIndex(index);
         char current = segment.Get(offset);
-        current &= ~(1 << (index & BIT_BYTE_INDEX_MASK));
+        current &= static_cast<char>(~(1u << (index & BIT_BYTE_INDEX_MASK)));
         segment.Put(offset, current);
     } else {
         BitUnSetMultiSegments(segments, base_offset, index);
@@ -204,7 +204,7 @@ void MemorySegmentUtils::BitUnSetMultiSegments(std::vector<MemorySegment>* segme
     MemorySegment& segment = (*segments)[seg_index];
 
     char current = segment.Get(seg_offset);
-    current &= ~(1 << (index & BIT_BYTE_INDEX_MASK));
+    current &= static_cast<char>(~(1u << (index & BIT_BYTE_INDEX_MASK)));
     segment.Put(seg_offset, current);
 }
 
@@ -237,8 +237,7 @@ bool MemorySegmentUtils::EqualsMultiSegments(const std::vector<MemorySegment>& s
     int32_t seg_offset2 = offset2 - seg_size2 * seg_index2;  // equal to %
 
     while (len > 0) {
-        int32_t equal_len =
-            std::min(std::min(len, seg_size1 - seg_offset1), seg_size2 - seg_offset2);
+        int32_t equal_len = std::min({len, seg_size1 - seg_offset1, seg_size2 - seg_offset2});
         if (!segments1[seg_index1].EqualTo(segments2[seg_index2], seg_offset1, seg_offset2,
                                            equal_len)) {
             return false;

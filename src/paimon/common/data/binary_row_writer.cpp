@@ -145,8 +145,9 @@ Result<BinaryRowWriter::FieldSetterFunc> BinaryRowWriter::CreateFieldSetter(
                 arrow::internal::checked_cast<arrow::Decimal128Type*>(field_type.get());
             assert(decimal_type);
             auto precision = decimal_type->precision();
-            field_setter = [field_idx, precision](const VariantType& field,
-                                                  BinaryRowWriter* writer) -> void {
+            auto scale = decimal_type->scale();
+            field_setter = [field_idx, precision, scale](const VariantType& field,
+                                                         BinaryRowWriter* writer) -> void {
                 if (DataDefine::IsVariantNull(field)) {
                     if (!Decimal::IsCompact(precision)) {
                         writer->WriteDecimal(field_idx, std::nullopt, precision);
@@ -155,8 +156,10 @@ Result<BinaryRowWriter::FieldSetterFunc> BinaryRowWriter::CreateFieldSetter(
                     }
                     return;
                 }
-                return writer->WriteDecimal(field_idx, DataDefine::GetVariantValue<Decimal>(field),
-                                            precision);
+                auto decimal_value = DataDefine::GetVariantValue<Decimal>(field);
+                assert(decimal_value.Scale() == scale);
+                (void)scale;
+                return writer->WriteDecimal(field_idx, decimal_value, precision);
             };
             return field_setter;
         }

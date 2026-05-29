@@ -20,8 +20,10 @@
 namespace paimon {
 
 int32_t BlockDecompressor::ReadIntLE(const char* buf) {
-    return (buf[0] & 0xFF) | ((buf[1] & 0xFF) << 8) | ((buf[2] & 0xFF) << 16) |
-           ((buf[3] & 0xFF) << 24);
+    return static_cast<int32_t>(static_cast<uint32_t>(static_cast<uint8_t>(buf[0])) |
+                                (static_cast<uint32_t>(static_cast<uint8_t>(buf[1])) << 8) |
+                                (static_cast<uint32_t>(static_cast<uint8_t>(buf[2])) << 16) |
+                                (static_cast<uint32_t>(static_cast<uint8_t>(buf[3])) << 24));
 }
 
 Status BlockDecompressor::ValidateLength(int32_t compressed_len, int32_t original_len) {

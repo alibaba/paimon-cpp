@@ -317,8 +317,11 @@ Status BlobFileBatchReader::ReadBlobContentAt(const int64_t offset, const int64_
 }
 
 int32_t BlobFileBatchReader::GetIndexLength(const int8_t* bytes, int32_t offset) {
-    return (bytes[offset + 3] << 24) | ((bytes[offset + 2] & 0xff) << 16) |
-           ((bytes[offset + 1] & 0xff) << 8) | (bytes[offset] & 0xff);
+    return static_cast<int32_t>(
+        (static_cast<uint32_t>(static_cast<uint8_t>(bytes[offset + 3])) << 24) |
+        (static_cast<uint32_t>(static_cast<uint8_t>(bytes[offset + 2])) << 16) |
+        (static_cast<uint32_t>(static_cast<uint8_t>(bytes[offset + 1])) << 8) |
+        static_cast<uint32_t>(static_cast<uint8_t>(bytes[offset])));
 }
 
 // Note: blob file has no self-describing schema, use read schema instead.

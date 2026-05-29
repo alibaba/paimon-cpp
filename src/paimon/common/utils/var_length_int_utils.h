@@ -87,14 +87,20 @@ class VarLengthIntUtils {
             ++(*offset);
             return static_cast<int32_t>(first_byte);
         }
-        // Multi-byte: fall through to generic loop
-        int32_t result = 0;
+        // Multi-byte: fall through to generic loop.
+        // NOTE: EncodeInt only encodes non-negative values, so a decoded negative result
+        // indicates malformed data.
+        uint32_t result = 0;
         for (int32_t shift = 0; shift < 32; shift += 7) {
             auto byte_val = static_cast<uint8_t>(data[*offset]);
             ++(*offset);
-            result |= static_cast<int32_t>(byte_val & 0x7F) << shift;
+            result |= static_cast<uint32_t>(byte_val & 0x7F) << shift;
             if ((byte_val & 0x80) == 0) {
-                return result;
+                auto signed_result = static_cast<int32_t>(result);
+                if (PAIMON_UNLIKELY(signed_result < 0)) {
+                    return Status::Invalid("Malformed varint32: decoded negative value");
+                }
+                return signed_result;
             }
         }
         return Status::Invalid("Malformed varint32: too many continuation bytes");
@@ -108,14 +114,20 @@ class VarLengthIntUtils {
             ++(*offset);
             return static_cast<int64_t>(first_byte);
         }
-        // Multi-byte: fall through to generic loop
-        int64_t result = 0;
+        // Multi-byte: fall through to generic loop.
+        // NOTE: EncodeLong only encodes non-negative values, so a decoded negative result
+        // indicates malformed data.
+        uint64_t result = 0;
         for (int32_t shift = 0; shift < 64; shift += 7) {
             auto byte_val = static_cast<uint8_t>(data[*offset]);
             ++(*offset);
-            result |= static_cast<int64_t>(byte_val & 0x7F) << shift;
+            result |= static_cast<uint64_t>(byte_val & 0x7F) << shift;
             if ((byte_val & 0x80) == 0) {
-                return result;
+                auto signed_result = static_cast<int64_t>(result);
+                if (PAIMON_UNLIKELY(signed_result < 0)) {
+                    return Status::Invalid("Malformed varint64: decoded negative value");
+                }
+                return signed_result;
             }
         }
         return Status::Invalid("Malformed varint64: too many continuation bytes");

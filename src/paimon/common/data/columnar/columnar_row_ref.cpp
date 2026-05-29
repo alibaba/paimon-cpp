@@ -34,8 +34,11 @@ Decimal ColumnarRowRef::GetDecimal(int32_t pos, int32_t precision, int32_t scale
     auto array = arrow::internal::checked_cast<const ArrayType*>(ctx_->array_vec[pos].get());
     assert(array);
     arrow::Decimal128 decimal(array->GetValue(row_id_));
-    return Decimal(precision, scale,
-                   static_cast<Decimal::int128_t>(decimal.high_bits()) << 64 | decimal.low_bits());
+    return Decimal(
+        precision, scale,
+        static_cast<Decimal::int128_t>(
+            static_cast<Decimal::uint128_t>(static_cast<uint64_t>(decimal.high_bits())) << 64 |
+            decimal.low_bits()));
 }
 
 Timestamp ColumnarRowRef::GetTimestamp(int32_t pos, int32_t precision) const {
