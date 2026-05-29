@@ -17,6 +17,7 @@
 #include "paimon/common/utils/arrow/arrow_input_stream_adapter.h"
 
 #include <cstdint>
+#include <functional>
 #include <utility>
 
 #include "arrow/api.h"
