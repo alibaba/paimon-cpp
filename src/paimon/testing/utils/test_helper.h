@@ -239,18 +239,6 @@ class TestHelper {
         return result_blobs;
     }
 
-    // need to reconstruct the blob array, because the array in read result do not have blob meta
-    Result<std::shared_ptr<arrow::Array>> ReconstructBlobArray(
-        const std::shared_ptr<arrow::Array>& array, const std::shared_ptr<arrow::Schema>& schema) {
-        ::ArrowArray c_array;
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &c_array));
-        ::ArrowSchema new_c_schema;
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schema, &new_c_schema));
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto new_array,
-                                          arrow::ImportArray(&c_array, &new_c_schema));
-        return new_array;
-    }
-
     Result<bool> ReadAndCheckResult(const std::shared_ptr<arrow::DataType>& data_type,
                                     const std::vector<std::shared_ptr<Split>>& splits,
                                     const std::string& expected_result) {
