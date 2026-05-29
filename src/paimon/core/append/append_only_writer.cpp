@@ -200,7 +200,7 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingRowWrit
         external_storage_writer_ = std::make_unique<ExternalStorageBlobWriter>(
             write_schema_, blob_context->GetExternalStorageFields(),
             blob_context->GetExternalStoragePath().value(), schema_id_, seq_num_counter_,
-            options_.GetFileSystem(), path_factory_, memory_pool_, options_);
+            path_factory_, options_, memory_pool_);
         if (!main_write_cols) {
             // To align with java, when require external storage writer, main writer will set write
             // cols in DataFileMeta

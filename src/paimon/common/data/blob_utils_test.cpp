@@ -175,6 +175,12 @@ TEST_F(BlobUtilsTest, SeparateBlobArray) {
     ASSERT_NOK_WITH_MSG(
         BlobUtils::SeparateBlobArray(struct_array, /*inline_fields=*/{"f2_blob"}),
         "SeparateBlobArray expects at least one non-inline blob field, but got none.");
+
+    // All fields are blob with no inline -> no main field -> should return error
+    auto all_blob_struct = arrow::StructArray::Make({blob_array_data}, {blob_field}).ValueOrDie();
+    auto all_blob_sa = std::dynamic_pointer_cast<arrow::StructArray>(all_blob_struct);
+    ASSERT_NOK_WITH_MSG(BlobUtils::SeparateBlobArray(all_blob_sa, /*inline_fields=*/{}),
+                        "SeparateBlobArray expects at least one main field, but got none.");
 }
 
 TEST_F(BlobUtilsTest, SeparateBlobArrayWithPartialInline) {

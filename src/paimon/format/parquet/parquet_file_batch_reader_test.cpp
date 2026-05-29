@@ -164,15 +164,16 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
 TEST_F(ParquetFileBatchReaderTest, TestReadBinaryWrittenFromBinaryAndLargeBinary) {
     auto check_binary_read_result = [&](const std::shared_ptr<arrow::DataType>& write_type,
                                         const std::string& file_name) {
-        auto write_field = arrow::field("f0", write_type);
-        auto write_schema = arrow::schema({write_field});
-        auto write_array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({write_field}), R"([
+        std::string data_json = R"([
         ["descriptor-1"],
         [""],
         [null],
         ["descriptor-2"]
-    ])")
+    ])";
+        auto write_field = arrow::field("f0", write_type);
+        auto write_schema = arrow::schema({write_field});
+        auto write_array = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({write_field}), data_json)
                 .ValueOrDie());
 
         std::string file_path = PathUtil::JoinPath(dir_->Str(), file_name);
@@ -190,12 +191,7 @@ TEST_F(ParquetFileBatchReaderTest, TestReadBinaryWrittenFromBinaryAndLargeBinary
         ASSERT_TRUE(file_schema->Equals(*read_schema));
 
         auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({read_field}), R"([
-        ["descriptor-1"],
-        [""],
-        [null],
-        ["descriptor-2"]
-    ])")
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({read_field}), data_json)
                 .ValueOrDie());
         auto expected_chunked_array = std::make_shared<arrow::ChunkedArray>(expected_array);
         ASSERT_OK_AND_ASSIGN(auto result_array, paimon::test::ReadResultCollector::CollectResult(

@@ -78,7 +78,7 @@ class RecordBatch;
 
 namespace paimon::test {
 
-struct ScanReadResult {
+struct ReadResult {
     std::unique_ptr<BatchReader> batch_reader;
     std::shared_ptr<arrow::ChunkedArray> chunked_array;
 };
@@ -192,11 +192,11 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
 
     /// Read from table using a pre-scanned plan, returning the ChunkedArray and batch_reader.
     /// The batch_reader must outlive the returned ChunkedArray (array memory depends on reader).
-    Result<ScanReadResult> ReadTable(const std::string& table_path,
-                                     const std::vector<std::string>& read_schema,
-                                     const std::shared_ptr<Plan>& plan,
-                                     const std::shared_ptr<Predicate>& predicate = nullptr,
-                                     const std::map<std::string, std::string>& options = {}) const {
+    Result<ReadResult> ReadTable(const std::string& table_path,
+                                 const std::vector<std::string>& read_schema,
+                                 const std::shared_ptr<Plan>& plan,
+                                 const std::shared_ptr<Predicate>& predicate = nullptr,
+                                 const std::map<std::string, std::string>& options = {}) const {
         auto splits = plan->Splits();
         ReadContextBuilder read_context_builder(table_path);
         read_context_builder.SetReadSchema(read_schema).SetPredicate(predicate);
@@ -209,14 +209,14 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
         PAIMON_ASSIGN_OR_RAISE(auto batch_reader, table_read->CreateReader(splits));
         PAIMON_ASSIGN_OR_RAISE(auto read_result,
                                ReadResultCollector::CollectResult(batch_reader.get()));
-        return ScanReadResult{std::move(batch_reader), std::move(read_result)};
+        return ReadResult{std::move(batch_reader), std::move(read_result)};
     }
 
     /// Convenience: scan + read in one call.
-    Result<ScanReadResult> ScanAndReadResult(const std::string& table_path,
-                                             const std::vector<std::string>& read_schema,
-                                             const std::shared_ptr<Predicate>& predicate = nullptr,
-                                             const std::vector<Range>& row_ranges = {}) const {
+    Result<ReadResult> ScanAndReadResult(const std::string& table_path,
+                                         const std::vector<std::string>& read_schema,
+                                         const std::shared_ptr<Predicate>& predicate = nullptr,
+                                         const std::vector<Range>& row_ranges = {}) const {
         PAIMON_ASSIGN_OR_RAISE(auto result_plan, ScanTable(table_path, predicate, row_ranges));
         return ReadTable(table_path, read_schema, result_plan, predicate);
     }
@@ -278,30 +278,51 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
     /// BlobDescriptor bytes. Each raw blob value is written to a temporary file, and
     /// the corresponding cell is replaced with the serialized BlobDescriptor pointing
     /// to that file.
-    Result<std::shared_ptr<arrow::StructArray>> ConvertRawBlobToDescriptor(
-        const std::shared_ptr<arrow::StructArray>& raw_array,
-        const std::set<std::string>& blob_fields) {
-        auto fs = std::make_shared<LocalFileSystem>();
-        int64_t num_rows = raw_array->length();
-        auto fields = raw_array->type()->fields();
+    /// Common framework for transforming blob fields in a StructArray.
+    /// Non-blob fields are kept as-is; blob fields are processed row-by-row via `transform_row`.
+    /// `transform_row` receives (binary_value_view) and returns the transformed bytes via builder.
+    using BlobRowTransform =
+        std::function<Status(const std::string_view& value, arrow::LargeBinaryBuilder* builder)>;
 
+    Result<std::shared_ptr<arrow::StructArray>> TransformBlobFields(
+        const std::shared_ptr<arrow::StructArray>& input_array,
+        const std::set<std::string>& blob_fields, BlobRowTransform transform_row) const {
+        auto fields = input_array->type()->fields();
         arrow::ArrayVector child_arrays;
 
         for (const auto& field : fields) {
-            auto col = raw_array->GetFieldByName(field->name());
+            auto col = input_array->GetFieldByName(field->name());
             if (blob_fields.count(field->name()) == 0) {
                 child_arrays.push_back(col);
                 continue;
             }
             const auto& binary_array =
                 arrow::internal::checked_cast<const arrow::LargeBinaryArray&>(*col);
-            arrow::LargeBinaryBuilder desc_builder;
-            for (int64_t i = 0; i < num_rows; ++i) {
+            arrow::LargeBinaryBuilder builder;
+            for (int64_t i = 0; i < binary_array.length(); ++i) {
                 if (binary_array.IsNull(i)) {
-                    PAIMON_RETURN_NOT_OK_FROM_ARROW(desc_builder.AppendNull());
+                    PAIMON_RETURN_NOT_OK_FROM_ARROW(builder.AppendNull());
                     continue;
                 }
-                std::string_view raw_value = binary_array.GetView(i);
+                PAIMON_RETURN_NOT_OK(transform_row(binary_array.GetView(i), &builder));
+            }
+            std::shared_ptr<arrow::Array> result_col;
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(builder.Finish(&result_col));
+            child_arrays.push_back(result_col);
+        }
+
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto result,
+                                          arrow::StructArray::Make(child_arrays, fields));
+        return result;
+    }
+
+    Result<std::shared_ptr<arrow::StructArray>> ConvertRawBlobToDescriptor(
+        const std::shared_ptr<arrow::StructArray>& raw_array,
+        const std::set<std::string>& blob_fields) {
+        auto fs = std::make_shared<LocalFileSystem>();
+        return TransformBlobFields(
+            raw_array, blob_fields,
+            [&](const std::string_view& raw_value, arrow::LargeBinaryBuilder* builder) -> Status {
                 std::string file_path =
                     blob_dir_->Str() + "/blob_" + std::to_string(blob_file_counter_++) + ".bin";
                 PAIMON_ASSIGN_OR_RAISE(auto out, fs->Create(file_path, /*overwrite=*/true));
@@ -317,16 +338,9 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
                 PAIMON_ASSIGN_OR_RAISE(auto blob, Blob::FromPath(file_path));
                 auto descriptor = blob->ToDescriptor(pool_);
                 PAIMON_RETURN_NOT_OK_FROM_ARROW(
-                    desc_builder.Append(descriptor->data(), descriptor->size()));
-            }
-            std::shared_ptr<arrow::Array> desc_array;
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(desc_builder.Finish(&desc_array));
-            child_arrays.push_back(desc_array);
-        }
-
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto result,
-                                          arrow::StructArray::Make(child_arrays, fields));
-        return result;
+                    builder->Append(descriptor->data(), descriptor->size()));
+                return Status::OK();
+            });
     }
 
     /// Convert a StructArray with serialized BlobDescriptor bytes back to a StructArray
@@ -336,39 +350,16 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
         const std::shared_ptr<arrow::StructArray>& desc_array,
         const std::set<std::string>& blob_fields) const {
         auto fs = std::make_shared<LocalFileSystem>();
-        int64_t num_rows = desc_array->length();
-        auto fields = desc_array->type()->fields();
-
-        arrow::ArrayVector child_arrays;
-
-        for (const auto& field : fields) {
-            auto col = desc_array->GetFieldByName(field->name());
-            if (blob_fields.count(field->name()) == 0) {
-                child_arrays.push_back(col);
-                continue;
-            }
-            const auto& binary_array =
-                arrow::internal::checked_cast<const arrow::LargeBinaryArray&>(*col);
-            arrow::LargeBinaryBuilder raw_builder;
-            for (int64_t i = 0; i < num_rows; ++i) {
-                if (binary_array.IsNull(i)) {
-                    PAIMON_RETURN_NOT_OK_FROM_ARROW(raw_builder.AppendNull());
-                    continue;
-                }
-                std::string_view descriptor_bytes = binary_array.GetView(i);
+        return TransformBlobFields(
+            desc_array, blob_fields,
+            [&](const std::string_view& descriptor_bytes,
+                arrow::LargeBinaryBuilder* builder) -> Status {
                 PAIMON_ASSIGN_OR_RAISE(auto blob, Blob::FromDescriptor(descriptor_bytes.data(),
                                                                        descriptor_bytes.size()));
                 PAIMON_ASSIGN_OR_RAISE(auto data, blob->ToData(fs, pool_));
-                PAIMON_RETURN_NOT_OK_FROM_ARROW(raw_builder.Append(data->data(), data->size()));
-            }
-            std::shared_ptr<arrow::Array> raw_array_col;
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(raw_builder.Finish(&raw_array_col));
-            child_arrays.push_back(raw_array_col);
-        }
-
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto result,
-                                          arrow::StructArray::Make(child_arrays, fields));
-        return result;
+                PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(data->data(), data->size()));
+                return Status::OK();
+            });
     }
 
     /// Verify DataFileMeta properties from a scan plan.
@@ -396,24 +387,12 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
         ASSERT_EQ(expected_write_cols.size(), expected_file_count);
         for (size_t i = 0; i < all_files.size(); ++i) {
             const auto& file = all_files[i];
-            EXPECT_EQ(file->row_count, expected_row_counts[i])
-                << "file[" << i << "] row_count mismatch";
-            EXPECT_EQ(file->min_sequence_number, expected_min_seqs[i])
-                << "file[" << i << "] min_sequence_number mismatch";
-            EXPECT_EQ(file->max_sequence_number, expected_max_seqs[i])
-                << "file[" << i << "] max_sequence_number mismatch";
-            ASSERT_TRUE(file->first_row_id.has_value())
-                << "file[" << i << "] first_row_id should not be null";
-            EXPECT_EQ(file->first_row_id.value(), expected_first_row_ids[i])
-                << "file[" << i << "] first_row_id mismatch";
-            EXPECT_EQ(file->write_cols, expected_write_cols[i])
-                << "file[" << i << "] write_cols mismatch, actual: "
-                << (file->write_cols ? fmt::format("[{}]", fmt::join(*file->write_cols, ", "))
-                                     : "nullopt")
-                << ", expected: "
-                << (expected_write_cols[i]
-                        ? fmt::format("[{}]", fmt::join(*expected_write_cols[i], ", "))
-                        : "nullopt");
+            EXPECT_EQ(file->row_count, expected_row_counts[i]);
+            EXPECT_EQ(file->min_sequence_number, expected_min_seqs[i]);
+            EXPECT_EQ(file->max_sequence_number, expected_max_seqs[i]);
+            ASSERT_TRUE(file->first_row_id.has_value());
+            EXPECT_EQ(file->first_row_id.value(), expected_first_row_ids[i]);
+            EXPECT_EQ(file->write_cols, expected_write_cols[i]);
         }
     }
 
@@ -707,7 +686,7 @@ TEST_P(BlobTableInteTest, TestOnlySomeColumns) {
     ])")
             .ValueOrDie());
     ASSERT_NOK_WITH_MSG(WriteArray(table_path, {}, write_cols1, {src_array1}),
-                        "Can't infer struct array length with 0 child arrays");
+                        "SeparateBlobArray expects at least one main field, but got none.");
 }
 
 TEST_P(BlobTableInteTest, TestMultipleAppendsDifferentFirstRowIds) {
@@ -2211,10 +2190,13 @@ TEST_P(BlobTableInteTest, TestDataEvolutionWithBlobDescriptorField) {
     }
     // Test DataEvolution (split-column write) combined with blob descriptor fields.
     // Schema: f0(int32), b0(blob descriptor inline), b1(blob descriptor+external), b2(blob),
-    // b3(blob) Commit 1: file A writes (f0, b2, b3) Commit 2: file B writes (f0, b0, b1) with
-    // SetFirstRowId(0) -> merges with commit 1 Commit 3: file A writes (f0, b0, b1, b3) Commit 4:
-    // file B writes (b0, b1, b3) with SetFirstRowId(3) -> merges with commit 3 Duplicate columns
-    // (b0, b1, b3) in commit 4 - newer file (B) takes precedence.
+    // b3(blob)
+    // Commit 1: file A writes (f0, b2, b3)
+    // Commit 2: file B writes (f0, b0, b1) with SetFirstRowId(0)
+    // -> merges with commit 1
+    // Commit 3: file A writes (f0, b0, b1, b3)
+    // Commit 4: file B writes (b0, b1, b3) with SetFirstRowId(3)
+    // -> merges with commit 3
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("b0", true),
         BlobUtils::ToArrowField("b1", true), BlobUtils::ToArrowField("b2", true),
@@ -2299,7 +2281,6 @@ TEST_P(BlobTableInteTest, TestDataEvolutionWithBlobDescriptorField) {
     ASSERT_OK(Commit(table_path, commit_msgs_b2));
 
     // --- Read all data with full schema ---
-    // Round 2: b0, b1, b3 come from file B (newer), f0 from file A, b2 not written -> null
     std::vector<std::string> read_schema = {"f0", "b0", "b1", "b2", "b3"};
     ASSERT_OK_AND_ASSIGN(auto plan, ScanTable(table_path));
 
@@ -2327,11 +2308,8 @@ TEST_P(BlobTableInteTest, TestDataEvolutionWithBlobDescriptorField) {
     // Resolve descriptors back to raw bytes
     ASSERT_OK_AND_ASSIGN(auto resolved, ConvertDescriptorToRawBlob(read_struct, {"b0", "b1"}));
     ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(expected_array));
-    ASSERT_TRUE(resolved->type()->Equals(expected_with_rk->type()))
-        << resolved->type()->ToString() << std::endl
-        << expected_with_rk->type()->ToString();
-    ASSERT_TRUE(resolved->Equals(expected_with_rk)) << resolved->ToString() << std::endl
-                                                    << expected_with_rk->ToString();
+    ASSERT_TRUE(resolved->type()->Equals(expected_with_rk->type()));
+    ASSERT_TRUE(resolved->Equals(expected_with_rk));
 }
 
 TEST_P(BlobTableInteTest, TestBlobDescriptorFieldWriteRawBytesDirectly) {

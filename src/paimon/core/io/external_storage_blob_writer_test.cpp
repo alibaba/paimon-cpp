@@ -73,7 +73,7 @@ TEST_F(ExternalStorageBlobWriterTest, TestEmptyExternalFields) {
     // No external storage fields -> TransformBatch returns original batch
     ExternalStorageBlobWriter writer(write_schema_, /*external_storage_fields=*/{},
                                      external_storage_path_, /*schema_id=*/0, seq_num_counter_,
-                                     file_system_, path_factory_, pool_, options_);
+                                     path_factory_, options_, pool_);
 
     auto input = std::static_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(write_schema_->fields()),
@@ -89,8 +89,8 @@ TEST_F(ExternalStorageBlobWriterTest, TestEmptyExternalFields) {
 TEST_F(ExternalStorageBlobWriterTest, TestTransformBatchReplacesBlob) {
     std::set<std::string> external_fields = {"blob_col"};
     ExternalStorageBlobWriter writer(write_schema_, external_fields, external_storage_path_,
-                                     /*schema_id=*/0, seq_num_counter_, file_system_, path_factory_,
-                                     pool_, options_);
+                                     /*schema_id=*/0, seq_num_counter_, path_factory_, options_,
+                                     pool_);
 
     auto struct_type = arrow::struct_(write_schema_->fields());
     auto input = std::static_pointer_cast<arrow::StructArray>(
@@ -124,8 +124,8 @@ TEST_F(ExternalStorageBlobWriterTest, TestTransformBatchReplacesBlob) {
 TEST_F(ExternalStorageBlobWriterTest, TestAbort) {
     std::set<std::string> external_fields = {"blob_col"};
     ExternalStorageBlobWriter writer(write_schema_, external_fields, external_storage_path_,
-                                     /*schema_id=*/0, seq_num_counter_, file_system_, path_factory_,
-                                     pool_, options_);
+                                     /*schema_id=*/0, seq_num_counter_, path_factory_, options_,
+                                     pool_);
 
     auto input = std::static_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(write_schema_->fields()),

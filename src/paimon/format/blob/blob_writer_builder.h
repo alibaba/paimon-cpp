@@ -71,7 +71,7 @@ class BlobWriterBuilder : public SpecificFSWriterBuilder {
         if (fs_ == nullptr) {
             return Status::Invalid("File system is nullptr. Please call WithFileSystem() first.");
         }
-        return BlobFormatWriter::Create(out, data_type_, fs_, pool_, write_consumer_);
+        return BlobFormatWriter::Create(out, data_type_, write_consumer_, fs_, pool_);
     }
 
  private:

@@ -32,12 +32,13 @@
 
 namespace paimon::blob {
 
-BlobFormatWriter::BlobFormatWriter(const std::shared_ptr<OutputStream>& out,
+BlobFormatWriter::BlobFormatWriter(const std::shared_ptr<OutputStream>& out, const std::string& uri,
                                    const std::shared_ptr<arrow::DataType>& data_type,
+                                   WriteConsumer write_consumer,
                                    const std::shared_ptr<FileSystem>& fs,
-                                   const std::shared_ptr<MemoryPool>& pool,
-                                   WriteConsumer write_consumer)
+                                   const std::shared_ptr<MemoryPool>& pool)
     : out_(out),
+      uri_(uri),
       data_type_(data_type),
       fs_(fs),
       pool_(pool),
@@ -48,8 +49,8 @@ BlobFormatWriter::BlobFormatWriter(const std::shared_ptr<OutputStream>& out,
 
 Result<std::unique_ptr<BlobFormatWriter>> BlobFormatWriter::Create(
     const std::shared_ptr<OutputStream>& out, const std::shared_ptr<arrow::DataType>& data_type,
-    const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<MemoryPool>& pool,
-    WriteConsumer write_consumer) {
+    WriteConsumer write_consumer, const std::shared_ptr<FileSystem>& fs,
+    const std::shared_ptr<MemoryPool>& pool) {
     if (out == nullptr) {
         return Status::Invalid("blob format writer create failed. out is nullptr");
     }
@@ -67,8 +68,9 @@ Result<std::unique_ptr<BlobFormatWriter>> BlobFormatWriter::Create(
         return Status::Invalid(
             fmt::format("field {} is not BLOB", data_type->field(0)->ToString()));
     }
+    PAIMON_ASSIGN_OR_RAISE(std::string uri, out->GetUri());
     return std::unique_ptr<BlobFormatWriter>(
-        new BlobFormatWriter(out, data_type, fs, pool, std::move(write_consumer)));
+        new BlobFormatWriter(out, uri, data_type, std::move(write_consumer), fs, pool));
 }
 
 Status BlobFormatWriter::AddBatch(ArrowArray* batch) {
@@ -93,7 +95,7 @@ Status BlobFormatWriter::AddBatch(ArrowArray* batch) {
     if (child_array->IsNull(0)) {
         bin_lengths_.push_back(BlobDefs::kNullBinLength);
         if (write_consumer_) {
-            write_consumer_(nullptr);
+            write_consumer_(/*descriptor=*/nullptr);
         }
         return Status::OK();
     }
@@ -116,11 +118,10 @@ Status BlobFormatWriter::AddBatch(ArrowArray* batch) {
         PAIMON_ASSIGN_OR_RAISE(int64_t end_pos, out_->GetPos());
         int64_t blob_start_pos = end_pos - bin_length;
         int64_t content_offset = blob_start_pos + BlobDefs::kContentStartOffset;
-        int64_t content_length = bin_length - 16;
+        int64_t content_length = bin_length - BlobDefs::kTotalMetaLength;
 
-        PAIMON_ASSIGN_OR_RAISE(std::string uri, out_->GetUri());
-        PAIMON_ASSIGN_OR_RAISE(auto descriptor,
-                               BlobDescriptor::Create(uri, content_offset, content_length));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlobDescriptor> descriptor,
+                               BlobDescriptor::Create(uri_, content_offset, content_length));
         bool should_flush = write_consumer_(std::move(descriptor));
         if (should_flush) {
             PAIMON_RETURN_NOT_OK(Flush());

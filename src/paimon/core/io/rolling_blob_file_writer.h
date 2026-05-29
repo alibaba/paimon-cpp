@@ -64,7 +64,7 @@ class RollingBlobFileWriter
                           const std::shared_ptr<arrow::Schema>& blob_schema,
                           MultipleBlobFileWriter::BlobWriterCreator blob_writer_creator,
                           const std::shared_ptr<arrow::DataType>& data_type,
-                          std::set<std::string> inline_fields = {});
+                          std::set<std::string> inline_fields);
     ~RollingBlobFileWriter() override = default;
 
     Status Write(::ArrowArray* record) override;

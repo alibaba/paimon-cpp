@@ -27,7 +27,6 @@
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/scope_guard.h"
-#include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_path_factory.h"
 #include "paimon/core/io/data_file_writer.h"
 #include "paimon/format/blob/blob_writer_builder.h"
@@ -42,19 +41,16 @@ ExternalStorageBlobWriter::ExternalStorageBlobWriter(
     const std::shared_ptr<arrow::Schema>& write_schema,
     const std::set<std::string>& external_storage_fields, const std::string& external_storage_path,
     int64_t schema_id, const std::shared_ptr<LongCounter>& seq_num_counter,
-    const std::shared_ptr<FileSystem>& file_system,
-    const std::shared_ptr<DataFilePathFactory>& path_factory,
-    const std::shared_ptr<MemoryPool>& memory_pool, const CoreOptions& options)
+    const std::shared_ptr<DataFilePathFactory>& path_factory, const CoreOptions& options,
+    const std::shared_ptr<MemoryPool>& memory_pool)
     : write_schema_(write_schema),
       external_storage_fields_(external_storage_fields),
       external_storage_path_(external_storage_path),
       schema_id_(schema_id),
       seq_num_counter_(seq_num_counter),
-      file_system_(file_system),
       path_factory_(path_factory),
       memory_pool_(memory_pool),
-      options_(options),
-      logger_(Logger::GetLogger("ExternalStorageBlobWriter")) {}
+      options_(options) {}
 
 Result<std::unique_ptr<ExternalStorageBlobWriter::BlobRollingWriter>>
 ExternalStorageBlobWriter::CreateFieldRollingWriter(FieldWriter* field_writer) {
@@ -99,13 +95,80 @@ ExternalStorageBlobWriter::CreateFieldRollingWriter(FieldWriter* field_writer) {
             seq_num_counter_, FileSource::Append(), stats_extractor,
             path_factory_->IsExternalPath(), write_cols, memory_pool_);
         PAIMON_RETURN_NOT_OK(writer->Init(
-            file_system_, path_factory_->NewExternalStorageBlobPath(external_storage_path_),
-            writer_builder));
+            options_.GetFileSystem(),
+            path_factory_->NewExternalStorageBlobPath(external_storage_path_), writer_builder));
         return writer;
     };
 
     return std::make_unique<BlobRollingWriter>(options_.GetBlobTargetFileSize(),
                                                single_blob_file_writer_creator);
+}
+
+Status ExternalStorageBlobWriter::InitializeFieldWritersIfNeeded() {
+    if (initialized_) {
+        return Status::OK();
+    }
+    for (int32_t i = 0; i < write_schema_->num_fields(); ++i) {
+        const auto& field = write_schema_->field(i);
+        if (external_storage_fields_.count(field->name()) > 0) {
+            FieldWriter fw;
+            fw.field_name = field->name();
+            fw.field_index = i;
+            field_writers_.push_back(std::move(fw));
+        }
+    }
+    // Create rolling writers after push_back so FieldWriter addresses are stable
+    // for the consumer lambda capture.
+    for (auto& fw : field_writers_) {
+        PAIMON_ASSIGN_OR_RAISE(fw.rolling_writer, CreateFieldRollingWriter(&fw));
+    }
+    initialized_ = true;
+    return Status::OK();
+}
+
+Result<std::shared_ptr<arrow::Array>> ExternalStorageBlobWriter::TransformField(
+    const std::shared_ptr<arrow::Array>& column, FieldWriter* field_writer) {
+    int64_t num_rows = column->length();
+
+    // Clear captured descriptors before processing this batch
+    field_writer->captured_descriptors.clear();
+
+    // Write each row via RollingFileWriter; the consumer captures the descriptor
+    for (int64_t row = 0; row < num_rows; ++row) {
+        std::shared_ptr<arrow::Array> slice = column->Slice(row, 1);
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+            std::shared_ptr<arrow::StructArray> single_row_struct,
+            arrow::StructArray::Make({slice}, {field_writer->field_name}));
+
+        ::ArrowArray c_array;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*single_row_struct, &c_array));
+        PAIMON_RETURN_NOT_OK(field_writer->rolling_writer->Write(&c_array));
+    }
+
+    // Validate captured descriptor count
+    if (static_cast<int64_t>(field_writer->captured_descriptors.size()) != num_rows) {
+        return Status::Invalid(
+            "Captured descriptor count {} does not match row count {} for field '{}'",
+            field_writer->captured_descriptors.size(), num_rows, field_writer->field_name);
+    }
+
+    // Build descriptor column from captured descriptors
+    arrow::LargeBinaryBuilder descriptor_builder;
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(descriptor_builder.Reserve(num_rows));
+    for (int64_t row = 0; row < num_rows; ++row) {
+        const auto& descriptor = field_writer->captured_descriptors[row];
+        if (!descriptor) {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(descriptor_builder.AppendNull());
+        } else {
+            auto serialized = descriptor->Serialize(memory_pool_);
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(
+                descriptor_builder.Append(serialized->data(), serialized->size()));
+        }
+    }
+
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> descriptor_array,
+                                      descriptor_builder.Finish());
+    return descriptor_array;
 }
 
 Result<std::shared_ptr<arrow::StructArray>> ExternalStorageBlobWriter::TransformBatch(
@@ -114,30 +177,11 @@ Result<std::shared_ptr<arrow::StructArray>> ExternalStorageBlobWriter::Transform
         return batch;
     }
 
-    // Lazily initialize per-field writers
-    if (!initialized_) {
-        for (int32_t i = 0; i < write_schema_->num_fields(); ++i) {
-            const auto& field = write_schema_->field(i);
-            if (external_storage_fields_.count(field->name()) > 0) {
-                FieldWriter fw;
-                fw.field_name = field->name();
-                fw.field_index = i;
-                field_writers_.push_back(std::move(fw));
-            }
-        }
-        // Create rolling writers for each field (must be done after push_back so
-        // the FieldWriter addresses are stable for the consumer lambda capture).
-        for (auto& fw : field_writers_) {
-            PAIMON_ASSIGN_OR_RAISE(fw.rolling_writer, CreateFieldRollingWriter(&fw));
-        }
-        initialized_ = true;
-    }
+    PAIMON_RETURN_NOT_OK(InitializeFieldWritersIfNeeded());
 
     if (field_writers_.empty()) {
         return batch;
     }
-
-    int64_t num_rows = batch->length();
 
     // Collect all arrays and field names from the original batch
     std::vector<std::shared_ptr<arrow::Array>> result_arrays;
@@ -150,56 +194,13 @@ Result<std::shared_ptr<arrow::StructArray>> ExternalStorageBlobWriter::Transform
         result_arrays.push_back(batch->field(col));
     }
 
-    // For each external storage field, write blobs row by row via RollingFileWriter
-    // and build a replacement descriptor column from captured descriptors.
+    // Transform each external storage field and replace in result
     for (FieldWriter& fw : field_writers_) {
-        std::shared_ptr<arrow::Array> original_column = batch->field(fw.field_index);
-
-        // Clear captured descriptors before processing this batch
-        fw.captured_descriptors.clear();
-
-        arrow::LargeBinaryBuilder descriptor_builder;
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(descriptor_builder.Reserve(num_rows));
-
-        for (int64_t row = 0; row < num_rows; ++row) {
-            // Create a single-row single-field StructArray for BlobFormatWriter
-            std::shared_ptr<arrow::Array> slice = original_column->Slice(row, 1);
-            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::StructArray> single_row_struct,
-                                              arrow::StructArray::Make({slice}, {fw.field_name}));
-
-            ::ArrowArray c_array;
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*single_row_struct, &c_array));
-
-            // Write via RollingFileWriter; the consumer captures the descriptor
-            PAIMON_RETURN_NOT_OK(fw.rolling_writer->Write(&c_array));
-        }
-
-        // Build descriptor column from captured descriptors
-        if (static_cast<int64_t>(fw.captured_descriptors.size()) != num_rows) {
-            return Status::Invalid(
-                "Captured descriptor count {} does not match row count {} for field '{}'",
-                fw.captured_descriptors.size(), num_rows, fw.field_name);
-        }
-
-        for (int64_t row = 0; row < num_rows; ++row) {
-            const auto& descriptor = fw.captured_descriptors[row];
-            if (!descriptor) {
-                // Null blob -> null descriptor
-                PAIMON_RETURN_NOT_OK_FROM_ARROW(descriptor_builder.AppendNull());
-            } else {
-                auto serialized = descriptor->Serialize(memory_pool_);
-                PAIMON_RETURN_NOT_OK_FROM_ARROW(
-                    descriptor_builder.Append(serialized->data(), serialized->size()));
-            }
-        }
-
-        // Build the descriptor column and replace
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> descriptor_array,
-                                          descriptor_builder.Finish());
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> descriptor_array,
+                               TransformField(batch->field(fw.field_index), &fw));
         result_arrays[fw.field_index] = descriptor_array;
     }
 
-    // Construct the result StructArray
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::StructArray> result,
                                       arrow::StructArray::Make(result_arrays, result_names));
     return result;

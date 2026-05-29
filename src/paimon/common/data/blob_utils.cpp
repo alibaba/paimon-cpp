@@ -22,6 +22,7 @@
 #include "arrow/api.h"
 #include "arrow/array/array_nested.h"
 #include "arrow/type.h"
+#include "fmt/format.h"
 #include "paimon/common/data/blob_defs.h"
 #include "paimon/common/data/blob_descriptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
@@ -77,6 +78,9 @@ Result<BlobUtils::SeparatedStructArrays> BlobUtils::SeparateBlobArray(
     if (blob_fields.empty()) {
         return Status::Invalid(
             "SeparateBlobArray expects at least one non-inline blob field, but got none.");
+    }
+    if (main_fields.empty()) {
+        return Status::Invalid("SeparateBlobArray expects at least one main field, but got none.");
     }
 
     SeparatedStructArrays result;

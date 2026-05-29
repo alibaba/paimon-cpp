@@ -56,8 +56,8 @@ class BlobFormatWriter : public FormatWriter {
 
     static Result<std::unique_ptr<BlobFormatWriter>> Create(
         const std::shared_ptr<OutputStream>& out, const std::shared_ptr<arrow::DataType>& data_type,
-        const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<MemoryPool>& pool,
-        WriteConsumer write_consumer);
+        WriteConsumer write_consumer, const std::shared_ptr<FileSystem>& fs,
+        const std::shared_ptr<MemoryPool>& pool);
 
     Status AddBatch(ArrowArray* batch) override;
 
@@ -72,10 +72,10 @@ class BlobFormatWriter : public FormatWriter {
     }
 
  private:
-    BlobFormatWriter(const std::shared_ptr<OutputStream>& out,
+    BlobFormatWriter(const std::shared_ptr<OutputStream>& out, const std::string& uri,
                      const std::shared_ptr<arrow::DataType>& data_type,
-                     const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<MemoryPool>& pool,
-                     WriteConsumer write_consumer);
+                     WriteConsumer write_consumer, const std::shared_ptr<FileSystem>& fs,
+                     const std::shared_ptr<MemoryPool>& pool);
 
     Status WriteBlob(std::string_view blob_data);
 
@@ -93,6 +93,7 @@ class BlobFormatWriter : public FormatWriter {
     uint32_t crc32_ = 0;
     std::vector<int64_t> bin_lengths_;
     std::shared_ptr<OutputStream> out_;
+    std::string uri_;
     PAIMON_UNIQUE_PTR<Bytes> tmp_buffer_;
     std::shared_ptr<arrow::DataType> data_type_;
     std::shared_ptr<FileSystem> fs_;

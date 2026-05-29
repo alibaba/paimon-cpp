@@ -23,13 +23,13 @@
 #include <vector>
 
 #include "paimon/common/data/blob_descriptor.h"
+#include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/io/rolling_file_writer.h"
 #include "paimon/core/io/single_file_writer.h"
 #include "paimon/logging.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
-
 namespace arrow {
 class Schema;
 class StructArray;
@@ -37,7 +37,6 @@ class StructArray;
 
 namespace paimon {
 
-class CoreOptions;
 class FileSystem;
 class LongCounter;
 class MemoryPool;
@@ -60,10 +59,9 @@ class ExternalStorageBlobWriter {
                               const std::set<std::string>& external_storage_fields,
                               const std::string& external_storage_path, int64_t schema_id,
                               const std::shared_ptr<LongCounter>& seq_num_counter,
-                              const std::shared_ptr<FileSystem>& file_system,
                               const std::shared_ptr<DataFilePathFactory>& path_factory,
-                              const std::shared_ptr<MemoryPool>& memory_pool,
-                              const CoreOptions& options);
+                              const CoreOptions& options,
+                              const std::shared_ptr<MemoryPool>& memory_pool);
 
     /// Transforms a batch by writing external storage fields to .blob files and replacing
     /// the BLOB values with serialized BlobDescriptor bytes.
@@ -86,6 +84,14 @@ class ExternalStorageBlobWriter {
         std::vector<std::unique_ptr<BlobDescriptor>> captured_descriptors;
     };
 
+    /// Lazily initializes per-field writers on first call to TransformBatch.
+    Status InitializeFieldWritersIfNeeded();
+
+    /// Writes all rows of a single external blob field via RollingFileWriter and returns
+    /// a descriptor column (LargeBinary) built from captured BlobDescriptors.
+    Result<std::shared_ptr<arrow::Array>> TransformField(
+        const std::shared_ptr<arrow::Array>& column, FieldWriter* field_writer);
+
     /// Creates a RollingFileWriter for one external storage blob field with consumer injected.
     Result<std::unique_ptr<BlobRollingWriter>> CreateFieldRollingWriter(FieldWriter* field_writer);
 
@@ -94,15 +100,12 @@ class ExternalStorageBlobWriter {
     std::string external_storage_path_;
     int64_t schema_id_;
     std::shared_ptr<LongCounter> seq_num_counter_;
-    std::shared_ptr<FileSystem> file_system_;
     std::shared_ptr<DataFilePathFactory> path_factory_;
     std::shared_ptr<MemoryPool> memory_pool_;
-    const CoreOptions& options_;
+    CoreOptions options_;
 
     std::vector<FieldWriter> field_writers_;
     bool initialized_ = false;
-
-    std::unique_ptr<Logger> logger_;
 };
 
 }  // namespace paimon
