@@ -35,8 +35,8 @@ class MemoryPool;
 
 class Blob::Impl {
  public:
-    Impl(std::unique_ptr<BlobDescriptor>&& descriptor, const std::string& uri)
-        : descriptor_(std::move(descriptor)), uri_(uri) {}
+    explicit Impl(std::unique_ptr<BlobDescriptor>&& descriptor)
+        : descriptor_(std::move(descriptor)) {}
 
     PAIMON_UNIQUE_PTR<Bytes> SerializeDescriptor(const std::shared_ptr<MemoryPool>& pool) const {
         return descriptor_->Serialize(pool);
@@ -47,12 +47,11 @@ class Blob::Impl {
     }
 
     const std::string& Uri() const {
-        return uri_;
+        return descriptor_->Uri();
     }
 
  private:
     std::unique_ptr<BlobDescriptor> descriptor_;
-    std::string uri_;
 };
 
 Result<std::unique_ptr<Blob>> Blob::FromPath(const std::string& path) {
@@ -64,7 +63,7 @@ Result<std::unique_ptr<Blob>> Blob::FromPath(const std::string& path, int64_t of
     PAIMON_ASSIGN_OR_RAISE(std::string normalized_path, PathUtil::NormalizePath(path));
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlobDescriptor> descriptor,
                            BlobDescriptor::Create(normalized_path, offset, length));
-    auto impl = std::make_unique<Blob::Impl>(std::move(descriptor), descriptor->Uri());
+    auto impl = std::make_unique<Impl>(std::move(descriptor));
     return std::unique_ptr<Blob>(new Blob(std::move(impl)));
 }
 
@@ -75,7 +74,7 @@ Result<std::unique_ptr<Blob>> Blob::FromDescriptor(const char* buffer, uint64_t 
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlobDescriptor> descriptor,
                            BlobDescriptor::Deserialize(buffer, length));
 
-    auto impl = std::make_unique<Impl>(std::move(descriptor), descriptor->Uri());
+    auto impl = std::make_unique<Impl>(std::move(descriptor));
     return std::unique_ptr<Blob>(new Blob(std::move(impl)));
 }
 
