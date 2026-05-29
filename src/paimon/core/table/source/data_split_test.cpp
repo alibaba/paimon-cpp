@@ -1161,6 +1161,60 @@ TEST(DataSplitTest, TestPartialMergedRowCountMixedCardinalityReturnsNullopt) {
     ASSERT_EQ(std::nullopt, data_split->PartialMergedRowCount());
 }
 
+TEST(DataSplitTest, TestPartialMergedRowCountUnknownDeleteRowCountReturnsNullopt) {
+    auto pool = GetDefaultPool();
+    auto file_meta1 = std::make_shared<DataFileMeta>(
+        "data-0.orc", /*file_size=*/100, /*row_count=*/3,
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David"), 1}, pool.get()),
+        /*key_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 1}, {std::string("David"), 1},
+                                          {0, 0}, pool.get()),
+        /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 1, 11.0},
+                                          {std::string("David"), 10, 1, 11.1}, {0, 0, 0, 0},
+                                          pool.get()),
+        /*min_sequence_number=*/0, /*max_sequence_number=*/2, /*schema_id=*/0,
+        /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
+        /*creation_time=*/Timestamp(1725562946338ll, 0),
+        /*delete_row_count=*/std::nullopt, /*embedded_index=*/nullptr, FileSource::Append(),
+        /*value_stats_cols=*/std::nullopt, /*external_path=*/std::nullopt,
+        /*first_row_id=*/std::nullopt,
+        /*write_cols=*/std::nullopt);
+    auto file_meta2 = std::make_shared<DataFileMeta>(
+        "data-1.orc", /*file_size=*/100, /*row_count=*/2,
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Bob"), 1}, pool.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David"), 1}, pool.get()),
+        /*key_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Bob"), 1}, {std::string("David"), 1},
+                                          {0, 0}, pool.get()),
+        /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Bob"), 10, 1, 11.0},
+                                          {std::string("David"), 10, 1, 11.1}, {0, 0, 0, 0},
+                                          pool.get()),
+        /*min_sequence_number=*/3, /*max_sequence_number=*/4, /*schema_id=*/0,
+        /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
+        /*creation_time=*/Timestamp(1725562947338ll, 0),
+        /*delete_row_count=*/0, /*embedded_index=*/nullptr, FileSource::Append(),
+        /*value_stats_cols=*/std::nullopt, /*external_path=*/std::nullopt,
+        /*first_row_id=*/std::nullopt,
+        /*write_cols=*/std::nullopt);
+
+    DataSplitImpl::Builder builder(
+        /*partition=*/BinaryRowGenerator::GenerateRow({10}, pool.get()),
+        /*bucket=*/0, /*bucket_path=*/"fake_table/f1=10/bucket-0", {file_meta1, file_meta2});
+
+    auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(
+        builder.WithSnapshot(1)
+            .WithDataDeletionFiles({std::nullopt, std::nullopt})
+            .IsStreaming(false)
+            .RawConvertible(true)
+            .Build()
+            .value());
+
+    ASSERT_EQ(std::nullopt, data_split->PartialMergedRowCount());
+}
+
 TEST(DataSplitTest, TestRowCountAndLatestFileCreationEpochMillisEmpty) {
     DataSplitImpl::Builder builder(
         /*partition=*/BinaryRow::EmptyRow(),

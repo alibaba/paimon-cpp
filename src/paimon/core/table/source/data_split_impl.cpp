@@ -116,6 +116,10 @@ std::optional<int64_t> DataSplitImpl::PartialMergedRowCount() const {
     int64_t sum = 0;
     for (size_t i = 0; i < data_files_.size(); i++) {
         const auto& data_file = data_files_[i];
+        if (data_file->delete_row_count == std::nullopt) {
+            // Legacy files may contain delete/retract rows while delete_row_count is unknown.
+            return std::nullopt;
+        }
         if (data_deletion_files_.empty() || data_deletion_files_[i] == std::nullopt) {
             sum += data_file->row_count;
         } else if (data_deletion_files_[i].value().cardinality != std::nullopt) {
