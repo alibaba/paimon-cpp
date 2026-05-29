@@ -279,6 +279,7 @@ impl PaimonTantivyReader {
         with_score: bool,
         limit: Option<usize>,
         pre_filter: Option<&Treemap>,
+        min_score: Option<f32>,
     ) -> Result<Vec<(u64, Option<f32>)>, String> {
         let q = self.build_query(search_type, query)?;
         let searcher = self.reader.searcher();
@@ -306,39 +307,52 @@ impl PaimonTantivyReader {
                 if n == 0 {
                     return Ok(Vec::new());
                 }
-                let collector = LimitedDocSetCollector::new(n);
-                let mut docset = searcher
-                    .search(&*q, &collector)
-                    .map_err(|e| format!("tantivy search: {e}"))?;
-                let mut by_segment: std::collections::HashMap<SegmentOrdinal, Vec<DocId>> =
-                    std::collections::HashMap::new();
-                for addr in docset.drain(..) {
-                    by_segment.entry(addr.segment_ord).or_default().push(addr.doc_id);
-                }
-                let mut row_ids: Vec<u64> = Vec::new();
-                for (segment_ord, doc_ids) in by_segment.iter() {
-                    let segment_reader = searcher.segment_reader(*segment_ord);
-                    let fast = segment_reader
-                        .fast_fields()
-                        .u64(PAIMON_ROW_ID_FIELD_NAME)
-                        .map_err(|e| format!("fast_fields().u64('row_id') on segment {}: {e}",
-                                             segment_ord))?;
-                    for &doc_id in doc_ids {
-                        row_ids.push(fast.first(doc_id).unwrap_or(0));
+                if min_score.is_some() {
+                    // min_score requires scoring — fall back to collect_scored path
+                    let mut filtered = self.collect_scored(&*q, &searcher, pre_filter)?;
+                    if let Some(threshold) = min_score {
+                        filtered.retain(|(s, _)| *s > threshold);
                     }
+                    let truncated = Self::sort_by_score_desc_truncate(filtered, n);
+                    Ok(truncated.into_iter().map(|(_, id)| (id, None)).collect())
+                } else {
+                    let collector = LimitedDocSetCollector::new(n);
+                    let mut docset = searcher
+                        .search(&*q, &collector)
+                        .map_err(|e| format!("tantivy search: {e}"))?;
+                    let mut by_segment: std::collections::HashMap<SegmentOrdinal, Vec<DocId>> =
+                        std::collections::HashMap::new();
+                    for addr in docset.drain(..) {
+                        by_segment.entry(addr.segment_ord).or_default().push(addr.doc_id);
+                    }
+                    let mut row_ids: Vec<u64> = Vec::new();
+                    for (segment_ord, doc_ids) in by_segment.iter() {
+                        let segment_reader = searcher.segment_reader(*segment_ord);
+                        let fast = segment_reader
+                            .fast_fields()
+                            .u64(PAIMON_ROW_ID_FIELD_NAME)
+                            .map_err(|e| format!("fast_fields().u64('row_id') on segment {}: {e}",
+                                                 segment_ord))?;
+                        for &doc_id in doc_ids {
+                            row_ids.push(fast.first(doc_id).unwrap_or(0));
+                        }
+                    }
+                    if let Some(filter) = pre_filter {
+                        row_ids.retain(|id| filter.contains(*id));
+                    }
+                    row_ids.sort_unstable();
+                    row_ids.dedup();
+                    row_ids.truncate(n);
+                    Ok(row_ids.into_iter().map(|id| (id, None)).collect())
                 }
-                if let Some(filter) = pre_filter {
-                    row_ids.retain(|id| filter.contains(*id));
-                }
-                row_ids.sort_unstable();
-                row_ids.dedup();
-                row_ids.truncate(n);
-                Ok(row_ids.into_iter().map(|id| (id, None)).collect())
             }
             // Path C: all rows + all scores, sorted by row_id asc to match the
             // BitmapScoredGlobalIndexResult contract (bitmap iter order == score order).
             (true, None) => {
                 let mut filtered = self.collect_scored(&*q, &searcher, pre_filter)?;
+                if let Some(threshold) = min_score {
+                    filtered.retain(|(s, _)| *s > threshold);
+                }
                 filtered.sort_unstable_by(|a, b| a.1.cmp(&b.1));
                 Ok(filtered.into_iter().map(|(s, id)| (id, Some(s))).collect())
             }
@@ -347,7 +361,10 @@ impl PaimonTantivyReader {
                 if n == 0 {
                     return Ok(Vec::new());
                 }
-                let filtered = self.collect_scored(&*q, &searcher, pre_filter)?;
+                let mut filtered = self.collect_scored(&*q, &searcher, pre_filter)?;
+                if let Some(threshold) = min_score {
+                    filtered.retain(|(s, _)| *s > threshold);
+                }
                 let truncated = Self::sort_by_score_desc_truncate(filtered, n);
                 Ok(truncated.into_iter().map(|(s, id)| (id, Some(s))).collect())
             }
@@ -746,6 +763,7 @@ pub unsafe extern "C" fn paimon_tantivy_reader_search(
     limit: i32,
     pre_filter_bytes: *const c_char,
     pre_filter_len: usize,
+    min_score: f32,
     out: *mut PaimonTantivyBuffer,
 ) -> PaimonTantivyStatus {
     if out.is_null() {
@@ -802,8 +820,9 @@ pub unsafe extern "C" fn paimon_tantivy_reader_search(
     };
 
     let limit_opt: Option<usize> = if limit < 0 { None } else { Some(limit as usize) };
+    let min_score_opt: Option<f32> = if min_score > 0.0 { Some(min_score) } else { None };
 
-    match r.search_with_limit_and_filter(st, query_str, with_score, limit_opt, pre_filter.as_ref())
+    match r.search_with_limit_and_filter(st, query_str, with_score, limit_opt, pre_filter.as_ref(), min_score_opt)
     {
         Ok(rows) => {
             // v0.2: has_scores is decoupled from limit — it equals with_score directly.
@@ -952,7 +971,7 @@ mod tests {
         ]);
         let r = open(&bytes);
         let rows = r
-            .search_with_limit_and_filter(SearchType::MatchAll, "doc", true, Some(2), None)
+            .search_with_limit_and_filter(SearchType::MatchAll, "doc", true, Some(2), None, None)
             .unwrap();
         assert_eq!(rows.len(), 2);
         // doc 1 has highest TF, expect first
@@ -968,7 +987,7 @@ mod tests {
         let bytes = build(&["hello world", "world hello", "world peace"]);
         let r = open(&bytes);
         let rows = r
-            .search_with_limit_and_filter(SearchType::MatchAll, "world", false, None, None)
+            .search_with_limit_and_filter(SearchType::MatchAll, "world", false, None, None, None)
             .unwrap();
         let ids: Vec<u64> = rows.iter().map(|(id, _)| *id).collect();
         assert_eq!(ids, vec![0u64, 1, 2]);
@@ -984,7 +1003,7 @@ mod tests {
         tm.add(0);
         tm.add(2);
         let rows = r
-            .search_with_limit_and_filter(SearchType::MatchAll, "alpha", false, None, Some(&tm))
+            .search_with_limit_and_filter(SearchType::MatchAll, "alpha", false, None, Some(&tm), None)
             .unwrap();
         let ids: Vec<u64> = rows.iter().map(|(id, _)| *id).collect();
         assert_eq!(ids, vec![0u64]);
@@ -1003,7 +1022,7 @@ mod tests {
         let mut tm = Treemap::new();
         tm.add(1);  // only doc 1 passes pre_filter
         let rows = r
-            .search_with_limit_and_filter(SearchType::MatchAll, "doc", true, Some(10), Some(&tm))
+            .search_with_limit_and_filter(SearchType::MatchAll, "doc", true, Some(10), Some(&tm), None)
             .unwrap();
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].0, 1u64);
@@ -1015,7 +1034,7 @@ mod tests {
         let r = open(&bytes);
         let tm = Treemap::new();  // empty
         let rows = r
-            .search_with_limit_and_filter(SearchType::MatchAll, "alpha", false, None, Some(&tm))
+            .search_with_limit_and_filter(SearchType::MatchAll, "alpha", false, None, Some(&tm), None)
             .unwrap();
         assert!(rows.is_empty());
     }
@@ -1025,7 +1044,7 @@ mod tests {
         let bytes = build(&["alpha", "beta"]);
         let r = open(&bytes);
         let rows = r
-            .search_with_limit_and_filter(SearchType::MatchAll, "alpha", true, Some(0), None)
+            .search_with_limit_and_filter(SearchType::MatchAll, "alpha", true, Some(0), None, None)
             .unwrap();
         assert!(rows.is_empty());
     }
@@ -1047,7 +1066,7 @@ mod tests {
         let mut tm = Treemap::new();
         tm.add(200);
         let rows = r
-            .search_with_limit_and_filter(SearchType::MatchAll, "alpha", false, None, Some(&tm))
+            .search_with_limit_and_filter(SearchType::MatchAll, "alpha", false, None, Some(&tm), None)
             .unwrap();
         let ids: Vec<u64> = rows.iter().map(|(id, _)| *id).collect();
         assert_eq!(ids, vec![200u64], "pre_filter must operate on row_id, not doc_id");

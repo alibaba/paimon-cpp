@@ -103,5 +103,10 @@ struct PAIMON_EXPORT FullTextSearch {
     ///
     /// Default is `false` to avoid silent score computation overhead for callers that don't need it.
     bool with_score = false;
+    /// Minimum BM25 score threshold (exclusive). Results with score ≤ this value are excluded.
+    /// Only meaningful when scoring is active (i.e., `with_score = true` or `limit` is set).
+    /// Applied before truncation so low-score documents never occupy limit slots.
+    /// Default is nullopt (no threshold filtering).
+    std::optional<float> min_score;
 };
 }  // namespace paimon

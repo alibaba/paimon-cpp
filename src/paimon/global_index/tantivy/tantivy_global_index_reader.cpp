@@ -160,12 +160,16 @@ Result<std::shared_ptr<GlobalIndexResult>> TantivyGlobalIndexReader::VisitFullTe
                             ? static_cast<int32_t>(full_text_search->limit.value())
                             : -1;
 
+    float min_score_arg = full_text_search->min_score.has_value()
+                              ? full_text_search->min_score.value()
+                              : 0.0f;
+
     BufferGuard out;
     PaimonTantivyStatus st = paimon_tantivy_reader_search(
         reader_.get(), static_cast<int32_t>(full_text_search->search_type),
         full_text_search->query.data(), full_text_search->query.size(),
         full_text_search->with_score, limit_arg,
-        pre_filter_ptr, pre_filter_len, out.out());
+        pre_filter_ptr, pre_filter_len, min_score_arg, out.out());
     PAIMON_TANTIVY_RETURN_NOT_OK(st);
 
     // Decode `[u8 has_scores | u64 count | u64 row_ids[] | optional f32 scores[]]`.
