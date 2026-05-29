@@ -41,15 +41,12 @@ namespace paimon {
 CountSplitRead::CountSplitRead(const std::shared_ptr<InternalReadContext>& context,
                                std::unique_ptr<MergeFileSplitRead>&& merge_read,
                                const std::shared_ptr<MemoryPool>& memory_pool)
-    : context_(context),
-      merge_read_(std::move(merge_read)),
-      pool_(memory_pool) {}
+    : context_(context), merge_read_(std::move(merge_read)), pool_(memory_pool) {}
 
 Result<std::unique_ptr<CountSplitRead>> CountSplitRead::Create(
     const std::shared_ptr<FileStorePathFactory>& path_factory,
     const std::shared_ptr<InternalReadContext>& context,
-    const std::shared_ptr<MemoryPool>& memory_pool,
-    const std::shared_ptr<Executor>& executor) {
+    const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor) {
     // Build a minimal read schema for COUNT(*).
     // Only includes PK columns.
     // _SEQUENCE_NUMBER, _VALUE_KIND, and sequence-group fields are auto-completed
@@ -68,9 +65,9 @@ Result<std::unique_ptr<CountSplitRead>> CountSplitRead::Create(
     //   Input:  count_read_schema = [pk_col]
     //   Output: read_schema = [_SEQUENCE_NUMBER, _VALUE_KIND, pk_col, (seq_field)]
     // This is the actual schema used to read Parquet files — only 3~4 columns instead of 100.
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<MergeFileSplitRead> merge_read,
-                           MergeFileSplitRead::Create(path_factory, count_context, memory_pool,
-                                                      executor));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<MergeFileSplitRead> merge_read,
+        MergeFileSplitRead::Create(path_factory, count_context, memory_pool, executor));
 
     return std::unique_ptr<CountSplitRead>(
         new CountSplitRead(count_context, std::move(merge_read), memory_pool));
@@ -120,10 +117,9 @@ Result<int64_t> CountSplitRead::MetadataCount(const std::shared_ptr<DataSplitImp
 
 Result<int64_t> CountSplitRead::MergeCount(const std::shared_ptr<DataSplitImpl>& split) {
     // Create DataFilePathFactory for this split's partition/bucket
-    PAIMON_ASSIGN_OR_RAISE(
-        std::shared_ptr<DataFilePathFactory> data_file_path_factory,
-        merge_read_->GetPathFactory()->CreateDataFilePathFactory(
-            split->Partition(), split->Bucket()));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
+                           merge_read_->GetPathFactory()->CreateDataFilePathFactory(
+                               split->Partition(), split->Bucket()));
 
     // Build deletion file map from split's data files and deletion files
     std::unordered_map<std::string, DeletionFile> deletion_file_map;
@@ -138,9 +134,8 @@ Result<int64_t> CountSplitRead::MergeCount(const std::shared_ptr<DataSplitImpl>&
     }
 
     // Create DV factory from deletion file map
-    auto dv_factory = DeletionVector::CreateFactory(
-        context_->GetCoreOptions().GetFileSystem(),
-        deletion_file_map, pool_);
+    auto dv_factory = DeletionVector::CreateFactory(context_->GetCoreOptions().GetFileSystem(),
+                                                    deletion_file_map, pool_);
 
     // Partition files into non-overlapping sections
     std::vector<std::vector<SortedRun>> sections =
@@ -156,13 +151,11 @@ Result<int64_t> CountSplitRead::MergeCount(const std::shared_ptr<DataSplitImpl>&
         //   3. Multi-way merge sort by PK
         //   4. Calls MergeFunction to determine final version and KIND
         //   5. DropDeleteReader filters out rows with KIND=DELETE
-        PAIMON_ASSIGN_OR_RAISE(
-            std::unique_ptr<SortMergeReader> merged_reader,
-            merge_read_->CreateSortMergeReaderForSection(
-                section, split->Partition(), dv_factory,
-                /*predicate=*/nullptr,
-                data_file_path_factory,
-                /*drop_delete=*/true));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortMergeReader> merged_reader,
+                               merge_read_->CreateSortMergeReaderForSection(
+                                   section, split->Partition(), dv_factory,
+                                   /*predicate=*/nullptr, data_file_path_factory,
+                                   /*drop_delete=*/true));
 
         // Use RowCountAccumulator to iterate and count
         RowCountAccumulator accumulator(std::move(merged_reader));

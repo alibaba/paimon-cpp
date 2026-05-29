@@ -2925,8 +2925,7 @@ TEST_P(ScanAndReadInteTest, TestCreateCountReaderWithPredicateNotSupported) {
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
 
     // Set predicate in read context. CountReader currently does not support predicate pushdown.
-    auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2",
-                                             FieldType::INT,
+    auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT,
                                              Literal(static_cast<int32_t>(0)));
     ReadContextBuilder read_context_builder(table_path);
     AddReadOptionsForPrefetch(&read_context_builder);

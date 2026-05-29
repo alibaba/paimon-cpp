@@ -121,9 +121,8 @@ Result<std::shared_ptr<InternalReadContext>> InternalReadContext::CreateWithSche
     const std::shared_ptr<arrow::Schema>& new_read_schema) {
     // Create a new InternalReadContext sharing all properties except read_schema.
     // The new read_schema is the minimal column set for COUNT(*).
-    return std::shared_ptr<InternalReadContext>(
-        new InternalReadContext(original->read_context_, original->table_schema_,
-                                new_read_schema, original->options_));
+    return std::shared_ptr<InternalReadContext>(new InternalReadContext(
+        original->read_context_, original->table_schema_, new_read_schema, original->options_));
 }
 
 }  // namespace paimon

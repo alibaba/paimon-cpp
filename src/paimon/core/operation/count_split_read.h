@@ -48,8 +48,7 @@ class CountSplitRead {
     static Result<std::unique_ptr<CountSplitRead>> Create(
         const std::shared_ptr<FileStorePathFactory>& path_factory,
         const std::shared_ptr<InternalReadContext>& context,
-        const std::shared_ptr<MemoryPool>& memory_pool,
-        const std::shared_ptr<Executor>& executor);
+        const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor);
 
     /// Count rows for a single split. This is the main entry point.
     /// Automatically selects the best optimization level based on split properties.

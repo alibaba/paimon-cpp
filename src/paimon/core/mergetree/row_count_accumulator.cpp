@@ -22,8 +22,7 @@
 
 namespace paimon {
 
-RowCountAccumulator::RowCountAccumulator(
-    std::unique_ptr<SortMergeReader>&& merged_reader)
+RowCountAccumulator::RowCountAccumulator(std::unique_ptr<SortMergeReader>&& merged_reader)
     : merged_reader_(std::move(merged_reader)) {}
 
 Result<int64_t> RowCountAccumulator::CountAll() {

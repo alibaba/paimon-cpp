@@ -36,9 +36,8 @@ namespace {
 class PkCountReader : public CountReader {
  public:
     PkCountReader(std::vector<std::shared_ptr<Split>> splits,
-              std::unique_ptr<CountSplitRead>&& count_split_read)
-        : splits_(std::move(splits)),
-      count_split_read_(std::move(count_split_read)) {}
+                  std::unique_ptr<CountSplitRead>&& count_split_read)
+        : splits_(std::move(splits)), count_split_read_(std::move(count_split_read)) {}
 
     Result<int64_t> CountRows() override {
         int64_t total = 0;
@@ -90,9 +89,8 @@ Result<std::unique_ptr<TableRead>> KeyValueTableRead::Create(
         MergeFileSplitRead::Create(path_factory, context, memory_pool, executor));
     split_reads.emplace_back(std::move(merge_file_split_read));
 
-    return std::unique_ptr<TableRead>(
-        new KeyValueTableRead(std::move(split_reads), path_factory, context, memory_pool,
-                              executor));
+    return std::unique_ptr<TableRead>(new KeyValueTableRead(std::move(split_reads), path_factory,
+                                                            context, memory_pool, executor));
 }
 
 void KeyValueTableRead::ForceKeepDelete(bool force_keep_delete) {
