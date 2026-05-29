@@ -1792,7 +1792,9 @@ TEST_P(ScanAndReadInteTest, TestWithPKWith09VersionDvBatchScanLatestSnapshot) {
 [0, "Emily", 10, 0, 13.1],
 [0, "Alice", 10, 1, 21.1],
 [0, "Two roads diverged in a wood, and I took the one less traveled by, And that has made all the difference.", 10, 1, 11.0],
-[0, "Whether I shall turn out to be the hero of my own life.", 10, 1, 19.1]
+[0, "Whether I shall turn out to be the hero of my own life.", 10, 1, 19.1],
+[0, "Lucy", 20, 1, 14.1],
+[0, "Paul", 20, 1, 18.1]
    ])")
             .ValueOrDie());
     ASSERT_TRUE(expected);
