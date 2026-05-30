@@ -17,6 +17,7 @@
 #include "paimon/common/data/blob_utils.h"
 
 #include <cstddef>
+#include <set>
 #include <vector>
 
 #include "arrow/api.h"
@@ -25,6 +26,7 @@
 #include "fmt/format.h"
 #include "paimon/common/data/blob_defs.h"
 #include "paimon/common/data/blob_descriptor.h"
+#include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/string_utils.h"
 namespace arrow {
@@ -161,6 +163,29 @@ Status BlobUtils::ValidateInlineBlobDescriptors(
         }
     }
     return Status::OK();
+}
+
+std::vector<DataField> BlobUtils::ConvertBlobInlineDataFields(
+    const std::vector<DataField>& data_fields, const std::vector<std::string>& blob_inline_fields) {
+    if (blob_inline_fields.empty()) {
+        return data_fields;
+    }
+
+    std::set<std::string> blob_inline_field_set(blob_inline_fields.begin(),
+                                                blob_inline_fields.end());
+    std::vector<DataField> converted_fields;
+    converted_fields.reserve(data_fields.size());
+    for (const auto& data_field : data_fields) {
+        if (blob_inline_field_set.find(data_field.Name()) == blob_inline_field_set.end()) {
+            converted_fields.push_back(data_field);
+            continue;
+        }
+
+        auto binary_field = arrow::field(data_field.Name(), arrow::binary(), data_field.Nullable(),
+                                         data_field.ArrowField()->metadata());
+        converted_fields.emplace_back(data_field.Id(), binary_field, data_field.Description());
+    }
+    return converted_fields;
 }
 
 }  // namespace paimon

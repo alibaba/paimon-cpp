@@ -91,7 +91,7 @@ TEST_F(FieldMappingTest, TestEmptyPartitionKeys) {
     ASSERT_OK_AND_ASSIGN(auto mapping_builder,
                          FieldMappingBuilder::Create(
                              schema_, /*partition_keys=*/std::vector<std::string>(), predicate));
-    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_, {}));
+    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_));
 
     ASSERT_EQ(mapping->partition_info, std::nullopt);
     ASSERT_EQ(mapping->non_exist_field_info, std::nullopt);
@@ -123,7 +123,7 @@ TEST_F(FieldMappingTest, TestCompoundPartitionPredicate) {
     std::vector<std::string> partition_keys = {"f0", "f1", "f2"};
     ASSERT_OK_AND_ASSIGN(auto mapping_builder,
                          FieldMappingBuilder::Create(schema_, partition_keys, predicate));
-    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_, {}));
+    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_));
 
     PartitionInfo expected_part_info;
     expected_part_info.partition_read_schema = {fields_[0], fields_[1], fields_[2]};
@@ -156,7 +156,7 @@ TEST_F(FieldMappingTest, TestPartitionKeysEqualSchema) {
     std::vector<std::string> partition_keys = {"f0", "f1", "f2", "f3"};
     ASSERT_OK_AND_ASSIGN(auto mapping_builder,
                          FieldMappingBuilder::Create(schema_, partition_keys, predicate));
-    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_, {}));
+    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_));
 
     PartitionInfo expected_part_info;
     expected_part_info.partition_read_schema = fields_;
@@ -182,7 +182,7 @@ TEST_F(FieldMappingTest, TestAllPartitionKeysInSchema) {
     std::vector<std::string> partition_keys = {"f1", "f2"};
     ASSERT_OK_AND_ASSIGN(auto mapping_builder,
                          FieldMappingBuilder::Create(schema_, partition_keys, predicate));
-    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_, {}));
+    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_));
 
     PartitionInfo expected_part_info;
     expected_part_info.partition_read_schema = {fields_[1], fields_[2]};
@@ -208,7 +208,7 @@ TEST_F(FieldMappingTest, TestAllPartitionKeysInSchema2) {
     std::vector<std::string> partition_keys = {"f1", "f2"};
     ASSERT_OK_AND_ASSIGN(auto mapping_builder,
                          FieldMappingBuilder::Create(schema_, partition_keys, predicate));
-    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_, {}));
+    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_));
 
     PartitionInfo expected_part_info;
     expected_part_info.partition_read_schema = {fields_[1], fields_[2]};
@@ -245,7 +245,7 @@ TEST_F(FieldMappingTest, TestAllPartitionKeysInSchema3) {
     std::vector<std::string> partition_keys = {"f1", "f2"};
     ASSERT_OK_AND_ASSIGN(auto mapping_builder,
                          FieldMappingBuilder::Create(schema_, partition_keys, predicate));
-    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_, {}));
+    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_));
 
     PartitionInfo expected_part_info;
     expected_part_info.partition_read_schema = {fields_[1], fields_[2]};
@@ -288,7 +288,7 @@ TEST_F(FieldMappingTest, TestPartialPartitionKeysInSchema) {
     std::vector<std::string> partition_keys = {"f1", "f2"};
     ASSERT_OK_AND_ASSIGN(auto mapping_builder,
                          FieldMappingBuilder::Create(read_schema, partition_keys, predicate));
-    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_, {}));
+    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_));
 
     PartitionInfo expected_part_info;
     expected_part_info.partition_read_schema = {fields_[2]};
@@ -332,7 +332,7 @@ TEST_F(FieldMappingTest, TestNoPartitionKeysInReadSchema) {
     std::vector<std::string> partition_keys = {"f1", "f2"};
     ASSERT_OK_AND_ASSIGN(auto mapping_builder,
                          FieldMappingBuilder::Create(read_schema, partition_keys, predicate));
-    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_, {}));
+    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_));
 
     ASSERT_EQ(mapping->partition_info, std::nullopt);
 
@@ -376,7 +376,7 @@ TEST_F(FieldMappingTest, TestSchemaEvolution) {
     ASSERT_OK_AND_ASSIGN(
         auto mapping_builder,
         FieldMappingBuilder::Create(read_schema, partition_keys, /*predicate=*/nullptr));
-    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields, {}));
+    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields));
 
     PartitionInfo expected_part_info;
     expected_part_info.partition_read_schema = {
@@ -462,7 +462,7 @@ TEST_F(FieldMappingTest, TestSchemaEvolutionWithPredicate) {
     std::vector<std::string> partition_keys = {"key0", "key1"};
     ASSERT_OK_AND_ASSIGN(auto mapping_builder,
                          FieldMappingBuilder::Create(read_schema, partition_keys, predicate));
-    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields, {}));
+    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields));
 
     PartitionInfo expected_part_info;
     expected_part_info.partition_read_schema = {
@@ -564,7 +564,7 @@ TEST_F(FieldMappingTest, TestSchemaEvolutionWithPredicate2) {
     std::vector<std::string> partition_keys = {"key0", "key1"};
     ASSERT_OK_AND_ASSIGN(auto mapping_builder,
                          FieldMappingBuilder::Create(read_schema, partition_keys, predicate));
-    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields, {}));
+    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields));
 
     PartitionInfo expected_part_info;
     expected_part_info.partition_read_schema = {
@@ -631,7 +631,7 @@ TEST_F(FieldMappingTest, TestCompoundPredicateWithoutPushDown) {
     ASSERT_OK_AND_ASSIGN(auto mapping_builder,
                          FieldMappingBuilder::Create(read_schema, partition_keys, predicate));
     ASSERT_TRUE(mapping_builder);
-    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields, {}));
+    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields));
     ASSERT_FALSE(mapping->partition_info);
 
     NonPartitionInfo expected_non_part_info;
@@ -641,50 +641,6 @@ TEST_F(FieldMappingTest, TestCompoundPredicateWithoutPushDown) {
     // or_predicate includes int to string predicate converter, therefore it is removed
     expected_non_part_info.non_partition_filter = equal;
     CheckNonPartitionInfo(mapping->non_partition_info, expected_non_part_info);
-}
-
-TEST_F(FieldMappingTest, TestBlobInlineFieldConversion) {
-    // Schema with a blob field (large_binary with blob metadata) and a normal field.
-    auto blob_field = BlobUtils::ToArrowField("blob_col", /*nullable=*/true);
-    std::vector<DataField> data_fields = {DataField(0, arrow::field("int_col", arrow::int32())),
-                                          DataField(1, blob_field),
-                                          DataField(2, arrow::field("str_col", arrow::utf8()))};
-
-    auto read_schema = DataField::ConvertDataFieldsToArrowSchema(data_fields);
-    ASSERT_OK_AND_ASSIGN(
-        auto mapping_builder,
-        FieldMappingBuilder::Create(read_schema, /*partition_keys=*/{}, /*predicate=*/nullptr));
-
-    // Without inline fields — blob_col stays as large_binary
-    {
-        ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields, {}));
-        auto& data_schema = mapping->non_partition_info.non_partition_data_schema;
-        ASSERT_EQ(data_schema.size(), 3);
-        ASSERT_EQ(data_schema[1].ArrowField()->type()->id(), arrow::Type::LARGE_BINARY);
-    }
-
-    // With inline fields — blob_col should be converted from large_binary to binary
-    {
-        ASSERT_OK_AND_ASSIGN(auto mapping,
-                             mapping_builder->CreateFieldMapping(data_fields, {"blob_col"}));
-        auto& data_schema = mapping->non_partition_info.non_partition_data_schema;
-        ASSERT_EQ(data_schema.size(), 3);
-        // blob_col converted to binary
-        ASSERT_EQ(data_schema[1].ArrowField()->type()->id(), arrow::Type::BINARY);
-        ASSERT_EQ(data_schema[1].Name(), "blob_col");
-        ASSERT_EQ(data_schema[1].Nullable(), true);
-        // Other fields unchanged
-        ASSERT_EQ(data_schema[0].ArrowField()->type()->id(), arrow::Type::INT32);
-        ASSERT_EQ(data_schema[2].ArrowField()->type()->id(), arrow::Type::STRING);
-    }
-
-    // Non-matching inline field name — no conversion should happen
-    {
-        ASSERT_OK_AND_ASSIGN(
-            auto mapping, mapping_builder->CreateFieldMapping(data_fields, {"non_existent_field"}));
-        auto& data_schema = mapping->non_partition_info.non_partition_data_schema;
-        ASSERT_EQ(data_schema[1].ArrowField()->type()->id(), arrow::Type::LARGE_BINARY);
-    }
 }
 
 }  // namespace paimon::test

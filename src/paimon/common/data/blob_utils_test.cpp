@@ -21,6 +21,7 @@
 #include "gtest/gtest.h"
 #include "paimon/common/data/blob_defs.h"
 #include "paimon/common/data/blob_descriptor.h"
+#include "paimon/common/types/data_field.h"
 #include "paimon/data/blob.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/testing/utils/testharness.h"
@@ -329,6 +330,39 @@ TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsMultipleFields) {
         BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0", "b1"}),
         "BLOB inline field b1 configured by blob-descriptor-field or blob-view-field "
         "require values to be a BlobDescriptor or BlobViewStruct.");
+}
+
+TEST_F(BlobUtilsTest, TestConvertBlobInlineDataFields) {
+    // Schema with a blob field (large_binary with blob metadata) and normal fields.
+    auto blob_field = BlobUtils::ToArrowField("blob_col", /*nullable=*/true);
+    std::vector<DataField> data_fields = {DataField(0, arrow::field("int_col", arrow::int32())),
+                                          DataField(1, blob_field),
+                                          DataField(2, arrow::field("str_col", arrow::utf8()))};
+
+    // Without inline fields — blob_col stays as large_binary
+    {
+        auto result = BlobUtils::ConvertBlobInlineDataFields(data_fields, {});
+        ASSERT_EQ(result.size(), 3);
+        ASSERT_EQ(result[1].ArrowField()->type()->id(), arrow::Type::LARGE_BINARY);
+    }
+
+    // With inline fields — blob_col should be converted from large_binary to binary
+    {
+        auto result = BlobUtils::ConvertBlobInlineDataFields(data_fields, {"blob_col"});
+        ASSERT_EQ(result.size(), 3);
+        ASSERT_EQ(result[1].ArrowField()->type()->id(), arrow::Type::BINARY);
+        ASSERT_EQ(result[1].Name(), "blob_col");
+        ASSERT_EQ(result[1].Nullable(), true);
+        // Other fields unchanged
+        ASSERT_EQ(result[0].ArrowField()->type()->id(), arrow::Type::INT32);
+        ASSERT_EQ(result[2].ArrowField()->type()->id(), arrow::Type::STRING);
+    }
+
+    // Non-matching inline field name — no conversion should happen
+    {
+        auto result = BlobUtils::ConvertBlobInlineDataFields(data_fields, {"non_existent_field"});
+        ASSERT_EQ(result[1].ArrowField()->type()->id(), arrow::Type::LARGE_BINARY);
+    }
 }
 
 }  // namespace paimon::test

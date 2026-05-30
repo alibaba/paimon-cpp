@@ -20,6 +20,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "paimon/result.h"
 #include "paimon/visibility.h"
@@ -30,6 +31,10 @@ class KeyValueMetadata;
 class Schema;
 class StructArray;
 }  // namespace arrow
+
+namespace paimon {
+class DataField;
+}  // namespace paimon
 
 namespace paimon {
 /// Utils for blob type.
@@ -74,6 +79,14 @@ class PAIMON_EXPORT BlobUtils {
     static Status ValidateInlineBlobDescriptors(
         const std::shared_ptr<arrow::StructArray>& struct_array,
         const std::set<std::string>& inline_descriptor_fields);
+
+    /// Converts inline blob DataFields from large_binary to binary type.
+    /// Inline blob fields use large_binary in the table schema (because they are BLOB type),
+    /// but are stored as binary in data files. This conversion aligns the field type with
+    /// the actual on-disk storage format for correct reading.
+    static std::vector<DataField> ConvertBlobInlineDataFields(
+        const std::vector<DataField>& data_fields,
+        const std::vector<std::string>& blob_inline_fields);
 };
 
 }  // namespace paimon

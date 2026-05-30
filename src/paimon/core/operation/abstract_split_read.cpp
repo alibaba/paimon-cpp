@@ -21,6 +21,7 @@
 #include <utility>
 
 #include "arrow/type.h"
+#include "paimon/common/data/blob_utils.h"
 #include "paimon/common/reader/delegating_prefetch_reader.h"
 #include "paimon/common/reader/predicate_batch_reader.h"
 #include "paimon/common/reader/prefetch_file_batch_reader_impl.h"
@@ -193,14 +194,16 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingRe
                                               SpecialFields::ValueKind()};
         file_fields.insert(file_fields.end(), data_schema->Fields().begin(),
                            data_schema->Fields().end());
-        PAIMON_ASSIGN_OR_RAISE(field_mapping, field_mapping_builder->CreateFieldMapping(
-                                                  file_fields, blob_inline_fields));
+        PAIMON_ASSIGN_OR_RAISE(field_mapping,
+                               field_mapping_builder->CreateFieldMapping(file_fields));
     } else {
         PAIMON_ASSIGN_OR_RAISE(
             std::vector<DataField> projected_data_fields,
             ProjectFieldsForRowTrackingAndDataEvolution(data_schema, file_meta->write_cols));
-        PAIMON_ASSIGN_OR_RAISE(field_mapping, field_mapping_builder->CreateFieldMapping(
-                                                  projected_data_fields, blob_inline_fields));
+        auto converted_fields =
+            BlobUtils::ConvertBlobInlineDataFields(projected_data_fields, blob_inline_fields);
+        PAIMON_ASSIGN_OR_RAISE(field_mapping,
+                               field_mapping_builder->CreateFieldMapping(converted_fields));
     }
 
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(

@@ -122,7 +122,7 @@ class FieldMappingReaderTest : public ::testing::Test {
 
         ASSERT_OK_AND_ASSIGN(auto mapping_builder,
                              FieldMappingBuilder::Create(read_schema, partition_keys_, predicate));
-        ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields_, {}));
+        ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields_));
 
         auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(
             mapping->non_partition_info.non_partition_data_schema);
@@ -155,8 +155,7 @@ class FieldMappingReaderTest : public ::testing::Test {
                      const std::shared_ptr<arrow::Schema>& read_schema,
                      const std::shared_ptr<Predicate>& predicate,
                      const std::vector<std::string>& partition_keys, const BinaryRow& partition,
-                     const std::shared_ptr<arrow::Array>& expect_array,
-                     const std::vector<std::string>& blob_inline_fields = {}) const {
+                     const std::shared_ptr<arrow::Array>& expect_array) const {
         auto dir = paimon::test::UniqueTestDirectory::Create();
         ASSERT_TRUE(dir);
         auto fs = dir->GetFileSystem();
@@ -164,8 +163,7 @@ class FieldMappingReaderTest : public ::testing::Test {
 
         ASSERT_OK_AND_ASSIGN(auto mapping_builder,
                              FieldMappingBuilder::Create(read_schema, partition_keys, predicate));
-        ASSERT_OK_AND_ASSIGN(auto mapping,
-                             mapping_builder->CreateFieldMapping(data_schema, blob_inline_fields));
+        ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_schema));
 
         auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(
             mapping->non_partition_info.non_partition_data_schema);
@@ -713,8 +711,9 @@ TEST_F(FieldMappingReaderTest, TestSchemaEvolutionWithDictType) {
 }
 
 TEST_F(FieldMappingReaderTest, TestReadInlineBlobAsBinaryDataFile) {
+    // data_fields uses binary type because inline blob fields are stored as binary in data files
     std::vector<DataField> data_fields = {
-        DataField(0, BlobUtils::ToArrowField("descriptor", /*nullable=*/true)),
+        DataField(0, arrow::field("descriptor", arrow::binary(), /*nullable=*/true)),
     };
     auto data_schema = DataField::ConvertDataFieldsToArrowSchema(data_fields);
     std::string json_str = R"([
@@ -735,8 +734,7 @@ TEST_F(FieldMappingReaderTest, TestReadInlineBlobAsBinaryDataFile) {
             .ValueOrDie());
 
     CheckResult(data_schema, data_array, read_schema, /*predicate=*/nullptr,
-                /*partition_keys=*/{}, BinaryRow::EmptyRow(), expected,
-                /*blob_inline_fields=*/{"descriptor"});
+                /*partition_keys=*/{}, BinaryRow::EmptyRow(), expected);
 }
 
 TEST_F(FieldMappingReaderTest, TestReadWithSchemaEvolutionRenameCombinedCast) {
