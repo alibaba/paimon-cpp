@@ -69,11 +69,11 @@ Result<bool> Like::TestString(const std::string& field, const std::string& patte
                 return Status::Invalid("Invalid escape sequence '" + pattern + "', " +
                                        std::to_string(i));
             }
-            pat_chars.push_back(std::string(1, next_char));
+            pat_chars.emplace_back(std::string(1, next_char));
             is_wild.push_back(false);
             i += 2;
         } else if (pattern[i] == '_' || pattern[i] == '%') {
-            pat_chars.push_back(std::string(1, pattern[i]));
+            pat_chars.emplace_back(std::string(1, pattern[i]));
             is_wild.push_back(true);
             ++i;
         } else {
