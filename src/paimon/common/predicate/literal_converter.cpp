@@ -239,8 +239,9 @@ std::vector<Literal> LiteralConverter::GetLiteralFromDecimalArray(const arrow::A
             literals.emplace_back(FieldType::DECIMAL);
         } else {
             const arrow::Decimal128 decimal(array_.GetValue(i));
-            auto value =
-                static_cast<Decimal::int128_t>(decimal.high_bits()) << 64 | decimal.low_bits();
+            auto value = static_cast<Decimal::int128_t>(
+                static_cast<Decimal::uint128_t>(static_cast<uint64_t>(decimal.high_bits())) << 64 |
+                decimal.low_bits());
             literals.emplace_back(Decimal(precision, scale, value));
         }
     }

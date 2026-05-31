@@ -95,7 +95,8 @@ int32_t BinaryArrayWriter::GetFieldOffset(int32_t pos) const {
 }
 
 void BinaryArrayWriter::SetOffsetAndSize(int32_t pos, int32_t offset, int64_t size) {
-    const int64_t offset_and_size = (static_cast<int64_t>(offset) << 32) | size;
+    const auto offset_and_size =
+        static_cast<int64_t>((static_cast<uint64_t>(offset) << 32) | static_cast<uint64_t>(size));
     segment_.PutValue<int64_t>(GetElementOffset(pos, 8), offset_and_size);
 }
 

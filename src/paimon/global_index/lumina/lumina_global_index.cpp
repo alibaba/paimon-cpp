@@ -177,8 +177,12 @@ Result<std::shared_ptr<GlobalIndexReader>> LuminaGlobalIndex::CreateReader(
 class LuminaDataset : public ::lumina::api::Dataset {
  public:
     LuminaDataset(int64_t element_count, uint32_t dimension,
-                  const std::vector<std::shared_ptr<arrow::FloatArray>>& array_vec)
-        : element_count_(element_count), dimension_(dimension), array_vec_(array_vec) {}
+                  const std::vector<std::shared_ptr<arrow::FloatArray>>& array_vec,
+                  const std::vector<int64_t>& start_ids)
+        : element_count_(element_count),
+          dimension_(dimension),
+          array_vec_(array_vec),
+          start_ids_(start_ids) {}
 
     uint32_t Dim() const noexcept override {
         return dimension_;
@@ -200,8 +204,8 @@ class LuminaDataset : public ::lumina::api::Dataset {
         vector_buffer.resize(value_array_length);
         memcpy(vector_buffer.data(), value_ptr, sizeof(float) * value_array_length);
         id_buffer.resize(element_count);
-        std::iota(id_buffer.begin(), id_buffer.end(), id_);
-        id_ += element_count;
+        std::iota(id_buffer.begin(), id_buffer.end(),
+                  static_cast<::lumina::core::vector_id_t>(start_ids_[cursor_]));
 
         // release the array when copy to vector_buffer
         value_array.reset();
@@ -213,8 +217,8 @@ class LuminaDataset : public ::lumina::api::Dataset {
     int64_t element_count_;
     uint32_t dimension_;
     std::vector<std::shared_ptr<arrow::FloatArray>> array_vec_;
+    std::vector<int64_t> start_ids_;
     size_t cursor_ = 0;
-    ::lumina::core::vector_id_t id_ = 0;
 };
 
 LuminaIndexWriter::LuminaIndexWriter(const std::string& field_name,
@@ -254,35 +258,62 @@ Status LuminaIndexWriter::AddBatch(::ArrowArray* arrow_array,
     auto list_field_array = std::dynamic_pointer_cast<arrow::ListArray>(field_array);
     CHECK_NOT_NULL(list_field_array,
                    "invalid input array in LuminaIndexWriter, field array must be list array");
-    auto value_array = std::dynamic_pointer_cast<arrow::FloatArray>(list_field_array->values());
-    CHECK_NOT_NULL(
-        value_array,
-        "invalid input array in LuminaIndexWriter, field value array must be float array");
-    if (value_array->null_count() != 0) {
-        return Status::Invalid("field value array in LuminaIndexWriter is invalid, must not null");
+
+    // Split into contiguous non-null segments, skipping null rows in the list field.
+    int64_t segment_start = -1;
+    for (int64_t i = 0; i <= field_length; i++) {
+        bool is_null = (i < field_length) && list_field_array->IsNull(i);
+        bool is_end = (i == field_length);
+
+        if (!is_null && !is_end && segment_start == -1) {
+            segment_start = i;
+        }
+
+        if ((is_null || is_end) && segment_start != -1) {
+            int64_t segment_len = i - segment_start;
+            // Use value_offset to precisely locate the float range for this segment
+            auto value_start_offset = list_field_array->value_offset(segment_start);
+            auto value_end_offset = list_field_array->value_offset(segment_start + segment_len);
+            int64_t value_length = value_end_offset - value_start_offset;
+            auto sliced_values = std::dynamic_pointer_cast<arrow::FloatArray>(
+                list_field_array->values()->Slice(value_start_offset, value_length));
+            CHECK_NOT_NULL(sliced_values,
+                           "invalid sliced value array in LuminaIndexWriter, must be float array");
+            if (sliced_values->null_count() != 0) {
+                return Status::Invalid(
+                    "field value array in LuminaIndexWriter is invalid, must not null");
+            }
+            if (sliced_values->length() != segment_len * static_cast<int64_t>(dimension_)) {
+                return Status::Invalid(fmt::format(
+                    "invalid input array in LuminaIndexWriter, length of field array [{}] "
+                    "multiplied dimension [{}] must match length of field value array [{}]",
+                    segment_len, dimension_, sliced_values->length()));
+            }
+            array_vec_.push_back(std::move(sliced_values));
+            array_start_ids_.push_back(count_ + segment_start);
+            indexed_count_ += segment_len;
+            segment_start = -1;
+        }
     }
-    if (value_array->length() != field_length * dimension_) {
-        return Status::Invalid(fmt::format(
-            "invalid input array in LuminaIndexWriter, length of field array [{}] multiplied "
-            "dimension [{}] must match length of field value array [{}]",
-            field_length, dimension_, value_array->length()));
-    }
+
     count_ += array->length();
-    array_vec_.push_back(std::move(value_array));
     return Status::OK();
 }
 
 Result<std::vector<GlobalIndexIOMeta>> LuminaIndexWriter::Finish() {
+    if (indexed_count_ == 0) {
+        return std::vector<GlobalIndexIOMeta>();
+    }
     ::lumina::core::MemoryResourceConfig memory_resource(pool_.get());
     PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(
         ::lumina::api::LuminaBuilder builder,
         ::lumina::api::LuminaBuilder::Create(builder_options_, memory_resource));
     // pretrain
-    LuminaDataset dataset1(count_, dimension_, array_vec_);
+    LuminaDataset dataset1(indexed_count_, dimension_, array_vec_, array_start_ids_);
     PAIMON_RETURN_NOT_OK_FROM_LUMINA(builder.PretrainFrom(dataset1));
 
     // insert data
-    LuminaDataset dataset2(count_, dimension_, array_vec_);
+    LuminaDataset dataset2(indexed_count_, dimension_, array_vec_, array_start_ids_);
     std::vector<std::shared_ptr<arrow::FloatArray>>().swap(array_vec_);
     PAIMON_RETURN_NOT_OK_FROM_LUMINA(builder.InsertFrom(dataset2));
 
