@@ -40,6 +40,7 @@
 #include "paimon/common/utils/binary_row_partition_computer.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/internal_row_utils.h"
+#include "paimon/common/utils/object_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/rapidjson_util.h"
 #include "paimon/core/core_options.h"
@@ -53,7 +54,7 @@
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/snapshot.h"
-#include "paimon/core/stats/simple_stats_evolutions.h"
+#include "paimon/core/stats/simple_stats_evolution.h"
 #include "paimon/core/tag/tag.h"
 #include "paimon/core/utils/branch_manager.h"
 #include "paimon/core/utils/consumer_manager.h"
@@ -167,9 +168,7 @@ Result<VariantType> LocalTimestampMillisValue(int64_t epoch_millis) {
 }
 
 Result<VariantType> LocalTimestampMillisValue(const Timestamp& local_timestamp) {
-    PAIMON_ASSIGN_OR_RAISE(Timestamp utc_timestamp, DateTimeUtils::ToUTCTimestamp(local_timestamp));
-    int64_t epoch_millis = utc_timestamp.GetMillisecond();
-    return LocalTimestampMillisValue(epoch_millis);
+    return TimestampMillisValue(local_timestamp.GetMillisecond());
 }
 
 VariantType OptionalTimestampMillisValue(const std::optional<int64_t>& value) {
@@ -234,6 +233,8 @@ Result<std::vector<ManifestFileMeta>> ReadDataManifests(
         ManifestList::Create(context.fs, core_options.GetManifestFormat(),
                              core_options.GetManifestCompression(), path_factory, pool));
     std::vector<ManifestFileMeta> manifests;
+    // TODO: Align Java ReadAllManifests semantics by including changelog manifests once
+    // paimon-cpp exposes the required manifest-list support.
     PAIMON_RETURN_NOT_OK(manifest_list->ReadDataManifests(snapshot, &manifests));
     return manifests;
 }
@@ -285,13 +286,6 @@ Result<std::vector<ManifestEntry>> ReadLatestDataFiles(
     return merged_entries;
 }
 
-std::optional<std::string> OptionalBinaryRowString(const BinaryRow& row) {
-    if (row.GetFieldCount() <= 0) {
-        return std::nullopt;
-    }
-    return row.ToString();
-}
-
 Result<std::optional<std::string>> OptionalPartitionString(
     const BinaryRow& row, const std::shared_ptr<arrow::Schema>& partition_schema) {
     if (row.GetFieldCount() <= 0) {
@@ -310,12 +304,6 @@ Result<VariantType> OptionalPartitionStringValue(
     return OptionalStringValue(value);
 }
 
-Result<std::string> PartitionString(const std::shared_ptr<FileStorePathFactory>& path_factory,
-                                    const BinaryRow& partition) {
-    PAIMON_ASSIGN_OR_RAISE(std::string value, path_factory->GetPartitionString(partition));
-    return value;
-}
-
 Result<std::string> FilePath(const std::shared_ptr<FileStorePathFactory>& path_factory,
                              const ManifestEntry& entry, const DataFileMeta& file) {
     if (file.external_path) {
@@ -326,42 +314,81 @@ Result<std::string> FilePath(const std::shared_ptr<FileStorePathFactory>& path_f
     return PathUtil::JoinPath(bucket_path, file.file_name);
 }
 
-Result<std::string> FieldsValueMapString(const std::vector<DataField>& fields,
-                                         const InternalRow& row) {
+Result<std::vector<std::string>> RowValueStrings(const std::vector<DataField>& fields,
+                                                 const InternalRow& row) {
     std::shared_ptr<arrow::Schema> schema = DataField::ConvertDataFieldsToArrowSchema(fields);
     PAIMON_ASSIGN_OR_RAISE(std::vector<InternalRow::FieldGetterFunc> getters,
                            InternalRowUtils::CreateFieldGetters(schema, /*use_view=*/false));
     std::vector<std::string> values;
-    values.reserve(fields.size());
-    for (size_t i = 0; i < fields.size(); ++i) {
+    int32_t length = std::min<int32_t>(static_cast<int32_t>(fields.size()), row.GetFieldCount());
+    values.reserve(length);
+    for (int32_t i = 0; i < length; ++i) {
         std::string value = "null";
         if (!row.IsNullAt(i)) {
             VariantType field_value = getters[i](row);
-            if (std::holds_alternative<std::string_view>(field_value)) {
-                value = std::string(std::get<std::string_view>(field_value));
-            } else {
-                value = DataDefine::VariantValueToString(field_value);
-            }
+            value = DataDefine::VariantValueToString(field_value);
         }
-        values.emplace_back(fmt::format("{}:{}", fields[i].Name(), value));
+        values.push_back(std::move(value));
     }
-    return fmt::format("{{{}}}", fmt::join(values, ", "));
+    return values;
+}
+
+Result<std::string> RowValuesString(const std::vector<DataField>& fields, const InternalRow& row,
+                                    std::string_view left, std::string_view right) {
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> values, RowValueStrings(fields, row));
+    return fmt::format("{}{}{}", left, fmt::join(values, ", "), right);
+}
+
+Result<std::optional<std::string>> OptionalRowValuesString(const std::vector<DataField>& fields,
+                                                           const InternalRow& row,
+                                                           std::string_view left,
+                                                           std::string_view right) {
+    if (row.GetFieldCount() <= 0) {
+        return std::optional<std::string>();
+    }
+    PAIMON_ASSIGN_OR_RAISE(std::string value, RowValuesString(fields, row, left, right));
+    return std::optional<std::string>(value);
+}
+
+Result<std::string> FieldsValueMapString(const std::vector<DataField>& fields,
+                                         const InternalRow& row) {
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> values, RowValueStrings(fields, row));
+    std::vector<std::pair<std::string, std::string>> field_values;
+    size_t length = std::min(fields.size(), values.size());
+    field_values.reserve(length);
+    for (size_t i = 0; i < length; ++i) {
+        field_values.emplace_back(fields[i].Name(), std::move(values[i]));
+    }
+    std::sort(field_values.begin(), field_values.end(),
+              [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
+
+    std::vector<std::string> entries;
+    entries.reserve(field_values.size());
+    for (const auto& [name, value] : field_values) {
+        entries.emplace_back(fmt::format("{}={}", name, value));
+    }
+    return fmt::format("{{{}}}", fmt::join(entries, ", "));
 }
 
 Result<std::string> NullValueCountsString(const std::vector<DataField>& fields,
                                           const InternalArray& null_counts) {
-    std::vector<std::string> values;
-    values.reserve(fields.size());
-    for (size_t i = 0; i < fields.size(); ++i) {
+    std::vector<std::pair<std::string, std::string>> field_values;
+    int32_t length = std::min<int32_t>(static_cast<int32_t>(fields.size()), null_counts.Size());
+    field_values.reserve(length);
+    for (int32_t i = 0; i < length; ++i) {
         std::string value =
             null_counts.IsNullAt(i) ? "null" : std::to_string(null_counts.GetLong(i));
-        values.emplace_back(fmt::format("{}:{}", fields[i].Name(), value));
+        field_values.emplace_back(fields[i].Name(), std::move(value));
     }
-    return fmt::format("{{{}}}", fmt::join(values, ", "));
-}
+    std::sort(field_values.begin(), field_values.end(),
+              [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
 
-Result<std::vector<DataField>> StatsFields(const std::shared_ptr<TableSchema>& schema) {
-    return schema->Fields();
+    std::vector<std::string> entries;
+    entries.reserve(field_values.size());
+    for (const auto& [name, value] : field_values) {
+        entries.emplace_back(fmt::format("{}={}", name, value));
+    }
+    return fmt::format("{{{}}}", fmt::join(entries, ", "));
 }
 
 Result<std::shared_ptr<TableSchema>> LoadDataSchema(const MetadataSystemTableContext& context,
@@ -373,11 +400,29 @@ Result<std::shared_ptr<TableSchema>> LoadDataSchema(const MetadataSystemTableCon
     return schema_manager.ReadSchema(schema_id);
 }
 
-Result<std::vector<DataField>> ValueStatsFields(const MetadataSystemTableContext& context,
-                                                int64_t schema_id) {
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<TableSchema> data_schema,
-                           LoadDataSchema(context, schema_id));
-    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> fields, StatsFields(data_schema));
+Result<std::vector<DataField>> ProjectWriteFields(const std::shared_ptr<TableSchema>& data_schema,
+                                                  const DataFileMeta& file) {
+    if (!file.write_cols) {
+        return data_schema->Fields();
+    }
+
+    std::vector<DataField> fields;
+    fields.reserve(file.write_cols->size() + data_schema->PartitionKeys().size());
+    for (const auto& write_col : file.write_cols.value()) {
+        if (write_col == SpecialFields::RowId().Name() ||
+            write_col == SpecialFields::SequenceNumber().Name()) {
+            continue;
+        }
+        PAIMON_ASSIGN_OR_RAISE(DataField field, data_schema->GetField(write_col));
+        fields.push_back(std::move(field));
+    }
+
+    for (const auto& partition_key : data_schema->PartitionKeys()) {
+        if (!ObjectUtils::Contains(file.write_cols.value(), partition_key)) {
+            PAIMON_ASSIGN_OR_RAISE(DataField field, data_schema->GetField(partition_key));
+            fields.push_back(std::move(field));
+        }
+    }
     return fields;
 }
 
@@ -774,13 +819,11 @@ Result<std::vector<GenericRow>> FilesSystemTable::BuildRows() const {
                            CreatePathFactory(context_, core_options, pool));
     PAIMON_ASSIGN_OR_RAISE(std::vector<ManifestEntry> entries,
                            ReadLatestDataFiles(context_, path_factory, core_options, pool));
-    std::shared_ptr<arrow::Schema> arrow_schema =
-        DataField::ConvertDataFieldsToArrowSchema(context_.table_schema->Fields());
     PAIMON_ASSIGN_OR_RAISE(
-        std::shared_ptr<arrow::Schema> partition_schema,
-        FieldMapping::GetPartitionSchema(arrow_schema, context_.table_schema->PartitionKeys()));
+        std::vector<DataField> partition_fields,
+        context_.table_schema->GetFields(context_.table_schema->PartitionKeys()));
+    const std::vector<DataField>& value_stats_fields = context_.table_schema->Fields();
 
-    SimpleStatsEvolutions stats_evolutions(context_.table_schema, pool);
     std::vector<GenericRow> rows;
     rows.reserve(entries.size());
     for (const auto& entry : entries) {
@@ -791,10 +834,16 @@ Result<std::vector<GenericRow>> FilesSystemTable::BuildRows() const {
         const std::shared_ptr<DataFileMeta>& file = entry.File();
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<TableSchema> data_schema,
                                LoadDataSchema(context_, file->schema_id));
-        PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> value_stats_fields,
-                               ValueStatsFields(context_, file->schema_id));
-        std::shared_ptr<SimpleStatsEvolution> stats_evolution =
-            stats_evolutions.GetOrCreate(data_schema);
+        PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> data_stats_fields,
+                               ProjectWriteFields(data_schema, *file));
+        PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> key_fields,
+                               data_schema->TrimmedPrimaryKeyFields());
+        if (key_fields.empty()) {
+            key_fields = data_schema->Fields();
+        }
+        auto stats_evolution = std::make_shared<SimpleStatsEvolution>(
+            data_stats_fields, value_stats_fields,
+            data_schema->Id() != context_.table_schema->Id() || file->write_cols.has_value(), pool);
         PAIMON_ASSIGN_OR_RAISE(
             SimpleStatsEvolution::EvolutionStats stats,
             stats_evolution->Evolution(file->value_stats, file->row_count, file->value_stats_cols));
@@ -804,7 +853,7 @@ Result<std::vector<GenericRow>> FilesSystemTable::BuildRows() const {
             row.SetField(0, NullType());
         } else {
             PAIMON_ASSIGN_OR_RAISE(std::string partition,
-                                   PartitionString(path_factory, entry.Partition()));
+                                   RowValuesString(partition_fields, entry.Partition(), "{", "}"));
             row.SetField(0, StringValue(partition));
         }
         row.SetField(1, entry.Bucket());
@@ -816,8 +865,12 @@ Result<std::vector<GenericRow>> FilesSystemTable::BuildRows() const {
         row.SetField(5, file->level);
         row.SetField(6, file->row_count);
         row.SetField(7, file->file_size);
-        row.SetField(8, OptionalStringValue(OptionalBinaryRowString(file->min_key)));
-        row.SetField(9, OptionalStringValue(OptionalBinaryRowString(file->max_key)));
+        PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> min_key,
+                               OptionalRowValuesString(key_fields, file->min_key, "[", "]"));
+        PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> max_key,
+                               OptionalRowValuesString(key_fields, file->max_key, "[", "]"));
+        row.SetField(8, OptionalStringValue(min_key));
+        row.SetField(9, OptionalStringValue(max_key));
         PAIMON_ASSIGN_OR_RAISE(std::string null_value_counts,
                                NullValueCountsString(value_stats_fields, *stats.null_counts));
         row.SetField(10, StringValue(null_value_counts));

@@ -814,10 +814,101 @@ TEST(SystemTableReadInteTest, TestReadFilesSystemTableForPartitionedTable) {
     ASSERT_EQ(files_array->length(), 1);
     auto partition_array = std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(0));
     auto file_path_array = std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(2));
+    auto min_key_array = std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(8));
+    auto max_key_array = std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(9));
+    auto null_value_counts_array =
+        std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(10));
+    auto min_value_stats_array =
+        std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(11));
+    auto max_value_stats_array =
+        std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(12));
     ASSERT_TRUE(partition_array);
     ASSERT_TRUE(file_path_array);
-    ASSERT_EQ(partition_array->GetString(0), "dt=20260527/");
+    ASSERT_TRUE(min_key_array);
+    ASSERT_TRUE(max_key_array);
+    ASSERT_TRUE(null_value_counts_array);
+    ASSERT_TRUE(min_value_stats_array);
+    ASSERT_TRUE(max_value_stats_array);
+    ASSERT_EQ(partition_array->GetString(0), "{20260527}");
     ASSERT_NE(file_path_array->GetString(0).find("/dt=20260527/bucket-0/"), std::string::npos);
+    ASSERT_EQ(min_key_array->GetString(0), "[a]");
+    ASSERT_EQ(max_key_array->GetString(0), "[a]");
+    ASSERT_EQ(null_value_counts_array->GetString(0), "{dt=0, pk=0, v=0}");
+    ASSERT_EQ(min_value_stats_array->GetString(0), "{dt=20260527, pk=a, v=1}");
+    ASSERT_EQ(max_value_stats_array->GetString(0), "{dt=20260527, pk=a, v=1}");
+}
+
+TEST(SystemTableReadInteTest, TestReadFilesSystemTableWithSchemaEvolutionStats) {
+    std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"}};
+    std::string table_path = paimon::test::GetDataDir() +
+                             "/orc/append_table_with_alter_table_with_dense_field.db/"
+                             "append_table_with_alter_table_with_dense_field";
+
+    ASSERT_OK_AND_ASSIGN(auto files_result, ReadSystemTable(table_path + "$files", options));
+    auto files_array = SingleStructChunk(files_result);
+    ASSERT_EQ(StructFieldNames(files_array), (std::vector<std::string>{"partition",
+                                                                       "bucket",
+                                                                       "file_path",
+                                                                       "file_format",
+                                                                       "schema_id",
+                                                                       "level",
+                                                                       "record_count",
+                                                                       "file_size_in_bytes",
+                                                                       "min_key",
+                                                                       "max_key",
+                                                                       "null_value_counts",
+                                                                       "min_value_stats",
+                                                                       "max_value_stats",
+                                                                       "min_sequence_number",
+                                                                       "max_sequence_number",
+                                                                       "creation_time",
+                                                                       "deleteRowCount",
+                                                                       "file_source",
+                                                                       "first_row_id",
+                                                                       "write_cols"}));
+    ASSERT_GT(files_array->length(), 0);
+
+    auto partition_array = std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(0));
+    auto schema_id_array = std::dynamic_pointer_cast<arrow::Int64Array>(files_array->field(4));
+    auto null_value_counts_array =
+        std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(10));
+    auto min_value_stats_array =
+        std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(11));
+    auto max_value_stats_array =
+        std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(12));
+    ASSERT_TRUE(partition_array);
+    ASSERT_TRUE(schema_id_array);
+    ASSERT_TRUE(null_value_counts_array);
+    ASSERT_TRUE(min_value_stats_array);
+    ASSERT_TRUE(max_value_stats_array);
+
+    bool found_old_schema_file = false;
+    bool found_latest_schema_file = false;
+    for (int64_t i = 0; i < files_array->length(); ++i) {
+        std::string partition = partition_array->GetString(i);
+        ASSERT_TRUE(partition == "{0}" || partition == "{1}");
+
+        std::string null_value_counts = null_value_counts_array->GetString(i);
+        std::string min_value_stats = min_value_stats_array->GetString(i);
+        std::string max_value_stats = max_value_stats_array->GetString(i);
+        ASSERT_NE(null_value_counts.find("f4="), std::string::npos);
+        ASSERT_NE(min_value_stats.find("f4="), std::string::npos);
+        ASSERT_NE(max_value_stats.find("f4="), std::string::npos);
+        ASSERT_EQ(null_value_counts.find("f0="), std::string::npos);
+        ASSERT_EQ(min_value_stats.find("f0="), std::string::npos);
+        ASSERT_EQ(max_value_stats.find("f0="), std::string::npos);
+
+        if (schema_id_array->Value(i) == 0) {
+            found_old_schema_file = true;
+            ASSERT_NE(null_value_counts.find("f4="), std::string::npos);
+            ASSERT_NE(min_value_stats.find("f4=null"), std::string::npos);
+            ASSERT_NE(max_value_stats.find("f4=null"), std::string::npos);
+        } else if (schema_id_array->Value(i) == 1) {
+            found_latest_schema_file = true;
+        }
+    }
+    ASSERT_TRUE(found_old_schema_file);
+    ASSERT_TRUE(found_latest_schema_file);
 }
 
 TEST(SystemTableReadInteTest, TestReadManifestAndFilesSystemTablesForEmptyTable) {
