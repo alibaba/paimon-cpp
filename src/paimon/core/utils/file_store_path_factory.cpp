@@ -230,7 +230,7 @@ Result<std::string> FileStorePathFactory::GetPartitionString(const BinaryRow& pa
     std::vector<std::pair<std::string, std::string>> part_values;
     PAIMON_ASSIGN_OR_RAISE(part_values, partition_computer_->GeneratePartitionVector(partition));
     PAIMON_ASSIGN_OR_RAISE(std::string part_str,
-                           PartitionPathUtils::GeneratePartitionPath(part_values))
+                           PartitionPathUtils::GeneratePartitionPath(part_values));
 
     std::unique_lock<std::shared_mutex> write_lock(cache_mutex_);
     auto iter = row_to_str_cache_.find(partition);
