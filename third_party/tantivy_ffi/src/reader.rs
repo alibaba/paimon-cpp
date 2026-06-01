@@ -21,12 +21,12 @@ use std::ffi::{c_char, CStr};
 use std::path::Path;
 
 use croaring::{Portable, Treemap};
-use tantivy::collector::{Collector, DocSetCollector, SegmentCollector};
-// [BUG_QPLEAK_RUST] DEBUG LOG — see LoggingDocSetCollector below
+use tantivy::collector::{Collector, SegmentCollector};
+use tantivy::columnar::Column;
 use tantivy::query::{BooleanQuery, Occur, PhraseQuery, Query, RegexQuery, TermQuery};
 use tantivy::schema::{Field, IndexRecordOption};
 use tantivy::{DocAddress, DocId, Index, IndexReader, ReloadPolicy, Score, SegmentOrdinal,
-               Searcher, SegmentReader, Term};
+               SegmentReader, Term};
 
 use crate::buffer::PaimonTantivyBuffer;
 use crate::callback_directory::{PaimonCallbackDirectory, PaimonStreamCallbacks};
@@ -152,19 +152,6 @@ impl PaimonTantivyReader {
         })
     }
 
-    /// Translate (segment_ord, doc_id) → row_id via the fast field. Walks the
-    /// segment list once per call but tantivy's API requires per-segment
-    /// SegmentReader handle.
-    fn doc_address_to_row_id(searcher: &Searcher, addr: DocAddress) -> Result<u64, String> {
-        let segment_reader = searcher.segment_reader(addr.segment_ord);
-        let fast = segment_reader
-            .fast_fields()
-            .u64(PAIMON_ROW_ID_FIELD_NAME)
-            .map_err(|e| format!("fast_fields().u64('row_id') on segment {}: {e}",
-                                 addr.segment_ord))?;
-        Ok(fast.first(addr.doc_id).unwrap_or(0))
-    }
-
     /// Tokenize the query string using the *same* tokenizer the index's text
     /// field was built with. Looks up `self.tokenizer_name` in the index's
     /// `TokenizerManager` — which was populated by `new()` with either
@@ -262,13 +249,9 @@ impl PaimonTantivyReader {
     pub fn search_all(&self, search_type: SearchType, query: &str) -> Result<Vec<u64>, String> {
         let q = self.build_query(search_type, query)?;
         let searcher = self.reader.searcher();
-        let docset = searcher
-            .search(&*q, &DocSetCollector)
+        let mut ids: Vec<u64> = searcher
+            .search(&*q, &RowIdCollector)
             .map_err(|e| format!("tantivy search: {e}"))?;
-        let mut ids: Vec<u64> = docset
-            .into_iter()
-            .map(|addr| Self::doc_address_to_row_id(&searcher, addr))
-            .collect::<Result<Vec<_>, _>>()?;
         ids.sort_unstable();
         ids.dedup();
         Ok(ids)
@@ -279,7 +262,7 @@ impl PaimonTantivyReader {
     ///
     /// | with_score | limit  | path | collector              | sort           | truncate | output score |
     /// |------------|--------|------|------------------------|----------------|----------|--------------|
-    /// | false      | None   |  A   | DocSetCollector        | row_id asc     | —        | ❌           |
+    /// | false      | None   |  A   | RowIdCollector         | row_id asc     | —        | ❌           |
     /// | false      | Some(n)|  B   | AllScoredCollector     | score desc     | top n    | ❌ (dropped) |
     /// | true       | None   |  C   | AllScoredCollector     | row_id asc     | —        | ✅           |
     /// | true       | Some(n)|  D   | AllScoredCollector     | score desc     | top n    | ✅           |
@@ -300,44 +283,13 @@ impl PaimonTantivyReader {
         let q = self.build_query(search_type, query)?;
         let searcher = self.reader.searcher();
         match (with_score, limit) {
-            // Path A: all rows, no score.
-            // Group docset by segment so fast_fields().u64("row_id") is opened ONCE per
-            // segment instead of per match. The per-match form (calling
-            // doc_address_to_row_id inside .map()) allocates a Column<u64> handle for
-            // every doc, which makes high-cardinality MATCH queries (e.g. 'english' on a
-            // 250M-row table with tens of millions of hits) spend hours in this loop
-            // and balloon SR's query_pool MemTracker counter.
+            // Path A: all rows, no score. RowIdCollector reads the `row_id` fast
+            // field inline per segment (opened once), avoiding a DocSetCollector
+            // HashSet and per-doc handle — hot path for high-cardinality counts.
             (false, None) => {
-                // [BUG_QPLEAK_RUST] use logging collector instead of stock DocSetCollector
-                let docset = searcher
-                    .search(&*q, &LoggingDocSetCollector)
+                let mut row_ids: Vec<u64> = searcher
+                    .search(&*q, &RowIdCollector)
                     .map_err(|e| format!("tantivy search: {e}"))?;
-                log::warn!("[BUG_QPLEAK_RUST] path A search done, docset.len={}", docset.len());
-                let mut by_segment: std::collections::HashMap<SegmentOrdinal, Vec<DocId>> =
-                    std::collections::HashMap::new();
-                for addr in docset.into_iter() {
-                    by_segment.entry(addr.segment_ord).or_default().push(addr.doc_id);
-                }
-                let mut row_ids: Vec<u64> = Vec::new();
-                let mut processed: u64 = 0;
-                for (segment_ord, doc_ids) in by_segment.iter() {
-                    let segment_reader = searcher.segment_reader(*segment_ord);
-                    let fast = segment_reader
-                        .fast_fields()
-                        .u64(PAIMON_ROW_ID_FIELD_NAME)
-                        .map_err(|e| format!("fast_fields().u64('row_id') on segment {}: {e}",
-                                             segment_ord))?;
-                    for &doc_id in doc_ids {
-                        row_ids.push(fast.first(doc_id).unwrap_or(0));
-                        processed += 1;
-                        if processed % 500_000 == 0 {
-                            log::warn!("[BUG_QPLEAK_RUST] path A row_ids progress={} cap={}",
-                                       processed, row_ids.capacity());
-                        }
-                    }
-                }
-                log::warn!("[BUG_QPLEAK_RUST] path A row_ids done total={} cap={}",
-                           row_ids.len(), row_ids.capacity());
                 if let Some(filter) = pre_filter {
                     row_ids.retain(|id| filter.contains(*id));
                 }
@@ -464,62 +416,45 @@ fn wildcard_to_regex(input: &str) -> String {
     out
 }
 
-/// [BUG_QPLEAK_RUST] Mimics tantivy's `DocSetCollector` (returns `HashSet<DocAddress>`)
-/// but logs progress every 1M docs collected per segment + on harvest + on merge.
-/// Lets us watch query_pool growth correlate with real docset accumulation.
-struct LoggingDocSetCollector;
+/// Collector that reads the explicit `row_id` u64 fast field directly into a
+/// `Vec<u64>`, opening the column once per segment in `for_segment`. Replaces
+/// the DocSetCollector → HashSet → per-doc translate path for unscored queries.
+struct RowIdCollector;
 
-struct LoggingDocSetSegmentCollector {
-    segment_ord: SegmentOrdinal,
-    docs: Vec<DocId>,
-    count: u64,
+struct RowIdSegmentCollector {
+    row_id: Column<u64>,
+    ids: Vec<u64>,
 }
 
-impl SegmentCollector for LoggingDocSetSegmentCollector {
-    type Fruit = Vec<DocAddress>;
+impl SegmentCollector for RowIdSegmentCollector {
+    type Fruit = Vec<u64>;
 
     fn collect(&mut self, doc: DocId, _score: Score) {
-        self.docs.push(doc);
-        self.count += 1;
-        if self.count % 1_000_000 == 0 {
-            log::warn!(
-                "[BUG_QPLEAK_RUST] seg={} progress count={} cap={} mem~{}MB",
-                self.segment_ord, self.count, self.docs.capacity(),
-                self.docs.capacity() * 4 / 1024 / 1024
-            );
-        }
+        self.ids.push(self.row_id.first(doc).unwrap_or(0));
     }
 
-    fn harvest(self) -> Self::Fruit {
-        let segment_ord = self.segment_ord;
-        log::warn!(
-            "[BUG_QPLEAK_RUST] seg={} HARVEST count={} cap={}",
-            segment_ord, self.count, self.docs.capacity()
-        );
-        self.docs.into_iter().map(|d| DocAddress::new(segment_ord, d)).collect()
+    fn harvest(self) -> Vec<u64> {
+        self.ids
     }
 }
 
-impl Collector for LoggingDocSetCollector {
-    type Fruit = std::collections::HashSet<DocAddress>;
-    type Child = LoggingDocSetSegmentCollector;
+impl Collector for RowIdCollector {
+    type Fruit = Vec<u64>;
+    type Child = RowIdSegmentCollector;
 
     fn for_segment(
-        &self, segment_ord: SegmentOrdinal, _segment: &SegmentReader,
-    ) -> tantivy::Result<Self::Child> {
-        log::warn!("[BUG_QPLEAK_RUST] seg={} STARTING", segment_ord);
-        Ok(LoggingDocSetSegmentCollector { segment_ord, docs: Vec::new(), count: 0 })
+        &self, _ord: SegmentOrdinal, segment: &SegmentReader,
+    ) -> tantivy::Result<RowIdSegmentCollector> {
+        let row_id = segment.fast_fields().u64(PAIMON_ROW_ID_FIELD_NAME)?;
+        Ok(RowIdSegmentCollector { row_id, ids: Vec::new() })
     }
 
-    fn requires_scoring(&self) -> bool { false }
+    fn requires_scoring(&self) -> bool {
+        false
+    }
 
-    fn merge_fruits(
-        &self, segment_fruits: Vec<Vec<DocAddress>>,
-    ) -> tantivy::Result<std::collections::HashSet<DocAddress>> {
-        let mut result = std::collections::HashSet::new();
-        for f in segment_fruits { for a in f { result.insert(a); } }
-        log::warn!("[BUG_QPLEAK_RUST] MERGE total={}", result.len());
-        Ok(result)
+    fn merge_fruits(&self, segs: Vec<Vec<u64>>) -> tantivy::Result<Vec<u64>> {
+        Ok(segs.into_iter().flatten().collect())
     }
 }
 
