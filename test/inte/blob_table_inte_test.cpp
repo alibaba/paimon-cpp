@@ -2150,23 +2150,25 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorMultiCommitAndShuffledReadSchema) {
                          WriteArray(table_path, {}, schema->field_names(), {desc_array_3}));
     ASSERT_OK(Commit(table_path, commit_msgs_3));
 
-    // --- Read with shuffled schema: b3, b2, b1, b0, f0 ---
-    std::vector<std::string> shuffled_read_schema = {"b3", "b2", "b1", "b0", "f0"};
-    ASSERT_OK_AND_ASSIGN(auto plan, ScanTable(table_path));
+    // test read
+    {
+        // --- Read with shuffled schema: b3, b2, b1, b0, f0 ---
+        std::vector<std::string> shuffled_read_schema = {"b3", "b2", "b1", "b0", "f0"};
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanTable(table_path));
 
-    std::map<std::string, std::string> read_options = {{Options::BLOB_AS_DESCRIPTOR, "false"}};
-    ASSERT_OK_AND_ASSIGN(auto result, ReadTable(table_path, shuffled_read_schema, plan,
-                                                /*predicate=*/nullptr, read_options));
-    ASSERT_TRUE(result.chunked_array);
-    auto read_concat = arrow::Concatenate(result.chunked_array->chunks()).ValueOrDie();
-    auto read_struct = std::dynamic_pointer_cast<arrow::StructArray>(read_concat);
+        std::map<std::string, std::string> read_options = {{Options::BLOB_AS_DESCRIPTOR, "false"}};
+        ASSERT_OK_AND_ASSIGN(auto result, ReadTable(table_path, shuffled_read_schema, plan,
+                                                    /*predicate=*/nullptr, read_options));
+        ASSERT_TRUE(result.chunked_array);
+        auto read_concat = arrow::Concatenate(result.chunked_array->chunks()).ValueOrDie();
+        auto read_struct = std::dynamic_pointer_cast<arrow::StructArray>(read_concat);
 
-    // Build expected array in shuffled order from all 3 batches
-    arrow::FieldVector shuffled_fields = {
-        BlobUtils::ToArrowField("b3", true), BlobUtils::ToArrowField("b2", true),
-        BlobUtils::ToArrowField("b1", true), BlobUtils::ToArrowField("b0", true),
-        arrow::field("f0", arrow::int32())};
-    std::string expected_json = R"([
+        // Build expected array in shuffled order from all 3 batches
+        arrow::FieldVector shuffled_fields = {
+            BlobUtils::ToArrowField("b3", true), BlobUtils::ToArrowField("b2", true),
+            BlobUtils::ToArrowField("b1", true), BlobUtils::ToArrowField("b0", true),
+            arrow::field("f0", arrow::int32())};
+        std::string expected_json = R"([
         ["raw_3_0", "raw_2_0", null,    "img_0", 1],
         [null,      "raw_2_1", "vid_1", "img_1", 2],
         ["raw_3_2", "raw_2_2", "vid_2", "img_2", 3],
@@ -2174,14 +2176,49 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorMultiCommitAndShuffledReadSchema) {
         [null,      "raw_2_4", null,    "img_4", 5],
         ["raw_3_5", null,      "vid_5", "img_5", 6]
     ])";
-    auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(shuffled_fields), expected_json)
-            .ValueOrDie());
+        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(shuffled_fields),
+                                                      expected_json)
+                .ValueOrDie());
 
-    // Resolve descriptors (b0, b1 are descriptor fields) back to raw bytes
-    ASSERT_OK_AND_ASSIGN(auto resolved, ConvertDescriptorToRawBlob(read_struct, {"b0", "b1"}));
-    ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(expected_array));
-    ASSERT_TRUE(resolved->Equals(expected_with_rk));
+        // Resolve descriptors (b0, b1 are descriptor fields) back to raw bytes
+        ASSERT_OK_AND_ASSIGN(auto resolved, ConvertDescriptorToRawBlob(read_struct, {"b0", "b1"}));
+        ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(expected_array));
+        ASSERT_TRUE(resolved->Equals(expected_with_rk));
+    }
+    {
+        // test scan and read with GlobalIndexResult
+        std::vector<std::string> shuffled_read_schema = {"b3", "b2", "b1", "b0", "f0"};
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanTable(table_path, /*predicate=*/nullptr,
+                                                  /*row_ranges=*/{Range(1, 3), Range(5, 5)}));
+        std::map<std::string, std::string> read_options = {{Options::BLOB_AS_DESCRIPTOR, "false"}};
+        ASSERT_OK_AND_ASSIGN(auto result, ReadTable(table_path, shuffled_read_schema, plan,
+                                                    /*predicate=*/nullptr, read_options));
+        ASSERT_TRUE(result.chunked_array);
+        auto read_concat = arrow::Concatenate(result.chunked_array->chunks()).ValueOrDie();
+        auto read_struct = std::dynamic_pointer_cast<arrow::StructArray>(read_concat);
+
+        // Build expected array in shuffled order from all 3 batches
+        arrow::FieldVector shuffled_fields = {
+            BlobUtils::ToArrowField("b3", true), BlobUtils::ToArrowField("b2", true),
+            BlobUtils::ToArrowField("b1", true), BlobUtils::ToArrowField("b0", true),
+            arrow::field("f0", arrow::int32())};
+        std::string expected_json = R"([
+        [null,      "raw_2_1", "vid_1", "img_1", 2],
+        ["raw_3_2", "raw_2_2", "vid_2", "img_2", 3],
+        ["raw_3_3", "raw_2_3", "vid_3", null,    4],
+        ["raw_3_5", null,      "vid_5", "img_5", 6]
+    ])";
+        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(shuffled_fields),
+                                                      expected_json)
+                .ValueOrDie());
+
+        // Resolve descriptors (b0, b1 are descriptor fields) back to raw bytes
+        ASSERT_OK_AND_ASSIGN(auto resolved, ConvertDescriptorToRawBlob(read_struct, {"b0", "b1"}));
+        ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(expected_array));
+        ASSERT_TRUE(resolved->Equals(expected_with_rk));
+    }
 }
 
 TEST_P(BlobTableInteTest, TestDataEvolutionWithBlobDescriptorField) {

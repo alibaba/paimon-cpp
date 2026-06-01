@@ -127,7 +127,7 @@ Status BlobFormatWriter::AddBatch(ArrowArray* batch) {
             PAIMON_RETURN_NOT_OK(Flush());
         }
     } else {
-        // TODO(xinyu.lxy): Java does not flush when writeConsumer is null.
+        // Java does not flush when writeConsumer is null.
         PAIMON_RETURN_NOT_OK(Flush());
     }
     return Status::OK();

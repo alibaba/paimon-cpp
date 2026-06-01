@@ -18,10 +18,8 @@
 
 #include <algorithm>
 
-#include "arrow/type.h"
 #include "arrow/type_fwd.h"
 #include "gtest/gtest.h"
-#include "paimon/common/data/blob_utils.h"
 #include "paimon/common/predicate/leaf_predicate_impl.h"
 #include "paimon/common/predicate/predicate_filter.h"
 #include "paimon/data/decimal.h"
