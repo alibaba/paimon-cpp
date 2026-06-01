@@ -38,6 +38,7 @@
 #include "paimon/common/data/binary_array_writer.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
+#include "paimon/common/data/blob_view_struct.h"
 #include "paimon/common/factories/io_hook.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/path_util.h"
@@ -2382,6 +2383,105 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorFieldWriteRawBytesDirectly) {
                         "BLOB inline field b0 configured by blob-descriptor-field or "
                         "blob-view-field require values "
                         "to be a BlobDescriptor or BlobViewStruct.");
+}
+
+TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamTable) {
+    auto file_format = GetParam();
+    if (file_format != "orc" && file_format != "parquet") {
+        return;
+    }
+
+    const std::string upstream_db_name = "append_table_with_multi_blob";
+    const std::string upstream_table_name = "append_table_with_multi_blob";
+    std::string src_db_path = paimon::test::GetDataDir() + file_format + "/" + upstream_db_name +
+                              ".db/" + upstream_table_name;
+    std::string dst_db_path =
+        PathUtil::JoinPath(dir_->Str(), upstream_db_name + ".db/" + upstream_table_name);
+    ASSERT_TRUE(TestUtil::CopyDirectory(src_db_path, dst_db_path));
+
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
+                                 BlobUtils::ToArrowField("view", true)};
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, file_format},
+                                                  {Options::BUCKET, "-1"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                  {Options::BLOB_VIEW_FIELD, "view"},
+                                                  {Options::FILE_SYSTEM, "local"}};
+    CreateTable(fields, /*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+
+    // src array
+    Identifier upstream_identifier(upstream_db_name, upstream_table_name);
+    arrow::Int32Builder f0_builder;
+    arrow::LargeBinaryBuilder view_builder;
+    for (int32_t i = 0; i < 8; ++i) {
+        ASSERT_TRUE(f0_builder.Append(100 + i).ok());
+        if (i < 6) {
+            BlobViewStruct view_struct(upstream_identifier, /*field_id=*/6,
+                                       /*row_id=*/static_cast<int64_t>(i));
+            auto serialized = view_struct.Serialize(GetDefaultPool());
+            ASSERT_TRUE(view_builder
+                            .Append(reinterpret_cast<const uint8_t*>(serialized->data()),
+                                    serialized->size())
+                            .ok());
+        } else {
+            ASSERT_TRUE(view_builder.AppendNull().ok());
+        }
+    }
+    std::shared_ptr<arrow::Array> f0_array;
+    std::shared_ptr<arrow::Array> view_array;
+    ASSERT_TRUE(f0_builder.Finish(&f0_array).ok());
+    ASSERT_TRUE(view_builder.Finish(&view_array).ok());
+    auto write_struct_result = arrow::StructArray::Make(arrow::ArrayVector({f0_array, view_array}),
+                                                        std::vector<std::string>({"f0", "view"}));
+    ASSERT_TRUE(write_struct_result.ok());
+    auto write_struct =
+        std::dynamic_pointer_cast<arrow::StructArray>(write_struct_result.ValueOrDie());
+
+    // write & commit
+    auto schema = arrow::schema(fields);
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         WriteArray(table_path, {}, schema->field_names(), {write_struct}));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+    // scan & read
+    ASSERT_OK_AND_ASSIGN(auto plan, ScanTable(table_path));
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         ReadTable(table_path, schema->field_names(), plan, /*predicate=*/nullptr));
+    ASSERT_TRUE(result.chunked_array);
+    auto read_concat = arrow::Concatenate(result.chunked_array->chunks()).ValueOrDie();
+    auto read_struct = std::dynamic_pointer_cast<arrow::StructArray>(read_concat);
+    ASSERT_EQ(read_struct->length(), 8);
+    ASSERT_OK_AND_ASSIGN(auto result_array, ConvertDescriptorToRawBlob(read_struct, {"view"}));
+
+    // check result
+    arrow::Int32Builder expected_f0_builder;
+    arrow::LargeBinaryBuilder expected_view_builder;
+    for (int32_t i = 0; i < 8; ++i) {
+        ASSERT_TRUE(expected_f0_builder.Append(100 + i).ok());
+        if (i >= 6 || i == 0 || i == 2) {
+            ASSERT_TRUE(expected_view_builder.AppendNull().ok());
+            continue;
+        }
+        std::string raw(2048, static_cast<char>('a' + i));
+        ASSERT_TRUE(
+            expected_view_builder.Append(reinterpret_cast<const uint8_t*>(raw.data()), raw.size())
+                .ok());
+    }
+    std::shared_ptr<arrow::Array> expected_f0;
+    std::shared_ptr<arrow::Array> expected_view;
+    ASSERT_TRUE(expected_f0_builder.Finish(&expected_f0).ok());
+    ASSERT_TRUE(expected_view_builder.Finish(&expected_view).ok());
+    auto expected_struct_result = arrow::StructArray::Make(
+        arrow::ArrayVector({expected_f0, expected_view}), std::vector<std::string>({"f0", "view"}));
+    ASSERT_TRUE(expected_struct_result.ok());
+    auto expected_struct =
+        std::dynamic_pointer_cast<arrow::StructArray>(expected_struct_result.ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(expected_struct));
+
+    ASSERT_TRUE(result_array->Equals(expected_with_rk))
+        << "result_array:" << result_array->ToString() << std::endl
+        << "expected:" << expected_with_rk->ToString();
 }
 
 }  // namespace paimon::test

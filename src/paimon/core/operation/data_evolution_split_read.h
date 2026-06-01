@@ -21,8 +21,10 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
+#include "paimon/common/data/blob_view_struct.h"
 #include "paimon/common/reader/data_evolution_file_reader.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/operation/abstract_split_read.h"
@@ -140,6 +142,22 @@ class DataEvolutionSplitRead : public AbstractSplitRead {
         std::vector<std::shared_ptr<DataFileMeta>>&& files);
 
     static bool HasIndexScoreField(const std::shared_ptr<arrow::Schema>& read_schema);
+
+    static std::vector<std::string> HasBlobViewField(
+        const CoreOptions& options, const std::shared_ptr<arrow::Schema>& read_schema);
+
+    static Result<std::unordered_set<BlobViewStruct>> ExtractBlobViewStructs(BatchReader* reader);
+
+    /// Resolves every read field name in `read_blob_view_fields` against `read_schema` and returns
+    /// the set of corresponding paimon field ids (extracted from the field metadata). Returns an
+    /// error if any field is missing or lacks the `paimon.id` metadata entry.
+    static Result<std::unordered_set<int32_t>> CollectBlobViewFieldIds(
+        const std::shared_ptr<arrow::Schema>& read_schema,
+        const std::vector<std::string>& read_blob_view_fields);
+
+    Result<std::unique_ptr<BatchReader>> CreateBlobViewReader(
+        const std::shared_ptr<DataSplit>& data_split,
+        const std::vector<std::string>& read_blob_view_fields) const;
 
  private:
     Result<std::unique_ptr<DataEvolutionFileReader>> CreateUnionReader(

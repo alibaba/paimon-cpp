@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "fmt/format.h"
+#include "paimon/common/utils/murmurhash_utils.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -38,7 +39,7 @@ Identifier::Identifier(const std::string& table)
 Identifier::Identifier(const std::string& database, const std::string& table)
     : database_(database), table_(table) {}
 
-bool Identifier::operator==(const Identifier& other) {
+bool Identifier::operator==(const Identifier& other) const {
     return (database_ == other.database_ && table_ == other.table_);
 }
 
@@ -77,6 +78,34 @@ Result<bool> Identifier::IsSystemTable() const {
 
 std::string Identifier::ToString() const {
     return fmt::format("Identifier{{database='{}', table='{}'}}", database_, table_);
+}
+
+int32_t Identifier::HashCode() const {
+    int32_t hash = MurmurHashUtils::HashUnsafeBytes(reinterpret_cast<const void*>(database_.data()),
+                                                    /*offset=*/0, database_.size());
+    return MurmurHashUtils::HashUnsafeBytes(reinterpret_cast<const void*>(table_.data()),
+                                            /*offset=*/0, table_.size(), hash);
+}
+
+std::string Identifier::GetFullName() const {
+    if (database_ == kUnknownDatabase) {
+        return table_;
+    }
+    return fmt::format("{}.{}", database_, table_);
+}
+
+Result<Identifier> Identifier::FromString(const std::string& full_name) {
+    if (StringUtils::IsNullOrWhitespaceOnly(full_name)) {
+        return Status::Invalid("full name cannot be empty or whitespace only");
+    }
+    const auto dot_pos = full_name.find('.');
+    if (dot_pos == std::string::npos || dot_pos == 0 || dot_pos == full_name.size() - 1) {
+        return Status::Invalid(
+            fmt::format("cannot get splits from '{}' to get database and table", full_name));
+    }
+    std::string database = full_name.substr(0, dot_pos);
+    std::string table = full_name.substr(dot_pos + 1);
+    return Identifier(database, table);
 }
 
 Status Identifier::SplitTableName() const {
