@@ -597,6 +597,12 @@ TEST_F(ScanAndReadInteTest, TestWithPKWithDvBatchScanSnapshot6) {
                 .ValueOrDie());
         ASSERT_TRUE(expected);
         ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+
+        // CountRows should match the number of visible rows returned by CreateReader.
+        ASSERT_OK_AND_ASSIGN(auto count_reader,
+                             table_read->CreateCountReader(result_plan->Splits()));
+        ASSERT_OK_AND_ASSIGN(int64_t count, count_reader->CountRows());
+        ASSERT_EQ(count, read_result->length());
     };
     for (auto [file_format, enable_prefetch] : GetTestValuesForScanAndReadInteTest()) {
         check_result(file_format);
@@ -1067,7 +1073,8 @@ TEST_P(ScanAndReadInteTest, TestWithPKWithMorBatchScanLatestSnapshot) {
 
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     ASSERT_EQ(result_plan->SnapshotId().value(), 5);
-    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(result_plan->Splits()));
+    auto splits = result_plan->Splits();
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(splits));
     ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
 
     // check result
@@ -1088,6 +1095,10 @@ TEST_P(ScanAndReadInteTest, TestWithPKWithMorBatchScanLatestSnapshot) {
             .ValueOrDie());
     ASSERT_TRUE(expected);
     ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+
+    ASSERT_OK_AND_ASSIGN(auto count_reader, table_read->CreateCountReader(splits));
+    ASSERT_OK_AND_ASSIGN(int64_t count, count_reader->CountRows());
+    ASSERT_EQ(count, read_result->length());
 }
 
 TEST_P(ScanAndReadInteTest, TestWithPKWithMorBatchScanSnapshot2) {
@@ -1109,7 +1120,8 @@ TEST_P(ScanAndReadInteTest, TestWithPKWithMorBatchScanSnapshot2) {
 
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     ASSERT_EQ(result_plan->SnapshotId().value(), 2);
-    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(result_plan->Splits()));
+    auto splits = result_plan->Splits();
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(splits));
     ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
 
     // check result
@@ -1127,6 +1139,10 @@ TEST_P(ScanAndReadInteTest, TestWithPKWithMorBatchScanSnapshot2) {
             .ValueOrDie());
     ASSERT_TRUE(expected);
     ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+
+    ASSERT_OK_AND_ASSIGN(auto count_reader, table_read->CreateCountReader(splits));
+    ASSERT_OK_AND_ASSIGN(int64_t count, count_reader->CountRows());
+    ASSERT_EQ(count, read_result->length());
 }
 
 TEST_P(ScanAndReadInteTest, TestWithPKWithMorBatchScanSnapshot5WithPartitionAndBucketFilter) {
@@ -2781,89 +2797,6 @@ TEST_P(ScanAndReadInteTest, TestWithPKBucketSelectByPredicate) {
 // =============================================================================
 // CountRows integration tests
 // =============================================================================
-
-TEST_P(ScanAndReadInteTest, TestCountRowsWithPKMorLatestSnapshot) {
-    auto [file_format, enable_prefetch] = GetParam();
-    std::string table_path = paimon::test::GetDataDir() + file_format +
-                             "/pk_table_scan_and_read_mor.db/pk_table_scan_and_read_mor/";
-
-    // Scan latest snapshot (snapshot 5) for PK+MOR table
-    ScanContextBuilder scan_context_builder(table_path);
-    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
-
-    ReadContextBuilder read_context_builder(table_path);
-    AddReadOptionsForPrefetch(&read_context_builder);
-    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
-
-    ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
-    ASSERT_EQ(result_plan->SnapshotId().value(), 5);
-
-    // Use CreateCountReader as the primary count API.
-    ASSERT_OK_AND_ASSIGN(auto count_reader, table_read->CreateCountReader(result_plan->Splits()));
-    ASSERT_OK_AND_ASSIGN(int64_t count, count_reader->CountRows());
-
-    // Verify: the MOR latest snapshot should have 11 rows
-    // (same as TestWithPKWithMorBatchScanLatestSnapshot)
-    ASSERT_EQ(count, 11);
-}
-
-TEST_P(ScanAndReadInteTest, TestCountRowsWithPKMorSnapshot2) {
-    auto [file_format, enable_prefetch] = GetParam();
-    std::string table_path = paimon::test::GetDataDir() + file_format +
-                             "/pk_table_scan_and_read_mor.db/pk_table_scan_and_read_mor/";
-
-    // Scan snapshot 2 for PK+MOR table
-    ScanContextBuilder scan_context_builder(table_path);
-    scan_context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "2");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
-
-    ReadContextBuilder read_context_builder(table_path);
-    AddReadOptionsForPrefetch(&read_context_builder);
-    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
-
-    ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
-    ASSERT_EQ(result_plan->SnapshotId().value(), 2);
-
-    // Use CreateCountReader as the primary count API.
-    ASSERT_OK_AND_ASSIGN(auto count_reader, table_read->CreateCountReader(result_plan->Splits()));
-    ASSERT_OK_AND_ASSIGN(int64_t count, count_reader->CountRows());
-
-    // Verify: snapshot 2 should have 8 rows
-    // (same as TestWithPKWithMorBatchScanSnapshot2)
-    ASSERT_EQ(count, 8);
-}
-
-TEST_P(ScanAndReadInteTest, TestCountRowsWithPKDvSnapshot6) {
-    auto [file_format, enable_prefetch] = GetParam();
-    std::string table_path = paimon::test::GetDataDir() + file_format +
-                             "/pk_table_scan_and_read_dv.db/pk_table_scan_and_read_dv/";
-
-    // Scan snapshot 6 for PK+DV table
-    ScanContextBuilder scan_context_builder(table_path);
-    scan_context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "6");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
-
-    ReadContextBuilder read_context_builder(table_path);
-    AddReadOptionsForPrefetch(&read_context_builder);
-    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
-
-    ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
-    ASSERT_EQ(result_plan->SnapshotId().value(), 6);
-
-    // Use CreateCountReader as the primary count API.
-    ASSERT_OK_AND_ASSIGN(auto count_reader, table_read->CreateCountReader(result_plan->Splits()));
-    ASSERT_OK_AND_ASSIGN(int64_t count, count_reader->CountRows());
-
-    // Verify: DV snapshot 6 should have 8 rows
-    // (same as TestWithPKWithDvBatchScanSnapshot6)
-    ASSERT_EQ(count, 8);
-}
 
 TEST_P(ScanAndReadInteTest, TestCountRowsEmptySplits) {
     auto [file_format, enable_prefetch] = GetParam();

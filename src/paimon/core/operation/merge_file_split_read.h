@@ -105,7 +105,7 @@ class MergeFileSplitRead : public AbstractSplitRead {
         return path_factory_;
     }
 
-    /// Get the key comparator (needed by CountSplitRead for IntervalPartition).
+    /// Get the key comparator (needed by count readers for IntervalPartition).
     std::shared_ptr<FieldsComparator> GetKeyComparator() const {
         return key_comparator_;
     }

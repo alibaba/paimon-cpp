@@ -273,7 +273,6 @@ set(PAIMON_CORE_SRCS
     core/operation/append_only_file_store_scan.cpp
     core/operation/append_only_file_store_write.cpp
     core/operation/commit_context.cpp
-    core/operation/count_split_read.cpp
     core/operation/expire_snapshots.cpp
     core/operation/file_store_commit.cpp
     core/operation/file_store_commit_impl.cpp
@@ -307,6 +306,7 @@ set(PAIMON_CORE_SRCS
     core/table/sink/commit_message.cpp
     core/table/sink/commit_message_impl.cpp
     core/table/sink/commit_message_serializer.cpp
+    core/table/source/append_count_reader.cpp
     core/table/source/append_only_table_read.cpp
     core/table/source/split.cpp
     core/table/source/data_split_impl.cpp
@@ -314,6 +314,7 @@ set(PAIMON_CORE_SRCS
     core/table/source/data_table_stream_scan.cpp
     core/table/source/fallback_table_read.cpp
     core/table/source/key_value_table_read.cpp
+    core/table/source/pk_count_reader.cpp
     core/table/source/merge_tree_split_generator.cpp
     core/table/source/data_evolution_split_generator.cpp
     core/table/source/plan_impl.cpp
@@ -705,6 +706,8 @@ if(PAIMON_BUILD_TESTS)
                     core/table/sink/commit_message_impl_test.cpp
                     core/table/source/fallback_data_split_test.cpp
                     core/table/source/table_read_test.cpp
+                    core/table/source/append_count_reader_test.cpp
+                    core/table/source/pk_count_reader_test.cpp
                     core/table/source/data_split_test.cpp
                     core/table/source/deletion_file_test.cpp
                     core/table/source/split_generator_test.cpp

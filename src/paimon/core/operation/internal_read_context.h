@@ -99,7 +99,7 @@ class InternalReadContext {
     }
 
     /// Create a new InternalReadContext with a different read schema.
-    /// Used by CountSplitRead to create a context with a minimal column set.
+    /// Useful for creating a context with a minimal column set for specialized reads.
     /// All other settings (predicate, options, table_schema, etc.) are inherited
     /// from the original context.
     static Result<std::shared_ptr<InternalReadContext>> CreateWithSchema(
