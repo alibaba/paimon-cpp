@@ -223,7 +223,7 @@ index 4d3acb491e..3906ff3c59 100644
 @@ -207,6 +207,117 @@
    return {col_start, col_length};
  }
- 
+
 +// CachedInputStream: InputStream adapter that reads through ReadRangeCache with
 +// zero-cost skip for non-cached pages. Used for page-level caching where only
 +// specific pages are pre-buffered.
