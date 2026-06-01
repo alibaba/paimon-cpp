@@ -97,11 +97,14 @@ Result<std::set<std::string>> OrphanFilesCleanerImpl::Clean() {
     }
     PAIMON_ASSIGN_OR_RAISE(std::set<std::string> all_dirs, ListPaimonFileDirs());
     std::vector<std::future<std::vector<std::unique_ptr<FileStatus>>>> file_statuses_futures;
+    ScopeGuard file_statuses_guard(
+        [&file_statuses_futures]() { CollectAll(file_statuses_futures); });
     for (const auto& dir : all_dirs) {
         file_statuses_futures.push_back(
             Via(executor_.get(), [this, dir] { return TryBestListingDirs(dir); }));
     }
     PAIMON_ASSIGN_OR_RAISE(std::set<std::string> used_file_names, GetUsedFiles());
+    file_statuses_guard.Release();
 
     Duration duration;
     std::set<std::string> need_to_deletes;

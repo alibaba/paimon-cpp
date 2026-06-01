@@ -339,7 +339,8 @@ Result<int32_t> Literal::CompareTo(const Literal& other) const {
         case FieldType::BINARY: {
             std::string_view v1(impl_->value_.Buffer, impl_->size_);
             std::string_view v2(other.impl_->value_.Buffer, other.impl_->size_);
-            return (*this == other) ? 0 : (v1 < v2 ? -1 : 1);
+            int32_t cmp = v1.compare(v2);
+            return cmp < 0 ? -1 : (cmp > 0 ? 1 : 0);
         }
         case FieldType::TIMESTAMP:
             return impl_->value_.TimestampVal == other.impl_->value_.TimestampVal
@@ -361,65 +362,11 @@ bool Literal::operator==(const Literal& other) const {
     if (this == &other) {
         return true;
     }
-    if (GetType() != other.GetType() || IsNull() != other.IsNull()) {
+    auto result = CompareTo(other);
+    if (!result.ok()) {
         return false;
     }
-    if (IsNull()) {
-        return true;
-    }
-    if (GetType() != FieldType::FLOAT && GetType() != FieldType::DOUBLE &&
-        HashCode() != other.HashCode()) {
-        return false;
-    }
-    switch (GetType()) {
-        case FieldType::BOOLEAN:
-            return impl_->value_.BooleanVal == other.impl_->value_.BooleanVal;
-        case FieldType::TINYINT:
-            return impl_->value_.TinyIntVal == other.impl_->value_.TinyIntVal;
-        case FieldType::SMALLINT:
-            return impl_->value_.SmallIntVal == other.impl_->value_.SmallIntVal;
-        case FieldType::INT:
-            return impl_->value_.IntVal == other.impl_->value_.IntVal;
-        case FieldType::BIGINT:
-            return impl_->value_.BigIntVal == other.impl_->value_.BigIntVal;
-        case FieldType::FLOAT: {
-            if (std::isnan(impl_->value_.FloatVal) && std::isnan(other.impl_->value_.FloatVal)) {
-                return true;
-            }
-            if (impl_->value_.FloatVal == INFINITY && other.impl_->value_.FloatVal == INFINITY) {
-                return true;
-            }
-            if (impl_->value_.FloatVal == -INFINITY && other.impl_->value_.FloatVal == -INFINITY) {
-                return true;
-            }
-            return std::fabs(impl_->value_.FloatVal - other.impl_->value_.FloatVal) < 1E-5;
-        }
-        case FieldType::DOUBLE: {
-            if (std::isnan(impl_->value_.DoubleVal) && std::isnan(other.impl_->value_.DoubleVal)) {
-                return true;
-            }
-            if (impl_->value_.DoubleVal == INFINITY && other.impl_->value_.DoubleVal == INFINITY) {
-                return true;
-            }
-            if (impl_->value_.DoubleVal == -INFINITY &&
-                other.impl_->value_.DoubleVal == -INFINITY) {
-                return true;
-            }
-            return std::fabs(impl_->value_.DoubleVal - other.impl_->value_.DoubleVal) < 1E-5;
-        }
-        case FieldType::STRING:
-        case FieldType::BINARY:
-            return impl_->size_ == other.impl_->size_ &&
-                   memcmp(impl_->value_.Buffer, other.impl_->value_.Buffer, impl_->size_) == 0;
-        case FieldType::TIMESTAMP:
-            return impl_->value_.TimestampVal == other.impl_->value_.TimestampVal;
-        case FieldType::DECIMAL:
-            return impl_->value_.DecimalVal == other.impl_->value_.DecimalVal;
-        case FieldType::DATE:
-            return impl_->value_.IntVal == other.impl_->value_.IntVal;
-        default:
-            return false;
-    }
+    return result.value() == 0;
 }
 
 bool Literal::operator!=(const Literal& r) const {
