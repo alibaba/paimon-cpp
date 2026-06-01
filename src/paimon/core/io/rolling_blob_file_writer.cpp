@@ -44,12 +44,13 @@ RollingBlobFileWriter::RollingBlobFileWriter(
     std::function<Result<std::unique_ptr<MainWriter>>()> create_file_writer,
     const std::shared_ptr<arrow::Schema>& blob_schema,
     MultipleBlobFileWriter::BlobWriterCreator blob_writer_creator,
-    const std::shared_ptr<arrow::DataType>& data_type)
+    const std::shared_ptr<arrow::DataType>& data_type, const std::set<std::string>& inline_fields)
     : RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>(target_file_size,
                                                                       create_file_writer),
       blob_schema_(blob_schema),
       blob_writer_creator_(std::move(blob_writer_creator)),
       data_type_(data_type),
+      inline_fields_(inline_fields),
       logger_(Logger::GetLogger("RollingBlobFileWriter")) {}
 
 Status RollingBlobFileWriter::Write(::ArrowArray* record) {
@@ -67,7 +68,7 @@ Status RollingBlobFileWriter::Write(::ArrowArray* record) {
     auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(arrow_array);
 
     PAIMON_ASSIGN_OR_RAISE(BlobUtils::SeparatedStructArrays separated_arrays,
-                           BlobUtils::SeparateBlobArray(struct_array));
+                           BlobUtils::SeparateBlobArray(struct_array, inline_fields_));
     // Write main (non-blob) data
     ::ArrowArray c_main_array;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(

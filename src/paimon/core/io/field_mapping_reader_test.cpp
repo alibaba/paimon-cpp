@@ -32,6 +32,7 @@
 #include "arrow/ipc/json_simple.h"
 #include "arrow/util/checked_cast.h"
 #include "gtest/gtest.h"
+#include "paimon/common/data/blob_utils.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/core/utils/field_mapping.h"
 #include "paimon/defs.h"
@@ -180,6 +181,9 @@ class FieldMappingReaderTest : public ::testing::Test {
         }
         auto expected_chunk_array =
             std::make_shared<arrow::ChunkedArray>(arrow::ArrayVector({expect_array}));
+
+        ASSERT_TRUE(result_array->type()->Equals(expected_chunk_array->type()))
+            << result_array->type()->ToString() << expected_chunk_array->type()->ToString();
 
         ASSERT_TRUE(result_array->Equals(expected_chunk_array))
             << result_array->ToString() << expected_chunk_array->ToString();
@@ -704,6 +708,33 @@ TEST_F(FieldMappingReaderTest, TestSchemaEvolutionWithDictType) {
             .ValueOrDie());
     CheckResult(data_schema, data_array, read_schema, /*predicate=*/nullptr, partition_keys,
                 partition, expected_array);
+}
+
+TEST_F(FieldMappingReaderTest, TestReadInlineBlobAsBinaryDataFile) {
+    // data_fields uses binary type because inline blob fields are stored as binary in data files
+    std::vector<DataField> data_fields = {
+        DataField(0, arrow::field("descriptor", arrow::binary(), /*nullable=*/true)),
+    };
+    auto data_schema = DataField::ConvertDataFieldsToArrowSchema(data_fields);
+    std::string json_str = R"([
+        ["descriptor-1"],
+        [null],
+        ["descriptor-2"]
+    ])";
+    auto data_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(data_schema->fields()), json_str)
+            .ValueOrDie());
+
+    std::vector<DataField> read_fields = {
+        DataField(0, BlobUtils::ToArrowField("descriptor", /*nullable=*/true)),
+    };
+    auto read_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields);
+    auto expected = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(read_schema->fields()), json_str)
+            .ValueOrDie());
+
+    CheckResult(data_schema, data_array, read_schema, /*predicate=*/nullptr,
+                /*partition_keys=*/{}, BinaryRow::EmptyRow(), expected);
 }
 
 TEST_F(FieldMappingReaderTest, TestReadWithSchemaEvolutionRenameCombinedCast) {

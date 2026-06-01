@@ -71,10 +71,6 @@ AppendOnlyFileStoreWrite::AppendOnlyFileStoreWrite(
                              is_streaming_mode, ignore_num_bucket_check, executor, pool),
       logger_(Logger::GetLogger("AppendOnlyFileStoreWrite")) {
     write_cols_ = write_schema->field_names();
-    auto schemas = BlobUtils::SeparateBlobSchema(schema_);
-    if (schemas.blob_schema && schemas.blob_schema->num_fields() > 0) {
-        with_blob_ = true;
-    }
     // optimize write_cols to null in following cases:
     // 1. write_schema contains all columns
     // 2. TODO(xinyu.lxy) write_schema contains all columns and append _ROW_ID & _SEQUENCE_NUMBER
@@ -172,9 +168,7 @@ Result<std::shared_ptr<BatchWriter>> AppendOnlyFileStoreWrite::CreateWriter(
                            file_store_path_factory_->CreateDataFilePathFactory(partition, bucket));
 
     std::shared_ptr<CompactManager> compact_manager;
-    auto schemas = BlobUtils::SeparateBlobSchema(write_schema_);
-    if (options_.WriteOnly() || options_.DataEvolutionEnabled() || options_.GetBucket() == -1 ||
-        with_blob_) {
+    if (options_.WriteOnly() || options_.DataEvolutionEnabled() || options_.GetBucket() == -1) {
         compact_manager = std::make_shared<NoopCompactManager>();
     } else {
         auto dv_factory =

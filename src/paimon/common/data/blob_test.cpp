@@ -144,38 +144,34 @@ TEST_F(BlobTest, TestNewInputStreamWithDynamicLength) {
 }
 
 TEST_F(BlobTest, TestArrowField) {
-    {
-        // basic: field name, non-nullable by default
-        ASSERT_OK_AND_ASSIGN(auto schema, Blob::ArrowField("my_blob"));
+    for (bool nullable : {false, true}) {
+        ASSERT_OK_AND_ASSIGN(auto schema, Blob::ArrowField("my_blob", nullable));
         ASSERT_NE(schema, nullptr);
 
-        // import back to arrow::Field to verify
         auto field_result = arrow::ImportField(schema.get());
         ASSERT_TRUE(field_result.ok());
         auto field = field_result.ValueUnsafe();
 
         ASSERT_EQ(field->name(), "my_blob");
         ASSERT_EQ(field->type()->id(), arrow::Type::LARGE_BINARY);
-        ASSERT_FALSE(field->nullable());
+        ASSERT_EQ(field->nullable(), nullable);
         ASSERT_TRUE(field->HasMetadata());
         auto extension_type = field->metadata()->Get("paimon.extension.type");
         ASSERT_TRUE(extension_type.ok());
         ASSERT_EQ(extension_type.ValueUnsafe(), "paimon.type.blob");
     }
     {
-        // with custom metadata
         std::unordered_map<std::string, std::string> custom_metadata = {
             {"custom_key", "custom_value"}};
-        ASSERT_OK_AND_ASSIGN(auto schema, Blob::ArrowField("meta_blob", custom_metadata));
+        ASSERT_OK_AND_ASSIGN(auto schema,
+                             Blob::ArrowField("meta_blob", /*nullable=*/false, custom_metadata));
         auto field = arrow::ImportField(schema.get()).ValueUnsafe();
         ASSERT_EQ(field->name(), "meta_blob");
         ASSERT_FALSE(field->nullable());
         ASSERT_TRUE(field->HasMetadata());
-        // blob extension metadata should be present
         auto extension_type = field->metadata()->Get("paimon.extension.type");
         ASSERT_TRUE(extension_type.ok());
         ASSERT_EQ(extension_type.ValueUnsafe(), "paimon.type.blob");
-        // custom metadata should also be present
         auto custom_val = field->metadata()->Get("custom_key");
         ASSERT_TRUE(custom_val.ok());
         ASSERT_EQ(custom_val.ValueUnsafe(), "custom_value");

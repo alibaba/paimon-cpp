@@ -33,11 +33,13 @@
 #include "paimon/core/io/data_file_path_factory.h"
 #include "paimon/core/io/data_file_writer.h"
 #include "paimon/core/io/data_increment.h"
+#include "paimon/core/io/external_storage_blob_writer.h"
 #include "paimon/core/io/multiple_blob_file_writer.h"
 #include "paimon/core/io/rolling_blob_file_writer.h"
 #include "paimon/core/io/rolling_file_writer.h"
 #include "paimon/core/io/single_file_writer.h"
 #include "paimon/core/manifest/file_source.h"
+#include "paimon/core/operation/blob_file_context.h"
 #include "paimon/core/utils/commit_increment.h"
 #include "paimon/format/file_format.h"
 #include "paimon/format/file_format_factory.h"
@@ -81,6 +83,36 @@ Status AppendOnlyWriter::Write(std::unique_ptr<RecordBatch>&& batch) {
     }
     if (writer_ == nullptr) {
         PAIMON_ASSIGN_OR_RAISE(writer_, CreateRollingRowWriter());
+    }
+
+    // Transform batch for external storage descriptor fields before writing.
+    if (external_storage_writer_) {
+        auto data_type = arrow::struct_(write_schema_->fields());
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> arrow_array,
+                                          arrow::ImportArray(batch->GetData(), data_type));
+        auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(arrow_array);
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> transformed,
+                               external_storage_writer_->TransformBatch(struct_array));
+        auto transformed_struct = std::dynamic_pointer_cast<arrow::StructArray>(transformed);
+        // TODO(lc.lsz): validate blob view
+        PAIMON_RETURN_NOT_OK(BlobUtils::ValidateInlineBlobDescriptors(transformed_struct,
+                                                                      inline_descriptor_fields_));
+        ::ArrowArray c_transformed;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*transformed, &c_transformed));
+        return writer_->Write(&c_transformed);
+    }
+
+    if (!inline_descriptor_fields_.empty()) {
+        auto data_type = arrow::struct_(write_schema_->fields());
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> arrow_array,
+                                          arrow::ImportArray(batch->GetData(), data_type));
+        auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(arrow_array);
+        // TODO(lc.lsz): validate blob view
+        PAIMON_RETURN_NOT_OK(
+            BlobUtils::ValidateInlineBlobDescriptors(struct_array, inline_descriptor_fields_));
+        ::ArrowArray c_array;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*struct_array, &c_array));
+        return writer_->Write(&c_array);
     }
     return writer_->Write(batch->GetData());
 }
@@ -153,14 +185,45 @@ Status AppendOnlyWriter::Flush(bool wait_for_latest_compaction, bool forced_full
     return Status::OK();
 }
 
-AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingRowWriter() const {
-    auto schemas = BlobUtils::SeparateBlobSchema(write_schema_);
-    if (schemas.blob_schema && schemas.blob_schema->num_fields() > 0) {
-        return CreateRollingBlobWriter(schemas);
-    } else {
+AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingRowWriter() {
+    auto blob_context = BlobFileContext::Create(write_schema_, options_);
+    std::optional<std::vector<std::string>> main_write_cols = write_cols_;
+
+    // Save inline descriptor fields for validation in Write()
+    if (blob_context) {
+        inline_descriptor_fields_ = blob_context->GetDescriptorFields();
+    }
+
+    // Initialize ExternalStorageBlobWriter if needed
+    if (blob_context && blob_context->RequireExternalStorageWriter()) {
+        assert(blob_context->GetExternalStoragePath());
+        external_storage_writer_ = std::make_unique<ExternalStorageBlobWriter>(
+            write_schema_, blob_context->GetExternalStorageFields(),
+            blob_context->GetExternalStoragePath().value(), schema_id_, seq_num_counter_,
+            path_factory_, options_, memory_pool_);
+        if (!main_write_cols) {
+            // To align with java, when require external storage writer, main writer will set write
+            // cols in DataFileMeta
+            main_write_cols = write_schema_->field_names();
+        }
+    }
+
+    if (blob_context && blob_context->RequireBlobFileWriter()) {
+        // Use context-aware schema separation: inline BLOB fields stay in main
+        auto schemas =
+            BlobUtils::SeparateBlobSchema(write_schema_, blob_context->GetInlineFields());
+        return CreateRollingBlobWriter(schemas, blob_context->GetInlineFields());
+    } else if (!blob_context) {
+        // No BLOB fields at all -> plain rolling writer
         return std::make_unique<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
             options_.GetTargetFileSize(/*has_primary_key=*/false),
-            GetDataFileWriterCreator(write_schema_, write_cols_));
+            GetDataFileWriterCreator(write_schema_, main_write_cols));
+    } else {
+        // All BLOB fields are inline, no .blob files needed -> plain rolling writer
+        // The main data file contains all fields including inline descriptors/views.
+        return std::make_unique<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
+            options_.GetTargetFileSize(/*has_primary_key=*/false),
+            GetDataFileWriterCreator(write_schema_, main_write_cols));
     }
 }
 
@@ -212,7 +275,7 @@ AppendOnlyWriter::SingleFileWriterCreator AppendOnlyWriter::GetBlobFileWriterCre
 }
 
 AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingBlobWriter(
-    const BlobUtils::SeparatedSchemas& schemas) const {
+    const BlobUtils::SeparatedSchemas& schemas, const std::set<std::string>& inline_fields) const {
     // Multiple blob fields are supported. Each blob field gets its own rolling file writer
     // via MultipleBlobFileWriter.
     auto blob_schema = schemas.blob_schema;
@@ -249,7 +312,7 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingBlobWri
     return std::make_unique<RollingBlobFileWriter>(
         options_.GetTargetFileSize(/*has_primary_key=*/false),
         GetDataFileWriterCreator(schemas.main_schema, schemas.main_schema->field_names()),
-        blob_schema, blob_writer_creator, arrow::struct_(write_schema_->fields()));
+        blob_schema, blob_writer_creator, arrow::struct_(write_schema_->fields()), inline_fields);
 }
 
 Status AppendOnlyWriter::Sync() {
@@ -275,10 +338,14 @@ Status AppendOnlyWriter::Close() {
         writer_.reset();
     }
 
+    if (external_storage_writer_) {
+        PAIMON_RETURN_NOT_OK(external_storage_writer_->Close());
+        external_storage_writer_.reset();
+    }
+
     if (compact_deletion_file_ != nullptr) {
         compact_deletion_file_->Clean();
     }
     return Status::OK();
 }
-
 }  // namespace paimon
