@@ -40,8 +40,23 @@ Result<std::unique_ptr<PKCountReader>> PKCountReader::Create(
     const std::shared_ptr<FileStorePathFactory>& path_factory,
     const std::shared_ptr<InternalReadContext>& context,
     const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor) {
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> count_read_schema,
-                           BuildCountReadSchema(*context));
+    const auto& table_schema = context->GetTableSchema();
+    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> pk_fields,
+                           table_schema->TrimmedPrimaryKeyFields());
+
+    std::vector<DataField> count_fields;
+    for (const auto& field : pk_fields) {
+        count_fields.push_back(field);
+    }
+
+    // Note: The following are automatically handled by GenerateKeyValueReadSchema:
+    //   - _SEQUENCE_NUMBER and _VALUE_KIND (always prepended)
+    //   - Sequence-group fields (via CompleteSequenceField)
+    //   - User-defined sequence fields (via GetSequenceField)
+    //   So we do NOT need to add them here.
+
+    std::shared_ptr<arrow::Schema> count_read_schema =
+        DataField::ConvertDataFieldsToArrowSchema(count_fields);
 
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InternalReadContext> count_context,
                            InternalReadContext::CreateWithSchema(context, count_read_schema));
@@ -136,20 +151,6 @@ Result<int64_t> PKCountReader::MergeCount(const std::shared_ptr<DataSplitImpl>& 
     }
 
     return total_count;
-}
-
-Result<std::shared_ptr<arrow::Schema>> PKCountReader::BuildCountReadSchema(
-    const InternalReadContext& context) {
-    const auto& table_schema = context.GetTableSchema();
-    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> pk_fields,
-                           table_schema->TrimmedPrimaryKeyFields());
-
-    std::vector<DataField> result_fields;
-    for (const auto& field : pk_fields) {
-        result_fields.push_back(field);
-    }
-
-    return DataField::ConvertDataFieldsToArrowSchema(result_fields);
 }
 
 }  // namespace paimon

@@ -58,9 +58,6 @@ class PKCountReader : public CountReader {
     Result<int64_t> MetadataCount(const std::shared_ptr<DataSplitImpl>& split);
     Result<int64_t> MergeCount(const std::shared_ptr<DataSplitImpl>& split);
 
-    static Result<std::shared_ptr<arrow::Schema>> BuildCountReadSchema(
-        const InternalReadContext& context);
-
  private:
     std::vector<std::shared_ptr<Split>> splits_;
     std::shared_ptr<InternalReadContext> context_;
