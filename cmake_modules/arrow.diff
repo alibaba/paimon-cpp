@@ -220,7 +220,7 @@ index 4d3acb491e..3906ff3c59 100644
 
 --- a/cpp/src/parquet/file_reader.cc
 +++ b/cpp/src/parquet/file_reader.cc
-@@ -207,6 +207,100 @@
+@@ -207,6 +207,109 @@
    return {col_start, col_length};
  }
 
@@ -306,6 +306,16 @@ index 4d3acb491e..3906ff3c59 100644
 +    ARROW_ASSIGN_OR_RAISE(auto buf, source_->ReadAt(range.offset, range.length));
 +    position_ += buf->size();
 +    return std::shared_ptr<::arrow::Buffer>(std::move(buf));
++  }
++
++  // Override Advance to avoid real I/O for skipped pages.
++  // The default InputStream::Advance() calls Read() and discards the result,
++  // which would trigger source_->ReadAt() on cache miss — defeating page-level
++  // I/O skipping via data_page_filter. Since Advance() is only used to skip
++  // over data that will not be consumed, we can safely just move the position.
++  ::arrow::Status Advance(int64_t nbytes) override {
++    position_ += std::min(nbytes, length_ - position_);
++    return ::arrow::Status::OK();
 +  }
 +
 + private:
@@ -410,3 +420,13 @@ diff --git a/cpp/cmake_modules/BuildUtils.cmake b/cpp/cmake_modules/BuildUtils.c
        message(FATAL_ERROR "libtool found appears to be the incompatible GNU libtool: ${LIBTOOL_MACOS}"
        )
      endif()
+
+diff --git a/cpp/src/arrow/io/interfaces.h b/cpp/src/arrow/io/interfaces.h
+--- a/cpp/src/arrow/io/interfaces.h
++++ b/cpp/src/arrow/io/interfaces.h
+@@ -211,7 +211,7 @@
+   /// \brief Advance or skip stream indicated number of bytes
+   /// \param[in] nbytes the number to move forward
+   /// \return Status
+-  Status Advance(int64_t nbytes);
++  virtual Status Advance(int64_t nbytes);
