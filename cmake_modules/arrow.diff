@@ -220,10 +220,10 @@ index 4d3acb491e..3906ff3c59 100644
 
 --- a/cpp/src/parquet/file_reader.cc
 +++ b/cpp/src/parquet/file_reader.cc
-@@ -207,6 +207,109 @@
+@@ -207,6 +207,117 @@
    return {col_start, col_length};
  }
-
+ 
 +// CachedInputStream: InputStream adapter that reads through ReadRangeCache with
 +// zero-cost skip for non-cached pages. Used for page-level caching where only
 +// specific pages are pre-buffered.
@@ -314,7 +314,14 @@ index 4d3acb491e..3906ff3c59 100644
 +  // I/O skipping via data_page_filter. Since Advance() is only used to skip
 +  // over data that will not be consumed, we can safely just move the position.
 +  ::arrow::Status Advance(int64_t nbytes) override {
-+    position_ += std::min(nbytes, length_ - position_);
++    if (nbytes <= 0) {
++      return ::arrow::Status::OK();
++    }
++    int64_t remaining = length_ - position_;
++    if (remaining <= 0) {
++      return ::arrow::Status::OK();
++    }
++    position_ += std::min(nbytes, remaining);
 +    return ::arrow::Status::OK();
 +  }
 +
@@ -331,7 +338,7 @@ index 4d3acb491e..3906ff3c59 100644
  // RowGroupReader::Contents implementation for the Parquet file specification
  class SerializedRowGroup : public RowGroupReader::Contents {
   public:
-@@ -242,6 +336,11 @@
+@@ -242,6 +343,11 @@
        // segments.
        PARQUET_ASSIGN_OR_THROW(auto buffer, cached_source_->Read(col_range));
        stream = std::make_shared<::arrow::io::BufferReader>(buffer);
@@ -343,7 +350,7 @@ index 4d3acb491e..3906ff3c59 100644
      } else {
        stream = properties_.GetStream(source_, col_range.offset, col_range.length);
      }
-@@ -417,6 +516,26 @@
+@@ -417,6 +523,26 @@
      return cached_source_->WaitFor(ranges);
    }
 
@@ -370,7 +377,7 @@ index 4d3acb491e..3906ff3c59 100644
    // Metadata/footer parsing. Divided up to separate sync/async paths, and to use
    // exceptions for error handling (with the async path converting to Future/Status).
 
-@@ -911,6 +1030,22 @@
+@@ -911,6 +1037,22 @@
    return file->WhenBuffered(row_groups, column_indices);
  }
 
