@@ -16,7 +16,10 @@
 
 #include "paimon/core/utils/file_store_path_factory.h"
 
+#include <atomic>
+#include <mutex>
 #include <optional>
+#include <thread>
 #include <variant>
 
 #include "arrow/type.h"
@@ -356,6 +359,92 @@ TEST_F(FileStorePathFactoryTest, TestToBinaryRowAndToPartitionString) {
         partition_map["hr"] = "somestr";
         ASSERT_NOK(path_factory->ToBinaryRow(partition_map));
     }
+}
+
+TEST_F(FileStorePathFactoryTest, TestConcurrentToBinaryRowAndGetPartitionString) {
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::boolean()),  arrow::field("f1", arrow::int8()),
+        arrow::field("f2", arrow::int8()),     arrow::field("f3", arrow::int16()),
+        arrow::field("f4", arrow::int16()),    arrow::field("f5", arrow::int32()),
+        arrow::field("hr", arrow::int32()),    arrow::field("f7", arrow::int64()),
+        arrow::field("dt", arrow::utf8()),     arrow::field("f9", arrow::float32()),
+        arrow::field("f10", arrow::float64()), arrow::field("f11", arrow::utf8()),
+        arrow::field("f12", arrow::binary()),  arrow::field("non-partition-field", arrow::int32())};
+    auto schema = arrow::schema(fields);
+
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<FileStorePathFactory> path_factory,
+        FileStorePathFactory::Create(dir->Str(), schema, {"dt", "hr"}, "default",
+                                     /*identifier=*/"mock_format", /*data_file_prefix=*/"data-",
+                                     /*legacy_partition_name_enabled=*/true,
+                                     /*external_paths=*/std::vector<std::string>(),
+                                     /*global_index_external_path=*/std::nullopt,
+                                     /*index_file_in_data_file_dir=*/false, mem_pool_));
+
+    const std::vector<std::pair<std::map<std::string, std::string>, std::string>> test_cases = {
+        {{{"dt", "20211224"}, {"hr", "23"}}, "dt=20211224/hr=23/"},
+        {{{"dt", "default"}, {"hr", "17"}}, "dt=default/hr=17/"},
+        {{{"dt", "20240812"}, {"hr", "5"}}, "dt=20240812/hr=5/"},
+        {{{"dt", " a "}, {"hr", "22"}}, "dt= a /hr=22/"},
+    };
+
+    std::atomic<bool> has_error = false;
+    std::mutex error_mutex;
+    std::string first_error;
+
+    constexpr int32_t kThreadNum = 8;
+    constexpr int32_t kIterationsPerThread = 500;
+    std::vector<std::thread> threads;
+    threads.reserve(kThreadNum);
+
+    for (int32_t thread_id = 0; thread_id < kThreadNum; ++thread_id) {
+        threads.emplace_back([&, thread_id]() {
+            for (int32_t i = 0; i < kIterationsPerThread; ++i) {
+                const auto& [partition_map, expected] =
+                    test_cases[(thread_id + i) % test_cases.size()];
+
+                auto row_result = path_factory->ToBinaryRow(partition_map);
+                if (!row_result.ok()) {
+                    std::lock_guard<std::mutex> lock(error_mutex);
+                    has_error.store(true, std::memory_order_relaxed);
+                    if (first_error.empty()) {
+                        first_error = "ToBinaryRow failed: " + row_result.status().ToString();
+                    }
+                    return;
+                }
+
+                auto partition_str_result = path_factory->GetPartitionString(row_result.value());
+                if (!partition_str_result.ok()) {
+                    std::lock_guard<std::mutex> lock(error_mutex);
+                    has_error.store(true, std::memory_order_relaxed);
+                    if (first_error.empty()) {
+                        first_error = "GetPartitionString failed: " +
+                                      partition_str_result.status().ToString();
+                    }
+                    return;
+                }
+
+                if (partition_str_result.value() != expected) {
+                    std::lock_guard<std::mutex> lock(error_mutex);
+                    has_error.store(true, std::memory_order_relaxed);
+                    if (first_error.empty()) {
+                        first_error = "Unexpected partition string, expected=" + expected +
+                                      ", actual=" + partition_str_result.value();
+                    }
+                    return;
+                }
+            }
+        });
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    ASSERT_FALSE(has_error.load(std::memory_order_relaxed)) << first_error;
 }
 
 TEST_F(FileStorePathFactoryTest, TestCreateIndexFileFactory) {
