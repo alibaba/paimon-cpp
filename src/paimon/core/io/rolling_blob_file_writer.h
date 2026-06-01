@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <memory>
 #include <set>
+#include <string>
 #include <vector>
 
 #include "arrow/array/array_nested.h"
@@ -62,7 +63,8 @@ class RollingBlobFileWriter
                           std::function<Result<std::unique_ptr<MainWriter>>()> create_file_writer,
                           const std::shared_ptr<arrow::Schema>& blob_schema,
                           MultipleBlobFileWriter::BlobWriterCreator blob_writer_creator,
-                          const std::shared_ptr<arrow::DataType>& data_type);
+                          const std::shared_ptr<arrow::DataType>& data_type,
+                          const std::set<std::string>& inline_fields);
     ~RollingBlobFileWriter() override = default;
 
     Status Write(::ArrowArray* record) override;
@@ -85,6 +87,7 @@ class RollingBlobFileWriter
     MultipleBlobFileWriter::BlobWriterCreator blob_writer_creator_;
     std::unique_ptr<MultipleBlobFileWriter> blob_writer_;
     std::shared_ptr<arrow::DataType> data_type_;
+    std::set<std::string> inline_fields_;
 
     std::unique_ptr<Logger> logger_;
 };

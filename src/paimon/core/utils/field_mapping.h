@@ -15,8 +15,6 @@
  */
 
 #pragma once
-#include <algorithm>
-#include <cstdint>
 #include <map>
 #include <memory>
 #include <optional>
