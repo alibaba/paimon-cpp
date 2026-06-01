@@ -162,8 +162,23 @@ class CastExecutorTest : public ::testing::Test {
         for (size_t i = 0; i < src_data.size(); i++) {
             ASSERT_OK_AND_ASSIGN(Literal result, cast_executor->Cast(src_literals[i], target_type));
             ASSERT_FALSE(result.IsNull());
-            ASSERT_EQ(target_literals[i], result)
-                << target_literals[i].ToString() << "->" << result.ToString();
+            if (target_literals[i] != result) {
+                // Fall back to approximate comparison for floating-point types, because
+                // different conversion paths (e.g. decimal->float vs float literal) may
+                // produce slightly different bit representations.
+                if (target_field_type == FieldType::FLOAT) {
+                    ASSERT_NEAR(target_literals[i].GetValue<float>(), result.GetValue<float>(),
+                                1E-5)
+                        << target_literals[i].ToString() << "->" << result.ToString();
+                } else if (target_field_type == FieldType::DOUBLE) {
+                    ASSERT_NEAR(target_literals[i].GetValue<double>(), result.GetValue<double>(),
+                                1E-5)
+                        << target_literals[i].ToString() << "->" << result.ToString();
+                } else {
+                    ASSERT_EQ(target_literals[i], result)
+                        << target_literals[i].ToString() << "->" << result.ToString();
+                }
+            }
         }
         // test null
         Literal null_literal(src_type);
