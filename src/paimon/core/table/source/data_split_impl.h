@@ -177,9 +177,9 @@ class DataSplitImpl : public DataSplit {
           bucket_path_(bucket_path),
           data_files_(std::move(data_files)) {}
 
-     bool RawMergedRowCountAvailable() const;
+    bool RawMergedRowCountAvailable() const;
     int64_t RawMergedRowCount() const;
-     bool DataEvolutionRowCountAvailable() const;
+    bool DataEvolutionRowCountAvailable() const;
     Result<int64_t> DataEvolutionMergedRowCount() const;
 
  private:

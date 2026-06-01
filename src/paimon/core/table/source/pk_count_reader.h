@@ -63,7 +63,7 @@ class PKCountReader : public CountReader {
  private:
     std::vector<std::shared_ptr<Split>> splits_;
     std::shared_ptr<InternalReadContext> context_;
-   std::unique_ptr<RawFileSplitRead> raw_read_;
+    std::unique_ptr<RawFileSplitRead> raw_read_;
     std::unique_ptr<MergeFileSplitRead> merge_read_;
     std::shared_ptr<MemoryPool> pool_;
 };

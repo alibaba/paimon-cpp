@@ -1136,8 +1136,8 @@ TEST(DataSplitTest, TestPartialMergedRowCountRawConvertibleWithoutDeletionFiles)
         /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Bob"), 1}, pool.get()),
         /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Eric"), 1}, pool.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Bob"), 1}, {std::string("Eric"), 1},
-                                          {0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Bob"), 1}, {std::string("Eric"), 1}, {0, 0},
+                                          pool.get()),
         /*value_stats=*/
         BinaryRowGenerator::GenerateStats({std::string("Bob"), 10, 1, 11.0},
                                           {std::string("Eric"), 10, 1, 11.2}, {0, 0, 0, 0},
@@ -1380,8 +1380,8 @@ TEST(DataSplitTest, TestPartialMergedRowCountFallsBackToDataEvolution) {
         /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Bob"), 1}, pool.get()),
         /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Eric"), 1}, pool.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Bob"), 1}, {std::string("Eric"), 1},
-                                          {0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Bob"), 1}, {std::string("Eric"), 1}, {0, 0},
+                                          pool.get()),
         /*value_stats=*/
         BinaryRowGenerator::GenerateStats({std::string("Bob"), 10, 1, 11.0},
                                           {std::string("Eric"), 10, 1, 11.2}, {0, 0, 0, 0},
