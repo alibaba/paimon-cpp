@@ -102,7 +102,7 @@ Result<int64_t> PKCountReader::CountSingleSplit(const std::shared_ptr<Split>& sp
 }
 
 Result<int64_t> PKCountReader::MetadataCount(const std::shared_ptr<DataSplitImpl>& split) {
-    std::optional<int64_t> count = split->PartialMergedRowCount();
+    PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> count, split->MergedRowCount());
     if (count.has_value()) {
         return count.value();
     }

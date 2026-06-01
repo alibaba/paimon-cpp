@@ -21,6 +21,8 @@
 #include <string>
 #include <vector>
 
+#include "paimon/common/utils/range_helper.h"
+
 namespace paimon {
 
 bool DataSplit::SimpleDataFileMeta::operator==(const SimpleDataFileMeta& other) const {
@@ -109,27 +111,70 @@ bool DataSplitImpl::TEST_Equal(const DataSplitImpl& other) const {
            is_streaming_ == other.is_streaming_ && raw_convertible_ == other.raw_convertible_;
 }
 
-std::optional<int64_t> DataSplitImpl::PartialMergedRowCount() const {
-    if (!raw_convertible_) {
-        return std::nullopt;
+Result<std::optional<int64_t>> DataSplitImpl::MergedRowCount() const {
+    if (RawMergedRowCountAvailable()) {
+        return std::optional<int64_t>(RawMergedRowCount());
     }
+    if (DataEvolutionRowCountAvailable()) {
+        PAIMON_ASSIGN_OR_RAISE(int64_t merged_row_count, DataEvolutionMergedRowCount());
+        return std::optional<int64_t>(merged_row_count);
+    }
+    return std::optional<int64_t>();
+}
+
+bool DataSplitImpl::RawMergedRowCountAvailable() const {
+    return raw_convertible_ &&
+           (data_deletion_files_.empty() ||
+            std::all_of(data_deletion_files_.begin(), data_deletion_files_.end(),
+                        [](const std::optional<DeletionFile>& file) {
+                            return file == std::nullopt || file.value().cardinality != std::nullopt;
+                        }));
+}
+
+int64_t DataSplitImpl::RawMergedRowCount() const {
     int64_t sum = 0;
     for (size_t i = 0; i < data_files_.size(); i++) {
         const auto& data_file = data_files_[i];
-        if (data_file->delete_row_count == std::nullopt) {
-            // Legacy files may contain delete/retract rows while delete_row_count is unknown.
-            return std::nullopt;
-        }
-        if (data_deletion_files_.empty() || data_deletion_files_[i] == std::nullopt) {
+        const std::optional<DeletionFile> deletion_file =
+            data_deletion_files_.empty() ? std::nullopt : data_deletion_files_[i];
+        if (deletion_file == std::nullopt) {
             sum += data_file->row_count;
-        } else if (data_deletion_files_[i].value().cardinality != std::nullopt) {
-            sum += data_file->row_count - data_deletion_files_[i].value().cardinality.value();
-        } else {
-            // Cannot derive exact row count from metadata when cardinality is missing.
-            return std::nullopt;
+        } else if (deletion_file.value().cardinality != std::nullopt) {
+            sum += data_file->row_count - deletion_file.value().cardinality.value();
         }
     }
-    return std::optional<int64_t>(sum);
+    return sum;
+}
+
+bool DataSplitImpl::DataEvolutionRowCountAvailable() const {
+    return std::all_of(data_files_.begin(), data_files_.end(),
+                       [](const std::shared_ptr<DataFileMeta>& file) {
+                           return file->first_row_id != std::nullopt;
+                       });
+}
+
+Result<int64_t> DataSplitImpl::DataEvolutionMergedRowCount() const {
+    std::vector<std::shared_ptr<DataFileMeta>> files = data_files_;
+    RangeHelper<std::shared_ptr<DataFileMeta>> range_helper(
+        [](const std::shared_ptr<DataFileMeta>& meta) -> Result<int64_t> {
+            return meta->first_row_id.value();
+        },
+        [](const std::shared_ptr<DataFileMeta>& meta) -> Result<int64_t> {
+            return meta->first_row_id.value() + meta->row_count - 1;
+        });
+
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::vector<std::shared_ptr<DataFileMeta>>> ranges,
+                           range_helper.MergeOverlappingRanges(std::move(files)));
+
+    int64_t sum = 0;
+    for (const auto& group : ranges) {
+        int64_t max_count = 0;
+        for (const auto& file : group) {
+            max_count = std::max(max_count, file->row_count);
+        }
+        sum += max_count;
+    }
+    return sum;
 }
 
 Result<std::unique_ptr<ObjectSerializer<std::shared_ptr<DataFileMeta>>>>

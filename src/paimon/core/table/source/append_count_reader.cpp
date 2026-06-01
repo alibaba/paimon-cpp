@@ -45,7 +45,7 @@ Result<int64_t> AppendCountReader::CountSingleSplit(const std::shared_ptr<Split>
 
 Result<int64_t> AppendCountReader::MetadataCount(
     const std::shared_ptr<DataSplitImpl>& split) const {
-    std::optional<int64_t> partial_count = split->PartialMergedRowCount();
+    PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> partial_count, split->MergedRowCount());
     if (partial_count.has_value()) {
         return partial_count.value();
     }

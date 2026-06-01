@@ -94,17 +94,16 @@ class DataSplitImpl : public DataSplit {
     bool operator==(const DataSplitImpl& other) const;
     bool TEST_Equal(const DataSplitImpl& other) const;
 
-    /// Obtain merged row count for raw-convertible split when metadata is sufficient.
+    /// Obtain merged row count when metadata is sufficient.
     ///
-    /// Returns std::nullopt when row count cannot be computed exactly from metadata, e.g. some
-    /// deletion files do not provide cardinality.
+    /// This method follows Java DataSplit#mergedRowCount behavior:
     ///
-    /// There are two scenarios where accurate row count can be calculated:
+    /// 1. Prefer raw merged row count when split is raw-convertible and deletion cardinality is
+    ///    available.
+    /// 2. Fallback to data-evolution merged row count when all files have first_row_id.
     ///
-    /// 1. raw file and no deletion file.
-    ///
-    /// 2. raw file + deletion file with cardinality.
-    std::optional<int64_t> PartialMergedRowCount() const;
+    /// Returns std::nullopt when neither strategy can derive an exact count.
+    Result<std::optional<int64_t>> MergedRowCount() const;
 
     // Builder
     /// Builder for `DataSplitImpl`.
@@ -177,6 +176,11 @@ class DataSplitImpl : public DataSplit {
           bucket_(bucket),
           bucket_path_(bucket_path),
           data_files_(std::move(data_files)) {}
+
+     bool RawMergedRowCountAvailable() const;
+    int64_t RawMergedRowCount() const;
+     bool DataEvolutionRowCountAvailable() const;
+    Result<int64_t> DataEvolutionMergedRowCount() const;
 
  private:
     int64_t snapshot_id_ = 0;
