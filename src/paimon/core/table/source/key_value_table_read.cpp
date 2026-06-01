@@ -20,8 +20,8 @@
 
 #include "paimon/core/operation/merge_file_split_read.h"
 #include "paimon/core/operation/raw_file_split_read.h"
-#include "paimon/core/table/source/pk_count_reader.h"
 #include "paimon/core/table/source/data_split_impl.h"
+#include "paimon/core/table/source/pk_count_reader.h"
 #include "paimon/status.h"
 
 namespace paimon {
@@ -95,9 +95,9 @@ Result<std::unique_ptr<CountReader>> KeyValueTableRead::CreateCountReader(
         return Status::NotImplemented("CreateCountReader with force_keep_delete is not supported");
     }
 
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<PKCountReader> pk_count_reader,
-                           PKCountReader::Create(splits, path_factory_, context_,
-                                                 GetMemoryPool(), executor_));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<PKCountReader> pk_count_reader,
+        PKCountReader::Create(splits, path_factory_, context_, GetMemoryPool(), executor_));
 
     return pk_count_reader;
 }

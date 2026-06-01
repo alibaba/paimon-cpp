@@ -46,9 +46,9 @@ Result<std::unique_ptr<PKCountReader>> PKCountReader::Create(
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InternalReadContext> count_context,
                            InternalReadContext::CreateWithSchema(context, count_read_schema));
 
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<MergeFileSplitRead> merge_read,
-                           MergeFileSplitRead::Create(path_factory, count_context, memory_pool,
-                                                      executor));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<MergeFileSplitRead> merge_read,
+        MergeFileSplitRead::Create(path_factory, count_context, memory_pool, executor));
 
     return std::unique_ptr<PKCountReader>(
         new PKCountReader(std::move(splits), count_context, std::move(merge_read), memory_pool));

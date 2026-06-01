@@ -44,8 +44,7 @@ class PKCountReader : public CountReader {
         std::vector<std::shared_ptr<Split>> splits,
         const std::shared_ptr<FileStorePathFactory>& path_factory,
         const std::shared_ptr<InternalReadContext>& context,
-        const std::shared_ptr<MemoryPool>& memory_pool,
-        const std::shared_ptr<Executor>& executor);
+        const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor);
 
     Result<int64_t> CountRows() override;
 

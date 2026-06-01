@@ -65,15 +65,16 @@ class PKCountReaderTest : public testing::Test {
         return plan->Splits();
     }
 
-    Result<std::shared_ptr<InternalReadContext>> CreateInternalContext(const std::string& table_path) {
+    Result<std::shared_ptr<InternalReadContext>> CreateInternalContext(
+        const std::string& table_path) {
         ReadContextBuilder read_context_builder(table_path);
         PAIMON_ASSIGN_OR_RAISE(auto read_context, read_context_builder.Finish());
 
         SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), table_path);
         PAIMON_ASSIGN_OR_RAISE(auto table_schema, schema_manager.ReadSchema(0));
         PAIMON_ASSIGN_OR_RAISE(auto internal_context,
-                       InternalReadContext::Create(std::move(read_context), table_schema,
-                                   table_schema->Options()));
+                               InternalReadContext::Create(std::move(read_context), table_schema,
+                                                           table_schema->Options()));
         return std::shared_ptr<InternalReadContext>(std::move(internal_context));
     }
 
@@ -88,16 +89,15 @@ class PKCountReaderTest : public testing::Test {
         PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> global_index_external_path,
                                core_options.CreateGlobalIndexExternalPath());
 
-        PAIMON_ASSIGN_OR_RAISE(auto path_factory,
-                               FileStorePathFactory::Create(
-                                   internal_context->GetPath(), arrow_schema,
-                                   internal_context->GetTableSchema()->PartitionKeys(),
-                                   core_options.GetPartitionDefaultName(),
-                                   core_options.GetFileFormat()->Identifier(),
-                                   core_options.DataFilePrefix(),
-                                   core_options.LegacyPartitionNameEnabled(), external_paths,
-                                   global_index_external_path,
-                                   core_options.IndexFileInDataFileDir(), pool_));
+        PAIMON_ASSIGN_OR_RAISE(
+            auto path_factory,
+            FileStorePathFactory::Create(
+                internal_context->GetPath(), arrow_schema,
+                internal_context->GetTableSchema()->PartitionKeys(),
+                core_options.GetPartitionDefaultName(), core_options.GetFileFormat()->Identifier(),
+                core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
+                external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
+                pool_));
 
         return std::shared_ptr<FileStorePathFactory>(std::move(path_factory));
     }
@@ -107,8 +107,8 @@ class PKCountReaderTest : public testing::Test {
 };
 
 TEST_F(PKCountReaderTest, TestCountRowsWithMORSnapshot5) {
-    std::string table_path = GetDataDir() +
-                             "/orc/pk_table_scan_and_read_mor.db/pk_table_scan_and_read_mor/";
+    std::string table_path =
+        GetDataDir() + "/orc/pk_table_scan_and_read_mor.db/pk_table_scan_and_read_mor/";
 
     ASSERT_OK_AND_ASSIGN(auto splits, CreateSplits(table_path, /*snapshot_id=*/5));
     ASSERT_OK_AND_ASSIGN(auto internal_context, CreateInternalContext(table_path));
@@ -123,8 +123,8 @@ TEST_F(PKCountReaderTest, TestCountRowsWithMORSnapshot5) {
 }
 
 TEST_F(PKCountReaderTest, TestCountRowsWithDVSnapshot6) {
-    std::string table_path = GetDataDir() +
-                             "/orc/pk_table_scan_and_read_dv.db/pk_table_scan_and_read_dv/";
+    std::string table_path =
+        GetDataDir() + "/orc/pk_table_scan_and_read_dv.db/pk_table_scan_and_read_dv/";
 
     ASSERT_OK_AND_ASSIGN(auto splits, CreateSplits(table_path, /*snapshot_id=*/6));
     ASSERT_OK_AND_ASSIGN(auto internal_context, CreateInternalContext(table_path));
@@ -139,8 +139,8 @@ TEST_F(PKCountReaderTest, TestCountRowsWithDVSnapshot6) {
 }
 
 TEST_F(PKCountReaderTest, TestCountRowsWithEmptySplits) {
-    std::string table_path = GetDataDir() +
-                             "/orc/pk_table_scan_and_read_mor.db/pk_table_scan_and_read_mor/";
+    std::string table_path =
+        GetDataDir() + "/orc/pk_table_scan_and_read_mor.db/pk_table_scan_and_read_mor/";
 
     ASSERT_OK_AND_ASSIGN(auto internal_context, CreateInternalContext(table_path));
     ASSERT_OK_AND_ASSIGN(auto path_factory, CreatePathFactory(internal_context));
@@ -155,8 +155,8 @@ TEST_F(PKCountReaderTest, TestCountRowsWithEmptySplits) {
 }
 
 TEST_F(PKCountReaderTest, TestCountRowsWithInvalidSplit) {
-    std::string table_path = GetDataDir() +
-                             "/orc/pk_table_scan_and_read_mor.db/pk_table_scan_and_read_mor/";
+    std::string table_path =
+        GetDataDir() + "/orc/pk_table_scan_and_read_mor.db/pk_table_scan_and_read_mor/";
 
     ASSERT_OK_AND_ASSIGN(auto internal_context, CreateInternalContext(table_path));
     ASSERT_OK_AND_ASSIGN(auto path_factory, CreatePathFactory(internal_context));
