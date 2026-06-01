@@ -44,11 +44,11 @@ RowRanges RowRanges::Union(const RowRanges& left, const RowRanges& right) {
     combined.reserve(left.ranges_.size() + right.ranges_.size());
     combined.insert(combined.end(), left.ranges_.begin(), left.ranges_.end());
     combined.insert(combined.end(), right.ranges_.begin(), right.ranges_.end());
-    return RowRanges(Range::SortAndMergeOverlap(combined, /*adjacent=*/true));
+    return RowRanges(std::move(Range::SortAndMergeOverlap(combined, /*adjacent=*/true)));
 }
 
 RowRanges RowRanges::Intersection(const RowRanges& left, const RowRanges& right) {
-    return RowRanges(Range::And(left.ranges_, right.ranges_));
+    return RowRanges(std::move(Range::And(left.ranges_, right.ranges_)));
 }
 
 int64_t RowRanges::RowCount() const {
