@@ -97,7 +97,8 @@ class PAIMON_EXPORT Blob {
     /// @param metadata A map of key-value metadata to be attached to the field.
     /// @return A result containing a unique pointer to the generated `ArrowSchema` or an error.
     static Result<std::unique_ptr<::ArrowSchema>> ArrowField(
-        const std::string& field_name, std::unordered_map<std::string, std::string> metadata = {});
+        const std::string& field_name, bool nullable = false,
+        std::unordered_map<std::string, std::string> metadata = {});
 
  private:
     class Impl;

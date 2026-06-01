@@ -159,6 +159,7 @@ set(PAIMON_CORE_SRCS
     core/bucket/hive_bucket_function.cpp
     core/bucket/mod_bucket_function.cpp
     core/bucket/bucket_id_calculator.cpp
+    core/casting/binary_to_blob_cast_executor.cpp
     core/casting/binary_to_string_cast_executor.cpp
     core/casting/boolean_to_decimal_cast_executor.cpp
     core/casting/boolean_to_numeric_cast_executor.cpp
@@ -222,6 +223,7 @@ set(PAIMON_CORE_SRCS
     core/io/key_value_meta_projection_consumer.cpp
     core/io/key_value_projection_consumer.cpp
     core/io/key_value_projection_reader.cpp
+    core/io/external_storage_blob_writer.cpp
     core/io/multiple_blob_file_writer.cpp
     core/io/rolling_blob_file_writer.cpp
     core/manifest/file_kind.cpp
@@ -601,6 +603,7 @@ if(PAIMON_BUILD_TESTS)
                     core/io/file_index_evaluator_test.cpp
                     core/io/single_file_writer_test.cpp
                     core/io/rolling_blob_file_writer_test.cpp
+                    core/io/external_storage_blob_writer_test.cpp
                     core/global_index/indexed_split_test.cpp
                     core/manifest/file_source_test.cpp
                     core/manifest/file_kind_test.cpp
