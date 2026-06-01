@@ -20,6 +20,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "arrow/c/abi.h"
 #include "arrow/type.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/core/deletionvectors/deletion_vector.h"
@@ -27,8 +28,10 @@
 #include "paimon/core/mergetree/row_count_accumulator.h"
 #include "paimon/core/operation/internal_read_context.h"
 #include "paimon/core/operation/merge_file_split_read.h"
+#include "paimon/core/operation/raw_file_split_read.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/source/data_split_impl.h"
+#include "paimon/reader/batch_reader.h"
 #include "paimon/status.h"
 
 namespace paimon {
@@ -43,30 +46,22 @@ Result<std::unique_ptr<PKCountReader>> PKCountReader::Create(
     const auto& table_schema = context->GetTableSchema();
     PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> pk_fields,
                            table_schema->TrimmedPrimaryKeyFields());
-
-    std::vector<DataField> count_fields;
-    for (const auto& field : pk_fields) {
-        count_fields.push_back(field);
-    }
-
-    // Note: The following are automatically handled by GenerateKeyValueReadSchema:
-    //   - _SEQUENCE_NUMBER and _VALUE_KIND (always prepended)
-    //   - Sequence-group fields (via CompleteSequenceField)
-    //   - User-defined sequence fields (via GetSequenceField)
-    //   So we do NOT need to add them here.
-
     std::shared_ptr<arrow::Schema> count_read_schema =
-        DataField::ConvertDataFieldsToArrowSchema(count_fields);
+        DataField::ConvertDataFieldsToArrowSchema(pk_fields);
 
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InternalReadContext> count_context,
                            InternalReadContext::CreateWithSchema(context, count_read_schema));
+
+    std::unique_ptr<RawFileSplitRead> raw_read =
+        std::make_unique<RawFileSplitRead>(path_factory, count_context, memory_pool, executor);
 
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<MergeFileSplitRead> merge_read,
         MergeFileSplitRead::Create(path_factory, count_context, memory_pool, executor));
 
-    return std::unique_ptr<PKCountReader>(
-        new PKCountReader(std::move(splits), count_context, std::move(merge_read), memory_pool));
+    return std::unique_ptr<PKCountReader>(new PKCountReader(std::move(splits), count_context,
+                                                            std::move(raw_read),
+                                                            std::move(merge_read), memory_pool));
 }
 
 Result<int64_t> PKCountReader::CountRows() {
@@ -80,10 +75,12 @@ Result<int64_t> PKCountReader::CountRows() {
 
 PKCountReader::PKCountReader(std::vector<std::shared_ptr<Split>> splits,
                              const std::shared_ptr<InternalReadContext>& context,
+                     std::unique_ptr<RawFileSplitRead>&& raw_read,
                              std::unique_ptr<MergeFileSplitRead>&& merge_read,
                              const std::shared_ptr<MemoryPool>& memory_pool)
     : splits_(std::move(splits)),
       context_(context),
+    raw_read_(std::move(raw_read)),
       merge_read_(std::move(merge_read)),
       pool_(memory_pool) {}
 
@@ -110,7 +107,18 @@ Result<int64_t> PKCountReader::MetadataCount(const std::shared_ptr<DataSplitImpl
         return count.value();
     }
 
-    return MergeCount(split);
+    // Keep raw-convertible splits on the raw read path when metadata is insufficient.
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> reader, raw_read_->CreateReader(split));
+    int64_t total_count = 0;
+    while (true) {
+        PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatch batch, reader->NextBatch());
+        if (BatchReader::IsEofBatch(batch)) {
+            break;
+        }
+        total_count += batch.first->length;
+    }
+    reader->Close();
+    return total_count;
 }
 
 Result<int64_t> PKCountReader::MergeCount(const std::shared_ptr<DataSplitImpl>& split) {
