@@ -26,6 +26,9 @@
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "gtest/gtest.h"
+#include "paimon/common/predicate/equal.h"
+#include "paimon/common/predicate/in.h"
+#include "paimon/common/predicate/leaf_predicate_impl.h"
 #include "paimon/common/utils/arrow/arrow_input_stream_adapter.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/defs.h"
@@ -477,6 +480,31 @@ TEST_F(ColumnIndexFilterTest, UnknownColumnReturnsError) {
 /// Null predicate → all rows
 TEST_F(ColumnIndexFilterTest, NullPredicateReturnsAllRows) {
     ASSERT_OK_AND_ASSIGN(auto ranges, Filter(nullptr));
+    EXPECT_EQ(row_group_row_count_, ranges.RowCount());
+}
+
+/// When literals is empty for comparison predicates (EQUAL, NOT_EQUAL, LESS_THAN,
+/// LESS_OR_EQUAL, GREATER_THAN, GREATER_OR_EQUAL), the filter should return all
+/// rows (conservative fallback) rather than returning empty ranges.
+TEST_F(ColumnIndexFilterTest, EmptyLiteralsReturnsAllRows) {
+    // Construct a LeafPredicate with EQUAL function but empty literals vector.
+    // This simulates the edge case where literals are unexpectedly empty.
+    auto pred = std::make_shared<paimon::LeafPredicateImpl>(paimon::Equal::Instance(), 0, "val",
+                                                            FieldType::INT, std::vector<Literal>());
+    ASSERT_OK_AND_ASSIGN(auto ranges, Filter(pred));
+    // With empty literals, the filter cannot evaluate the comparison,
+    // so it should conservatively return all rows.
+    EXPECT_EQ(row_group_row_count_, ranges.RowCount());
+}
+
+/// Empty literals for IN predicate — the early guard in VisitLeafPredicate treats
+/// all non-IS_NULL/IS_NOT_NULL predicates with empty literals conservatively,
+/// returning all rows rather than risking incorrect filtering.
+TEST_F(ColumnIndexFilterTest, EmptyLiteralsInReturnsAllRows) {
+    auto pred = std::make_shared<paimon::LeafPredicateImpl>(paimon::In::Instance(), 0, "val",
+                                                            FieldType::INT, std::vector<Literal>());
+    ASSERT_OK_AND_ASSIGN(auto ranges, Filter(pred));
+    // Empty literals → conservative fallback → all rows.
     EXPECT_EQ(row_group_row_count_, ranges.RowCount());
 }
 
