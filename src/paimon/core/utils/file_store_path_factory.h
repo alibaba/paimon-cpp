@@ -20,6 +20,8 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <mutex>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -97,7 +99,7 @@ class FileStorePathFactory : public std::enable_shared_from_this<FileStorePathFa
         return global_index_external_path_;
     }
 
-    /// @note This method is NOT THREAD SAFE.
+    /// Thread-safe for concurrent calls. Cache accesses are protected by internal locks.
     Result<std::string> GetPartitionString(const BinaryRow& partition) const;
     std::string NewManifestFile() const {
         return PathUtil::JoinPath(
@@ -167,6 +169,7 @@ class FileStorePathFactory : public std::enable_shared_from_this<FileStorePathFa
 
     mutable std::map<std::map<std::string, std::string>, BinaryRow> map_to_row_cache_;
     mutable std::unordered_map<BinaryRow, std::string> row_to_str_cache_;
+    mutable std::shared_mutex cache_mutex_;
 };
 
 }  // namespace paimon
