@@ -69,7 +69,7 @@ void BloomFilter64::AddHash(int64_t hash64) {
 
     for (int32_t i = 1; i <= num_hash_functions_; i++) {
         // Use uint32_t arithmetic to avoid signed overflow UB (matches Java int wrap semantics)
-        int32_t combined_hash =
+        auto combined_hash =
             static_cast<int32_t>(static_cast<uint32_t>(hash1) +
                                  (static_cast<uint32_t>(i) * static_cast<uint32_t>(hash2)));
         // hashcode should be positive, flip all the bits if it's negative
@@ -87,7 +87,7 @@ bool BloomFilter64::TestHash(int64_t hash64) const {
 
     for (int32_t i = 1; i <= num_hash_functions_; i++) {
         // Use uint32_t arithmetic to avoid signed overflow UB (matches Java int wrap semantics)
-        int32_t combined_hash =
+        auto combined_hash =
             static_cast<int32_t>(static_cast<uint32_t>(hash1) +
                                  (static_cast<uint32_t>(i) * static_cast<uint32_t>(hash2)));
         // hashcode should be positive, flip all the bits if it's negative
