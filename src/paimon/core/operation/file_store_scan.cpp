@@ -27,6 +27,7 @@
 #include "arrow/type.h"
 #include "fmt/format.h"
 #include "paimon/common/data/binary_array.h"
+#include "paimon/common/data/blob_utils.h"
 #include "paimon/common/executor/future.h"
 #include "paimon/common/predicate/literal_converter.h"
 #include "paimon/common/types/data_field.h"
@@ -354,8 +355,12 @@ Status FileStoreScan::SplitAndSetFilter(const std::vector<std::string>& partitio
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FieldMappingBuilder> mapping_builder,
                                FieldMappingBuilder::Create(arrow_schema, partition_keys,
                                                            scan_filters->GetPredicate()));
+        PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> data_fields,
+                               DataField::ConvertArrowSchemaToDataFields(arrow_schema));
+        auto converted_fields = BlobUtils::ConvertBlobInlineDataFields(
+            data_fields, core_options_.GetBlobInlineFields());
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FieldMapping> mapping,
-                               mapping_builder->CreateFieldMapping(arrow_schema));
+                               mapping_builder->CreateFieldMapping(converted_fields));
         if (mapping->partition_info != std::nullopt) {
             const auto& partition_info = mapping->partition_info.value();
             partition_schema_ =
