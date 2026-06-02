@@ -76,12 +76,12 @@ PKCountReader::PKCountReader(std::vector<std::shared_ptr<Split>> splits,
                              const std::shared_ptr<InternalReadContext>& context,
                              std::unique_ptr<RawFileSplitRead>&& raw_read,
                              std::unique_ptr<MergeFileSplitRead>&& merge_read,
-                     const std::shared_ptr<MemoryPool>& memory_pool)
+                             const std::shared_ptr<MemoryPool>& memory_pool)
     : splits_(std::move(splits)),
       context_(context),
       raw_read_(std::move(raw_read)),
       merge_read_(std::move(merge_read)),
-    pool_(memory_pool) {}
+      pool_(memory_pool) {}
 
 Result<int64_t> PKCountReader::CountSingleSplit(const std::shared_ptr<Split>& split) {
     auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
@@ -118,10 +118,9 @@ Result<int64_t> PKCountReader::MergeCount(const std::shared_ptr<DataSplitImpl>& 
                            merge_read_->GetPathFactory()->CreateDataFilePathFactory(
                                split->Partition(), split->Bucket()));
 
-    auto dv_factory = DeletionVector::CreateFactory(context_->GetCoreOptions().GetFileSystem(),
-                                                    DeletionVector::CreateDeletionFileMap(
-                                                        split->DataFiles(), split->DeletionFiles()),
-                                                    pool_);
+    auto dv_factory = DeletionVector::CreateFactory(
+        context_->GetCoreOptions().GetFileSystem(),
+        DeletionVector::CreateDeletionFileMap(split->DataFiles(), split->DeletionFiles()), pool_);
 
     std::vector<std::vector<SortedRun>> sections =
         IntervalPartition(split->DataFiles(), merge_read_->GetKeyComparator()).Partition();

@@ -57,9 +57,8 @@ Result<int64_t> AppendCountReader::MetadataCount(
             DeletionVector::CreateDeletionFileMap(split->DataFiles(), split->DeletionFiles()),
             pool_);
 
-        PAIMON_ASSIGN_OR_RAISE(
-            std::optional<int64_t> merged_count,
-            split->MergedRowCount(dv_factory));
+        PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> merged_count,
+                               split->MergedRowCount(dv_factory));
         if (merged_count.has_value()) {
             return merged_count.value();
         }
