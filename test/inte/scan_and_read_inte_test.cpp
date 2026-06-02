@@ -2802,10 +2802,6 @@ TEST_P(ScanAndReadInteTest, TestWithPKBucketSelectByPredicate) {
     ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
 }
 
-// =============================================================================
-// CountRows integration tests
-// =============================================================================
-
 TEST_P(ScanAndReadInteTest, TestCountRowsEmptySplits) {
     auto [file_format, enable_prefetch] = GetParam();
     std::string table_path = paimon::test::GetDataDir() + file_format +
