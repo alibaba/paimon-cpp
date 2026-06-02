@@ -334,6 +334,10 @@ TEST_P(ScanAndReadInteTest, TestWithAppendSnapshot1) {
             .ValueOrDie());
     ASSERT_TRUE(expected);
     ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+
+    ASSERT_OK_AND_ASSIGN(auto count_reader, table_read->CreateCountReader(splits));
+    ASSERT_OK_AND_ASSIGN(int64_t count, count_reader->CountRows());
+    ASSERT_EQ(count, read_result->length());
 }
 
 TEST_P(ScanAndReadInteTest, TestWithAppendSnapshot3) {
@@ -419,6 +423,10 @@ TEST_P(ScanAndReadInteTest, TestWithAppendSnapshot5) {
             .ValueOrDie());
     ASSERT_TRUE(expected);
     ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+
+    ASSERT_OK_AND_ASSIGN(auto count_reader, table_read->CreateCountReader(splits));
+    ASSERT_OK_AND_ASSIGN(int64_t count, count_reader->CountRows());
+    ASSERT_EQ(count, read_result->length());
 }
 
 TEST_P(ScanAndReadInteTest, TestWithAppendSnapshotWithStreamWithDefaultMode) {
