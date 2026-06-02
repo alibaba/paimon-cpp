@@ -331,7 +331,7 @@ set(PAIMON_CORE_SRCS
     core/table/system/system_table_schema.cpp
     core/tag/tag.cpp
     core/utils/branch_manager.cpp
-    core/utils/blob_view_lookup.cpp    
+    core/utils/blob_view_lookup.cpp
     core/utils/consumer_manager.cpp
     core/utils/field_mapping.cpp
     core/utils/file_store_path_factory.cpp
