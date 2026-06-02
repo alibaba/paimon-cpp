@@ -111,8 +111,7 @@ class DataSplitImpl : public DataSplit {
     ///
     /// When a deletion file exists but its cardinality metadata is missing, the factory can be
     /// used to read the deletion vector file and provide exact cardinality.
-    Result<std::optional<int64_t>> MergedRowCount(
-        const DeletionVector::Factory& dv_factory) const;
+    Result<std::optional<int64_t>> MergedRowCount(const DeletionVector::Factory& dv_factory) const;
 
     // Builder
     /// Builder for `DataSplitImpl`.

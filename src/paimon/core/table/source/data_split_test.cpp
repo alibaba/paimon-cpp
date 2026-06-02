@@ -1482,10 +1482,9 @@ TEST(DataSplitTest, TestPartialMergedRowCountResolvesMissingCardinalityViaFactor
     // which forces resolution through the dv_factory.
     auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(
         builder.WithSnapshot(1)
-            .WithDataDeletionFiles(
-                {std::nullopt,
-                 DeletionFile("fake/index-0", /*offset=*/0, /*length=*/22, /*cardinality=*/
-                              std::nullopt)})
+            .WithDataDeletionFiles({std::nullopt, DeletionFile("fake/index-0", /*offset=*/0,
+                                                               /*length=*/22, /*cardinality=*/
+                                                               std::nullopt)})
             .IsStreaming(false)
             .RawConvertible(true)
             .Build()

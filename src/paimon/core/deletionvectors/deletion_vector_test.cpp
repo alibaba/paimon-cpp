@@ -176,17 +176,17 @@ TEST(DeletionVectorTest, ReadFromDataInputStreamInvalidMagicNumber) {
 }
 
 TEST(DeletionVectorTest, CreateDeletionFileMap) {
-    std::vector<std::shared_ptr<DataFileMeta>> data_files = {
-        CreateDataFileMeta("file-0.orc"), CreateDataFileMeta("file-1.orc"),
-        CreateDataFileMeta("file-2.orc")};
+    std::vector<std::shared_ptr<DataFileMeta>> data_files = {CreateDataFileMeta("file-0.orc"),
+                                                             CreateDataFileMeta("file-1.orc"),
+                                                             CreateDataFileMeta("file-2.orc")};
 
     auto empty_map = DeletionVector::CreateDeletionFileMap(data_files, {});
     ASSERT_TRUE(empty_map.empty());
 
     DeletionFile deletion_file_0("dv-0", /*offset=*/10, /*length=*/20, /*cardinality=*/3);
     DeletionFile deletion_file_2("dv-2", /*offset=*/30, /*length=*/40, std::nullopt);
-    std::vector<std::optional<DeletionFile>> deletion_files = {
-        deletion_file_0, std::nullopt, deletion_file_2};
+    std::vector<std::optional<DeletionFile>> deletion_files = {deletion_file_0, std::nullopt,
+                                                               deletion_file_2};
 
     auto deletion_file_map = DeletionVector::CreateDeletionFileMap(data_files, deletion_files);
     ASSERT_EQ(deletion_file_map.size(), 2);
