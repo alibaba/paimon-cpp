@@ -92,18 +92,17 @@ class AsyncKeyValueProducerAndConsumer {
     std::shared_future<Status> producer_future_;
     std::vector<std::unique_ptr<AsyncKeyValueConsumer<T, R>>> consumers_;
     std::atomic<int32_t> consumer_finished_count_ = 0;
-    tbb::concurrent_bounded_queue<std::optional<KeyValue>> kv_queue_;
+    tbb::concurrent_bounded_queue<std::vector<KeyValue>> kv_queue_;
     tbb::concurrent_bounded_queue<R> result_queue_;
 };
 
 template <typename T, typename R>
 class AsyncKeyValueConsumer {
  public:
-    AsyncKeyValueConsumer(int32_t batch_size,
-                          std::unique_ptr<RowToArrowArrayConverter<T, R>>&& key_value_consumer,
+    AsyncKeyValueConsumer(std::unique_ptr<RowToArrowArrayConverter<T, R>>&& key_value_consumer,
                           std::atomic<bool>& consume_finished,
                           std::atomic<int32_t>& consumer_finished_count,
-                          tbb::concurrent_bounded_queue<std::optional<KeyValue>>& kv_queue,
+                          tbb::concurrent_bounded_queue<std::vector<KeyValue>>& kv_queue,
                           tbb::concurrent_bounded_queue<R>& result_queue);
 
     ~AsyncKeyValueConsumer() {
@@ -117,12 +116,11 @@ class AsyncKeyValueConsumer {
     Status ConsumeLoop();
 
  private:
-    int32_t batch_size_;
     std::unique_ptr<RowToArrowArrayConverter<T, R>> key_value_consumer_;
     std::shared_future<Status> consumer_future_;
     std::atomic<bool>& consume_finished_;
     std::atomic<int32_t>& consumer_finished_count_;
-    tbb::concurrent_bounded_queue<std::optional<KeyValue>>& kv_queue_;
+    tbb::concurrent_bounded_queue<std::vector<KeyValue>>& kv_queue_;
     tbb::concurrent_bounded_queue<R>& result_queue_;
 };
 

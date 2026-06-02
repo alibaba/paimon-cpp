@@ -59,7 +59,10 @@ Status BloomFilter::AddHash(int32_t hash1) {
     auto hash2 = static_cast<int32_t>(static_cast<uint32_t>(hash1) >> 16);
 
     for (int32_t i = 1; i <= num_hash_functions_; i++) {
-        int32_t combined_hash = hash1 + (i * hash2);
+        // Use uint32_t arithmetic to avoid signed overflow UB (matches Java int wrap semantics)
+        auto combined_hash =
+            static_cast<int32_t>(static_cast<uint32_t>(hash1) +
+                                 (static_cast<uint32_t>(i) * static_cast<uint32_t>(hash2)));
         // hashcode should be positive, flip all the bits if it's negative
         if (combined_hash < 0) {
             combined_hash = ~combined_hash;
@@ -74,7 +77,10 @@ bool BloomFilter::TestHash(int32_t hash1) const {
     auto hash2 = static_cast<int32_t>(static_cast<uint32_t>(hash1) >> 16);
 
     for (int32_t i = 1; i <= num_hash_functions_; i++) {
-        int32_t combined_hash = hash1 + (i * hash2);
+        // Use uint32_t arithmetic to avoid signed overflow UB (matches Java int wrap semantics)
+        auto combined_hash =
+            static_cast<int32_t>(static_cast<uint32_t>(hash1) +
+                                 (static_cast<uint32_t>(i) * static_cast<uint32_t>(hash2)));
         // hashcode should be positive, flip all the bits if it's negative
         if (combined_hash < 0) {
             combined_hash = ~combined_hash;
