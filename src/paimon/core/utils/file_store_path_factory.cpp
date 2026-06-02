@@ -219,24 +219,44 @@ Result<std::string> FileStorePathFactory::GetPartitionString(const BinaryRow& pa
     if (partition.GetSizeInBytes() == 0) {
         return Status::Invalid("invalid binary row partition");
     }
+    {
+        std::shared_lock<std::shared_mutex> read_lock(cache_mutex_);
+        auto iter = row_to_str_cache_.find(partition);
+        if (PAIMON_LIKELY(iter != row_to_str_cache_.end())) {
+            return iter->second;
+        }
+    }
+
+    std::vector<std::pair<std::string, std::string>> part_values;
+    PAIMON_ASSIGN_OR_RAISE(part_values, partition_computer_->GeneratePartitionVector(partition));
+    PAIMON_ASSIGN_OR_RAISE(std::string part_str,
+                           PartitionPathUtils::GeneratePartitionPath(part_values));
+
+    std::unique_lock<std::shared_mutex> write_lock(cache_mutex_);
     auto iter = row_to_str_cache_.find(partition);
     if (PAIMON_LIKELY(iter != row_to_str_cache_.end())) {
         return iter->second;
     }
-    std::vector<std::pair<std::string, std::string>> part_values;
-    PAIMON_ASSIGN_OR_RAISE(part_values, partition_computer_->GeneratePartitionVector(partition));
-    PAIMON_ASSIGN_OR_RAISE(std::string part_str,
-                           PartitionPathUtils::GeneratePartitionPath(part_values))
     return row_to_str_cache_.insert({partition, part_str}).first->second;
 }
 
 Result<BinaryRow> FileStorePathFactory::ToBinaryRow(
     const std::map<std::string, std::string>& partition) const {
+    {
+        std::shared_lock<std::shared_mutex> read_lock(cache_mutex_);
+        auto iter = map_to_row_cache_.find(partition);
+        if (PAIMON_LIKELY(iter != map_to_row_cache_.end())) {
+            return iter->second;
+        }
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(BinaryRow row, partition_computer_->ToBinaryRow(partition));
+
+    std::unique_lock<std::shared_mutex> write_lock(cache_mutex_);
     auto iter = map_to_row_cache_.find(partition);
     if (PAIMON_LIKELY(iter != map_to_row_cache_.end())) {
         return iter->second;
     }
-    PAIMON_ASSIGN_OR_RAISE(BinaryRow row, partition_computer_->ToBinaryRow(partition));
     return map_to_row_cache_.insert({partition, row}).first->second;
 }
 
