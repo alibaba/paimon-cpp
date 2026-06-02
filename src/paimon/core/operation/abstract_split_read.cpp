@@ -102,18 +102,6 @@ bool AbstractSplitRead::NeedCompleteRowTrackingFields(
     }
     return false;
 }
-
-std::unordered_map<std::string, DeletionFile> AbstractSplitRead::CreateDeletionFileMap(
-    const DataSplitImpl& data_split) {
-    return CreateDeletionFileMap(data_split.DataFiles(), data_split.DeletionFiles());
-}
-
-std::unordered_map<std::string, DeletionFile> AbstractSplitRead::CreateDeletionFileMap(
-    const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
-    const std::vector<std::optional<DeletionFile>>& deletion_files) {
-    return DeletionVector::CreateDeletionFileMap(data_files, deletion_files);
-}
-
 Result<std::unique_ptr<BatchReader>> AbstractSplitRead::ApplyPredicateFilterIfNeeded(
     std::unique_ptr<BatchReader>&& reader, const std::shared_ptr<Predicate>& predicate) const {
     if (!context_->EnablePredicateFilter() || predicate == nullptr) {
