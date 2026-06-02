@@ -68,7 +68,7 @@ Result<bool> KeyValueDataFileRecordReader::Iterator::HasNext() const {
 
 Result<KeyValue> KeyValueDataFileRecordReader::Iterator::Next() {
     // key is only used in merge sort; key context does not hold parent struct array
-    auto key = std::make_unique<ColumnarRowRef>(reader_->key_ctx_, cursor_);
+    std::shared_ptr<InternalRow> key = std::make_shared<ColumnarRowRef>(reader_->key_ctx_, cursor_);
     // value is used in merge sort and projection (maybe async and multi-thread), so value context
     // holds parent struct array to ensure data remains valid
     auto value = std::make_unique<ColumnarRowRef>(reader_->value_ctx_, cursor_);

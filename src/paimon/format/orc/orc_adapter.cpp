@@ -1316,6 +1316,9 @@ arrow::Status WriteBatch(const arrow::Array& array, ::orc::ColumnVectorBatch* co
         case arrow::Type::type::BINARY:
             return WriteGenericBatch<arrow::BinaryType, ::orc::StringVectorBatch>(
                 array, column_vector_batch);
+        case arrow::Type::type::LARGE_BINARY:
+            return WriteGenericBatch<arrow::LargeBinaryType, ::orc::StringVectorBatch>(
+                array, column_vector_batch);
         case arrow::Type::type::STRING:
             return WriteGenericBatch<arrow::StringType, ::orc::StringVectorBatch>(
                 array, column_vector_batch);
@@ -1379,6 +1382,7 @@ arrow::Result<std::unique_ptr<::orc::Type>> GetOrcType(const arrow::DataType& ty
         case arrow::Type::type::STRING:
             return ::orc::createPrimitiveType(::orc::TypeKind::STRING);
         case arrow::Type::type::BINARY:
+        case arrow::Type::type::LARGE_BINARY:
             return ::orc::createPrimitiveType(::orc::TypeKind::BINARY);
         case arrow::Type::type::DATE32:
             return ::orc::createPrimitiveType(::orc::TypeKind::DATE);

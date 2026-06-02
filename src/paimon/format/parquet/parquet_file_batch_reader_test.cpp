@@ -161,6 +161,48 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
     std::shared_ptr<arrow::StructArray> struct_array_;
 };
 
+TEST_F(ParquetFileBatchReaderTest, TestReadBinaryWrittenFromBinaryAndLargeBinary) {
+    auto check_binary_read_result = [&](const std::shared_ptr<arrow::DataType>& write_type,
+                                        const std::string& file_name) {
+        std::string data_json = R"([
+        ["descriptor-1"],
+        [""],
+        [null],
+        ["descriptor-2"]
+    ])";
+        auto write_field = arrow::field("f0", write_type);
+        auto write_schema = arrow::schema({write_field});
+        auto write_array = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({write_field}), data_json)
+                .ValueOrDie());
+
+        std::string file_path = PathUtil::JoinPath(dir_->Str(), file_name);
+        WriteArray(file_path, write_array, write_schema, /*write_batch_size=*/write_array->length(),
+                   /*enable_dictionary=*/false, /*max_row_group_length=*/write_array->length());
+
+        auto read_field = arrow::field("f0", arrow::binary());
+        auto read_schema = arrow::schema({read_field});
+        auto parquet_batch_reader =
+            PrepareParquetFileBatchReader(file_path, read_schema, /*predicate=*/nullptr,
+                                          /*selection_bitmap=*/std::nullopt, batch_size_);
+
+        ASSERT_OK_AND_ASSIGN(auto c_file_schema, parquet_batch_reader->GetFileSchema());
+        auto file_schema = arrow::ImportSchema(c_file_schema.get()).ValueOrDie();
+        ASSERT_TRUE(file_schema->Equals(*read_schema));
+
+        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({read_field}), data_json)
+                .ValueOrDie());
+        auto expected_chunked_array = std::make_shared<arrow::ChunkedArray>(expected_array);
+        ASSERT_OK_AND_ASSIGN(auto result_array, paimon::test::ReadResultCollector::CollectResult(
+                                                    parquet_batch_reader.get()));
+        ASSERT_TRUE(result_array->Equals(expected_chunked_array));
+    };
+
+    check_binary_read_result(arrow::binary(), "binary.parquet");
+    check_binary_read_result(arrow::large_binary(), "large-binary.parquet");
+}
+
 TEST_F(ParquetFileBatchReaderTest, TestSimple) {
     std::string file_name = paimon::test::GetDataDir() +
                             "/parquet/parquet_append_table.db/parquet_append_table/bucket-0/"

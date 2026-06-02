@@ -444,12 +444,8 @@ Status SchemaValidation::ValidateBlobFields(const TableSchema& schema, const Cor
     const auto& blob_descriptor_names = options.GetBlobDescriptorFields();
     const auto& blob_view_names = options.GetBlobViewFields();
     const auto& blob_external_storage_names = options.GetBlobExternalStorageFields();
-    std::vector<std::string> configured_blob_like_names = configured_blob_names;
-    configured_blob_like_names.insert(configured_blob_like_names.end(),
-                                      blob_descriptor_names.begin(), blob_descriptor_names.end());
-    configured_blob_like_names.insert(configured_blob_like_names.end(), blob_view_names.begin(),
-                                      blob_view_names.end());
-    if (configured_blob_like_names.empty() && blob_external_storage_names.empty()) {
+    if (configured_blob_names.empty() && blob_descriptor_names.empty() && blob_view_names.empty() &&
+        blob_external_storage_names.empty()) {
         return Status::OK();
     }
 

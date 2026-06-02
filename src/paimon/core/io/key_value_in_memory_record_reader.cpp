@@ -45,7 +45,7 @@ Result<KeyValue> KeyValueInMemoryRecordReader::Iterator::Next() {
     }
 
     // key must hold value_struct_array as min/max key may be used after projection
-    auto key = std::make_unique<ColumnarRowRef>(reader_->key_ctx_, index);
+    std::shared_ptr<InternalRow> key = std::make_shared<ColumnarRowRef>(reader_->key_ctx_, index);
     auto value = std::make_unique<ColumnarRowRef>(reader_->value_ctx_, index);
     return KeyValue(row_kind, reader_->last_sequence_num_ + index,
                     /*level=*/KeyValue::UNKNOWN_LEVEL, std::move(key), std::move(value));
