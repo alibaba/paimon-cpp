@@ -111,18 +111,7 @@ std::unordered_map<std::string, DeletionFile> AbstractSplitRead::CreateDeletionF
 std::unordered_map<std::string, DeletionFile> AbstractSplitRead::CreateDeletionFileMap(
     const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
     const std::vector<std::optional<DeletionFile>>& deletion_files) {
-    std::unordered_map<std::string, DeletionFile> deletion_file_map;
-    if (deletion_files.empty()) {
-        return deletion_file_map;
-    }
-    assert(deletion_files.size() == data_files.size());
-    size_t file_count = deletion_files.size();
-    for (size_t i = 0; i < file_count; i++) {
-        if (deletion_files[i] != std::nullopt) {
-            deletion_file_map.emplace(data_files[i]->file_name, deletion_files[i].value());
-        }
-    }
-    return deletion_file_map;
+    return DeletionVector::CreateDeletionFileMap(data_files, deletion_files);
 }
 
 Result<std::unique_ptr<BatchReader>> AbstractSplitRead::ApplyPredicateFilterIfNeeded(

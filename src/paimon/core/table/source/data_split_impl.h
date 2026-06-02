@@ -30,11 +30,13 @@
 #include "paimon/core/io/data_file_meta_10_serializer.h"
 #include "paimon/core/io/data_file_meta_12_serializer.h"
 #include "paimon/core/io/data_file_meta_first_row_id_legacy_serializer.h"
+#include "paimon/core/deletionvectors/deletion_vector.h"
 #include "paimon/core/io/data_file_meta_serializer.h"
 #include "paimon/core/table/source/deletion_file.h"
 #include "paimon/table/source/data_split.h"
 
 namespace paimon {
+
 /// Input splits. Needed by most batch computation engines.
 class DataSplitImpl : public DataSplit {
  public:
@@ -102,8 +104,14 @@ class DataSplitImpl : public DataSplit {
     ///    available.
     /// 2. Fallback to data-evolution merged row count when all files have first_row_id.
     ///
-    /// Returns std::nullopt when neither strategy can derive an exact count.
-    Result<std::optional<int64_t>> MergedRowCount() const;
+    /// Obtain merged row count with an optional deletion vector factory for missing cardinality.
+    ///
+    /// When a deletion file exists but its cardinality metadata is missing, the factory can be
+    /// used to read the deletion vector file and provide exact cardinality.
+    ///
+    /// The factory defaults to nullptr, which means missing cardinality keeps the result unknown.
+    Result<std::optional<int64_t>> MergedRowCount(
+        const DeletionVector::Factory& dv_factory = nullptr) const;
 
     // Builder
     /// Builder for `DataSplitImpl`.
@@ -177,8 +185,8 @@ class DataSplitImpl : public DataSplit {
           bucket_path_(bucket_path),
           data_files_(std::move(data_files)) {}
 
-    bool RawMergedRowCountAvailable() const;
-    int64_t RawMergedRowCount() const;
+    Result<std::optional<int64_t>> RawMergedRowCount(
+        const DeletionVector::Factory& dv_factory) const;
     bool DataEvolutionRowCountAvailable() const;
     Result<int64_t> DataEvolutionMergedRowCount() const;
 

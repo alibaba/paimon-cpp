@@ -18,8 +18,11 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <vector>
 
+#include "paimon/fs/file_system.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/reader/count_reader.h"
 #include "paimon/result.h"
 
@@ -29,8 +32,10 @@ class Split;
 
 class AppendCountReader : public CountReader {
  public:
-    explicit AppendCountReader(std::vector<std::shared_ptr<Split>> splits)
-        : splits_(std::move(splits)) {}
+    explicit AppendCountReader(std::vector<std::shared_ptr<Split>> splits,
+                                    const std::shared_ptr<FileSystem>& file_system,
+                                    const std::shared_ptr<MemoryPool>& pool)
+      : splits_(std::move(splits)), file_system_(file_system), pool_(pool) {}
 
     Result<int64_t> CountRows() override;
 
@@ -40,6 +45,8 @@ class AppendCountReader : public CountReader {
 
  private:
     std::vector<std::shared_ptr<Split>> splits_;
+   std::shared_ptr<FileSystem> file_system_;
+   std::shared_ptr<MemoryPool> pool_;
 };
 
 }  // namespace paimon

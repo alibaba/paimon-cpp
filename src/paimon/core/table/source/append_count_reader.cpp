@@ -16,6 +16,7 @@
 
 #include "paimon/core/table/source/append_count_reader.h"
 
+#include "paimon/core/deletionvectors/deletion_vector.h"
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/status.h"
 
@@ -45,12 +46,31 @@ Result<int64_t> AppendCountReader::CountSingleSplit(const std::shared_ptr<Split>
 
 Result<int64_t> AppendCountReader::MetadataCount(
     const std::shared_ptr<DataSplitImpl>& split) const {
-    PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> partial_count, split->MergedRowCount());
-    if (partial_count.has_value()) {
-        return partial_count.value();
+    if (split->RawConvertible()) {
+        if (!file_system_ || !pool_) {
+            return Status::Invalid(
+                "file_system or memory_pool is null for DV-based append count fallback");
+        }
+
+        DeletionVector::Factory dv_factory = DeletionVector::CreateFactory(
+            file_system_,
+            DeletionVector::CreateDeletionFileMap(split->DataFiles(), split->DeletionFiles()),
+            pool_);
+
+        PAIMON_ASSIGN_OR_RAISE(
+            std::optional<int64_t> merged_count,
+            split->MergedRowCount(dv_factory));
+        if (merged_count.has_value()) {
+            return merged_count.value();
+        }
+    } else {
+        PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> merged_count, split->MergedRowCount());
+        if (merged_count.has_value()) {
+            return merged_count.value();
+        }
     }
 
-    return split->RowCount();
+    return Status::Invalid("not support split in append count fallback");
 }
 
 }  // namespace paimon

@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "paimon/common/utils/range_helper.h"
+#include "paimon/core/deletionvectors/deletion_vector.h"
 
 namespace paimon {
 
@@ -111,9 +112,12 @@ bool DataSplitImpl::TEST_Equal(const DataSplitImpl& other) const {
            is_streaming_ == other.is_streaming_ && raw_convertible_ == other.raw_convertible_;
 }
 
-Result<std::optional<int64_t>> DataSplitImpl::MergedRowCount() const {
-    if (RawMergedRowCountAvailable()) {
-        return std::optional<int64_t>(RawMergedRowCount());
+Result<std::optional<int64_t>> DataSplitImpl::MergedRowCount(
+    const DeletionVector::Factory& dv_factory) const {
+    PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> raw_merged_row_count,
+                           RawMergedRowCount(dv_factory));
+    if (raw_merged_row_count.has_value()) {
+        return raw_merged_row_count;
     }
     if (DataEvolutionRowCountAvailable()) {
         PAIMON_ASSIGN_OR_RAISE(int64_t merged_row_count, DataEvolutionMergedRowCount());
@@ -122,16 +126,12 @@ Result<std::optional<int64_t>> DataSplitImpl::MergedRowCount() const {
     return std::optional<int64_t>();
 }
 
-bool DataSplitImpl::RawMergedRowCountAvailable() const {
-    return raw_convertible_ &&
-           (data_deletion_files_.empty() ||
-            std::all_of(data_deletion_files_.begin(), data_deletion_files_.end(),
-                        [](const std::optional<DeletionFile>& file) {
-                            return file == std::nullopt || file.value().cardinality != std::nullopt;
-                        }));
-}
+Result<std::optional<int64_t>> DataSplitImpl::RawMergedRowCount(
+    const DeletionVector::Factory& dv_factory) const {
+    if (!raw_convertible_) {
+        return std::optional<int64_t>();
+    }
 
-int64_t DataSplitImpl::RawMergedRowCount() const {
     int64_t sum = 0;
     for (size_t i = 0; i < data_files_.size(); i++) {
         const auto& data_file = data_files_[i];
@@ -141,9 +141,21 @@ int64_t DataSplitImpl::RawMergedRowCount() const {
             sum += data_file->row_count;
         } else if (deletion_file.value().cardinality != std::nullopt) {
             sum += data_file->row_count - deletion_file.value().cardinality.value();
+        } else {
+            if (!dv_factory) {
+                return std::optional<int64_t>();
+            }
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DeletionVector> deletion_vector,
+                                   dv_factory(data_file->file_name));
+            if (!deletion_vector) {
+                return Status::Invalid(
+                    "deletion vector not found for file with missing cardinality");
+            }
+            sum += data_file->row_count - deletion_vector->GetCardinality();
         }
     }
-    return sum;
+
+    return std::optional<int64_t>(sum);
 }
 
 bool DataSplitImpl::DataEvolutionRowCountAvailable() const {

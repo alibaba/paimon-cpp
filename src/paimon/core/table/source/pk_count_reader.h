@@ -65,7 +65,7 @@ class PKCountReader : public CountReader {
     std::shared_ptr<InternalReadContext> context_;
     std::unique_ptr<RawFileSplitRead> raw_read_;
     std::unique_ptr<MergeFileSplitRead> merge_read_;
-    std::shared_ptr<MemoryPool> pool_;
+   std::shared_ptr<MemoryPool> pool_;
 };
 
 }  // namespace paimon

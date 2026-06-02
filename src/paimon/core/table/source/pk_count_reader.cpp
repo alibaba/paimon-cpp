@@ -76,12 +76,12 @@ PKCountReader::PKCountReader(std::vector<std::shared_ptr<Split>> splits,
                              const std::shared_ptr<InternalReadContext>& context,
                              std::unique_ptr<RawFileSplitRead>&& raw_read,
                              std::unique_ptr<MergeFileSplitRead>&& merge_read,
-                             const std::shared_ptr<MemoryPool>& memory_pool)
+                     const std::shared_ptr<MemoryPool>& memory_pool)
     : splits_(std::move(splits)),
       context_(context),
       raw_read_(std::move(raw_read)),
       merge_read_(std::move(merge_read)),
-      pool_(memory_pool) {}
+    pool_(memory_pool) {}
 
 Result<int64_t> PKCountReader::CountSingleSplit(const std::shared_ptr<Split>& split) {
     auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
@@ -101,23 +101,16 @@ Result<int64_t> PKCountReader::CountSingleSplit(const std::shared_ptr<Split>& sp
 }
 
 Result<int64_t> PKCountReader::MetadataCount(const std::shared_ptr<DataSplitImpl>& split) {
-    PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> count, split->MergedRowCount());
+    DeletionVector::Factory dv_factory = DeletionVector::CreateFactory(
+        context_->GetCoreOptions().GetFileSystem(),
+        DeletionVector::CreateDeletionFileMap(split->DataFiles(), split->DeletionFiles()), pool_);
+
+    PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> count, split->MergedRowCount(dv_factory));
     if (count.has_value()) {
         return count.value();
     }
 
-    // Keep raw-convertible splits on the raw read path when metadata is insufficient.
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> reader, raw_read_->CreateReader(split));
-    int64_t total_count = 0;
-    while (true) {
-        PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatch batch, reader->NextBatch());
-        if (BatchReader::IsEofBatch(batch)) {
-            break;
-        }
-        total_count += batch.first->length;
-    }
-    reader->Close();
-    return total_count;
+    return Status::Invalid("not support split in pk count metadata fallback");
 }
 
 Result<int64_t> PKCountReader::MergeCount(const std::shared_ptr<DataSplitImpl>& split) {
@@ -125,19 +118,10 @@ Result<int64_t> PKCountReader::MergeCount(const std::shared_ptr<DataSplitImpl>& 
                            merge_read_->GetPathFactory()->CreateDataFilePathFactory(
                                split->Partition(), split->Bucket()));
 
-    std::unordered_map<std::string, DeletionFile> deletion_file_map;
-    const auto& data_files = split->DataFiles();
-    const auto& deletion_files = split->DeletionFiles();
-    if (!deletion_files.empty()) {
-        for (size_t i = 0; i < deletion_files.size(); i++) {
-            if (deletion_files[i] != std::nullopt) {
-                deletion_file_map.emplace(data_files[i]->file_name, deletion_files[i].value());
-            }
-        }
-    }
-
     auto dv_factory = DeletionVector::CreateFactory(context_->GetCoreOptions().GetFileSystem(),
-                                                    deletion_file_map, pool_);
+                                                    DeletionVector::CreateDeletionFileMap(
+                                                        split->DataFiles(), split->DeletionFiles()),
+                                                    pool_);
 
     std::vector<std::vector<SortedRun>> sections =
         IntervalPartition(split->DataFiles(), merge_read_->GetKeyComparator()).Partition();

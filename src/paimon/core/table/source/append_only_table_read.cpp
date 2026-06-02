@@ -65,7 +65,8 @@ Result<std::unique_ptr<CountReader>> AppendOnlyTableRead::CreateCountReader(
             "CreateCountReader with predicate pushdown is not supported yet");
     }
 
-    return std::make_unique<AppendCountReader>(splits);
+    return std::make_unique<AppendCountReader>(splits, context_->GetCoreOptions().GetFileSystem(),
+                                               GetMemoryPool());
 }
 
 }  // namespace paimon
