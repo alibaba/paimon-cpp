@@ -104,16 +104,15 @@ struct ColumnarBatchContext {
                 case arrow::Type::DATE32:
                 case arrow::Type::INT64:
                 case arrow::Type::FLOAT:
-                case arrow::Type::DOUBLE:
-                case arrow::Type::TIMESTAMP:
-                case arrow::Type::DECIMAL128:
+                case arrow::Type::DOUBLE: {
                     // Fixed-width: values in buffer[1]
                     if (array_data->buffers.size() > 1 && array_data->buffers[1]) {
                         meta.values_data = array_data->buffers[1]->data();
                     }
                     break;
+                }
                 case arrow::Type::STRING:
-                case arrow::Type::BINARY:
+                case arrow::Type::BINARY: {
                     // Variable-length: offsets in buffer[1], data in buffer[2]
                     if (array_data->buffers.size() > 2) {
                         if (array_data->buffers[1]) {
@@ -125,8 +124,10 @@ struct ColumnarBatchContext {
                         }
                     }
                     break;
+                }
                 default:
-                    // DICTIONARY, LIST, MAP, STRUCT — not cached, use array_vec fallback
+                    // TIMESTAMP, DECIMAL, DICTIONARY, LIST, MAP, STRUCT — not cached, use array_vec
+                    // fallback
                     break;
             }
         }
