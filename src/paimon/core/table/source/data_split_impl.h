@@ -104,14 +104,15 @@ class DataSplitImpl : public DataSplit {
     ///    available.
     /// 2. Fallback to data-evolution merged row count when all files have first_row_id.
     ///
-    /// Obtain merged row count with an optional deletion vector factory for missing cardinality.
+    /// Obtain merged row count without reading deletion vector files for missing cardinality.
+    Result<std::optional<int64_t>> MergedRowCount() const;
+
+    /// Obtain merged row count with a deletion vector factory for missing cardinality.
     ///
     /// When a deletion file exists but its cardinality metadata is missing, the factory can be
     /// used to read the deletion vector file and provide exact cardinality.
-    ///
-    /// The factory defaults to nullptr, which means missing cardinality keeps the result unknown.
     Result<std::optional<int64_t>> MergedRowCount(
-        const DeletionVector::Factory& dv_factory = nullptr) const;
+        const DeletionVector::Factory& dv_factory) const;
 
     // Builder
     /// Builder for `DataSplitImpl`.

@@ -112,6 +112,10 @@ bool DataSplitImpl::TEST_Equal(const DataSplitImpl& other) const {
            is_streaming_ == other.is_streaming_ && raw_convertible_ == other.raw_convertible_;
 }
 
+Result<std::optional<int64_t>> DataSplitImpl::MergedRowCount() const {
+    return MergedRowCount(nullptr);
+}
+
 Result<std::optional<int64_t>> DataSplitImpl::MergedRowCount(
     const DeletionVector::Factory& dv_factory) const {
     PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> raw_merged_row_count,
