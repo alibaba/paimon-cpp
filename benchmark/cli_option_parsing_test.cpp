@@ -16,6 +16,7 @@
 
 #include "benchmark/cli_option_parsing.h"
 
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -36,104 +37,108 @@ struct ArgvHolder {
         }
     }
 
-    int argc() const {
-        return static_cast<int>(argv.size());
+    int32_t argc() const {
+        return static_cast<int32_t>(argv.size());
     }
 };
 
 TEST(CliOptionParsingTest, ConsumeCliOptionWorks) {
     std::string value;
-    EXPECT_TRUE(paimon::benchmark::ConsumeCliOption("--foo=bar", "--foo", &value));
-    EXPECT_EQ(value, "bar");
+    ASSERT_TRUE(paimon::benchmark::ConsumeCliOption("--foo=bar", "--foo", &value));
+    ASSERT_EQ(value, "bar");
 
     value.clear();
-    EXPECT_FALSE(paimon::benchmark::ConsumeCliOption("--foo", "--foo", &value));
+    ASSERT_FALSE(paimon::benchmark::ConsumeCliOption("--foo", "--foo", &value));
 }
 
 TEST(CliOptionParsingTest, ParseCsvColumnsWorks) {
-    const auto parsed = paimon::benchmark::ParseCsvColumns("id, name\tage", "--cols");
+    const auto parsed = paimon::benchmark::ParseCsvColumns("id, name,age", "--cols");
     ASSERT_EQ(parsed.size(), 3U);
-    EXPECT_EQ(parsed[0], "id");
-    EXPECT_EQ(parsed[1], "name");
-    EXPECT_EQ(parsed[2], "age");
+    ASSERT_EQ(parsed[0], "id");
+    ASSERT_EQ(parsed[1], "name");
+    ASSERT_EQ(parsed[2], "age");
 }
 
 TEST(CliOptionParsingTest, ParseCsvColumnsRejectsInvalidInput) {
-    EXPECT_THROW((void)paimon::benchmark::ParseCsvColumns("", "--cols"), std::runtime_error);
-    EXPECT_THROW((void)paimon::benchmark::ParseCsvColumns("id,", "--cols"), std::runtime_error);
+    ASSERT_THROW((void)paimon::benchmark::ParseCsvColumns("", "--cols"), std::runtime_error);
+    ASSERT_THROW((void)paimon::benchmark::ParseCsvColumns("id,", "--cols"), std::runtime_error);
+    ASSERT_THROW((void)paimon::benchmark::ParseCsvColumns("id,,name", "--cols"),
+                 std::runtime_error);
 }
 
 TEST(CliOptionParsingTest, ParseDelimitedOptionsWorks) {
     const auto parsed = paimon::benchmark::ParseDelimitedOptions("k1:v1;k2:v2", "--paimon_option");
     ASSERT_EQ(parsed.size(), 2U);
-    EXPECT_EQ(parsed[0], std::make_pair(std::string("k1"), std::string("v1")));
-    EXPECT_EQ(parsed[1], std::make_pair(std::string("k2"), std::string("v2")));
+    ASSERT_EQ(parsed[0], std::make_pair(std::string("k1"), std::string("v1")));
+    ASSERT_EQ(parsed[1], std::make_pair(std::string("k2"), std::string("v2")));
 }
 
 TEST(CliOptionParsingTest, ParseDelimitedOptionsRejectsInvalidInput) {
-    EXPECT_THROW((void)paimon::benchmark::ParseDelimitedOptions("", "--paimon_option"),
+    ASSERT_THROW((void)paimon::benchmark::ParseDelimitedOptions("", "--paimon_option"),
                  std::runtime_error);
-    EXPECT_THROW((void)paimon::benchmark::ParseDelimitedOptions("k1:v1;", "--paimon_option"),
+    ASSERT_THROW((void)paimon::benchmark::ParseDelimitedOptions("k1:v1;", "--paimon_option"),
                  std::runtime_error);
 }
 
 TEST(CliOptionParsingTest, ParseStringOptionArgWorksForEqualsAndSeparatedForms) {
     {
         ArgvHolder argv_holder({"prog", "--foo=bar"});
-        int i = 1;
+        int32_t arg_index = 1;
         std::string value;
-        EXPECT_TRUE(paimon::benchmark::ParseStringOptionArg(
-            &i, argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[i], "--foo", &value));
-        EXPECT_EQ(i, 1);
-        EXPECT_EQ(value, "bar");
+        ASSERT_TRUE(paimon::benchmark::ParseStringOptionArg(
+            argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[arg_index], "--foo",
+            &arg_index, &value));
+        ASSERT_EQ(arg_index, 1);
+        ASSERT_EQ(value, "bar");
     }
 
     {
         ArgvHolder argv_holder({"prog", "--foo", "bar"});
-        int i = 1;
+        int32_t arg_index = 1;
         std::string value;
-        EXPECT_TRUE(paimon::benchmark::ParseStringOptionArg(
-            &i, argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[i], "--foo", &value));
-        EXPECT_EQ(i, 2);
-        EXPECT_EQ(value, "bar");
+        ASSERT_TRUE(paimon::benchmark::ParseStringOptionArg(
+            argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[arg_index], "--foo",
+            &arg_index, &value));
+        ASSERT_EQ(arg_index, 2);
+        ASSERT_EQ(value, "bar");
     }
 }
 
 TEST(CliOptionParsingTest, ParseStringOptionArgRejectsMissingValue) {
     ArgvHolder argv_holder({"prog", "--foo"});
-    int i = 1;
+    int32_t arg_index = 1;
     std::string value;
-    EXPECT_THROW(
-        (void)paimon::benchmark::ParseStringOptionArg(
-            &i, argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[i], "--foo", &value),
-        std::runtime_error);
+    ASSERT_THROW((void)paimon::benchmark::ParseStringOptionArg(
+                     argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[arg_index],
+                     "--foo", &arg_index, &value),
+                 std::runtime_error);
 }
 
 TEST(CliOptionParsingTest, ParseCsvOptionArgAndDelimitedRepeatableOptionArgWorks) {
     {
         ArgvHolder argv_holder({"prog", "--cols", "id,name"});
-        int i = 1;
+        int32_t arg_index = 1;
         std::vector<std::string> columns;
-        EXPECT_TRUE(paimon::benchmark::ParseCsvOptionArg(&i, argv_holder.argc(),
-                                                         argv_holder.argv.data(),
-                                                         argv_holder.args[i], "--cols", &columns));
-        EXPECT_EQ(i, 2);
+        ASSERT_TRUE(paimon::benchmark::ParseCsvOptionArg(
+            argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[arg_index], "--cols",
+            &arg_index, &columns));
+        ASSERT_EQ(arg_index, 2);
         ASSERT_EQ(columns.size(), 2U);
-        EXPECT_EQ(columns[0], "id");
-        EXPECT_EQ(columns[1], "name");
+        ASSERT_EQ(columns[0], "id");
+        ASSERT_EQ(columns[1], "name");
     }
 
     {
         ArgvHolder argv_holder({"prog", "--paimon_option", "k1:v1;k2:v2"});
-        int i = 1;
+        int32_t arg_index = 1;
         std::vector<std::pair<std::string, std::string>> options;
-        EXPECT_TRUE(paimon::benchmark::ParseDelimitedRepeatableOptionArg(
-            &i, argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[i], "--paimon_option",
-            &options));
-        EXPECT_EQ(i, 2);
+        ASSERT_TRUE(paimon::benchmark::ParseDelimitedRepeatableOptionArg(
+            argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[arg_index],
+            "--paimon_option", &arg_index, &options));
+        ASSERT_EQ(arg_index, 2);
         ASSERT_EQ(options.size(), 2U);
-        EXPECT_EQ(options[0], std::make_pair(std::string("k1"), std::string("v1")));
-        EXPECT_EQ(options[1], std::make_pair(std::string("k2"), std::string("v2")));
+        ASSERT_EQ(options[0], std::make_pair(std::string("k1"), std::string("v1")));
+        ASSERT_EQ(options[1], std::make_pair(std::string("k2"), std::string("v2")));
     }
 }
 

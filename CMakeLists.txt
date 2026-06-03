@@ -355,6 +355,26 @@ endif()
 
 set(ENV{PAIMON_TEST_DATA} "${CMAKE_SOURCE_DIR}/test/test_data")
 
+if(PAIMON_BUILD_TESTS OR PAIMON_BUILD_BENCHMARKS)
+    paimon_link_libraries_whole_archive(PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS
+                                        paimon_local_file_system_static)
+    paimon_link_libraries_no_as_needed(PAIMON_LOCAL_FILE_SYSTEM_SHARED_LINK_LIBS
+                                       paimon_local_file_system_shared)
+    paimon_link_libraries_whole_archive(PAIMON_BLOB_FILE_FORMAT_STATIC_LINK_LIBS
+                                        paimon_blob_file_format_static)
+    paimon_link_libraries_whole_archive(PAIMON_PARQUET_FILE_FORMAT_STATIC_LINK_LIBS
+                                        paimon_parquet_file_format_static)
+
+    if(PAIMON_ENABLE_ORC)
+        paimon_link_libraries_whole_archive(PAIMON_ORC_FILE_FORMAT_STATIC_LINK_LIBS
+                                            paimon_orc_file_format_static)
+    endif()
+    if(PAIMON_ENABLE_AVRO)
+        paimon_link_libraries_whole_archive(PAIMON_AVRO_FILE_FORMAT_STATIC_LINK_LIBS
+                                            paimon_avro_file_format_static)
+    endif()
+endif()
+
 if(PAIMON_BUILD_TESTS)
     if(NOT PAIMON_ENABLE_ORC)
         message(FATAL_ERROR "PAIMON_ENABLE_ORC must be enabled if PAIMON_BUILD_TESTS is enable"
@@ -389,15 +409,6 @@ if(PAIMON_BUILD_TESTS)
         TEST_PLUGIN_LINK_LIBS paimon_parquet_file_format_shared
         paimon_blob_file_format_shared)
     set(TEST_STATIC_LINK_LIBS ${TEST_WHOLE_ARCHIVE_LINK_LIBS} ${TEST_PLUGIN_LINK_LIBS})
-    paimon_link_libraries_whole_archive(PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS
-                                        paimon_local_file_system_static)
-    paimon_link_libraries_no_as_needed(PAIMON_LOCAL_FILE_SYSTEM_SHARED_LINK_LIBS
-                                       paimon_local_file_system_shared)
-    paimon_link_libraries_whole_archive(PAIMON_BLOB_FILE_FORMAT_STATIC_LINK_LIBS
-                                        paimon_blob_file_format_static)
-    paimon_link_libraries_whole_archive(PAIMON_PARQUET_FILE_FORMAT_STATIC_LINK_LIBS
-                                        paimon_parquet_file_format_static)
-
     if(PAIMON_ENABLE_LANCE)
         paimon_link_libraries_whole_archive(PAIMON_LANCE_FILE_FORMAT_STATIC_LINK_LIBS
                                             paimon_lance_file_format_static)
@@ -406,15 +417,11 @@ if(PAIMON_BUILD_TESTS)
         list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
     endif()
     if(PAIMON_ENABLE_ORC)
-        paimon_link_libraries_whole_archive(PAIMON_ORC_FILE_FORMAT_STATIC_LINK_LIBS
-                                            paimon_orc_file_format_static)
         paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
                                            paimon_orc_file_format_shared)
         list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
     endif()
     if(PAIMON_ENABLE_AVRO)
-        paimon_link_libraries_whole_archive(PAIMON_AVRO_FILE_FORMAT_STATIC_LINK_LIBS
-                                            paimon_avro_file_format_static)
         paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
                                            paimon_avro_file_format_shared)
         list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
@@ -453,9 +460,6 @@ if(PAIMON_BUILD_BENCHMARKS)
     add_dependencies(benchmark paimon-benchmarks)
 
     set(PAIMON_BENCHMARK_LINK_TOOLCHAIN benchmark::benchmark)
-    if(TARGET benchmark::benchmark_main)
-        list(APPEND PAIMON_BENCHMARK_LINK_TOOLCHAIN benchmark::benchmark_main)
-    endif()
 endif()
 
 paimon_print_dependency_resolution_summary()

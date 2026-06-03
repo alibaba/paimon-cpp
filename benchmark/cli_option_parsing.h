@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -33,6 +34,15 @@ inline bool ConsumeCliOption(const std::string& arg, const std::string& option_n
     return true;
 }
 
+inline std::string TrimAsciiWhitespace(const std::string& value) {
+    const auto first = value.find_first_not_of(" \t\n\r");
+    if (first == std::string::npos) {
+        return "";
+    }
+    const auto last = value.find_last_not_of(" \t\n\r");
+    return value.substr(first, last - first + 1);
+}
+
 inline std::vector<std::string> ParseCsvColumns(const std::string& csv,
                                                 const std::string& option_name) {
     if (csv.empty()) {
@@ -40,38 +50,20 @@ inline std::vector<std::string> ParseCsvColumns(const std::string& csv,
     }
 
     std::vector<std::string> columns;
-    std::string current;
-    bool last_delimiter_was_comma = false;
-    for (char c : csv) {
-        if (c == ',') {
-            if (current.empty()) {
-                throw std::runtime_error("invalid " + option_name + ": empty column name");
-            }
-            columns.push_back(current);
-            current.clear();
-            last_delimiter_was_comma = true;
-            continue;
-        }
-        if (c == ' ' || c == '\t') {
-            if (!current.empty()) {
-                columns.push_back(current);
-                current.clear();
-            }
+    size_t segment_start = 0;
+    for (size_t index = 0; index <= csv.size(); ++index) {
+        if (index != csv.size() && csv[index] != ',') {
             continue;
         }
 
-        current.push_back(c);
-        last_delimiter_was_comma = false;
-    }
-
-    if (current.empty()) {
-        if (!columns.empty() && !last_delimiter_was_comma) {
-            return columns;
+        const std::string column =
+            TrimAsciiWhitespace(csv.substr(segment_start, index - segment_start));
+        if (column.empty()) {
+            throw std::runtime_error("invalid " + option_name + ": empty column name");
         }
-        throw std::runtime_error("invalid " + option_name + ": empty column name");
+        columns.push_back(column);
+        segment_start = index + 1;
     }
-
-    columns.push_back(current);
     return columns;
 }
 
@@ -83,10 +75,10 @@ inline std::vector<std::pair<std::string, std::string>> ParseDelimitedOptions(
 
     std::vector<std::pair<std::string, std::string>> parsed;
     std::string token;
-    for (size_t i = 0; i <= input.size(); ++i) {
-        const bool at_end = (i == input.size());
-        if (!at_end && input[i] != ';') {
-            token.push_back(input[i]);
+    for (size_t index = 0; index <= input.size(); ++index) {
+        const bool at_end = (index == input.size());
+        if (!at_end && input[index] != ';') {
+            token.push_back(input[index]);
             continue;
         }
 
@@ -94,19 +86,20 @@ inline std::vector<std::pair<std::string, std::string>> ParseDelimitedOptions(
             throw std::runtime_error("invalid " + option_name + ": empty option segment");
         }
 
-        const auto sep = token.find(':');
-        if (sep == std::string::npos || sep == 0 || sep + 1 >= token.size()) {
+        const auto separator = token.find(':');
+        if (separator == std::string::npos || separator == 0 || separator + 1 >= token.size()) {
             throw std::runtime_error("invalid " + option_name + ": expected key:value");
         }
 
-        parsed.emplace_back(token.substr(0, sep), token.substr(sep + 1));
+        parsed.emplace_back(token.substr(0, separator), token.substr(separator + 1));
         token.clear();
     }
     return parsed;
 }
 
-inline bool ParseStringOptionArg(int* i, int argc, char** argv, const std::string& arg,
-                                 const std::string& option_name, std::string* value_out) {
+inline bool ParseStringOptionArg(int32_t argc, char** argv, const std::string& arg,
+                                 const std::string& option_name, int32_t* arg_index,
+                                 std::string* value_out) {
     std::string parsed_value;
     if (ConsumeCliOption(arg, option_name, &parsed_value)) {
         *value_out = std::move(parsed_value);
@@ -117,15 +110,15 @@ inline bool ParseStringOptionArg(int* i, int argc, char** argv, const std::strin
         return false;
     }
 
-    if (*i + 1 >= argc) {
+    if (*arg_index + 1 >= argc) {
         throw std::runtime_error("missing value for " + option_name);
     }
-    *value_out = argv[++(*i)];
+    *value_out = argv[++(*arg_index)];
     return true;
 }
 
-inline bool ParseCsvOptionArg(int* i, int argc, char** argv, const std::string& arg,
-                              const std::string& option_name,
+inline bool ParseCsvOptionArg(int32_t argc, char** argv, const std::string& arg,
+                              const std::string& option_name, int32_t* arg_index,
                               std::vector<std::string>* columns_out) {
     std::string parsed_value;
     if (ConsumeCliOption(arg, option_name, &parsed_value)) {
@@ -137,16 +130,16 @@ inline bool ParseCsvOptionArg(int* i, int argc, char** argv, const std::string& 
         return false;
     }
 
-    if (*i + 1 >= argc) {
+    if (*arg_index + 1 >= argc) {
         throw std::runtime_error("missing value for " + option_name);
     }
-    *columns_out = ParseCsvColumns(std::string(argv[++(*i)]), option_name);
+    *columns_out = ParseCsvColumns(std::string(argv[++(*arg_index)]), option_name);
     return true;
 }
 
 inline bool ParseDelimitedRepeatableOptionArg(
-    int* i, int argc, char** argv, const std::string& arg, const std::string& option_name,
-    std::vector<std::pair<std::string, std::string>>* options_out) {
+    int32_t argc, char** argv, const std::string& arg, const std::string& option_name,
+    int32_t* arg_index, std::vector<std::pair<std::string, std::string>>* options_out) {
     std::string parsed_value;
     if (ConsumeCliOption(arg, option_name, &parsed_value)) {
         const auto parsed_options = ParseDelimitedOptions(parsed_value, option_name);
@@ -158,11 +151,11 @@ inline bool ParseDelimitedRepeatableOptionArg(
         return false;
     }
 
-    if (*i + 1 >= argc) {
+    if (*arg_index + 1 >= argc) {
         throw std::runtime_error("missing value for " + option_name);
     }
 
-    const std::string option_arg = argv[++(*i)];
+    const std::string option_arg = argv[++(*arg_index)];
     const auto parsed_options = ParseDelimitedOptions(option_arg, option_name);
     options_out->insert(options_out->end(), parsed_options.begin(), parsed_options.end());
     return true;

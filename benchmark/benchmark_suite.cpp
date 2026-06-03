@@ -19,7 +19,6 @@
 #include <atomic>
 #include <cstdint>
 #include <cstdlib>
-#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <limits>
@@ -54,9 +53,11 @@ namespace {
 using DataBatches = std::vector<std::shared_ptr<arrow::StructArray>>;
 
 struct BenchmarkCliOptions {
-    std::string source_parquet;
+    std::string source_data_file;
     std::string external_table_path;
     std::string file_format = "parquet";
+    int64_t source_batch_max_rows = 4096;
+    int32_t row_to_batch_thread_number = 3;
     std::vector<std::string> pk_columns;
     std::vector<std::pair<std::string, std::string>> extra_options;
 };
@@ -75,44 +76,83 @@ const BenchmarkCliOptions& GetBenchmarkCliOptions() {
     return MutableBenchmarkCliOptions();
 }
 
+int64_t ParsePositiveInt64(const std::string& value, const std::string& option_name) {
+    char* end = nullptr;
+    const auto parsed = std::strtoll(value.c_str(), &end, 10);
+    if (end == value.c_str() || *end != '\0' || parsed <= 0) {
+        throw std::runtime_error("invalid " + option_name + ", expected positive integer");
+    }
+    return static_cast<int64_t>(parsed);
+}
+
+int32_t ParsePositiveInt32(const std::string& value, const std::string& option_name) {
+    const int64_t parsed = ParsePositiveInt64(value, option_name);
+    if (parsed > std::numeric_limits<int32_t>::max()) {
+        throw std::runtime_error("invalid " + option_name + ", value is too large");
+    }
+    return static_cast<int32_t>(parsed);
+}
+
 void ParsePaimonBenchmarkCliArgsImpl(int* argc, char** argv) {
     auto& options = MutableBenchmarkCliOptions();
-    int write_idx = 1;
-    for (int i = 1; i < *argc; ++i) {
-        const std::string arg(argv[i]);
+    auto parsed_argc = static_cast<int32_t>(*argc);
+    int32_t write_index = 1;
+    for (int32_t arg_index = 1; arg_index < parsed_argc; ++arg_index) {
+        const std::string arg(argv[arg_index]);
+        std::string parsed_value;
 
-        if (paimon::benchmark::ParseStringOptionArg(&i, *argc, argv, arg, "--paimon_source_parquet",
-                                                    &options.source_parquet)) {
+        if (paimon::benchmark::ParseStringOptionArg(parsed_argc, argv, arg,
+                                                    "--paimon_source_data_file", &arg_index,
+                                                    &options.source_data_file)) {
             continue;
         }
-        if (paimon::benchmark::ParseStringOptionArg(&i, *argc, argv, arg,
-                                                    "--paimon_external_table_path",
+        if (paimon::benchmark::ParseStringOptionArg(parsed_argc, argv, arg,
+                                                    "--paimon_source_parquet", &arg_index,
+                                                    &options.source_data_file)) {
+            continue;
+        }
+        if (paimon::benchmark::ParseStringOptionArg(parsed_argc, argv, arg,
+                                                    "--paimon_external_table_path", &arg_index,
                                                     &options.external_table_path)) {
             continue;
         }
-        if (paimon::benchmark::ParseStringOptionArg(&i, *argc, argv, arg, "--paimon_file_format",
-                                                    &options.file_format)) {
+        if (paimon::benchmark::ParseStringOptionArg(parsed_argc, argv, arg, "--paimon_file_format",
+                                                    &arg_index, &options.file_format)) {
             continue;
         }
-        if (paimon::benchmark::ParseCsvOptionArg(&i, *argc, argv, arg, "--paimon_pk_columns",
-                                                 &options.pk_columns)) {
+        if (paimon::benchmark::ParseStringOptionArg(parsed_argc, argv, arg,
+                                                    "--paimon_source_batch_max_rows", &arg_index,
+                                                    &parsed_value)) {
+            options.source_batch_max_rows =
+                ParsePositiveInt64(parsed_value, "--paimon_source_batch_max_rows");
+            continue;
+        }
+        if (paimon::benchmark::ParseStringOptionArg(parsed_argc, argv, arg,
+                                                    "--paimon_row_to_batch_thread_number",
+                                                    &arg_index, &parsed_value)) {
+            options.row_to_batch_thread_number =
+                ParsePositiveInt32(parsed_value, "--paimon_row_to_batch_thread_number");
+            continue;
+        }
+        if (paimon::benchmark::ParseCsvOptionArg(parsed_argc, argv, arg, "--paimon_pk_columns",
+                                                 &arg_index, &options.pk_columns)) {
             continue;
         }
         if (paimon::benchmark::ParseDelimitedRepeatableOptionArg(
-                &i, *argc, argv, arg, "--paimon_option", &options.extra_options)) {
+                parsed_argc, argv, arg, "--paimon_option", &arg_index, &options.extra_options)) {
             continue;
         }
 
-        argv[write_idx++] = argv[i];
+        argv[write_index++] = argv[arg_index];
     }
 
-    *argc = write_idx;
-    argv[write_idx] = nullptr;
+    *argc = write_index;
+    argv[write_index] = nullptr;
 }
 
 bool HasHelpFlagImpl(int argc, char** argv) {
-    for (int i = 1; i < argc; ++i) {
-        const std::string arg(argv[i]);
+    for (int32_t arg_index = 1; arg_index < argc; ++arg_index) {
+        const std::string arg(argv[arg_index]);
         if (arg == "-h" || arg == "--help" || arg == "--help=true") {
             return true;
         }
@@ -121,32 +161,36 @@ bool HasHelpFlagImpl(int argc, char** argv) {
 }
 
 void PrintPaimonBenchmarkCliHelpImpl() {
-    std::cout
-        << "Paimon benchmark custom options:\n"
-        << "  --paimon_source_parquet=<path>\n"
-        << "      Required. External Parquet source file used to build benchmark data.\n"
-        << "      Also supports: --paimon_source_parquet <path>\n"
-        << "  --paimon_external_table_path=<path>\n"
-        << "      Optional for BM_Read and BM_MOR_Read. If set, read directly from existing\n"
-        << "      table path and\n"
-        << "      skip source file loading and pre-write stage.\n"
-        << "      Also supports: --paimon_external_table_path <path>\n"
-        << "  --paimon_file_format=<parquet|orc>\n"
-        << "      Optional. Target table file format. Default: parquet.\n"
-        << "      Also supports: --paimon_file_format <parquet|orc>\n"
-        << "  --paimon_pk_columns=<col1,col2,...>\n"
-        << "      Required by BM_PK_Write and BM_MOR_Read.\n"
-        << "      Also supports: --paimon_pk_columns <col1,col2,...>\n"
-        << "  --paimon_option=<key1>:<value1>;<key2>:<value2>\n"
-        << "      Optional and repeatable. Pass through table options as-is.\n"
-        << "      Also supports: --paimon_option <key1>:<value1>;<key2>:<value2>\n"
-        << "      Note: use quotes in shell, e.g. \"--paimon_option k1:v1;k2:v2\".\n"
-        << "\n"
-        << "Example:\n"
-        << "  paimon-read-write-benchmark --paimon_source_parquet /path/data.parquet \\\n"
-        << "      --paimon_file_format parquet --paimon_pk_columns=id \\\n"
-        << "      --paimon_option \"read.batch-size:8192;bucket:4\" --benchmark_filter=BM_Read\n"
-        << std::endl;
+    std::cout << "Paimon benchmark custom options:\n"
+              << "  --paimon_source_data_file=<path>\n"
+              << "      Required. External source data file used to build benchmark data.\n"
+              << "      Currently supports Parquet source files.\n"
+              << "      Also supports: --paimon_source_data_file <path>\n"
+              << "      Deprecated alias: --paimon_source_parquet\n"
+              << "  --paimon_external_table_path=<path>\n"
+              << "      Optional for BM_Read and BM_MOR_Read. If set, read directly from existing\n"
+              << "      table path and skip source file loading and pre-write stage.\n"
+              << "      Also supports: --paimon_external_table_path <path>\n"
+              << "  --paimon_file_format=<parquet|orc>\n"
+              << "      Optional. Target table file format. Default: parquet.\n"
+              << "      Also supports: --paimon_file_format <parquet|orc>\n"
+              << "  --paimon_source_batch_max_rows=<rows>\n"
+              << "      Optional. Max rows per source batch. Default: 4096.\n"
+              << "  --paimon_row_to_batch_thread_number=<threads>\n"
+              << "      Optional. Row-to-batch thread number for reads. Default: 3.\n"
+              << "  --paimon_pk_columns=<col1,col2,...>\n"
+              << "      Required by BM_PK_Write and BM_MOR_Read.\n"
+              << "      Also supports: --paimon_pk_columns <col1,col2,...>\n"
+              << "  --paimon_option=<key1>:<value1>;<key2>:<value2>\n"
+              << "      Optional and repeatable. Pass through table options as-is.\n"
+              << "      Also supports: --paimon_option <key1>:<value1>;<key2>:<value2>\n"
+              << "      Note: use quotes in shell, e.g. \"--paimon_option k1:v1;k2:v2\".\n"
+              << "\n"
+              << "Example:\n"
+              << "  paimon-read-write-benchmark --paimon_source_data_file /path/data.parquet \\\n"
+              << "      --paimon_file_format parquet --paimon_pk_columns=id \\\n"
+              << "      --paimon_option \"read.batch-size:8192\" --benchmark_filter=BM_Read\n"
+              << std::endl;
 }
 
 struct BenchmarkWorkspace {
@@ -256,13 +300,13 @@ std::map<std::string, std::string> BuildOptions(const std::string& file_format) 
 
 std::map<std::string, std::string> BuildPkOptions(const std::string& file_format) {
     auto options = BuildOptions(file_format);
-    options.emplace(paimon::Options::BUCKET, "4");
+    options.emplace(paimon::Options::BUCKET, "1");
     options.emplace(paimon::Options::MERGE_ENGINE, "deduplicate");
     return options;
 }
 
-std::string GetParquetDataSourcePath() {
-    return GetBenchmarkCliOptions().source_parquet;
+std::string GetSourceDataFilePath() {
+    return GetBenchmarkCliOptions().source_data_file;
 }
 
 std::string GetExternalTablePath() {
@@ -274,26 +318,19 @@ const std::vector<std::string>& GetPkColumns() {
 }
 
 SourceDataSpec GetSourceDataSpec() {
-    const std::string parquet_source_path = GetParquetDataSourcePath();
-    if (!parquet_source_path.empty()) {
-        return {"parquet", parquet_source_path};
+    const std::string source_data_file_path = GetSourceDataFilePath();
+    if (!source_data_file_path.empty()) {
+        return {"parquet", source_data_file_path};
     }
     return {"", ""};
 }
 
-int64_t GetParquetSourceBatchMaxRows() {
-    const char* value = std::getenv("PAIMON_BENCHMARK_SOURCE_BATCH_MAX_ROWS");
-    if (value == nullptr || std::strlen(value) == 0) {
-        return 4096;
-    }
+int64_t GetSourceBatchMaxRows() {
+    return GetBenchmarkCliOptions().source_batch_max_rows;
+}
 
-    char* end = nullptr;
-    const auto parsed = std::strtoll(value, &end, 10);
-    if (end == value || *end != '\0' || parsed <= 0) {
-        throw std::runtime_error(
-            "invalid PAIMON_BENCHMARK_SOURCE_BATCH_MAX_ROWS, expected positive integer");
-    }
-    return static_cast<int64_t>(parsed);
+int32_t GetRowToBatchThreadNumber() {
+    return GetBenchmarkCliOptions().row_to_batch_thread_number;
 }
 
 bool SupportsParquetSourceDataMode() {
@@ -334,7 +371,7 @@ std::shared_ptr<arrow::StructArray> BuildStructArrayFromRecordBatch(
 }
 
 const ParquetSourceCache& LoadParquetSource(const std::string& path) {
-    const int64_t batch_max_rows = GetParquetSourceBatchMaxRows();
+    const int64_t batch_max_rows = GetSourceBatchMaxRows();
     static ParquetSourceCache cache;
     if (cache.path == path && cache.batch_max_rows == batch_max_rows) {
         return cache;
@@ -493,7 +530,7 @@ struct SharedMorReadTableCache {
 std::string BuildReadTableCacheKey(const std::string& file_format,
                                    const SourceDataSpec& source_spec) {
     return file_format + "|" + source_spec.format + "|" + source_spec.path + "|" +
-           std::to_string(GetParquetSourceBatchMaxRows());
+           std::to_string(GetSourceBatchMaxRows());
 }
 
 std::string JoinColumns(const std::vector<std::string>& columns) {
@@ -589,8 +626,8 @@ int64_t ReadRows(const std::string& table_path, const std::map<std::string, std:
         .EnablePrefetch(true)
         .SetPrefetchBatchCount(kPrefetchBatchCount)
         .SetPrefetchMaxParallelNum(prefetch_parallel_num)
-        .EnableMultiThreadRowToBatch(false)
-        .SetRowToBatchThreadNumber(1);
+        .EnableMultiThreadRowToBatch(GetRowToBatchThreadNumber() > 1)
+        .SetRowToBatchThreadNumber(GetRowToBatchThreadNumber());
     auto read_ctx = ValueOrThrow(read_builder.Finish(), "create read context");
     auto reader =
         ValueOrThrow(paimon::TableRead::Create(std::move(read_ctx)), "create table reader");
@@ -663,7 +700,7 @@ void RunBMWrite(::benchmark::State& state) {
         return;
     }
     if (!BenchmarkHelpers::ValidateSourcePresenceOrSkip(
-            state, source_spec.path, "--paimon_source_parquet is required", &SkipWithMessage)) {
+            state, source_spec.path, "--paimon_source_data_file is required", &SkipWithMessage)) {
         return;
     }
     if (!BenchmarkHelpers::ValidateSourceSupportOrSkip(state, source_spec.format,
@@ -723,7 +760,7 @@ void RunBMRead(::benchmark::State& state) {
 
     if (!BenchmarkHelpers::ValidateSourcePresenceOrSkip(
             state, source_spec.path,
-            "--paimon_source_parquet is required when --paimon_external_table_path is not set",
+            "--paimon_source_data_file is required when --paimon_external_table_path is not set",
             &SkipWithMessage)) {
         return;
     }
@@ -755,7 +792,7 @@ void RunBMPkWrite(::benchmark::State& state) {
         return;
     }
     if (!BenchmarkHelpers::ValidateSourcePresenceOrSkip(
-            state, source_spec.path, "--paimon_source_parquet is required", &SkipWithMessage)) {
+            state, source_spec.path, "--paimon_source_data_file is required", &SkipWithMessage)) {
         return;
     }
     if (!BenchmarkHelpers::ValidateSourceSupportOrSkip(state, source_spec.format,
@@ -819,7 +856,7 @@ void RunBMMorRead(::benchmark::State& state) {
 
     if (!BenchmarkHelpers::ValidateSourcePresenceOrSkip(
             state, source_spec.path,
-            "--paimon_source_parquet is required when --paimon_external_table_path is not set",
+            "--paimon_source_data_file is required when --paimon_external_table_path is not set",
             &SkipWithMessage)) {
         return;
     }

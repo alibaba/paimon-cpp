@@ -20,24 +20,24 @@ find_package(Threads REQUIRED)
 
 set(PAIMON_BENCHMARK_STATIC_LINK_LIBS
     paimon_shared
-    "-Wl,--whole-archive"
-    paimon_local_file_system_shared
-    "-Wl,--no-whole-archive"
-    "-Wl,--no-as-needed"
-    paimon_parquet_file_format_shared
-    paimon_blob_file_format_shared
-    "-Wl,--as-needed")
+    ${PAIMON_LOCAL_FILE_SYSTEM_SHARED_LINK_LIBS}
+    ${PAIMON_PARQUET_FILE_FORMAT_STATIC_LINK_LIBS}
+    ${PAIMON_BLOB_FILE_FORMAT_STATIC_LINK_LIBS})
 
 if(PAIMON_ENABLE_ORC)
-    list(APPEND PAIMON_BENCHMARK_STATIC_LINK_LIBS "-Wl,--no-as-needed")
-    list(APPEND PAIMON_BENCHMARK_STATIC_LINK_LIBS paimon_orc_file_format_shared)
-    list(APPEND PAIMON_BENCHMARK_STATIC_LINK_LIBS "-Wl,--as-needed")
+    list(APPEND PAIMON_BENCHMARK_STATIC_LINK_LIBS ${PAIMON_ORC_FILE_FORMAT_STATIC_LINK_LIBS})
 endif()
 
 if(PAIMON_ENABLE_AVRO)
-    list(APPEND PAIMON_BENCHMARK_STATIC_LINK_LIBS "-Wl,--no-as-needed")
-    list(APPEND PAIMON_BENCHMARK_STATIC_LINK_LIBS paimon_avro_file_format_shared)
-    list(APPEND PAIMON_BENCHMARK_STATIC_LINK_LIBS "-Wl,--as-needed")
+    list(APPEND PAIMON_BENCHMARK_STATIC_LINK_LIBS ${PAIMON_AVRO_FILE_FORMAT_STATIC_LINK_LIBS})
+endif()
+
+set(PAIMON_BENCHMARK_PLATFORM_LINK_LIBS)
+if(UNIX AND NOT APPLE)
+    find_library(PAIMON_BENCHMARK_RT_LIBRARY rt)
+    if(PAIMON_BENCHMARK_RT_LIBRARY)
+        list(APPEND PAIMON_BENCHMARK_PLATFORM_LINK_LIBS ${PAIMON_BENCHMARK_RT_LIBRARY})
+    endif()
 endif()
 
 if(PAIMON_BUILD_BENCHMARKS)
@@ -56,7 +56,7 @@ if(PAIMON_BUILD_BENCHMARKS)
                          ${PAIMON_BENCHMARK_STATIC_LINK_LIBS}
                          Threads::Threads
                          ${CMAKE_DL_LIBS}
-                         rt
+                         ${PAIMON_BENCHMARK_PLATFORM_LINK_LIBS}
                          ${PAIMON_BENCHMARK_LINK_TOOLCHAIN}
                          EXTRA_INCLUDES
                          ${CMAKE_SOURCE_DIR})

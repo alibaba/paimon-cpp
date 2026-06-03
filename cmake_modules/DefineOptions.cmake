@@ -245,7 +245,7 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
                          BUNDLED
                          SYSTEM)
 
-    define_option_string(Benchmark_SOURCE
+    define_option_string(benchmark_SOURCE
                          "Dependency source for Google Benchmark"
                          ""
                          AUTO
