@@ -233,8 +233,9 @@ Result<std::vector<ManifestFileMeta>> ReadDataManifests(
         ManifestList::Create(context.fs, core_options.GetManifestFormat(),
                              core_options.GetManifestCompression(), path_factory, pool));
     std::vector<ManifestFileMeta> manifests;
-    // TODO: Align Java ReadAllManifests semantics by including changelog manifests once
-    // paimon-cpp exposes the required manifest-list support.
+    // TODO(suxiaogang223): Align Java ReadAllManifests semantics by including changelog
+    // manifests. ReadAllManifests currently delegates to ReadChangelogManifests, which returns
+    // NotImplemented when a snapshot has a changelog manifest list.
     PAIMON_RETURN_NOT_OK(manifest_list->ReadDataManifests(snapshot, &manifests));
     return manifests;
 }
