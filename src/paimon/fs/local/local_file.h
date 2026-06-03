@@ -36,7 +36,7 @@ class LocalFileStatus;
 
 class LocalFile {
  public:
-    explicit LocalFile(const std::string& path);
+    static Result<LocalFile> Create(const std::string& path_string);
     ~LocalFile() = default;
 
     Result<bool> Exists() const;
@@ -52,9 +52,6 @@ class LocalFile {
     Result<uint64_t> Length() const;
     Result<int64_t> LastModifiedTimeMs() const;
     Status OpenFile(bool is_read_file);
-    Result<int32_t> Read() {
-        return Status::NotImplemented("");
-    }
     Result<int32_t> Read(char* buffer, uint32_t length);
     Result<int32_t> Read(char* buffer, uint32_t length, uint64_t offset);
     Result<int32_t> Write(const char* buffer, uint32_t length);
@@ -68,6 +65,8 @@ class LocalFile {
     }
 
  private:
+    explicit LocalFile(const std::string& path);
+
     const std::string path_;
     FILE* file_ = nullptr;
     IOHook* hook_;

@@ -52,11 +52,6 @@ class LocalFileSystem : public FileSystem {
         std::vector<std::unique_ptr<FileStatus>>* file_status_list) const override;
     Result<bool> Exists(const std::string& path) const override;
 
-    /// Converts the given %Path to a File for this file system. If the path is empty,
-    /// we will return `new File(".")` instead of `new File("")`, since
-    /// the latter returns `false` for `isDirectory` judgement.
-    Result<LocalFile> ToFile(const std::string& path) const;
-
  private:
     // the lock to ensure atomic renaming
     static const std::mutex RENAME_LOCK;

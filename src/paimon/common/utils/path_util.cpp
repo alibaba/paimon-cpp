@@ -16,8 +16,13 @@
 
 #include "paimon/common/utils/path_util.h"
 
+#include <unistd.h>
+
+#include <cerrno>
+#include <climits>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <utility>
 
 #include "fmt/format.h"
@@ -140,6 +145,14 @@ void PathUtil::TrimLastDelim(std::string* dir_path) noexcept {
     if (dir_path->length() > 1 && *(dir_path->rbegin()) == '/') {
         dir_path->erase(dir_path->size() - 1, 1);
     }
+}
+
+Result<std::string> PathUtil::GetCurrentPath() noexcept {
+    char cwd[PATH_MAX];
+    if (getcwd(cwd, sizeof(cwd)) != nullptr) {
+        return std::string(cwd);
+    }
+    return Status::IOError(fmt::format("get current path failed, ec: {}", std::strerror(errno)));
 }
 
 Result<std::string> PathUtil::CreateTempPath(const std::string& path) noexcept {
