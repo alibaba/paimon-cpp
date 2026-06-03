@@ -109,24 +109,18 @@ class FileReaderWrapper {
 
     /// Prepare for lazy reading of the specified row groups and columns.
     /// Actual reader initialization is deferred until the first Next() call.
-    Status PrepareForReadingLazy(const std::set<int32_t>& row_group_indices,
+    Status PrepareForReadingLazy(const std::vector<TargetRowGroup>& target_row_groups,
                                  const std::vector<int32_t>& column_indices);
 
     /// Prepare for immediate reading of the specified row groups and columns.
     /// Initializes the reader and starts pre-buffering I/O.
-    Status PrepareForReading(const std::set<int32_t>& row_group_indices,
+    Status PrepareForReading(const std::vector<TargetRowGroup>& target_row_groups,
                              const std::vector<int32_t>& column_indices);
 
     /// Filter row groups by read ranges, returning only those that overlap.
     Result<std::set<int32_t>> FilterRowGroupsByReadRanges(
         const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges,
         const std::vector<int32_t>& src_row_groups) const;
-
-    /// Set per-row-group RowRanges for page-level filtering.
-    /// Only partially matched row groups should have entries.
-    void SetRowGroupRowRanges(const std::map<int32_t, RowRanges>& ranges) {
-        row_group_row_ranges_ = ranges;
-    }
 
     /// Get the page index reader for the file.
     /// Returns nullptr if page index is not available.
@@ -154,8 +148,6 @@ class FileReaderWrapper {
     std::unique_ptr<arrow::RecordBatchReader> batch_reader_;
 
     std::vector<std::pair<uint64_t, uint64_t>> all_row_group_ranges_;
-    std::set<int32_t> target_row_group_indices_;
-    std::vector<std::pair<uint64_t, uint64_t>> target_row_groups_;
     std::vector<int32_t> target_column_indices_;
 
     ::arrow::MemoryPool* pool_;
@@ -175,13 +167,8 @@ class FileReaderWrapper {
     RowRanges current_filtered_row_ranges_;   // RowRanges for the active page-filtered RG
     uint64_t current_filtered_rg_start_ = 0;  // Absolute row-group start row number
 
-    // Page-level filtering state. Externally injected via SetRowGroupRowRanges and
-    // looked up by row group index when entering a page-filtered RG.
-    std::map<int32_t, RowRanges> row_group_row_ranges_;
-
-    // Set of target_row_groups_ positional indices that use page-filtered reading.
-    // Built in PrepareForReading from row_group_row_ranges_.
-    std::set<uint64_t> page_filtered_indices_;
+    // Target row groups with row ranges for none page-level filtering and page-level filtering
+    std::vector<TargetRowGroup> target_row_groups_;
 
     // Arrow schema covering target_column_indices_, used when constructing the per-RG
     // page-filtered reader. Cached in PrepareForReading because it's identical across

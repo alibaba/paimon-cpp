@@ -105,4 +105,16 @@ class RowRanges {
     std::vector<Range> ranges_;
 };
 
+struct TargetRowGroup {
+    int32_t row_group_index;
+    bool is_page_filtered;
+    // page-filtered row ranges, only valid if is_page_filtered is true.
+    RowRanges row_ranges;
+
+    TargetRowGroup() = default;
+    TargetRowGroup(int32_t rg_index, bool page_filtered, RowRanges ranges)
+        : row_group_index(rg_index),
+          is_page_filtered(page_filtered),
+          row_ranges(std::move(ranges)) {}
+};
 }  // namespace paimon::parquet
