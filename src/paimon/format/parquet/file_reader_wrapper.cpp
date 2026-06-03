@@ -159,9 +159,19 @@ void FileReaderWrapper::WaitForPendingPreBuffer() {
     }
 }
 
+void FileReaderWrapper::AdvanceToNextRowGroup() {
+    if (current_row_group_idx_ >= target_row_groups_.size() - 1) {
+        next_row_to_read_ = num_rows_;
+        current_row_group_idx_ = target_row_groups_.size();
+    } else {
+        current_row_group_idx_++;
+        next_row_to_read_ =
+            all_row_group_ranges_[target_row_groups_[current_row_group_idx_].row_group_index].first;
+    }
+}
+
 Status FileReaderWrapper::SeekToRow(uint64_t row_number) {
     try {
-        // Reset any in-progress page-filtered streaming
         current_page_filtered_reader_.reset();
         filtered_global_offset_ = 0;
 
@@ -179,19 +189,16 @@ Status FileReaderWrapper::SeekToRow(uint64_t row_number) {
                 current_row_group_idx_ = i;
                 next_row_to_read_ = rg_start;
 
-                // Rebuild batch_reader_ only for non-page-filtered row groups at/after seek
-                // position. Page-filtered RGs need no seek-side bookkeeping: their per-RG
-                // reader is constructed on demand in Next() from row_group_row_ranges_ each
-                // time, so backward seek "just works".
-                std::vector<int32_t> target_row_group_indices;
+                // Rebuild batch_reader_ for non-page-filtered RGs at/after seek position.
+                std::vector<int32_t> fully_matched_indices;
                 for (uint64_t j = i; j < target_row_groups_.size(); j++) {
                     if (!target_row_groups_[j].is_page_filtered) {
-                        target_row_group_indices.push_back(target_row_groups_[j].row_group_index);
+                        fully_matched_indices.push_back(target_row_groups_[j].row_group_index);
                     }
                 }
-                if (!target_row_group_indices.empty()) {
+                if (!fully_matched_indices.empty()) {
                     PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetRecordBatchReader(
-                        target_row_group_indices, target_column_indices_, &batch_reader_));
+                        fully_matched_indices, target_column_indices_, &batch_reader_));
                 } else {
                     batch_reader_.reset();
                 }
@@ -205,119 +212,96 @@ Status FileReaderWrapper::SeekToRow(uint64_t row_number) {
     PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("FileReaderWrapper::SeekToRow")
 }
 
+Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::NextPageFiltered() {
+    int32_t rg_id = target_row_groups_[current_row_group_idx_].row_group_index;
+
+    // Construct the per-RG streaming reader on demand.
+    if (!current_page_filtered_reader_) {
+        const auto& row_ranges = target_row_groups_[current_row_group_idx_].row_ranges;
+        auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
+            file_reader_->parquet_reader(), rg_id, row_ranges, target_column_indices_);
+        bool pre_buffered = !prebuffered_ranges_.empty();
+        int64_t max_chunksize = batch_size_ > 0 ? batch_size_ : std::numeric_limits<int64_t>::max();
+        PAIMON_ASSIGN_OR_RAISE(
+            current_page_filtered_reader_,
+            PageFilteredRowGroupReader::ReadFilteredRowGroup(
+                file_reader_->parquet_reader(), rg_id, row_ranges, target_column_indices_,
+                page_filtered_read_schema_, pool_, file_reader_->properties().cache_options(),
+                pre_buffered, page_ranges, max_chunksize));
+        current_filtered_row_ranges_ = row_ranges;
+        current_filtered_rg_start_ = all_row_group_ranges_[rg_id].first;
+        filtered_global_offset_ = 0;
+    }
+
+    std::shared_ptr<arrow::RecordBatch> record_batch;
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(current_page_filtered_reader_->ReadNext(&record_batch));
+
+    if (record_batch) {
+        auto original_row =
+            current_filtered_row_ranges_.MapFilteredIndexToOriginalRow(filtered_global_offset_);
+        previous_first_row_ = original_row.has_value() ? current_filtered_rg_start_ +
+                                                             static_cast<uint64_t>(*original_row)
+                                                       : current_filtered_rg_start_;
+        filtered_global_offset_ += record_batch->num_rows();
+        return record_batch;
+    }
+
+    // RG exhausted — reset and advance.
+    current_page_filtered_reader_.reset();
+    filtered_global_offset_ = 0;
+    AdvanceToNextRowGroup();
+    return std::shared_ptr<arrow::RecordBatch>();
+}
+
+Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::NextFullyMatched() {
+    if (!batch_reader_) {
+        return std::shared_ptr<arrow::RecordBatch>();
+    }
+
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto record_batch, batch_reader_->Next());
+    if (!record_batch) {
+        return std::shared_ptr<arrow::RecordBatch>();
+    }
+
+    int32_t rg_id = target_row_groups_[current_row_group_idx_].row_group_index;
+    uint64_t rg_end = all_row_group_ranges_[rg_id].second;
+    int64_t num_rows = record_batch->num_rows();
+
+    previous_first_row_ = next_row_to_read_;
+    if (next_row_to_read_ + num_rows < rg_end) {
+        next_row_to_read_ += num_rows;
+    } else if (next_row_to_read_ + num_rows == rg_end) {
+        AdvanceToNextRowGroup();
+    } else {
+        return Status::Invalid(
+            fmt::format("Next failed. next_row_to_read {} + num_rows {} exceeds row group end {}",
+                        next_row_to_read_, num_rows, rg_end));
+    }
+    return record_batch;
+}
+
 Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::Next() {
     try {
         if (PAIMON_UNLIKELY(!reader_initialized_)) {
             PAIMON_RETURN_NOT_OK(PrepareForReading(target_row_groups_, target_column_indices_));
         }
 
-        // Loop until we produce a batch or exhaust all row groups. A null from the active
-        // per-RG reader means that RG is done; we advance and try the next RG without
-        // surfacing a spurious null to the caller.
         while (current_row_group_idx_ < target_row_groups_.size()) {
-            std::shared_ptr<arrow::RecordBatch> record_batch;
-            int32_t rg_id = target_row_groups_[current_row_group_idx_].row_group_index;
-            uint64_t rg_end = all_row_group_ranges_[rg_id].second;
             bool is_page_filtered = target_row_groups_[current_row_group_idx_].is_page_filtered;
-
-            if (is_page_filtered) {
-                // Construct the per-RG streaming reader on demand. Inputs are recomputed each
-                // time from existing wrapper fields (no per-RG meta cached on the wrapper),
-                // mirroring how the fully-matched path delegates to Arrow's stateless
-                // GetRecordBatchReader. This makes both forward and backward seeks work
-                // uniformly: SeekToRow only resets current_page_filtered_reader_, and the
-                // next Next() rebuilds from authoritative state.
-                if (!current_page_filtered_reader_) {
-                    const auto& row_ranges = target_row_groups_[current_row_group_idx_].row_ranges;
-                    auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
-                        file_reader_->parquet_reader(), rg_id, row_ranges, target_column_indices_);
-                    bool pre_buffered = !prebuffered_ranges_.empty();
-                    // batch_size_ == 0 means "no per-batch row cap" in the wrapper's contract,
-                    // but TableBatchReader::set_chunksize(0) would loop forever emitting empty
-                    // batches. Translate to int64_max so the reader produces one batch per
-                    // underlying chunk boundary instead.
-                    int64_t max_chunksize =
-                        batch_size_ > 0 ? batch_size_ : std::numeric_limits<int64_t>::max();
-                    PAIMON_ASSIGN_OR_RAISE(current_page_filtered_reader_,
-                                           PageFilteredRowGroupReader::ReadFilteredRowGroup(
-                                               file_reader_->parquet_reader(), rg_id, row_ranges,
-                                               target_column_indices_, page_filtered_read_schema_,
-                                               pool_, file_reader_->properties().cache_options(),
-                                               pre_buffered, page_ranges, max_chunksize));
-                    current_filtered_row_ranges_ = row_ranges;
-                    current_filtered_rg_start_ = all_row_group_ranges_[rg_id].first;
-                    filtered_global_offset_ = 0;
-                }
-                PAIMON_RETURN_NOT_OK_FROM_ARROW(
-                    current_page_filtered_reader_->ReadNext(&record_batch));
-            } else if (batch_reader_) {
-                PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(record_batch, batch_reader_->Next());
-            }
-
-            if (record_batch) {
-                int64_t num_rows = record_batch->num_rows();
-                if (is_page_filtered) {
-                    // Map the cumulative filtered-row offset back to the original row index
-                    // within this row group. Must be evaluated BEFORE incrementing the offset.
-                    auto original_row = current_filtered_row_ranges_.MapFilteredIndexToOriginalRow(
-                        filtered_global_offset_);
-                    previous_first_row_ =
-                        original_row.has_value()
-                            ? current_filtered_rg_start_ + static_cast<uint64_t>(*original_row)
-                            : current_filtered_rg_start_;
-                    filtered_global_offset_ += num_rows;
-                    // Stay on this RG; the next ReadNext will either return more data or null.
-                } else {
-                    previous_first_row_ = next_row_to_read_;
-                    if (next_row_to_read_ + num_rows < rg_end) {
-                        next_row_to_read_ += num_rows;
-                    } else if (next_row_to_read_ + num_rows == rg_end) {
-                        if (current_row_group_idx_ == target_row_groups_.size() - 1) {
-                            next_row_to_read_ = num_rows_;
-                        } else {
-                            current_row_group_idx_++;
-                            next_row_to_read_ =
-                                all_row_group_ranges_[target_row_groups_[current_row_group_idx_]
-                                                          .row_group_index]
-                                    .first;
-                        }
-                    } else {
-                        return Status::Invalid(fmt::format(
-                            "Next failed. Unexpected error, next row to read {} + num rows just "
-                            "read {} should always be within current row group range or exactly "
-                            "equals to current row group end {}",
-                            next_row_to_read_, num_rows, rg_end));
-                    }
-                }
-                return record_batch;
-            }
-
-            // Null batch: current row group is exhausted (or fully-matched RGs hit a degenerate
-            // EOF). Advance to the next row group and continue the loop.
-            if (is_page_filtered) {
-                current_page_filtered_reader_.reset();
-                filtered_global_offset_ = 0;
-                if (current_row_group_idx_ == target_row_groups_.size() - 1) {
-                    next_row_to_read_ = num_rows_;
-                    current_row_group_idx_ = target_row_groups_.size();
-                } else {
-                    current_row_group_idx_++;
-                    next_row_to_read_ =
-                        all_row_group_ranges_[target_row_groups_[current_row_group_idx_]
-                                                  .row_group_index]
-                            .first;
-                }
-            } else {
-                // Fully-matched path: batch_reader_ is exhausted with no more RBs to align on
-                // row counts. Stop here — remaining RGs (if any) should be page-filtered and
-                // will be handled by re-entering the loop, but if we got here without advancing
-                // first, treat as terminal to avoid an infinite loop.
+            PAIMON_ASSIGN_OR_RAISE(auto batch,
+                                   is_page_filtered ? NextPageFiltered() : NextFullyMatched());
+            if (batch) {
+                return batch;
+            } else if (!is_page_filtered) {
+                // Null from fully-matched path means batch_reader_ is globally exhausted.
                 break;
             }
+            // current_row_group_idx_ has been advanced in NextPageFiltered() or NextFullyMatched(),
+            // loop to try next RG.
         }
 
         previous_first_row_ = next_row_to_read_;
-        return std::shared_ptr<arrow::RecordBatch>();  // EOF
+        return std::shared_ptr<arrow::RecordBatch>();
     }
     PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("FileReaderWrapper::Next")
 }
@@ -344,130 +328,112 @@ Status FileReaderWrapper::PrepareForReadingLazy(
     return Status::OK();
 }
 
+Status FileReaderWrapper::BuildPageFilteredSchema(const std::vector<int32_t>& column_indices) {
+    if (page_filtered_read_schema_) {
+        return Status::OK();
+    }
+    std::shared_ptr<arrow::Schema> schema;
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetSchema(&schema));
+    auto parquet_schema = file_reader_->parquet_reader()->metadata()->schema();
+    std::vector<std::shared_ptr<arrow::Field>> fields;
+    for (int32_t col_idx : column_indices) {
+        const std::string& col_name = parquet_schema->Column(col_idx)->name();
+        auto field = schema->GetFieldByName(col_name);
+        if (!field) {
+            return Status::Invalid(fmt::format(
+                "PrepareForReading: Parquet column {} ('{}') has no matching Arrow field in "
+                "file schema",
+                col_idx, col_name));
+        }
+        fields.push_back(field);
+    }
+    page_filtered_read_schema_ = arrow::schema(fields);
+    return Status::OK();
+}
+
+std::vector<::arrow::io::ReadRange> FileReaderWrapper::CollectPreBufferRanges(
+    const std::vector<int32_t>& fully_matched_row_groups,
+    const std::vector<int32_t>& column_indices) {
+    std::vector<::arrow::io::ReadRange> ranges;
+
+    // Page-filtered RGs: only matching page byte ranges.
+    for (const auto& trg : target_row_groups_) {
+        if (trg.is_page_filtered) {
+            auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
+                file_reader_->parquet_reader(), trg.row_group_index, trg.row_ranges,
+                column_indices);
+            ranges.insert(ranges.end(), std::make_move_iterator(page_ranges.begin()),
+                          std::make_move_iterator(page_ranges.end()));
+        }
+    }
+
+    // Fully-matched RGs: entire column chunk ranges.
+    auto file_metadata = file_reader_->parquet_reader()->metadata();
+    for (int32_t rg_idx : fully_matched_row_groups) {
+        auto rg_metadata = file_metadata->RowGroup(rg_idx);
+        for (int32_t col_idx : column_indices) {
+            auto col_chunk = rg_metadata->ColumnChunk(col_idx);
+            int64_t offset = col_chunk->data_page_offset();
+            if (col_chunk->has_dictionary_page() && col_chunk->dictionary_page_offset() > 0 &&
+                offset > col_chunk->dictionary_page_offset()) {
+                offset = col_chunk->dictionary_page_offset();
+            }
+            ranges.push_back({offset, col_chunk->total_compressed_size()});
+        }
+    }
+    return ranges;
+}
+
+void FileReaderWrapper::DispatchPreBuffer(std::vector<::arrow::io::ReadRange> ranges) {
+    const auto& cache_opts = file_reader_->properties().cache_options();
+    ::arrow::io::IOContext io_ctx(pool_);
+    auto merged_ranges = MergeOverlappingRanges(std::move(ranges));
+    try {
+        file_reader_->parquet_reader()->PreBufferRanges(merged_ranges, io_ctx, cache_opts);
+        prebuffered_ranges_ = std::move(merged_ranges);
+    } catch (const std::exception&) {
+        prebuffered_ranges_.clear();
+    }
+}
+
 Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& target_row_groups,
                                             const std::vector<int32_t>& column_indices) {
     try {
         target_row_groups_ = target_row_groups;
         target_column_indices_ = column_indices;
-
-        // Separate row groups into fully matched (Arrow's standard reader) and partially
-        // matched (page-filtered, per-RG reader constructed on demand in Next()).
-        // Per-RG metadata for the page-filtered path is NOT cached on the wrapper — it's
-        // recomputed on demand in Next() from row_group_row_ranges_ + target_column_indices_,
-        // mirroring how the fully-matched path lets Arrow's FileReader own all metadata.
-        std::vector<int32_t> fully_matched_row_groups;
         page_filtered_read_schema_.reset();
 
-        // Page-level byte ranges collected here only for the bulk PreBuffer call below;
-        // discarded once PreBuffer is dispatched.
-        std::vector<::arrow::io::ReadRange> page_filtered_byte_ranges;
-
-        for (const auto& target_row_group : target_row_groups_) {
-            if (target_row_group.is_page_filtered) {
-                // Build the page-filter read_schema once on first encounter — it's identical
-                // across all page-filtered RGs in this session.
-                if (!page_filtered_read_schema_) {
-                    std::shared_ptr<arrow::Schema> schema;
-                    PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetSchema(&schema));
-                    std::vector<std::shared_ptr<arrow::Field>> fields;
-                    auto parquet_schema = file_reader_->parquet_reader()->metadata()->schema();
-                    for (int32_t col_idx : column_indices) {
-                        const std::string& col_name = parquet_schema->Column(col_idx)->name();
-                        auto field = schema->GetFieldByName(col_name);
-                        if (!field) {
-                            return Status::Invalid(fmt::format(
-                                "PrepareForReading: Parquet column {} ('{}') has no matching Arrow "
-                                "field in file schema",
-                                col_idx, col_name));
-                        }
-                        fields.push_back(field);
-                    }
-                    page_filtered_read_schema_ = arrow::schema(fields);
-                }
-
-                auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
-                    file_reader_->parquet_reader(), target_row_group.row_group_index,
-                    target_row_group.row_ranges, column_indices);
-                page_filtered_byte_ranges.insert(page_filtered_byte_ranges.end(),
-                                                 std::make_move_iterator(page_ranges.begin()),
-                                                 std::make_move_iterator(page_ranges.end()));
-            } else {
-                fully_matched_row_groups.push_back(target_row_group.row_group_index);
+        // Partition into fully-matched and page-filtered row groups.
+        std::vector<int32_t> fully_matched_row_groups;
+        for (const auto& trg : target_row_groups_) {
+            if (!trg.is_page_filtered) {
+                fully_matched_row_groups.push_back(trg.row_group_index);
             }
         }
 
-        // Wait for any previously pre-buffered data before starting new pre-buffer.
+        bool has_page_filtered = fully_matched_row_groups.size() != target_row_groups_.size();
+        if (has_page_filtered) {
+            PAIMON_RETURN_NOT_OK(BuildPageFilteredSchema(column_indices));
+        }
+
         WaitForPendingPreBuffer();
 
-        // Create standard reader for fully matched row groups FIRST.
-        // GetRecordBatchReader internally calls PreBuffer, but we'll override it below
-        // with a single PreBuffer covering ALL row groups (page-filtered + fully-matched)
-        // so that async I/O for all files starts in parallel.
-        std::unique_ptr<arrow::RecordBatchReader> batch_reader;
+        // Create standard reader for fully-matched row groups.
         if (!fully_matched_row_groups.empty()) {
             PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetRecordBatchReader(
-                fully_matched_row_groups, column_indices, &batch_reader));
+                fully_matched_row_groups, column_indices, &batch_reader_));
+        } else {
+            batch_reader_.reset();
         }
 
-        // Collect all byte ranges for a single PreBufferRanges call.
-        // Page-filtered RGs: only matching page ranges (from ComputePageRanges).
-        // Fully-matched RGs: entire column chunk ranges.
-        //
-        // When there are no page-filtered RGs, skip the manual PreBufferRanges entirely:
-        // GetRecordBatchReader has already issued PreBuffer internally (driven by
-        // ArrowReaderProperties::pre_buffer=true), and a second PreBufferRanges call here
-        // would tear down and rebuild cached_source_, redundantly re-issuing the same IO
-        // on remote filesystems. The manual path is only needed to merge page-level ranges
-        // with column-chunk ranges into a single PreBuffer covering both kinds of RGs.
-        bool has_page_filtered_row_groups = false;
-        for (const auto& target_row_group : target_row_groups_) {
-            if (target_row_group.is_page_filtered) {
-                has_page_filtered_row_groups = true;
-                break;
-            }
+        // When page-filtered RGs exist, issue a single PreBuffer covering both kinds.
+        // Otherwise GetRecordBatchReader already issued PreBuffer internally.
+        if (has_page_filtered) {
+            auto all_ranges = CollectPreBufferRanges(fully_matched_row_groups, column_indices);
+            DispatchPreBuffer(std::move(all_ranges));
         }
 
-        if (has_page_filtered_row_groups) {
-            std::vector<::arrow::io::ReadRange> all_ranges = std::move(page_filtered_byte_ranges);
-
-            // Fully-matched row groups: add entire column chunk ranges
-            // The correct calculation follows Arrow's ColumnChunkMetaData::file_range():
-            // - col_start = data_page_offset (or dictionary_page_offset if present and lower)
-            // - col_length = total_compressed_size (includes all pages: dictionary + data)
-            auto file_metadata = file_reader_->parquet_reader()->metadata();
-            for (int32_t rg_idx : fully_matched_row_groups) {
-                auto rg_metadata = file_metadata->RowGroup(rg_idx);
-                for (int32_t col_idx : column_indices) {
-                    auto col_chunk = rg_metadata->ColumnChunk(col_idx);
-                    int64_t offset = col_chunk->data_page_offset();
-                    if (col_chunk->has_dictionary_page() &&
-                        col_chunk->dictionary_page_offset() > 0 &&
-                        offset > col_chunk->dictionary_page_offset()) {
-                        offset = col_chunk->dictionary_page_offset();
-                    }
-                    int64_t size = col_chunk->total_compressed_size();
-                    all_ranges.push_back({offset, size});
-                }
-            }
-
-            const auto& cache_opts = file_reader_->properties().cache_options();
-            ::arrow::io::IOContext io_ctx(pool_);
-            // Merge overlapping ranges before calling PreBufferRanges, which rejects overlapping
-            // ranges.
-            auto merged_ranges = MergeOverlappingRanges(std::move(all_ranges));
-            // PreBuffer is an optimization - if it fails (e.g., IO error during testing),
-            // continue without pre-buffering. Subsequent reads will fetch data on-demand.
-            try {
-                file_reader_->parquet_reader()->PreBufferRanges(merged_ranges, io_ctx, cache_opts);
-                // Track for cleanup on destruction
-                prebuffered_ranges_ = std::move(merged_ranges);
-            } catch (const std::exception& e) {
-                // Pre-buffering failed, clear ranges to indicate no pre-buffered data available.
-                // Reading will fall back to on-demand I/O.
-                prebuffered_ranges_.clear();
-            }
-        }
-        batch_reader_ = std::move(batch_reader);
+        // Reset read state.
         if (target_row_groups_.empty()) {
             next_row_to_read_ = num_rows_;
         } else {

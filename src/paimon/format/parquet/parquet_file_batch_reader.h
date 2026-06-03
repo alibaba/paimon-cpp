@@ -183,7 +183,6 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
 
     uint64_t read_rows_ = 0;
     uint64_t read_batch_count_ = 0;
-
 };
 
 }  // namespace paimon::parquet
