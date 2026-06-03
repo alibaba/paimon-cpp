@@ -117,10 +117,10 @@ class FileReaderWrapper {
     Status PrepareForReading(const std::vector<TargetRowGroup>& target_row_groups,
                              const std::vector<int32_t>& column_indices);
 
-    /// Filter row groups by read ranges, returning only those that overlap.
-    Result<std::set<int32_t>> FilterRowGroupsByReadRanges(
-        const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges,
-        const std::vector<int32_t>& src_row_groups) const;
+    /// Apply read ranges to the current target_row_groups_, keeping only those
+    /// whose row-group range overlaps with one of the given read ranges.
+    /// Resets reader state so that the next Next() call will re-initialize.
+    Status ApplyReadRanges(const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges);
 
     /// Get the page index reader for the file.
     /// Returns nullptr if page index is not available.
@@ -140,9 +140,6 @@ class FileReaderWrapper {
                       const std::vector<std::pair<uint64_t, uint64_t>>& all_row_group_ranges,
                       uint64_t num_rows, ::arrow::MemoryPool* pool, int64_t batch_size);
 
-    Result<std::set<int32_t>> ReadRangesToRowGroupIds(
-        const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) const;
-    Result<int32_t> GetRowGroupId(std::pair<uint64_t, uint64_t> target_range) const;
 
     std::unique_ptr<::parquet::arrow::FileReader> file_reader_;
     std::unique_ptr<arrow::RecordBatchReader> batch_reader_;

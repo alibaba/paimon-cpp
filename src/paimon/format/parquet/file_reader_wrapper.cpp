@@ -481,39 +481,32 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
     PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("FileReaderWrapper::PrepareForReading")
 }
 
-Result<std::set<int32_t>> FileReaderWrapper::FilterRowGroupsByReadRanges(
-    const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges,
-    const std::vector<int32_t>& src_row_groups) const {
-    std::set<int32_t> target_row_groups;
-    PAIMON_ASSIGN_OR_RAISE(std::set<int32_t> row_groups_to_read,
-                           ReadRangesToRowGroupIds(read_ranges));
-    for (const auto& row_group_id : src_row_groups) {
-        if (row_groups_to_read.find(row_group_id) != row_groups_to_read.end()) {
-            target_row_groups.emplace(row_group_id);
-        }
+Status FileReaderWrapper::ApplyReadRanges(
+    const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) {
+    if (read_ranges.empty()) {
+        target_row_groups_.clear();
+        reader_initialized_ = false;
+        return Status::OK();
     }
-    return target_row_groups;
-}
-
-Result<std::set<int32_t>> FileReaderWrapper::ReadRangesToRowGroupIds(
-    const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) const {
-    std::set<int32_t> selected_row_group_ids;
+    // Build a set of row group indices whose range matches one of the read ranges.
+    std::set<int32_t> matching_rg_indices;
     for (const auto& read_range : read_ranges) {
-        PAIMON_ASSIGN_OR_RAISE(int32_t row_group_id, GetRowGroupId(read_range));
-        selected_row_group_ids.emplace(row_group_id);
-    }
-    return selected_row_group_ids;
-}
-
-Result<int32_t> FileReaderWrapper::GetRowGroupId(std::pair<uint64_t, uint64_t> target_range) const {
-    for (size_t i = 0; i < all_row_group_ranges_.size(); i++) {
-        if (all_row_group_ranges_[i] == target_range) {
-            return i;
+        for (size_t i = 0; i < all_row_group_ranges_.size(); i++) {
+            if (all_row_group_ranges_[i] == read_range) {
+                matching_rg_indices.insert(static_cast<int32_t>(i));
+            }
         }
     }
-    return Status::Invalid(fmt::format(
-        "not expected failure. target range bound '{},{}' not match with row group range bound",
-        target_range.first, target_range.second));
+    // Keep only target row groups whose row_group_index is in matching set.
+    std::vector<TargetRowGroup> filtered;
+    for (const auto& trg : target_row_groups_) {
+        if (matching_rg_indices.count(trg.row_group_index) > 0) {
+            filtered.push_back(trg);
+        }
+    }
+    target_row_groups_ = std::move(filtered);
+    reader_initialized_ = false;
+    return Status::OK();
 }
 
 std::shared_ptr<::parquet::PageIndexReader> FileReaderWrapper::GetPageIndexReader() {

@@ -378,37 +378,38 @@ TEST_F(FileReaderWrapperTest, GetRowGroupRanges) {
     ASSERT_TRUE(ranges.empty());
 }
 
-TEST_F(FileReaderWrapperTest, ReadRangesToRowGroupIds) {
+TEST_F(FileReaderWrapperTest, ApplyReadRanges) {
     std::string file_path = PathUtil::JoinPath(dir_->Str(), "test.parquet");
     PrepareParquetFile(file_path, /*row_count=*/5500);
     ASSERT_OK_AND_ASSIGN(auto reader_wrapper, PrepareReaderWrapper(file_path));
-    std::set<int32_t> expected_row_group_ids = {0, 3, 5};
+
+    // Prepare with a subset of row groups: {0, 1, 2, 4, 5}
+    std::vector<TargetRowGroup> initial_targets = {
+        TargetRowGroup(0, false, RowRanges()), TargetRowGroup(1, false, RowRanges()),
+        TargetRowGroup(2, false, RowRanges()), TargetRowGroup(4, false, RowRanges()),
+        TargetRowGroup(5, false, RowRanges())};
+    std::vector<int32_t> all_columns = {0, 1, 2};
+    ASSERT_OK(reader_wrapper->PrepareForReadingLazy(initial_targets, all_columns));
+
+    // Apply read ranges that match RG 0, 3, 5. Only 0 and 5 are in initial targets.
     std::vector<std::pair<uint64_t, uint64_t>> read_ranges = {
         {0, 1000}, {3000, 4000}, {5000, 5500}};
-    ASSERT_OK_AND_ASSIGN(auto row_group_ids, reader_wrapper->ReadRangesToRowGroupIds(read_ranges));
-    ASSERT_EQ(expected_row_group_ids, row_group_ids);
-    std::vector<std::pair<uint64_t, uint64_t>> invalid_ranges = {
-        {0, 1000}, {3000, 4000}, {5000, 5600}};
-    ASSERT_NOK_WITH_MSG(reader_wrapper->ReadRangesToRowGroupIds(invalid_ranges),
-                        "not match with row group range bound");
-    ASSERT_OK_AND_ASSIGN(row_group_ids, reader_wrapper->ReadRangesToRowGroupIds({}));
-    ASSERT_TRUE(row_group_ids.empty());
-}
+    ASSERT_OK(reader_wrapper->ApplyReadRanges(read_ranges));
 
-TEST_F(FileReaderWrapperTest, FilterRowGroupsByReadRanges) {
-    std::string file_path = PathUtil::JoinPath(dir_->Str(), "test.parquet");
-    PrepareParquetFile(file_path, /*row_count=*/5500);
-    ASSERT_OK_AND_ASSIGN(auto reader_wrapper, PrepareReaderWrapper(file_path));
-    std::set<int32_t> expected_row_group_ids = {0, 5};
-    std::vector<std::pair<uint64_t, uint64_t>> read_ranges = {
-        {0, 1000}, {3000, 4000}, {5000, 5500}};
-    ASSERT_OK_AND_ASSIGN(auto row_group_ids,
-                         reader_wrapper->FilterRowGroupsByReadRanges(read_ranges, {0, 1, 2, 4, 5}));
-    ASSERT_EQ(expected_row_group_ids, row_group_ids);
+    // Verify: reading should only produce rows from RG 0 (1000 rows) and RG 5 (500 rows).
+    int64_t total_rows = 0;
+    while (true) {
+        ASSERT_OK_AND_ASSIGN(auto batch, reader_wrapper->Next());
+        if (!batch) break;
+        total_rows += batch->num_rows();
+    }
+    ASSERT_EQ(1500, total_rows);
 
-    ASSERT_OK_AND_ASSIGN(row_group_ids,
-                         reader_wrapper->FilterRowGroupsByReadRanges(read_ranges, {}));
-    ASSERT_TRUE(row_group_ids.empty());
+    // Apply empty read ranges should result in no data.
+    ASSERT_OK(reader_wrapper->PrepareForReadingLazy(initial_targets, all_columns));
+    ASSERT_OK(reader_wrapper->ApplyReadRanges({}));
+    ASSERT_OK_AND_ASSIGN(auto batch, reader_wrapper->Next());
+    ASSERT_FALSE(batch);
 }
 
 TEST_F(FileReaderWrapperTest, PrepareForReading) {

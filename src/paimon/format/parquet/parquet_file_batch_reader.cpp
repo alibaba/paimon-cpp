@@ -189,20 +189,14 @@ Status ParquetFileBatchReader::SetReadSchema(
         }
 
         read_data_type_ = arrow::struct_(read_schema->fields());
-        read_row_groups_ = row_groups;
-        read_column_indices_ = column_indices;
 
         metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_TOTAL,
                              reader_->GetNumberOfRowGroups());
         metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_AFTER_FILTER, row_groups.size());
 
-        PAIMON_ASSIGN_OR_RAISE(
-            std::set<int32_t> ordered_row_groups,
-            reader_->FilterRowGroupsByReadRanges(read_ranges_, read_row_groups_));
-
-        // build target row groups with page-level row ranges for PrepareForReadingLazy
+        // Build TargetRowGroup list with page-filter info in one shot.
         std::vector<TargetRowGroup> target_row_groups;
-        for (int32_t rg_id : ordered_row_groups) {
+        for (int32_t rg_id : row_groups) {
             auto it = row_group_row_ranges.find(rg_id);
             if (it != row_group_row_ranges.end()) {
                 target_row_groups.emplace_back(rg_id, true, it->second);
@@ -211,6 +205,7 @@ Status ParquetFileBatchReader::SetReadSchema(
             }
         }
         PAIMON_RETURN_NOT_OK(reader_->PrepareForReadingLazy(target_row_groups, column_indices));
+        PAIMON_RETURN_NOT_OK(reader_->ApplyReadRanges(read_ranges_));
     }
     PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetFileBatchReader::SetReadSchema")
     return Status::OK();
