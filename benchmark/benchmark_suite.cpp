@@ -219,9 +219,7 @@ void CheckStatus(const paimon::Status& status, const std::string& context) {
 }
 
 void SkipWithMessage(::benchmark::State& state, const std::string& message) {
-    static thread_local std::string owned_message;
-    owned_message = message;
-    state.SkipWithError(owned_message.c_str());
+    state.SkipWithError(message);
 }
 
 std::string GetConfiguredFileFormat() {
@@ -344,6 +342,8 @@ const SourceDataMetadata& LoadParquetSourceMetadata(const std::string& path) {
         "Parquet source data mode requires parquet::arrow reader support in this build");
 #else
     static SourceDataMetadata cache;
+    static std::mutex cache_mutex;
+    std::lock_guard<std::mutex> lock(cache_mutex);
     if (cache.path == path && cache.format == "parquet") {
         return cache;
     }
