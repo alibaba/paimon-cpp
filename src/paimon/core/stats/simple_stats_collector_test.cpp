@@ -38,9 +38,8 @@ TEST(SimpleStatsCollectorTest, TestSimple) {
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::boolean()), arrow::field("f1", arrow::int8()),
         arrow::field("f2", arrow::int16()),   arrow::field("f3", arrow::int32()),
-        arrow::field("f4", arrow::int64()),   arrow::field("f5", arrow::float32()),
-        arrow::field("f6", arrow::float64()), arrow::field("f7", arrow::utf8()),
-        arrow::field("f8", arrow::date32()),
+        arrow::field("f4", arrow::int64()),   arrow::field("f5", arrow::utf8()),
+        arrow::field("f6", arrow::date32()),
     };
 
     auto schema = arrow::schema(fields);
@@ -48,25 +47,21 @@ TEST(SimpleStatsCollectorTest, TestSimple) {
     auto pool = GetDefaultPool();
     ASSERT_OK(collector.Collect(BinaryRowGenerator::GenerateRow(
         {true, static_cast<int8_t>(1), static_cast<int16_t>(1), static_cast<int32_t>(1),
-         static_cast<int64_t>(1), static_cast<float>(3.0), static_cast<double>(3.0),
-         std::string("abc"), 2025},
+         static_cast<int64_t>(1), std::string("abc"), 2025},
         pool.get())));
     ASSERT_OK(collector.Collect(BinaryRowGenerator::GenerateRow(
         {false, static_cast<int8_t>(2), static_cast<int16_t>(2), static_cast<int32_t>(2),
-         static_cast<int64_t>(2), static_cast<float>(6.0), static_cast<double>(6.0),
-         std::string("bcd"), 2026},
+         static_cast<int64_t>(2), std::string("bcd"), 2026},
         pool.get())));
     ASSERT_OK_AND_ASSIGN(auto col_stats, collector.GetResult());
     ASSERT_OK_AND_ASSIGN(SimpleStats stats, SimpleStatsConverter::ToBinary(col_stats, pool.get()));
 
     auto expected_stats = BinaryRowGenerator::GenerateStats(
         {false, static_cast<int8_t>(1), static_cast<int16_t>(1), static_cast<int32_t>(1),
-         static_cast<int64_t>(1), static_cast<float>(3.0), static_cast<double>(3.0),
-         std::string("abc"), 2025},
+         static_cast<int64_t>(1), std::string("abc"), 2025},
         {true, static_cast<int8_t>(2), static_cast<int16_t>(2), static_cast<int32_t>(2),
-         static_cast<int64_t>(2), static_cast<float>(6.0), static_cast<double>(6.0),
-         std::string("bcd"), 2026},
-        std::vector<int64_t>({0, 0, 0, 0, 0, 0, 0, 0, 0}), GetDefaultPool().get());
+         static_cast<int64_t>(2), std::string("bcd"), 2026},
+        std::vector<int64_t>({0, 0, 0, 0, 0, 0, 0}), GetDefaultPool().get());
 
     ASSERT_EQ(stats, expected_stats);
 }
@@ -75,29 +70,27 @@ TEST(SimpleStatsCollectorTest, TestNull) {
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::boolean()), arrow::field("f1", arrow::int8()),
         arrow::field("f2", arrow::int16()),   arrow::field("f3", arrow::int32()),
-        arrow::field("f4", arrow::int64()),   arrow::field("f5", arrow::float32()),
-        arrow::field("f6", arrow::float64()), arrow::field("f7", arrow::utf8()),
-        arrow::field("f8", arrow::date32()),  arrow::field("key", arrow::int32()),
+        arrow::field("f4", arrow::int64()),   arrow::field("f5", arrow::utf8()),
+        arrow::field("f6", arrow::date32()),  arrow::field("key", arrow::int32()),
     };
 
     auto schema = arrow::schema(fields);
     SimpleStatsCollector collector(schema);
     auto pool = GetDefaultPool();
-    ASSERT_OK(collector.Collect(
-        BinaryRowGenerator::GenerateRow({NullType(), NullType(), NullType(), NullType(), NullType(),
-                                         NullType(), NullType(), NullType(), NullType(), 100},
-                                        pool.get())));
+    ASSERT_OK(collector.Collect(BinaryRowGenerator::GenerateRow(
+        {NullType(), NullType(), NullType(), NullType(), NullType(), NullType(), NullType(), 100},
+        pool.get())));
     ASSERT_OK_AND_ASSIGN(auto col_stats, collector.GetResult());
-    ASSERT_EQ(10, col_stats.size());
+    ASSERT_EQ(8, col_stats.size());
     ASSERT_OK_AND_ASSIGN(SimpleStats stats, SimpleStatsConverter::ToBinary(col_stats, pool.get()));
 
     ASSERT_EQ(stats.MinValues(), stats.MaxValues());
-    for (size_t i = 0; i < 9; ++i) {
+    for (size_t i = 0; i < 7; ++i) {
         ASSERT_TRUE(stats.MinValues().IsNullAt(i));
     }
-    ASSERT_EQ(stats.MinValues().GetInt(9), 100);
+    ASSERT_EQ(stats.MinValues().GetInt(7), 100);
     ASSERT_OK_AND_ASSIGN(std::vector<int64_t> expected, stats.NullCounts().ToLongArray());
-    ASSERT_EQ(expected, std::vector<int64_t>({1l, 1l, 1l, 1l, 1l, 1l, 1l, 1l, 1l, 0l}));
+    ASSERT_EQ(expected, std::vector<int64_t>({1l, 1l, 1l, 1l, 1l, 1l, 1l, 0l}));
 }
 
 TEST(SimpleStatsCollectorTest, TestInvalidPartition) {

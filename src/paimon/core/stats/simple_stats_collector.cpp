@@ -130,40 +130,6 @@ Status SimpleStatsCollector::Collect(const BinaryRow& row) {
                 }
                 break;
             }
-            case arrow::Type::FLOAT: {
-                if (column_stats_[i] == nullptr) {
-                    column_stats_[i] = ColumnStats::CreateFloatColumnStats(
-                        std::nullopt, std::nullopt, std::nullopt);
-                }
-                auto typed_stats = dynamic_cast<FloatColumnStats*>(column_stats_[i].get());
-                if (typed_stats == nullptr) {
-                    assert(false);
-                    return Status::Invalid("cast typed stats failed");
-                }
-                if (!row.IsNullAt(i)) {
-                    typed_stats->Collect(row.GetFloat(i));
-                } else {
-                    typed_stats->Collect(std::nullopt);
-                }
-                break;
-            }
-            case arrow::Type::DOUBLE: {
-                if (column_stats_[i] == nullptr) {
-                    column_stats_[i] = ColumnStats::CreateDoubleColumnStats(
-                        std::nullopt, std::nullopt, std::nullopt);
-                }
-                auto typed_stats = dynamic_cast<DoubleColumnStats*>(column_stats_[i].get());
-                if (typed_stats == nullptr) {
-                    assert(false);
-                    return Status::Invalid("cast typed stats failed");
-                }
-                if (!row.IsNullAt(i)) {
-                    typed_stats->Collect(row.GetDouble(i));
-                } else {
-                    typed_stats->Collect(std::nullopt);
-                }
-                break;
-            }
             case arrow::Type::STRING:
             case arrow::Type::BINARY: {
                 if (column_stats_[i] == nullptr) {

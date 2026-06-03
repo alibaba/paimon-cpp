@@ -78,14 +78,6 @@ Status DataGenerator::WriteBinaryRow(const BinaryRow& src_row, int32_t src_field
             target_row_writer->WriteLong(target_field_id, src_row.GetLong(src_field_id));
             break;
         }
-        case arrow::Type::type::FLOAT: {
-            target_row_writer->WriteFloat(target_field_id, src_row.GetFloat(src_field_id));
-            break;
-        }
-        case arrow::Type::type::DOUBLE: {
-            target_row_writer->WriteDouble(target_field_id, src_row.GetDouble(src_field_id));
-            break;
-        }
         case arrow::Type::type::STRING: {
             target_row_writer->WriteString(target_field_id, src_row.GetString(src_field_id));
             break;

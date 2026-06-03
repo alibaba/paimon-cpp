@@ -51,8 +51,8 @@ class SchemaValidation {
     static Status ValidateOnlyContainPrimitiveType(const std::vector<DataField>& fields,
                                                    const std::vector<std::string>& field_names,
                                                    const std::string& error_message_intro);
-    static Status ValidateNotContainComplexType(const std::vector<DataField>& fields,
-                                                const std::vector<std::string>& field_names);
+    static Status ValidateNotContainSpecificType(const std::vector<DataField>& fields,
+                                                 const std::vector<std::string>& field_names);
     static Status ValidateBucket(const TableSchema& schema, const CoreOptions& options);
     static Status ValidateDefaultValues(const TableSchema& schema) {
         return Status::NotImplemented("validate default values not implemented");
