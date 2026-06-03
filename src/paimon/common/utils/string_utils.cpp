@@ -140,8 +140,10 @@ Result<int32_t> StringUtils::StringToDate(const std::string& str) {
     if (ss.fail()) {
         return Status::Invalid(fmt::format("failed to convert string '{}' to date", str));
     }
+    int32_t orig_mon = timeinfo.tm_mon;
+    int32_t orig_mday = timeinfo.tm_mday;
     std::time_t time = timegm(&timeinfo);
-    if (time == -1) {
+    if (time == -1 || timeinfo.tm_mon != orig_mon || timeinfo.tm_mday != orig_mday) {
         return Status::Invalid(fmt::format("failed to convert string '{}' to date", str));
     }
     static const int64_t SECONDS_PER_DAY = 86400l;  // = 24 * 60 * 60
@@ -207,8 +209,10 @@ Result<int64_t> StringUtils::StringToTimestampMillis(const std::string& str) {
                         str));
     }
 
+    int32_t orig_mon = timeinfo.tm_mon;
+    int32_t orig_mday = timeinfo.tm_mday;
     std::time_t time = mktime(&timeinfo);
-    if (time == -1) {
+    if (time == -1 || timeinfo.tm_mon != orig_mon || timeinfo.tm_mday != orig_mday) {
         return Status::Invalid(fmt::format("failed to convert string '{}' to timestamp", str));
     }
     return static_cast<int64_t>(time) * 1000 + millis_part;
