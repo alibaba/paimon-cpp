@@ -19,12 +19,16 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
+#include <optional>
 #include <set>
 #include <vector>
 
 #include "gtest/gtest.h"
 #include "paimon/core/deletionvectors/bitmap64_deletion_vector.h"
 #include "paimon/core/deletionvectors/bitmap_deletion_vector.h"
+#include "paimon/core/io/data_file_meta.h"
+#include "paimon/core/table/source/deletion_file.h"
 #include "paimon/io/byte_array_input_stream.h"
 #include "paimon/io/byte_order.h"
 #include "paimon/io/data_input_stream.h"
@@ -39,6 +43,16 @@ void AppendInt32BigEndian(std::vector<uint8_t>* bytes, int32_t value) {
     bytes->push_back(static_cast<uint8_t>((value >> 16) & 0xFF));
     bytes->push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
     bytes->push_back(static_cast<uint8_t>(value & 0xFF));
+}
+
+std::shared_ptr<DataFileMeta> CreateDataFileMeta(const std::string& file_name) {
+    return std::make_shared<DataFileMeta>(
+        file_name, /*file_size=*/100, /*row_count=*/10, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
+        /*min_sequence_number=*/0, /*max_sequence_number=*/0, /*schema_id=*/0,
+        DataFileMeta::DUMMY_LEVEL, std::vector<std::optional<std::string>>{}, Timestamp(0, 0),
+        std::nullopt, nullptr, FileSource::Append(), std::nullopt, std::nullopt, std::nullopt,
+        std::nullopt);
 }
 
 }  // namespace
@@ -159,6 +173,26 @@ TEST(DeletionVectorTest, ReadFromDataInputStreamInvalidMagicNumber) {
 
     ASSERT_NOK_WITH_MSG(DeletionVector::Read(&in, std::nullopt, pool.get()),
                         "Invalid magic number");
+}
+
+TEST(DeletionVectorTest, CreateDeletionFileMap) {
+    std::vector<std::shared_ptr<DataFileMeta>> data_files = {CreateDataFileMeta("file-0.orc"),
+                                                             CreateDataFileMeta("file-1.orc"),
+                                                             CreateDataFileMeta("file-2.orc")};
+
+    auto empty_map = DeletionVector::CreateDeletionFileMap(data_files, {});
+    ASSERT_TRUE(empty_map.empty());
+
+    DeletionFile deletion_file_0("dv-0", /*offset=*/10, /*length=*/20, /*cardinality=*/3);
+    DeletionFile deletion_file_2("dv-2", /*offset=*/30, /*length=*/40, std::nullopt);
+    std::vector<std::optional<DeletionFile>> deletion_files = {deletion_file_0, std::nullopt,
+                                                               deletion_file_2};
+
+    auto deletion_file_map = DeletionVector::CreateDeletionFileMap(data_files, deletion_files);
+    ASSERT_EQ(deletion_file_map.size(), 2);
+    ASSERT_EQ(deletion_file_map.at("file-0.orc"), deletion_file_0);
+    ASSERT_EQ(deletion_file_map.count("file-1.orc"), 0);
+    ASSERT_EQ(deletion_file_map.at("file-2.orc"), deletion_file_2);
 }
 
 }  // namespace paimon::test
