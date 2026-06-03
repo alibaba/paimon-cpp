@@ -160,7 +160,8 @@ void FileReaderWrapper::WaitForPendingPreBuffer() {
 }
 
 void FileReaderWrapper::AdvanceToNextRowGroup() {
-    if (current_row_group_idx_ >= target_row_groups_.size() - 1) {
+    // current_row_group_idx_ >= target_row_groups_.size() -1, avoid unsigned overflow
+    if (current_row_group_idx_ + 1 >= target_row_groups_.size()) {
         next_row_to_read_ = num_rows_;
         current_row_group_idx_ = target_row_groups_.size();
     } else {
