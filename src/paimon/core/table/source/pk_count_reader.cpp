@@ -55,8 +55,8 @@ Result<std::unique_ptr<PKCountReader>> PKCountReader::Create(
         std::unique_ptr<MergeFileSplitRead> merge_read,
         MergeFileSplitRead::Create(path_factory, count_context, memory_pool, executor));
 
-    return std::unique_ptr<PKCountReader>(new PKCountReader(
-        std::move(splits), count_context, std::move(merge_read), memory_pool));
+    return std::unique_ptr<PKCountReader>(
+        new PKCountReader(std::move(splits), count_context, std::move(merge_read), memory_pool));
 }
 
 Result<int64_t> PKCountReader::CountRows() {
