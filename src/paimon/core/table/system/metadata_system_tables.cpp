@@ -167,10 +167,6 @@ Result<VariantType> LocalTimestampMillisValue(int64_t epoch_millis) {
     return TimestampMillisValue(local_timestamp.GetMillisecond());
 }
 
-Result<VariantType> LocalTimestampMillisValue(const Timestamp& local_timestamp) {
-    return TimestampMillisValue(local_timestamp.GetMillisecond());
-}
-
 VariantType OptionalTimestampMillisValue(const std::optional<int64_t>& value) {
     if (!value) {
         return NullType();
@@ -883,9 +879,7 @@ Result<std::vector<GenericRow>> FilesSystemTable::BuildRows() const {
         row.SetField(12, StringValue(max_value_stats));
         row.SetField(13, file->min_sequence_number);
         row.SetField(14, file->max_sequence_number);
-        PAIMON_ASSIGN_OR_RAISE(VariantType creation_time,
-                               LocalTimestampMillisValue(file->creation_time));
-        row.SetField(15, creation_time);
+        row.SetField(15, TimestampMillisValue(file->creation_time.GetMillisecond()));
         row.SetField(16, OptionalInt64Value(file->delete_row_count));
         row.SetField(17, file->file_source ? StringValue(file->file_source.value().ToString())
                                            : VariantType(NullType()));
