@@ -39,7 +39,7 @@ specific options below:
 
 ``--paimon_source_data_file=<path>``
    Source data file used to build benchmark data. Currently Parquet source files
-   are supported. ``--paimon_source_parquet`` is kept as a deprecated alias.
+   are supported.
 
 ``--paimon_external_table_path=<path>``
    Read directly from an existing table path for ``BM_Read`` and ``BM_MOR_Read``.
@@ -55,10 +55,12 @@ specific options below:
    Row-to-batch thread number for reads. The default value is ``3``.
 
 ``--paimon_pk_columns=<col1,col2,...>``
-   Primary key columns for ``BM_PK_Write`` and ``BM_MOR_Read``.
+   Primary key columns for ``BM_PK_Write`` and ``BM_MOR_Read``. These cases
+   explicitly use ``bucket=1`` because benchmark batches are written to bucket 0.
 
 ``--paimon_option=<key1>:<value1>;<key2>:<value2>``
-   Repeatable table options passed through to Paimon.
+   Repeatable table options passed through to Paimon. For ``BM_PK_Write`` and
+   ``BM_MOR_Read``, ``bucket`` is forced to ``1``.
 
 Examples
 ========

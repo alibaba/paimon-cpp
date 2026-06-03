@@ -19,7 +19,6 @@
 #include <atomic>
 #include <cstdint>
 #include <cstdlib>
-#include <filesystem>
 #include <iostream>
 #include <limits>
 #include <map>
@@ -38,9 +37,11 @@
 #include "benchmark/cli_option_parsing.h"
 #include "paimon/api.h"
 #include "paimon/catalog/catalog.h"
+#include "paimon/testing/utils/testharness.h"
 
 #if __has_include("parquet/arrow/reader.h")
 #include "parquet/arrow/reader.h"
+#include "parquet/file_reader.h"
 #define PAIMON_BENCHMARK_HAS_PARQUET_READER 1
 #else
 #define PAIMON_BENCHMARK_HAS_PARQUET_READER 0
@@ -49,8 +50,6 @@
 namespace paimon::benchmark {
 
 namespace {
-
-using DataBatches = std::vector<std::shared_ptr<arrow::StructArray>>;
 
 struct BenchmarkCliOptions {
     std::string source_data_file;
@@ -93,9 +92,9 @@ int32_t ParsePositiveInt32(const std::string& value, const std::string& option_n
     return static_cast<int32_t>(parsed);
 }
 
-void ParsePaimonBenchmarkCliArgsImpl(int* argc, char** argv) {
+void ParsePaimonBenchmarkCliArgsImpl(int32_t* argc, char** argv) {
     auto& options = MutableBenchmarkCliOptions();
-    auto parsed_argc = static_cast<int32_t>(*argc);
+    const int32_t parsed_argc = *argc;
     int32_t write_index = 1;
     for (int32_t arg_index = 1; arg_index < parsed_argc; ++arg_index) {
         const std::string arg(argv[arg_index]);
@@ -103,11 +102,6 @@ void ParsePaimonBenchmarkCliArgsImpl(int* argc, char** argv) {
 
         if (paimon::benchmark::ParseStringOptionArg(parsed_argc, argv, arg,
                                                     "--paimon_source_data_file", &arg_index,
-                                                    &options.source_data_file)) {
-            continue;
-        }
-        if (paimon::benchmark::ParseStringOptionArg(parsed_argc, argv, arg,
-                                                    "--paimon_source_parquet", &arg_index,
                                                     &options.source_data_file)) {
             continue;
         }
@@ -134,8 +128,8 @@ void ParsePaimonBenchmarkCliArgsImpl(int* argc, char** argv) {
                 ParsePositiveInt32(parsed_value, "--paimon_row_to_batch_thread_number");
             continue;
         }
-        if (paimon::benchmark::ParseCsvOptionArg(parsed_argc, argv, arg, "--paimon_pk_columns",
-                                                 &arg_index, &options.pk_columns)) {
+        if (paimon::benchmark::ParseCommaSeparatedOptionArg(
+                parsed_argc, argv, arg, "--paimon_pk_columns", &arg_index, &options.pk_columns)) {
             continue;
         }
         if (paimon::benchmark::ParseDelimitedRepeatableOptionArg(
@@ -150,7 +144,7 @@ void ParsePaimonBenchmarkCliArgsImpl(int* argc, char** argv) {
     argv[write_index] = nullptr;
 }
 
-bool HasHelpFlagImpl(int argc, char** argv) {
+bool HasHelpFlagImpl(int32_t argc, char** argv) {
     for (int32_t arg_index = 1; arg_index < argc; ++arg_index) {
         const std::string arg(argv[arg_index]);
         if (arg == "-h" || arg == "--help" || arg == "--help=true") {
@@ -166,7 +160,6 @@ void PrintPaimonBenchmarkCliHelpImpl() {
               << "      Required. External source data file used to build benchmark data.\n"
               << "      Currently supports Parquet source files.\n"
               << "      Also supports: --paimon_source_data_file <path>\n"
-              << "      Deprecated alias: --paimon_source_parquet\n"
               << "  --paimon_external_table_path=<path>\n"
               << "      Optional for BM_Read and BM_MOR_Read. If set, read directly from existing\n"
               << "      table path and skip source file loading and pre-write stage.\n"
@@ -193,42 +186,13 @@ void PrintPaimonBenchmarkCliHelpImpl() {
               << std::endl;
 }
 
-struct BenchmarkWorkspace {
-    explicit BenchmarkWorkspace(const std::string& prefix) {
-        std::error_code ec;
-        const std::filesystem::path temp_dir = std::filesystem::temp_directory_path(ec);
-        if (ec) {
-            throw std::runtime_error("failed to get system temp directory: " + ec.message());
-        }
-
-        const std::filesystem::path workspace_dir =
-            temp_dir / (prefix + "_" + std::to_string(NextId()));
-        root_path = workspace_dir.string();
-        EnsureDirectory(workspace_dir);
+std::unique_ptr<paimon::test::UniqueTestDirectory> CreateBenchmarkWorkspace() {
+    auto workspace = paimon::test::UniqueTestDirectory::Create();
+    if (workspace == nullptr) {
+        throw std::runtime_error("failed to create benchmark workspace");
     }
-
-    ~BenchmarkWorkspace() {
-        std::error_code ec;
-        std::filesystem::remove_all(std::filesystem::path(root_path), ec);
-    }
-
-    std::string root_path;
-
- private:
-    static void EnsureDirectory(const std::filesystem::path& path) {
-        std::error_code ec;
-        std::filesystem::create_directories(path, ec);
-        if (ec) {
-            throw std::runtime_error("failed to create benchmark workspace: " + path.string() +
-                                     ", error=" + ec.message());
-        }
-    }
-
-    static uint64_t NextId() {
-        static std::atomic<uint64_t> id{0};
-        return ++id;
-    }
-};
+    return workspace;
+}
 
 uint64_t NextTableId() {
     static std::atomic<uint64_t> id{0};
@@ -260,7 +224,7 @@ void SkipWithMessage(::benchmark::State& state, const std::string& message) {
     state.SkipWithError(owned_message.c_str());
 }
 
-std::string GetFileFormatFromEnv() {
+std::string GetConfiguredFileFormat() {
     std::string file_format = GetBenchmarkCliOptions().file_format;
     for (const auto& kv : GetBenchmarkCliOptions().extra_options) {
         if (kv.first == paimon::Options::FILE_FORMAT) {
@@ -300,8 +264,8 @@ std::map<std::string, std::string> BuildOptions(const std::string& file_format) 
 
 std::map<std::string, std::string> BuildPkOptions(const std::string& file_format) {
     auto options = BuildOptions(file_format);
-    options.emplace(paimon::Options::BUCKET, "1");
-    options.emplace(paimon::Options::MERGE_ENGINE, "deduplicate");
+    options[paimon::Options::BUCKET] = "1";
+    options[paimon::Options::MERGE_ENGINE] = "deduplicate";
     return options;
 }
 
@@ -348,39 +312,15 @@ bool SupportsSourceDataMode(const std::string& source_format) {
     return false;
 }
 
-struct ParquetSourceCache {
-    std::string path;
-    int64_t batch_max_rows = 0;
+struct SourceDataMetadata {
     std::shared_ptr<arrow::Schema> schema;
-    DataBatches batches;
-    int64_t total_rows = 0;
-};
-
-struct SourceDataCache {
-    std::shared_ptr<arrow::Schema> schema;
-    const DataBatches* batches = nullptr;
     int64_t total_rows = 0;
     std::string format;
     std::string path;
 };
 
-std::shared_ptr<arrow::StructArray> BuildStructArrayFromRecordBatch(
-    const std::shared_ptr<arrow::RecordBatch>& batch) {
-    return std::make_shared<arrow::StructArray>(arrow::struct_(batch->schema()->fields()),
-                                                batch->num_rows(), batch->columns());
-}
-
-const ParquetSourceCache& LoadParquetSource(const std::string& path) {
-    const int64_t batch_max_rows = GetSourceBatchMaxRows();
-    static ParquetSourceCache cache;
-    if (cache.path == path && cache.batch_max_rows == batch_max_rows) {
-        return cache;
-    }
-
-#if !PAIMON_BENCHMARK_HAS_PARQUET_READER
-    throw std::runtime_error(
-        "Parquet source data mode requires parquet::arrow reader support in this build");
-#else
+#if PAIMON_BENCHMARK_HAS_PARQUET_READER
+std::unique_ptr<parquet::arrow::FileReader> OpenParquetSourceReader(const std::string& path) {
     auto input = arrow::io::ReadableFile::Open(path);
     if (!input.ok()) {
         throw std::runtime_error("open Parquet source failed: " + path + ", " +
@@ -393,73 +333,52 @@ const ParquetSourceCache& LoadParquetSource(const std::string& path) {
     if (!open_status.ok()) {
         throw std::runtime_error("create Parquet reader failed: " + open_status.ToString());
     }
+    parquet_reader->set_batch_size(GetSourceBatchMaxRows());
+    return parquet_reader;
+}
+#endif
 
-    std::shared_ptr<arrow::Table> table;
-    const auto read_status = parquet_reader->ReadTable(&table);
-    if (!read_status.ok()) {
-        throw std::runtime_error("read Parquet source failed: " + read_status.ToString());
+const SourceDataMetadata& LoadParquetSourceMetadata(const std::string& path) {
+#if !PAIMON_BENCHMARK_HAS_PARQUET_READER
+    throw std::runtime_error(
+        "Parquet source data mode requires parquet::arrow reader support in this build");
+#else
+    static SourceDataMetadata cache;
+    if (cache.path == path && cache.format == "parquet") {
+        return cache;
     }
 
-    if (table->num_rows() <= 0) {
+    auto parquet_reader = OpenParquetSourceReader(path);
+    std::shared_ptr<arrow::Schema> schema;
+    const auto schema_status = parquet_reader->GetSchema(&schema);
+    if (!schema_status.ok()) {
+        throw std::runtime_error("read Parquet source schema failed: " + schema_status.ToString());
+    }
+
+    const int64_t total_rows = parquet_reader->parquet_reader()->metadata()->num_rows();
+    if (total_rows <= 0) {
         throw std::runtime_error("Parquet source is empty: " + path);
     }
 
-    DataBatches batches;
-    int64_t total_rows = 0;
-    arrow::TableBatchReader batch_reader(*table);
-    batch_reader.set_chunksize(batch_max_rows);
-    std::shared_ptr<arrow::RecordBatch> record_batch;
-    while (true) {
-        const auto read_batch_status = batch_reader.ReadNext(&record_batch);
-        if (!read_batch_status.ok()) {
-            throw std::runtime_error("split Parquet table into batches failed: " +
-                                     read_batch_status.ToString());
-        }
-        if (record_batch == nullptr) {
-            break;
-        }
-        if (record_batch->num_rows() <= 0) {
-            continue;
-        }
-        batches.push_back(BuildStructArrayFromRecordBatch(record_batch));
-        total_rows += record_batch->num_rows();
-    }
-
-    if (batches.empty() || total_rows <= 0) {
-        throw std::runtime_error("Parquet source has no non-empty batches: " + path);
-    }
-
-    cache.path = path;
-    cache.batch_max_rows = batch_max_rows;
-    cache.schema = table->schema();
-    cache.batches = std::move(batches);
+    cache.schema = std::move(schema);
     cache.total_rows = total_rows;
+    cache.format = "parquet";
+    cache.path = path;
     return cache;
 #endif
 }
 
-SourceDataCache LoadSourceData(const SourceDataSpec& source_spec) {
+SourceDataMetadata LoadSourceDataMetadata(const SourceDataSpec& source_spec) {
     if (source_spec.format == "parquet") {
-        const auto& source = LoadParquetSource(source_spec.path);
-        return {source.schema, &source.batches, source.total_rows, source_spec.format,
-                source_spec.path};
+        return LoadParquetSourceMetadata(source_spec.path);
     }
     throw std::runtime_error("unknown source format: " + source_spec.format);
 }
 
-std::shared_ptr<arrow::Schema> BuildSchema(const SourceDataSpec& source_spec) {
-    return LoadSourceData(source_spec).schema;
-}
-DataBatches BuildDataBatches(const SourceDataSpec& source_spec) {
-    const auto source = LoadSourceData(source_spec);
-    if (source.batches == nullptr || source.batches->empty() || source.total_rows <= 0) {
-        throw std::runtime_error("source file has no non-empty data batches");
-    }
-
-    std::cout << "[benchmark][source] format=" << source.format << ", path=" << source.path
-              << ", source_rows=" << source.total_rows
-              << ", generated_data_batches=" << source.batches->size() << std::endl;
-    return *source.batches;
+std::shared_ptr<arrow::StructArray> BuildStructArrayFromRecordBatch(
+    const std::shared_ptr<arrow::RecordBatch>& batch) {
+    return std::make_shared<arrow::StructArray>(arrow::struct_(batch->schema()->fields()),
+                                                batch->num_rows(), batch->columns());
 }
 
 std::unique_ptr<paimon::RecordBatch> MakeRecordBatch(
@@ -490,19 +409,59 @@ void EnsureTable(const std::string& root_path, const std::string& db_name,
                 "create table");
 }
 
+void WriteSourceDataToWriter(paimon::FileStoreWrite* writer, const SourceDataSpec& source_spec) {
+    if (source_spec.format != "parquet") {
+        throw std::runtime_error("unknown source format: " + source_spec.format);
+    }
+
+#if !PAIMON_BENCHMARK_HAS_PARQUET_READER
+    throw std::runtime_error(
+        "Parquet source data mode requires parquet::arrow reader support in this build");
+#else
+    auto parquet_reader = OpenParquetSourceReader(source_spec.path);
+    std::unique_ptr<arrow::RecordBatchReader> batch_reader;
+    const auto reader_status = parquet_reader->GetRecordBatchReader(&batch_reader);
+    if (!reader_status.ok()) {
+        throw std::runtime_error("create Parquet source batch reader failed: " +
+                                 reader_status.ToString());
+    }
+
+    int64_t written_rows = 0;
+    while (true) {
+        std::shared_ptr<arrow::RecordBatch> record_batch;
+        const auto read_status = batch_reader->ReadNext(&record_batch);
+        if (!read_status.ok()) {
+            throw std::runtime_error("read Parquet source batch failed: " + read_status.ToString());
+        }
+        if (record_batch == nullptr) {
+            break;
+        }
+        if (record_batch->num_rows() <= 0) {
+            continue;
+        }
+
+        auto struct_array = BuildStructArrayFromRecordBatch(record_batch);
+        auto batch = MakeRecordBatch(struct_array);
+        CheckStatus(writer->Write(std::move(batch)), "write batch");
+        written_rows += record_batch->num_rows();
+    }
+
+    if (written_rows <= 0) {
+        throw std::runtime_error("source file has no non-empty data batches: " + source_spec.path);
+    }
+#endif
+}
+
 void WriteAndCommit(const std::string& table_path,
                     const std::map<std::string, std::string>& options,
-                    const DataBatches& data_batches) {
+                    const SourceDataSpec& source_spec) {
     paimon::WriteContextBuilder write_builder(table_path, "benchmark-writer");
     auto write_ctx =
         ValueOrThrow(write_builder.SetOptions(options).Finish(), "create write context");
     auto writer = ValueOrThrow(paimon::FileStoreWrite::Create(std::move(write_ctx)),
                                "create file store writer");
 
-    for (const auto& data : data_batches) {
-        auto batch = MakeRecordBatch(data);
-        CheckStatus(writer->Write(std::move(batch)), "write batch");
-    }
+    WriteSourceDataToWriter(writer.get(), source_spec);
     auto messages = ValueOrThrow(writer->PrepareCommit(), "prepare commit");
 
     paimon::CommitContextBuilder commit_builder(table_path, "benchmark-writer");
@@ -515,14 +474,14 @@ void WriteAndCommit(const std::string& table_path,
 
 struct SharedReadTableCache {
     std::string key;
-    std::unique_ptr<BenchmarkWorkspace> workspace;
+    std::unique_ptr<paimon::test::UniqueTestDirectory> workspace;
     std::string table_path;
     int64_t total_rows = 0;
 };
 
 struct SharedMorReadTableCache {
     std::string key;
-    std::unique_ptr<BenchmarkWorkspace> workspace;
+    std::unique_ptr<paimon::test::UniqueTestDirectory> workspace;
     std::string table_path;
     int64_t total_rows = 0;
 };
@@ -560,24 +519,22 @@ const SharedMorReadTableCache& GetOrCreateSharedMorReadTable(const std::string& 
     }
 
     auto options = BuildPkOptions(file_format);
-    const auto source = LoadSourceData(source_spec);
-    auto schema = BuildSchema(source_spec);
-    auto data_batches = BuildDataBatches(source_spec);
+    const auto source_metadata = LoadSourceDataMetadata(source_spec);
 
-    auto workspace = std::make_unique<BenchmarkWorkspace>("paimon_mor_read_bench_shared");
+    auto workspace = CreateBenchmarkWorkspace();
     const std::string db_name = "bench_db";
     const std::string table_name = "mor_read_shared_" + std::to_string(NextTableId());
-    EnsureTable(workspace->root_path, db_name, table_name, options, schema,
+    EnsureTable(workspace->Str(), db_name, table_name, options, source_metadata.schema,
                 /*primary_keys=*/pk_columns);
-    const std::string table_path = RequirePath(workspace->root_path, db_name, table_name);
+    const std::string table_path = RequirePath(workspace->Str(), db_name, table_name);
     std::cout << "[benchmark][mor-read] create_shared_output_table_path=" << table_path
               << std::endl;
-    WriteAndCommit(table_path, options, data_batches);
+    WriteAndCommit(table_path, options, source_spec);
 
     cache.key = cache_key;
     cache.workspace = std::move(workspace);
     cache.table_path = table_path;
-    cache.total_rows = source.total_rows;
+    cache.total_rows = source_metadata.total_rows;
     return cache;
 }
 
@@ -594,22 +551,20 @@ const SharedReadTableCache& GetOrCreateSharedReadTable(const std::string& file_f
     }
 
     auto options = BuildOptions(file_format);
-    const auto source = LoadSourceData(source_spec);
-    auto schema = BuildSchema(source_spec);
-    auto data_batches = BuildDataBatches(source_spec);
+    const auto source_metadata = LoadSourceDataMetadata(source_spec);
 
-    auto workspace = std::make_unique<BenchmarkWorkspace>("paimon_read_bench_shared");
+    auto workspace = CreateBenchmarkWorkspace();
     const std::string db_name = "bench_db";
     const std::string table_name = "read_shared_" + std::to_string(NextTableId());
-    EnsureTable(workspace->root_path, db_name, table_name, options, schema);
-    const std::string table_path = RequirePath(workspace->root_path, db_name, table_name);
+    EnsureTable(workspace->Str(), db_name, table_name, options, source_metadata.schema);
+    const std::string table_path = RequirePath(workspace->Str(), db_name, table_name);
     std::cout << "[benchmark][read] create_shared_output_table_path=" << table_path << std::endl;
-    WriteAndCommit(table_path, options, data_batches);
+    WriteAndCommit(table_path, options, source_spec);
 
     cache.key = cache_key;
     cache.workspace = std::move(workspace);
     cache.table_path = table_path;
-    cache.total_rows = source.total_rows;
+    cache.total_rows = source_metadata.total_rows;
     return cache;
 }
 
@@ -652,7 +607,6 @@ int64_t ReadRows(const std::string& table_path, const std::map<std::string, std:
 
 struct PreparedSourceData {
     std::shared_ptr<arrow::Schema> schema;
-    DataBatches data_batches;
     int64_t total_rows = 0;
 };
 
@@ -669,9 +623,9 @@ bool TryGetSourceSpec(::benchmark::State& state, SourceDataSpec* source_spec) {
 bool TryPrepareSourceData(::benchmark::State& state, const SourceDataSpec& source_spec,
                           PreparedSourceData* prepared) {
     try {
-        prepared->total_rows = LoadSourceData(source_spec).total_rows;
-        prepared->schema = BuildSchema(source_spec);
-        prepared->data_batches = BuildDataBatches(source_spec);
+        const auto source_metadata = LoadSourceDataMetadata(source_spec);
+        prepared->schema = source_metadata.schema;
+        prepared->total_rows = source_metadata.total_rows;
         return true;
     } catch (const std::exception& e) {
         SkipWithMessage(state, e.what());
@@ -682,10 +636,12 @@ bool TryPrepareSourceData(::benchmark::State& state, const SourceDataSpec& sourc
 }  // namespace
 
 void ParsePaimonBenchmarkCliArgs(int* argc, char** argv) {
-    ParsePaimonBenchmarkCliArgsImpl(argc, argv);
+    auto parsed_argc = static_cast<int32_t>(*argc);
+    ParsePaimonBenchmarkCliArgsImpl(&parsed_argc, argv);
+    *argc = static_cast<int>(parsed_argc);
 }
 
-bool HasHelpFlag(int argc, char** argv) {
+bool HasHelpFlag(int32_t argc, char** argv) {
     return HasHelpFlagImpl(argc, argv);
 }
 
@@ -694,7 +650,7 @@ void PrintPaimonBenchmarkCliHelp() {
 }
 
 void RunBMWrite(::benchmark::State& state) {
-    const std::string file_format = GetFileFormatFromEnv();
+    const std::string file_format = GetConfiguredFileFormat();
     SourceDataSpec source_spec;
     if (!TryGetSourceSpec(state, &source_spec)) {
         return;
@@ -718,15 +674,15 @@ void RunBMWrite(::benchmark::State& state) {
     if (!TryPrepareSourceData(state, source_spec, &prepared)) {
         return;
     }
-    BenchmarkWorkspace workspace("paimon_write_bench");
+    auto workspace = CreateBenchmarkWorkspace();
 
     for (auto _ : state) {
         const std::string db_name = "bench_db";
         const std::string table_name = "write_" + std::to_string(NextTableId());
-        EnsureTable(workspace.root_path, db_name, table_name, options, prepared.schema);
-        const std::string table_path = RequirePath(workspace.root_path, db_name, table_name);
+        EnsureTable(workspace->Str(), db_name, table_name, options, prepared.schema);
+        const std::string table_path = RequirePath(workspace->Str(), db_name, table_name);
         std::cout << "[benchmark][write] output_table_path=" << table_path << std::endl;
-        WriteAndCommit(table_path, options, prepared.data_batches);
+        WriteAndCommit(table_path, options, source_spec);
     }
 
     state.SetItemsProcessed(state.iterations() * prepared.total_rows);
@@ -734,7 +690,7 @@ void RunBMWrite(::benchmark::State& state) {
 
 void RunBMRead(::benchmark::State& state) {
     const auto prefetch_parallel_num = static_cast<int32_t>(state.range(0));
-    const std::string file_format = GetFileFormatFromEnv();
+    const std::string file_format = GetConfiguredFileFormat();
     const std::string external_table_path = GetExternalTablePath();
     SourceDataSpec source_spec;
     if (!TryGetSourceSpec(state, &source_spec)) {
@@ -786,7 +742,7 @@ void RunBMRead(::benchmark::State& state) {
 }
 
 void RunBMPkWrite(::benchmark::State& state) {
-    const std::string file_format = GetFileFormatFromEnv();
+    const std::string file_format = GetConfiguredFileFormat();
     SourceDataSpec source_spec;
     if (!TryGetSourceSpec(state, &source_spec)) {
         return;
@@ -815,16 +771,16 @@ void RunBMPkWrite(::benchmark::State& state) {
     if (!TryPrepareSourceData(state, source_spec, &prepared)) {
         return;
     }
-    BenchmarkWorkspace workspace("paimon_pk_write_bench");
+    auto workspace = CreateBenchmarkWorkspace();
 
     for (auto _ : state) {
         const std::string db_name = "bench_db";
         const std::string table_name = "pk_write_" + std::to_string(NextTableId());
-        EnsureTable(workspace.root_path, db_name, table_name, options, prepared.schema,
+        EnsureTable(workspace->Str(), db_name, table_name, options, prepared.schema,
                     /*primary_keys=*/pk_columns);
-        const std::string table_path = RequirePath(workspace.root_path, db_name, table_name);
+        const std::string table_path = RequirePath(workspace->Str(), db_name, table_name);
         std::cout << "[benchmark][pk-write] output_table_path=" << table_path << std::endl;
-        WriteAndCommit(table_path, options, prepared.data_batches);
+        WriteAndCommit(table_path, options, source_spec);
     }
 
     state.SetItemsProcessed(state.iterations() * prepared.total_rows);
@@ -832,7 +788,7 @@ void RunBMPkWrite(::benchmark::State& state) {
 
 void RunBMMorRead(::benchmark::State& state) {
     const auto prefetch_parallel_num = static_cast<int32_t>(state.range(0));
-    const std::string file_format = GetFileFormatFromEnv();
+    const std::string file_format = GetConfiguredFileFormat();
     const std::string external_table_path = GetExternalTablePath();
     SourceDataSpec source_spec;
     if (!TryGetSourceSpec(state, &source_spec)) {

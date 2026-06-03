@@ -16,12 +16,14 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "benchmark/benchmark.h"
 
 namespace paimon::benchmark {
 
 void ParsePaimonBenchmarkCliArgs(int* argc, char** argv);
-bool HasHelpFlag(int argc, char** argv);
+bool HasHelpFlag(int32_t argc, char** argv);
 void PrintPaimonBenchmarkCliHelp();
 
 void RunBMWrite(::benchmark::State& state);

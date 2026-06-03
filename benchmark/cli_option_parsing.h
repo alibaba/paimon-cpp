@@ -43,21 +43,21 @@ inline std::string TrimAsciiWhitespace(const std::string& value) {
     return value.substr(first, last - first + 1);
 }
 
-inline std::vector<std::string> ParseCsvColumns(const std::string& csv,
-                                                const std::string& option_name) {
-    if (csv.empty()) {
+inline std::vector<std::string> ParseCommaSeparatedColumns(const std::string& input,
+                                                           const std::string& option_name) {
+    if (input.empty()) {
         throw std::runtime_error("missing value for " + option_name);
     }
 
     std::vector<std::string> columns;
     size_t segment_start = 0;
-    for (size_t index = 0; index <= csv.size(); ++index) {
-        if (index != csv.size() && csv[index] != ',') {
+    for (size_t index = 0; index <= input.size(); ++index) {
+        if (index != input.size() && input[index] != ',') {
             continue;
         }
 
         const std::string column =
-            TrimAsciiWhitespace(csv.substr(segment_start, index - segment_start));
+            TrimAsciiWhitespace(input.substr(segment_start, index - segment_start));
         if (column.empty()) {
             throw std::runtime_error("invalid " + option_name + ": empty column name");
         }
@@ -117,12 +117,12 @@ inline bool ParseStringOptionArg(int32_t argc, char** argv, const std::string& a
     return true;
 }
 
-inline bool ParseCsvOptionArg(int32_t argc, char** argv, const std::string& arg,
-                              const std::string& option_name, int32_t* arg_index,
-                              std::vector<std::string>* columns_out) {
+inline bool ParseCommaSeparatedOptionArg(int32_t argc, char** argv, const std::string& arg,
+                                         const std::string& option_name, int32_t* arg_index,
+                                         std::vector<std::string>* columns_out) {
     std::string parsed_value;
     if (ConsumeCliOption(arg, option_name, &parsed_value)) {
-        *columns_out = ParseCsvColumns(parsed_value, option_name);
+        *columns_out = ParseCommaSeparatedColumns(parsed_value, option_name);
         return true;
     }
 
@@ -133,7 +133,7 @@ inline bool ParseCsvOptionArg(int32_t argc, char** argv, const std::string& arg,
     if (*arg_index + 1 >= argc) {
         throw std::runtime_error("missing value for " + option_name);
     }
-    *columns_out = ParseCsvColumns(std::string(argv[++(*arg_index)]), option_name);
+    *columns_out = ParseCommaSeparatedColumns(std::string(argv[++(*arg_index)]), option_name);
     return true;
 }
 

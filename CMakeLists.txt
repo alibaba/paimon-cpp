@@ -356,6 +356,9 @@ endif()
 set(ENV{PAIMON_TEST_DATA} "${CMAKE_SOURCE_DIR}/test/test_data")
 
 if(PAIMON_BUILD_TESTS OR PAIMON_BUILD_BENCHMARKS)
+    resolve_dependency(GTest)
+    include_directories(SYSTEM ${GTEST_INCLUDE_DIR})
+
     paimon_link_libraries_whole_archive(PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS
                                         paimon_local_file_system_static)
     paimon_link_libraries_no_as_needed(PAIMON_LOCAL_FILE_SYSTEM_SHARED_LINK_LIBS
@@ -386,7 +389,6 @@ if(PAIMON_BUILD_TESTS)
     endif()
     # Adding unit tests part of the "paimon" portion of the test suite
     add_custom_target(paimon-tests)
-    resolve_dependency(GTest)
 
     add_custom_target(unittest
                       ctest
@@ -396,7 +398,6 @@ if(PAIMON_BUILD_TESTS)
                       --output-on-failure)
     add_dependencies(unittest paimon-tests)
 
-    include_directories(SYSTEM ${GTEST_INCLUDE_DIR})
     include_directories("${CMAKE_SOURCE_DIR}/test/")
 
     paimon_link_libraries_whole_archive(

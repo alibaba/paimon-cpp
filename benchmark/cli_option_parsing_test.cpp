@@ -51,18 +51,20 @@ TEST(CliOptionParsingTest, ConsumeCliOptionWorks) {
     ASSERT_FALSE(paimon::benchmark::ConsumeCliOption("--foo", "--foo", &value));
 }
 
-TEST(CliOptionParsingTest, ParseCsvColumnsWorks) {
-    const auto parsed = paimon::benchmark::ParseCsvColumns("id, name,age", "--cols");
+TEST(CliOptionParsingTest, ParseCommaSeparatedColumnsWorks) {
+    const auto parsed = paimon::benchmark::ParseCommaSeparatedColumns("id, name,age", "--cols");
     ASSERT_EQ(parsed.size(), 3U);
     ASSERT_EQ(parsed[0], "id");
     ASSERT_EQ(parsed[1], "name");
     ASSERT_EQ(parsed[2], "age");
 }
 
-TEST(CliOptionParsingTest, ParseCsvColumnsRejectsInvalidInput) {
-    ASSERT_THROW((void)paimon::benchmark::ParseCsvColumns("", "--cols"), std::runtime_error);
-    ASSERT_THROW((void)paimon::benchmark::ParseCsvColumns("id,", "--cols"), std::runtime_error);
-    ASSERT_THROW((void)paimon::benchmark::ParseCsvColumns("id,,name", "--cols"),
+TEST(CliOptionParsingTest, ParseCommaSeparatedColumnsRejectsInvalidInput) {
+    ASSERT_THROW((void)paimon::benchmark::ParseCommaSeparatedColumns("", "--cols"),
+                 std::runtime_error);
+    ASSERT_THROW((void)paimon::benchmark::ParseCommaSeparatedColumns("id,", "--cols"),
+                 std::runtime_error);
+    ASSERT_THROW((void)paimon::benchmark::ParseCommaSeparatedColumns("id,,name", "--cols"),
                  std::runtime_error);
 }
 
@@ -114,12 +116,12 @@ TEST(CliOptionParsingTest, ParseStringOptionArgRejectsMissingValue) {
                  std::runtime_error);
 }
 
-TEST(CliOptionParsingTest, ParseCsvOptionArgAndDelimitedRepeatableOptionArgWorks) {
+TEST(CliOptionParsingTest, ParseCommaSeparatedOptionArgAndDelimitedRepeatableOptionArgWorks) {
     {
         ArgvHolder argv_holder({"prog", "--cols", "id,name"});
         int32_t arg_index = 1;
         std::vector<std::string> columns;
-        ASSERT_TRUE(paimon::benchmark::ParseCsvOptionArg(
+        ASSERT_TRUE(paimon::benchmark::ParseCommaSeparatedOptionArg(
             argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[arg_index], "--cols",
             &arg_index, &columns));
         ASSERT_EQ(arg_index, 2);

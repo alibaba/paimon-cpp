@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <cstdint>
 #include <exception>
 #include <iostream>
 
@@ -25,12 +26,11 @@ int main(int argc, char** argv) {
         paimon::benchmark::ParsePaimonBenchmarkCliArgs(&argc, argv);
     } catch (const std::exception& e) {
         std::cerr << "paimon-read-write-benchmark: " << e.what() << std::endl;
-        std::cerr << "Try 'paimon-read-write-benchmark --help' for more information."
-                  << std::endl;
+        std::cerr << "Try 'paimon-read-write-benchmark --help' for more information." << std::endl;
         return 1;
     }
 
-    if (paimon::benchmark::HasHelpFlag(argc, argv)) {
+    if (paimon::benchmark::HasHelpFlag(static_cast<int32_t>(argc), argv)) {
         paimon::benchmark::PrintPaimonBenchmarkCliHelp();
         return 0;
     }
