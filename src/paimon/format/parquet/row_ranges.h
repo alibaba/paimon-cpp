@@ -106,8 +106,8 @@ class RowRanges {
 };
 
 struct TargetRowGroup {
-    int32_t row_group_index;
-    bool is_page_filtered;
+    int32_t row_group_index{-1};
+    bool is_page_filtered{false};
     // page-filtered row ranges, only valid if is_page_filtered is true.
     RowRanges row_ranges;
 
