@@ -46,8 +46,7 @@ class ExternalPathProvider {
     ///
     /// @return the next external data path
     std::string GetNextExternalDataPath(const std::string& file_name) {
-        size_t position =
-            (position_.fetch_add(1, std::memory_order_relaxed) + 1) % external_table_paths_.size();
+        size_t position = (++position_) % external_table_paths_.size();
         return PathUtil::JoinPath(
             PathUtil::JoinPath(external_table_paths_[position], relative_bucket_path_), file_name);
     }
