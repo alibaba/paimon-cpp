@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/defs.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/memory_pool.h"
@@ -85,6 +86,27 @@ TEST_F(AppendCountReaderTest, TestCountRowsSnapshot5) {
 
     ASSERT_OK_AND_ASSIGN(int64_t count, count_reader.CountRows());
     ASSERT_EQ(count, 11);
+}
+
+TEST_F(AppendCountReaderTest, TestCountRowsDataEvolutionTable) {
+    std::string table_path =
+        GetDataDir() + "/orc/data_evolution_with_dense_stats.db/data_evolution_with_dense_stats";
+
+    ASSERT_OK_AND_ASSIGN(auto splits, CreateSplits(table_path, /*snapshot_id=*/2));
+    ASSERT_FALSE(splits.empty());
+
+    bool has_non_raw_convertible_split = false;
+    for (const auto& split : splits) {
+        auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
+        ASSERT_TRUE(data_split);
+        has_non_raw_convertible_split |= !data_split->RawConvertible();
+    }
+    ASSERT_TRUE(has_non_raw_convertible_split);
+
+    AppendCountReader count_reader(splits, file_system_, pool_);
+
+    ASSERT_OK_AND_ASSIGN(int64_t count, count_reader.CountRows());
+    ASSERT_EQ(count, 2);
 }
 
 TEST_F(AppendCountReaderTest, TestCountRowsWithEmptySplits) {

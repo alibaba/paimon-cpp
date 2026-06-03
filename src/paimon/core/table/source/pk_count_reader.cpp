@@ -28,7 +28,6 @@
 #include "paimon/core/mergetree/row_count_accumulator.h"
 #include "paimon/core/operation/internal_read_context.h"
 #include "paimon/core/operation/merge_file_split_read.h"
-#include "paimon/core/operation/raw_file_split_read.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/reader/batch_reader.h"
@@ -52,15 +51,12 @@ Result<std::unique_ptr<PKCountReader>> PKCountReader::Create(
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InternalReadContext> count_context,
                            InternalReadContext::CreateWithSchema(context, count_read_schema));
 
-    std::unique_ptr<RawFileSplitRead> raw_read =
-        std::make_unique<RawFileSplitRead>(path_factory, count_context, memory_pool, executor);
-
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<MergeFileSplitRead> merge_read,
         MergeFileSplitRead::Create(path_factory, count_context, memory_pool, executor));
 
     return std::unique_ptr<PKCountReader>(new PKCountReader(
-        std::move(splits), count_context, std::move(raw_read), std::move(merge_read), memory_pool));
+        std::move(splits), count_context, std::move(merge_read), memory_pool));
 }
 
 Result<int64_t> PKCountReader::CountRows() {
@@ -74,12 +70,10 @@ Result<int64_t> PKCountReader::CountRows() {
 
 PKCountReader::PKCountReader(std::vector<std::shared_ptr<Split>> splits,
                              const std::shared_ptr<InternalReadContext>& context,
-                             std::unique_ptr<RawFileSplitRead>&& raw_read,
                              std::unique_ptr<MergeFileSplitRead>&& merge_read,
                              const std::shared_ptr<MemoryPool>& memory_pool)
     : splits_(std::move(splits)),
       context_(context),
-      raw_read_(std::move(raw_read)),
       merge_read_(std::move(merge_read)),
       pool_(memory_pool) {}
 

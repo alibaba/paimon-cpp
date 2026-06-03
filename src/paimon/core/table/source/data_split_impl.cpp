@@ -117,7 +117,7 @@ Result<std::optional<int64_t>> DataSplitImpl::MergedRowCount() const {
 }
 
 Result<std::optional<int64_t>> DataSplitImpl::MergedRowCount(
-    const DeletionVector::Factory& dv_factory) const {
+    DeletionVector::Factory dv_factory) const {
     PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> raw_merged_row_count,
                            RawMergedRowCount(dv_factory));
     if (raw_merged_row_count.has_value()) {
@@ -131,7 +131,7 @@ Result<std::optional<int64_t>> DataSplitImpl::MergedRowCount(
 }
 
 Result<std::optional<int64_t>> DataSplitImpl::RawMergedRowCount(
-    const DeletionVector::Factory& dv_factory) const {
+    DeletionVector::Factory dv_factory) const {
     if (!raw_convertible_) {
         return std::optional<int64_t>();
     }

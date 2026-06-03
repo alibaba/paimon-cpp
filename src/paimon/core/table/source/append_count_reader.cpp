@@ -63,6 +63,9 @@ Result<int64_t> AppendCountReader::MetadataCount(
             return merged_count.value();
         }
     } else {
+        // Non-raw-convertible splits are typically produced by data evolution when multiple files
+        // overlap on row-id ranges. Count them through data-evolution metadata instead of using a
+        // deletion-vector factory for raw file counts.
         PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> merged_count, split->MergedRowCount());
         if (merged_count.has_value()) {
             return merged_count.value();

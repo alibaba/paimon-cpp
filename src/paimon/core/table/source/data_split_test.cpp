@@ -1056,16 +1056,8 @@ TEST(DataSplitTest, TestDeserializePk10WithSnapshot6) {
 TEST(DataSplitTest, TestPartialMergedRowCount) {
     auto pool = GetDefaultPool();
     auto file_meta = std::make_shared<DataFileMeta>(
-        "data-0.orc", /*file_size=*/100, /*row_count=*/2,
-        /*min_key=*/
-        BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool.get()), /*max_key=*/
-        BinaryRowGenerator::GenerateRow({std::string("David"), 1}, pool.get()),
-        /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Alice"), 1}, {std::string("David"), 1},
-                                          {0, 0}, pool.get()), /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 1, 11.0},
-                                          {std::string("David"), 10, 1, 11.1}, {0, 0, 0, 0},
-                                          pool.get()),
+        "data-0.orc", /*file_size=*/100, /*row_count=*/2, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
         /*min_sequence_number=*/0, /*max_sequence_number=*/1, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562946338ll, 0),
@@ -1074,16 +1066,8 @@ TEST(DataSplitTest, TestPartialMergedRowCount) {
         /*first_row_id=*/std::nullopt,
         /*write_cols=*/std::nullopt);
     auto file_meta2 = std::make_shared<DataFileMeta>(
-        "data-1.orc", /*file_size=*/100, /*row_count=*/2,
-        /*min_key=*/
-        BinaryRowGenerator::GenerateRow({std::string("Bob"), 1}, pool.get()), /*max_key=*/
-        BinaryRowGenerator::GenerateRow({std::string("David"), 1}, pool.get()),
-        /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Bob"), 1}, {std::string("David"), 1},
-                                          {0, 0}, pool.get()), /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Bob"), 10, 1, 11.0},
-                                          {std::string("David"), 10, 1, 11.1}, {0, 0, 0, 0},
-                                          pool.get()),
+        "data-1.orc", /*file_size=*/100, /*row_count=*/2, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
         /*min_sequence_number=*/2, /*max_sequence_number=*/3, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562947338ll, 0),
@@ -1116,16 +1100,8 @@ TEST(DataSplitTest, TestPartialMergedRowCount) {
 TEST(DataSplitTest, TestPartialMergedRowCountRawConvertibleWithoutDeletionFiles) {
     auto pool = GetDefaultPool();
     auto file_meta1 = std::make_shared<DataFileMeta>(
-        "data-0.orc", /*file_size=*/100, /*row_count=*/3,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David"), 1}, pool.get()),
-        /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Alice"), 1}, {std::string("David"), 1},
-                                          {0, 0}, pool.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 1, 11.0},
-                                          {std::string("David"), 10, 1, 11.1}, {0, 0, 0, 0},
-                                          pool.get()),
+        "data-0.orc", /*file_size=*/100, /*row_count=*/3, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
         /*min_sequence_number=*/0, /*max_sequence_number=*/2, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562946338ll, 0),
@@ -1134,16 +1110,8 @@ TEST(DataSplitTest, TestPartialMergedRowCountRawConvertibleWithoutDeletionFiles)
         /*first_row_id=*/std::nullopt,
         /*write_cols=*/std::nullopt);
     auto file_meta2 = std::make_shared<DataFileMeta>(
-        "data-1.orc", /*file_size=*/100, /*row_count=*/4,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Bob"), 1}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Eric"), 1}, pool.get()),
-        /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Bob"), 1}, {std::string("Eric"), 1}, {0, 0},
-                                          pool.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Bob"), 10, 1, 11.0},
-                                          {std::string("Eric"), 10, 1, 11.2}, {0, 0, 0, 0},
-                                          pool.get()),
+        "data-1.orc", /*file_size=*/100, /*row_count=*/4, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
         /*min_sequence_number=*/3, /*max_sequence_number=*/6, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562947338ll, 0),
@@ -1167,16 +1135,8 @@ TEST(DataSplitTest, TestPartialMergedRowCountRawConvertibleWithoutDeletionFiles)
 TEST(DataSplitTest, TestPartialMergedRowCountRawConvertibleWithCardinality) {
     auto pool = GetDefaultPool();
     auto file_meta1 = std::make_shared<DataFileMeta>(
-        "data-0.orc", /*file_size=*/100, /*row_count=*/7,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David"), 1}, pool.get()),
-        /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Alice"), 1}, {std::string("David"), 1},
-                                          {0, 0}, pool.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 1, 11.0},
-                                          {std::string("David"), 10, 1, 11.1}, {0, 0, 0, 0},
-                                          pool.get()),
+        "data-0.orc", /*file_size=*/100, /*row_count=*/7, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
         /*min_sequence_number=*/0, /*max_sequence_number=*/6, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562946338ll, 0),
@@ -1185,16 +1145,8 @@ TEST(DataSplitTest, TestPartialMergedRowCountRawConvertibleWithCardinality) {
         /*first_row_id=*/std::nullopt,
         /*write_cols=*/std::nullopt);
     auto file_meta2 = std::make_shared<DataFileMeta>(
-        "data-1.orc", /*file_size=*/100, /*row_count=*/2,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Bob"), 1}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David"), 1}, pool.get()),
-        /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Bob"), 1}, {std::string("David"), 1},
-                                          {0, 0}, pool.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Bob"), 10, 1, 11.0},
-                                          {std::string("David"), 10, 1, 11.1}, {0, 0, 0, 0},
-                                          pool.get()),
+        "data-1.orc", /*file_size=*/100, /*row_count=*/2, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
         /*min_sequence_number=*/7, /*max_sequence_number=*/8, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562947338ll, 0),
@@ -1203,16 +1155,8 @@ TEST(DataSplitTest, TestPartialMergedRowCountRawConvertibleWithCardinality) {
         /*first_row_id=*/std::nullopt,
         /*write_cols=*/std::nullopt);
     auto file_meta3 = std::make_shared<DataFileMeta>(
-        "data-2.orc", /*file_size=*/100, /*row_count=*/3,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Carl"), 1}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Fiona"), 1}, pool.get()),
-        /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Carl"), 1}, {std::string("Fiona"), 1},
-                                          {0, 0}, pool.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Carl"), 10, 1, 11.0},
-                                          {std::string("Fiona"), 10, 1, 11.2}, {0, 0, 0, 0},
-                                          pool.get()),
+        "data-2.orc", /*file_size=*/100, /*row_count=*/3, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
         /*min_sequence_number=*/9, /*max_sequence_number=*/11, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562948338ll, 0),
@@ -1246,16 +1190,8 @@ TEST(DataSplitTest, TestPartialMergedRowCountRawConvertibleWithCardinality) {
 TEST(DataSplitTest, TestPartialMergedRowCountMixedCardinalityReturnsNullopt) {
     auto pool = GetDefaultPool();
     auto file_meta1 = std::make_shared<DataFileMeta>(
-        "data-0.orc", /*file_size=*/100, /*row_count=*/7,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David"), 1}, pool.get()),
-        /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Alice"), 1}, {std::string("David"), 1},
-                                          {0, 0}, pool.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 1, 11.0},
-                                          {std::string("David"), 10, 1, 11.1}, {0, 0, 0, 0},
-                                          pool.get()),
+        "data-0.orc", /*file_size=*/100, /*row_count=*/7, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
         /*min_sequence_number=*/0, /*max_sequence_number=*/6, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562946338ll, 0),
@@ -1264,16 +1200,8 @@ TEST(DataSplitTest, TestPartialMergedRowCountMixedCardinalityReturnsNullopt) {
         /*first_row_id=*/std::nullopt,
         /*write_cols=*/std::nullopt);
     auto file_meta2 = std::make_shared<DataFileMeta>(
-        "data-1.orc", /*file_size=*/100, /*row_count=*/2,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Bob"), 1}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David"), 1}, pool.get()),
-        /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Bob"), 1}, {std::string("David"), 1},
-                                          {0, 0}, pool.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Bob"), 10, 1, 11.0},
-                                          {std::string("David"), 10, 1, 11.1}, {0, 0, 0, 0},
-                                          pool.get()),
+        "data-1.orc", /*file_size=*/100, /*row_count=*/2, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
         /*min_sequence_number=*/7, /*max_sequence_number=*/8, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562947338ll, 0),
@@ -1305,16 +1233,8 @@ TEST(DataSplitTest, TestPartialMergedRowCountMixedCardinalityReturnsNullopt) {
 TEST(DataSplitTest, TestPartialMergedRowCountUnknownDeleteRowCountDoesNotBlockRawCount) {
     auto pool = GetDefaultPool();
     auto file_meta1 = std::make_shared<DataFileMeta>(
-        "data-0.orc", /*file_size=*/100, /*row_count=*/3,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David"), 1}, pool.get()),
-        /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Alice"), 1}, {std::string("David"), 1},
-                                          {0, 0}, pool.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 1, 11.0},
-                                          {std::string("David"), 10, 1, 11.1}, {0, 0, 0, 0},
-                                          pool.get()),
+        "data-0.orc", /*file_size=*/100, /*row_count=*/3, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
         /*min_sequence_number=*/0, /*max_sequence_number=*/2, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562946338ll, 0),
@@ -1323,16 +1243,8 @@ TEST(DataSplitTest, TestPartialMergedRowCountUnknownDeleteRowCountDoesNotBlockRa
         /*first_row_id=*/std::nullopt,
         /*write_cols=*/std::nullopt);
     auto file_meta2 = std::make_shared<DataFileMeta>(
-        "data-1.orc", /*file_size=*/100, /*row_count=*/2,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Bob"), 1}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David"), 1}, pool.get()),
-        /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Bob"), 1}, {std::string("David"), 1},
-                                          {0, 0}, pool.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Bob"), 10, 1, 11.0},
-                                          {std::string("David"), 10, 1, 11.1}, {0, 0, 0, 0},
-                                          pool.get()),
+        "data-1.orc", /*file_size=*/100, /*row_count=*/2, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
         /*min_sequence_number=*/3, /*max_sequence_number=*/4, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562947338ll, 0),
@@ -1360,16 +1272,8 @@ TEST(DataSplitTest, TestPartialMergedRowCountUnknownDeleteRowCountDoesNotBlockRa
 TEST(DataSplitTest, TestPartialMergedRowCountFallsBackToDataEvolution) {
     auto pool = GetDefaultPool();
     auto file_meta1 = std::make_shared<DataFileMeta>(
-        "data-0.orc", /*file_size=*/100, /*row_count=*/3,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David"), 1}, pool.get()),
-        /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Alice"), 1}, {std::string("David"), 1},
-                                          {0, 0}, pool.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 1, 11.0},
-                                          {std::string("David"), 10, 1, 11.1}, {0, 0, 0, 0},
-                                          pool.get()),
+        "data-0.orc", /*file_size=*/100, /*row_count=*/3, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
         /*min_sequence_number=*/0, /*max_sequence_number=*/2, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562946338ll, 0),
@@ -1378,16 +1282,8 @@ TEST(DataSplitTest, TestPartialMergedRowCountFallsBackToDataEvolution) {
         /*first_row_id=*/100,
         /*write_cols=*/std::nullopt);
     auto file_meta2 = std::make_shared<DataFileMeta>(
-        "data-1.orc", /*file_size=*/100, /*row_count=*/5,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Bob"), 1}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Eric"), 1}, pool.get()),
-        /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Bob"), 1}, {std::string("Eric"), 1}, {0, 0},
-                                          pool.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Bob"), 10, 1, 11.0},
-                                          {std::string("Eric"), 10, 1, 11.2}, {0, 0, 0, 0},
-                                          pool.get()),
+        "data-1.orc", /*file_size=*/100, /*row_count=*/5, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
         /*min_sequence_number=*/3, /*max_sequence_number=*/7, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562947338ll, 0),
@@ -1396,16 +1292,8 @@ TEST(DataSplitTest, TestPartialMergedRowCountFallsBackToDataEvolution) {
         /*first_row_id=*/100,
         /*write_cols=*/std::nullopt);
     auto file_meta3 = std::make_shared<DataFileMeta>(
-        "data-2.orc", /*file_size=*/100, /*row_count=*/2,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Carl"), 1}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Fiona"), 1}, pool.get()),
-        /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Carl"), 1}, {std::string("Fiona"), 1},
-                                          {0, 0}, pool.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Carl"), 10, 1, 11.0},
-                                          {std::string("Fiona"), 10, 1, 11.2}, {0, 0, 0, 0},
-                                          pool.get()),
+        "data-2.orc", /*file_size=*/100, /*row_count=*/2, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
         /*min_sequence_number=*/8, /*max_sequence_number=*/9, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562948338ll, 0),
@@ -1438,16 +1326,8 @@ TEST(DataSplitTest, TestPartialMergedRowCountFallsBackToDataEvolution) {
 TEST(DataSplitTest, TestPartialMergedRowCountResolvesMissingCardinalityViaFactory) {
     auto pool = GetDefaultPool();
     auto file_meta1 = std::make_shared<DataFileMeta>(
-        "data-0.orc", /*file_size=*/100, /*row_count=*/7,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David"), 1}, pool.get()),
-        /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Alice"), 1}, {std::string("David"), 1},
-                                          {0, 0}, pool.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 1, 11.0},
-                                          {std::string("David"), 10, 1, 11.1}, {0, 0, 0, 0},
-                                          pool.get()),
+        "data-0.orc", /*file_size=*/100, /*row_count=*/7, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
         /*min_sequence_number=*/0, /*max_sequence_number=*/6, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562946338ll, 0),
@@ -1456,16 +1336,8 @@ TEST(DataSplitTest, TestPartialMergedRowCountResolvesMissingCardinalityViaFactor
         /*first_row_id=*/std::nullopt,
         /*write_cols=*/std::nullopt);
     auto file_meta2 = std::make_shared<DataFileMeta>(
-        "data-1.orc", /*file_size=*/100, /*row_count=*/5,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Bob"), 1}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Eric"), 1}, pool.get()),
-        /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Bob"), 1}, {std::string("Eric"), 1}, {0, 0},
-                                          pool.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({std::string("Bob"), 10, 1, 11.0},
-                                          {std::string("Eric"), 10, 1, 11.2}, {0, 0, 0, 0},
-                                          pool.get()),
+        "data-1.orc", /*file_size=*/100, /*row_count=*/5, DataFileMeta::EmptyMinKey(),
+        DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
         /*min_sequence_number=*/7, /*max_sequence_number=*/11, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562947338ll, 0),

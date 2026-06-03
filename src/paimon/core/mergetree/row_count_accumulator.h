@@ -25,24 +25,6 @@
 namespace paimon {
 
 /// Counts rows from a merged KeyValue stream after delete rows are dropped.
-///
-/// COUNT(*) on a merge-read split still uses the normal lower-level file readers to produce
-/// KeyValue objects. For example, schema/file field mapping may still happen before merge.
-/// This accumulator only avoids the final KeyValue-to-Arrow batch path used by normal reads.
-///
-/// Data flow:
-///   lower-level file readers
-///     -> SortMergeReader
-///     -> DropDeleteReader
-///     -> RowCountAccumulator::CountAll()
-///       -> count each remaining KeyValue
-///
-/// Performance benefit:
-///   - No final row-to-column conversion through KeyValueProjectionReader or
-///     AsyncKeyValueProjectionReader.
-///   - No Arrow batch allocation for the merged result.
-///   - No optional post-projection PredicateBatchReader in the count path. Predicate pushdown is
-///     currently not supported by count readers.
 class RowCountAccumulator {
  public:
     /// @param merged_reader  The merged reader. Must be wrapped with DropDeleteReader

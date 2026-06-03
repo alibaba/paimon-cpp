@@ -34,7 +34,6 @@ class FileStorePathFactory;
 class InternalReadContext;
 class MemoryPool;
 class MergeFileSplitRead;
-class RawFileSplitRead;
 class Split;
 
 class PKCountReader : public CountReader {
@@ -52,7 +51,6 @@ class PKCountReader : public CountReader {
  private:
     PKCountReader(std::vector<std::shared_ptr<Split>> splits,
                   const std::shared_ptr<InternalReadContext>& context,
-                  std::unique_ptr<RawFileSplitRead>&& raw_read,
                   std::unique_ptr<MergeFileSplitRead>&& merge_read,
                   const std::shared_ptr<MemoryPool>& memory_pool);
 
@@ -63,7 +61,6 @@ class PKCountReader : public CountReader {
  private:
     std::vector<std::shared_ptr<Split>> splits_;
     std::shared_ptr<InternalReadContext> context_;
-    std::unique_ptr<RawFileSplitRead> raw_read_;
     std::unique_ptr<MergeFileSplitRead> merge_read_;
     std::shared_ptr<MemoryPool> pool_;
 };
