@@ -31,6 +31,7 @@
 #include "gtest/gtest.h"
 #include "paimon/catalog/identifier.h"
 #include "paimon/common/data/blob_descriptor.h"
+#include "paimon/common/data/blob_utils.h"
 #include "paimon/common/data/blob_view_struct.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/arrow/status_utils.h"
@@ -118,7 +119,7 @@ class BlobViewResolvingBatchReaderTest : public ::testing::Test {
         std::shared_ptr<arrow::Array> array;
         EXPECT_TRUE(builder.Finish(&array).ok());
 
-        arrow::FieldVector fields = {arrow::field("blob_col", arrow::large_binary())};
+        arrow::FieldVector fields = {BlobUtils::ToArrowField("blob_col", /*nullable=*/true)};
         arrow::ArrayVector arrays = {array};
         auto result = arrow::StructArray::Make(arrays, fields).ValueOrDie();
         return result;
@@ -130,10 +131,9 @@ class BlobViewResolvingBatchReaderTest : public ::testing::Test {
 
 TEST_F(BlobViewResolvingBatchReaderTest, TestEofBatch) {
     auto inner_reader = std::make_unique<InMemoryBatchReader>(nullptr);
-    auto resolver =
-        BlobViewResolver([](const BlobViewStruct&) -> Result<std::shared_ptr<BlobDescriptor>> {
-            return std::shared_ptr<BlobDescriptor>();
-        });
+    auto resolver = BlobViewResolver([](const BlobViewStruct&) -> Result<std::shared_ptr<Bytes>> {
+        return std::shared_ptr<Bytes>();
+    });
     BlobViewResolvingBatchReader reader(std::move(inner_reader), {"blob_col"}, std::move(resolver),
                                         pool_);
     ASSERT_OK_AND_ASSIGN(auto batch, reader.NextBatch());
@@ -146,9 +146,9 @@ TEST_F(BlobViewResolvingBatchReaderTest, TestEmptyReadBlobViewFields) {
 
     bool resolver_called = false;
     auto resolver = BlobViewResolver(
-        [&resolver_called](const BlobViewStruct&) -> Result<std::shared_ptr<BlobDescriptor>> {
+        [&resolver_called](const BlobViewStruct&) -> Result<std::shared_ptr<Bytes>> {
             resolver_called = true;
-            return std::shared_ptr<BlobDescriptor>();
+            return std::shared_ptr<Bytes>();
         });
 
     auto inner_reader = std::make_unique<InMemoryBatchReader>(struct_array);
@@ -171,17 +171,13 @@ TEST_F(BlobViewResolvingBatchReaderTest, TestResolvesBlobViewColumn) {
     ASSERT_OK_AND_ASSIGN(auto expected_row1_descriptor,
                          MakeBlobDescriptorBytes("/path/b", /*offset=*/16, /*length=*/32));
 
-    auto resolver = BlobViewResolver(
-        [&](const BlobViewStruct& view_struct) -> Result<std::shared_ptr<BlobDescriptor>> {
+    auto resolver =
+        BlobViewResolver([&](const BlobViewStruct& view_struct) -> Result<std::shared_ptr<Bytes>> {
             if (view_struct.RowId() == 100) {
-                EXPECT_OK_AND_ASSIGN(std::shared_ptr<BlobDescriptor> descriptor,
-                                     BlobDescriptor::Create("/path/a", 0, 8));
-                return descriptor;
+                return std::make_shared<Bytes>(expected_row0_descriptor, pool_.get());
             }
             if (view_struct.RowId() == 200) {
-                EXPECT_OK_AND_ASSIGN(std::shared_ptr<BlobDescriptor> descriptor,
-                                     BlobDescriptor::Create("/path/b", 16, 32));
-                return descriptor;
+                return std::make_shared<Bytes>(expected_row1_descriptor, pool_.get());
             }
             return Status::Invalid("unexpected view struct");
         });
@@ -203,10 +199,9 @@ TEST_F(BlobViewResolvingBatchReaderTest, TestResolvesBlobViewColumn) {
 TEST_F(BlobViewResolvingBatchReaderTest, TestResolverError) {
     auto view_bytes = MakeBlobViewStructBytes("db", "tbl", /*field_id=*/1, /*row_id=*/5);
     std::shared_ptr<arrow::StructArray> src_struct = BuildStructArray({view_bytes}, {true});
-    auto resolver =
-        BlobViewResolver([](const BlobViewStruct&) -> Result<std::shared_ptr<BlobDescriptor>> {
-            return Status::Invalid("cache miss");
-        });
+    auto resolver = BlobViewResolver([](const BlobViewStruct&) -> Result<std::shared_ptr<Bytes>> {
+        return Status::Invalid("cache miss");
+    });
     auto inner_reader = std::make_unique<InMemoryBatchReader>(src_struct);
     BlobViewResolvingBatchReader reader(std::move(inner_reader), {"blob_col"}, std::move(resolver),
                                         pool_);

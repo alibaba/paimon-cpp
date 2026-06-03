@@ -143,42 +143,46 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::CreateReader(
     const std::shared_ptr<Split>& split) {
     if (auto indexed_split = std::dynamic_pointer_cast<IndexedSplitImpl>(split)) {
         PAIMON_RETURN_NOT_OK(indexed_split->Validate());
-        PAIMON_ASSIGN_OR_RAISE(
-            std::unique_ptr<BatchReader> batch_reader,
-            InnerCreateReader(indexed_split->GetDataSplit(), indexed_split->RowRanges()));
+        const auto& data_split = indexed_split->GetDataSplit();
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> batch_reader,
+                               InnerCreateReader(data_split, indexed_split->RowRanges()));
         if (HasIndexScoreField(raw_read_schema_)) {
-            return std::make_unique<CompleteIndexScoreBatchReader>(std::move(batch_reader),
-                                                                   indexed_split->Scores(), pool_);
+            batch_reader = std::make_unique<CompleteIndexScoreBatchReader>(
+                std::move(batch_reader), indexed_split->Scores(), pool_);
         }
-        return batch_reader;
+        return WrapWithBlobViewResolverIfNeeded(data_split, std::move(batch_reader));
     } else if (auto data_split = std::dynamic_pointer_cast<DataSplit>(split)) {
         if (HasIndexScoreField(raw_read_schema_)) {
             return Status::Invalid(
                 "Invalid read schema, read _INDEX_SCORE while split cannot cast to IndexedSplit");
         }
-        std::vector<std::string> read_blob_view_fields =
-            HasBlobViewField(options_, raw_read_schema_);
-        if (!read_blob_view_fields.empty()) {
-            PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> pre_reader,
-                                   CreateBlobViewReader(data_split, read_blob_view_fields));
-            PAIMON_ASSIGN_OR_RAISE(std::unordered_set<BlobViewStruct> blob_view_structs,
-                                   ExtractBlobViewStructs(pre_reader.get()));
-            std::string warehouse_path =
-                PathUtil::GetParentDirPath(PathUtil::GetParentDirPath(context_->GetPath()));
-            auto catalog_context = std::make_shared<CatalogContext>(
-                warehouse_path, options_.ToMap(), options_.GetFileSystem());
-            PAIMON_ASSIGN_OR_RAISE(
-                BlobViewResolver resolver,
-                BlobViewLookup::CreateResolver(blob_view_structs, catalog_context, pool_));
-            PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> inner_reader,
-                                   InnerCreateReader(data_split, /*row_ranges=*/std::nullopt));
-            return std::make_unique<BlobViewResolvingBatchReader>(std::move(inner_reader),
-                                                                  std::move(read_blob_view_fields),
-                                                                  std::move(resolver), pool_);
-        }
-        return InnerCreateReader(data_split, /*row_ranges=*/std::nullopt);
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> inner_reader,
+                               InnerCreateReader(data_split, /*row_ranges=*/std::nullopt));
+        return WrapWithBlobViewResolverIfNeeded(data_split, std::move(inner_reader));
     }
     return Status::Invalid("Invalid Split, cannot cast to IndexedSplit or DataSplit");
+}
+
+Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::WrapWithBlobViewResolverIfNeeded(
+    const std::shared_ptr<DataSplit>& data_split,
+    std::unique_ptr<BatchReader>&& inner_reader) const {
+    std::vector<std::string> read_blob_view_fields = HasBlobViewField(options_, raw_read_schema_);
+    if (read_blob_view_fields.empty()) {
+        return std::move(inner_reader);
+    }
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> pre_reader,
+                           CreateBlobViewReader(data_split, read_blob_view_fields));
+    PAIMON_ASSIGN_OR_RAISE(std::unordered_set<BlobViewStruct> blob_view_structs,
+                           ExtractBlobViewStructs(pre_reader.get()));
+    std::string warehouse_path =
+        PathUtil::GetParentDirPath(PathUtil::GetParentDirPath(context_->GetPath()));
+    auto catalog_context = std::make_shared<CatalogContext>(warehouse_path, options_.ToMap(),
+                                                            options_.GetFileSystem());
+    PAIMON_ASSIGN_OR_RAISE(
+        BlobViewResolver resolver,
+        BlobViewLookup::CreateResolver(blob_view_structs, catalog_context, pool_));
+    return std::make_unique<BlobViewResolvingBatchReader>(
+        std::move(inner_reader), std::move(read_blob_view_fields), std::move(resolver), pool_);
 }
 
 Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::CreateBlobViewReader(
@@ -217,7 +221,7 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::CreateBlobViewReade
     PAIMON_ASSIGN_OR_RAISE(
         std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers,
         CreateRawFileReaders(split_impl->Partition(), data_files, blob_view_schema,
-                             context_->GetPredicate(), /*dv_factory=*/nullptr,
+                             /*predicate=*/nullptr, /*dv_factory=*/nullptr,
                              /*row_ranges=*/std::nullopt, data_file_path_factory));
 
     auto batch_readers =

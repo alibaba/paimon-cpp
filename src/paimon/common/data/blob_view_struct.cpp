@@ -92,8 +92,15 @@ std::string BlobViewStruct::ToString() const {
 }
 
 bool BlobViewStruct::operator==(const BlobViewStruct& other) const {
+    if (this == &other) {
+        return true;
+    }
     return field_id_ == other.field_id_ && row_id_ == other.row_id_ &&
            identifier_ == other.identifier_;
+}
+
+bool BlobViewStruct::operator!=(const BlobViewStruct& other) const {
+    return !(*this == other);
 }
 
 int32_t BlobViewStruct::HashCode() const {

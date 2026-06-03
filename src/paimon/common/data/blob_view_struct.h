@@ -22,7 +22,6 @@
 #include <string>
 
 #include "paimon/catalog/identifier.h"
-#include "paimon/common/data/blob_descriptor.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
@@ -56,6 +55,7 @@ class BlobViewStruct {
     int32_t HashCode() const;
 
     bool operator==(const BlobViewStruct& other) const;
+    bool operator!=(const BlobViewStruct& other) const;
 
  private:
     static constexpr int64_t kMagic = 0x424C4F4256494557l;
@@ -68,6 +68,10 @@ class BlobViewStruct {
     int64_t row_id_;
 };
 
+/// Resolves a BlobViewStruct into the serialized BlobDescriptor bytes stored in the upstream
+/// table. Returns nullptr when the referenced source-table cell is null.
+using BlobViewResolver = std::function<Result<std::shared_ptr<Bytes>>(const BlobViewStruct&)>;
+
 }  // namespace paimon
 
 namespace std {
@@ -79,12 +83,3 @@ struct hash<paimon::BlobViewStruct> {
 };
 
 }  // namespace std
-
-namespace paimon {
-
-/// Resolves a BlobViewStruct into the BlobDescriptor stored in the upstream table.
-/// Returns nullptr when the referenced source-table cell is null.
-using BlobViewResolver =
-    std::function<Result<std::shared_ptr<BlobDescriptor>>(const BlobViewStruct&)>;
-
-}  // namespace paimon

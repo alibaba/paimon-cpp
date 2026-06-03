@@ -18,6 +18,8 @@
 
 #include <cstdint>
 #include <memory>
+#include <set>
+#include <string>
 #include <unordered_set>
 #include <vector>
 
@@ -53,7 +55,7 @@ class BlobViewResolvingBatchReader : public BatchReader {
     std::shared_ptr<MemoryPool> pool_;
     std::unique_ptr<arrow::MemoryPool> arrow_pool_;
     std::unique_ptr<BatchReader> reader_;
-    std::vector<std::string> read_blob_view_fields_;
+    std::set<std::string> read_blob_view_fields_;
     BlobViewResolver resolver_;
 };
 

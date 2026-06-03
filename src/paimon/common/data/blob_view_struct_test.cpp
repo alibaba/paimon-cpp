@@ -74,4 +74,36 @@ TEST_F(BlobViewStructTest, TestToString) {
     ASSERT_EQ(debug_str, "BlobViewStruct{identifier=test_db.test_table, fieldId=7, rowId=1024}");
 }
 
+TEST_F(BlobViewStructTest, TestEqual) {
+    {
+        // test equal itself
+        ASSERT_EQ(view_struct_, view_struct_);
+    }
+    {
+        // test equal
+        BlobViewStruct other_view_struct =
+            BlobViewStruct(identifier_, /*field_id=*/7, /*row_id=*/1024);
+        ASSERT_EQ(view_struct_, other_view_struct);
+    }
+    {
+        // test wrong identifier
+        Identifier wrong_identifier = Identifier("db", "table");
+        BlobViewStruct wrong_view_struct =
+            BlobViewStruct(wrong_identifier, /*field_id=*/7, /*row_id=*/1024);
+        ASSERT_NE(view_struct_, wrong_view_struct);
+    }
+    {
+        // test wrong field_id
+        BlobViewStruct wrong_view_struct =
+            BlobViewStruct(identifier_, /*field_id=*/8, /*row_id=*/1024);
+        ASSERT_NE(view_struct_, wrong_view_struct);
+    }
+    {
+        // test wrong row_id
+        BlobViewStruct wrong_view_struct =
+            BlobViewStruct(identifier_, /*field_id=*/7, /*row_id=*/1000);
+        ASSERT_NE(view_struct_, wrong_view_struct);
+    }
+}
+
 }  // namespace paimon::test

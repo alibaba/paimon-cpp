@@ -142,13 +142,13 @@ TEST(IdentifierTest, TestFromString) {
         // test normal database
         ASSERT_OK_AND_ASSIGN(Identifier identifier, Identifier::FromString("ab.cd"));
         Identifier expected("ab", "cd");
-        ASSERT_EQ(identifier.ToString(), expected.ToString());
+        ASSERT_EQ(identifier, expected);
     }
     {
         // test normal database
         ASSERT_OK_AND_ASSIGN(Identifier identifier, Identifier::FromString("ab.cd.ef"));
         Identifier expected("ab", "cd.ef");
-        ASSERT_EQ(identifier.ToString(), expected.ToString());
+        ASSERT_EQ(identifier, expected);
     }
 }
 

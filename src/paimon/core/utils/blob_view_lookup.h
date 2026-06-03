@@ -17,6 +17,7 @@
 #pragma once
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -24,8 +25,8 @@
 
 #include "paimon/catalog/identifier.h"
 #include "paimon/common/catalog/catalog_context.h"
-#include "paimon/common/data/blob_descriptor.h"
 #include "paimon/common/data/blob_view_struct.h"
+#include "paimon/memory/bytes.h"
 #include "paimon/result.h"
 #include "paimon/utils/range.h"
 
@@ -37,6 +38,8 @@ class BatchReader;
 /// the upstream tables in row-range chunks.
 class BlobViewLookup {
  public:
+    using DescriptorMapping = std::unordered_map<BlobViewStruct, std::shared_ptr<Bytes>>;
+
     BlobViewLookup() = delete;
     ~BlobViewLookup() = delete;
 
@@ -56,18 +59,19 @@ class BlobViewLookup {
 
      private:
         Identifier identifier_;
-        std::map<int32_t, std::vector<BlobViewStruct>> references_by_field_id_;
+        std::set<int32_t> references_by_field_id_;
         std::vector<int64_t> row_ranges_;
     };
 
-    static Result<std::unordered_map<BlobViewStruct, std::shared_ptr<BlobDescriptor>>>
-    PreloadDescriptors(const std::unordered_set<BlobViewStruct>& view_structs,
-                       const std::shared_ptr<CatalogContext>& catalog_context,
-                       const std::shared_ptr<MemoryPool>& pool);
+    static Result<DescriptorMapping> PreloadDescriptors(
+        const std::unordered_set<BlobViewStruct>& view_structs,
+        const std::shared_ptr<CatalogContext>& catalog_context,
+        const std::shared_ptr<MemoryPool>& pool);
 
-    static Status ExtractBlobDescriptors(
-        const Identifier& identifier, const std::vector<int32_t>& field_ids, BatchReader* reader,
-        std::unordered_map<BlobViewStruct, std::shared_ptr<BlobDescriptor>>* mapping);
+    static Status ExtractBlobDescriptors(const Identifier& identifier,
+                                         const std::vector<int32_t>& field_ids,
+                                         const std::shared_ptr<MemoryPool>& pool,
+                                         BatchReader* reader, DescriptorMapping* mapping);
 
     static std::unordered_map<Identifier, TableReadPlan> GroupByIdentifier(
         const std::unordered_set<BlobViewStruct>& view_structs);

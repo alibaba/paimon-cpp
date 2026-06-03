@@ -49,8 +49,6 @@ TEST_F(BlobViewLookupTest, TestConstruct) {
     ASSERT_EQ(references.size(), 1U);
     auto iter = references.find(7);
     ASSERT_NE(iter, references.end());
-    ASSERT_EQ(iter->second.size(), 1U);
-    ASSERT_EQ(iter->second[0], view);
 
     const auto& row_ranges = plan.row_ranges_;
     ASSERT_EQ(row_ranges.size(), 1U);
@@ -68,8 +66,10 @@ TEST_F(BlobViewLookupTest, TestAdd) {
 
     const auto& references = plan.references_by_field_id_;
     ASSERT_EQ(references.size(), 2U);
-    ASSERT_EQ(references.at(7).size(), 2U);
-    ASSERT_EQ(references.at(9).size(), 2U);
+    auto iter = references.find(7);
+    ASSERT_NE(iter, references.end());
+    iter = references.find(9);
+    ASSERT_NE(iter, references.end());
 
     ASSERT_EQ(plan.row_ranges_, (std::vector<int64_t>{10, 12, 11, 13}));
 }
@@ -89,8 +89,7 @@ TEST_F(BlobViewLookupTest, TestGetSortedDistinctRangesMergesTwoAdjacentRowIds) {
 
     auto ranges = plan.GetSortedDistinctRanges();
     ASSERT_EQ(ranges.size(), 1U);
-    ASSERT_EQ(ranges[0].from, 5);
-    ASSERT_EQ(ranges[0].to, 6);
+    ASSERT_EQ(ranges[0], Range(5, 6));
 }
 
 TEST_F(BlobViewLookupTest, TestGetSortedDistinctRangesMergesContiguousAndGaps) {
@@ -158,8 +157,10 @@ TEST_F(BlobViewLookupTest, TestMultipleViewStructsOfSameTableAreMergedIntoOnePla
 
     const auto& references = plan.references_by_field_id_;
     ASSERT_EQ(references.size(), 2U);
-    ASSERT_EQ(references.at(3).size(), 2U);
-    ASSERT_EQ(references.at(4).size(), 1U);
+    auto iter = references.find(3);
+    ASSERT_NE(iter, references.end());
+    iter = references.find(4);
+    ASSERT_NE(iter, references.end());
 
     ASSERT_EQ(plan.row_ranges_.size(), 3U);
 }

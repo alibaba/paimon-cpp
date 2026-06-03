@@ -40,7 +40,10 @@ Identifier::Identifier(const std::string& database, const std::string& table)
     : database_(database), table_(table) {}
 
 bool Identifier::operator==(const Identifier& other) const {
-    return (database_ == other.database_ && table_ == other.table_);
+    if (this == &other) {
+        return true;
+    }
+    return database_ == other.database_ && table_ == other.table_;
 }
 
 const std::string& Identifier::GetDatabaseName() const {
@@ -98,6 +101,7 @@ Result<Identifier> Identifier::FromString(const std::string& full_name) {
     if (StringUtils::IsNullOrWhitespaceOnly(full_name)) {
         return Status::Invalid("full name cannot be empty or whitespace only");
     }
+    // TODO(lisizhuo.lsz): deal with kUnknownDatabase to be done
     const auto dot_pos = full_name.find('.');
     if (dot_pos == std::string::npos || dot_pos == 0 || dot_pos == full_name.size() - 1) {
         return Status::Invalid(

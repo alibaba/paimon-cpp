@@ -27,7 +27,6 @@
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "fmt/format.h"
-#include "paimon/common/data/blob_descriptor.h"
 #include "paimon/common/data/blob_view_struct.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
@@ -42,7 +41,8 @@ BlobViewResolvingBatchReader::BlobViewResolvingBatchReader(
     : pool_(pool),
       arrow_pool_(GetArrowPool(pool)),
       reader_(std::move(reader)),
-      read_blob_view_fields_(std::move(read_blob_view_fields)),
+      read_blob_view_fields_(std::make_move_iterator(read_blob_view_fields.begin()),
+                             std::make_move_iterator(read_blob_view_fields.end())),
       resolver_(std::move(resolver)) {}
 
 Result<BatchReader::ReadBatch> BlobViewResolvingBatchReader::NextBatch() {
@@ -71,8 +71,7 @@ Result<BatchReader::ReadBatch> BlobViewResolvingBatchReader::NextBatch() {
     for (int32_t field_idx = 0; field_idx < struct_type->num_fields(); ++field_idx) {
         const auto& field = struct_type->field(field_idx);
         field_names.push_back(field->name());
-        if (std::find(read_blob_view_fields_.begin(), read_blob_view_fields_.end(),
-                      field->name()) == read_blob_view_fields_.end()) {
+        if (read_blob_view_fields_.find(field->name()) == read_blob_view_fields_.end()) {
             continue;
         }
         const auto& column = struct_array->field(field_idx);
@@ -110,15 +109,14 @@ Result<std::shared_ptr<arrow::Array>> BlobViewResolvingBatchReader::ResolveBinar
         }
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlobViewStruct> view_struct,
                                BlobViewStruct::Deserialize(view.data(), view.size()));
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BlobDescriptor> descriptor, resolver_(*view_struct));
-        if (descriptor == nullptr) {
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Bytes> descriptor_bytes, resolver_(*view_struct));
+        if (descriptor_bytes == nullptr) {
             // null in source table
             PAIMON_RETURN_NOT_OK_FROM_ARROW(builder.AppendNull());
             continue;
         }
-        PAIMON_UNIQUE_PTR<Bytes> serialized = descriptor->Serialize(pool_);
         PAIMON_RETURN_NOT_OK_FROM_ARROW(builder.Append(
-            reinterpret_cast<const uint8_t*>(serialized->data()), serialized->size()));
+            reinterpret_cast<const uint8_t*>(descriptor_bytes->data()), descriptor_bytes->size()));
     }
     std::shared_ptr<arrow::Array> blob_descriptor_array;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(builder.Finish(&blob_descriptor_array));

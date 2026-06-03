@@ -23,10 +23,12 @@
 #include "arrow/c/bridge.h"
 #include "fmt/format.h"
 #include "paimon/catalog/catalog.h"
+#include "paimon/common/data/blob_descriptor.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/defs.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
+#include "paimon/memory/bytes.h"
 #include "paimon/read_context.h"
 #include "paimon/scan_context.h"
 #include "paimon/table/source/table_read.h"
@@ -36,26 +38,23 @@
 namespace paimon {
 BlobViewLookup::TableReadPlan::TableReadPlan(const BlobViewStruct& view_struct)
     : identifier_(view_struct.GetIdentifier()) {
-    references_by_field_id_[view_struct.FieldId()].push_back(view_struct);
+    references_by_field_id_.insert(view_struct.FieldId());
     row_ranges_.push_back(view_struct.RowId());
 }
 
 void BlobViewLookup::TableReadPlan::Add(const BlobViewStruct& view_struct) {
-    references_by_field_id_[view_struct.FieldId()].push_back(view_struct);
+    references_by_field_id_.insert(view_struct.FieldId());
     row_ranges_.push_back(view_struct.RowId());
 }
 
 std::vector<int32_t> BlobViewLookup::TableReadPlan::GetFieldIds() const {
-    std::vector<int32_t> field_ids;
-    field_ids.reserve(references_by_field_id_.size());
-    for (const auto& [field_id, _] : references_by_field_id_) {
-        field_ids.push_back(field_id);
-    }
-    return field_ids;
+    return std::vector<int32_t>(references_by_field_id_.begin(), references_by_field_id_.end());
 }
 
 std::vector<Range> BlobViewLookup::TableReadPlan::GetSortedDistinctRanges() const {
-    if (row_ranges_.empty()) return {};
+    if (row_ranges_.empty()) {
+        return {};
+    }
     std::vector<int64_t> sorted = row_ranges_;
     std::sort(sorted.begin(), sorted.end());
     std::vector<Range> ranges;
@@ -76,8 +75,6 @@ std::vector<Range> BlobViewLookup::TableReadPlan::GetSortedDistinctRanges() cons
     return ranges;
 }
 
-using DescriptorMapping = std::unordered_map<BlobViewStruct, std::shared_ptr<BlobDescriptor>>;
-
 Result<BlobViewResolver> BlobViewLookup::CreateResolver(
     const std::unordered_set<BlobViewStruct>& view_structs,
     const std::shared_ptr<CatalogContext>& catalog_context,
@@ -85,7 +82,7 @@ Result<BlobViewResolver> BlobViewLookup::CreateResolver(
     PAIMON_ASSIGN_OR_RAISE(DescriptorMapping mapping,
                            PreloadDescriptors(view_structs, catalog_context, pool));
     return BlobViewResolver([cached = std::move(mapping)](const BlobViewStruct& view_struct)
-                                -> Result<std::shared_ptr<BlobDescriptor>> {
+                                -> Result<std::shared_ptr<Bytes>> {
         auto iter = cached.find(view_struct);
         if (iter == cached.end()) {
             return Status::Invalid(fmt::format("BlobViewStruct not found in preloaded cache: {}",
@@ -95,16 +92,16 @@ Result<BlobViewResolver> BlobViewLookup::CreateResolver(
     });
 }
 
-Result<std::unordered_map<BlobViewStruct, std::shared_ptr<BlobDescriptor>>>
-BlobViewLookup::PreloadDescriptors(const std::unordered_set<BlobViewStruct>& view_structs,
-                                   const std::shared_ptr<CatalogContext>& catalog_context,
-                                   const std::shared_ptr<MemoryPool>& pool) {
+Result<BlobViewLookup::DescriptorMapping> BlobViewLookup::PreloadDescriptors(
+    const std::unordered_set<BlobViewStruct>& view_structs,
+    const std::shared_ptr<CatalogContext>& catalog_context,
+    const std::shared_ptr<MemoryPool>& pool) {
     std::unordered_map<Identifier, BlobViewLookup::TableReadPlan> plan_by_identifier =
         GroupByIdentifier(view_structs);
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<Catalog> catalog,
                            Catalog::Create(catalog_context->root_path, catalog_context->options,
                                            catalog_context->file_system));
-    std::unordered_map<BlobViewStruct, std::shared_ptr<BlobDescriptor>> mapping;
+    DescriptorMapping mapping;
     for (const auto& [identifier, table_read_plan] : plan_by_identifier) {
         std::string source_table_path = catalog->GetTableLocation(identifier);
         PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> branch, identifier.GetBranchName());
@@ -138,14 +135,16 @@ BlobViewLookup::PreloadDescriptors(const std::unordered_set<BlobViewStruct>& vie
                                TableRead::Create(std::move(read_context)));
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> reader,
                                table_read->CreateReader(plan->Splits()));
-        PAIMON_RETURN_NOT_OK(ExtractBlobDescriptors(identifier, field_ids, reader.get(), &mapping));
+        PAIMON_RETURN_NOT_OK(
+            ExtractBlobDescriptors(identifier, field_ids, pool, reader.get(), &mapping));
     }
     return mapping;
 }
 
-Status BlobViewLookup::ExtractBlobDescriptors(
-    const Identifier& identifier, const std::vector<int32_t>& field_ids, BatchReader* reader,
-    std::unordered_map<BlobViewStruct, std::shared_ptr<BlobDescriptor>>* mapping) {
+Status BlobViewLookup::ExtractBlobDescriptors(const Identifier& identifier,
+                                              const std::vector<int32_t>& field_ids,
+                                              const std::shared_ptr<MemoryPool>& pool,
+                                              BatchReader* reader, DescriptorMapping* mapping) {
     if (reader == nullptr) {
         return Status::Invalid("invalid reader in ExtractBlobDescriptors, reader is nullptr");
     }
@@ -200,10 +199,10 @@ Status BlobViewLookup::ExtractBlobDescriptors(
                     "invalid array in ExtractBlobDescriptors, column is not a LargeBinaryArray.");
             }
             for (int64_t row = 0; row < binary_array->length(); ++row) {
+                BlobViewStruct blob_view_struct(identifier, field_ids[idx - 1],
+                                                typed_row_id_array->Value(row));
                 if (binary_array->IsNull(row)) {
                     // null in source table
-                    BlobViewStruct blob_view_struct(identifier, field_ids[idx - 1],
-                                                    typed_row_id_array->Value(row));
                     (*mapping)[blob_view_struct] = nullptr;
                     continue;
                 }
@@ -215,11 +214,9 @@ Status BlobViewLookup::ExtractBlobDescriptors(
                         "requires blob field value to be a serialized BlobDescriptor in source "
                         "table.");
                 }
-                PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BlobDescriptor> descriptor,
-                                       BlobDescriptor::Deserialize(bytes.data(), bytes.size()));
-                BlobViewStruct blob_view_struct(identifier, field_ids[idx - 1],
-                                                typed_row_id_array->Value(row));
-                (*mapping)[blob_view_struct] = descriptor;
+                auto descriptor_bytes = std::make_shared<Bytes>(bytes.size(), pool.get());
+                std::memcpy(descriptor_bytes->data(), bytes.data(), bytes.size());
+                (*mapping)[blob_view_struct] = std::move(descriptor_bytes);
             }
         }
     }
