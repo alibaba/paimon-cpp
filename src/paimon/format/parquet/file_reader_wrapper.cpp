@@ -217,18 +217,18 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::NextPageFiltered(
 
     // Construct the per-RG streaming reader on demand.
     if (!current_page_filtered_reader_) {
-        const auto& row_ranges = target_row_groups_[current_row_group_idx_].row_ranges;
+        const auto& target_rg = target_row_groups_[current_row_group_idx_];
         auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
-            file_reader_->parquet_reader(), rg_id, row_ranges, target_column_indices_);
+            file_reader_->parquet_reader(), target_rg, target_column_indices_);
         bool pre_buffered = !prebuffered_ranges_.empty();
         int64_t max_chunksize = batch_size_ > 0 ? batch_size_ : std::numeric_limits<int64_t>::max();
         PAIMON_ASSIGN_OR_RAISE(
             current_page_filtered_reader_,
             PageFilteredRowGroupReader::ReadFilteredRowGroup(
-                file_reader_->parquet_reader(), rg_id, row_ranges, target_column_indices_,
+                file_reader_->parquet_reader(), target_rg, target_column_indices_,
                 page_filtered_read_schema_, pool_, file_reader_->properties().cache_options(),
                 pre_buffered, page_ranges, max_chunksize));
-        current_filtered_row_ranges_ = row_ranges;
+        current_filtered_row_ranges_ = target_rg.row_ranges;
         current_filtered_rg_start_ = all_row_group_ranges_[rg_id].first;
         filtered_global_offset_ = 0;
     }
@@ -360,8 +360,7 @@ std::vector<::arrow::io::ReadRange> FileReaderWrapper::CollectPreBufferRanges(
     for (const auto& trg : target_row_groups_) {
         if (trg.is_page_filtered) {
             auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
-                file_reader_->parquet_reader(), trg.row_group_index, trg.row_ranges,
-                column_indices);
+                file_reader_->parquet_reader(), trg, column_indices);
             ranges.insert(ranges.end(), std::make_move_iterator(page_ranges.begin()),
                           std::make_move_iterator(page_ranges.end()));
         }
