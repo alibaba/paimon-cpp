@@ -31,6 +31,7 @@
 #include "paimon/core/operation/file_store_commit_impl.h"
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
+#include "paimon/core/table/bucket_mode.h"
 #include "paimon/core/utils/field_mapping.h"
 #include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/core/utils/snapshot_manager.h"
@@ -68,7 +69,17 @@ Result<std::unique_ptr<FileStoreCommit>> FileStoreCommit::Create(
     const auto& schema = table_schema.value();
     if (!schema->PrimaryKeys().empty() &&
         ctx->GetOptions().find("enable-pk-commit-in-inte-test") == ctx->GetOptions().end()) {
-        return Status::NotImplemented("not support pk table commit yet");
+        // Postpone bucket mode (bucket=-2) writes data like an append table: all files go to
+        // bucket-postpone/ directory and the REST catalog server handles bucket redistribution
+        // during compaction. The commit logic is the same as append tables, so we allow it.
+        auto schema_opts = schema->Options();
+        auto bucket_it = schema_opts.find("bucket");
+        bool is_postpone_bucket =
+            bucket_it != schema_opts.end() &&
+            bucket_it->second == std::to_string(BucketModeDefine::POSTPONE_BUCKET);
+        if (!is_postpone_bucket) {
+            return Status::NotImplemented("not support pk table commit yet");
+        }
     }
     auto opts = schema->Options();
     for (const auto& [key, value] : ctx->GetOptions()) {
