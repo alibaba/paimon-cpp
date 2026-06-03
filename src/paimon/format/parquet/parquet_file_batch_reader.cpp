@@ -65,7 +65,6 @@ ParquetFileBatchReader::ParquetFileBatchReader(
       arrow_pool_(arrow_pool),
       input_stream_(std::move(input_stream)),
       reader_(std::move(reader)),
-      read_ranges_(reader_->GetAllRowGroupRanges()),
       metrics_(std::make_shared<MetricsImpl>()),
       logger_(Logger::GetLogger("ParquetFileBatchReader")) {}
 
@@ -205,7 +204,6 @@ Status ParquetFileBatchReader::SetReadSchema(
             }
         }
         PAIMON_RETURN_NOT_OK(reader_->PrepareForReadingLazy(target_row_groups, column_indices));
-        PAIMON_RETURN_NOT_OK(reader_->ApplyReadRanges(read_ranges_));
     }
     PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetFileBatchReader::SetReadSchema")
     return Status::OK();

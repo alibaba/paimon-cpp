@@ -102,7 +102,6 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     }
 
     Status SetReadRanges(const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) override {
-        read_ranges_ = read_ranges;
         return reader_->ApplyReadRanges(read_ranges);
     }
 
@@ -176,7 +175,6 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     std::unique_ptr<FileReaderWrapper> reader_;
 
     std::shared_ptr<arrow::DataType> read_data_type_;
-    std::vector<std::pair<uint64_t, uint64_t>> read_ranges_;
 
     std::shared_ptr<Metrics> metrics_;
     std::unique_ptr<Logger> logger_;
