@@ -17,6 +17,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -25,6 +26,7 @@
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/preconditions.h"
 #include "paimon/common/utils/string_utils.h"
+#include "paimon/core/deletionvectors/deletion_vector.h"
 #include "paimon/core/io/data_file_meta_09_serializer.h"
 #include "paimon/core/io/data_file_meta_10_serializer.h"
 #include "paimon/core/io/data_file_meta_12_serializer.h"
@@ -34,6 +36,7 @@
 #include "paimon/table/source/data_split.h"
 
 namespace paimon {
+
 /// Input splits. Needed by most batch computation engines.
 class DataSplitImpl : public DataSplit {
  public:
@@ -93,14 +96,22 @@ class DataSplitImpl : public DataSplit {
     bool operator==(const DataSplitImpl& other) const;
     bool TEST_Equal(const DataSplitImpl& other) const;
 
-    /// Obtain merged row count as much as possible. There are two scenarios where accurate row
-    /// count
-    /// can be calculated:
+    /// Obtain merged row count when metadata is sufficient.
     ///
-    /// 1. raw file and no deletion file.
+    /// This method follows Java DataSplit#mergedRowCount behavior:
     ///
-    /// 2. raw file + deletion file with cardinality.
-    int64_t PartialMergedRowCount() const;
+    /// 1. Prefer raw merged row count when split is raw-convertible and deletion cardinality is
+    ///    available.
+    /// 2. Fallback to data-evolution merged row count when all files have first_row_id.
+    ///
+    /// Obtain merged row count without reading deletion vector files for missing cardinality.
+    Result<std::optional<int64_t>> MergedRowCount() const;
+
+    /// Obtain merged row count with a deletion vector factory for missing cardinality.
+    ///
+    /// When a deletion file exists but its cardinality metadata is missing, the factory can be
+    /// used to read the deletion vector file and provide exact cardinality.
+    Result<std::optional<int64_t>> MergedRowCount(DeletionVector::Factory dv_factory) const;
 
     // Builder
     /// Builder for `DataSplitImpl`.
@@ -173,6 +184,10 @@ class DataSplitImpl : public DataSplit {
           bucket_(bucket),
           bucket_path_(bucket_path),
           data_files_(std::move(data_files)) {}
+
+    Result<std::optional<int64_t>> RawMergedRowCount(DeletionVector::Factory dv_factory) const;
+    bool DataEvolutionRowCountAvailable() const;
+    Result<int64_t> DataEvolutionMergedRowCount() const;
 
  private:
     int64_t snapshot_id_ = 0;
