@@ -118,7 +118,7 @@ class FileReaderWrapper {
                              const std::vector<int32_t>& column_indices);
 
     /// Apply read ranges to the current target_row_groups_, keeping only those
-    /// whose row-group range overlaps with one of the given read ranges.
+    /// whose row-group range is equal to one of the given read ranges.
     /// Resets reader state so that the next Next() call will re-initialize.
     Status ApplyReadRanges(const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges);
 
