@@ -47,12 +47,13 @@ class BenchmarkHelpers {
     static bool ValidatePrefetchParallelOrSkip(::benchmark::State& state,
                                                int32_t prefetch_parallel_num, SkipFn skip);
 
-    static Result<int64_t> RunReadIterations(::benchmark::State& state, const ReadOnceFn& read_once);
+    static Result<int64_t> RunReadIterations(::benchmark::State& state,
+                                             const ReadOnceFn& read_once);
 
     static Result<bool> TryRunSourceTableReadMode(::benchmark::State& state,
-                                                   const std::string& benchmark_name,
-                                                   const std::string& source_table_path,
-                                                   const ReadOnceFn& read_once);
+                                                  const std::string& benchmark_name,
+                                                  const std::string& source_table_path,
+                                                  const ReadOnceFn& read_once);
 };
 
 }  // namespace paimon::benchmark

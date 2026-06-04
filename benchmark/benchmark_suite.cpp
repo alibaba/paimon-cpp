@@ -82,29 +82,26 @@ Status ParsePaimonBenchmarkCliArgsImpl(int32_t* argc, char** argv) {
 
         PAIMON_ASSIGN_OR_RAISE(bool is_parsed,
                                paimon::benchmark::ParseStringOptionArg(
-                                   parsed_argc, argv, arg, "--paimon_source_data_file",
-                                   &arg_index, &options.source_data_file));
+                                   parsed_argc, argv, arg, "--paimon_source_data_file", &arg_index,
+                                   &options.source_data_file));
         if (is_parsed) {
             continue;
         }
-        PAIMON_ASSIGN_OR_RAISE(is_parsed,
-                               paimon::benchmark::ParseStringOptionArg(
-                                   parsed_argc, argv, arg, "--paimon_source_table_path",
-                                   &arg_index, &options.source_table_path));
+        PAIMON_ASSIGN_OR_RAISE(is_parsed, paimon::benchmark::ParseStringOptionArg(
+                                              parsed_argc, argv, arg, "--paimon_source_table_path",
+                                              &arg_index, &options.source_table_path));
         if (is_parsed) {
             continue;
         }
-        PAIMON_ASSIGN_OR_RAISE(is_parsed,
-                               paimon::benchmark::ParseCommaSeparatedOptionArg(
-                                   parsed_argc, argv, arg, "--paimon_pk_columns", &arg_index,
-                                   &options.pk_columns));
+        PAIMON_ASSIGN_OR_RAISE(is_parsed, paimon::benchmark::ParseCommaSeparatedOptionArg(
+                                              parsed_argc, argv, arg, "--paimon_pk_columns",
+                                              &arg_index, &options.pk_columns));
         if (is_parsed) {
             continue;
         }
-        PAIMON_ASSIGN_OR_RAISE(is_parsed,
-                               paimon::benchmark::ParseDelimitedRepeatableOptionArg(
-                                   parsed_argc, argv, arg, "--paimon_option", &arg_index,
-                                   &options.extra_options));
+        PAIMON_ASSIGN_OR_RAISE(is_parsed, paimon::benchmark::ParseDelimitedRepeatableOptionArg(
+                                              parsed_argc, argv, arg, "--paimon_option", &arg_index,
+                                              &options.extra_options));
         if (is_parsed) {
             continue;
         }
@@ -128,29 +125,30 @@ bool HasHelpFlagImpl(int32_t argc, char** argv) {
 }
 
 void PrintPaimonBenchmarkCliHelpImpl() {
-    std::cout << "Paimon benchmark custom options:\n"
-              << "  --paimon_source_data_file=<path>\n"
-              << "      Required. External source data file used to build benchmark data.\n"
-              << "      Currently supports Parquet source files.\n"
-              << "      Also supports: --paimon_source_data_file <path>\n"
-              << "  --paimon_source_table_path=<path>\n"
-              << "      Optional for BM_Read and BM_MOR_Read. If set, read directly from existing\n"
-              << "      table path and skip source file loading and pre-write stage.\n"
-              << "      Also supports: --paimon_source_table_path <path>\n"
-              << "  --paimon_pk_columns=<col1,col2,...>\n"
-              << "      Required by BM_PK_Write and BM_MOR_Read.\n"
-              << "      Also supports: --paimon_pk_columns <col1,col2,...>\n"
-              << "  --paimon_option=<key1>:<value1>;<key2>:<value2>\n"
-              << "      Optional and repeatable. Pass through table options as-is.\n"
-              << "      Default table file format is parquet; use file.format:<format> to override.\n"
-              << "      Also supports: --paimon_option <key1>:<value1>;<key2>:<value2>\n"
-              << "      Note: use quotes in shell, e.g. \"--paimon_option k1:v1;k2:v2\".\n"
-              << "\n"
-              << "Example:\n"
-              << "  paimon-read-write-benchmark --paimon_source_data_file /path/data.parquet \\\n"
-              << "      --paimon_pk_columns=id --paimon_option \"read.batch-size:8192\" \\\n"
-              << "      --benchmark_filter=BM_Read\n"
-              << std::endl;
+    std::cout
+        << "Paimon benchmark custom options:\n"
+        << "  --paimon_source_data_file=<path>\n"
+        << "      Required. External source data file used to build benchmark data.\n"
+        << "      Currently supports Parquet source files.\n"
+        << "      Also supports: --paimon_source_data_file <path>\n"
+        << "  --paimon_source_table_path=<path>\n"
+        << "      Optional for BM_Read and BM_MOR_Read. If set, read directly from existing\n"
+        << "      table path and skip source file loading and pre-write stage.\n"
+        << "      Also supports: --paimon_source_table_path <path>\n"
+        << "  --paimon_pk_columns=<col1,col2,...>\n"
+        << "      Required by BM_PK_Write and BM_MOR_Read.\n"
+        << "      Also supports: --paimon_pk_columns <col1,col2,...>\n"
+        << "  --paimon_option=<key1>:<value1>;<key2>:<value2>\n"
+        << "      Optional and repeatable. Pass through table options as-is.\n"
+        << "      Default table file format is parquet; use file.format:<format> to override.\n"
+        << "      Also supports: --paimon_option <key1>:<value1>;<key2>:<value2>\n"
+        << "      Note: use quotes in shell, e.g. \"--paimon_option k1:v1;k2:v2\".\n"
+        << "\n"
+        << "Example:\n"
+        << "  paimon-read-write-benchmark --paimon_source_data_file /path/data.parquet \\\n"
+        << "      --paimon_pk_columns=id --paimon_option \"read.batch-size:8192\" \\\n"
+        << "      --benchmark_filter=BM_Read\n"
+        << std::endl;
 }
 
 Result<std::unique_ptr<paimon::test::UniqueTestDirectory>> CreateBenchmarkWorkspace() {
@@ -362,13 +360,11 @@ Result<std::unique_ptr<paimon::RecordBatch>> MakeRecordBatch(
 }
 
 Status EnsureTable(const std::string& root_path, const std::string& db_name,
-                   const std::string& table_name,
-                   const std::map<std::string, std::string>& options,
+                   const std::string& table_name, const std::map<std::string, std::string>& options,
                    const std::shared_ptr<arrow::Schema>& schema,
                    const std::vector<std::string>& primary_keys = {}) {
-    PAIMON_ASSIGN_OR_RAISE(auto catalog,
-                           AddContext(paimon::Catalog::Create(root_path, options),
-                                      "create catalog"));
+    PAIMON_ASSIGN_OR_RAISE(
+        auto catalog, AddContext(paimon::Catalog::Create(root_path, options), "create catalog"));
     PAIMON_RETURN_NOT_OK(
         AddContext(catalog->CreateDatabase(db_name, options, true), "create database"));
 
@@ -376,16 +372,15 @@ Status EnsureTable(const std::string& root_path, const std::string& db_name,
     if (!arrow::ExportSchema(*schema, &c_schema).ok()) {
         return Status::Invalid("failed to export table schema");
     }
-    PAIMON_RETURN_NOT_OK(AddContext(
-        catalog->CreateTable(paimon::Identifier(db_name, table_name), &c_schema,
-                             /*partition_keys=*/{}, primary_keys, options,
-                             /*ignore_if_exists=*/false),
-        "create table"));
+    PAIMON_RETURN_NOT_OK(
+        AddContext(catalog->CreateTable(paimon::Identifier(db_name, table_name), &c_schema,
+                                        /*partition_keys=*/{}, primary_keys, options,
+                                        /*ignore_if_exists=*/false),
+                   "create table"));
     return Status::OK();
 }
 
-Status WriteSourceDataToWriter(paimon::FileStoreWrite* writer,
-                               const SourceDataSpec& source_spec) {
+Status WriteSourceDataToWriter(paimon::FileStoreWrite* writer, const SourceDataSpec& source_spec) {
     if (source_spec.format != "parquet") {
         return Status::Invalid("unknown source format: ", source_spec.format);
     }
@@ -433,22 +428,18 @@ Status WriteAndCommit(const std::string& table_path,
                       const std::map<std::string, std::string>& options,
                       const SourceDataSpec& source_spec) {
     paimon::WriteContextBuilder write_builder(table_path, "benchmark-writer");
-    PAIMON_ASSIGN_OR_RAISE(
-        auto write_ctx,
-        AddContext(write_builder.SetOptions(options).Finish(), "create write context"));
-    PAIMON_ASSIGN_OR_RAISE(
-        auto writer,
-        AddContext(paimon::FileStoreWrite::Create(std::move(write_ctx)),
-                   "create file store writer"));
+    PAIMON_ASSIGN_OR_RAISE(auto write_ctx, AddContext(write_builder.SetOptions(options).Finish(),
+                                                      "create write context"));
+    PAIMON_ASSIGN_OR_RAISE(auto writer,
+                           AddContext(paimon::FileStoreWrite::Create(std::move(write_ctx)),
+                                      "create file store writer"));
 
     PAIMON_RETURN_NOT_OK(WriteSourceDataToWriter(writer.get(), source_spec));
-    PAIMON_ASSIGN_OR_RAISE(auto messages,
-                           AddContext(writer->PrepareCommit(), "prepare commit"));
+    PAIMON_ASSIGN_OR_RAISE(auto messages, AddContext(writer->PrepareCommit(), "prepare commit"));
 
     paimon::CommitContextBuilder commit_builder(table_path, "benchmark-writer");
-    PAIMON_ASSIGN_OR_RAISE(
-        auto commit_ctx,
-        AddContext(commit_builder.SetOptions(options).Finish(), "create commit context"));
+    PAIMON_ASSIGN_OR_RAISE(auto commit_ctx, AddContext(commit_builder.SetOptions(options).Finish(),
+                                                       "create commit context"));
     PAIMON_ASSIGN_OR_RAISE(
         auto committer,
         AddContext(paimon::FileStoreCommit::Create(std::move(commit_ctx)), "create committer"));
@@ -523,8 +514,8 @@ Result<const SharedMorReadTableCache*> GetOrCreateSharedMorReadTable(
     return &cache;
 }
 
-Result<const SharedReadTableCache*> GetOrCreateSharedReadTable(
-    const std::string& file_format, const SourceDataSpec& source_spec) {
+Result<const SharedReadTableCache*> GetOrCreateSharedReadTable(const std::string& file_format,
+                                                               const SourceDataSpec& source_spec) {
     static SharedReadTableCache cache;
     static std::mutex cache_mutex;
 
@@ -558,11 +549,10 @@ Result<int64_t> ReadRows(const std::string& table_path,
                          const std::map<std::string, std::string>& options,
                          int32_t prefetch_parallel_num) {
     paimon::ScanContextBuilder scan_builder(table_path);
+    PAIMON_ASSIGN_OR_RAISE(auto scan_ctx, AddContext(scan_builder.SetOptions(options).Finish(),
+                                                     "create scan context"));
     PAIMON_ASSIGN_OR_RAISE(
-        auto scan_ctx, AddContext(scan_builder.SetOptions(options).Finish(), "create scan context"));
-    PAIMON_ASSIGN_OR_RAISE(auto scanner,
-                           AddContext(paimon::TableScan::Create(std::move(scan_ctx)),
-                                      "create scanner"));
+        auto scanner, AddContext(paimon::TableScan::Create(std::move(scan_ctx)), "create scanner"));
     PAIMON_ASSIGN_OR_RAISE(auto plan, AddContext(scanner->CreatePlan(), "create plan"));
 
     paimon::ReadContextBuilder read_builder(table_path);
@@ -573,14 +563,11 @@ Result<int64_t> ReadRows(const std::string& table_path,
         .SetPrefetchMaxParallelNum(prefetch_parallel_num)
         .EnableMultiThreadRowToBatch(GetRowToBatchThreadNumber() > 1)
         .SetRowToBatchThreadNumber(GetRowToBatchThreadNumber());
-    PAIMON_ASSIGN_OR_RAISE(auto read_ctx,
-                           AddContext(read_builder.Finish(), "create read context"));
-    PAIMON_ASSIGN_OR_RAISE(
-        auto reader,
-        AddContext(paimon::TableRead::Create(std::move(read_ctx)), "create table reader"));
+    PAIMON_ASSIGN_OR_RAISE(auto read_ctx, AddContext(read_builder.Finish(), "create read context"));
+    PAIMON_ASSIGN_OR_RAISE(auto reader, AddContext(paimon::TableRead::Create(std::move(read_ctx)),
+                                                   "create table reader"));
     PAIMON_ASSIGN_OR_RAISE(auto batch_reader,
-                           AddContext(reader->CreateReader(plan->Splits()),
-                                      "create batch reader"));
+                           AddContext(reader->CreateReader(plan->Splits()), "create batch reader"));
 
     int64_t total_rows = 0;
     while (true) {
@@ -713,9 +700,8 @@ void RunBMRead(::benchmark::State& state) {
     auto options = BuildOptions(file_format);
 
     auto source_table_read_result = BenchmarkHelpers::TryRunSourceTableReadMode(
-        state, "read", source_table_path, [&]() {
-            return ReadRows(source_table_path, options, prefetch_parallel_num);
-        });
+        state, "read", source_table_path,
+        [&]() { return ReadRows(source_table_path, options, prefetch_parallel_num); });
     if (!source_table_read_result.ok()) {
         SkipWithMessage(state, source_table_read_result.status().ToString());
         return;
@@ -792,9 +778,9 @@ void RunBMPkWrite(::benchmark::State& state) {
     for (auto _ : state) {
         const std::string db_name = "bench_db";
         const std::string table_name = "pk_write_" + std::to_string(NextTableId());
-        const Status ensure_status = EnsureTable(workspace.value()->Str(), db_name, table_name,
-                                                 options, prepared.schema,
-                                                 /*primary_keys=*/pk_columns);
+        const Status ensure_status =
+            EnsureTable(workspace.value()->Str(), db_name, table_name, options, prepared.schema,
+                        /*primary_keys=*/pk_columns);
         if (!ensure_status.ok()) {
             SkipWithMessage(state, ensure_status.ToString());
             return;
@@ -829,8 +815,8 @@ void RunBMMorRead(::benchmark::State& state) {
     }
 
     const auto source_table_read_options = BuildOptions(file_format);
-    auto source_table_read_result = BenchmarkHelpers::TryRunSourceTableReadMode(
-        state, "mor-read", source_table_path, [&]() {
+    auto source_table_read_result =
+        BenchmarkHelpers::TryRunSourceTableReadMode(state, "mor-read", source_table_path, [&]() {
             return ReadRows(source_table_path, source_table_read_options, prefetch_parallel_num);
         });
     if (!source_table_read_result.ok()) {

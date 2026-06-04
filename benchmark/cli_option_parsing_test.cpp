@@ -54,8 +54,7 @@ TEST(CliOptionParsingTest, ConsumeCliOptionWorks) {
 
 TEST(CliOptionParsingTest, ParseCommaSeparatedColumnsWorks) {
     ASSERT_OK_AND_ASSIGN(auto parsed,
-                         paimon::benchmark::ParseCommaSeparatedColumns("id, name,age",
-                                                                       "--cols"));
+                         paimon::benchmark::ParseCommaSeparatedColumns("id, name,age", "--cols"));
     ASSERT_EQ(parsed.size(), 3U);
     ASSERT_EQ(parsed[0], "id");
     ASSERT_EQ(parsed[1], "name");
@@ -70,17 +69,15 @@ TEST(CliOptionParsingTest, ParseCommaSeparatedColumnsRejectsInvalidInput) {
 
 TEST(CliOptionParsingTest, ParseDelimitedOptionsWorks) {
     ASSERT_OK_AND_ASSIGN(
-        auto parsed,
-        paimon::benchmark::ParseDelimitedOptions("k1:v1;k2:v2", "--paimon_option"));
+        auto parsed, paimon::benchmark::ParseDelimitedOptions("k1:v1;k2:v2", "--paimon_option"));
     ASSERT_EQ(parsed.size(), 2U);
     ASSERT_EQ(parsed[0], std::make_pair(std::string("k1"), std::string("v1")));
     ASSERT_EQ(parsed[1], std::make_pair(std::string("k2"), std::string("v2")));
 }
 
 TEST(CliOptionParsingTest, ParseDelimitedOptionsTrimsKeyAndValue) {
-    ASSERT_OK_AND_ASSIGN(
-        auto parsed,
-        paimon::benchmark::ParseDelimitedOptions(" k1 : v1 ; k2: v2 ", "--paimon_option"));
+    ASSERT_OK_AND_ASSIGN(auto parsed, paimon::benchmark::ParseDelimitedOptions(" k1 : v1 ; k2: v2 ",
+                                                                               "--paimon_option"));
     ASSERT_EQ(parsed.size(), 2U);
     ASSERT_EQ(parsed[0], std::make_pair(std::string("k1"), std::string("v1")));
     ASSERT_EQ(parsed[1], std::make_pair(std::string("k2"), std::string("v2")));
@@ -99,11 +96,10 @@ TEST(CliOptionParsingTest, ParseStringOptionArgWorksForEqualsAndSeparatedForms) 
         ArgvHolder argv_holder({"prog", "--foo=bar"});
         int32_t arg_index = 1;
         std::string value;
-        ASSERT_OK_AND_ASSIGN(
-            bool is_parsed,
-            paimon::benchmark::ParseStringOptionArg(
-                argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[arg_index],
-                "--foo", &arg_index, &value));
+        ASSERT_OK_AND_ASSIGN(bool is_parsed,
+                             paimon::benchmark::ParseStringOptionArg(
+                                 argv_holder.argc(), argv_holder.argv.data(),
+                                 argv_holder.args[arg_index], "--foo", &arg_index, &value));
         ASSERT_TRUE(is_parsed);
         ASSERT_EQ(arg_index, 1);
         ASSERT_EQ(value, "bar");
@@ -113,11 +109,10 @@ TEST(CliOptionParsingTest, ParseStringOptionArgWorksForEqualsAndSeparatedForms) 
         ArgvHolder argv_holder({"prog", "--foo", "bar"});
         int32_t arg_index = 1;
         std::string value;
-        ASSERT_OK_AND_ASSIGN(
-            bool is_parsed,
-            paimon::benchmark::ParseStringOptionArg(
-                argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[arg_index],
-                "--foo", &arg_index, &value));
+        ASSERT_OK_AND_ASSIGN(bool is_parsed,
+                             paimon::benchmark::ParseStringOptionArg(
+                                 argv_holder.argc(), argv_holder.argv.data(),
+                                 argv_holder.args[arg_index], "--foo", &arg_index, &value));
         ASSERT_TRUE(is_parsed);
         ASSERT_EQ(arg_index, 2);
         ASSERT_EQ(value, "bar");
@@ -128,9 +123,9 @@ TEST(CliOptionParsingTest, ParseStringOptionArgRejectsMissingValue) {
     ArgvHolder argv_holder({"prog", "--foo"});
     int32_t arg_index = 1;
     std::string value;
-    ASSERT_NOK(paimon::benchmark::ParseStringOptionArg(
-        argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[arg_index], "--foo",
-        &arg_index, &value));
+    ASSERT_NOK(paimon::benchmark::ParseStringOptionArg(argv_holder.argc(), argv_holder.argv.data(),
+                                                       argv_holder.args[arg_index], "--foo",
+                                                       &arg_index, &value));
 }
 
 TEST(CliOptionParsingTest, ParseStringOptionArgIgnoresOtherOptions) {
@@ -151,11 +146,10 @@ TEST(CliOptionParsingTest, ParseCommaSeparatedOptionArgAndDelimitedRepeatableOpt
         ArgvHolder argv_holder({"prog", "--cols", "id,name"});
         int32_t arg_index = 1;
         std::vector<std::string> columns;
-        ASSERT_OK_AND_ASSIGN(
-            bool is_parsed,
-            paimon::benchmark::ParseCommaSeparatedOptionArg(
-                argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[arg_index],
-                "--cols", &arg_index, &columns));
+        ASSERT_OK_AND_ASSIGN(bool is_parsed,
+                             paimon::benchmark::ParseCommaSeparatedOptionArg(
+                                 argv_holder.argc(), argv_holder.argv.data(),
+                                 argv_holder.args[arg_index], "--cols", &arg_index, &columns));
         ASSERT_TRUE(is_parsed);
         ASSERT_EQ(arg_index, 2);
         ASSERT_EQ(columns.size(), 2U);
@@ -167,11 +161,10 @@ TEST(CliOptionParsingTest, ParseCommaSeparatedOptionArgAndDelimitedRepeatableOpt
         ArgvHolder argv_holder({"prog", "--paimon_option", "k1:v1;k2:v2"});
         int32_t arg_index = 1;
         std::vector<std::pair<std::string, std::string>> options;
-        ASSERT_OK_AND_ASSIGN(
-            bool is_parsed,
-            paimon::benchmark::ParseDelimitedRepeatableOptionArg(
-                argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[arg_index],
-                "--paimon_option", &arg_index, &options));
+        ASSERT_OK_AND_ASSIGN(bool is_parsed, paimon::benchmark::ParseDelimitedRepeatableOptionArg(
+                                                 argv_holder.argc(), argv_holder.argv.data(),
+                                                 argv_holder.args[arg_index], "--paimon_option",
+                                                 &arg_index, &options));
         ASSERT_TRUE(is_parsed);
         ASSERT_EQ(arg_index, 2);
         ASSERT_EQ(options.size(), 2U);

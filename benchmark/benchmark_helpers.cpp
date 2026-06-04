@@ -72,9 +72,9 @@ Result<int64_t> BenchmarkHelpers::RunReadIterations(::benchmark::State& state,
 }
 
 Result<bool> BenchmarkHelpers::TryRunSourceTableReadMode(::benchmark::State& state,
-                                                          const std::string& benchmark_name,
-                                                          const std::string& source_table_path,
-                                                          const ReadOnceFn& read_once) {
+                                                         const std::string& benchmark_name,
+                                                         const std::string& source_table_path,
+                                                         const ReadOnceFn& read_once) {
     if (source_table_path.empty()) {
         return false;
     }

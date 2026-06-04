@@ -45,8 +45,8 @@ inline std::string TrimAsciiWhitespace(const std::string& value) {
     return value.substr(first, last - first + 1);
 }
 
-inline Result<std::vector<std::string>> ParseCommaSeparatedColumns(
-    const std::string& input, const std::string& option_name) {
+inline Result<std::vector<std::string>> ParseCommaSeparatedColumns(const std::string& input,
+                                                                   const std::string& option_name) {
     if (input.empty()) {
         return Status::Invalid("missing value for ", option_name);
     }
@@ -127,13 +127,11 @@ inline Result<bool> ParseStringOptionArg(int32_t argc, char** argv, const std::s
 }
 
 inline Result<bool> ParseCommaSeparatedOptionArg(int32_t argc, char** argv, const std::string& arg,
-                                                 const std::string& option_name,
-                                                 int32_t* arg_index,
+                                                 const std::string& option_name, int32_t* arg_index,
                                                  std::vector<std::string>* columns_out) {
     std::string parsed_value;
     if (ConsumeCliOption(arg, option_name, &parsed_value)) {
-        PAIMON_ASSIGN_OR_RAISE(*columns_out,
-                               ParseCommaSeparatedColumns(parsed_value, option_name));
+        PAIMON_ASSIGN_OR_RAISE(*columns_out, ParseCommaSeparatedColumns(parsed_value, option_name));
         return true;
     }
 
@@ -144,9 +142,8 @@ inline Result<bool> ParseCommaSeparatedOptionArg(int32_t argc, char** argv, cons
     if (*arg_index + 1 >= argc) {
         return Status::Invalid("missing value for ", option_name);
     }
-    PAIMON_ASSIGN_OR_RAISE(*columns_out,
-                           ParseCommaSeparatedColumns(std::string(argv[++(*arg_index)]),
-                                                      option_name));
+    PAIMON_ASSIGN_OR_RAISE(
+        *columns_out, ParseCommaSeparatedColumns(std::string(argv[++(*arg_index)]), option_name));
     return true;
 }
 
