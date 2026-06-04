@@ -178,4 +178,10 @@ Result<std::unique_ptr<BatchReader>> TableRead::CreateReader(
     return std::make_unique<ConcatBatchReader>(std::move(batch_readers), pool_);
 }
 
+Result<std::unique_ptr<CountReader>> TableRead::CreateCountReader(
+    const std::vector<std::shared_ptr<Split>>& splits) {
+    (void)splits;
+    return Status::NotImplemented("CreateCountReader is not implemented for this table type");
+}
+
 }  // namespace paimon
