@@ -81,7 +81,8 @@ Result<std::unique_ptr<FileStoreCommit>> FileStoreCommit::Create(
     assert(options.GetFileSystem());
     assert(options.GetFileFormat());
     PAIMON_ASSIGN_OR_RAISE(bool is_object_store, FileSystem::IsObjectStore(root_path));
-    if (is_object_store && opts.find("enable-object-store-commit-in-inte-test") == opts.end()) {
+    if (is_object_store && !ctx->UseRESTCatalogCommit() &&
+        opts.find("enable-object-store-commit-in-inte-test") == opts.end()) {
         return Status::NotImplemented(
             "commit operation does not support object store file system for now");
     }
