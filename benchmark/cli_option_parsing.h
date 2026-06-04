@@ -71,8 +71,8 @@ inline Result<std::vector<std::string>> ParseCommaSeparatedColumns(const std::st
     return columns;
 }
 
-inline Result<ParsedOptions> ParseDelimitedOptions(
-    const std::string& input, const std::string& option_name) {
+inline Result<ParsedOptions> ParseDelimitedOptions(const std::string& input,
+                                                   const std::string& option_name) {
     if (input.empty()) {
         return Status::Invalid("missing value for ", option_name);
     }

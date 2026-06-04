@@ -435,10 +435,9 @@ Status WriteAndCommit(const std::string& table_path,
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<paimon::WriteContext> write_ctx,
         AddContext(write_builder.SetOptions(options).Finish(), "create write context"));
-    PAIMON_ASSIGN_OR_RAISE(
-        std::unique_ptr<paimon::FileStoreWrite> writer,
-        AddContext(paimon::FileStoreWrite::Create(std::move(write_ctx)),
-                   "create file store writer"));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<paimon::FileStoreWrite> writer,
+                           AddContext(paimon::FileStoreWrite::Create(std::move(write_ctx)),
+                                      "create file store writer"));
 
     PAIMON_RETURN_NOT_OK(WriteSourceDataToWriter(writer.get(), source_spec));
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<paimon::CommitMessage>> messages,
@@ -583,9 +582,8 @@ Result<int64_t> ReadRows(const std::string& table_path,
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<paimon::TableRead> reader,
         AddContext(paimon::TableRead::Create(std::move(read_ctx)), "create table reader"));
-    PAIMON_ASSIGN_OR_RAISE(
-        std::unique_ptr<paimon::BatchReader> batch_reader,
-        AddContext(reader->CreateReader(plan->Splits()), "create batch reader"));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<paimon::BatchReader> batch_reader,
+                           AddContext(reader->CreateReader(plan->Splits()), "create batch reader"));
 
     int64_t total_rows = 0;
     while (true) {
