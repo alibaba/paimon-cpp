@@ -1887,6 +1887,7 @@ TEST_P(WriteInteTest, TestPkTableEnableDeletionVector) {
 }
 
 TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
+    auto file_format = GetParam();
     ::testing::GTEST_FLAG(throw_on_failure) = true;
     // create table
     arrow::FieldVector fields = {
@@ -1895,7 +1896,6 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
     auto schema = arrow::schema(fields);
     std::vector<std::string> primary_keys = {"f0", "f1"};
     std::vector<std::string> partition_keys = {"f1"};
-    auto file_format = GetParam();
     std::map<std::string, std::string> options = {
         {Options::MANIFEST_FORMAT, "orc"},   {Options::FILE_FORMAT, file_format},
         {Options::TARGET_FILE_SIZE, "1024"}, {Options::BUCKET, "2"},
@@ -1904,7 +1904,11 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
     bool run_complete = false;
     auto io_hook = IOHook::GetInstance();
 
-    for (size_t i = 0; i < 500; i++) {
+    // Loop bound must exceed the workflow's total IO operations so the loop can
+    // naturally terminate at the iteration where injection position falls past
+    // the last IO. Measured IO counts: orc=310, parquet=506, avro=195, lance=69.
+    // 1000 leaves headroom for future format/workflow changes.
+    for (size_t i = 0; i < 1000; i++) {
         auto dir = UniqueTestDirectory::Create();
         ASSERT_TRUE(dir);
         ScopeGuard guard([&io_hook]() { io_hook->Clear(); });

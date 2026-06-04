@@ -122,7 +122,22 @@ class PAIMON_EXPORT RecordBatchBuilder {
     /// @param data Map of partition column names to their string values.
     RecordBatchBuilder& SetPartition(const std::map<std::string, std::string>& data);
 
-    /// Set the bucket id for this record batch. If not set, default value is `-1`.
+    /// Set the bucket id for this record batch. If not set, default value is `-2147483648`
+    /// (i.e., `HasSpecifiedBucket()` returns false), and the bucket will be auto-resolved
+    /// at write time based on the table's bucket option:
+    ///
+    /// - **Unaware-bucket mode** (table option `bucket = -1`, append-only table without
+    ///   primary keys): the bucket will be auto-filled with `UNAWARE_BUCKET (0)`. If the
+    ///   caller does specify a bucket, it MUST be `UNAWARE_BUCKET (0)`, otherwise the
+    ///   write fails.
+    /// - **Postpone-bucket mode** (table option `bucket = -2`, primary-key table whose
+    ///   bucket assignment is deferred): the bucket will be auto-filled with
+    ///   `POSTPONE_BUCKET (-2)`. If the caller does specify a bucket, it MUST be
+    ///   `POSTPONE_BUCKET (-2)`, otherwise the write fails.
+    /// - **Fixed-bucket mode** (table option `bucket > 0`): the caller MUST explicitly
+    ///   call `SetBucket()` with a value in `[0, bucket)`; not calling `SetBucket()`
+    ///   (or passing an out-of-range value) will cause the write to fail.
+    ///
     /// @param bucket The bucket id for data distribution.
     RecordBatchBuilder& SetBucket(int32_t bucket);
 

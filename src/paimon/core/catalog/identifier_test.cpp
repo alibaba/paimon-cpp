@@ -111,6 +111,47 @@ TEST(IdentifierTest, ParseBranchSystemTable) {
     ASSERT_TRUE(is_system_table);
 }
 
+TEST(IdentifierTest, TestGetFullName) {
+    {
+        // test unknown database
+        std::string table = "tbl$branch_dev$options";
+        Identifier id(table);
+        ASSERT_EQ(table, id.GetFullName());
+    }
+    {
+        // test normal database
+        std::string db = "database";
+        std::string table = "tbl$branch_dev$options";
+        Identifier id(db, table);
+        ASSERT_EQ("database.tbl$branch_dev$options", id.GetFullName());
+    }
+}
+
+TEST(IdentifierTest, TestFromString) {
+    {
+        // test invalid identifier string
+        ASSERT_NOK_WITH_MSG(Identifier::FromString(""),
+                            "full name cannot be empty or whitespace only");
+        ASSERT_NOK_WITH_MSG(Identifier::FromString("    "),
+                            "full name cannot be empty or whitespace only");
+        ASSERT_NOK_WITH_MSG(Identifier::FromString("abcd"), "cannot get splits from 'abcd'");
+        ASSERT_NOK_WITH_MSG(Identifier::FromString(".abcd"), "cannot get splits from '.abcd'");
+        ASSERT_NOK_WITH_MSG(Identifier::FromString("abcd."), "cannot get splits from 'abcd.'");
+    }
+    {
+        // test normal database
+        ASSERT_OK_AND_ASSIGN(Identifier identifier, Identifier::FromString("ab.cd"));
+        Identifier expected("ab", "cd");
+        ASSERT_EQ(identifier, expected);
+    }
+    {
+        // test normal database
+        ASSERT_OK_AND_ASSIGN(Identifier identifier, Identifier::FromString("ab.cd.ef"));
+        Identifier expected("ab", "cd.ef");
+        ASSERT_EQ(identifier, expected);
+    }
+}
+
 TEST(IdentifierTest, InvalidSystemTableName) {
     Identifier invalid_middle("db", "tbl$bad$options");
     ASSERT_NOK_WITH_MSG(invalid_middle.IsSystemTable(),

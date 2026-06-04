@@ -158,7 +158,7 @@ class LuminaGlobalIndexTest : public ::testing::Test {
         return struct_array;
     }
 
- private:
+ protected:
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
     std::shared_ptr<FileSystem> fs_ = std::make_shared<LocalFileSystem>();
     std::map<std::string, std::string> options_ = {{"lumina.index.dimension", "4"},
@@ -467,6 +467,203 @@ TEST_F(LuminaGlobalIndexTest, TestHighCardinalityAndMultiThreadSearch) {
         if (t.joinable()) {
             t.join();
         }
+    }
+}
+
+TEST_F(LuminaGlobalIndexTest, TestWriteWithNullRows) {
+    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    std::string test_root = test_root_dir->Str();
+
+    // Array with null at row 1 (middle): rows 0,2,3 are valid, row 1 is null
+    // This should split into two segments: [0,0] and [2,3]
+    std::shared_ptr<arrow::Array> array_with_null =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type_,
+                                                  R"([
+        [[0.0, 0.0, 0.0, 0.0]],
+        [null],
+        [[1.0, 0.0, 1.0, 0.0]],
+        [[1.0, 1.0, 1.0, 1.0]]
+    ])")
+            .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(
+        auto meta, WriteGlobalIndex(test_root, data_type_, options_, array_with_null, Range(0, 3)));
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         CreateGlobalIndexReader(test_root, data_type_, options_, meta));
+    {
+        // Search should return ids 0, 2, 3 (skipping null row 1)
+        ASSERT_OK_AND_ASSIGN(
+            auto scored_result,
+            reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+                /*field_name=*/"f0", /*limit=*/4, query_, /*filter=*/nullptr,
+                /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/options_)));
+        // Only 3 vectors indexed (row 1 is null), so limit=4 returns 3
+        CheckResult(scored_result, {3l, 2l, 0l}, {0.01f, 2.21f, 4.21f});
+    }
+}
+
+TEST_F(LuminaGlobalIndexTest, TestWriteWithMultipleNullSegments) {
+    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    std::string test_root = test_root_dir->Str();
+
+    // Nulls at rows 0, 2, 5: valid rows are 1, 3, 4
+    // Splits into segments: [1,1], [3,4]
+    std::shared_ptr<arrow::Array> array_with_nulls =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type_,
+                                                  R"([
+        [null],
+        [[0.0, 1.0, 0.0, 1.0]],
+        [null],
+        [[1.0, 0.0, 1.0, 0.0]],
+        [[1.0, 1.0, 1.0, 1.0]],
+        [null]
+    ])")
+            .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(auto meta, WriteGlobalIndex(test_root, data_type_, options_,
+                                                     array_with_nulls, Range(0, 5)));
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         CreateGlobalIndexReader(test_root, data_type_, options_, meta));
+    {
+        ASSERT_OK_AND_ASSIGN(
+            auto scored_result,
+            reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+                /*field_name=*/"f0", /*limit=*/4, query_, /*filter=*/nullptr,
+                /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/options_)));
+        // Only 3 vectors indexed at ids 1, 3, 4
+        CheckResult(scored_result, {4l, 1l, 3l}, {0.01f, 2.01f, 2.21f});
+    }
+}
+
+TEST_F(LuminaGlobalIndexTest, TestWriteWithAllNullRows) {
+    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    std::string test_root = test_root_dir->Str();
+
+    // All rows are null — no vectors to index
+    std::shared_ptr<arrow::Array> all_null_array =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type_,
+                                                  R"([
+        [null],
+        [null],
+        [null]
+    ])")
+            .ValueOrDie();
+
+    auto global_index = std::make_shared<LuminaGlobalIndex>(options_);
+    auto path_factory = std::make_shared<FakeIndexPathFactory>(test_root);
+    auto file_writer = std::make_shared<GlobalIndexFileManager>(fs_, path_factory);
+
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<GlobalIndexWriter> global_writer,
+        global_index->CreateWriter("f0", CreateArrowSchema(data_type_).get(), file_writer, pool_));
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*all_null_array, &c_array).ok());
+    std::vector<int64_t> row_ids = {0, 1, 2};
+    ASSERT_OK(global_writer->AddBatch(&c_array, std::move(row_ids)));
+    // Finish with zero indexed vectors — returns empty metas
+    ASSERT_OK_AND_ASSIGN(auto result_metas, global_writer->Finish());
+    ASSERT_TRUE(result_metas.empty());
+}
+
+TEST_F(LuminaGlobalIndexTest, TestWriteWithNullAndFilter) {
+    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    std::string test_root = test_root_dir->Str();
+
+    // Null at row 2: valid rows are 0, 1, 3
+    std::shared_ptr<arrow::Array> array_with_null =
+        arrow::ipc::internal::json::ArrayFromJSON(data_type_,
+                                                  R"([
+        [[0.0, 0.0, 0.0, 0.0]],
+        [[0.0, 1.0, 0.0, 1.0]],
+        [null],
+        [[1.0, 1.0, 1.0, 1.0]]
+    ])")
+            .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(
+        auto meta, WriteGlobalIndex(test_root, data_type_, options_, array_with_null, Range(0, 3)));
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         CreateGlobalIndexReader(test_root, data_type_, options_, meta));
+    {
+        // Filter: only allow ids < 3 (filters out id=3), so only ids 0, 1 remain
+        auto filter = [](int64_t id) -> bool { return id < 3; };
+        ASSERT_OK_AND_ASSIGN(
+            auto scored_result,
+            reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+                /*field_name=*/"f0", /*limit=*/4, query_, filter,
+                /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/options_)));
+        CheckResult(scored_result, {1l, 0l}, {2.01f, 4.21f});
+    }
+}
+
+TEST_F(LuminaGlobalIndexTest, TestWriteWithNullAcrossMultipleBatches) {
+    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    std::string test_root = test_root_dir->Str();
+
+    // Batch 1: rows 0-2, null at row 1 → indexed ids: {0, 2}
+    std::shared_ptr<arrow::Array> batch1 = arrow::ipc::internal::json::ArrayFromJSON(data_type_,
+                                                                                     R"([
+        [[0.0, 0.0, 0.0, 0.0]],
+        [null],
+        [[1.0, 0.0, 1.0, 0.0]]
+    ])")
+                                               .ValueOrDie();
+
+    // Batch 2: rows 3-5, null at row 3 → indexed ids: {4, 5}
+    std::shared_ptr<arrow::Array> batch2 = arrow::ipc::internal::json::ArrayFromJSON(data_type_,
+                                                                                     R"([
+        [null],
+        [[1.0, 1.0, 1.0, 1.0]],
+        [[0.0, 1.0, 0.0, 1.0]]
+    ])")
+                                               .ValueOrDie();
+
+    auto global_index = std::make_shared<LuminaGlobalIndex>(options_);
+    auto path_factory = std::make_shared<FakeIndexPathFactory>(test_root);
+    auto file_writer = std::make_shared<GlobalIndexFileManager>(fs_, path_factory);
+
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<GlobalIndexWriter> global_writer,
+        global_index->CreateWriter("f0", CreateArrowSchema(data_type_).get(), file_writer, pool_));
+
+    // AddBatch 1: row_ids {0, 1, 2}
+    {
+        ArrowArray c_array;
+        ASSERT_TRUE(arrow::ExportArray(*batch1, &c_array).ok());
+        std::vector<int64_t> row_ids = {0, 1, 2};
+        ASSERT_OK(global_writer->AddBatch(&c_array, std::move(row_ids)));
+    }
+    // AddBatch 2: row_ids {3, 4, 5}
+    {
+        ArrowArray c_array;
+        ASSERT_TRUE(arrow::ExportArray(*batch2, &c_array).ok());
+        std::vector<int64_t> row_ids = {3, 4, 5};
+        ASSERT_OK(global_writer->AddBatch(&c_array, std::move(row_ids)));
+    }
+
+    ASSERT_OK_AND_ASSIGN(auto result_metas, global_writer->Finish());
+    ASSERT_EQ(result_metas.size(), 1);
+
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         CreateGlobalIndexReader(test_root, data_type_, options_, result_metas[0]));
+    {
+        // Search all: should return ids {0, 2, 4, 5}, never {1, 3}
+        ASSERT_OK_AND_ASSIGN(
+            auto scored_result,
+            reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+                /*field_name=*/"f0", /*limit=*/10, query_, /*filter=*/nullptr,
+                /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/options_)));
+        // id 0: [0,0,0,0] → L2 dist to [1,1,1,1.1] = 4.21
+        // id 2: [1,0,1,0] → L2 dist = 2.21
+        // id 4: [1,1,1,1] → L2 dist = 0.01
+        // id 5: [0,1,0,1] → L2 dist = 2.01
+        CheckResult(scored_result, {4l, 5l, 2l, 0l}, {0.01f, 2.01f, 2.21f, 4.21f});
     }
 }
 

@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string_view>
 #include <vector>
@@ -36,6 +37,7 @@ struct ArrowArray;
 
 namespace paimon {
 class Blob;
+class BlobDescriptor;
 class FileSystem;
 class Metrics;
 class OutputStream;
@@ -47,9 +49,14 @@ namespace paimon::blob {
 // https://cwiki.apache.org/confluence/display/PAIMON/PIP-35%3A+Introduce+Blob+to+store+multimodal+data
 class BlobFormatWriter : public FormatWriter {
  public:
+    /// Callback invoked after each blob row is written.
+    /// Receives the BlobDescriptor of the written blob (nullptr for null blobs).
+    /// Similar to Java's BlobConsumer. Returns true if the output stream should be flushed.
+    using WriteConsumer = std::function<bool(std::unique_ptr<BlobDescriptor> descriptor)>;
+
     static Result<std::unique_ptr<BlobFormatWriter>> Create(
-        bool blob_as_descriptor, const std::shared_ptr<OutputStream>& out,
-        const std::shared_ptr<arrow::DataType>& data_type, const std::shared_ptr<FileSystem>& fs,
+        const std::shared_ptr<OutputStream>& out, const std::shared_ptr<arrow::DataType>& data_type,
+        WriteConsumer write_consumer, const std::shared_ptr<FileSystem>& fs,
         const std::shared_ptr<MemoryPool>& pool);
 
     Status AddBatch(ArrowArray* batch) override;
@@ -65,9 +72,9 @@ class BlobFormatWriter : public FormatWriter {
     }
 
  private:
-    BlobFormatWriter(bool blob_as_descriptor, const std::shared_ptr<OutputStream>& out,
+    BlobFormatWriter(const std::shared_ptr<OutputStream>& out, const std::string& uri,
                      const std::shared_ptr<arrow::DataType>& data_type,
-                     const std::shared_ptr<FileSystem>& fs,
+                     WriteConsumer write_consumer, const std::shared_ptr<FileSystem>& fs,
                      const std::shared_ptr<MemoryPool>& pool);
 
     Status WriteBlob(std::string_view blob_data);
@@ -83,15 +90,16 @@ class BlobFormatWriter : public FormatWriter {
     static constexpr uint32_t kTmpBufferSize = 1024 * 1024;
 
  private:
-    bool blob_as_descriptor_;
     uint32_t crc32_ = 0;
     std::vector<int64_t> bin_lengths_;
     std::shared_ptr<OutputStream> out_;
+    std::string uri_;
     PAIMON_UNIQUE_PTR<Bytes> tmp_buffer_;
     std::shared_ptr<arrow::DataType> data_type_;
     std::shared_ptr<FileSystem> fs_;
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<Metrics> metrics_;
+    WriteConsumer write_consumer_;
 };
 
 }  // namespace paimon::blob

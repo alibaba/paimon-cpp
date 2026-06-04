@@ -17,6 +17,7 @@
 #include "paimon/core/casting/cast_executor_factory.h"
 
 #include "gtest/gtest.h"
+#include "paimon/core/casting/binary_to_blob_cast_executor.h"
 #include "paimon/core/casting/binary_to_string_cast_executor.h"
 #include "paimon/core/casting/boolean_to_decimal_cast_executor.h"
 #include "paimon/core/casting/boolean_to_numeric_cast_executor.h"
@@ -119,6 +120,13 @@ TEST(CastExecutorFactoryTest, TestRegister) {
         auto cast_executor = factory->GetCastExecutor(FieldType::BINARY, FieldType::STRING);
         ASSERT_TRUE(cast_executor);
         ASSERT_TRUE(std::dynamic_pointer_cast<BinaryToStringCastExecutor>(cast_executor));
+    }
+    {
+        auto* factory = CastExecutorFactory::GetCastExecutorFactory();
+        ASSERT_FALSE(factory->executor_map_.empty());
+        auto cast_executor = factory->GetCastExecutor(FieldType::BINARY, FieldType::BLOB);
+        ASSERT_TRUE(cast_executor);
+        ASSERT_TRUE(std::dynamic_pointer_cast<BinaryToBlobCastExecutor>(cast_executor));
     }
     {
         auto* factory = CastExecutorFactory::GetCastExecutorFactory();

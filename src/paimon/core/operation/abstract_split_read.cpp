@@ -21,6 +21,7 @@
 #include <utility>
 
 #include "arrow/type.h"
+#include "paimon/common/data/blob_utils.h"
 #include "paimon/common/reader/delegating_prefetch_reader.h"
 #include "paimon/common/reader/predicate_batch_reader.h"
 #include "paimon/common/reader/prefetch_file_batch_reader_impl.h"
@@ -101,29 +102,6 @@ bool AbstractSplitRead::NeedCompleteRowTrackingFields(
     }
     return false;
 }
-
-std::unordered_map<std::string, DeletionFile> AbstractSplitRead::CreateDeletionFileMap(
-    const DataSplitImpl& data_split) {
-    return CreateDeletionFileMap(data_split.DataFiles(), data_split.DeletionFiles());
-}
-
-std::unordered_map<std::string, DeletionFile> AbstractSplitRead::CreateDeletionFileMap(
-    const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
-    const std::vector<std::optional<DeletionFile>>& deletion_files) {
-    std::unordered_map<std::string, DeletionFile> deletion_file_map;
-    if (deletion_files.empty()) {
-        return deletion_file_map;
-    }
-    assert(deletion_files.size() == data_files.size());
-    size_t file_count = deletion_files.size();
-    for (size_t i = 0; i < file_count; i++) {
-        if (deletion_files[i] != std::nullopt) {
-            deletion_file_map.emplace(data_files[i]->file_name, deletion_files[i].value());
-        }
-    }
-    return deletion_file_map;
-}
-
 Result<std::unique_ptr<BatchReader>> AbstractSplitRead::ApplyPredicateFilterIfNeeded(
     std::unique_ptr<BatchReader>&& reader, const std::shared_ptr<Predicate>& predicate) const {
     if (!context_->EnablePredicateFilter() || predicate == nullptr) {
@@ -182,6 +160,10 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingRe
         // load schema to get data schema
         PAIMON_ASSIGN_OR_RAISE(data_schema, schema_manager_->ReadSchema(file_meta->schema_id));
     }
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions data_options,
+                           CoreOptions::FromMap(data_schema->Options(), options_.GetFileSystem()));
+    auto blob_inline_fields = data_options.GetBlobInlineFields();
+
     std::unique_ptr<FieldMapping> field_mapping;
     if (!data_schema->PrimaryKeys().empty()) {
         // for pk table, add special fields to file schema when field mapping
@@ -195,8 +177,10 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingRe
         PAIMON_ASSIGN_OR_RAISE(
             std::vector<DataField> projected_data_fields,
             ProjectFieldsForRowTrackingAndDataEvolution(data_schema, file_meta->write_cols));
+        auto converted_fields =
+            BlobUtils::ConvertBlobInlineDataFields(projected_data_fields, blob_inline_fields);
         PAIMON_ASSIGN_OR_RAISE(field_mapping,
-                               field_mapping_builder->CreateFieldMapping(projected_data_fields));
+                               field_mapping_builder->CreateFieldMapping(converted_fields));
     }
 
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(

@@ -365,7 +365,7 @@ struct PAIMON_EXPORT Options {
     /// "partition.legacy-name" - The legacy partition name is using `ToString` for all types. If
     /// false, using casting to string for all types. Default value is "true".
     static const char PARTITION_GENERATE_LEGACY_NAME[];
-    /// "blob-as-descriptor" - Read and write blob field using blob descriptor rather than blob
+    /// "blob-as-descriptor" - Read blob field using blob descriptor rather than blob
     /// bytes. Default value is "false".
     static const char BLOB_AS_DESCRIPTOR[];
     /// "blob-field" - Specifies column names that should be stored as blob type. This is used

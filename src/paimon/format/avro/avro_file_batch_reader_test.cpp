@@ -403,6 +403,56 @@ TEST_F(AvroFileBatchReaderTest, TestGetNumberOfRows) {
     }
 }
 
+TEST_F(AvroFileBatchReaderTest, TestReadBinaryWrittenFromBinaryAndLargeBinary) {
+    auto check_binary_read_result = [&](const std::shared_ptr<arrow::DataType>& write_type,
+                                        const std::string& file_name) {
+        std::string data_json = R"([
+            ["descriptor-1"],
+            [""],
+            [null],
+            ["descriptor-2"]
+        ])";
+        auto write_field = arrow::field("f0", write_type);
+        auto write_data_type = arrow::struct_({write_field});
+        auto write_array =
+            arrow::ipc::internal::json::ArrayFromJSON(write_data_type, data_json).ValueOrDie();
+
+        std::string file_path = PathUtil::JoinPath(dir_->Str(), file_name);
+        WriteData(write_array, file_path, /*compression=*/"null");
+
+        // Read back with binary schema
+        auto read_field = arrow::field("f0", arrow::binary());
+        auto read_data_type = arrow::struct_({read_field});
+
+        ASSERT_OK_AND_ASSIGN(auto reader_builder,
+                             file_format_->CreateReaderBuilder(/*batch_size=*/1024));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_path));
+        ASSERT_OK_AND_ASSIGN(auto batch_reader, reader_builder->Build(in));
+
+        // Check GetFileSchema: regardless of write type, avro file schema is always binary
+        ASSERT_OK_AND_ASSIGN(auto c_file_schema, batch_reader->GetFileSchema());
+        auto file_schema = arrow::ImportSchema(c_file_schema.get()).ValueOrDie();
+        arrow::Schema expected_file_schema({read_field});
+        ASSERT_TRUE(file_schema->Equals(expected_file_schema));
+
+        auto read_schema = arrow::schema({read_field});
+        std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
+        ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
+        EXPECT_OK(batch_reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr,
+                                              /*selection_bitmap=*/std::nullopt));
+
+        ASSERT_OK_AND_ASSIGN(auto result_array, ::paimon::test::ReadResultCollector::CollectResult(
+                                                    batch_reader.get()));
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(read_data_type, data_json).ValueOrDie();
+        auto expected_chunked_array = std::make_shared<arrow::ChunkedArray>(expected_array);
+        ASSERT_TRUE(result_array->Equals(expected_chunked_array));
+    };
+
+    check_binary_read_result(arrow::binary(), "binary.avro");
+    check_binary_read_result(arrow::large_binary(), "large-binary.avro");
+}
+
 INSTANTIATE_TEST_SUITE_P(TestParam, AvroFileBatchReaderTest, ::testing::Values(false, true));
 
 }  // namespace paimon::avro::test

@@ -16,10 +16,13 @@
 
 #include "paimon/core/table/source/append_only_table_read.h"
 
+#include <utility>
+
 #include "paimon/core/core_options.h"
 #include "paimon/core/operation/data_evolution_split_read.h"
 #include "paimon/core/operation/internal_read_context.h"
 #include "paimon/core/operation/raw_file_split_read.h"
+#include "paimon/core/table/source/append_count_reader.h"
 #include "paimon/status.h"
 
 namespace paimon {
@@ -32,7 +35,7 @@ AppendOnlyTableRead::AppendOnlyTableRead(const std::shared_ptr<FileStorePathFact
                                          const std::shared_ptr<InternalReadContext>& context,
                                          const std::shared_ptr<MemoryPool>& memory_pool,
                                          const std::shared_ptr<Executor>& executor)
-    : TableRead(memory_pool) {
+    : TableRead(memory_pool), context_(context) {
     const auto& core_options = context->GetCoreOptions();
     if (core_options.DataEvolutionEnabled()) {
         // add data evolution first
@@ -53,6 +56,17 @@ Result<std::unique_ptr<BatchReader>> AppendOnlyTableRead::CreateReader(
         }
     }
     return Status::Invalid("create reader failed, not read match with split.");
+}
+
+Result<std::unique_ptr<CountReader>> AppendOnlyTableRead::CreateCountReader(
+    const std::vector<std::shared_ptr<Split>>& splits) {
+    if (context_->GetPredicate() != nullptr) {
+        return Status::NotImplemented(
+            "CreateCountReader with predicate pushdown is not supported yet");
+    }
+
+    return std::make_unique<AppendCountReader>(splits, context_->GetCoreOptions().GetFileSystem(),
+                                               GetMemoryPool());
 }
 
 }  // namespace paimon

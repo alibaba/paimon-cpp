@@ -25,6 +25,7 @@ set(PAIMON_COMMON_SRCS
     common/data/binary_string.cpp
     common/data/blob.cpp
     common/data/blob_descriptor.cpp
+    common/data/blob_view_struct.cpp
     common/data/blob_utils.cpp
     common/data/columnar/columnar_array.cpp
     common/data/columnar/columnar_map.cpp
@@ -110,6 +111,7 @@ set(PAIMON_COMMON_SRCS
     common/reader/predicate_batch_reader.cpp
     common/reader/prefetch_file_batch_reader_impl.cpp
     common/reader/reader_utils.cpp
+    common/reader/blob_view_resolving_batch_reader.cpp
     common/reader/complete_row_kind_batch_reader.cpp
     common/reader/data_evolution_file_reader.cpp
     common/sst/block_handle.cpp
@@ -159,6 +161,7 @@ set(PAIMON_CORE_SRCS
     core/bucket/hive_bucket_function.cpp
     core/bucket/mod_bucket_function.cpp
     core/bucket/bucket_id_calculator.cpp
+    core/casting/binary_to_blob_cast_executor.cpp
     core/casting/binary_to_string_cast_executor.cpp
     core/casting/boolean_to_decimal_cast_executor.cpp
     core/casting/boolean_to_numeric_cast_executor.cpp
@@ -222,6 +225,7 @@ set(PAIMON_CORE_SRCS
     core/io/key_value_meta_projection_consumer.cpp
     core/io/key_value_projection_consumer.cpp
     core/io/key_value_projection_reader.cpp
+    core/io/external_storage_blob_writer.cpp
     core/io/multiple_blob_file_writer.cpp
     core/io/rolling_blob_file_writer.cpp
     core/manifest/file_kind.cpp
@@ -262,6 +266,7 @@ set(PAIMON_CORE_SRCS
     core/mergetree/lookup_file.cpp
     core/mergetree/lookup_levels.cpp
     core/mergetree/lookup/remote_lookup_file_manager.cpp
+    core/mergetree/row_count_accumulator.cpp
     core/migrate/file_meta_utils.cpp
     core/operation/data_evolution_file_store_scan.cpp
     core/operation/data_evolution_split_read.cpp
@@ -303,6 +308,7 @@ set(PAIMON_CORE_SRCS
     core/table/sink/commit_message.cpp
     core/table/sink/commit_message_impl.cpp
     core/table/sink/commit_message_serializer.cpp
+    core/table/source/append_count_reader.cpp
     core/table/source/append_only_table_read.cpp
     core/table/source/split.cpp
     core/table/source/data_split_impl.cpp
@@ -310,6 +316,7 @@ set(PAIMON_CORE_SRCS
     core/table/source/data_table_stream_scan.cpp
     core/table/source/fallback_table_read.cpp
     core/table/source/key_value_table_read.cpp
+    core/table/source/pk_count_reader.cpp
     core/table/source/merge_tree_split_generator.cpp
     core/table/source/data_evolution_split_generator.cpp
     core/table/source/plan_impl.cpp
@@ -327,6 +334,7 @@ set(PAIMON_CORE_SRCS
     core/table/system/system_table_schema.cpp
     core/tag/tag.cpp
     core/utils/branch_manager.cpp
+    core/utils/blob_view_lookup.cpp
     core/utils/consumer_manager.cpp
     core/utils/field_mapping.cpp
     core/utils/file_store_path_factory.cpp
@@ -403,6 +411,7 @@ if(PAIMON_BUILD_TESTS)
                     common/data/timestamp_test.cpp
                     common/data/blob_test.cpp
                     common/data/blob_descriptor_test.cpp
+                    common/data/blob_view_struct_test.cpp
                     common/data/blob_utils_test.cpp
                     common/executor/default_executor_test.cpp
                     common/format/column_stats_test.cpp
@@ -465,6 +474,7 @@ if(PAIMON_BUILD_TESTS)
                     common/reader/prefetch_file_batch_reader_impl_test.cpp
                     common/reader/reader_utils_test.cpp
                     common/reader/complete_row_kind_batch_reader_test.cpp
+                    common/reader/blob_view_resolving_batch_reader_test.cpp
                     common/reader/data_evolution_file_reader_test.cpp
                     common/reader/data_evolution_array_test.cpp
                     common/reader/data_evolution_row_test.cpp
@@ -601,6 +611,7 @@ if(PAIMON_BUILD_TESTS)
                     core/io/file_index_evaluator_test.cpp
                     core/io/single_file_writer_test.cpp
                     core/io/rolling_blob_file_writer_test.cpp
+                    core/io/external_storage_blob_writer_test.cpp
                     core/global_index/indexed_split_test.cpp
                     core/manifest/file_source_test.cpp
                     core/manifest/file_kind_test.cpp
@@ -700,6 +711,8 @@ if(PAIMON_BUILD_TESTS)
                     core/table/sink/commit_message_impl_test.cpp
                     core/table/source/fallback_data_split_test.cpp
                     core/table/source/table_read_test.cpp
+                    core/table/source/append_count_reader_test.cpp
+                    core/table/source/pk_count_reader_test.cpp
                     core/table/source/data_split_test.cpp
                     core/table/source/deletion_file_test.cpp
                     core/table/source/split_generator_test.cpp
@@ -707,6 +720,7 @@ if(PAIMON_BUILD_TESTS)
                     core/table/source/table_scan_test.cpp
                     core/table/system/system_table_test.cpp
                     core/tag/tag_test.cpp
+                    core/utils/blob_view_lookup_test.cpp
                     core/utils/branch_manager_test.cpp
                     core/utils/consumer_manager_test.cpp
                     core/utils/file_store_path_factory_cache_test.cpp

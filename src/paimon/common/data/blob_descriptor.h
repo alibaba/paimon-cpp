@@ -38,7 +38,7 @@ namespace paimon {
 /// | 13 + N | offset        | long      | 8    |
 /// | 21 + N | length        | long      | 8    |
 
-class BlobDescriptor {
+class PAIMON_EXPORT BlobDescriptor {
  public:
     static Result<std::unique_ptr<BlobDescriptor>> Create(const std::string& uri, int64_t offset,
                                                           int64_t length);
