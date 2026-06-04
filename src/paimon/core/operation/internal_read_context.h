@@ -98,6 +98,14 @@ class InternalReadContext {
         return read_context_->GetCacheConfig();
     }
 
+    /// Create a new InternalReadContext with a different read schema.
+    /// Useful for creating a context with a minimal column set for specialized reads.
+    /// All other settings (predicate, options, table_schema, etc.) are inherited
+    /// from the original context.
+    static Result<std::shared_ptr<InternalReadContext>> CreateWithSchema(
+        const std::shared_ptr<InternalReadContext>& original,
+        const std::shared_ptr<arrow::Schema>& new_read_schema);
+
  private:
     InternalReadContext(const std::shared_ptr<ReadContext>& read_context,
                         const std::shared_ptr<TableSchema>& table_schema,

@@ -36,7 +36,7 @@ class PAIMON_EXPORT Identifier {
     explicit Identifier(const std::string& table);
     Identifier(const std::string& database, const std::string& table);
 
-    bool operator==(const Identifier& other);
+    bool operator==(const Identifier& other) const;
     const std::string& GetDatabaseName() const;
     const std::string& GetTableName() const;
     Result<std::string> GetDataTableName() const;
@@ -44,7 +44,12 @@ class PAIMON_EXPORT Identifier {
     Result<std::string> GetBranchNameOrDefault() const;
     Result<std::optional<std::string>> GetSystemTableName() const;
     Result<bool> IsSystemTable() const;
+    std::string GetFullName() const;
     std::string ToString() const;
+    int32_t HashCode() const;
+
+ public:
+    static Result<Identifier> FromString(const std::string& full_name);
 
  private:
     Status SplitTableName() const;
@@ -58,3 +63,13 @@ class PAIMON_EXPORT Identifier {
 };
 
 }  // namespace paimon
+
+namespace std {
+template <>
+struct hash<paimon::Identifier> {
+    size_t operator()(const paimon::Identifier& identifier) const {
+        return identifier.HashCode();
+    }
+};
+
+}  // namespace std
