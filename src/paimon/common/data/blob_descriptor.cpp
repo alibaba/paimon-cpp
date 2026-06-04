@@ -50,7 +50,7 @@ Result<std::unique_ptr<BlobDescriptor>> BlobDescriptor::Create(int8_t version,
 PAIMON_UNIQUE_PTR<Bytes> BlobDescriptor::Serialize(const std::shared_ptr<MemoryPool>& pool) const {
     MemorySegmentOutputStream out(MemorySegmentOutputStream::DEFAULT_SEGMENT_SIZE, pool);
     out.SetOrder(ByteOrder::PAIMON_LITTLE_ENDIAN);
-    out.WriteValue<int8_t>(version_);
+    out.WriteValue<int8_t>(kCurrentVersion);
     out.WriteValue<int64_t>(kMagic);
     out.WriteValue<int32_t>(static_cast<int32_t>(uri_.size()));
 
