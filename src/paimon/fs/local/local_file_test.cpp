@@ -29,14 +29,14 @@ TEST(LocalFileTest, TestReadWriteEmptyContent) {
     auto test_root_dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(test_root_dir);
     std::string test_root = test_root_dir->Str();
-    LocalFile dir = LocalFile(test_root);
+    ASSERT_OK_AND_ASSIGN(auto dir, LocalFile::Create(test_root));
     if (dir.Exists().ok()) {
         ASSERT_TRUE(dir.Delete().ok());
     }
     ASSERT_OK_AND_ASSIGN(bool success, dir.Mkdir());
     ASSERT_TRUE(success);
     std::string path = test_root + "/test.txt";
-    LocalFile file = LocalFile(path);
+    ASSERT_OK_AND_ASSIGN(auto file, LocalFile::Create(path));
     if (file.Exists().ok()) {
         ASSERT_TRUE(file.Delete().ok());
     }
@@ -55,7 +55,7 @@ TEST(LocalFileTest, TestReadWriteEmptyContent) {
 
     ASSERT_OK(file.Close());
 
-    LocalFile file2(path);
+    ASSERT_OK_AND_ASSIGN(auto file2, LocalFile::Create(path));
     ASSERT_OK(file2.OpenFile(/*is_read_file=*/true));
     char buffer[10];
     ASSERT_OK_AND_ASSIGN(int32_t read_len, file2.Read(buffer, 10));
@@ -66,14 +66,14 @@ TEST(LocalFileTest, TestSimple) {
     auto test_root_dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(test_root_dir);
     std::string test_root = test_root_dir->Str();
-    LocalFile dir = LocalFile(test_root);
+    ASSERT_OK_AND_ASSIGN(auto dir, LocalFile::Create(test_root));
     if (dir.Exists().ok()) {
         ASSERT_OK(dir.Delete());
     }
     ASSERT_OK_AND_ASSIGN(bool success, dir.Mkdir());
     ASSERT_TRUE(success);
     std::string path = test_root + "/test.txt";
-    LocalFile file = LocalFile(path);
+    ASSERT_OK_AND_ASSIGN(auto file, LocalFile::Create(path));
     if (file.Exists().ok()) {
         ASSERT_OK(file.Delete());
     }
@@ -102,7 +102,7 @@ TEST(LocalFileTest, TestSimple) {
     ASSERT_OK_AND_ASSIGN(size_t len, file.Length());
     ASSERT_EQ(len, str_size);
 
-    LocalFile file2 = LocalFile(path);
+    ASSERT_OK_AND_ASSIGN(auto file2, LocalFile::Create(path));
     ASSERT_OK(file2.Exists());
 
     ASSERT_OK(file2.OpenFile(true));
@@ -139,17 +139,17 @@ TEST(LocalFileTest, TestSimple) {
 
 TEST(LocalFileTest, TestUsage) {
     std::string test_root = "local_file_test_usage";
-    LocalFile dir = LocalFile(test_root);
+    ASSERT_OK_AND_ASSIGN(auto dir, LocalFile::Create(test_root));
     ASSERT_OK_AND_ASSIGN(bool success, dir.Mkdir());
     ASSERT_TRUE(success);
     std::vector<std::string> file_list;
     ASSERT_OK(dir.List(&file_list));
     std::string path_deep_dir = test_root + "/tmp2";
-    LocalFile deep_dir = LocalFile(path_deep_dir);
+    ASSERT_OK_AND_ASSIGN(auto deep_dir, LocalFile::Create(path_deep_dir));
     ASSERT_OK_AND_ASSIGN(success, deep_dir.Mkdir());
     ASSERT_TRUE(success);
     LocalFile parent_deep_dir = deep_dir.GetParentFile();
-    ASSERT_EQ(parent_deep_dir.GetAbsolutePath(), test_root);
+    ASSERT_EQ(parent_deep_dir.GetPath(), dir.GetPath());
     ASSERT_OK(deep_dir.Delete());
     ASSERT_OK(parent_deep_dir.Delete());
     ASSERT_OK(dir.Delete());
@@ -159,14 +159,14 @@ TEST(LocalFileTest, TestOpenFile) {
     auto test_root_dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(test_root_dir);
     std::string test_root = test_root_dir->Str();
-    LocalFile dir = LocalFile(test_root);
+    ASSERT_OK_AND_ASSIGN(auto dir, LocalFile::Create(test_root));
     if (dir.Exists().ok()) {
         ASSERT_OK(dir.Delete());
     }
     ASSERT_OK_AND_ASSIGN(bool success, dir.Mkdir());
     ASSERT_TRUE(success);
     std::string path = test_root + "/test.txt";
-    LocalFile file = LocalFile(path);
+    ASSERT_OK_AND_ASSIGN(auto file, LocalFile::Create(path));
     if (file.Exists().ok()) {
         ASSERT_OK(file.Delete());
     }
@@ -177,15 +177,15 @@ TEST(LocalFileTest, TestOpenFile) {
     ASSERT_NOK_WITH_MSG(dir.OpenFile(/*is_read_file=*/true), "cannot open a directory");
 
     std::string path3 = "test.txt";
-    LocalFile file3 = LocalFile(path3);
+    ASSERT_OK_AND_ASSIGN(auto file3, LocalFile::Create(path3));
     ASSERT_OK(file3.OpenFile(/*is_read_file=*/false));
     ASSERT_OK_AND_ASSIGN(int64_t modify_time, file3.LastModifiedTimeMs());
     ASSERT_GE(modify_time, -1);
 
-    LocalFile dir2 = LocalFile("/");
+    ASSERT_OK_AND_ASSIGN(auto dir2, LocalFile::Create("/"));
     ASSERT_OK_AND_ASSIGN(success, dir2.Mkdir());
     ASSERT_FALSE(success);
-    LocalFile dir3 = LocalFile(test_root + "/");
+    ASSERT_OK_AND_ASSIGN(auto dir3, LocalFile::Create(test_root + "/"));
     ASSERT_OK_AND_ASSIGN(success, dir3.Mkdir());
     ASSERT_FALSE(success);
 }
@@ -195,27 +195,27 @@ TEST(LocalFileTest, TestMkdir) {
     ASSERT_TRUE(test_root_dir);
     std::string test_root = test_root_dir->Str();
     {
-        LocalFile dir = LocalFile(test_root + "tmp/local/f/1");
+        ASSERT_OK_AND_ASSIGN(auto dir, LocalFile::Create(test_root + "tmp/local/f/1"));
         ASSERT_OK_AND_ASSIGN(bool success, dir.Mkdir());
         ASSERT_FALSE(success);
     }
     {
-        LocalFile dir = LocalFile(test_root + "tmp1");
+        ASSERT_OK_AND_ASSIGN(auto dir, LocalFile::Create(test_root + "tmp1"));
         ASSERT_OK_AND_ASSIGN(bool success, dir.Mkdir());
         ASSERT_TRUE(success);
     }
     {
-        LocalFile dir = LocalFile(test_root + "tmp1/f2/");
+        ASSERT_OK_AND_ASSIGN(auto dir, LocalFile::Create(test_root + "tmp1/f2/"));
         ASSERT_OK_AND_ASSIGN(bool success, dir.Mkdir());
         ASSERT_TRUE(success);
     }
     {
-        LocalFile dir = LocalFile("/");
+        ASSERT_OK_AND_ASSIGN(auto dir, LocalFile::Create("/"));
         ASSERT_OK_AND_ASSIGN(bool success, dir.Mkdir());
         ASSERT_FALSE(success);
     }
     {
-        LocalFile dir = LocalFile("");
+        ASSERT_OK_AND_ASSIGN(auto dir, LocalFile::Create(""));
         ASSERT_OK_AND_ASSIGN(bool success, dir.Mkdir());
         ASSERT_FALSE(success);
     }

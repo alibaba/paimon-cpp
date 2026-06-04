@@ -74,7 +74,7 @@ class LocalInputStream : public InputStream {
 
     Status Close() override;
     Result<std::string> GetUri() const override {
-        return file_.GetAbsolutePath();
+        return file_.GetPath();
     }
     Result<uint64_t> Length() const override;
 
@@ -93,7 +93,7 @@ class LocalOutputStream : public OutputStream {
     Status Flush() override;
     Status Close() override;
     Result<std::string> GetUri() const override {
-        return file_.GetAbsolutePath();
+        return file_.GetPath();
     }
 
  private:

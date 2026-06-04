@@ -54,7 +54,7 @@ Result<std::unique_ptr<OutputStream>> LocalFileSystem::Create(const std::string&
     }
     PAIMON_ASSIGN_OR_RAISE(LocalFile file, LocalFile::Create(path));
     LocalFile parent = file.GetParentFile();
-    PAIMON_RETURN_NOT_OK(Mkdirs(parent.GetAbsolutePath()));
+    PAIMON_RETURN_NOT_OK(Mkdirs(parent.GetPath()));
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalOutputStream> out, LocalOutputStream::Create(file));
     return out;
 }
@@ -75,7 +75,7 @@ Status LocalFileSystem::MkdirsInternal(const LocalFile& file) const {
         } else {
             // exists and is not a directory -> is a regular file
             return Status::IOError(fmt::format("file {} already exists and is not a directory",
-                                               file.GetAbsolutePath()));
+                                               file.GetPath()));
         }
     }
 
@@ -90,7 +90,7 @@ Status LocalFileSystem::MkdirsInternal(const LocalFile& file) const {
             return Status::OK();
         } else {
             return Status::IOError(
-                fmt::format("create directory '{}' failed", file.GetAbsolutePath()));
+                fmt::format("create directory '{}' failed", file.GetPath()));
         }
     }
     return Status::OK();
@@ -105,7 +105,7 @@ Result<std::unique_ptr<FileStatus>> LocalFileSystem::GetFileStatus(const std::st
         return Status::NotExist(
             fmt::format("File {} does not exist or the user running "
                         "Paimon has insufficient permissions to access it.",
-                        file.GetAbsolutePath()));
+                        file.GetPath()));
     }
 }
 
@@ -120,7 +120,7 @@ Status LocalFileSystem::ListDir(
     PAIMON_ASSIGN_OR_RAISE(bool is_file, file.IsFile());
     if (is_file) {
         return Status::IOError(
-            fmt::format("file {} already exists and is not a directory", file.GetAbsolutePath()));
+            fmt::format("file {} already exists and is not a directory", file.GetPath()));
     } else {
         std::vector<std::string> file_list;
         PAIMON_RETURN_NOT_OK(file.List(&file_list));
@@ -183,7 +183,7 @@ Status LocalFileSystem::Delete(const LocalFile& f, bool recursive) const {
         PAIMON_RETURN_NOT_OK(f.ListFiles(&files));
         if (recursive == false && !files.empty()) {
             return Status::IOError(
-                fmt::format("cannot delete {}, directory is not empty", f.GetAbsolutePath()));
+                fmt::format("cannot delete {}, directory is not empty", f.GetPath()));
         }
         for (const auto& file : files) {
             PAIMON_RETURN_NOT_OK(Delete(file));
@@ -212,8 +212,8 @@ Status LocalFileSystem::Rename(const std::string& src, const std::string& dst) c
     }
     PAIMON_ASSIGN_OR_RAISE(LocalFile dst_file, LocalFile::Create(dst));
     auto parent = dst_file.GetParentFile();
-    PAIMON_RETURN_NOT_OK(Mkdirs(parent.GetAbsolutePath()));
-    if (::rename(src_file.GetAbsolutePath().c_str(), dst_file.GetAbsolutePath().c_str()) != 0) {
+    PAIMON_RETURN_NOT_OK(Mkdirs(parent.GetPath()));
+    if (::rename(src_file.GetPath().c_str(), dst_file.GetPath().c_str()) != 0) {
         int32_t cur_errno = errno;
         return Status::IOError(err_msg, std::strerror(cur_errno));
     }
@@ -256,7 +256,7 @@ Result<int32_t> LocalInputStream::Read(char* buffer, uint32_t size) {
     PAIMON_ASSIGN_OR_RAISE(int32_t read_length, file_.Read(buffer, size));
     if (read_length != static_cast<int32_t>(size)) {
         return Status::IOError(fmt::format("file '{}' read size {} != expected {}",
-                                           file_.GetAbsolutePath(), read_length, size));
+                                           file_.GetPath(), read_length, size));
     }
     return read_length;
 }
@@ -265,7 +265,7 @@ Result<int32_t> LocalInputStream::Read(char* buffer, uint32_t size, uint64_t off
     PAIMON_ASSIGN_OR_RAISE(int32_t read_length, file_.Read(buffer, size, offset));
     if (read_length != static_cast<int32_t>(size)) {
         return Status::IOError(fmt::format("file '{}' read size {} != expected {}",
-                                           file_.GetAbsolutePath(), read_length, size));
+                                           file_.GetPath(), read_length, size));
     }
     return read_length;
 }

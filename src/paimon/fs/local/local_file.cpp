@@ -182,7 +182,7 @@ LocalFile LocalFile::GetParentFile() const {
     }
 }
 
-const std::string& LocalFile::GetAbsolutePath() const {
+const std::string& LocalFile::GetPath() const {
     return path_;
 }
 

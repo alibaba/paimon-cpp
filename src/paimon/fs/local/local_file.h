@@ -45,7 +45,7 @@ class LocalFile {
     Status List(std::vector<std::string>* file_list) const;
     Status ListFiles(std::vector<LocalFile>* file_list) const;
     Status Delete() const;
-    const std::string& GetAbsolutePath() const;
+    const std::string& GetPath() const;
     LocalFile GetParentFile() const;
     Result<bool> Mkdir() const;
     Result<std::unique_ptr<LocalFileStatus>> GetFileStatus() const;
