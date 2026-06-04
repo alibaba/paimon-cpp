@@ -80,9 +80,14 @@ Result<std::shared_ptr<Plan>> DataTableBatchScan::ApplyPushDownLimit(
             return Status::Invalid("DataSplit cannot cast to DataSplitImpl");
         }
         if (data_split->RawConvertible()) {
-            int64_t partial_merged_row_count = data_split->PartialMergedRowCount();
+            PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> partial_merged_row_count,
+                                   data_split->MergedRowCount());
+            if (!partial_merged_row_count.has_value()) {
+                // Cannot safely estimate split rows from metadata; skip push-down limit.
+                return current_scan_result->GetPlan();
+            }
             limited_data_splits.emplace_back(data_split);
-            scanned_row_count += partial_merged_row_count;
+            scanned_row_count += partial_merged_row_count.value();
             if (scanned_row_count >= push_down_limit_.value()) {
                 PAIMON_ASSIGN_OR_RAISE(int64_t snapshot_id, current_scan_result->SnapshotId());
                 return std::make_shared<PlanImpl>(snapshot_id, limited_data_splits);
