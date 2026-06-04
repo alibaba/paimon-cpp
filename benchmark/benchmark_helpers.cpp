@@ -18,6 +18,8 @@
 
 #include <iostream>
 
+#include "fmt/format.h"
+
 #include "benchmark/benchmark.h"
 
 namespace paimon::benchmark {
@@ -26,7 +28,7 @@ bool BenchmarkHelpers::ValidateFileFormatOrSkip(::benchmark::State& state,
                                                 const std::string& file_format, bool is_supported,
                                                 SkipFn skip) {
     if (!is_supported) {
-        skip(state, "file format is not supported in this build: " + file_format);
+        skip(state, fmt::format("file format is not supported in this build: {}", file_format));
         return false;
     }
     return true;
@@ -47,7 +49,8 @@ bool BenchmarkHelpers::ValidateSourceSupportOrSkip(::benchmark::State& state,
                                                    bool is_supported, SkipFn skip) {
     if (!is_supported) {
         skip(state,
-             "source data mode requires reader support in this build for format: " + source_format);
+             fmt::format("source data mode requires reader support in this build for format: {}",
+                         source_format));
         return false;
     }
     return true;

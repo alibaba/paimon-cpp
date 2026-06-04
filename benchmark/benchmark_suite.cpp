@@ -316,7 +316,8 @@ Result<SourceDataMetadata> LoadParquetSourceMetadata(const std::string& path) {
         return cache;
     }
 
-    PAIMON_ASSIGN_OR_RAISE(auto parquet_reader, OpenParquetSourceReader(path));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<parquet::arrow::FileReader> parquet_reader,
+                           OpenParquetSourceReader(path));
     std::shared_ptr<arrow::Schema> schema;
     const auto schema_status = parquet_reader->GetSchema(&schema);
     if (!schema_status.ok()) {
@@ -364,7 +365,8 @@ Status EnsureTable(const std::string& root_path, const std::string& db_name,
                    const std::shared_ptr<arrow::Schema>& schema,
                    const std::vector<std::string>& primary_keys = {}) {
     PAIMON_ASSIGN_OR_RAISE(
-        auto catalog, AddContext(paimon::Catalog::Create(root_path, options), "create catalog"));
+        std::unique_ptr<paimon::Catalog> catalog,
+        AddContext(paimon::Catalog::Create(root_path, options), "create catalog"));
     PAIMON_RETURN_NOT_OK(
         AddContext(catalog->CreateDatabase(db_name, options, true), "create database"));
 
@@ -389,7 +391,8 @@ Status WriteSourceDataToWriter(paimon::FileStoreWrite* writer, const SourceDataS
     return Status::Invalid(
         "Parquet source data mode requires parquet::arrow reader support in this build");
 #else
-    PAIMON_ASSIGN_OR_RAISE(auto parquet_reader, OpenParquetSourceReader(source_spec.path));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<parquet::arrow::FileReader> parquet_reader,
+                           OpenParquetSourceReader(source_spec.path));
     std::unique_ptr<arrow::RecordBatchReader> batch_reader;
     const auto reader_status = parquet_reader->GetRecordBatchReader(&batch_reader);
     if (!reader_status.ok()) {
@@ -412,7 +415,8 @@ Status WriteSourceDataToWriter(paimon::FileStoreWrite* writer, const SourceDataS
         }
 
         auto struct_array = BuildStructArrayFromRecordBatch(record_batch);
-        PAIMON_ASSIGN_OR_RAISE(auto batch, MakeRecordBatch(struct_array));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<paimon::RecordBatch> batch,
+                               MakeRecordBatch(struct_array));
         PAIMON_RETURN_NOT_OK(AddContext(writer->Write(std::move(batch)), "write batch"));
         written_rows += record_batch->num_rows();
     }
@@ -428,20 +432,24 @@ Status WriteAndCommit(const std::string& table_path,
                       const std::map<std::string, std::string>& options,
                       const SourceDataSpec& source_spec) {
     paimon::WriteContextBuilder write_builder(table_path, "benchmark-writer");
-    PAIMON_ASSIGN_OR_RAISE(auto write_ctx, AddContext(write_builder.SetOptions(options).Finish(),
-                                                      "create write context"));
-    PAIMON_ASSIGN_OR_RAISE(auto writer,
-                           AddContext(paimon::FileStoreWrite::Create(std::move(write_ctx)),
-                                      "create file store writer"));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<paimon::WriteContext> write_ctx,
+        AddContext(write_builder.SetOptions(options).Finish(), "create write context"));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<paimon::FileStoreWrite> writer,
+        AddContext(paimon::FileStoreWrite::Create(std::move(write_ctx)),
+                   "create file store writer"));
 
     PAIMON_RETURN_NOT_OK(WriteSourceDataToWriter(writer.get(), source_spec));
-    PAIMON_ASSIGN_OR_RAISE(auto messages, AddContext(writer->PrepareCommit(), "prepare commit"));
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<paimon::CommitMessage>> messages,
+                           AddContext(writer->PrepareCommit(), "prepare commit"));
 
     paimon::CommitContextBuilder commit_builder(table_path, "benchmark-writer");
-    PAIMON_ASSIGN_OR_RAISE(auto commit_ctx, AddContext(commit_builder.SetOptions(options).Finish(),
-                                                       "create commit context"));
     PAIMON_ASSIGN_OR_RAISE(
-        auto committer,
+        std::unique_ptr<paimon::CommitContext> commit_ctx,
+        AddContext(commit_builder.SetOptions(options).Finish(), "create commit context"));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<paimon::FileStoreCommit> committer,
         AddContext(paimon::FileStoreCommit::Create(std::move(commit_ctx)), "create committer"));
     PAIMON_RETURN_NOT_OK(AddContext(committer->Commit(messages), "commit write"));
     return Status::OK();
@@ -494,9 +502,11 @@ Result<const SharedMorReadTableCache*> GetOrCreateSharedMorReadTable(
     }
 
     auto options = BuildPkOptions(file_format);
-    PAIMON_ASSIGN_OR_RAISE(const auto source_metadata, LoadSourceDataMetadata(source_spec));
+    PAIMON_ASSIGN_OR_RAISE(const SourceDataMetadata source_metadata,
+                           LoadSourceDataMetadata(source_spec));
 
-    PAIMON_ASSIGN_OR_RAISE(auto workspace, CreateBenchmarkWorkspace());
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<paimon::test::UniqueTestDirectory> workspace,
+                           CreateBenchmarkWorkspace());
     const std::string db_name = "bench_db";
     const std::string table_name = "mor_read_shared_" + std::to_string(NextTableId());
     PAIMON_RETURN_NOT_OK(EnsureTable(workspace->Str(), db_name, table_name, options,
@@ -527,9 +537,11 @@ Result<const SharedReadTableCache*> GetOrCreateSharedReadTable(const std::string
     }
 
     auto options = BuildOptions(file_format);
-    PAIMON_ASSIGN_OR_RAISE(const auto source_metadata, LoadSourceDataMetadata(source_spec));
+    PAIMON_ASSIGN_OR_RAISE(const SourceDataMetadata source_metadata,
+                           LoadSourceDataMetadata(source_spec));
 
-    PAIMON_ASSIGN_OR_RAISE(auto workspace, CreateBenchmarkWorkspace());
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<paimon::test::UniqueTestDirectory> workspace,
+                           CreateBenchmarkWorkspace());
     const std::string db_name = "bench_db";
     const std::string table_name = "read_shared_" + std::to_string(NextTableId());
     PAIMON_RETURN_NOT_OK(
@@ -549,11 +561,14 @@ Result<int64_t> ReadRows(const std::string& table_path,
                          const std::map<std::string, std::string>& options,
                          int32_t prefetch_parallel_num) {
     paimon::ScanContextBuilder scan_builder(table_path);
-    PAIMON_ASSIGN_OR_RAISE(auto scan_ctx, AddContext(scan_builder.SetOptions(options).Finish(),
-                                                     "create scan context"));
     PAIMON_ASSIGN_OR_RAISE(
-        auto scanner, AddContext(paimon::TableScan::Create(std::move(scan_ctx)), "create scanner"));
-    PAIMON_ASSIGN_OR_RAISE(auto plan, AddContext(scanner->CreatePlan(), "create plan"));
+        std::unique_ptr<paimon::ScanContext> scan_ctx,
+        AddContext(scan_builder.SetOptions(options).Finish(), "create scan context"));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<paimon::TableScan> scanner,
+        AddContext(paimon::TableScan::Create(std::move(scan_ctx)), "create scanner"));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<paimon::Plan> plan,
+                           AddContext(scanner->CreatePlan(), "create plan"));
 
     paimon::ReadContextBuilder read_builder(table_path);
     constexpr int32_t kPrefetchBatchCount = 600;
@@ -563,15 +578,18 @@ Result<int64_t> ReadRows(const std::string& table_path,
         .SetPrefetchMaxParallelNum(prefetch_parallel_num)
         .EnableMultiThreadRowToBatch(GetRowToBatchThreadNumber() > 1)
         .SetRowToBatchThreadNumber(GetRowToBatchThreadNumber());
-    PAIMON_ASSIGN_OR_RAISE(auto read_ctx, AddContext(read_builder.Finish(), "create read context"));
-    PAIMON_ASSIGN_OR_RAISE(auto reader, AddContext(paimon::TableRead::Create(std::move(read_ctx)),
-                                                   "create table reader"));
-    PAIMON_ASSIGN_OR_RAISE(auto batch_reader,
-                           AddContext(reader->CreateReader(plan->Splits()), "create batch reader"));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<paimon::ReadContext> read_ctx,
+                           AddContext(read_builder.Finish(), "create read context"));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<paimon::TableRead> reader,
+        AddContext(paimon::TableRead::Create(std::move(read_ctx)), "create table reader"));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<paimon::BatchReader> batch_reader,
+        AddContext(reader->CreateReader(plan->Splits()), "create batch reader"));
 
     int64_t total_rows = 0;
     while (true) {
-        PAIMON_ASSIGN_OR_RAISE(auto batch,
+        PAIMON_ASSIGN_OR_RAISE(paimon::BatchReader::ReadBatch batch,
                                AddContext(batch_reader->NextBatch(), "read next batch"));
         if (paimon::BatchReader::IsEofBatch(batch)) {
             break;

@@ -26,6 +26,8 @@
 
 namespace paimon::benchmark {
 
+using ParsedOptions = std::vector<std::pair<std::string, std::string>>;
+
 inline bool ConsumeCliOption(const std::string& arg, const std::string& option_name,
                              std::string* value_out) {
     const std::string prefix = option_name + "=";
@@ -69,13 +71,13 @@ inline Result<std::vector<std::string>> ParseCommaSeparatedColumns(const std::st
     return columns;
 }
 
-inline Result<std::vector<std::pair<std::string, std::string>>> ParseDelimitedOptions(
+inline Result<ParsedOptions> ParseDelimitedOptions(
     const std::string& input, const std::string& option_name) {
     if (input.empty()) {
         return Status::Invalid("missing value for ", option_name);
     }
 
-    std::vector<std::pair<std::string, std::string>> parsed;
+    ParsedOptions parsed;
     std::string token;
     for (size_t index = 0; index <= input.size(); ++index) {
         const bool at_end = (index == input.size());
@@ -152,8 +154,8 @@ inline Result<bool> ParseDelimitedRepeatableOptionArg(
     int32_t* arg_index, std::vector<std::pair<std::string, std::string>>* options_out) {
     std::string parsed_value;
     if (ConsumeCliOption(arg, option_name, &parsed_value)) {
-        PAIMON_ASSIGN_OR_RAISE(const auto parsed_options,
-                               ParseDelimitedOptions(parsed_value, option_name));
+        ParsedOptions parsed_options;
+        PAIMON_ASSIGN_OR_RAISE(parsed_options, ParseDelimitedOptions(parsed_value, option_name));
         options_out->insert(options_out->end(), parsed_options.begin(), parsed_options.end());
         return true;
     }
@@ -167,8 +169,8 @@ inline Result<bool> ParseDelimitedRepeatableOptionArg(
     }
 
     const std::string option_arg = argv[++(*arg_index)];
-    PAIMON_ASSIGN_OR_RAISE(const auto parsed_options,
-                           ParseDelimitedOptions(option_arg, option_name));
+    ParsedOptions parsed_options;
+    PAIMON_ASSIGN_OR_RAISE(parsed_options, ParseDelimitedOptions(option_arg, option_name));
     options_out->insert(options_out->end(), parsed_options.begin(), parsed_options.end());
     return true;
 }
