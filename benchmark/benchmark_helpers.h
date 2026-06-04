@@ -20,6 +20,8 @@
 #include <functional>
 #include <string>
 
+#include "paimon/result.h"
+
 namespace benchmark {
 class State;
 }
@@ -28,7 +30,7 @@ namespace paimon::benchmark {
 
 class BenchmarkHelpers {
  public:
-    using ReadOnceFn = std::function<int64_t()>;
+    using ReadOnceFn = std::function<Result<int64_t>()>;
     using SkipFn = void (*)(::benchmark::State&, const std::string&);
 
     static bool ValidateFileFormatOrSkip(::benchmark::State& state, const std::string& file_format,
@@ -45,11 +47,12 @@ class BenchmarkHelpers {
     static bool ValidatePrefetchParallelOrSkip(::benchmark::State& state,
                                                int32_t prefetch_parallel_num, SkipFn skip);
 
-    static int64_t RunReadIterations(::benchmark::State& state, const ReadOnceFn& read_once);
+    static Result<int64_t> RunReadIterations(::benchmark::State& state, const ReadOnceFn& read_once);
 
-    static bool TryRunExternalReadMode(::benchmark::State& state, const std::string& benchmark_name,
-                                       const std::string& external_table_path,
-                                       const ReadOnceFn& read_once);
+    static Result<bool> TryRunExternalReadMode(::benchmark::State& state,
+                                               const std::string& benchmark_name,
+                                               const std::string& external_table_path,
+                                               const ReadOnceFn& read_once);
 };
 
 }  // namespace paimon::benchmark

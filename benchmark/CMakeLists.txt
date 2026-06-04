@@ -70,5 +70,6 @@ if(PAIMON_BUILD_TESTS)
                     EXTRA_INCLUDES
                     ${CMAKE_SOURCE_DIR}
                     STATIC_LINK_LIBS
+                    paimon_shared
                     ${GTEST_LINK_TOOLCHAIN})
 endif()

@@ -15,17 +15,15 @@
  */
 
 #include <cstdint>
-#include <exception>
 #include <iostream>
 
 #include "benchmark/benchmark.h"
 #include "benchmark/benchmark_suite.h"
 
 int main(int argc, char** argv) {
-    try {
-        paimon::benchmark::ParsePaimonBenchmarkCliArgs(&argc, argv);
-    } catch (const std::exception& e) {
-        std::cerr << "paimon-read-write-benchmark: " << e.what() << std::endl;
+    const paimon::Status parse_status = paimon::benchmark::ParsePaimonBenchmarkCliArgs(&argc, argv);
+    if (!parse_status.ok()) {
+        std::cerr << "paimon-read-write-benchmark: " << parse_status.ToString() << std::endl;
         std::cerr << "Try 'paimon-read-write-benchmark --help' for more information." << std::endl;
         return 1;
     }

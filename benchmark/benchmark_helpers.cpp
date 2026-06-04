@@ -62,26 +62,26 @@ bool BenchmarkHelpers::ValidatePrefetchParallelOrSkip(::benchmark::State& state,
     return true;
 }
 
-int64_t BenchmarkHelpers::RunReadIterations(::benchmark::State& state,
-                                            const ReadOnceFn& read_once) {
+Result<int64_t> BenchmarkHelpers::RunReadIterations(::benchmark::State& state,
+                                                    const ReadOnceFn& read_once) {
     int64_t rows_read = 0;
     for (auto _ : state) {
-        rows_read = read_once();
+        PAIMON_ASSIGN_OR_RAISE(rows_read, read_once());
     }
     return rows_read;
 }
 
-bool BenchmarkHelpers::TryRunExternalReadMode(::benchmark::State& state,
-                                              const std::string& benchmark_name,
-                                              const std::string& external_table_path,
-                                              const ReadOnceFn& read_once) {
+Result<bool> BenchmarkHelpers::TryRunExternalReadMode(::benchmark::State& state,
+                                                      const std::string& benchmark_name,
+                                                      const std::string& external_table_path,
+                                                      const ReadOnceFn& read_once) {
     if (external_table_path.empty()) {
         return false;
     }
 
     std::cout << "[benchmark][" << benchmark_name << "] external_table_path=" << external_table_path
               << std::endl;
-    const int64_t rows_read = RunReadIterations(state, read_once);
+    PAIMON_ASSIGN_OR_RAISE(const int64_t rows_read, RunReadIterations(state, read_once));
     state.SetItemsProcessed(state.iterations() * rows_read);
     return true;
 }

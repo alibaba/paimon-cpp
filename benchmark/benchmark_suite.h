@@ -19,10 +19,11 @@
 #include <cstdint>
 
 #include "benchmark/benchmark.h"
+#include "paimon/status.h"
 
 namespace paimon::benchmark {
 
-void ParsePaimonBenchmarkCliArgs(int* argc, char** argv);
+Status ParsePaimonBenchmarkCliArgs(int* argc, char** argv);
 bool HasHelpFlag(int32_t argc, char** argv);
 void PrintPaimonBenchmarkCliHelp();
 

@@ -17,10 +17,12 @@
 #pragma once
 
 #include <cstdint>
-#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "paimon/result.h"
+#include "paimon/status.h"
 
 namespace paimon::benchmark {
 
@@ -43,10 +45,10 @@ inline std::string TrimAsciiWhitespace(const std::string& value) {
     return value.substr(first, last - first + 1);
 }
 
-inline std::vector<std::string> ParseCommaSeparatedColumns(const std::string& input,
-                                                           const std::string& option_name) {
+inline Result<std::vector<std::string>> ParseCommaSeparatedColumns(
+    const std::string& input, const std::string& option_name) {
     if (input.empty()) {
-        throw std::runtime_error("missing value for " + option_name);
+        return Status::Invalid("missing value for ", option_name);
     }
 
     std::vector<std::string> columns;
@@ -59,7 +61,7 @@ inline std::vector<std::string> ParseCommaSeparatedColumns(const std::string& in
         const std::string column =
             TrimAsciiWhitespace(input.substr(segment_start, index - segment_start));
         if (column.empty()) {
-            throw std::runtime_error("invalid " + option_name + ": empty column name");
+            return Status::Invalid("invalid ", option_name, ": empty column name");
         }
         columns.push_back(column);
         segment_start = index + 1;
@@ -67,10 +69,10 @@ inline std::vector<std::string> ParseCommaSeparatedColumns(const std::string& in
     return columns;
 }
 
-inline std::vector<std::pair<std::string, std::string>> ParseDelimitedOptions(
+inline Result<std::vector<std::pair<std::string, std::string>>> ParseDelimitedOptions(
     const std::string& input, const std::string& option_name) {
     if (input.empty()) {
-        throw std::runtime_error("missing value for " + option_name);
+        return Status::Invalid("missing value for ", option_name);
     }
 
     std::vector<std::pair<std::string, std::string>> parsed;
@@ -83,12 +85,12 @@ inline std::vector<std::pair<std::string, std::string>> ParseDelimitedOptions(
         }
 
         if (token.empty()) {
-            throw std::runtime_error("invalid " + option_name + ": empty option segment");
+            return Status::Invalid("invalid ", option_name, ": empty option segment");
         }
 
         const auto separator = token.find(':');
         if (separator == std::string::npos || separator == 0 || separator + 1 >= token.size()) {
-            throw std::runtime_error("invalid " + option_name + ": expected key:value");
+            return Status::Invalid("invalid ", option_name, ": expected key:value");
         }
 
         parsed.emplace_back(token.substr(0, separator), token.substr(separator + 1));
@@ -97,9 +99,9 @@ inline std::vector<std::pair<std::string, std::string>> ParseDelimitedOptions(
     return parsed;
 }
 
-inline bool ParseStringOptionArg(int32_t argc, char** argv, const std::string& arg,
-                                 const std::string& option_name, int32_t* arg_index,
-                                 std::string* value_out) {
+inline Result<bool> ParseStringOptionArg(int32_t argc, char** argv, const std::string& arg,
+                                         const std::string& option_name, int32_t* arg_index,
+                                         std::string* value_out) {
     std::string parsed_value;
     if (ConsumeCliOption(arg, option_name, &parsed_value)) {
         *value_out = std::move(parsed_value);
@@ -111,18 +113,20 @@ inline bool ParseStringOptionArg(int32_t argc, char** argv, const std::string& a
     }
 
     if (*arg_index + 1 >= argc) {
-        throw std::runtime_error("missing value for " + option_name);
+        return Status::Invalid("missing value for ", option_name);
     }
     *value_out = argv[++(*arg_index)];
     return true;
 }
 
-inline bool ParseCommaSeparatedOptionArg(int32_t argc, char** argv, const std::string& arg,
-                                         const std::string& option_name, int32_t* arg_index,
-                                         std::vector<std::string>* columns_out) {
+inline Result<bool> ParseCommaSeparatedOptionArg(int32_t argc, char** argv, const std::string& arg,
+                                                 const std::string& option_name,
+                                                 int32_t* arg_index,
+                                                 std::vector<std::string>* columns_out) {
     std::string parsed_value;
     if (ConsumeCliOption(arg, option_name, &parsed_value)) {
-        *columns_out = ParseCommaSeparatedColumns(parsed_value, option_name);
+        PAIMON_ASSIGN_OR_RAISE(*columns_out,
+                               ParseCommaSeparatedColumns(parsed_value, option_name));
         return true;
     }
 
@@ -131,18 +135,21 @@ inline bool ParseCommaSeparatedOptionArg(int32_t argc, char** argv, const std::s
     }
 
     if (*arg_index + 1 >= argc) {
-        throw std::runtime_error("missing value for " + option_name);
+        return Status::Invalid("missing value for ", option_name);
     }
-    *columns_out = ParseCommaSeparatedColumns(std::string(argv[++(*arg_index)]), option_name);
+    PAIMON_ASSIGN_OR_RAISE(*columns_out,
+                           ParseCommaSeparatedColumns(std::string(argv[++(*arg_index)]),
+                                                      option_name));
     return true;
 }
 
-inline bool ParseDelimitedRepeatableOptionArg(
+inline Result<bool> ParseDelimitedRepeatableOptionArg(
     int32_t argc, char** argv, const std::string& arg, const std::string& option_name,
     int32_t* arg_index, std::vector<std::pair<std::string, std::string>>* options_out) {
     std::string parsed_value;
     if (ConsumeCliOption(arg, option_name, &parsed_value)) {
-        const auto parsed_options = ParseDelimitedOptions(parsed_value, option_name);
+        PAIMON_ASSIGN_OR_RAISE(const auto parsed_options,
+                               ParseDelimitedOptions(parsed_value, option_name));
         options_out->insert(options_out->end(), parsed_options.begin(), parsed_options.end());
         return true;
     }
@@ -152,11 +159,12 @@ inline bool ParseDelimitedRepeatableOptionArg(
     }
 
     if (*arg_index + 1 >= argc) {
-        throw std::runtime_error("missing value for " + option_name);
+        return Status::Invalid("missing value for ", option_name);
     }
 
     const std::string option_arg = argv[++(*arg_index)];
-    const auto parsed_options = ParseDelimitedOptions(option_arg, option_name);
+    PAIMON_ASSIGN_OR_RAISE(const auto parsed_options,
+                           ParseDelimitedOptions(option_arg, option_name));
     options_out->insert(options_out->end(), parsed_options.begin(), parsed_options.end());
     return true;
 }
