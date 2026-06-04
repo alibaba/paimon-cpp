@@ -84,16 +84,23 @@ inline Result<std::vector<std::pair<std::string, std::string>>> ParseDelimitedOp
             continue;
         }
 
-        if (token.empty()) {
+        const std::string segment = TrimAsciiWhitespace(token);
+        if (segment.empty()) {
             return Status::Invalid("invalid ", option_name, ": empty option segment");
         }
 
-        const auto separator = token.find(':');
-        if (separator == std::string::npos || separator == 0 || separator + 1 >= token.size()) {
+        const auto separator = segment.find(':');
+        if (separator == std::string::npos) {
             return Status::Invalid("invalid ", option_name, ": expected key:value");
         }
 
-        parsed.emplace_back(token.substr(0, separator), token.substr(separator + 1));
+        const std::string key = TrimAsciiWhitespace(segment.substr(0, separator));
+        const std::string value = TrimAsciiWhitespace(segment.substr(separator + 1));
+        if (key.empty() || value.empty()) {
+            return Status::Invalid("invalid ", option_name, ": expected key:value");
+        }
+
+        parsed.emplace_back(key, value);
         token.clear();
     }
     return parsed;

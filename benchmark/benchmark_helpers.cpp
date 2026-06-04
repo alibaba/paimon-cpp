@@ -71,15 +71,15 @@ Result<int64_t> BenchmarkHelpers::RunReadIterations(::benchmark::State& state,
     return rows_read;
 }
 
-Result<bool> BenchmarkHelpers::TryRunExternalReadMode(::benchmark::State& state,
-                                                      const std::string& benchmark_name,
-                                                      const std::string& external_table_path,
-                                                      const ReadOnceFn& read_once) {
-    if (external_table_path.empty()) {
+Result<bool> BenchmarkHelpers::TryRunSourceTableReadMode(::benchmark::State& state,
+                                                          const std::string& benchmark_name,
+                                                          const std::string& source_table_path,
+                                                          const ReadOnceFn& read_once) {
+    if (source_table_path.empty()) {
         return false;
     }
 
-    std::cout << "[benchmark][" << benchmark_name << "] external_table_path=" << external_table_path
+    std::cout << "[benchmark][" << benchmark_name << "] source_table_path=" << source_table_path
               << std::endl;
     PAIMON_ASSIGN_OR_RAISE(const int64_t rows_read, RunReadIterations(state, read_once));
     state.SetItemsProcessed(state.iterations() * rows_read);

@@ -18,9 +18,7 @@
 
 #include <atomic>
 #include <cstdint>
-#include <cstdlib>
 #include <iostream>
-#include <limits>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -50,12 +48,12 @@ namespace paimon::benchmark {
 
 namespace {
 
+constexpr int64_t kSourceBatchMaxRows = 4096;
+constexpr int32_t kRowToBatchThreadNumber = 3;
+
 struct BenchmarkCliOptions {
     std::string source_data_file;
-    std::string external_table_path;
-    std::string file_format = "parquet";
-    int64_t source_batch_max_rows = 4096;
-    int32_t row_to_batch_thread_number = 3;
+    std::string source_table_path;
     std::vector<std::string> pk_columns;
     std::vector<std::pair<std::string, std::string>> extra_options;
 };
@@ -74,30 +72,13 @@ const BenchmarkCliOptions& GetBenchmarkCliOptions() {
     return MutableBenchmarkCliOptions();
 }
 
-Result<int64_t> ParsePositiveInt64(const std::string& value, const std::string& option_name) {
-    char* end = nullptr;
-    const auto parsed = std::strtoll(value.c_str(), &end, 10);
-    if (end == value.c_str() || *end != '\0' || parsed <= 0) {
-        return Status::Invalid("invalid ", option_name, ", expected positive integer");
-    }
-    return static_cast<int64_t>(parsed);
-}
-
-Result<int32_t> ParsePositiveInt32(const std::string& value, const std::string& option_name) {
-    PAIMON_ASSIGN_OR_RAISE(const int64_t parsed, ParsePositiveInt64(value, option_name));
-    if (parsed > std::numeric_limits<int32_t>::max()) {
-        return Status::Invalid("invalid ", option_name, ", value is too large");
-    }
-    return static_cast<int32_t>(parsed);
-}
-
 Status ParsePaimonBenchmarkCliArgsImpl(int32_t* argc, char** argv) {
     auto& options = MutableBenchmarkCliOptions();
+    options = BenchmarkCliOptions{};
     const int32_t parsed_argc = *argc;
     int32_t write_index = 1;
     for (int32_t arg_index = 1; arg_index < parsed_argc; ++arg_index) {
         const std::string arg(argv[arg_index]);
-        std::string parsed_value;
 
         PAIMON_ASSIGN_OR_RAISE(bool is_parsed,
                                paimon::benchmark::ParseStringOptionArg(
@@ -108,36 +89,9 @@ Status ParsePaimonBenchmarkCliArgsImpl(int32_t* argc, char** argv) {
         }
         PAIMON_ASSIGN_OR_RAISE(is_parsed,
                                paimon::benchmark::ParseStringOptionArg(
-                                   parsed_argc, argv, arg, "--paimon_external_table_path",
-                                   &arg_index, &options.external_table_path));
+                                   parsed_argc, argv, arg, "--paimon_source_table_path",
+                                   &arg_index, &options.source_table_path));
         if (is_parsed) {
-            continue;
-        }
-        PAIMON_ASSIGN_OR_RAISE(is_parsed,
-                               paimon::benchmark::ParseStringOptionArg(
-                                   parsed_argc, argv, arg, "--paimon_file_format", &arg_index,
-                                   &options.file_format));
-        if (is_parsed) {
-            continue;
-        }
-        PAIMON_ASSIGN_OR_RAISE(is_parsed,
-                               paimon::benchmark::ParseStringOptionArg(
-                                   parsed_argc, argv, arg, "--paimon_source_batch_max_rows",
-                                   &arg_index, &parsed_value));
-        if (is_parsed) {
-            PAIMON_ASSIGN_OR_RAISE(
-                options.source_batch_max_rows,
-                ParsePositiveInt64(parsed_value, "--paimon_source_batch_max_rows"));
-            continue;
-        }
-        PAIMON_ASSIGN_OR_RAISE(is_parsed,
-                               paimon::benchmark::ParseStringOptionArg(
-                                   parsed_argc, argv, arg, "--paimon_row_to_batch_thread_number",
-                                   &arg_index, &parsed_value));
-        if (is_parsed) {
-            PAIMON_ASSIGN_OR_RAISE(
-                options.row_to_batch_thread_number,
-                ParsePositiveInt32(parsed_value, "--paimon_row_to_batch_thread_number"));
             continue;
         }
         PAIMON_ASSIGN_OR_RAISE(is_parsed,
@@ -179,29 +133,23 @@ void PrintPaimonBenchmarkCliHelpImpl() {
               << "      Required. External source data file used to build benchmark data.\n"
               << "      Currently supports Parquet source files.\n"
               << "      Also supports: --paimon_source_data_file <path>\n"
-              << "  --paimon_external_table_path=<path>\n"
+              << "  --paimon_source_table_path=<path>\n"
               << "      Optional for BM_Read and BM_MOR_Read. If set, read directly from existing\n"
               << "      table path and skip source file loading and pre-write stage.\n"
-              << "      Also supports: --paimon_external_table_path <path>\n"
-              << "  --paimon_file_format=<parquet|orc>\n"
-              << "      Optional. Target table file format. Default: parquet.\n"
-              << "      Also supports: --paimon_file_format <parquet|orc>\n"
-              << "  --paimon_source_batch_max_rows=<rows>\n"
-              << "      Optional. Max rows per source batch. Default: 4096.\n"
-              << "  --paimon_row_to_batch_thread_number=<threads>\n"
-              << "      Optional. Row-to-batch thread number for reads. Default: 3.\n"
+              << "      Also supports: --paimon_source_table_path <path>\n"
               << "  --paimon_pk_columns=<col1,col2,...>\n"
               << "      Required by BM_PK_Write and BM_MOR_Read.\n"
               << "      Also supports: --paimon_pk_columns <col1,col2,...>\n"
               << "  --paimon_option=<key1>:<value1>;<key2>:<value2>\n"
               << "      Optional and repeatable. Pass through table options as-is.\n"
+              << "      Default table file format is parquet; use file.format:<format> to override.\n"
               << "      Also supports: --paimon_option <key1>:<value1>;<key2>:<value2>\n"
               << "      Note: use quotes in shell, e.g. \"--paimon_option k1:v1;k2:v2\".\n"
               << "\n"
               << "Example:\n"
               << "  paimon-read-write-benchmark --paimon_source_data_file /path/data.parquet \\\n"
-              << "      --paimon_file_format parquet --paimon_pk_columns=id \\\n"
-              << "      --paimon_option \"read.batch-size:8192\" --benchmark_filter=BM_Read\n"
+              << "      --paimon_pk_columns=id --paimon_option \"read.batch-size:8192\" \\\n"
+              << "      --benchmark_filter=BM_Read\n"
               << std::endl;
 }
 
@@ -226,14 +174,15 @@ std::string RequirePath(const std::string& root_path, const std::string& db_name
 template <typename T>
 Result<T> AddContext(paimon::Result<T>&& result, const std::string& context) {
     if (!result.ok()) {
-        return Status::Invalid(context, ": ", result.status().ToString());
+        const Status status = result.status();
+        return status.WithMessage(context, ": ", status.message());
     }
     return std::move(result).value();
 }
 
 Status AddContext(const paimon::Status& status, const std::string& context) {
     if (!status.ok()) {
-        return Status::Invalid(context, ": ", status.ToString());
+        return status.WithMessage(context, ": ", status.message());
     }
     return Status::OK();
 }
@@ -243,7 +192,7 @@ void SkipWithMessage(::benchmark::State& state, const std::string& message) {
 }
 
 std::string GetConfiguredFileFormat() {
-    std::string file_format = GetBenchmarkCliOptions().file_format;
+    std::string file_format = "parquet";
     for (const auto& kv : GetBenchmarkCliOptions().extra_options) {
         if (kv.first == paimon::Options::FILE_FORMAT) {
             file_format = kv.second;
@@ -291,8 +240,8 @@ std::string GetSourceDataFilePath() {
     return GetBenchmarkCliOptions().source_data_file;
 }
 
-std::string GetExternalTablePath() {
-    return GetBenchmarkCliOptions().external_table_path;
+std::string GetSourceTablePath() {
+    return GetBenchmarkCliOptions().source_table_path;
 }
 
 const std::vector<std::string>& GetPkColumns() {
@@ -308,11 +257,11 @@ SourceDataSpec GetSourceDataSpec() {
 }
 
 int64_t GetSourceBatchMaxRows() {
-    return GetBenchmarkCliOptions().source_batch_max_rows;
+    return kSourceBatchMaxRows;
 }
 
 int32_t GetRowToBatchThreadNumber() {
-    return GetBenchmarkCliOptions().row_to_batch_thread_number;
+    return kRowToBatchThreadNumber;
 }
 
 bool SupportsParquetSourceDataMode() {
@@ -746,7 +695,7 @@ void RunBMWrite(::benchmark::State& state) {
 void RunBMRead(::benchmark::State& state) {
     const auto prefetch_parallel_num = static_cast<int32_t>(state.range(0));
     const std::string file_format = GetConfiguredFileFormat();
-    const std::string external_table_path = GetExternalTablePath();
+    const std::string source_table_path = GetSourceTablePath();
     SourceDataSpec source_spec;
     if (!TryGetSourceSpec(state, &source_spec)) {
         return;
@@ -763,21 +712,21 @@ void RunBMRead(::benchmark::State& state) {
 
     auto options = BuildOptions(file_format);
 
-    auto external_read_result = BenchmarkHelpers::TryRunExternalReadMode(
-        state, "read", external_table_path, [&]() {
-            return ReadRows(external_table_path, options, prefetch_parallel_num);
+    auto source_table_read_result = BenchmarkHelpers::TryRunSourceTableReadMode(
+        state, "read", source_table_path, [&]() {
+            return ReadRows(source_table_path, options, prefetch_parallel_num);
         });
-    if (!external_read_result.ok()) {
-        SkipWithMessage(state, external_read_result.status().ToString());
+    if (!source_table_read_result.ok()) {
+        SkipWithMessage(state, source_table_read_result.status().ToString());
         return;
     }
-    if (external_read_result.value()) {
+    if (source_table_read_result.value()) {
         return;
     }
 
     if (!BenchmarkHelpers::ValidateSourcePresenceOrSkip(
             state, source_spec.path,
-            "--paimon_source_data_file is required when --paimon_external_table_path is not set",
+            "--paimon_source_data_file is required when --paimon_source_table_path is not set",
             &SkipWithMessage)) {
         return;
     }
@@ -865,7 +814,7 @@ void RunBMPkWrite(::benchmark::State& state) {
 void RunBMMorRead(::benchmark::State& state) {
     const auto prefetch_parallel_num = static_cast<int32_t>(state.range(0));
     const std::string file_format = GetConfiguredFileFormat();
-    const std::string external_table_path = GetExternalTablePath();
+    const std::string source_table_path = GetSourceTablePath();
     SourceDataSpec source_spec;
     if (!TryGetSourceSpec(state, &source_spec)) {
         return;
@@ -879,22 +828,22 @@ void RunBMMorRead(::benchmark::State& state) {
         return;
     }
 
-    const auto external_read_options = BuildOptions(file_format);
-    auto external_read_result = BenchmarkHelpers::TryRunExternalReadMode(
-        state, "mor-read", external_table_path, [&]() {
-            return ReadRows(external_table_path, external_read_options, prefetch_parallel_num);
+    const auto source_table_read_options = BuildOptions(file_format);
+    auto source_table_read_result = BenchmarkHelpers::TryRunSourceTableReadMode(
+        state, "mor-read", source_table_path, [&]() {
+            return ReadRows(source_table_path, source_table_read_options, prefetch_parallel_num);
         });
-    if (!external_read_result.ok()) {
-        SkipWithMessage(state, external_read_result.status().ToString());
+    if (!source_table_read_result.ok()) {
+        SkipWithMessage(state, source_table_read_result.status().ToString());
         return;
     }
-    if (external_read_result.value()) {
+    if (source_table_read_result.value()) {
         return;
     }
 
     if (!BenchmarkHelpers::ValidateSourcePresenceOrSkip(
             state, source_spec.path,
-            "--paimon_source_data_file is required when --paimon_external_table_path is not set",
+            "--paimon_source_data_file is required when --paimon_source_table_path is not set",
             &SkipWithMessage)) {
         return;
     }

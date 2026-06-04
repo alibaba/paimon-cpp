@@ -41,26 +41,19 @@ specific options below:
    Source data file used to build benchmark data. Currently Parquet source files
    are supported.
 
-``--paimon_external_table_path=<path>``
+``--paimon_source_table_path=<path>``
    Read directly from an existing table path for ``BM_Read`` and ``BM_MOR_Read``.
    When set, the source loading and pre-write stage are skipped.
-
-``--paimon_file_format=<parquet|orc>``
-   Target table file format. The default value is ``parquet``.
-
-``--paimon_source_batch_max_rows=<rows>``
-   Max rows per source batch. The default value is ``4096``.
-
-``--paimon_row_to_batch_thread_number=<threads>``
-   Row-to-batch thread number for reads. The default value is ``3``.
 
 ``--paimon_pk_columns=<col1,col2,...>``
    Primary key columns for ``BM_PK_Write`` and ``BM_MOR_Read``. These cases
    explicitly use ``bucket=1`` because benchmark batches are written to bucket 0.
 
 ``--paimon_option=<key1>:<value1>;<key2>:<value2>``
-   Repeatable table options passed through to Paimon. For ``BM_PK_Write`` and
-   ``BM_MOR_Read``, ``bucket`` is forced to ``1``.
+   Repeatable table options passed through to Paimon. The default table file
+   format is ``parquet``; use ``--paimon_option file.format:<format>`` to
+   override it. For ``BM_PK_Write`` and ``BM_MOR_Read``, ``bucket`` is forced to
+   ``1``.
 
 Examples
 ========
@@ -87,6 +80,6 @@ Primary-key table write::
 MOR read from an existing table::
 
    paimon-read-write-benchmark \
-       --paimon_external_table_path /path/table \
+       --paimon_source_table_path /path/table \
        --paimon_pk_columns=id \
        --benchmark_filter=BM_MOR_Read/4

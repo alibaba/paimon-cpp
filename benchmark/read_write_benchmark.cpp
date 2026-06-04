@@ -21,16 +21,16 @@
 #include "benchmark/benchmark_suite.h"
 
 int main(int argc, char** argv) {
+    if (paimon::benchmark::HasHelpFlag(static_cast<int32_t>(argc), argv)) {
+        paimon::benchmark::PrintPaimonBenchmarkCliHelp();
+        return 0;
+    }
+
     const paimon::Status parse_status = paimon::benchmark::ParsePaimonBenchmarkCliArgs(&argc, argv);
     if (!parse_status.ok()) {
         std::cerr << "paimon-read-write-benchmark: " << parse_status.ToString() << std::endl;
         std::cerr << "Try 'paimon-read-write-benchmark --help' for more information." << std::endl;
         return 1;
-    }
-
-    if (paimon::benchmark::HasHelpFlag(static_cast<int32_t>(argc), argv)) {
-        paimon::benchmark::PrintPaimonBenchmarkCliHelp();
-        return 0;
     }
 
     benchmark::Initialize(&argc, argv);

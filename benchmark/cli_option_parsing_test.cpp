@@ -77,9 +77,21 @@ TEST(CliOptionParsingTest, ParseDelimitedOptionsWorks) {
     ASSERT_EQ(parsed[1], std::make_pair(std::string("k2"), std::string("v2")));
 }
 
+TEST(CliOptionParsingTest, ParseDelimitedOptionsTrimsKeyAndValue) {
+    ASSERT_OK_AND_ASSIGN(
+        auto parsed,
+        paimon::benchmark::ParseDelimitedOptions(" k1 : v1 ; k2: v2 ", "--paimon_option"));
+    ASSERT_EQ(parsed.size(), 2U);
+    ASSERT_EQ(parsed[0], std::make_pair(std::string("k1"), std::string("v1")));
+    ASSERT_EQ(parsed[1], std::make_pair(std::string("k2"), std::string("v2")));
+}
+
 TEST(CliOptionParsingTest, ParseDelimitedOptionsRejectsInvalidInput) {
     ASSERT_NOK(paimon::benchmark::ParseDelimitedOptions("", "--paimon_option"));
     ASSERT_NOK(paimon::benchmark::ParseDelimitedOptions("k1:v1;", "--paimon_option"));
+    ASSERT_NOK(paimon::benchmark::ParseDelimitedOptions("k1:", "--paimon_option"));
+    ASSERT_NOK(paimon::benchmark::ParseDelimitedOptions(":v1", "--paimon_option"));
+    ASSERT_NOK(paimon::benchmark::ParseDelimitedOptions("k1:   ", "--paimon_option"));
 }
 
 TEST(CliOptionParsingTest, ParseStringOptionArgWorksForEqualsAndSeparatedForms) {
@@ -119,6 +131,19 @@ TEST(CliOptionParsingTest, ParseStringOptionArgRejectsMissingValue) {
     ASSERT_NOK(paimon::benchmark::ParseStringOptionArg(
         argv_holder.argc(), argv_holder.argv.data(), argv_holder.args[arg_index], "--foo",
         &arg_index, &value));
+}
+
+TEST(CliOptionParsingTest, ParseStringOptionArgIgnoresOtherOptions) {
+    ArgvHolder argv_holder({"prog", "--bar=baz"});
+    int32_t arg_index = 1;
+    std::string value;
+    ASSERT_OK_AND_ASSIGN(bool is_parsed,
+                         paimon::benchmark::ParseStringOptionArg(
+                             argv_holder.argc(), argv_holder.argv.data(),
+                             argv_holder.args[arg_index], "--foo", &arg_index, &value));
+    ASSERT_FALSE(is_parsed);
+    ASSERT_EQ(arg_index, 1);
+    ASSERT_TRUE(value.empty());
 }
 
 TEST(CliOptionParsingTest, ParseCommaSeparatedOptionArgAndDelimitedRepeatableOptionArgWorks) {

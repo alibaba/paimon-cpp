@@ -49,10 +49,10 @@ class BenchmarkHelpers {
 
     static Result<int64_t> RunReadIterations(::benchmark::State& state, const ReadOnceFn& read_once);
 
-    static Result<bool> TryRunExternalReadMode(::benchmark::State& state,
-                                               const std::string& benchmark_name,
-                                               const std::string& external_table_path,
-                                               const ReadOnceFn& read_once);
+    static Result<bool> TryRunSourceTableReadMode(::benchmark::State& state,
+                                                   const std::string& benchmark_name,
+                                                   const std::string& source_table_path,
+                                                   const ReadOnceFn& read_once);
 };
 
 }  // namespace paimon::benchmark
