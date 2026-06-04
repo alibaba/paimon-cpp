@@ -31,8 +31,8 @@
 namespace paimon {
 
 Result<bool> LocalFileSystem::Exists(const std::string& path) const {
-    PAIMON_ASSIGN_OR_RAISE(LocalFile file, LocalFile::Create(path));
-    return file.Exists();
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> file, LocalFile::Create(path));
+    return file->Exists();
 }
 
 Result<std::unique_ptr<InputStream>> LocalFileSystem::Open(const std::string& path) const {
@@ -40,8 +40,8 @@ Result<std::unique_ptr<InputStream>> LocalFileSystem::Open(const std::string& pa
     if (!is_exist) {
         return Status::NotExist(fmt::format("File '{}' not exists", path));
     }
-    PAIMON_ASSIGN_OR_RAISE(LocalFile file, LocalFile::Create(path));
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalInputStream> in, LocalInputStream::Create(file));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> file, LocalFile::Create(path));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalInputStream> in, LocalInputStream::Create(*file));
     return in;
 }
 
@@ -52,16 +52,17 @@ Result<std::unique_ptr<OutputStream>> LocalFileSystem::Create(const std::string&
         return Status::Invalid(
             fmt::format("do not allow overwrite, but the file {} already exists", path));
     }
-    PAIMON_ASSIGN_OR_RAISE(LocalFile file, LocalFile::Create(path));
-    LocalFile parent = file.GetParentFile();
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> file, LocalFile::Create(path));
+    LocalFile parent = file->GetParentFile();
     PAIMON_RETURN_NOT_OK(Mkdirs(parent.GetPath()));
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalOutputStream> out, LocalOutputStream::Create(file));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalOutputStream> out,
+                           LocalOutputStream::Create(*file));
     return out;
 }
 
 Status LocalFileSystem::Mkdirs(const std::string& path) const {
-    PAIMON_ASSIGN_OR_RAISE(LocalFile file, LocalFile::Create(path));
-    return MkdirsInternal(file);
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> file, LocalFile::Create(path));
+    return MkdirsInternal(*file);
 }
 
 Status LocalFileSystem::MkdirsInternal(const LocalFile& file) const {
@@ -96,33 +97,33 @@ Status LocalFileSystem::MkdirsInternal(const LocalFile& file) const {
 }
 
 Result<std::unique_ptr<FileStatus>> LocalFileSystem::GetFileStatus(const std::string& path) const {
-    PAIMON_ASSIGN_OR_RAISE(LocalFile file, LocalFile::Create(path));
-    PAIMON_ASSIGN_OR_RAISE(bool is_exist, file.Exists());
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> file, LocalFile::Create(path));
+    PAIMON_ASSIGN_OR_RAISE(bool is_exist, file->Exists());
     if (is_exist) {
-        return file.GetFileStatus();
+        return file->GetFileStatus();
     } else {
         return Status::NotExist(
             fmt::format("File {} does not exist or the user running "
                         "Paimon has insufficient permissions to access it.",
-                        file.GetPath()));
+                        file->GetPath()));
     }
 }
 
 Status LocalFileSystem::ListDir(
     const std::string& directory,
     std::vector<std::unique_ptr<BasicFileStatus>>* file_status_list) const {
-    PAIMON_ASSIGN_OR_RAISE(LocalFile file, LocalFile::Create(directory));
-    PAIMON_ASSIGN_OR_RAISE(bool is_exist, file.Exists());
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> file, LocalFile::Create(directory));
+    PAIMON_ASSIGN_OR_RAISE(bool is_exist, file->Exists());
     if (!is_exist) {
         return Status::OK();
     }
-    PAIMON_ASSIGN_OR_RAISE(bool is_file, file.IsFile());
+    PAIMON_ASSIGN_OR_RAISE(bool is_file, file->IsFile());
     if (is_file) {
         return Status::IOError(
-            fmt::format("file {} already exists and is not a directory", file.GetPath()));
+            fmt::format("file {} already exists and is not a directory", file->GetPath()));
     } else {
         std::vector<std::string> file_list;
-        PAIMON_RETURN_NOT_OK(file.List(&file_list));
+        PAIMON_RETURN_NOT_OK(file->List(&file_list));
         file_status_list->reserve(file_status_list->size() + file_list.size());
         for (const auto& f : file_list) {
             Result<std::unique_ptr<FileStatus>> file_status =
@@ -140,18 +141,18 @@ Status LocalFileSystem::ListDir(
 
 Status LocalFileSystem::ListFileStatus(
     const std::string& path, std::vector<std::unique_ptr<FileStatus>>* file_status_list) const {
-    PAIMON_ASSIGN_OR_RAISE(LocalFile file, LocalFile::Create(path));
-    PAIMON_ASSIGN_OR_RAISE(bool is_exist, file.Exists());
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> file, LocalFile::Create(path));
+    PAIMON_ASSIGN_OR_RAISE(bool is_exist, file->Exists());
     if (!is_exist) {
         return Status::OK();
     }
-    PAIMON_ASSIGN_OR_RAISE(bool is_file, file.IsFile());
+    PAIMON_ASSIGN_OR_RAISE(bool is_file, file->IsFile());
     if (is_file) {
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStatus> file_status, file.GetFileStatus());
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStatus> file_status, file->GetFileStatus());
         file_status_list->emplace_back(std::move(file_status));
     } else {
         std::vector<std::string> file_list;
-        PAIMON_RETURN_NOT_OK(file.List(&file_list));
+        PAIMON_RETURN_NOT_OK(file->List(&file_list));
         file_status_list->reserve(file_status_list->size() + file_list.size());
         for (const auto& f : file_list) {
             Result<std::unique_ptr<FileStatus>> file_status =
@@ -167,12 +168,12 @@ Status LocalFileSystem::ListFileStatus(
 }
 
 Status LocalFileSystem::Delete(const std::string& path, bool recursive) const {
-    PAIMON_ASSIGN_OR_RAISE(LocalFile file, LocalFile::Create(path));
-    PAIMON_ASSIGN_OR_RAISE(bool is_file, file.IsFile());
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> file, LocalFile::Create(path));
+    PAIMON_ASSIGN_OR_RAISE(bool is_file, file->IsFile());
     if (is_file) {
-        return file.Delete();
+        return file->Delete();
     }
-    return Delete(file, recursive);
+    return Delete(*file, recursive);
 }
 
 Status LocalFileSystem::Delete(const LocalFile& f, bool recursive) const {
@@ -202,17 +203,17 @@ Status LocalFileSystem::Rename(const std::string& src, const std::string& dst) c
     if (is_dst_exist) {
         return Status::Invalid(err_msg, "dst file already exist");
     }
-    PAIMON_ASSIGN_OR_RAISE(LocalFile src_file, LocalFile::Create(src));
-    PAIMON_ASSIGN_OR_RAISE(bool is_file, src_file.IsFile());
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> src_file, LocalFile::Create(src));
+    PAIMON_ASSIGN_OR_RAISE(bool is_file, src_file->IsFile());
     std::string new_file_name = dst;
 
     if (is_file && new_file_name[new_file_name.length() - 1] == '/') {
         return Status::Invalid(err_msg, "src file is not a dir");
     }
-    PAIMON_ASSIGN_OR_RAISE(LocalFile dst_file, LocalFile::Create(dst));
-    auto parent = dst_file.GetParentFile();
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> dst_file, LocalFile::Create(dst));
+    auto parent = dst_file->GetParentFile();
     PAIMON_RETURN_NOT_OK(Mkdirs(parent.GetPath()));
-    if (::rename(src_file.GetPath().c_str(), dst_file.GetPath().c_str()) != 0) {
+    if (::rename(src_file->GetPath().c_str(), dst_file->GetPath().c_str()) != 0) {
         int32_t cur_errno = errno;
         return Status::IOError(err_msg, std::strerror(cur_errno));
     }

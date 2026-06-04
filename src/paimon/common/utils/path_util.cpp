@@ -19,7 +19,7 @@
 #include <unistd.h>
 
 #include <cerrno>
-#include <climits>
+#include <cstdlib>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -147,12 +147,15 @@ void PathUtil::TrimLastDelim(std::string* dir_path) noexcept {
     }
 }
 
-Result<std::string> PathUtil::GetCurrentPath() noexcept {
-    char cwd[PATH_MAX];
-    if (getcwd(cwd, sizeof(cwd)) != nullptr) {
-        return std::string(cwd);
+Result<std::string> PathUtil::GetWorkingDirectory() noexcept {
+    char* path = getcwd(nullptr, 0);
+    if (path != nullptr) {
+        std::string ret(path);
+        free(path);
+        return ret;
     }
-    return Status::IOError(fmt::format("get current path failed, ec: {}", std::strerror(errno)));
+    return Status::IOError(
+        fmt::format("get working directory failed, ec: {}", std::strerror(errno)));
 }
 
 Result<std::string> PathUtil::CreateTempPath(const std::string& path) noexcept {

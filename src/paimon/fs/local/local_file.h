@@ -36,7 +36,7 @@ class LocalFileStatus;
 
 class LocalFile {
  public:
-    static Result<LocalFile> Create(const std::string& path_string);
+    static Result<std::unique_ptr<LocalFile>> Create(const std::string& path_string);
     ~LocalFile() = default;
 
     Result<bool> Exists() const;

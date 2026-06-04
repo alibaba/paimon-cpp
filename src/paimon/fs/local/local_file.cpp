@@ -38,10 +38,10 @@ namespace paimon {
         PAIMON_RETURN_NOT_OK(hook_->Try(path_)); \
     }
 
-Result<LocalFile> LocalFile::Create(const std::string& path_string) {
+Result<std::unique_ptr<LocalFile>> LocalFile::Create(const std::string& path_string) {
     if (path_string.empty()) {
-        PAIMON_ASSIGN_OR_RAISE(std::string current_path, PathUtil::GetCurrentPath());
-        return LocalFile(current_path);
+        PAIMON_ASSIGN_OR_RAISE(std::string current_path, PathUtil::GetWorkingDirectory());
+        return std::unique_ptr<LocalFile>(new LocalFile(current_path));
     }
 
     // local file system does not support path_string with scheme, e.g., "file:/tmp" will be
@@ -51,10 +51,11 @@ Result<LocalFile> LocalFile::Create(const std::string& path_string) {
         return Status::Invalid(fmt::format("invalid scheme {} for local file system", path.scheme));
     }
     if (path.path.empty() || path.path[0] != '/') {
-        PAIMON_ASSIGN_OR_RAISE(std::string current_path, PathUtil::GetCurrentPath());
-        return LocalFile(PathUtil::JoinPath(current_path, path.path));
+        PAIMON_ASSIGN_OR_RAISE(std::string current_path, PathUtil::GetWorkingDirectory());
+        return std::unique_ptr<LocalFile>(
+            new LocalFile(PathUtil::JoinPath(current_path, path.path)));
     }
-    return LocalFile(path.path);
+    return std::unique_ptr<LocalFile>(new LocalFile(path.path));
 }
 
 LocalFile::LocalFile(const std::string& path) : path_(path), hook_(IOHook::GetInstance()) {}

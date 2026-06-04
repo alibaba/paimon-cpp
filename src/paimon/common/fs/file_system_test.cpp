@@ -161,7 +161,7 @@ class FileSystemTest : public ::testing::Test, public ::testing::WithParamInterf
         if (file_system == "local") {
             std::string data_dir = paimon::test::GetDataDir();
             if (data_dir.empty() || data_dir[0] != '/') {
-                EXPECT_OK_AND_ASSIGN(std::string current_path, PathUtil::GetCurrentPath());
+                EXPECT_OK_AND_ASSIGN(std::string current_path, PathUtil::GetWorkingDirectory());
                 data_dir = PathUtil::JoinPath(current_path, data_dir);
             }
             return data_dir;

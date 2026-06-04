@@ -91,8 +91,8 @@ TEST(PathUtilsTest, TestTrimLastDelim) {
     }
 }
 
-TEST(PathUtilsTest, TestGetCurrentPath) {
-    ASSERT_OK_AND_ASSIGN(std::string current_path, PathUtil::GetCurrentPath());
+TEST(PathUtilsTest, TestGetWorkingDirectory) {
+    ASSERT_OK_AND_ASSIGN(std::string current_path, PathUtil::GetWorkingDirectory());
     ASSERT_FALSE(current_path.empty());
     ASSERT_EQ(current_path[0], '/');
 }
