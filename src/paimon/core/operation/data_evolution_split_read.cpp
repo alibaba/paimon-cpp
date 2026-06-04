@@ -17,18 +17,32 @@
 #include "paimon/core/operation/data_evolution_split_read.h"
 
 #include <map>
+#include <string>
+#include <string_view>
+#include <unordered_set>
 #include <utility>
 
+#include "arrow/array/array_base.h"
+#include "arrow/array/array_binary.h"
+#include "arrow/array/array_nested.h"
+#include "arrow/c/bridge.h"
+#include "paimon/common/catalog/catalog_context.h"
 #include "paimon/common/data/blob_utils.h"
+#include "paimon/common/data/blob_view_struct.h"
 #include "paimon/common/file_index/bitmap/apply_bitmap_index_batch_reader.h"
 #include "paimon/common/global_index/complete_index_score_batch_reader.h"
+#include "paimon/common/reader/blob_view_resolving_batch_reader.h"
 #include "paimon/common/reader/complete_row_kind_batch_reader.h"
 #include "paimon/common/reader/concat_batch_reader.h"
 #include "paimon/common/table/special_fields.h"
+#include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/object_utils.h"
+#include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/range_helper.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/global_index/indexed_split_impl.h"
+#include "paimon/core/utils/blob_view_lookup.h"
 namespace paimon {
 Status DataEvolutionSplitRead::BlobBunch::Add(const std::shared_ptr<DataFileMeta>& file) {
     if (!BlobUtils::IsBlobFile(file->file_name)) {
@@ -113,26 +127,155 @@ bool DataEvolutionSplitRead::HasIndexScoreField(const std::shared_ptr<arrow::Sch
     return read_schema->GetFieldIndex(SpecialFields::IndexScore().Name()) != -1;
 }
 
+std::vector<std::string> DataEvolutionSplitRead::HasBlobViewField(
+    const CoreOptions& options, const std::shared_ptr<arrow::Schema>& read_schema) {
+    std::vector<std::string> read_blob_view_fields;
+    std::vector<std::string> blob_view_fields = options.GetBlobViewFields();
+    for (const auto& blob : blob_view_fields) {
+        if (read_schema->GetFieldByName(blob)) {
+            read_blob_view_fields.push_back(blob);
+        }
+    }
+    return read_blob_view_fields;
+}
+
 Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::CreateReader(
     const std::shared_ptr<Split>& split) {
     if (auto indexed_split = std::dynamic_pointer_cast<IndexedSplitImpl>(split)) {
         PAIMON_RETURN_NOT_OK(indexed_split->Validate());
-        PAIMON_ASSIGN_OR_RAISE(
-            std::unique_ptr<BatchReader> batch_reader,
-            InnerCreateReader(indexed_split->GetDataSplit(), indexed_split->RowRanges()));
+        const auto& data_split = indexed_split->GetDataSplit();
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> batch_reader,
+                               InnerCreateReader(data_split, indexed_split->RowRanges()));
         if (HasIndexScoreField(raw_read_schema_)) {
-            return std::make_unique<CompleteIndexScoreBatchReader>(std::move(batch_reader),
-                                                                   indexed_split->Scores(), pool_);
+            batch_reader = std::make_unique<CompleteIndexScoreBatchReader>(
+                std::move(batch_reader), indexed_split->Scores(), pool_);
         }
-        return batch_reader;
+        return WrapWithBlobViewResolverIfNeeded(data_split, std::move(batch_reader));
     } else if (auto data_split = std::dynamic_pointer_cast<DataSplit>(split)) {
         if (HasIndexScoreField(raw_read_schema_)) {
             return Status::Invalid(
                 "Invalid read schema, read _INDEX_SCORE while split cannot cast to IndexedSplit");
         }
-        return InnerCreateReader(data_split, /*row_ranges=*/std::nullopt);
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> inner_reader,
+                               InnerCreateReader(data_split, /*row_ranges=*/std::nullopt));
+        return WrapWithBlobViewResolverIfNeeded(data_split, std::move(inner_reader));
     }
     return Status::Invalid("Invalid Split, cannot cast to IndexedSplit or DataSplit");
+}
+
+Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::WrapWithBlobViewResolverIfNeeded(
+    const std::shared_ptr<DataSplit>& data_split,
+    std::unique_ptr<BatchReader>&& inner_reader) const {
+    std::vector<std::string> read_blob_view_fields = HasBlobViewField(options_, raw_read_schema_);
+    if (read_blob_view_fields.empty()) {
+        return std::move(inner_reader);
+    }
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> pre_reader,
+                           CreateBlobViewReader(data_split, read_blob_view_fields));
+    PAIMON_ASSIGN_OR_RAISE(std::unordered_set<BlobViewStruct> blob_view_structs,
+                           ExtractBlobViewStructs(pre_reader.get()));
+    std::string warehouse_path =
+        PathUtil::GetParentDirPath(PathUtil::GetParentDirPath(context_->GetPath()));
+    auto catalog_context = std::make_shared<CatalogContext>(warehouse_path, options_.ToMap(),
+                                                            options_.GetFileSystem());
+    PAIMON_ASSIGN_OR_RAISE(
+        BlobViewResolver resolver,
+        BlobViewLookup::CreateResolver(blob_view_structs, catalog_context, pool_));
+    return std::make_unique<BlobViewResolvingBatchReader>(
+        std::move(inner_reader), std::move(read_blob_view_fields), std::move(resolver), pool_);
+}
+
+Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::CreateBlobViewReader(
+    const std::shared_ptr<DataSplit>& data_split,
+    const std::vector<std::string>& read_blob_view_fields) const {
+    auto split_impl = dynamic_cast<DataSplitImpl*>(data_split.get());
+    if (split_impl == nullptr) {
+        return Status::Invalid("unexpected error, split cast to impl failed");
+    }
+    assert(raw_read_schema_->num_fields() > 0);
+
+    arrow::FieldVector blob_view_arrow_fields;
+    blob_view_arrow_fields.reserve(read_blob_view_fields.size());
+    for (const auto& field_name : read_blob_view_fields) {
+        auto field = raw_read_schema_->GetFieldByName(field_name);
+        if (field == nullptr) {
+            return Status::Invalid(
+                fmt::format("Blob view field {} not found in read schema.", field_name));
+        }
+        blob_view_arrow_fields.push_back(std::move(field));
+    }
+    auto blob_view_schema = arrow::schema(std::move(blob_view_arrow_fields));
+
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<DataFilePathFactory> data_file_path_factory,
+        path_factory_->CreateDataFilePathFactory(split_impl->Partition(), split_impl->Bucket()));
+
+    // skip blob files: they only contain blob payloads, not the blob-view columns.
+    std::vector<std::shared_ptr<DataFileMeta>> data_files;
+    data_files.reserve(split_impl->DataFiles().size());
+    for (const auto& file : split_impl->DataFiles()) {
+        if (!BlobUtils::IsBlobFile(file->file_name)) {
+            data_files.push_back(file);
+        }
+    }
+    PAIMON_ASSIGN_OR_RAISE(
+        std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers,
+        CreateRawFileReaders(split_impl->Partition(), data_files, blob_view_schema,
+                             /*predicate=*/nullptr, /*dv_factory=*/nullptr,
+                             /*row_ranges=*/std::nullopt, data_file_path_factory));
+
+    auto batch_readers =
+        ObjectUtils::MoveVector<std::unique_ptr<BatchReader>>(std::move(raw_file_readers));
+    return std::make_unique<ConcatBatchReader>(std::move(batch_readers), pool_);
+}
+
+Result<std::unordered_set<BlobViewStruct>> DataEvolutionSplitRead::ExtractBlobViewStructs(
+    BatchReader* reader) {
+    if (reader == nullptr) {
+        return Status::Invalid("invalid reader in ExtractBlobViewStructs, reader is nullptr");
+    }
+    std::unordered_set<BlobViewStruct> blob_view_structs;
+    while (true) {
+        PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatch batch, reader->NextBatch());
+        if (BatchReader::IsEofBatch(batch)) {
+            break;
+        }
+        auto& [c_array, c_schema] = batch;
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> arrow_array,
+                                          arrow::ImportArray(c_array.get(), c_schema.get()));
+        auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(arrow_array);
+        if (struct_array == nullptr) {
+            return Status::Invalid(
+                "invalid array in ExtractBlobViewStructs, batch array is not a StructArray.");
+        }
+
+        for (int32_t field_idx = 0; field_idx < struct_array->num_fields(); ++field_idx) {
+            auto binary_array =
+                std::dynamic_pointer_cast<arrow::LargeBinaryArray>(struct_array->field(field_idx));
+            if (binary_array == nullptr) {
+                return Status::Invalid(
+                    "invalid array in ExtractBlobViewStructs, blob view column is not a "
+                    "LargeBinaryArray.");
+            }
+            for (int64_t row = 0; row < binary_array->length(); ++row) {
+                if (binary_array->IsNull(row)) {
+                    continue;
+                }
+                std::string_view bytes = binary_array->GetView(row);
+                PAIMON_ASSIGN_OR_RAISE(
+                    bool is_view, BlobViewStruct::IsBlobViewStruct(bytes.data(), bytes.size()));
+                if (!is_view) {
+                    return Status::Invalid(
+                        "blob-view-field requires blob field value to be a serialized "
+                        "BlobViewStruct.");
+                }
+                PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlobViewStruct> view_struct,
+                                       BlobViewStruct::Deserialize(bytes.data(), bytes.size()));
+                blob_view_structs.insert(*view_struct);
+            }
+        }
+    }
+    return blob_view_structs;
 }
 
 Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::InnerCreateReader(
@@ -174,6 +317,7 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::InnerCreateReader(
         ApplyPredicateFilterIfNeeded(std::move(concat_batch_reader), context_->GetPredicate()));
     return std::make_unique<CompleteRowKindBatchReader>(std::move(batch_reader), pool_);
 }
+
 Result<std::unique_ptr<FileBatchReader>> DataEvolutionSplitRead::ApplyIndexAndDvReaderIfNeeded(
     std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
     const std::shared_ptr<arrow::Schema>& data_schema,

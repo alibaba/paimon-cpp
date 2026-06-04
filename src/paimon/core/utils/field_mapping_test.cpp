@@ -151,15 +151,19 @@ TEST_F(FieldMappingTest, TestPartitionKeysEqualSchema) {
                                                 FieldType::INT, Literal(20));
     ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({equal, not_equal}));
 
-    std::vector<std::string> partition_keys = {"f0", "f1", "f2", "f3"};
+    std::vector<DataField> fields = {DataField(0, arrow::field("f0", arrow::utf8())),
+                                     DataField(1, arrow::field("f1", arrow::int32())),
+                                     DataField(2, arrow::field("f2", arrow::int32()))};
+    std::shared_ptr<arrow::Schema> schema = DataField::ConvertDataFieldsToArrowSchema(fields);
+    std::vector<std::string> partition_keys = {"f0", "f1", "f2"};
     ASSERT_OK_AND_ASSIGN(auto mapping_builder,
-                         FieldMappingBuilder::Create(schema_, partition_keys, predicate));
-    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema_));
+                         FieldMappingBuilder::Create(schema, partition_keys, predicate));
+    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(schema));
 
     PartitionInfo expected_part_info;
-    expected_part_info.partition_read_schema = fields_;
-    expected_part_info.idx_in_target_read_schema = {0, 1, 2, 3};
-    expected_part_info.idx_in_partition = {0, 1, 2, 3};
+    expected_part_info.partition_read_schema = fields;
+    expected_part_info.idx_in_target_read_schema = {0, 1, 2};
+    expected_part_info.idx_in_partition = {0, 1, 2};
     expected_part_info.partition_filter = std::dynamic_pointer_cast<PredicateFilter>(predicate);
     CheckPartitionInfo(mapping->partition_info.value(), expected_part_info);
 
@@ -353,7 +357,7 @@ TEST_F(FieldMappingTest, TestSchemaEvolution) {
     // add field / delete field / rename / casting
     // without predicate
     std::vector<DataField> data_fields = {DataField(0, arrow::field("key0", arrow::int32())),
-                                          DataField(1, arrow::field("key1", arrow::float64())),
+                                          DataField(1, arrow::field("key1", arrow::int64())),
                                           DataField(2, arrow::field("a", arrow::int32())),
                                           DataField(3, arrow::field("b", arrow::int32())),
                                           DataField(4, arrow::field("c", arrow::int32())),
@@ -362,7 +366,7 @@ TEST_F(FieldMappingTest, TestSchemaEvolution) {
         DataField::ConvertDataFieldsToArrowSchema(data_fields);
 
     std::vector<DataField> read_fields = {DataField(0, arrow::field("key0", arrow::int32())),
-                                          DataField(1, arrow::field("key1", arrow::float64())),
+                                          DataField(1, arrow::field("key1", arrow::int64())),
                                           DataField(3, arrow::field("c", arrow::int64())),
                                           DataField(5, arrow::field("a", arrow::float32())),
                                           DataField(7, arrow::field("d", arrow::int32())),
@@ -377,9 +381,8 @@ TEST_F(FieldMappingTest, TestSchemaEvolution) {
     ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields));
 
     PartitionInfo expected_part_info;
-    expected_part_info.partition_read_schema = {
-        DataField(0, arrow::field("key0", arrow::int32())),
-        DataField(1, arrow::field("key1", arrow::float64()))};
+    expected_part_info.partition_read_schema = {DataField(0, arrow::field("key0", arrow::int32())),
+                                                DataField(1, arrow::field("key1", arrow::int64()))};
     expected_part_info.idx_in_target_read_schema = {0, 1};
     expected_part_info.idx_in_partition = {0, 1};
     expected_part_info.partition_filter = nullptr;
@@ -417,7 +420,7 @@ TEST_F(FieldMappingTest, TestSchemaEvolutionWithPredicate) {
     // field_7 is added to the middle;
     // field_8 is added to the last field.
     std::vector<DataField> data_fields = {DataField(0, arrow::field("key0", arrow::int32())),
-                                          DataField(1, arrow::field("key1", arrow::float64())),
+                                          DataField(1, arrow::field("key1", arrow::int64())),
                                           DataField(2, arrow::field("a", arrow::int32())),
                                           DataField(3, arrow::field("b", arrow::decimal128(5, 2))),
                                           DataField(4, arrow::field("c", arrow::int32())),
@@ -425,7 +428,7 @@ TEST_F(FieldMappingTest, TestSchemaEvolutionWithPredicate) {
                                           DataField(6, arrow::field("k", arrow::int32()))};
 
     std::vector<DataField> table_fields = {DataField(0, arrow::field("key0", arrow::int32())),
-                                           DataField(1, arrow::field("key1", arrow::float64())),
+                                           DataField(1, arrow::field("key1", arrow::int64())),
                                            DataField(6, arrow::field("k", arrow::int32())),
                                            DataField(3, arrow::field("c", arrow::decimal128(6, 3))),
                                            DataField(7, arrow::field("d", arrow::int32())),
@@ -438,7 +441,7 @@ TEST_F(FieldMappingTest, TestSchemaEvolutionWithPredicate) {
     auto greater_or_equal = PredicateBuilder::GreaterOrEqual(
         /*field_index=*/0, /*field_name=*/"key0", FieldType::INT, Literal(4));
     auto equal = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"key1",
-                                         FieldType::DOUBLE, Literal(3.0));
+                                         FieldType::BIGINT, Literal(3l));
     auto less_or_equal = PredicateBuilder::LessOrEqual(/*field_index=*/2, /*field_name=*/"k",
                                                        FieldType::INT, Literal(10));
     // greater_than will not be pushed down, as with casting, only integer predicates can be pushed
@@ -463,9 +466,8 @@ TEST_F(FieldMappingTest, TestSchemaEvolutionWithPredicate) {
     ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields));
 
     PartitionInfo expected_part_info;
-    expected_part_info.partition_read_schema = {
-        DataField(0, arrow::field("key0", arrow::int32())),
-        DataField(1, arrow::field("key1", arrow::float64()))};
+    expected_part_info.partition_read_schema = {DataField(0, arrow::field("key0", arrow::int32())),
+                                                DataField(1, arrow::field("key1", arrow::int64()))};
     expected_part_info.idx_in_target_read_schema = {0, 1};
     expected_part_info.idx_in_partition = {0, 1};
     expected_part_info.partition_filter =
@@ -511,7 +513,7 @@ TEST_F(FieldMappingTest, TestSchemaEvolutionWithPredicate2) {
     // field_7 is added to the middle;
     // field_8 is added to the last field.
     std::vector<DataField> data_fields = {DataField(0, arrow::field("key0", arrow::int32())),
-                                          DataField(1, arrow::field("key1", arrow::float64())),
+                                          DataField(1, arrow::field("key1", arrow::int64())),
                                           DataField(2, arrow::field("a", arrow::int32())),
                                           DataField(3, arrow::field("b", arrow::decimal128(5, 2))),
                                           DataField(4, arrow::field("c", arrow::int32())),
@@ -519,7 +521,7 @@ TEST_F(FieldMappingTest, TestSchemaEvolutionWithPredicate2) {
                                           DataField(6, arrow::field("k", arrow::int32()))};
 
     std::vector<DataField> table_fields = {DataField(0, arrow::field("key0", arrow::int32())),
-                                           DataField(1, arrow::field("key1", arrow::float64())),
+                                           DataField(1, arrow::field("key1", arrow::int64())),
                                            DataField(6, arrow::field("k", arrow::int32())),
                                            DataField(3, arrow::field("c", arrow::decimal128(6, 3))),
                                            DataField(7, arrow::field("d", arrow::int32())),
@@ -528,7 +530,7 @@ TEST_F(FieldMappingTest, TestSchemaEvolutionWithPredicate2) {
 
     // the field order of read schema and table schema is inconsistent
     std::vector<DataField> read_fields = {DataField(7, arrow::field("d", arrow::int32())),
-                                          DataField(1, arrow::field("key1", arrow::float64())),
+                                          DataField(1, arrow::field("key1", arrow::int64())),
                                           DataField(5, arrow::field("a", arrow::int64())),
                                           DataField(8, arrow::field("e", arrow::int32())),
                                           DataField(6, arrow::field("k", arrow::int32())),
@@ -540,7 +542,7 @@ TEST_F(FieldMappingTest, TestSchemaEvolutionWithPredicate2) {
     auto greater_or_equal = PredicateBuilder::GreaterOrEqual(
         /*field_index=*/6, /*field_name=*/"key0", FieldType::INT, Literal(4));
     auto equal = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"key1",
-                                         FieldType::DOUBLE, Literal(3.0));
+                                         FieldType::BIGINT, Literal(3l));
     auto less_or_equal = PredicateBuilder::LessOrEqual(/*field_index=*/4, /*field_name=*/"k",
                                                        FieldType::INT, Literal(10));
     // greater_than will not be pushed down, as with casting, only integer predicates can be pushed
@@ -565,15 +567,14 @@ TEST_F(FieldMappingTest, TestSchemaEvolutionWithPredicate2) {
     ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields));
 
     PartitionInfo expected_part_info;
-    expected_part_info.partition_read_schema = {
-        DataField(0, arrow::field("key0", arrow::int32())),
-        DataField(1, arrow::field("key1", arrow::float64()))};
+    expected_part_info.partition_read_schema = {DataField(0, arrow::field("key0", arrow::int32())),
+                                                DataField(1, arrow::field("key1", arrow::int64()))};
     expected_part_info.idx_in_target_read_schema = {6, 1};
     expected_part_info.idx_in_partition = {0, 1};
     auto greater_or_equal_new = PredicateBuilder::GreaterOrEqual(
         /*field_index=*/0, /*field_name=*/"key0", FieldType::INT, Literal(4));
     auto equal_new = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"key1",
-                                             FieldType::DOUBLE, Literal(3.0));
+                                             FieldType::BIGINT, Literal(3l));
     expected_part_info.partition_filter =
         PredicateBuilder::And({greater_or_equal_new, equal_new}).value_or(nullptr);
     CheckPartitionInfo(mapping->partition_info.value(), expected_part_info);
