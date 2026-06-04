@@ -21,8 +21,10 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
+#include "paimon/common/data/blob_view_struct.h"
 #include "paimon/common/reader/data_evolution_file_reader.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/operation/abstract_split_read.h"
@@ -51,7 +53,8 @@ struct DeletionFile;
 /// otherwise, it must be present in the read path.
 ///
 /// Readers Overview: (ConcatBatchReader across
-/// splits)->(CompleteIndexScoreBatchReader)->CompleteRowKindBatchReader->(PredicateBatchReader)
+/// splits)->(BlobViewResolvingBatchReader)->(CompleteIndexScoreBatchReader)->
+/// CompleteRowKindBatchReader->(PredicateBatchReader)
 /// ->ConcatBatchReader across files->DataEvolutionFileReader->(ConcatBatchReader across blob files)
 /// ->FieldMappingReader->(CompleteRowTrackingFieldsBatchReader)
 /// ->(DelegatingPrefetchReader)->(PrefetchFileBatchReader)->FormatReader
@@ -140,6 +143,19 @@ class DataEvolutionSplitRead : public AbstractSplitRead {
         std::vector<std::shared_ptr<DataFileMeta>>&& files);
 
     static bool HasIndexScoreField(const std::shared_ptr<arrow::Schema>& read_schema);
+
+    static std::vector<std::string> HasBlobViewField(
+        const CoreOptions& options, const std::shared_ptr<arrow::Schema>& read_schema);
+
+    static Result<std::unordered_set<BlobViewStruct>> ExtractBlobViewStructs(BatchReader* reader);
+
+    Result<std::unique_ptr<BatchReader>> CreateBlobViewReader(
+        const std::shared_ptr<DataSplit>& data_split,
+        const std::vector<std::string>& read_blob_view_fields) const;
+
+    Result<std::unique_ptr<BatchReader>> WrapWithBlobViewResolverIfNeeded(
+        const std::shared_ptr<DataSplit>& data_split,
+        std::unique_ptr<BatchReader>&& inner_reader) const;
 
  private:
     Result<std::unique_ptr<DataEvolutionFileReader>> CreateUnionReader(
