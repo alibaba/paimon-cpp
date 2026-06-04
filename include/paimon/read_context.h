@@ -206,6 +206,13 @@ class PAIMON_EXPORT ReadContextBuilder {
     /// It can significantly improve performance by reducing the amount of data
     /// that needs to be read and processed.
     ///
+    /// The caller should construct the predicate against the latest table schema.
+    /// `InternalReadContext::Create` projects each leaf onto the read schema
+    /// (mirroring paimon Java's `PredicateProjectionConverter`): leaf field indices
+    /// are rewritten to positions in the read schema, and AND children / OR branches
+    /// whose fields are not in the projection are pruned. The predicate therefore
+    /// does not need to be projection-aware.
+    ///
     /// @param predicate Shared pointer to the predicate for data filtering.
     /// @return Reference to this builder for method chaining.
     ReadContextBuilder& SetPredicate(const std::shared_ptr<Predicate>& predicate);

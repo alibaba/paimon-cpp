@@ -32,6 +32,11 @@ enum class FieldType;
 /// Leaf node of a `Predicate` tree. Compares a field with literals.
 class PAIMON_EXPORT LeafPredicate : virtual public Predicate {
  public:
+    /// The field's position in the schema this predicate is currently bound to.
+    /// At construction the value reflects the schema the caller supplied to
+    /// `PredicateBuilder`; predicates obtained from `InternalReadContext::GetPredicate()`
+    /// have already been projected onto the read schema (see
+    /// `InternalReadContext::GetPredicate()` for the projection semantics).
     int32_t FieldIndex() const {
         return field_index_;
     }
