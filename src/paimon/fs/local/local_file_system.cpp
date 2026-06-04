@@ -41,7 +41,8 @@ Result<std::unique_ptr<InputStream>> LocalFileSystem::Open(const std::string& pa
         return Status::NotExist(fmt::format("File '{}' not exists", path));
     }
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> file, LocalFile::Create(path));
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalInputStream> in, LocalInputStream::Create(*file));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalInputStream> in,
+                           LocalInputStream::Create(std::move(file)));
     return in;
 }
 
@@ -53,44 +54,44 @@ Result<std::unique_ptr<OutputStream>> LocalFileSystem::Create(const std::string&
             fmt::format("do not allow overwrite, but the file {} already exists", path));
     }
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> file, LocalFile::Create(path));
-    LocalFile parent = file->GetParentFile();
-    PAIMON_RETURN_NOT_OK(Mkdirs(parent.GetPath()));
+    std::unique_ptr<LocalFile> parent = file->GetParentFile();
+    PAIMON_RETURN_NOT_OK(Mkdirs(parent->GetPath()));
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalOutputStream> out,
-                           LocalOutputStream::Create(*file));
+                           LocalOutputStream::Create(std::move(file)));
     return out;
 }
 
 Status LocalFileSystem::Mkdirs(const std::string& path) const {
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> file, LocalFile::Create(path));
-    return MkdirsInternal(*file);
+    return MkdirsInternal(std::move(file));
 }
 
-Status LocalFileSystem::MkdirsInternal(const LocalFile& file) const {
+Status LocalFileSystem::MkdirsInternal(std::unique_ptr<LocalFile>&& file) const {
     // Important: The 'Exists()' check above must come before the 'IsDir()'
     // check to be safe when multiple parallel instances try to create the directory
-    PAIMON_ASSIGN_OR_RAISE(bool is_exist, file.Exists());
+    PAIMON_ASSIGN_OR_RAISE(bool is_exist, file->Exists());
     if (is_exist) {
-        PAIMON_ASSIGN_OR_RAISE(bool is_dir, file.IsDir());
+        PAIMON_ASSIGN_OR_RAISE(bool is_dir, file->IsDir());
         if (is_dir) {
             return Status::OK();
         } else {
             // exists and is not a directory -> is a regular file
             return Status::IOError(
-                fmt::format("file {} already exists and is not a directory", file.GetPath()));
+                fmt::format("file {} already exists and is not a directory", file->GetPath()));
         }
     }
 
-    auto parent = file.GetParentFile();
-    if (!parent.IsEmpty()) {
-        PAIMON_RETURN_NOT_OK(MkdirsInternal(parent));
+    std::unique_ptr<LocalFile> parent = file->GetParentFile();
+    if (!parent->IsEmpty()) {
+        PAIMON_RETURN_NOT_OK(MkdirsInternal(std::move(parent)));
     }
-    PAIMON_ASSIGN_OR_RAISE(bool success, file.Mkdir());
+    PAIMON_ASSIGN_OR_RAISE(bool success, file->Mkdir());
     if (!success) {
-        PAIMON_ASSIGN_OR_RAISE(bool is_dir, file.IsDir());
+        PAIMON_ASSIGN_OR_RAISE(bool is_dir, file->IsDir());
         if (is_dir) {
             return Status::OK();
         } else {
-            return Status::IOError(fmt::format("create directory '{}' failed", file.GetPath()));
+            return Status::IOError(fmt::format("create directory '{}' failed", file->GetPath()));
         }
     }
     return Status::OK();
@@ -173,24 +174,24 @@ Status LocalFileSystem::Delete(const std::string& path, bool recursive) const {
     if (is_file) {
         return file->Delete();
     }
-    return Delete(*file, recursive);
+    return Delete(std::move(file), recursive);
 }
 
-Status LocalFileSystem::Delete(const LocalFile& f, bool recursive) const {
-    PAIMON_ASSIGN_OR_RAISE(bool is_dir, f.IsDir());
+Status LocalFileSystem::Delete(std::unique_ptr<LocalFile>&& file, bool recursive) const {
+    PAIMON_ASSIGN_OR_RAISE(bool is_dir, file->IsDir());
     if (is_dir) {
-        std::vector<LocalFile> files;
-        PAIMON_RETURN_NOT_OK(f.ListFiles(&files));
+        std::vector<std::unique_ptr<LocalFile>> files;
+        PAIMON_RETURN_NOT_OK(file->ListFiles(&files));
         if (recursive == false && !files.empty()) {
             return Status::IOError(
-                fmt::format("cannot delete {}, directory is not empty", f.GetPath()));
+                fmt::format("cannot delete {}, directory is not empty", file->GetPath()));
         }
-        for (const auto& file : files) {
-            PAIMON_RETURN_NOT_OK(Delete(file));
+        for (auto& child : files) {
+            PAIMON_RETURN_NOT_OK(Delete(std::move(child)));
         }
     }
     // Now directory is empty
-    return f.Delete();
+    return file->Delete();
 }
 
 Status LocalFileSystem::Rename(const std::string& src, const std::string& dst) const {
@@ -211,8 +212,8 @@ Status LocalFileSystem::Rename(const std::string& src, const std::string& dst) c
         return Status::Invalid(err_msg, "src file is not a dir");
     }
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> dst_file, LocalFile::Create(dst));
-    auto parent = dst_file->GetParentFile();
-    PAIMON_RETURN_NOT_OK(Mkdirs(parent.GetPath()));
+    std::unique_ptr<LocalFile> parent = dst_file->GetParentFile();
+    PAIMON_RETURN_NOT_OK(Mkdirs(parent->GetPath()));
     if (::rename(src_file->GetPath().c_str(), dst_file->GetPath().c_str()) != 0) {
         int32_t cur_errno = errno;
         return Status::IOError(err_msg, std::strerror(cur_errno));
@@ -221,12 +222,13 @@ Status LocalFileSystem::Rename(const std::string& src, const std::string& dst) c
 }
 
 // input stream
-Result<std::unique_ptr<LocalInputStream>> LocalInputStream::Create(LocalFile& file) {
-    PAIMON_RETURN_NOT_OK(file.OpenFile(/*is_read_file=*/true));
-    return std::unique_ptr<LocalInputStream>(new LocalInputStream(file));
+Result<std::unique_ptr<LocalInputStream>> LocalInputStream::Create(
+    std::unique_ptr<LocalFile> file) {
+    PAIMON_RETURN_NOT_OK(file->OpenFile(/*is_read_file=*/true));
+    return std::unique_ptr<LocalInputStream>(new LocalInputStream(std::move(file)));
 }
 
-LocalInputStream::LocalInputStream(const LocalFile& file) : file_(file) {}
+LocalInputStream::LocalInputStream(std::unique_ptr<LocalFile>&& file) : file_(std::move(file)) {}
 
 Status LocalInputStream::Seek(int64_t offset, SeekOrigin origin) {
     if (origin != FS_SEEK_SET && origin != FS_SEEK_CUR && origin != FS_SEEK_END) {
@@ -245,27 +247,27 @@ Status LocalInputStream::Seek(int64_t offset, SeekOrigin origin) {
                 return SEEK_SET;
         }
     };
-    return file_.Seek(offset, convert_origin(origin));
+    return file_->Seek(offset, convert_origin(origin));
 }
 
 Result<int64_t> LocalInputStream::GetPos() const {
-    return file_.Tell();
+    return file_->Tell();
 }
 
 Result<int32_t> LocalInputStream::Read(char* buffer, uint32_t size) {
-    PAIMON_ASSIGN_OR_RAISE(int32_t read_length, file_.Read(buffer, size));
+    PAIMON_ASSIGN_OR_RAISE(int32_t read_length, file_->Read(buffer, size));
     if (read_length != static_cast<int32_t>(size)) {
-        return Status::IOError(fmt::format("file '{}' read size {} != expected {}", file_.GetPath(),
-                                           read_length, size));
+        return Status::IOError(fmt::format("file '{}' read size {} != expected {}",
+                                           file_->GetPath(), read_length, size));
     }
     return read_length;
 }
 
 Result<int32_t> LocalInputStream::Read(char* buffer, uint32_t size, uint64_t offset) {
-    PAIMON_ASSIGN_OR_RAISE(int32_t read_length, file_.Read(buffer, size, offset));
+    PAIMON_ASSIGN_OR_RAISE(int32_t read_length, file_->Read(buffer, size, offset));
     if (read_length != static_cast<int32_t>(size)) {
-        return Status::IOError(fmt::format("file '{}' read size {} != expected {}", file_.GetPath(),
-                                           read_length, size));
+        return Status::IOError(fmt::format("file '{}' read size {} != expected {}",
+                                           file_->GetPath(), read_length, size));
     }
     return read_length;
 }
@@ -283,32 +285,33 @@ void LocalInputStream::ReadAsync(char* buffer, uint32_t size, uint64_t offset,
 }
 
 Result<uint64_t> LocalInputStream::Length() const {
-    return file_.Length();
+    return file_->Length();
 }
 
 Status LocalInputStream::Close() {
-    return file_.Close();
+    return file_->Close();
 }
 
 // output stream
-Result<std::unique_ptr<LocalOutputStream>> LocalOutputStream::Create(LocalFile& file) {
-    PAIMON_RETURN_NOT_OK(file.OpenFile(/*is_read_file=*/false));
-    return std::unique_ptr<LocalOutputStream>(new LocalOutputStream(file));
+Result<std::unique_ptr<LocalOutputStream>> LocalOutputStream::Create(
+    std::unique_ptr<LocalFile> file) {
+    PAIMON_RETURN_NOT_OK(file->OpenFile(/*is_read_file=*/false));
+    return std::unique_ptr<LocalOutputStream>(new LocalOutputStream(std::move(file)));
 }
 
-LocalOutputStream::LocalOutputStream(const LocalFile& file) : file_(file) {}
+LocalOutputStream::LocalOutputStream(std::unique_ptr<LocalFile>&& file) : file_(std::move(file)) {}
 
 Result<int64_t> LocalOutputStream::GetPos() const {
-    return file_.Tell();
+    return file_->Tell();
 }
 Result<int32_t> LocalOutputStream::Write(const char* buffer, uint32_t size) {
-    return file_.Write(buffer, size);
+    return file_->Write(buffer, size);
 }
 Status LocalOutputStream::Flush() {
-    return file_.Flush();
+    return file_->Flush();
 }
 Status LocalOutputStream::Close() {
-    return file_.Close();
+    return file_->Close();
 }
 
 }  // namespace paimon

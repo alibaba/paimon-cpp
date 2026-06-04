@@ -56,14 +56,14 @@ class LocalFileSystem : public FileSystem {
     // the lock to ensure atomic renaming
     static const std::mutex RENAME_LOCK;
 
-    Status Delete(const LocalFile& f, bool recursive = true) const;
+    Status Delete(std::unique_ptr<LocalFile>&& file, bool recursive = true) const;
     std::string GetParentPath(const std::string& path) const;
-    Status MkdirsInternal(const LocalFile& file) const;
+    Status MkdirsInternal(std::unique_ptr<LocalFile>&& file) const;
 };
 
 class LocalInputStream : public InputStream {
  public:
-    static Result<std::unique_ptr<LocalInputStream>> Create(LocalFile& file);
+    static Result<std::unique_ptr<LocalInputStream>> Create(std::unique_ptr<LocalFile> file);
 
     Status Seek(int64_t offset, SeekOrigin origin) override;
     Result<int64_t> GetPos() const override;
@@ -74,32 +74,32 @@ class LocalInputStream : public InputStream {
 
     Status Close() override;
     Result<std::string> GetUri() const override {
-        return file_.GetPath();
+        return file_->GetPath();
     }
     Result<uint64_t> Length() const override;
 
  private:
-    explicit LocalInputStream(const LocalFile& file);
+    explicit LocalInputStream(std::unique_ptr<LocalFile>&& file);
 
-    LocalFile file_;
+    std::unique_ptr<LocalFile> file_;
 };
 
 class LocalOutputStream : public OutputStream {
  public:
-    static Result<std::unique_ptr<LocalOutputStream>> Create(LocalFile& file);
+    static Result<std::unique_ptr<LocalOutputStream>> Create(std::unique_ptr<LocalFile> file);
 
     Result<int64_t> GetPos() const override;
     Result<int32_t> Write(const char* buffer, uint32_t size) override;
     Status Flush() override;
     Status Close() override;
     Result<std::string> GetUri() const override {
-        return file_.GetPath();
+        return file_->GetPath();
     }
 
  private:
-    explicit LocalOutputStream(const LocalFile& file);
+    explicit LocalOutputStream(std::unique_ptr<LocalFile>&& file);
 
-    LocalFile file_;
+    std::unique_ptr<LocalFile> file_;
 };
 
 }  // namespace paimon

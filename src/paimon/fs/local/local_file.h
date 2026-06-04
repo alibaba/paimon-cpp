@@ -26,6 +26,7 @@
 #include <string>
 #include <vector>
 
+#include "paimon/macros.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 
@@ -37,16 +38,17 @@ class LocalFileStatus;
 class LocalFile {
  public:
     static Result<std::unique_ptr<LocalFile>> Create(const std::string& path_string);
-    ~LocalFile() = default;
+    PAIMON_DISALLOW_COPY_AND_ASSIGN(LocalFile);
+    ~LocalFile();
 
     Result<bool> Exists() const;
     Result<bool> IsFile() const;
     Result<bool> IsDir() const;
     Status List(std::vector<std::string>* file_list) const;
-    Status ListFiles(std::vector<LocalFile>* file_list) const;
+    Status ListFiles(std::vector<std::unique_ptr<LocalFile>>* file_list) const;
     Status Delete() const;
     const std::string& GetPath() const;
-    LocalFile GetParentFile() const;
+    std::unique_ptr<LocalFile> GetParentFile() const;
     Result<bool> Mkdir() const;
     Result<std::unique_ptr<LocalFileStatus>> GetFileStatus() const;
     Result<uint64_t> Length() const;

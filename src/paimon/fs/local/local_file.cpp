@@ -60,6 +60,12 @@ Result<std::unique_ptr<LocalFile>> LocalFile::Create(const std::string& path_str
 
 LocalFile::LocalFile(const std::string& path) : path_(path), hook_(IOHook::GetInstance()) {}
 
+LocalFile::~LocalFile() {
+    if (file_) {
+        std::fclose(file_);
+    }
+}
+
 Result<bool> LocalFile::Exists() const {
     CHECK_HOOK();
     if (access(path_.c_str(), F_OK) == 0) {
@@ -119,13 +125,15 @@ Status LocalFile::List(std::vector<std::string>* file_list) const {
     return Status::OK();
 }
 
-Status LocalFile::ListFiles(std::vector<LocalFile>* file_list) const {
+Status LocalFile::ListFiles(std::vector<std::unique_ptr<LocalFile>>* file_list) const {
     CHECK_HOOK();
     file_list->clear();
     std::vector<std::string> file_names;
     PAIMON_RETURN_NOT_OK(List(&file_names));
     for (const auto& file_name : file_names) {
-        file_list->push_back(LocalFile(PathUtil::JoinPath(path_, file_name)));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> file,
+                               LocalFile::Create(PathUtil::JoinPath(path_, file_name)));
+        file_list->push_back(std::move(file));
     }
     return Status::OK();
 }
@@ -173,13 +181,13 @@ Result<int64_t> LocalFile::LastModifiedTimeMs() const {
     return file_status->GetModificationTime();
 }
 
-LocalFile LocalFile::GetParentFile() const {
+std::unique_ptr<LocalFile> LocalFile::GetParentFile() const {
     size_t pos = path_.rfind('/');
     if (pos == std::string::npos) {
-        return LocalFile("");
+        return std::unique_ptr<LocalFile>(new LocalFile(""));
     } else {
         std::string parent_dir = path_.substr(0, pos);
-        return LocalFile(parent_dir);
+        return std::unique_ptr<LocalFile>(new LocalFile(parent_dir));
     }
 }
 

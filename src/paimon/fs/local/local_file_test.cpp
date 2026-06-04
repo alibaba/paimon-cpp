@@ -148,10 +148,10 @@ TEST(LocalFileTest, TestUsage) {
     ASSERT_OK_AND_ASSIGN(auto deep_dir, LocalFile::Create(path_deep_dir));
     ASSERT_OK_AND_ASSIGN(success, deep_dir->Mkdir());
     ASSERT_TRUE(success);
-    LocalFile parent_deep_dir = deep_dir->GetParentFile();
-    ASSERT_EQ(parent_deep_dir.GetPath(), dir->GetPath());
+    std::unique_ptr<LocalFile> parent_deep_dir = deep_dir->GetParentFile();
+    ASSERT_EQ(parent_deep_dir->GetPath(), dir->GetPath());
     ASSERT_OK(deep_dir->Delete());
-    ASSERT_OK(parent_deep_dir.Delete());
+    ASSERT_OK(parent_deep_dir->Delete());
     ASSERT_OK(dir->Delete());
 }
 
