@@ -38,6 +38,7 @@
 #include "paimon/common/data/binary_array_writer.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
+#include "paimon/common/data/blob_view_struct.h"
 #include "paimon/common/factories/io_hook.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/path_util.h"
@@ -2382,6 +2383,168 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorFieldWriteRawBytesDirectly) {
                         "BLOB inline field b0 configured by blob-descriptor-field or "
                         "blob-view-field require values "
                         "to be a BlobDescriptor or BlobViewStruct.");
+}
+
+TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamTable) {
+    auto file_format = GetParam();
+    if (file_format != "orc" && file_format != "parquet") {
+        return;
+    }
+
+    const std::string upstream_db_name = "append_table_with_multi_blob";
+    const std::string upstream_table_name = "append_table_with_multi_blob";
+    std::string src_db_path = paimon::test::GetDataDir() + file_format + "/" + upstream_db_name +
+                              ".db/" + upstream_table_name;
+    std::string dst_db_path =
+        PathUtil::JoinPath(dir_->Str(), upstream_db_name + ".db/" + upstream_table_name);
+    ASSERT_TRUE(TestUtil::CopyDirectory(src_db_path, dst_db_path));
+
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
+                                 BlobUtils::ToArrowField("view", true)};
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, file_format},
+                                                  {Options::BUCKET, "-1"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                  {Options::BLOB_VIEW_FIELD, "view"},
+                                                  {Options::FILE_SYSTEM, "local"}};
+    CreateTable(fields, /*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+
+    // src array
+    Identifier upstream_identifier(upstream_db_name, upstream_table_name);
+    arrow::LargeBinaryBuilder view_builder;
+    for (int32_t i = 0; i < 8; ++i) {
+        if (i < 6) {
+            BlobViewStruct view_struct(upstream_identifier, /*field_id=*/6,
+                                       /*row_id=*/static_cast<int64_t>(i));
+            auto serialized = view_struct.Serialize(GetDefaultPool());
+            ASSERT_TRUE(view_builder
+                            .Append(reinterpret_cast<const uint8_t*>(serialized->data()),
+                                    serialized->size())
+                            .ok());
+        } else {
+            ASSERT_TRUE(view_builder.AppendNull().ok());
+        }
+    }
+    std::shared_ptr<arrow::Array> write_view_array;
+    ASSERT_TRUE(view_builder.Finish(&write_view_array).ok());
+    auto write_f0_array = arrow::ipc::internal::json::ArrayFromJSON(
+                              arrow::int32(), R"([100,101,102,103,104,105,106,107])")
+                              .ValueOrDie();
+    auto write_struct = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::StructArray::Make(arrow::ArrayVector({write_f0_array, write_view_array}),
+                                 std::vector<std::string>({"f0", "view"}))
+            .ValueOrDie());
+
+    // write & commit
+    auto schema = arrow::schema(fields);
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         WriteArray(table_path, {}, schema->field_names(), {write_struct}));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+
+    std::string padding_b(2048, 'b');
+    std::string padding_d(2048, 'd');
+    std::string padding_e(2048, 'e');
+    std::string padding_f(2048, 'f');
+
+    // scan & read
+    ASSERT_OK_AND_ASSIGN(auto plan, ScanTable(table_path));
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         ReadTable(table_path, schema->field_names(), plan, /*predicate=*/nullptr));
+    ASSERT_TRUE(result.chunked_array);
+    auto read_concat = arrow::Concatenate(result.chunked_array->chunks()).ValueOrDie();
+    auto read_struct = std::dynamic_pointer_cast<arrow::StructArray>(read_concat);
+    ASSERT_EQ(read_struct->length(), 8);
+    ASSERT_OK_AND_ASSIGN(auto result_array, ConvertDescriptorToRawBlob(read_struct, {"view"}));
+
+    // clang-format off
+    std::string expected_json = R"([
+[100, null],
+[101, ")" + padding_b + R"("],
+[102, null],
+[103, ")" + padding_d + R"("],
+[104, ")" + padding_e + R"("],
+[105, ")" + padding_f + R"("],
+[106, null],
+[107, null]
+])";
+    // clang-format on
+    auto expected_struct = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), expected_json)
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(expected_struct));
+
+    ASSERT_TRUE(result_array->Equals(expected_with_rk))
+        << "result_array:" << result_array->ToString() << std::endl
+        << "expected:" << expected_with_rk->ToString();
+
+    // Sub-case 1: scan with row_ranges.
+    {
+        ASSERT_OK_AND_ASSIGN(auto range_plan, ScanTable(table_path, /*predicate=*/nullptr,
+                                                        /*row_ranges=*/{Range(1, 3), Range(5, 5)}));
+        ASSERT_OK_AND_ASSIGN(auto range_result, ReadTable(table_path, schema->field_names(),
+                                                          range_plan, /*predicate=*/nullptr));
+        ASSERT_TRUE(range_result.chunked_array);
+        auto range_concat = arrow::Concatenate(range_result.chunked_array->chunks()).ValueOrDie();
+        auto range_struct = std::dynamic_pointer_cast<arrow::StructArray>(range_concat);
+        ASSERT_EQ(range_struct->length(), 4);
+        ASSERT_OK_AND_ASSIGN(auto range_resolved,
+                             ConvertDescriptorToRawBlob(range_struct, {"view"}));
+
+        // clang-format off
+        std::string range_json = R"([
+[101, ")" + padding_b + R"("],
+[102, null],
+[103, ")" + padding_d + R"("],
+[105, ")" + padding_f + R"("]
+])";
+        // clang-format on
+        auto range_expected_struct = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), range_json)
+                .ValueOrDie());
+        ASSERT_OK_AND_ASSIGN(auto range_expected_with_rk,
+                             PrependRowKindColumn(range_expected_struct));
+        ASSERT_TRUE(range_resolved->Equals(range_expected_with_rk))
+            << "range_resolved:" << range_resolved->ToString() << std::endl
+            << "expected:" << range_expected_with_rk->ToString();
+    }
+
+    // Sub-case 2: scan with predicate (f0 > 102), data evolution split read will ignore format push
+    // down
+    {
+        auto predicate = PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f0",
+                                                       FieldType::INT, Literal(102));
+        ASSERT_OK_AND_ASSIGN(auto pred_plan, ScanTable(table_path, predicate, /*row_ranges=*/{}));
+        ASSERT_OK_AND_ASSIGN(auto pred_result,
+                             ReadTable(table_path, schema->field_names(), pred_plan, predicate));
+        ASSERT_TRUE(pred_result.chunked_array);
+        auto pred_concat = arrow::Concatenate(pred_result.chunked_array->chunks()).ValueOrDie();
+        auto pred_struct = std::dynamic_pointer_cast<arrow::StructArray>(pred_concat);
+        ASSERT_EQ(pred_struct->length(), 8);
+        ASSERT_OK_AND_ASSIGN(auto pred_resolved, ConvertDescriptorToRawBlob(pred_struct, {"view"}));
+
+        // clang-format off
+        std::string pred_json = R"([
+[100, null],
+[101, ")" + padding_b + R"("],
+[102, null],
+[103, ")" + padding_d + R"("],
+[104, ")" + padding_e + R"("],
+[105, ")" + padding_f + R"("],
+[106, null],
+[107, null]
+])";
+        // clang-format on
+        auto pred_expected_struct = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), pred_json)
+                .ValueOrDie());
+        ASSERT_OK_AND_ASSIGN(auto pred_expected_with_rk,
+                             PrependRowKindColumn(pred_expected_struct));
+        ASSERT_TRUE(pred_resolved->Equals(pred_expected_with_rk))
+            << "pred_resolved:" << pred_resolved->ToString() << std::endl
+            << "expected:" << pred_expected_with_rk->ToString();
+    }
 }
 
 }  // namespace paimon::test

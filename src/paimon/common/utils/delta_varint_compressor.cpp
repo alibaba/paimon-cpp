@@ -30,12 +30,14 @@ std::vector<char> DeltaVarintCompressor::Compress(const std::vector<int64_t>& da
         return {};
     }
 
-    // 1. Delta encoding
+    // 1. Delta encoding (use unsigned subtraction to avoid signed overflow UB)
     std::vector<int64_t> deltas;
     deltas.reserve(data.size());
     deltas.push_back(data[0]);
     for (size_t i = 1; i < data.size(); i++) {
-        deltas.push_back(data[i] - data[i - 1]);
+        uint64_t unsigned_delta =
+            static_cast<uint64_t>(data[i]) - static_cast<uint64_t>(data[i - 1]);
+        deltas.push_back(static_cast<int64_t>(unsigned_delta));
     }
 
     // 2. ZigZag + Varint
@@ -61,11 +63,13 @@ Result<std::vector<int64_t>> DeltaVarintCompressor::Decompress(const std::vector
         deltas.push_back(delta);
     }
 
-    // 2. Delta decoding
+    // 2. Delta decoding (use unsigned addition to avoid signed overflow UB)
     std::vector<int64_t> result(deltas.size());
     result[0] = deltas[0];
     for (size_t i = 1; i < result.size(); i++) {
-        result[i] = result[i - 1] + deltas[i];
+        uint64_t reconstructed =
+            static_cast<uint64_t>(result[i - 1]) + static_cast<uint64_t>(deltas[i]);
+        result[i] = static_cast<int64_t>(reconstructed);
     }
     return result;
 }
