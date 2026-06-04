@@ -70,9 +70,9 @@ Status SchemaValidation::ValidateTableSchema(const TableSchema& schema) {
         ValidateOnlyContainPrimitiveType(schema.Fields(), schema.PrimaryKeys(), "primary key"));
     PAIMON_RETURN_NOT_OK(
         ValidateOnlyContainPrimitiveType(schema.Fields(), schema.PartitionKeys(), "partition"));
-    // TODO(lisizhuo.lsz): C++ Paimon do not support timestamp & decimal type in partition keys for
-    // now.
-    PAIMON_RETURN_NOT_OK(ValidateNotContainComplexType(schema.Fields(), schema.PartitionKeys()));
+    // TODO(lisizhuo.lsz): C++ Paimon do not support timestamp & decimal & float & double type in
+    // partition keys for now.
+    PAIMON_RETURN_NOT_OK(ValidateNotContainSpecificType(schema.Fields(), schema.PartitionKeys()));
 
     PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(schema.Options()));
     PAIMON_RETURN_NOT_OK(ValidateBucket(schema, options));
@@ -160,7 +160,7 @@ Status SchemaValidation::ValidateOnlyContainPrimitiveType(
     return Status::OK();
 }
 
-Status SchemaValidation::ValidateNotContainComplexType(
+Status SchemaValidation::ValidateNotContainSpecificType(
     const std::vector<DataField>& fields, const std::vector<std::string>& field_names) {
     if (field_names.empty()) {
         return Status::OK();
@@ -175,8 +175,12 @@ Status SchemaValidation::ValidateNotContainComplexType(
             auto field = it->second;
             if (IsComplexType(field)) {
                 return Status::Invalid(
-                    fmt::format("The field {} in partition field {} is unsupported",
-                                field->ToString(), it->first));
+                    fmt::format("partition field {} cannot be TIMESTAMP/DECIMAL/BLOB", field_name));
+            }
+            if (field->type()->id() == arrow::Type::FLOAT ||
+                field->type()->id() == arrow::Type::DOUBLE) {
+                return Status::Invalid(
+                    fmt::format("partition field {} cannot be FLOAT/DOUBLE", field_name));
             }
         } else {
             assert(false);

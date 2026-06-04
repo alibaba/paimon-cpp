@@ -675,11 +675,10 @@ TEST_P(WriteAndReadInteTest, TestPKWithSequenceFieldPartialInPKField) {
 
 TEST_P(WriteAndReadInteTest, TestWriteSamePartitionTwiceWithAllBasicTypesForAppend) {
     arrow::FieldVector fields = {
-        arrow::field("f_bool", arrow::boolean()),   arrow::field("f_int8", arrow::int8()),
-        arrow::field("f_int16", arrow::int16()),    arrow::field("f_int32", arrow::int32()),
-        arrow::field("f_int64", arrow::int64()),    arrow::field("f_float", arrow::float32()),
-        arrow::field("f_double", arrow::float64()), arrow::field("f_string", arrow::utf8()),
-        arrow::field("f_date", arrow::date32()),    arrow::field("f_value", arrow::int32())};
+        arrow::field("f_bool", arrow::boolean()), arrow::field("f_int8", arrow::int8()),
+        arrow::field("f_int16", arrow::int16()),  arrow::field("f_int32", arrow::int32()),
+        arrow::field("f_int64", arrow::int64()),  arrow::field("f_string", arrow::utf8()),
+        arrow::field("f_date", arrow::date32()),  arrow::field("f_value", arrow::int32())};
     auto schema = arrow::schema(fields);
     auto [file_format, file_system] = GetParam();
     std::map<std::string, std::string> options = {
@@ -697,20 +696,20 @@ TEST_P(WriteAndReadInteTest, TestWriteSamePartitionTwiceWithAllBasicTypesForAppe
         auto helper, TestHelper::Create(test_dir_, schema,
                                         /*partition_keys=*/
                                         {"f_bool", "f_int8", "f_int16", "f_int32", "f_int64",
-                                         "f_float", "f_double", "f_string", "f_date"},
+                                         "f_string", "f_date"},
                                         /*primary_keys=*/{}, options, /*is_streaming_mode=*/true));
     int64_t commit_identifier = 0;
 
     {
         std::map<std::string, std::string> partition_map = {
-            {"f_bool", "true"},   {"f_int8", "1"},       {"f_int16", "100"},
-            {"f_int32", "10000"}, {"f_int64", "100000"}, {"f_float", "1.5"},
-            {"f_double", "2.5"},  {"f_string", "hello"}, {"f_date", "1970-01-02"}};
+            {"f_bool", "true"},      {"f_int8", "1"},       {"f_int16", "100"},
+            {"f_int32", "10000"},    {"f_int64", "100000"}, {"f_string", "hello"},
+            {"f_date", "1970-01-02"}};
 
         // First write to the same partition
         std::string data1 = R"([
-            [true, 1, 100, 10000, 100000, 1.5, 2.5, "hello", 1, 10],
-            [true, 1, 100, 10000, 100000, 1.5, 2.5, "hello", 1, 20]
+            [true, 1, 100, 10000, 100000, "hello", 1, 10],
+            [true, 1, 100, 10000, 100000, "hello", 1, 20]
     ])";
         ASSERT_OK_AND_ASSIGN(
             std::unique_ptr<RecordBatch> batch1,
@@ -722,8 +721,8 @@ TEST_P(WriteAndReadInteTest, TestWriteSamePartitionTwiceWithAllBasicTypesForAppe
 
         // Second write to the same partition
         std::string data2 = R"([
-            [true, 1, 100, 10000, 100000, 1.5, 2.5, "hello", 1, 30],
-            [true, 1, 100, 10000, 100000, 1.5, 2.5, "hello", 1, 40]
+            [true, 1, 100, 10000, 100000, "hello", 1, 30],
+            [true, 1, 100, 10000, 100000, "hello", 1, 40]
     ])";
         ASSERT_OK_AND_ASSIGN(
             std::unique_ptr<RecordBatch> batch2,
@@ -736,13 +735,12 @@ TEST_P(WriteAndReadInteTest, TestWriteSamePartitionTwiceWithAllBasicTypesForAppe
     {
         // write all null for partition fields
         std::map<std::string, std::string> partition_map = {
-            {"f_bool", "null"},   {"f_int8", "null"},   {"f_int16", "null"},
-            {"f_int32", "null"},  {"f_int64", "null"},  {"f_float", "null"},
-            {"f_double", "null"}, {"f_string", "null"}, {"f_date", "null"}};
+            {"f_bool", "null"},  {"f_int8", "null"},   {"f_int16", "null"}, {"f_int32", "null"},
+            {"f_int64", "null"}, {"f_string", "null"}, {"f_date", "null"}};
 
         // First write to the same partition
         std::string data1 = R"([
-            [null, null, null, null, null, null, null, null, null, 50]
+            [null, null, null, null, null, null, null, 50]
     ])";
         ASSERT_OK_AND_ASSIGN(
             std::unique_ptr<RecordBatch> batch1,
@@ -754,7 +752,7 @@ TEST_P(WriteAndReadInteTest, TestWriteSamePartitionTwiceWithAllBasicTypesForAppe
 
         // Second write to the same partition
         std::string data2 = R"([
-            [null, null, null, null, null, null, null, null, null, 60]
+            [null, null, null, null, null, null, null, 60]
     ])";
         ASSERT_OK_AND_ASSIGN(
             std::unique_ptr<RecordBatch> batch2,
@@ -772,12 +770,12 @@ TEST_P(WriteAndReadInteTest, TestWriteSamePartitionTwiceWithAllBasicTypesForAppe
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     std::string expected_data = R"([
-            [0, true, 1, 100, 10000, 100000, 1.5, 2.5, "hello", 1, 10],
-            [0, true, 1, 100, 10000, 100000, 1.5, 2.5, "hello", 1, 20],
-            [0, true, 1, 100, 10000, 100000, 1.5, 2.5, "hello", 1, 30],
-            [0, true, 1, 100, 10000, 100000, 1.5, 2.5, "hello", 1, 40],
-            [0, null, null, null, null, null, null, null, null, null, 50],
-            [0, null, null, null, null, null, null, null, null, null, 60]
+            [0, true, 1, 100, 10000, 100000, "hello", 1, 10],
+            [0, true, 1, 100, 10000, 100000, "hello", 1, 20],
+            [0, true, 1, 100, 10000, 100000, "hello", 1, 30],
+            [0, true, 1, 100, 10000, 100000, "hello", 1, 40],
+            [0, null, null, null, null, null, null, null, 50],
+            [0, null, null, null, null, null, null, null, 60]
     ])";
     ASSERT_OK_AND_ASSIGN(bool success,
                          helper->ReadAndCheckResult(data_type, data_splits, expected_data));
@@ -786,11 +784,10 @@ TEST_P(WriteAndReadInteTest, TestWriteSamePartitionTwiceWithAllBasicTypesForAppe
 
 TEST_P(WriteAndReadInteTest, TestWriteSamePartitionTwiceWithAllBasicTypesForPk) {
     arrow::FieldVector fields = {
-        arrow::field("f_bool", arrow::boolean()),   arrow::field("f_int8", arrow::int8()),
-        arrow::field("f_int16", arrow::int16()),    arrow::field("f_int32", arrow::int32()),
-        arrow::field("f_int64", arrow::int64()),    arrow::field("f_float", arrow::float32()),
-        arrow::field("f_double", arrow::float64()), arrow::field("f_string", arrow::utf8()),
-        arrow::field("f_date", arrow::date32()),    arrow::field("f_value", arrow::int32()),
+        arrow::field("f_bool", arrow::boolean()), arrow::field("f_int8", arrow::int8()),
+        arrow::field("f_int16", arrow::int16()),  arrow::field("f_int32", arrow::int32()),
+        arrow::field("f_int64", arrow::int64()),  arrow::field("f_string", arrow::utf8()),
+        arrow::field("f_date", arrow::date32()),  arrow::field("f_value", arrow::int32()),
         arrow::field("pk", arrow::utf8())};
     auto schema = arrow::schema(fields);
     auto [file_format, file_system] = GetParam();
@@ -804,26 +801,26 @@ TEST_P(WriteAndReadInteTest, TestWriteSamePartitionTwiceWithAllBasicTypesForPk) 
         options = AddOptionsForJindo(options);
     }
     ASSERT_OK_AND_ASSIGN(
-        auto helper, TestHelper::Create(test_dir_, schema,
-                                        /*partition_keys=*/
-                                        {"f_bool", "f_int8", "f_int16", "f_int32", "f_int64",
-                                         "f_float", "f_double", "f_string", "f_date"},
-                                        /*primary_keys=*/
-                                        {"pk", "f_bool", "f_int8", "f_int16", "f_int32", "f_int64",
-                                         "f_float", "f_double", "f_string", "f_date"},
-                                        options, /*is_streaming_mode=*/true));
+        auto helper,
+        TestHelper::Create(
+            test_dir_, schema,
+            /*partition_keys=*/
+            {"f_bool", "f_int8", "f_int16", "f_int32", "f_int64", "f_string", "f_date"},
+            /*primary_keys=*/
+            {"pk", "f_bool", "f_int8", "f_int16", "f_int32", "f_int64", "f_string", "f_date"},
+            options, /*is_streaming_mode=*/true));
     int64_t commit_identifier = 0;
 
     {
         std::map<std::string, std::string> partition_map = {
-            {"f_bool", "true"},   {"f_int8", "1"},       {"f_int16", "100"},
-            {"f_int32", "10000"}, {"f_int64", "100000"}, {"f_float", "1.5"},
-            {"f_double", "2.5"},  {"f_string", "hello"}, {"f_date", "1970-01-02"}};
+            {"f_bool", "true"},      {"f_int8", "1"},       {"f_int16", "100"},
+            {"f_int32", "10000"},    {"f_int64", "100000"}, {"f_string", "hello"},
+            {"f_date", "1970-01-02"}};
 
         // First write to the same partition
         std::string data1 = R"([
-            [true, 1, 100, 10000, 100000, 1.5, 2.5, "hello", 1, 10, "pk1"],
-            [true, 1, 100, 10000, 100000, 1.5, 2.5, "hello", 1, 20, "pk2"]
+            [true, 1, 100, 10000, 100000,"hello", 1, 10, "pk1"],
+            [true, 1, 100, 10000, 100000,"hello", 1, 20, "pk2"]
     ])";
         ASSERT_OK_AND_ASSIGN(
             std::unique_ptr<RecordBatch> batch1,
@@ -835,8 +832,8 @@ TEST_P(WriteAndReadInteTest, TestWriteSamePartitionTwiceWithAllBasicTypesForPk) 
 
         // Second write to the same partition
         std::string data2 = R"([
-            [true, 1, 100, 10000, 100000, 1.5, 2.5, "hello", 1, 30, "pk1"],
-            [true, 1, 100, 10000, 100000, 1.5, 2.5, "hello", 1, 40, "pk3"]
+            [true, 1, 100, 10000, 100000,"hello", 1, 30, "pk1"],
+            [true, 1, 100, 10000, 100000,"hello", 1, 40, "pk3"]
     ])";
         ASSERT_OK_AND_ASSIGN(
             std::unique_ptr<RecordBatch> batch2,
@@ -854,9 +851,9 @@ TEST_P(WriteAndReadInteTest, TestWriteSamePartitionTwiceWithAllBasicTypesForPk) 
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     std::string expected_data = R"([
-            [0, true, 1, 100, 10000, 100000, 1.5, 2.5, "hello", 1, 30, "pk1"],
-            [0, true, 1, 100, 10000, 100000, 1.5, 2.5, "hello", 1, 20, "pk2"],
-            [0, true, 1, 100, 10000, 100000, 1.5, 2.5, "hello", 1, 40, "pk3"]
+            [0, true, 1, 100, 10000, 100000, "hello", 1, 30, "pk1"],
+            [0, true, 1, 100, 10000, 100000, "hello", 1, 20, "pk2"],
+            [0, true, 1, 100, 10000, 100000, "hello", 1, 40, "pk3"]
     ])";
     ASSERT_OK_AND_ASSIGN(bool success,
                          helper->ReadAndCheckResult(data_type, data_splits, expected_data));

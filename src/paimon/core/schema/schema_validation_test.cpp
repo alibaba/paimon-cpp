@@ -390,19 +390,34 @@ TEST(SchemaValidationTest, NonPrimitivePartitionKeyStruct) {
                         "field f1 is unsupported");
 }
 
-TEST(SchemaValidationTest, TestComplexPartitionKey) {
-    auto f0 = arrow::field("f0", arrow::utf8());
-    auto f1 = arrow::field("f1", arrow::decimal128(5, 2));
-    auto f2 = arrow::field("f2", arrow::float64());
-    arrow::FieldVector fields = {f0, f1, f2};
-    auto schema = arrow::schema(fields);
-    std::vector<std::string> primary_keys = {"f0", "f1"};
-    std::vector<std::string> partition_keys = {"f1"};
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<TableSchema> table_schema,
-        TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, {}));
-    ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
-                        "partition field f1 is unsupported");
+TEST(SchemaValidationTest, TestSpecificPartitionKey) {
+    {
+        auto f0 = arrow::field("f0", arrow::utf8());
+        auto f1 = arrow::field("f1", arrow::decimal128(5, 2));
+        auto f2 = arrow::field("f2", arrow::float64());
+        arrow::FieldVector fields = {f0, f1, f2};
+        auto schema = arrow::schema(fields);
+        std::vector<std::string> primary_keys = {"f0", "f1"};
+        std::vector<std::string> partition_keys = {"f1"};
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<TableSchema> table_schema,
+            TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, {}));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "partition field f1 cannot be TIMESTAMP/DECIMAL/BLOB");
+    }
+    {
+        auto f0 = arrow::field("f0", arrow::utf8());
+        auto f1 = arrow::field("f1", arrow::float64());
+        arrow::FieldVector fields = {f0, f1};
+        auto schema = arrow::schema(fields);
+        std::vector<std::string> primary_keys = {"f0", "f1"};
+        std::vector<std::string> partition_keys = {"f1"};
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<TableSchema> table_schema,
+            TableSchema::Create(/*schema_id=*/0, schema, partition_keys, primary_keys, {}));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "partition field f1 cannot be FLOAT/DOUBLE");
+    }
 }
 
 TEST(SchemaValidationTest, TestComplexPartitionKeyWithBlob) {
@@ -416,7 +431,7 @@ TEST(SchemaValidationTest, TestComplexPartitionKeyWithBlob) {
         std::shared_ptr<TableSchema> table_schema,
         TableSchema::Create(/*schema_id=*/0, schema, partition_keys, /*primary_keys=*/{}, {}));
     ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
-                        "partition field f1 is unsupported");
+                        "partition field f1 cannot be TIMESTAMP/DECIMAL/BLOB");
 }
 
 TEST(SchemaValidationTest, TestDateTypePartitionKey) {
@@ -508,8 +523,8 @@ TEST(SchemaValidationTest, ValidateBucket) {
                             "The number of buckets needs to be greater than 0.");
     }
     {
-        std::vector<std::string> primary_keys = {"f0", "f1"};
-        std::vector<std::string> partition_keys = {"f2"};
+        std::vector<std::string> primary_keys = {"f0", "f2"};
+        std::vector<std::string> partition_keys = {"f1"};
         std::map<std::string, std::string> options = {{Options::BUCKET, "2"},
                                                       {Options::BUCKET_KEY, "f0"}};
         ASSERT_OK_AND_ASSIGN(
@@ -521,7 +536,7 @@ TEST(SchemaValidationTest, ValidateBucket) {
     }
     {
         std::vector<std::string> primary_keys = {};
-        std::vector<std::string> partition_keys = {"f2"};
+        std::vector<std::string> partition_keys = {"f1"};
         std::map<std::string, std::string> options = {{Options::BUCKET, "2"}};
         ASSERT_OK_AND_ASSIGN(
             std::shared_ptr<TableSchema> table_schema,
@@ -530,7 +545,7 @@ TEST(SchemaValidationTest, ValidateBucket) {
                             "You should define a 'bucket-key' for bucketed append mode");
     }
     {
-        std::vector<std::string> partition_keys = {"f2"};
+        std::vector<std::string> partition_keys = {"f1"};
         std::map<std::string, std::string> options = {{"full-compaction.delta-commits", "2"}};
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
                              TableSchema::Create(/*schema_id=*/0, schema, partition_keys,
@@ -630,11 +645,11 @@ TEST(SchemaValidationTest, ValidateSequenceField) {
         std::map<std::string, std::string> options = {{Options::BUCKET, "-1"},
                                                       {Options::SEQUENCE_FIELD, "f0,f1,f2"}};
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
-                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{"f2"},
-                                                 /*primary_keys=*/{"f0", "f1"}, options));
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{"f1"},
+                                                 /*primary_keys=*/{"f0", "f2"}, options));
         ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
                             "You cannot use sequence.field in cross partition update case (Primary "
-                            "key constraint 'f0, f1'  not including all partition fields 'f2').");
+                            "key constraint 'f0, f2'  not including all partition fields 'f1').");
     }
 }
 
