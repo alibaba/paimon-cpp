@@ -25,6 +25,7 @@ set(PAIMON_COMMON_SRCS
     common/data/binary_string.cpp
     common/data/blob.cpp
     common/data/blob_descriptor.cpp
+    common/data/blob_view_struct.cpp
     common/data/blob_utils.cpp
     common/data/columnar/columnar_array.cpp
     common/data/columnar/columnar_map.cpp
@@ -110,6 +111,7 @@ set(PAIMON_COMMON_SRCS
     common/reader/predicate_batch_reader.cpp
     common/reader/prefetch_file_batch_reader_impl.cpp
     common/reader/reader_utils.cpp
+    common/reader/blob_view_resolving_batch_reader.cpp
     common/reader/complete_row_kind_batch_reader.cpp
     common/reader/data_evolution_file_reader.cpp
     common/sst/block_handle.cpp
@@ -332,6 +334,7 @@ set(PAIMON_CORE_SRCS
     core/table/system/system_table_schema.cpp
     core/tag/tag.cpp
     core/utils/branch_manager.cpp
+    core/utils/blob_view_lookup.cpp
     core/utils/consumer_manager.cpp
     core/utils/field_mapping.cpp
     core/utils/file_store_path_factory.cpp
@@ -408,6 +411,7 @@ if(PAIMON_BUILD_TESTS)
                     common/data/timestamp_test.cpp
                     common/data/blob_test.cpp
                     common/data/blob_descriptor_test.cpp
+                    common/data/blob_view_struct_test.cpp
                     common/data/blob_utils_test.cpp
                     common/executor/default_executor_test.cpp
                     common/format/column_stats_test.cpp
@@ -470,6 +474,7 @@ if(PAIMON_BUILD_TESTS)
                     common/reader/prefetch_file_batch_reader_impl_test.cpp
                     common/reader/reader_utils_test.cpp
                     common/reader/complete_row_kind_batch_reader_test.cpp
+                    common/reader/blob_view_resolving_batch_reader_test.cpp
                     common/reader/data_evolution_file_reader_test.cpp
                     common/reader/data_evolution_array_test.cpp
                     common/reader/data_evolution_row_test.cpp
@@ -715,6 +720,7 @@ if(PAIMON_BUILD_TESTS)
                     core/table/source/table_scan_test.cpp
                     core/table/system/system_table_test.cpp
                     core/tag/tag_test.cpp
+                    core/utils/blob_view_lookup_test.cpp
                     core/utils/branch_manager_test.cpp
                     core/utils/consumer_manager_test.cpp
                     core/utils/file_store_path_factory_cache_test.cpp

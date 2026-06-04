@@ -488,7 +488,8 @@ TEST_F(PrefetchFileBatchReaderImplTest, SetReadRangesReturnErrorWhenPushDownFail
         data_array, data_type_, batch_size,
         /*read_ranges=*/{{0, 50}, {50, 100}},
         /*need_prefetch=*/true,
-        /*set_read_ranges_statuses=*/{Status::OK(), Status::IOError("set read ranges failed")});
+        /*set_read_ranges_statuses=*/
+        {Status::IOError("set read ranges failed"), Status::IOError("set read ranges failed")});
 
     ASSERT_OK_AND_ASSIGN(
         auto reader,
