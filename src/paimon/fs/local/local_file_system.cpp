@@ -74,8 +74,8 @@ Status LocalFileSystem::MkdirsInternal(const LocalFile& file) const {
             return Status::OK();
         } else {
             // exists and is not a directory -> is a regular file
-            return Status::IOError(fmt::format("file {} already exists and is not a directory",
-                                               file.GetPath()));
+            return Status::IOError(
+                fmt::format("file {} already exists and is not a directory", file.GetPath()));
         }
     }
 
@@ -89,8 +89,7 @@ Status LocalFileSystem::MkdirsInternal(const LocalFile& file) const {
         if (is_dir) {
             return Status::OK();
         } else {
-            return Status::IOError(
-                fmt::format("create directory '{}' failed", file.GetPath()));
+            return Status::IOError(fmt::format("create directory '{}' failed", file.GetPath()));
         }
     }
     return Status::OK();
@@ -255,8 +254,8 @@ Result<int64_t> LocalInputStream::GetPos() const {
 Result<int32_t> LocalInputStream::Read(char* buffer, uint32_t size) {
     PAIMON_ASSIGN_OR_RAISE(int32_t read_length, file_.Read(buffer, size));
     if (read_length != static_cast<int32_t>(size)) {
-        return Status::IOError(fmt::format("file '{}' read size {} != expected {}",
-                                           file_.GetPath(), read_length, size));
+        return Status::IOError(fmt::format("file '{}' read size {} != expected {}", file_.GetPath(),
+                                           read_length, size));
     }
     return read_length;
 }
@@ -264,8 +263,8 @@ Result<int32_t> LocalInputStream::Read(char* buffer, uint32_t size) {
 Result<int32_t> LocalInputStream::Read(char* buffer, uint32_t size, uint64_t offset) {
     PAIMON_ASSIGN_OR_RAISE(int32_t read_length, file_.Read(buffer, size, offset));
     if (read_length != static_cast<int32_t>(size)) {
-        return Status::IOError(fmt::format("file '{}' read size {} != expected {}",
-                                           file_.GetPath(), read_length, size));
+        return Status::IOError(fmt::format("file '{}' read size {} != expected {}", file_.GetPath(),
+                                           read_length, size));
     }
     return read_length;
 }
