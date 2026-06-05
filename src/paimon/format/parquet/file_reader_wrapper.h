@@ -196,7 +196,6 @@ class FileReaderWrapper {
 
     // Track pre-buffered ranges so we can wait on destruction
     std::vector<::arrow::io::ReadRange> prebuffered_ranges_;
-
 };
 
 }  // namespace paimon::parquet

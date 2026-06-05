@@ -108,7 +108,7 @@ class RowRanges {
 
 struct TargetRowGroup {
     int32_t row_group_index{-1};
-    bool is_page_filtered{false};
+    bool is_partially_matched{false};
     // page-filtered row ranges, only valid if is_page_filtered is true.
     RowRanges row_ranges;
     // Whether this row group has been excluded by ApplyReadRanges.
@@ -119,7 +119,7 @@ struct TargetRowGroup {
     TargetRowGroup() = default;
     TargetRowGroup(int32_t rg_index, bool page_filtered, RowRanges ranges)
         : row_group_index(rg_index),
-          is_page_filtered(page_filtered),
+          is_partially_matched(page_filtered),
           row_ranges(std::move(ranges)) {}
 };
 }  // namespace paimon::parquet

@@ -200,7 +200,7 @@ Status FileReaderWrapper::SeekToRow(uint64_t row_number) {
                 std::vector<int32_t> fully_matched_indices;
                 for (uint64_t j = i; j < target_row_groups_.size(); j++) {
                     if (!target_row_groups_[j].excluded_by_read_range &&
-                        !target_row_groups_[j].is_page_filtered) {
+                        !target_row_groups_[j].is_partially_matched) {
                         fully_matched_indices.push_back(target_row_groups_[j].row_group_index);
                     }
                 }
@@ -296,7 +296,7 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::Next() {
         }
 
         while (current_row_group_idx_ < target_row_groups_.size()) {
-            bool is_page_filtered = target_row_groups_[current_row_group_idx_].is_page_filtered;
+            bool is_page_filtered = target_row_groups_[current_row_group_idx_].is_partially_matched;
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::RecordBatch> batch,
                                    is_page_filtered ? NextPageFiltered() : NextFullyMatched());
             if (batch) {
@@ -370,7 +370,7 @@ std::vector<::arrow::io::ReadRange> FileReaderWrapper::CollectPreBufferRanges(
         if (trg.excluded_by_read_range) {
             continue;
         }
-        if (trg.is_page_filtered) {
+        if (trg.is_partially_matched) {
             auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
                 file_reader_->parquet_reader(), trg, column_indices);
             ranges.insert(ranges.end(), std::make_move_iterator(page_ranges.begin()),
@@ -422,7 +422,7 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
                 continue;
             }
             active_count++;
-            if (!trg.is_page_filtered) {
+            if (!trg.is_partially_matched) {
                 fully_matched_row_groups.push_back(trg.row_group_index);
             }
         }
