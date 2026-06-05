@@ -179,9 +179,9 @@ Status ParquetFileBatchReader::SetReadSchema(
                     }
                 }
 
+                std::pair<std::vector<int32_t>, std::map<int32_t, RowRanges>> page_filter_result;
                 PAIMON_ASSIGN_OR_RAISE(
-                    std::pair<std::vector<int32_t>, std::map<int32_t, RowRanges>>
-                        page_filter_result,
+                    page_filter_result,
                     FilterRowGroupsByPageIndex(predicate, column_name_to_index, row_groups));
                 row_groups = std::move(page_filter_result.first);
                 row_group_row_ranges = std::move(page_filter_result.second);
