@@ -729,8 +729,11 @@ TEST_F(PageFilteredRowGroupReaderTest, EndToEndPageLevelPreBuffer) {
 /// total_compressed_size already includes the dictionary page size. The correct
 /// chunk_end should be dictionary_page_offset + total_compressed_size.
 ///
-/// This test verifies that the last page's computed range does not exceed the
-/// actual column chunk boundary.
+/// This test verifies that:
+/// 1. No range exceeds the true chunk boundary (overshoot regression).
+/// 2. At least one non-dictionary data-page range is present (not truncated).
+/// 3. The maximum range_end equals true_chunk_end when requesting all rows.
+/// 4. End-to-end reads with page-level filtering return correct query results.
 TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) {
     std::string file_name = dir_->Str() + "/compute_ranges_dict.parquet";
 
@@ -806,7 +809,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
 
     ASSERT_FALSE(ranges.empty());
 
-    // The critical check: no range should extend beyond the true chunk end.
+    // --- Check 1: No range should extend beyond the true chunk end ---
     // With the bug, the last data page's range would use chunk_end = data_page_offset +
     // total_compressed_size, which overshoots by the dictionary page size.
     for (size_t i = 0; i < ranges.size(); ++i) {
@@ -819,11 +822,58 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
                "total_compressed_size.";
     }
 
-    // Also verify total covered range does not exceed file size
+    // --- Check 2: Maximum range_end equals true_chunk_end ---
+    int64_t max_range_end = 0;
+    for (const auto& range : ranges) {
+        int64_t range_end = range.offset + range.length;
+        max_range_end = std::max(max_range_end, range_end);
+    }
+    ASSERT_EQ(max_range_end, true_chunk_end)
+        << "When requesting all rows, the maximum range_end should exactly equal "
+        << "true_chunk_end (" << true_chunk_end << "), but got " << max_range_end
+        << ". The last data page range may be truncated or missing.";
+
+    // --- Check 3: No range exceeds file size ---
     for (const auto& range : ranges) {
         EXPECT_LE(range.offset + range.length, static_cast<int64_t>(length))
             << "Range exceeds file size";
     }
+
+    // --- End-to-end check 1: read all rows (no predicate filtering) ---
+    // Verifies that reading a dictionary-encoded file with page index enabled
+    // returns all 100 rows with correct values.
+    auto read_schema = arrow::schema({field});
+    auto predicate_all = PredicateBuilder::GreaterOrEqual(
+        /*field_index=*/0, /*field_name=*/"val", FieldType::INT, Literal(0));
+    std::shared_ptr<arrow::ChunkedArray> result_all;
+    ReadWithPredicateImpl(file_name, read_schema, predicate_all, &result_all);
+    ASSERT_TRUE(result_all);
+    ASSERT_EQ(100, result_all->length())
+        << "End-to-end read with dictionary encoding should return all 100 rows";
+
+    // --- End-to-end check 2: manual row-level filtering ---
+    // Page-level filter does not do row-level filtering. Verify data content by
+    // scanning all returned rows and checking val == 5 appears exactly 10 times
+    // (val = i % 10, so rows 5,15,25,...,95 have val == 5).
+    int32_t count_val5 = 0;
+    int64_t total_rows_checked = 0;
+    for (int i = 0; i < result_all->num_chunks(); ++i) {
+        auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(result_all->chunk(i));
+        ASSERT_TRUE(struct_arr);
+        auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+        ASSERT_TRUE(val_arr);
+        for (int64_t j = 0; j < val_arr->length(); ++j) {
+            auto expected = static_cast<int32_t>(total_rows_checked % 10);
+            ASSERT_EQ(expected, val_arr->Value(j))
+                << "Value mismatch at row " << total_rows_checked;
+            if (val_arr->Value(j) == 5) {
+                ++count_val5;
+            }
+            ++total_rows_checked;
+        }
+    }
+    ASSERT_EQ(100, total_rows_checked);
+    ASSERT_EQ(10, count_val5) << "val == 5 should appear exactly 10 times in 100 rows";
 }
 
 }  // namespace paimon::parquet::test
