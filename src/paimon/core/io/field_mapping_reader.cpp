@@ -218,16 +218,6 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::GenerateSinglePartitio
             scalar = std::make_shared<arrow::Int64Scalar>(value);
             break;
         }
-        case arrow::Type::type::FLOAT: {
-            float value = partition_.GetFloat(partition_info_.value().idx_in_partition[idx]);
-            scalar = std::make_shared<arrow::FloatScalar>(value);
-            break;
-        }
-        case arrow::Type::type::DOUBLE: {
-            double value = partition_.GetDouble(partition_info_.value().idx_in_partition[idx]);
-            scalar = std::make_shared<arrow::DoubleScalar>(value);
-            break;
-        }
         case arrow::Type::type::STRING: {
             BinaryString value =
                 partition_.GetString(partition_info_.value().idx_in_partition[idx]);

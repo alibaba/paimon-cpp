@@ -211,72 +211,53 @@ class FieldMappingReaderTest : public ::testing::Test {
 
 TEST_F(FieldMappingReaderTest, TestGenerateSinglePartitionArray) {
     PartitionInfo partition_info;
-    // read schema: p9-p0
-    // partition key: p0-p9
-    partition_info.partition_read_schema = {DataField(9, arrow::field("p9", arrow::date32())),
-                                            DataField(8, arrow::field("p8", arrow::binary())),
-                                            DataField(7, arrow::field("p7", arrow::utf8())),
-                                            DataField(6, arrow::field("p6", arrow::float64())),
-                                            DataField(5, arrow::field("p5", arrow::float32())),
+    // read schema: p7-p0
+    // partition key: p0-p7
+    partition_info.partition_read_schema = {DataField(7, arrow::field("p7", arrow::date32())),
+                                            DataField(6, arrow::field("p6", arrow::binary())),
+                                            DataField(5, arrow::field("p5", arrow::utf8())),
                                             DataField(4, arrow::field("p4", arrow::int64())),
                                             DataField(3, arrow::field("p3", arrow::int32())),
                                             DataField(2, arrow::field("p2", arrow::int16())),
                                             DataField(1, arrow::field("p1", arrow::int8())),
                                             DataField(0, arrow::field("p0", arrow::boolean()))};
-    partition_info.idx_in_target_read_schema = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-    partition_info.idx_in_partition = {9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+    partition_info.idx_in_target_read_schema = {0, 1, 2, 3, 4, 5, 6, 7};
+    partition_info.idx_in_partition = {7, 6, 5, 4, 3, 2, 1, 0};
 
     NonPartitionInfo non_part_info;
     auto field_mapping = std::make_unique<FieldMapping>(partition_info, non_part_info,
                                                         /*non_exist_field_info=*/std::nullopt);
     auto partition = BinaryRowGenerator::GenerateRow(
         {false, static_cast<int8_t>(1), static_cast<int16_t>(2), static_cast<int32_t>(3),
-         static_cast<int64_t>(4), static_cast<float>(5.1), 6.21, std::string("7"),
-         std::make_shared<Bytes>("8", pool_.get()), 100},
+         static_cast<int64_t>(4), std::string("5"), std::make_shared<Bytes>("6", pool_.get()), 100},
         pool_.get());
     auto mapping_reader = std::make_unique<FieldMappingReader>(
-        /*field_count=*/10, /*reader=*/nullptr, partition, std::move(field_mapping), pool_);
+        /*field_count=*/8, /*reader=*/nullptr, partition, std::move(field_mapping), pool_);
 
     {
-        ASSERT_OK_AND_ASSIGN(auto p9_array, mapping_reader->GenerateSinglePartitionArray(
-                                                /*idx in read schema*/ 0, /*batch_size=*/2));
-        ASSERT_EQ(p9_array->length(), 2);
-        ASSERT_EQ(arrow::internal::checked_cast<arrow::Date32Array*>(p9_array.get())->Value(0),
+        ASSERT_OK_AND_ASSIGN(auto p7_array, mapping_reader->GenerateSinglePartitionArray(
+                                                /*idx=*/0, /*batch_size=*/2));
+        ASSERT_EQ(p7_array->length(), 2);
+        ASSERT_EQ(arrow::internal::checked_cast<arrow::Date32Array*>(p7_array.get())->Value(0),
                   100);
     }
     {
-        ASSERT_OK_AND_ASSIGN(auto p8_array, mapping_reader->GenerateSinglePartitionArray(
-                                                /*idx in read schema*/ 1, /*batch_size=*/2));
-        ASSERT_EQ(p8_array->length(), 2);
-        ASSERT_EQ(arrow::internal::checked_cast<arrow::BinaryArray*>(p8_array.get())->Value(0),
-                  "8");
-    }
-    {
-        ASSERT_OK_AND_ASSIGN(auto p7_array, mapping_reader->GenerateSinglePartitionArray(
-                                                /*idx in read schema*/ 2, /*batch_size=*/1));
-        ASSERT_EQ(p7_array->length(), 1);
-        ASSERT_EQ(arrow::internal::checked_cast<arrow::StringArray*>(p7_array.get())->Value(0),
-                  "7");
-    }
-    {
         ASSERT_OK_AND_ASSIGN(auto p6_array, mapping_reader->GenerateSinglePartitionArray(
-                                                /*idx in read schema*/ 3, /*batch_size=*/1));
-        ASSERT_EQ(
-            arrow::internal::checked_cast<arrow::NumericArray<arrow::DoubleType>*>(p6_array.get())
-                ->Value(0),
-            static_cast<double>(6.21));
+                                                /*idx=*/1, /*batch_size=*/2));
+        ASSERT_EQ(p6_array->length(), 2);
+        ASSERT_EQ(arrow::internal::checked_cast<arrow::BinaryArray*>(p6_array.get())->Value(0),
+                  "6");
     }
     {
         ASSERT_OK_AND_ASSIGN(auto p5_array, mapping_reader->GenerateSinglePartitionArray(
-                                                /*idx in read schema*/ 4, /*batch_size=*/1));
-        ASSERT_EQ(
-            arrow::internal::checked_cast<arrow::NumericArray<arrow::FloatType>*>(p5_array.get())
-                ->Value(0),
-            static_cast<float>(5.1));
+                                                /*idx=*/2, /*batch_size=*/1));
+        ASSERT_EQ(p5_array->length(), 1);
+        ASSERT_EQ(arrow::internal::checked_cast<arrow::StringArray*>(p5_array.get())->Value(0),
+                  "5");
     }
     {
         ASSERT_OK_AND_ASSIGN(auto p4_array, mapping_reader->GenerateSinglePartitionArray(
-                                                /*idx in read schema*/ 5, /*batch_size=*/1));
+                                                /*idx=*/3, /*batch_size=*/1));
         ASSERT_EQ(
             arrow::internal::checked_cast<arrow::NumericArray<arrow::Int64Type>*>(p4_array.get())
                 ->Value(0),
@@ -284,7 +265,7 @@ TEST_F(FieldMappingReaderTest, TestGenerateSinglePartitionArray) {
     }
     {
         ASSERT_OK_AND_ASSIGN(auto p3_array, mapping_reader->GenerateSinglePartitionArray(
-                                                /*idx in read schema*/ 6, /*batch_size=*/1));
+                                                /*idx=*/4, /*batch_size=*/1));
         ASSERT_EQ(
             arrow::internal::checked_cast<arrow::NumericArray<arrow::Int32Type>*>(p3_array.get())
                 ->Value(0),
@@ -292,7 +273,7 @@ TEST_F(FieldMappingReaderTest, TestGenerateSinglePartitionArray) {
     }
     {
         ASSERT_OK_AND_ASSIGN(auto p2_array, mapping_reader->GenerateSinglePartitionArray(
-                                                /*idx in read schema*/ 7, /*batch_size=*/1));
+                                                /*idx=*/5, /*batch_size=*/1));
         ASSERT_EQ(
             arrow::internal::checked_cast<arrow::NumericArray<arrow::Int16Type>*>(p2_array.get())
                 ->Value(0),
@@ -300,7 +281,7 @@ TEST_F(FieldMappingReaderTest, TestGenerateSinglePartitionArray) {
     }
     {
         ASSERT_OK_AND_ASSIGN(auto p1_array, mapping_reader->GenerateSinglePartitionArray(
-                                                /*idx in read schema*/ 8, /*batch_size=*/1));
+                                                /*idx=*/6, /*batch_size=*/1));
         ASSERT_EQ(
             arrow::internal::checked_cast<arrow::NumericArray<arrow::Int8Type>*>(p1_array.get())
                 ->Value(0),
@@ -308,7 +289,7 @@ TEST_F(FieldMappingReaderTest, TestGenerateSinglePartitionArray) {
     }
     {
         ASSERT_OK_AND_ASSIGN(auto p0_array, mapping_reader->GenerateSinglePartitionArray(
-                                                /*idx in read schema*/ 9, /*batch_size=*/1));
+                                                /*idx=*/7, /*batch_size=*/1));
         ASSERT_EQ(arrow::internal::checked_cast<arrow::BooleanArray*>(p0_array.get())->Value(0),
                   false);
     }

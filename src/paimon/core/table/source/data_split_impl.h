@@ -51,7 +51,7 @@ class DataSplitImpl : public DataSplit {
         return partition_;
     }
 
-    int32_t Bucket() const {
+    int32_t Bucket() const override {
         return bucket_;
     }
 
