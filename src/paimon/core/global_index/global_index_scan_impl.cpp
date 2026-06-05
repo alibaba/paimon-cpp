@@ -103,11 +103,11 @@ Result<std::unique_ptr<GlobalIndexScanImpl>> GlobalIndexScanImpl::Create(
     auto final_executor = executor;
     if (!final_executor) {
         std::optional<int32_t> thread_num = options.GetGlobalIndexThreadNum();
-        if (!thread_num) {
-            uint32_t cpu_count = std::thread::hardware_concurrency();
-            thread_num = cpu_count > 0 ? static_cast<int32_t>(cpu_count) : 1;
+        if (thread_num) {
+            final_executor = CreateDefaultExecutor(static_cast<uint32_t>(thread_num.value()));
+        } else {
+            final_executor = GetGlobalDefaultExecutor();
         }
-        final_executor = CreateDefaultExecutor(static_cast<uint32_t>(thread_num.value()));
     }
     return std::unique_ptr<GlobalIndexScanImpl>(new GlobalIndexScanImpl(
         table_schema, options, path_factory, std::move(index_metas), final_executor, pool));

@@ -26,6 +26,7 @@
 #include "fmt/format.h"
 #include "paimon/common/data/blob_defs.h"
 #include "paimon/common/data/blob_descriptor.h"
+#include "paimon/common/data/blob_view_struct.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/string_utils.h"
@@ -155,10 +156,47 @@ Status BlobUtils::ValidateInlineBlobDescriptors(
             PAIMON_ASSIGN_OR_RAISE(bool is_descriptor,
                                    BlobDescriptor::IsBlobDescriptor(value.data(), value.size()));
             if (!is_descriptor) {
-                return Status::Invalid(fmt::format(
-                    "BLOB inline field {} configured by blob-descriptor-field or blob-view-field "
-                    "require values to be a BlobDescriptor or BlobViewStruct.",
-                    field_name));
+                return Status::Invalid(
+                    fmt::format("BLOB inline field {} configured by blob-descriptor-field require "
+                                "values to be a BlobDescriptor.",
+                                field_name));
+            }
+        }
+    }
+    return Status::OK();
+}
+
+Status BlobUtils::ValidateBlobViewFields(const std::shared_ptr<arrow::StructArray>& struct_array,
+                                         const std::set<std::string>& view_fields) {
+    if (view_fields.empty()) {
+        return Status::OK();
+    }
+    if (!struct_array) {
+        return Status::Invalid("array in ValidateBlobViewFields must be a struct_array");
+    }
+    for (const auto& field_name : view_fields) {
+        auto field_array = struct_array->GetFieldByName(field_name);
+        if (!field_array) {
+            continue;
+        }
+        const auto* binary_array =
+            arrow::internal::checked_cast<const arrow::LargeBinaryArray*>(field_array.get());
+        if (!binary_array) {
+            return Status::Invalid(
+                fmt::format("cannot cast array for field {} to LargeBinaryArray", field_name));
+        }
+        for (int64_t row = 0; row < binary_array->length(); ++row) {
+            if (binary_array->IsNull(row)) {
+                continue;
+            }
+            auto value = binary_array->GetView(row);
+            PAIMON_ASSIGN_OR_RAISE(bool is_view,
+                                   BlobViewStruct::IsBlobViewStruct(value.data(), value.size()));
+            if (!is_view) {
+                return Status::Invalid(
+                    fmt::format("BLOB inline field {} configured by blob-view-field require values "
+                                "to be a BlobViewStruct.",
+                                field_name));
             }
         }
     }

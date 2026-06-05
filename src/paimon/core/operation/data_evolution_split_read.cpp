@@ -174,13 +174,17 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::WrapWithBlobViewRes
                            CreateBlobViewReader(data_split, read_blob_view_fields));
     PAIMON_ASSIGN_OR_RAISE(std::unordered_set<BlobViewStruct> blob_view_structs,
                            ExtractBlobViewStructs(pre_reader.get()));
-    std::string warehouse_path =
-        PathUtil::GetParentDirPath(PathUtil::GetParentDirPath(context_->GetPath()));
-    auto catalog_context = std::make_shared<CatalogContext>(warehouse_path, options_.ToMap(),
-                                                            options_.GetFileSystem());
-    PAIMON_ASSIGN_OR_RAISE(
-        BlobViewResolver resolver,
-        BlobViewLookup::CreateResolver(blob_view_structs, catalog_context, pool_));
+    std::optional<std::string> warehouse_path = options_.GetBlobViewUpstreamWarehouse();
+    if (!warehouse_path) {
+        return Status::Invalid(
+            "invalid config for blob view, supposed to set BLOB_VIEW_UPSTREAM_WAREHOUSE");
+    }
+    auto catalog_context = std::make_shared<CatalogContext>(
+        warehouse_path.value(), options_.ToMap(), options_.GetFileSystem());
+    // use global thread number
+    PAIMON_ASSIGN_OR_RAISE(BlobViewResolver resolver,
+                           BlobViewLookup::CreateResolver(blob_view_structs, catalog_context, pool_,
+                                                          GetGlobalDefaultExecutor()));
     return std::make_unique<BlobViewResolvingBatchReader>(
         std::move(inner_reader), std::move(read_blob_view_fields), std::move(resolver), pool_);
 }

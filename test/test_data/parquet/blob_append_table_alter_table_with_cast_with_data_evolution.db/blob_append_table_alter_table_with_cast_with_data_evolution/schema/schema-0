@@ -42,11 +42,12 @@
   "partitionKeys" : [ "key0", "key1" ],
   "primaryKeys" : [ ],
   "options" : {
+    "bucket" : "-1",
+    "blob.target-file-size" : "50",
+    "row-tracking.enabled" : "true",
     "data-evolution.enabled" : "true",
     "manifest.format" : "avro",
-    "blob.target-file-size" : "50",
-    "file.format" : "parquet",
-    "row-tracking.enabled" : "true"
+    "file.format" : "parquet"
   },
-  "timeMillis" : 1762240078799
+  "timeMillis" : 1780568705752
 }
