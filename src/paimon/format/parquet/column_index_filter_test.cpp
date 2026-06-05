@@ -483,29 +483,23 @@ TEST_F(ColumnIndexFilterTest, NullPredicateReturnsAllRows) {
     EXPECT_EQ(row_group_row_count_, ranges.RowCount());
 }
 
-/// When literals is empty for comparison predicates (EQUAL, NOT_EQUAL, LESS_THAN,
-/// LESS_OR_EQUAL, GREATER_THAN, GREATER_OR_EQUAL), the filter should return all
-/// rows (conservative fallback) rather than returning empty ranges.
-TEST_F(ColumnIndexFilterTest, EmptyLiteralsReturnsAllRows) {
-    // Construct a LeafPredicate with EQUAL function but empty literals vector.
-    // This simulates the edge case where literals are unexpectedly empty.
+/// Predicates other than IsNull/IsNotNull are not allowed without a literal.
+/// PredicateBuilder (public API) does not support constructing them without
+/// a literal, so the filter should return an error for this invalid input.
+TEST_F(ColumnIndexFilterTest, EmptyLiteralsReturnsError) {
     auto pred = std::make_shared<paimon::LeafPredicateImpl>(paimon::Equal::Instance(), 0, "val",
                                                             FieldType::INT, std::vector<Literal>());
-    ASSERT_OK_AND_ASSIGN(auto ranges, Filter(pred));
-    // With empty literals, the filter cannot evaluate the comparison,
-    // so it should conservatively return all rows.
-    EXPECT_EQ(row_group_row_count_, ranges.RowCount());
+    auto result = Filter(pred);
+    EXPECT_FALSE(result.ok());
 }
 
-/// Empty literals for IN predicate — the early guard in VisitLeafPredicate treats
-/// all non-IS_NULL/IS_NOT_NULL predicates with empty literals conservatively,
-/// returning all rows rather than risking incorrect filtering.
-TEST_F(ColumnIndexFilterTest, EmptyLiteralsInReturnsAllRows) {
+/// Empty literals for IN predicate — same rule applies: non-IS_NULL/IS_NOT_NULL
+/// predicates without literals are invalid and should return an error.
+TEST_F(ColumnIndexFilterTest, EmptyLiteralsInReturnsError) {
     auto pred = std::make_shared<paimon::LeafPredicateImpl>(paimon::In::Instance(), 0, "val",
                                                             FieldType::INT, std::vector<Literal>());
-    ASSERT_OK_AND_ASSIGN(auto ranges, Filter(pred));
-    // Empty literals → conservative fallback → all rows.
-    EXPECT_EQ(row_group_row_count_, ranges.RowCount());
+    auto result = Filter(pred);
+    EXPECT_FALSE(result.ok());
 }
 
 }  // namespace paimon::parquet::test
