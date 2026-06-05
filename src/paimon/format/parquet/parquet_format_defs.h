@@ -19,6 +19,9 @@
 #include <cstdint>
 #include <limits>
 
+#include "fmt/format.h"
+#include "paimon/status.h"
+
 namespace paimon::parquet {
 
 // Convert any std::exception thrown by underlying Parquet/Arrow APIs into a
