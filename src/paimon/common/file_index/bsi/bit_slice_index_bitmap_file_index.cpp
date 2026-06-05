@@ -17,7 +17,9 @@
 #include "paimon/common/file_index/bsi/bit_slice_index_bitmap_file_index.h"
 
 #include <cassert>
+#include <climits>
 #include <cstddef>
+#include <cstdint>
 
 #include "fmt/format.h"
 #include "paimon/common/file_index/bsi/bit_slice_index_roaring_bitmap.h"
@@ -31,7 +33,17 @@
 #include "paimon/io/data_input_stream.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/utils/roaring_bitmap32.h"
+namespace {
+// Safe absolute value for int64_t that avoids undefined behavior when value == INT64_MIN.
+// This mirrors Java's Math.abs() wrapping semantics but produces the correct magnitude.
+inline int64_t SafeAbs(int64_t value) {
+    if (value == INT64_MIN) {
+        return INT64_MIN;
+    }
+    return value < 0 ? -value : value;
+}
 
+}  // namespace
 namespace paimon {
 class MemoryPool;
 
@@ -156,7 +168,7 @@ Result<std::shared_ptr<FileIndexResult>> BitSliceIndexBitmapFileIndexReader::Vis
         if (value >= 0) {
             return reader->positive_->GreaterThan(value);
         } else {
-            PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 b1, reader->negative_->LessThan(-value));
+            PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 b1, reader->negative_->LessThan(SafeAbs(value)));
             RoaringBitmap32 b2 = reader->positive_->IsNotNull();
             b1 |= b2;
             return b1;
@@ -173,7 +185,8 @@ Result<std::shared_ptr<FileIndexResult>> BitSliceIndexBitmapFileIndexReader::Vis
         if (value >= 0) {
             return reader->positive_->GreaterOrEqual(value);
         } else {
-            PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 b1, reader->negative_->LessOrEqual(-value));
+            PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 b1,
+                                   reader->negative_->LessOrEqual(SafeAbs(value)));
             RoaringBitmap32 b2 = reader->positive_->IsNotNull();
             b1 |= b2;
             return b1;
@@ -188,7 +201,7 @@ Result<std::shared_ptr<FileIndexResult>> BitSliceIndexBitmapFileIndexReader::Vis
         [literal = literal, reader = shared_from_this()]() -> Result<RoaringBitmap32> {
         PAIMON_ASSIGN_OR_RAISE(int64_t value, reader->value_mapper_(literal));
         if (value < 0) {
-            return reader->negative_->GreaterThan(-value);
+            return reader->negative_->GreaterThan(SafeAbs(value));
         } else {
             PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 b1, reader->positive_->LessThan(value));
             RoaringBitmap32 b2 = reader->negative_->IsNotNull();
@@ -204,7 +217,7 @@ Result<std::shared_ptr<FileIndexResult>> BitSliceIndexBitmapFileIndexReader::Vis
         [literal = literal, reader = shared_from_this()]() -> Result<RoaringBitmap32> {
         PAIMON_ASSIGN_OR_RAISE(int64_t value, reader->value_mapper_(literal));
         if (value < 0) {
-            return reader->negative_->GreaterOrEqual(-value);
+            return reader->negative_->GreaterOrEqual(SafeAbs(value));
         } else {
             PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 b1, reader->positive_->LessOrEqual(value));
             RoaringBitmap32 b2 = reader->negative_->IsNotNull();
@@ -234,7 +247,7 @@ Result<std::shared_ptr<FileIndexResult>> BitSliceIndexBitmapFileIndexReader::Vis
             PAIMON_ASSIGN_OR_RAISE(int64_t value, reader->value_mapper_(literal));
             RoaringBitmap32 equal;
             if (value < 0) {
-                PAIMON_ASSIGN_OR_RAISE(equal, reader->negative_->Equal(-value));
+                PAIMON_ASSIGN_OR_RAISE(equal, reader->negative_->Equal(SafeAbs(value)));
             } else {
                 PAIMON_ASSIGN_OR_RAISE(equal, reader->positive_->Equal(value));
             }
@@ -257,7 +270,7 @@ Result<std::shared_ptr<FileIndexResult>> BitSliceIndexBitmapFileIndexReader::Vis
             PAIMON_ASSIGN_OR_RAISE(int64_t value, reader->value_mapper_(literal));
             RoaringBitmap32 equal;
             if (value < 0) {
-                PAIMON_ASSIGN_OR_RAISE(equal, reader->negative_->Equal(-value));
+                PAIMON_ASSIGN_OR_RAISE(equal, reader->negative_->Equal(SafeAbs(value)));
             } else {
                 PAIMON_ASSIGN_OR_RAISE(equal, reader->positive_->Equal(value));
             }
