@@ -263,7 +263,7 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
 
     for (size_t i = 0; i < column_indices.size(); ++i) {
         PAIMON_ASSIGN_OR_RAISE(
-            auto chunked_array,
+            std::shared_ptr<arrow::ChunkedArray> chunked_array,
             ReadFilteredColumn(row_group_reader, parquet_reader, rg_page_index_reader,
                                row_group_index, column_indices[i], row_ranges,
                                arrow_schema->field(static_cast<int>(i)), row_group_row_count,

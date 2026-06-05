@@ -266,7 +266,8 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::NextFullyMatched(
         return std::shared_ptr<arrow::RecordBatch>();
     }
 
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto record_batch, batch_reader_->Next());
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::RecordBatch> record_batch,
+                                      batch_reader_->Next());
     if (!record_batch) {
         return std::shared_ptr<arrow::RecordBatch>();
     }
@@ -296,7 +297,7 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::Next() {
 
         while (current_row_group_idx_ < target_row_groups_.size()) {
             bool is_page_filtered = target_row_groups_[current_row_group_idx_].is_page_filtered;
-            PAIMON_ASSIGN_OR_RAISE(auto batch,
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::RecordBatch> batch,
                                    is_page_filtered ? NextPageFiltered() : NextFullyMatched());
             if (batch) {
                 return batch;
