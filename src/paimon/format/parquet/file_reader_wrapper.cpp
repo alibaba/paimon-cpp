@@ -160,12 +160,15 @@ void FileReaderWrapper::WaitForPendingPreBuffer() {
 }
 
 void FileReaderWrapper::AdvanceToNextRowGroup() {
-    // current_row_group_idx_ >= target_row_groups_.size() -1, avoid unsigned overflow
-    if (current_row_group_idx_ + 1 >= target_row_groups_.size()) {
-        next_row_to_read_ = num_rows_;
-        current_row_group_idx_ = target_row_groups_.size();
-    } else {
+    current_row_group_idx_++;
+    // Skip row groups excluded by read range.
+    while (current_row_group_idx_ < target_row_groups_.size() &&
+           target_row_groups_[current_row_group_idx_].excluded_by_read_range) {
         current_row_group_idx_++;
+    }
+    if (current_row_group_idx_ >= target_row_groups_.size()) {
+        next_row_to_read_ = num_rows_;
+    } else {
         next_row_to_read_ =
             all_row_group_ranges_[target_row_groups_[current_row_group_idx_].row_group_index].first;
     }
@@ -177,6 +180,9 @@ Status FileReaderWrapper::SeekToRow(uint64_t row_number) {
         filtered_global_offset_ = 0;
 
         for (uint64_t i = 0; i < target_row_groups_.size(); i++) {
+            if (target_row_groups_[i].excluded_by_read_range) {
+                continue;
+            }
             uint32_t rg_id = target_row_groups_[i].row_group_index;
             uint64_t rg_start = all_row_group_ranges_[rg_id].first;
             uint64_t rg_end = all_row_group_ranges_[rg_id].second;
@@ -193,7 +199,8 @@ Status FileReaderWrapper::SeekToRow(uint64_t row_number) {
                 // Rebuild batch_reader_ for non-page-filtered RGs at/after seek position.
                 std::vector<int32_t> fully_matched_indices;
                 for (uint64_t j = i; j < target_row_groups_.size(); j++) {
-                    if (!target_row_groups_[j].is_page_filtered) {
+                    if (!target_row_groups_[j].excluded_by_read_range &&
+                        !target_row_groups_[j].is_page_filtered) {
                         fully_matched_indices.push_back(target_row_groups_[j].row_group_index);
                     }
                 }
@@ -359,6 +366,9 @@ std::vector<::arrow::io::ReadRange> FileReaderWrapper::CollectPreBufferRanges(
 
     // Page-filtered RGs: only matching page byte ranges.
     for (const auto& trg : target_row_groups_) {
+        if (trg.excluded_by_read_range) {
+            continue;
+        }
         if (trg.is_page_filtered) {
             auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
                 file_reader_->parquet_reader(), trg, column_indices);
@@ -403,15 +413,20 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
         target_column_indices_ = column_indices;
         page_filtered_read_schema_.reset();
 
-        // Partition into fully-matched and page-filtered row groups.
+        // Partition into fully-matched and page-filtered row groups, skipping excluded ones.
         std::vector<int32_t> fully_matched_row_groups;
+        uint64_t active_count = 0;
         for (const auto& trg : target_row_groups_) {
+            if (trg.excluded_by_read_range) {
+                continue;
+            }
+            active_count++;
             if (!trg.is_page_filtered) {
                 fully_matched_row_groups.push_back(trg.row_group_index);
             }
         }
 
-        bool has_page_filtered = fully_matched_row_groups.size() != target_row_groups_.size();
+        bool has_page_filtered = fully_matched_row_groups.size() != active_count;
         if (has_page_filtered) {
             PAIMON_RETURN_NOT_OK(BuildPageFilteredSchema(column_indices));
         }
@@ -433,14 +448,20 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
             DispatchPreBuffer(std::move(all_ranges));
         }
 
-        // Reset read state.
-        if (target_row_groups_.empty()) {
+        // Reset read state. Find the first non-excluded row group.
+        uint64_t first_active_idx = 0;
+        while (first_active_idx < target_row_groups_.size() &&
+               target_row_groups_[first_active_idx].excluded_by_read_range) {
+            first_active_idx++;
+        }
+        if (first_active_idx >= target_row_groups_.size()) {
             next_row_to_read_ = num_rows_;
         } else {
-            next_row_to_read_ = all_row_group_ranges_[target_row_groups_[0].row_group_index].first;
+            next_row_to_read_ =
+                all_row_group_ranges_[target_row_groups_[first_active_idx].row_group_index].first;
         }
         previous_first_row_ = std::numeric_limits<uint64_t>::max();
-        current_row_group_idx_ = 0;
+        current_row_group_idx_ = first_active_idx;
         reader_initialized_ = true;
         return Status::OK();
     }
@@ -450,7 +471,9 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
 Status FileReaderWrapper::ApplyReadRanges(
     const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) {
     if (read_ranges.empty()) {
-        target_row_groups_.clear();
+        for (auto& trg : target_row_groups_) {
+            trg.excluded_by_read_range = true;
+        }
         reader_initialized_ = false;
         return Status::OK();
     }
@@ -463,14 +486,10 @@ Status FileReaderWrapper::ApplyReadRanges(
             }
         }
     }
-    // Keep only target row groups whose row_group_index is in matching set.
-    std::vector<TargetRowGroup> filtered;
-    for (const auto& trg : target_row_groups_) {
-        if (matching_rg_indices.count(trg.row_group_index) > 0) {
-            filtered.push_back(trg);
-        }
+    // Mark each target row group as excluded or not based on the matching set.
+    for (auto& trg : target_row_groups_) {
+        trg.excluded_by_read_range = matching_rg_indices.count(trg.row_group_index) == 0;
     }
-    target_row_groups_ = std::move(filtered);
     reader_initialized_ = false;
     return Status::OK();
 }

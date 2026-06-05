@@ -412,6 +412,35 @@ TEST_F(FileReaderWrapperTest, ApplyReadRanges) {
     ASSERT_FALSE(batch);
 }
 
+TEST_F(FileReaderWrapperTest, ApplyReadRangesWiderSecondCall) {
+    std::string file_path = PathUtil::JoinPath(dir_->Str(), "test.parquet");
+    PrepareParquetFile(file_path, /*row_count=*/5500);
+    ASSERT_OK_AND_ASSIGN(auto reader_wrapper, PrepareReaderWrapper(file_path));
+
+    // Prepare with row groups: {0, 1, 2, 4, 5}
+    std::vector<TargetRowGroup> initial_targets = {
+        TargetRowGroup(0, false, RowRanges()), TargetRowGroup(1, false, RowRanges()),
+        TargetRowGroup(2, false, RowRanges()), TargetRowGroup(4, false, RowRanges()),
+        TargetRowGroup(5, false, RowRanges())};
+    std::vector<int32_t> all_columns = {0, 1, 2};
+    ASSERT_OK(reader_wrapper->PrepareForReadingLazy(initial_targets, all_columns));
+
+    // First ApplyReadRanges: narrow to RG 0 only.
+    ASSERT_OK(reader_wrapper->ApplyReadRanges({{0, 1000}}));
+
+    // Second ApplyReadRanges: widen to RG 0, 1, 2. Previously excluded RG 1, 2 should restore.
+    ASSERT_OK(reader_wrapper->ApplyReadRanges({{0, 1000}, {1000, 2000}, {2000, 3000}}));
+
+    // Verify: reading should produce rows from RG 0 + 1 + 2 = 3000 rows.
+    int64_t total_rows = 0;
+    while (true) {
+        ASSERT_OK_AND_ASSIGN(auto batch, reader_wrapper->Next());
+        if (!batch) break;
+        total_rows += batch->num_rows();
+    }
+    ASSERT_EQ(3000, total_rows);
+}
+
 TEST_F(FileReaderWrapperTest, PrepareForReading) {
     std::string file_path = PathUtil::JoinPath(dir_->Str(), "test.parquet");
     PrepareParquetFile(file_path, /*row_count=*/5500);

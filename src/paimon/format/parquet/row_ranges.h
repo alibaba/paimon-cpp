@@ -110,6 +110,10 @@ struct TargetRowGroup {
     bool is_page_filtered{false};
     // page-filtered row ranges, only valid if is_page_filtered is true.
     RowRanges row_ranges;
+    // Whether this row group has been excluded by ApplyReadRanges.
+    // When true, this row group is logically skipped during iteration
+    // but retained so that a subsequent wider ApplyReadRanges can restore it.
+    bool excluded_by_read_range{false};
 
     TargetRowGroup() = default;
     TargetRowGroup(int32_t rg_index, bool page_filtered, RowRanges ranges)
