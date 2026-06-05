@@ -65,7 +65,8 @@ struct SpecialFields {
 
     static bool IsSpecialFieldName(const std::string& field_name) {
         if (field_name == SequenceNumber().Name() || field_name == ValueKind().Name() ||
-            field_name == RowId().Name() || field_name == IndexScore().Name()) {
+            field_name == RowKind().Name() || field_name == RowId().Name() ||
+            field_name == IndexScore().Name()) {
             return true;
         }
         return false;

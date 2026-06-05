@@ -159,7 +159,12 @@ class FileSystemTest : public ::testing::Test, public ::testing::WithParamInterf
     std::string GetTestDir() const {
         std::string file_system = GetParam();
         if (file_system == "local") {
-            return paimon::test::GetDataDir();
+            std::string data_dir = paimon::test::GetDataDir();
+            if (data_dir.empty() || data_dir[0] != '/') {
+                EXPECT_OK_AND_ASSIGN(std::string current_path, PathUtil::GetWorkingDirectory());
+                data_dir = PathUtil::JoinPath(current_path, data_dir);
+            }
+            return data_dir;
         } else if (file_system == "jindo") {
             return "oss://paimon-unittest/test_data/";
         }
@@ -207,6 +212,28 @@ TEST_P(FileSystemTest, TestCreate) {
     ASSERT_OK(out->Close());
 
     ASSERT_NOK_WITH_MSG(fs_->Create(path, /*overwrite=*/false), "already exists");
+}
+
+TEST_P(FileSystemTest, TestCreateRelativeFileInCurrentDirectory) {
+    if (GetParam() != "local") {
+        GTEST_SKIP() << "this test is only tested for the local file system";
+    }
+
+    std::string path = "relative_file_" + RandomName();
+    ASSERT_OK_AND_ASSIGN(auto out, fs_->Create(path, /*overwrite=*/true));
+    std::string content = "content";
+    ASSERT_OK_AND_ASSIGN(int32_t write_len, out->Write(content.data(), content.size()));
+    ASSERT_EQ(write_len, content.size());
+    ASSERT_OK_AND_ASSIGN(std::string uri, out->GetUri());
+    ASSERT_FALSE(uri.empty());
+    ASSERT_EQ(uri[0], '/');
+    ASSERT_EQ(PathUtil::GetName(uri), path);
+    ASSERT_OK(out->Close());
+
+    std::string read_content;
+    ASSERT_OK(fs_->ReadFile(path, &read_content));
+    ASSERT_EQ(read_content, content);
+    ASSERT_OK(fs_->Delete(path));
 }
 
 // --- write&read
@@ -648,6 +675,27 @@ TEST_P(FileSystemTest, TestRename) {
         "src file is not a dir");
 }
 
+TEST_P(FileSystemTest, TestRenameWithFileSchemeUsesNormalizedPath) {
+    if (GetParam() != "local") {
+        GTEST_SKIP() << "this test is only tested for the local file system";
+    }
+
+    const std::string src = "file:" + test_root_ + "/scheme_src.txt";
+    const std::string dst = "file:" + test_root_ + "/scheme_dst.txt";
+
+    ASSERT_OK(fs_->WriteFile(src, "content", /*overwrite=*/false));
+    ASSERT_OK(fs_->Rename(src, dst));
+
+    ASSERT_OK_AND_ASSIGN(bool src_exists, fs_->Exists(src));
+    ASSERT_FALSE(src_exists);
+    ASSERT_OK_AND_ASSIGN(bool dst_exists, fs_->Exists(dst));
+    ASSERT_TRUE(dst_exists);
+
+    std::string content;
+    ASSERT_OK(fs_->ReadFile(dst, &content));
+    ASSERT_EQ(content, "content");
+}
+
 TEST_P(FileSystemTest, TestRename2) {
     {
         // test rename dir
@@ -778,6 +826,19 @@ TEST_P(FileSystemTest, TestExists) {
 
     ASSERT_OK(fs_->WriteFile(dir_path + "/file.data", "content", /*overwrite=*/false));
     ASSERT_OK_AND_ASSIGN(is_exist, fs_->Exists(dir_path));
+    ASSERT_TRUE(is_exist);
+}
+
+TEST_P(FileSystemTest, TestExistsInLocalFileSystem) {
+    if (GetParam() != "local") {
+        GTEST_SKIP() << "this test is only tested for the local file system";
+    }
+
+    ASSERT_OK_AND_ASSIGN(bool is_exist, fs_->Exists("/"));
+    ASSERT_TRUE(is_exist);
+    ASSERT_OK_AND_ASSIGN(is_exist, fs_->Exists(""));
+    ASSERT_TRUE(is_exist);
+    ASSERT_OK_AND_ASSIGN(is_exist, fs_->Exists("."));
     ASSERT_TRUE(is_exist);
 }
 
@@ -985,8 +1046,16 @@ TEST_P(FileSystemTest, TestMkdir) {
     ASSERT_OK(fs_->Mkdirs(test_root_ + "/tmp/local/f/1"));
     ASSERT_OK(fs_->Mkdirs(test_root_ + "/tmp1"));
     ASSERT_OK(fs_->Mkdirs(test_root_ + "/tmp1/f2/"));
+}
+
+TEST_P(FileSystemTest, TestMkdirInLocalFileSystem) {
+    if (GetParam() != "local") {
+        GTEST_SKIP() << "this test is only tested for the local file system";
+    }
+
     ASSERT_OK(fs_->Mkdirs("/"));
-    ASSERT_NOK_WITH_MSG(fs_->Mkdirs(""), "path is an empty string.");
+    ASSERT_OK(fs_->Mkdirs(""));
+    ASSERT_OK(fs_->Mkdirs("."));
 }
 
 TEST_P(FileSystemTest, TestMkdir2) {
@@ -1399,6 +1468,14 @@ TEST_P(FileSystemTest, TestAtomicStoreAlreadyExist) {
     ASSERT_TRUE(is_exist);
 }
 
-INSTANTIATE_TEST_SUITE_P(UseLocal, FileSystemTest, ::testing::Values("local" /*, "jindo"*/));
+std::vector<std::string> GetTestValuesForFileSystemTest() {
+    std::vector<std::string> values;
+    values.emplace_back("local");
+    // values.emplace_back("jindo");
+    return values;
+}
+
+INSTANTIATE_TEST_SUITE_P(FsType, FileSystemTest,
+                         ::testing::ValuesIn(GetTestValuesForFileSystemTest()));
 
 }  // namespace paimon::test

@@ -91,6 +91,12 @@ TEST(PathUtilsTest, TestTrimLastDelim) {
     }
 }
 
+TEST(PathUtilsTest, TestGetWorkingDirectory) {
+    ASSERT_OK_AND_ASSIGN(std::string current_path, PathUtil::GetWorkingDirectory());
+    ASSERT_FALSE(current_path.empty());
+    ASSERT_EQ(current_path[0], '/');
+}
+
 TEST(PathUtilsTest, TestToPath) {
     {
         std::string test_path = "";
@@ -127,6 +133,22 @@ TEST(PathUtilsTest, TestToPath) {
         ASSERT_EQ(path.authority, "");
         ASSERT_EQ(path.path, "/tmp/index");
         ASSERT_EQ(path.ToString(), "/tmp/index");
+    }
+    {
+        std::string test_path = ".";
+        ASSERT_OK_AND_ASSIGN(Path path, PathUtil::ToPath(test_path));
+        ASSERT_EQ(path.scheme, "");
+        ASSERT_EQ(path.authority, "");
+        ASSERT_EQ(path.path, ".");
+        ASSERT_EQ(path.ToString(), ".");
+    }
+    {
+        std::string test_path = "relative/path";
+        ASSERT_OK_AND_ASSIGN(Path path, PathUtil::ToPath(test_path));
+        ASSERT_EQ(path.scheme, "");
+        ASSERT_EQ(path.authority, "");
+        ASSERT_EQ(path.path, "relative/path");
+        ASSERT_EQ(path.ToString(), "relative/path");
     }
 }
 

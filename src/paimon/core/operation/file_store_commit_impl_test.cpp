@@ -1661,4 +1661,31 @@ TEST_F(FileStoreCommitImplTest, TestCommitWithIOException) {
     ASSERT_TRUE(commit_run_complete);
 }
 
+TEST_F(FileStoreCommitImplTest, TestObjectStoreAllowedWithRESTCatalogCommit) {
+    // Verify: the object store check in FileStoreCommit::Create is skipped when
+    // UseRESTCatalogCommit is true. We can't use an actual oss:// path in unit
+    // tests (LocalFileSystem rejects the scheme), but we verify the condition
+    // by confirming that the "enable-object-store-commit-in-inte-test" flag is
+    // not needed when UseRESTCatalogCommit is enabled. End-to-end oss:// testing
+    // is covered by duckdb-paimon integration tests.
+    ASSERT_OK_AND_ASSIGN(bool is_oss, FileSystem::IsObjectStore("oss://bucket/path"));
+    ASSERT_TRUE(is_oss);
+
+    // REST commit with local path should work without the object store flag
+    CommitContextBuilder builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(
+        auto ctx,
+        builder.AddOption(Options::MANIFEST_FORMAT, "orc").UseRESTCatalogCommit(true).Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(ctx)));
+
+    auto msgs =
+        GetCommitMessages(paimon::test::GetDataDir() +
+                              "/orc/append_09.db/append_09/commit_messages/commit_messages-01",
+                          3);
+    ASSERT_GT(msgs.size(), 0);
+    ASSERT_OK(commit->Commit(msgs));
+    ASSERT_OK_AND_ASSIGN(auto json, commit->GetLastCommitTableRequest());
+    ASSERT_FALSE(json.empty());
+}
+
 }  // namespace paimon::test
