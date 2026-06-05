@@ -98,7 +98,8 @@ Result<RowRanges> ColumnIndexFilter::VisitLeafPredicate(
 
     if (function_type != Function::Type::IS_NULL && function_type != Function::Type::IS_NOT_NULL &&
         literals.empty()) {
-        return RowRanges::CreateSingle(row_group_row_count);
+        return Status::Invalid(
+            fmt::format("predicate on column '{}' requires at least one literal", field_name));
     }
     std::vector<int32_t> matching_pages;
 
