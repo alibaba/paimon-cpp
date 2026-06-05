@@ -140,6 +140,29 @@ class FileReaderWrapper {
                       const std::vector<std::pair<uint64_t, uint64_t>>& all_row_group_ranges,
                       uint64_t num_rows, ::arrow::MemoryPool* pool, int64_t batch_size);
 
+    /// Wait for all pending PreBuffer operations to complete.
+    void WaitForPendingPreBuffer();
+
+    /// Advance current_row_group_idx_ to the next row group and update next_row_to_read_.
+    void AdvanceToNextRowGroup();
+
+    /// Read next batch from a page-filtered row group. Returns nullptr when the RG is exhausted.
+    Result<std::shared_ptr<arrow::RecordBatch>> NextPageFiltered();
+
+    /// Read next batch from the fully-matched batch_reader_. Returns nullptr when exhausted.
+    Result<std::shared_ptr<arrow::RecordBatch>> NextFullyMatched();
+
+    /// Build page_filtered_read_schema_ from the given column indices. No-op if already built.
+    Status BuildPageFilteredSchema(const std::vector<int32_t>& column_indices);
+
+    /// Collect all byte ranges that need pre-buffering (page-filtered + fully-matched).
+    std::vector<::arrow::io::ReadRange> CollectPreBufferRanges(
+        const std::vector<int32_t>& fully_matched_row_groups,
+        const std::vector<int32_t>& column_indices);
+
+    /// Dispatch a single PreBufferRanges call with merged ranges.
+    void DispatchPreBuffer(std::vector<::arrow::io::ReadRange> ranges);
+
     std::unique_ptr<::parquet::arrow::FileReader> file_reader_;
     std::unique_ptr<arrow::RecordBatchReader> batch_reader_;
 
@@ -174,28 +197,6 @@ class FileReaderWrapper {
     // Track pre-buffered ranges so we can wait on destruction
     std::vector<::arrow::io::ReadRange> prebuffered_ranges_;
 
-    /// Wait for all pending PreBuffer operations to complete.
-    void WaitForPendingPreBuffer();
-
-    /// Advance current_row_group_idx_ to the next row group and update next_row_to_read_.
-    void AdvanceToNextRowGroup();
-
-    /// Read next batch from a page-filtered row group. Returns nullptr when the RG is exhausted.
-    Result<std::shared_ptr<arrow::RecordBatch>> NextPageFiltered();
-
-    /// Read next batch from the fully-matched batch_reader_. Returns nullptr when exhausted.
-    Result<std::shared_ptr<arrow::RecordBatch>> NextFullyMatched();
-
-    /// Build page_filtered_read_schema_ from the given column indices. No-op if already built.
-    Status BuildPageFilteredSchema(const std::vector<int32_t>& column_indices);
-
-    /// Collect all byte ranges that need pre-buffering (page-filtered + fully-matched).
-    std::vector<::arrow::io::ReadRange> CollectPreBufferRanges(
-        const std::vector<int32_t>& fully_matched_row_groups,
-        const std::vector<int32_t>& column_indices);
-
-    /// Dispatch a single PreBufferRanges call with merged ranges.
-    void DispatchPreBuffer(std::vector<::arrow::io::ReadRange> ranges);
 };
 
 }  // namespace paimon::parquet
