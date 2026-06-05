@@ -321,9 +321,9 @@ std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRange
         if (col_chunk->has_dictionary_page()) {
             int64_t dict_offset = col_chunk->dictionary_page_offset();
             int64_t dict_size = data_page_offset - dict_offset;
-            // if dictionary exists, the data page size should be reduced by the dictionary
-            data_page_compressed_size -= dict_size;
             if (dict_size > 0) {
+                // if dictionary exists, the data page size should be reduced by the dictionary
+                data_page_compressed_size -= dict_size;
                 ranges.push_back({dict_offset, dict_size});
             }
         }

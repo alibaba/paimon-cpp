@@ -822,7 +822,20 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
                "total_compressed_size.";
     }
 
-    // --- Check 2: Maximum range_end equals true_chunk_end ---
+    // --- Check 2: At least one non-dictionary data-page range is present ---
+    // Guards against truncation: if only the dictionary range is returned, the test
+    // would still pass the overshoot check but miss that data pages are lost.
+    int data_page_range_count = 0;
+    for (const auto& range : ranges) {
+        if (range.offset >= data_page_offset) {
+            ++data_page_range_count;
+        }
+    }
+    ASSERT_GE(data_page_range_count, 1)
+        << "Expected at least one data-page range (offset >= " << data_page_offset
+        << "), but only dictionary range(s) were returned.";
+
+    // --- Check 3: Maximum range_end equals true_chunk_end when requesting all rows ---
     int64_t max_range_end = 0;
     for (const auto& range : ranges) {
         int64_t range_end = range.offset + range.length;
@@ -833,7 +846,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
         << "true_chunk_end (" << true_chunk_end << "), but got " << max_range_end
         << ". The last data page range may be truncated or missing.";
 
-    // --- Check 3: No range exceeds file size ---
+    // --- Check 4: No range exceeds file size ---
     for (const auto& range : ranges) {
         EXPECT_LE(range.offset + range.length, static_cast<int64_t>(length))
             << "Range exceeds file size";
