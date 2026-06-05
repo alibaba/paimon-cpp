@@ -105,7 +105,8 @@ Result<std::unique_ptr<FileReaderWrapper>> FileReaderWrapper::Create(
             std::move(file_reader), all_row_group_ranges, num_rows, pool, batch_size));
         std::vector<TargetRowGroup> all_target_row_groups;
         for (int32_t i = 0; i < file_reader_wrapper->GetNumberOfRowGroups(); i++) {
-            all_target_row_groups.emplace_back(i, false, RowRanges());
+            all_target_row_groups.emplace_back(/*row_group_index=*/i, /*is_page_filtered=*/false,
+                                               /*row_ranges=*/RowRanges());
         }
         PAIMON_RETURN_NOT_OK(
             file_reader_wrapper->PrepareForReadingLazy(all_target_row_groups, columns_indices));
