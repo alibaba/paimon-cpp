@@ -1701,7 +1701,7 @@ TEST_F(FileStoreCommitImplTest, TestPostponeBucketPKTableCommitAllowed) {
         {arrow::field("pk", arrow::int32()), arrow::field("val", arrow::utf8())});
     ::ArrowSchema arrow_schema;
     ASSERT_TRUE(arrow::ExportSchema(pk_schema, &arrow_schema).ok());
-    std::map<std::string, std::string> table_options = {{"bucket", "-2"}};
+    std::map<std::string, std::string> table_options = {{Options::BUCKET, "-2"}};
     ASSERT_OK(catalog->CreateTable(Identifier("db", "pk_tbl"), &arrow_schema,
                                    /*partition_keys=*/{}, /*primary_keys=*/{"pk"}, table_options,
                                    /*ignore_if_exists=*/false));
@@ -1729,7 +1729,7 @@ TEST_F(FileStoreCommitImplTest, TestFixedBucketPKTableCommitRejected) {
         {arrow::field("pk", arrow::int32()), arrow::field("val", arrow::utf8())});
     ::ArrowSchema arrow_schema;
     ASSERT_TRUE(arrow::ExportSchema(pk_schema, &arrow_schema).ok());
-    std::map<std::string, std::string> table_options = {{"bucket", "4"}};
+    std::map<std::string, std::string> table_options = {{Options::BUCKET, "4"}};
     ASSERT_OK(catalog->CreateTable(Identifier("db", "pk_tbl_fixed"), &arrow_schema,
                                    /*partition_keys=*/{}, /*primary_keys=*/{"pk"}, table_options,
                                    /*ignore_if_exists=*/false));
@@ -1741,6 +1741,7 @@ TEST_F(FileStoreCommitImplTest, TestFixedBucketPKTableCommitRejected) {
     ASSERT_OK_AND_ASSIGN(auto commit_context, builder.Finish());
     auto result = FileStoreCommit::Create(std::move(commit_context));
     ASSERT_FALSE(result.ok());
+    ASSERT_TRUE(result.status().IsNotImplemented());
     ASSERT_TRUE(result.status().ToString().find("not support pk table commit") !=
                 std::string::npos);
 }
