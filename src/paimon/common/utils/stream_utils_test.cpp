@@ -46,8 +46,8 @@ class StreamUtilsTest : public ::testing::Test {
     std::string CreateTestFile(const std::string& content) {
         std::string file_path = dir_->Str() + "/test_file.txt";
         EXPECT_OK_AND_ASSIGN(auto output_stream, file_system_->Create(file_path, true));
-        EXPECT_OK_AND_ASSIGN(int32_t length, output_stream->Write(content.data(), content.size()));
-        EXPECT_EQ(length, static_cast<int32_t>(content.size()));
+        EXPECT_OK_AND_ASSIGN(int64_t length, output_stream->Write(content.data(), content.size()));
+        EXPECT_EQ(length, static_cast<int64_t>(content.size()));
         EXPECT_OK(output_stream->Close());
         return file_path;
     }

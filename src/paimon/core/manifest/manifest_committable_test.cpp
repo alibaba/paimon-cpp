@@ -59,7 +59,7 @@ class ManifestCommittableTest : public testing::Test {
 
         EXPECT_OK_AND_ASSIGN(auto in_stream, file_system->Open(path));
         EXPECT_OK_AND_ASSIGN(
-            [[maybe_unused]] int32_t read_bytes,
+            [[maybe_unused]] int64_t read_bytes,
             in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
         EXPECT_OK(in_stream->Close());
 

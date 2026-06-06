@@ -254,37 +254,37 @@ Result<int64_t> LocalInputStream::GetPos() const {
     return file_->Tell();
 }
 
-Result<int32_t> LocalInputStream::Read(char* buffer, uint32_t size) {
-    PAIMON_ASSIGN_OR_RAISE(int32_t read_length, file_->Read(buffer, size));
-    if (read_length != static_cast<int32_t>(size)) {
+Result<int64_t> LocalInputStream::Read(char* buffer, int64_t size) {
+    PAIMON_ASSIGN_OR_RAISE(int64_t read_length, file_->Read(buffer, size));
+    if (read_length != size) {
         return Status::IOError(fmt::format("file '{}' read size {} != expected {}",
                                            file_->GetPath(), read_length, size));
     }
     return read_length;
 }
 
-Result<int32_t> LocalInputStream::Read(char* buffer, uint32_t size, uint64_t offset) {
-    PAIMON_ASSIGN_OR_RAISE(int32_t read_length, file_->Read(buffer, size, offset));
-    if (read_length != static_cast<int32_t>(size)) {
+Result<int64_t> LocalInputStream::Read(char* buffer, int64_t size, int64_t offset) {
+    PAIMON_ASSIGN_OR_RAISE(int64_t read_length, file_->Read(buffer, size, offset));
+    if (read_length != size) {
         return Status::IOError(fmt::format("file '{}' read size {} != expected {}",
                                            file_->GetPath(), read_length, size));
     }
     return read_length;
 }
 
-void LocalInputStream::ReadAsync(char* buffer, uint32_t size, uint64_t offset,
+void LocalInputStream::ReadAsync(char* buffer, int64_t size, int64_t offset,
                                  std::function<void(Status)>&& callback) {
-    Result<int32_t> read_size = Read(buffer, size, offset);
+    Result<int64_t> read_size = Read(buffer, size, offset);
     Status status = Status::OK();
     if (!read_size.ok()) {
         status = read_size.status();
     } else {
-        assert(read_size.value() == static_cast<int32_t>(size));
+        assert(read_size.value() == size);
     }
     callback(status);
 }
 
-Result<uint64_t> LocalInputStream::Length() const {
+Result<int64_t> LocalInputStream::Length() const {
     return file_->Length();
 }
 
@@ -304,7 +304,7 @@ LocalOutputStream::LocalOutputStream(std::unique_ptr<LocalFile>&& file) : file_(
 Result<int64_t> LocalOutputStream::GetPos() const {
     return file_->Tell();
 }
-Result<int32_t> LocalOutputStream::Write(const char* buffer, uint32_t size) {
+Result<int64_t> LocalOutputStream::Write(const char* buffer, int64_t size) {
     return file_->Write(buffer, size);
 }
 Status LocalOutputStream::Flush() {

@@ -94,8 +94,20 @@ Result<std::unique_ptr<InputStream>> Blob::NewInputStream(
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<InputStream> file,
                            fs->Open(impl_->GetDescriptor()->Uri()));
 
-    return OffsetInputStream::Create(std::move(file), impl_->GetDescriptor()->Length(),
-                                     impl_->GetDescriptor()->Offset());
+    int64_t blob_length = impl_->GetDescriptor()->Length();
+    int64_t blob_offset = impl_->GetDescriptor()->Offset();
+
+    PAIMON_ASSIGN_OR_RAISE(int64_t total_length, file->Length());
+    if (PAIMON_UNLIKELY(blob_offset > total_length)) {
+        return Status::Invalid(
+            fmt::format("offset {} exceed total length {}", blob_offset, total_length));
+    }
+    if (blob_length == -1) {
+        // blob_length == -1 means it's dynamic length, should read to the end
+        blob_length = total_length - blob_offset;
+    }
+
+    return OffsetInputStream::Create(std::move(file), blob_length, blob_offset, total_length);
 }
 
 Result<PAIMON_UNIQUE_PTR<Bytes>> Blob::ToData(const std::shared_ptr<FileSystem>& fs,

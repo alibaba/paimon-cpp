@@ -248,7 +248,7 @@ class ColumnIndexFilterTest : public ::testing::Test {
 
         // Open as raw ParquetFileReader
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name_));
-        ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
+        ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
         auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
         parquet_reader_ = ::parquet::ParquetFileReader::Open(in_stream);
         ASSERT_TRUE(parquet_reader_);

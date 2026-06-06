@@ -42,7 +42,7 @@ class PAIMON_EXPORT BufferedInputStream : public InputStream {
     /// @param in The underlying input stream to wrap.
     /// @param buffer_size Size of the internal buffer in bytes.
     /// @param pool Memory pool for buffer allocation.
-    BufferedInputStream(const std::shared_ptr<InputStream>& in, int32_t buffer_size,
+    BufferedInputStream(const std::shared_ptr<InputStream>& in, int64_t buffer_size,
                         MemoryPool* pool);
 
     ~BufferedInputStream() noexcept override;
@@ -51,20 +51,20 @@ class PAIMON_EXPORT BufferedInputStream : public InputStream {
 
     Result<int64_t> GetPos() const override;
 
-    Result<int32_t> Read(char* buffer, uint32_t size) override;
+    Result<int64_t> Read(char* buffer, int64_t size) override;
 
-    Result<int32_t> Read(char* buffer, uint32_t size, uint64_t offset) override;
+    Result<int64_t> Read(char* buffer, int64_t size, int64_t offset) override;
 
-    void ReadAsync(char* buffer, uint32_t size, uint64_t offset,
+    void ReadAsync(char* buffer, int64_t size, int64_t offset,
                    std::function<void(Status)>&& callback) override;
 
-    Result<uint64_t> Length() const override;
+    Result<int64_t> Length() const override;
 
     Status Close() override;
 
     Result<std::string> GetUri() const override;
 
-    static constexpr int32_t DEFAULT_BUFFER_SIZE = 8192;
+    static constexpr int64_t DEFAULT_BUFFER_SIZE = 8192;
 
  private:
     /// Fill the internal buffer from the underlying stream.
@@ -72,15 +72,15 @@ class PAIMON_EXPORT BufferedInputStream : public InputStream {
 
     /// Internal read implementation.
     /// @pre size > 0
-    Result<int32_t> InnerRead(char* buffer, int32_t size);
+    Result<int64_t> InnerRead(char* buffer, int64_t size);
 
     /// Validate that the expected number of bytes were read.
-    Status AssertReadLength(int32_t read_length, int32_t actual_read_length) const;
+    Status AssertReadLength(int64_t read_length, int64_t actual_read_length) const;
 
  private:
-    int32_t buffer_size_;
-    int32_t pos_ = 0;
-    int32_t count_ = 0;
+    int64_t buffer_size_;
+    int64_t pos_ = 0;
+    int64_t count_ = 0;
     std::unique_ptr<Bytes> buffer_;
     std::shared_ptr<InputStream> in_;
 };

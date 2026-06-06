@@ -51,8 +51,7 @@ class BTreeCompatibilityTest : public ::testing::Test {
         EXPECT_OK_AND_ASSIGN(auto input, fs_->Open(path));
         EXPECT_OK_AND_ASSIGN(auto length, input->Length());
         std::string buffer(static_cast<size_t>(length), '\0');
-        EXPECT_OK_AND_ASSIGN([[maybe_unused]] auto bytes_read,
-                             input->Read(buffer.data(), static_cast<uint32_t>(length)));
+        EXPECT_OK_AND_ASSIGN([[maybe_unused]] auto bytes_read, input->Read(buffer.data(), length));
         return buffer;
     }
 
@@ -114,7 +113,7 @@ class BTreeCompatibilityTest : public ::testing::Test {
         auto meta_str = ReadFileAsString(meta_path);
         std::shared_ptr<Bytes> meta_bytes = Bytes::AllocateBytes(meta_str, pool_.get());
         PAIMON_ASSIGN_OR_RAISE(auto file_status, fs_->GetFileStatus(bin_path));
-        auto file_size = static_cast<int64_t>(file_status->GetLen());
+        auto file_size = file_status->GetLen();
 
         GlobalIndexIOMeta io_meta(bin_path, file_size, meta_bytes);
         std::vector<GlobalIndexIOMeta> metas = {io_meta};

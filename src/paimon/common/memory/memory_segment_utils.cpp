@@ -21,7 +21,7 @@
 #include "paimon/common/utils/murmurhash_utils.h"
 
 namespace paimon {
-std::shared_ptr<Bytes> MemorySegmentUtils::AllocateBytes(int32_t length, MemoryPool* pool) {
+std::shared_ptr<Bytes> MemorySegmentUtils::AllocateBytes(size_t length, MemoryPool* pool) {
     return Bytes::AllocateBytes(length, pool);
 }
 

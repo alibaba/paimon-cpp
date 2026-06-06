@@ -79,8 +79,8 @@ class BlobFormatWriter : public FormatWriter {
 
     Status WriteBlob(std::string_view blob_data);
 
-    Status WriteBytes(const char* data, int32_t length);
-    Status WriteWithCrc32(const char* data, int32_t length);
+    Status WriteBytes(const char* data, int64_t length);
+    Status WriteWithCrc32(const char* data, int64_t length);
 
     template <typename T>
     static PAIMON_UNIQUE_PTR<Bytes> IntegerToLittleEndian(T value,

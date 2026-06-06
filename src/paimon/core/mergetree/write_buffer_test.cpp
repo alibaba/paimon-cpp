@@ -100,7 +100,7 @@ class WriteBufferTest : public ::testing::Test {
         if (spill_files.size() != 1 || spill_files[0]->IsDir()) {
             return Status::Invalid("expected exactly one spill file");
         }
-        return static_cast<int64_t>(spill_files[0]->GetLen());
+        return spill_files[0]->GetLen();
     }
 
     Result<ReaderResult> ReadReaderResult(KeyValueRecordReader* reader) const {

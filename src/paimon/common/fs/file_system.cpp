@@ -48,10 +48,10 @@ Status FileSystem::ReadFile(const std::string& path, std::string* content) {
             Status s = in->Close();
             (void)s;
         });
-        PAIMON_ASSIGN_OR_RAISE(uint64_t length, in->Length());
-        content->resize(length);
-        PAIMON_ASSIGN_OR_RAISE(int32_t read_length, in->Read(content->data(), length));
-        if (read_length != static_cast<int32_t>(length)) {
+        PAIMON_ASSIGN_OR_RAISE(int64_t length, in->Length());
+        content->resize(static_cast<size_t>(length));
+        PAIMON_ASSIGN_OR_RAISE(int64_t read_length, in->Read(content->data(), length));
+        if (read_length != length) {
             return Status::IOError(fmt::format("path {}, expect read len {}, actual read len {}",
                                                path, length, read_length));
         }
@@ -69,8 +69,8 @@ Status FileSystem::WriteFile(const std::string& path, const std::string& content
             Status s = out->Close();
             (void)s;
         });
-        int32_t length = content.size();
-        PAIMON_ASSIGN_OR_RAISE(int32_t write_length, out->Write(content.data(), length));
+        auto length = static_cast<int64_t>(content.size());
+        PAIMON_ASSIGN_OR_RAISE(int64_t write_length, out->Write(content.data(), length));
         if (write_length != length) {
             return Status::IOError(fmt::format("path {}, expect write len {}, actual write len {}",
                                                path, length, write_length));

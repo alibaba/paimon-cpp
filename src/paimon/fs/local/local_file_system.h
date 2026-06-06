@@ -67,16 +67,16 @@ class LocalInputStream : public InputStream {
 
     Status Seek(int64_t offset, SeekOrigin origin) override;
     Result<int64_t> GetPos() const override;
-    Result<int32_t> Read(char* buffer, uint32_t size) override;
-    Result<int32_t> Read(char* buffer, uint32_t size, uint64_t offset) override;
-    void ReadAsync(char* buffer, uint32_t size, uint64_t offset,
+    Result<int64_t> Read(char* buffer, int64_t size) override;
+    Result<int64_t> Read(char* buffer, int64_t size, int64_t offset) override;
+    void ReadAsync(char* buffer, int64_t size, int64_t offset,
                    std::function<void(Status)>&& callback) override;
 
     Status Close() override;
     Result<std::string> GetUri() const override {
         return file_->GetPath();
     }
-    Result<uint64_t> Length() const override;
+    Result<int64_t> Length() const override;
 
  private:
     explicit LocalInputStream(std::unique_ptr<LocalFile>&& file);
@@ -89,7 +89,7 @@ class LocalOutputStream : public OutputStream {
     static Result<std::unique_ptr<LocalOutputStream>> Create(std::unique_ptr<LocalFile> file);
 
     Result<int64_t> GetPos() const override;
-    Result<int32_t> Write(const char* buffer, uint32_t size) override;
+    Result<int64_t> Write(const char* buffer, int64_t size) override;
     Status Flush() override;
     Status Close() override;
     Result<std::string> GetUri() const override {

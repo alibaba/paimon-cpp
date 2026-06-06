@@ -51,12 +51,12 @@ class LocalFile {
     std::unique_ptr<LocalFile> GetParentFile() const;
     Result<bool> Mkdir() const;
     Result<std::unique_ptr<LocalFileStatus>> GetFileStatus() const;
-    Result<uint64_t> Length() const;
+    Result<int64_t> Length() const;
     Result<int64_t> LastModifiedTimeMs() const;
     Status OpenFile(bool is_read_file);
-    Result<int32_t> Read(char* buffer, uint32_t length);
-    Result<int32_t> Read(char* buffer, uint32_t length, uint64_t offset);
-    Result<int32_t> Write(const char* buffer, uint32_t length);
+    Result<int64_t> Read(char* buffer, int64_t length);
+    Result<int64_t> Read(char* buffer, int64_t length, int64_t offset);
+    Result<int64_t> Write(const char* buffer, int64_t length);
     Status Flush();
     Status Close();
     Status Seek(int64_t offset, int32_t seek_origin);
