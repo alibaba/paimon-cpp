@@ -39,8 +39,8 @@ Result<std::string> GetJiebaDictionaryDir() {
     if (env_dir && *env_dir != '\0') {
         return std::string(env_dir);
     }
-    return Status::Invalid(fmt::format(
-        "jieba dictionary dir not found, please set {} env var", kJiebaDictDirEnv));
+    return Status::Invalid(
+        fmt::format("jieba dictionary dir not found, please set {} env var", kJiebaDictDirEnv));
 }
 
 }  // namespace
@@ -52,14 +52,12 @@ Result<std::shared_ptr<TantivyGlobalIndexWriter>> TantivyGlobalIndexWriter::Crea
     PAIMON_ASSIGN_OR_RAISE(
         bool omit_term_freq_and_positions,
         OptionsUtils::GetValueFromMap(options, kTantivyWriteOmitTermFreqAndPositions, false));
-    PAIMON_ASSIGN_OR_RAISE(
-        std::string tokenize_mode,
-        OptionsUtils::GetValueFromMap(options, kJiebaTokenizeMode,
-                                      std::string(kDefaultJiebaTokenizeMode)));
-    PAIMON_ASSIGN_OR_RAISE(
-        std::string tokenizer,
-        OptionsUtils::GetValueFromMap(options, kTantivyWriteTokenizer,
-                                      std::string(kDefaultTantivyWriteTokenizer)));
+    PAIMON_ASSIGN_OR_RAISE(std::string tokenize_mode,
+                           OptionsUtils::GetValueFromMap(options, kJiebaTokenizeMode,
+                                                         std::string(kDefaultJiebaTokenizeMode)));
+    PAIMON_ASSIGN_OR_RAISE(std::string tokenizer, OptionsUtils::GetValueFromMap(
+                                                      options, kTantivyWriteTokenizer,
+                                                      std::string(kDefaultTantivyWriteTokenizer)));
     // Jieba dict is only needed when actually using jieba. For tantivy built-in
     // tokenizers (e.g. "default") we don't force the caller to ship the jieba
     // dict dir — pass an empty string and Rust skips jieba construction.
@@ -71,8 +69,7 @@ Result<std::shared_ptr<TantivyGlobalIndexWriter>> TantivyGlobalIndexWriter::Crea
     PaimonTantivyWriter* raw = nullptr;
     PaimonTantivyStatus st = paimon_tantivy_writer_new(
         field_name.c_str(), tokenize_mode.c_str(),
-        /*with_position=*/!omit_term_freq_and_positions, dict_dir.c_str(),
-        tokenizer.c_str(), &raw);
+        /*with_position=*/!omit_term_freq_and_positions, dict_dir.c_str(), tokenizer.c_str(), &raw);
     PAIMON_TANTIVY_RETURN_NOT_OK(st);
     WriterPtr writer(raw);
     return std::shared_ptr<TantivyGlobalIndexWriter>(new TantivyGlobalIndexWriter(
@@ -133,8 +130,7 @@ Result<std::vector<GlobalIndexIOMeta>> TantivyGlobalIndexWriter::Finish() {
     // W1 streaming finish: open the output file, pipe archive bytes from Rust
     // through `paimon_cpp_writer_push` directly into the OutputStream. Peak
     // RAM (Rust side) = 64KB buffer, independent of archive size.
-    PAIMON_ASSIGN_OR_RAISE(std::string index_file_name,
-                           file_writer_->NewFileName(kIdentifier));
+    PAIMON_ASSIGN_OR_RAISE(std::string index_file_name, file_writer_->NewFileName(kIdentifier));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<OutputStream> out,
                            file_writer_->NewOutputStream(index_file_name));
 

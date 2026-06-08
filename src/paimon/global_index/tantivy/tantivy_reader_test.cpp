@@ -29,17 +29,15 @@
 #include "arrow/ipc/api.h"
 #include "arrow/type.h"
 #include "gtest/gtest.h"
-
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/global_index/global_index_file_manager.h"
 #include "paimon/core/index/index_path_factory.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
-#include "paimon/testing/utils/testharness.h"
-
 #include "paimon/global_index/tantivy/tantivy_defs.h"
 #include "paimon/global_index/tantivy/tantivy_global_index_reader.h"
 #include "paimon/global_index/tantivy/tantivy_global_index_writer.h"
+#include "paimon/testing/utils/testharness.h"
 
 #ifndef JIEBA_TEST_DICT_DIR
 #error "JIEBA_TEST_DICT_DIR must be set at compile time"
@@ -109,8 +107,7 @@ class TantivyReaderTest : public ::testing::Test {
         return {fm, metas_res.value()[0]};
     }
 
-    static std::vector<int64_t> BitmapToVec(
-        const std::shared_ptr<GlobalIndexResult>& result) {
+    static std::vector<int64_t> BitmapToVec(const std::shared_ptr<GlobalIndexResult>& result) {
         auto bg = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(result);
         EXPECT_TRUE(bg) << "expected BitmapGlobalIndexResult";
         auto bitmap_res = bg->GetBitmap();
@@ -183,14 +180,10 @@ TEST_F(TantivyReaderTest, EnglishPhrasePrefixWildcard) {
     };
 
     // "test document" is consecutive only in row 0 ("an test document.")
-    EXPECT_EQ(run("test document", FullTextSearch::SearchType::PHRASE),
-              (std::vector<int64_t>{0}));
-    EXPECT_EQ(run("unorder", FullTextSearch::SearchType::PREFIX),
-              (std::vector<int64_t>{3}));
-    EXPECT_EQ(run("*order*", FullTextSearch::SearchType::WILDCARD),
-              (std::vector<int64_t>{3}));
-    EXPECT_EQ(run("*or*er*", FullTextSearch::SearchType::WILDCARD),
-              (std::vector<int64_t>{3}));
+    EXPECT_EQ(run("test document", FullTextSearch::SearchType::PHRASE), (std::vector<int64_t>{0}));
+    EXPECT_EQ(run("unorder", FullTextSearch::SearchType::PREFIX), (std::vector<int64_t>{3}));
+    EXPECT_EQ(run("*order*", FullTextSearch::SearchType::WILDCARD), (std::vector<int64_t>{3}));
+    EXPECT_EQ(run("*or*er*", FullTextSearch::SearchType::WILDCARD), (std::vector<int64_t>{3}));
 }
 
 TEST_F(TantivyReaderTest, ChineseQueryMode) {
@@ -217,14 +210,11 @@ TEST_F(TantivyReaderTest, ChineseQueryMode) {
         return BitmapToVec(res.value());
     };
 
-    EXPECT_EQ(run("模块", FullTextSearch::SearchType::MATCH_ALL),
-              (std::vector<int64_t>{0, 2}));
-    EXPECT_EQ(run("模块技术", FullTextSearch::SearchType::MATCH_ALL),
-              (std::vector<int64_t>{0}));
+    EXPECT_EQ(run("模块", FullTextSearch::SearchType::MATCH_ALL), (std::vector<int64_t>{0, 2}));
+    EXPECT_EQ(run("模块技术", FullTextSearch::SearchType::MATCH_ALL), (std::vector<int64_t>{0}));
     EXPECT_EQ(run("模块技术", FullTextSearch::SearchType::MATCH_ANY),
               (std::vector<int64_t>{0, 1, 2, 3}));
-    EXPECT_EQ(run("发展方向", FullTextSearch::SearchType::PHRASE),
-              (std::vector<int64_t>{4}));
+    EXPECT_EQ(run("发展方向", FullTextSearch::SearchType::PHRASE), (std::vector<int64_t>{4}));
 }
 
 }  // namespace paimon::tantivy::test

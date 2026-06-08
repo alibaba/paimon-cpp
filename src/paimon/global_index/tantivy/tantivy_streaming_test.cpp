@@ -33,6 +33,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cinttypes>
 #include <cstring>
 #include <memory>
 #include <thread>
@@ -42,21 +43,19 @@
 #include "arrow/c/bridge.h"
 #include "arrow/type.h"
 #include "gtest/gtest.h"
-
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/global_index/global_index_file_manager.h"
 #include "paimon/core/index/index_path_factory.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/global_index/bitmap_scored_global_index_result.h"
-#include "paimon/io/byte_array_input_stream.h"
-#include "paimon/predicate/full_text_search.h"
-#include "paimon/testing/utils/testharness.h"
-
 #include "paimon/global_index/tantivy/tantivy_archive_layout.h"
 #include "paimon/global_index/tantivy/tantivy_defs.h"
 #include "paimon/global_index/tantivy/tantivy_global_index.h"
 #include "paimon/global_index/tantivy/tantivy_global_index_reader.h"
+#include "paimon/io/byte_array_input_stream.h"
+#include "paimon/predicate/full_text_search.h"
+#include "paimon/testing/utils/testharness.h"
 
 #ifndef JIEBA_TEST_DICT_DIR
 #error "JIEBA_TEST_DICT_DIR must be set at compile time"
@@ -69,12 +68,21 @@ namespace {
 class FakeIndexPathFactory : public IndexPathFactory {
  public:
     explicit FakeIndexPathFactory(const std::string& root) : root_(root) {}
-    std::string NewPath() const override { assert(false); return ""; }
-    std::string ToPath(const std::shared_ptr<IndexFileMeta>&) const override { assert(false); return ""; }
+    std::string NewPath() const override {
+        assert(false);
+        return "";
+    }
+    std::string ToPath(const std::shared_ptr<IndexFileMeta>&) const override {
+        assert(false);
+        return "";
+    }
     std::string ToPath(const std::string& file_name) const override {
         return PathUtil::JoinPath(root_, file_name);
     }
-    bool IsExternalPath() const override { return false; }
+    bool IsExternalPath() const override {
+        return false;
+    }
+
  private:
     std::string root_;
 };
@@ -108,8 +116,9 @@ class StreamingTestFixture : public ::testing::Test {
             EXPECT_TRUE(sb.Append(buf).ok());
         }
         auto text_array = sb.Finish().ValueOrDie();
-        auto struct_array = arrow::StructArray::Make(
-            {text_array}, {arrow::field("f0", arrow::utf8())}).ValueOrDie();
+        auto struct_array =
+            arrow::StructArray::Make({text_array}, {arrow::field("f0", arrow::utf8())})
+                .ValueOrDie();
 
         std::map<std::string, std::string> options;
         auto data_type = arrow::struct_({arrow::field("f0", arrow::utf8())});
@@ -133,7 +142,7 @@ class StreamingTestFixture : public ::testing::Test {
     }
 
     std::shared_ptr<GlobalIndexReader> OpenReader(const std::string& root,
-                                                   const GlobalIndexIOMeta& meta) {
+                                                  const GlobalIndexIOMeta& meta) {
         std::map<std::string, std::string> options;
         auto data_type = arrow::struct_({arrow::field("f0", arrow::utf8())});
         auto c_schema = std::make_unique<::ArrowSchema>();
@@ -172,7 +181,8 @@ TEST(ParseArchiveHeaderFuzz, TruncatedHeader) {
 
 TEST(ParseArchiveHeaderFuzz, NegativeFileCount) {
     // BE int32 -1 = 0xFFFFFFFF
-    char bytes[4] = {char(0xFF), char(0xFF), char(0xFF), char(0xFF)};
+    char bytes[4] = {static_cast<char>(0xFF), static_cast<char>(0xFF), static_cast<char>(0xFF),
+                     static_cast<char>(0xFF)};
     ByteArrayInputStream in(bytes, 4);
     auto r = ParseArchiveHeader(&in);
     ASSERT_FALSE(r.ok());
@@ -182,7 +192,14 @@ TEST(ParseArchiveHeaderFuzz, NegativeFileCount) {
 
 TEST(ParseArchiveHeaderFuzz, NameLenOutOfRange) {
     // file_count=1, name_len=2GB (BE int32 0x7FFFFFFF)
-    char bytes[8] = {0, 0, 0, 1, char(0x7F), char(0xFF), char(0xFF), char(0xFF)};
+    char bytes[8] = {0,
+                     0,
+                     0,
+                     1,
+                     static_cast<char>(0x7F),
+                     static_cast<char>(0xFF),
+                     static_cast<char>(0xFF),
+                     static_cast<char>(0xFF)};
     ByteArrayInputStream in(bytes, 8);
     auto r = ParseArchiveHeader(&in);
     ASSERT_FALSE(r.ok());
@@ -204,14 +221,26 @@ TEST(ParseArchiveHeaderFuzz, PayloadLenNegative) {
     // file_count=1, name_len=1, name="a", data_len=-1 (BE int64 0xFFFFFFFFFFFFFFFF)
     char bytes[4 + 4 + 1 + 8] = {
         // file_count=1
-        0, 0, 0, 1,
+        0,
+        0,
+        0,
+        1,
         // name_len=1
-        0, 0, 0, 1,
+        0,
+        0,
+        0,
+        1,
         // name='a'
         'a',
         // data_len = -1 (BE int64 0xFFFFFFFFFFFFFFFF)
-        char(0xFF), char(0xFF), char(0xFF), char(0xFF),
-        char(0xFF), char(0xFF), char(0xFF), char(0xFF),
+        static_cast<char>(0xFF),
+        static_cast<char>(0xFF),
+        static_cast<char>(0xFF),
+        static_cast<char>(0xFF),
+        static_cast<char>(0xFF),
+        static_cast<char>(0xFF),
+        static_cast<char>(0xFF),
+        static_cast<char>(0xFF),
     };
     ByteArrayInputStream in(bytes, sizeof(bytes));
     auto r = ParseArchiveHeader(&in);
@@ -251,8 +280,7 @@ TEST_F(StreamingTestFixture, ConcurrentQueryOnSameReader) {
                     continue;
                 }
                 auto bres = plain->GetBitmap();
-                if (!bres.ok() || bres.value() == nullptr
-                    || bres.value()->Cardinality() != 50) {
+                if (!bres.ok() || bres.value() == nullptr || bres.value()->Cardinality() != 50) {
                     failures++;
                 }
             }
@@ -278,10 +306,15 @@ TEST_F(StreamingTestFixture, ConcurrentCreateAndDropReaders) {
         threads.emplace_back([&, t] {
             for (int i = 0; i < 5; ++i) {
                 auto reader = OpenReader(wr.root_dir, wr.meta);
-                if (!reader) { failures++; continue; }
+                if (!reader) {
+                    failures++;
+                    continue;
+                }
                 auto fts = BuildMatchAll("apple");
                 auto r = reader->VisitFullTextSearch(fts);
-                if (!r.ok()) { failures++; }
+                if (!r.ok()) {
+                    failures++;
+                }
                 // reader drops here → Rust Arc<CallbackCtx>::drop → paimon_cpp_stream_release
             }
             (void)t;
@@ -300,18 +333,18 @@ TEST_F(StreamingTestFixture, StreamingBenchmarkLog) {
         struct rusage ru;
         getrusage(RUSAGE_SELF, &ru);
         // Linux: KB; macOS: bytes
-        return static_cast<long>(ru.ru_maxrss);
+        return static_cast<int64_t>(ru.ru_maxrss);
     };
 
-    long rss_before = rss_kb();
+    int64_t rss_before = rss_kb();
     auto t0 = std::chrono::steady_clock::now();
     auto wr = BuildArchive(200);
     auto t1 = std::chrono::steady_clock::now();
-    long rss_after_write = rss_kb();
+    int64_t rss_after_write = rss_kb();
 
     auto reader = OpenReader(wr.root_dir, wr.meta);
     auto t2 = std::chrono::steady_clock::now();
-    long rss_after_open = rss_kb();
+    int64_t rss_after_open = rss_kb();
 
     auto fts = BuildMatchAll("apple");
     auto result = reader->VisitFullTextSearch(fts);
@@ -323,10 +356,12 @@ TEST_F(StreamingTestFixture, StreamingBenchmarkLog) {
 
     std::fprintf(stderr,
                  "[BENCHMARK] V3 streaming (200 docs): "
-                 "write=%lldms open=%lldms query=%lldms "
-                 "rss_before=%ldKB rss_after_write=%ldKB rss_after_open=%ldKB\n",
-                 (long long)write_ms, (long long)open_ms, (long long)query_ms,
-                 rss_before, rss_after_write, rss_after_open);
+                 "write=%" PRId64 "ms open=%" PRId64 "ms query=%" PRId64
+                 "ms "
+                 "rss_before=%" PRId64 "KB rss_after_write=%" PRId64 "KB rss_after_open=%" PRId64
+                 "KB\n",
+                 static_cast<int64_t>(write_ms), static_cast<int64_t>(open_ms),
+                 static_cast<int64_t>(query_ms), rss_before, rss_after_write, rss_after_open);
     EXPECT_TRUE(result.ok());
     SUCCEED();
 }

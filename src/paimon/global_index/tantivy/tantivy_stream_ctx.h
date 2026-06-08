@@ -47,8 +47,8 @@ struct WriteCtx {
 /// Rust -> C++ read callback. Reads `len` bytes starting at archive-absolute
 /// `offset` into `out_buf`. Returns 0 on success, 1 on IO error. Thread-safe
 /// (serialized via `StreamCtx::pread_mu`; Rust also holds its own mutex).
-extern "C" int32_t paimon_cpp_stream_read_at(void* ctx_ptr, uint64_t offset,
-                                             std::size_t len, uint8_t* out_buf);
+extern "C" int32_t paimon_cpp_stream_read_at(void* ctx_ptr, uint64_t offset, std::size_t len,
+                                             uint8_t* out_buf);
 
 /// Rust -> C++ release callback. Called exactly once when the Rust reader is
 /// dropped. Deletes the ctx (which closes the underlying stream via ~shared_ptr).
@@ -57,7 +57,6 @@ extern "C" void paimon_cpp_stream_release(void* ctx_ptr);
 /// Rust -> C++ write push callback. Writes `len` bytes from `data` to the
 /// underlying OutputStream. Returns 0 on success, 1 on IO error (with the
 /// detailed Status stashed in `WriteCtx::last_error` for the caller to pick up).
-extern "C" int32_t paimon_cpp_writer_push(void* ctx_ptr, const uint8_t* data,
-                                          std::size_t len);
+extern "C" int32_t paimon_cpp_writer_push(void* ctx_ptr, const uint8_t* data, std::size_t len);
 
 }  // namespace paimon::tantivy

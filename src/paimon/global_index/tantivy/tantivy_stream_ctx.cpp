@@ -14,8 +14,8 @@
 
 namespace paimon::tantivy {
 
-extern "C" int32_t paimon_cpp_stream_read_at(void* ctx_ptr, uint64_t offset,
-                                             std::size_t len, uint8_t* out_buf) {
+extern "C" int32_t paimon_cpp_stream_read_at(void* ctx_ptr, uint64_t offset, std::size_t len,
+                                             uint8_t* out_buf) {
     if (ctx_ptr == nullptr || out_buf == nullptr) {
         return 1;
     }
@@ -24,10 +24,8 @@ extern "C" int32_t paimon_cpp_stream_read_at(void* ctx_ptr, uint64_t offset,
 
     std::size_t total = 0;
     while (total < len) {
-        auto r = ctx->stream->Read(
-            reinterpret_cast<char*>(out_buf + total),
-            static_cast<uint32_t>(len - total),
-            offset + total);
+        auto r = ctx->stream->Read(reinterpret_cast<char*>(out_buf + total),
+                                   static_cast<uint32_t>(len - total), offset + total);
         if (!r.ok()) {
             return 1;
         }
@@ -49,8 +47,7 @@ extern "C" void paimon_cpp_stream_release(void* ctx_ptr) {
     delete ctx;
 }
 
-extern "C" int32_t paimon_cpp_writer_push(void* ctx_ptr, const uint8_t* data,
-                                          std::size_t len) {
+extern "C" int32_t paimon_cpp_writer_push(void* ctx_ptr, const uint8_t* data, std::size_t len) {
     if (ctx_ptr == nullptr) {
         return 1;
     }

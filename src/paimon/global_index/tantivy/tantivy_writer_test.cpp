@@ -34,16 +34,14 @@
 #include "arrow/ipc/api.h"
 #include "arrow/type.h"
 #include "gtest/gtest.h"
-
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/global_index/global_index_file_manager.h"
 #include "paimon/core/index/index_path_factory.h"
 #include "paimon/fs/local/local_file_system.h"
-#include "paimon/testing/utils/testharness.h"
-
 #include "paimon/global_index/tantivy/tantivy_defs.h"
 #include "paimon/global_index/tantivy/tantivy_global_index_writer.h"
+#include "paimon/testing/utils/testharness.h"
 
 #ifndef JIEBA_TEST_DICT_DIR
 #error "JIEBA_TEST_DICT_DIR must be set at compile time"
@@ -155,9 +153,8 @@ class TantivyGlobalIndexWriterTest : public ::testing::Test {
         const std::shared_ptr<arrow::Array>& array) {
         auto path_factory = std::make_shared<FakeIndexPathFactory>(root);
         auto file_writer = std::make_shared<GlobalIndexFileManager>(fs_, path_factory);
-        PAIMON_ASSIGN_OR_RAISE(
-            auto writer,
-            TantivyGlobalIndexWriter::Create("f0", data_type, file_writer, options, pool_));
+        PAIMON_ASSIGN_OR_RAISE(auto writer, TantivyGlobalIndexWriter::Create(
+                                                "f0", data_type, file_writer, options, pool_));
         ::ArrowArray c_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &c_array));
         std::vector<int64_t> relative_row_ids(array->length());
@@ -183,14 +180,13 @@ TEST_F(TantivyGlobalIndexWriterTest, EnglishCorpusProducesValidPackedIndex) {
     std::map<std::string, std::string> options = {
         {kTantivyWriteOmitTermFreqAndPositions, "false"},
     };
-    std::shared_ptr<arrow::Array> array =
-        arrow::ipc::internal::json::ArrayFromJSON(data_type_, R"([
+    std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(data_type_, R"([
             ["This is an test document."],
             ["This is an new document document document."],
             ["Document document document document test."],
             ["unordered user-defined doc id"]
         ])")
-            .ValueOrDie();
+                                              .ValueOrDie();
 
     ASSERT_OK_AND_ASSIGN(auto metas, WriteIndex(root, data_type_, options, array));
     ASSERT_EQ(metas.size(), 1u);
@@ -226,12 +222,11 @@ TEST_F(TantivyGlobalIndexWriterTest, ChineseCorpusProducesValidPackedIndex) {
         {kTantivyWriteTokenizer, "paimon_jieba"},
         {kJiebaTokenizeMode, "query"},
     };
-    std::shared_ptr<arrow::Array> array =
-        arrow::ipc::internal::json::ArrayFromJSON(data_type_, R"([
+    std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(data_type_, R"([
             ["千问是一个智能助手"],
             ["新一代AI助手发布"]
         ])")
-            .ValueOrDie();
+                                              .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto metas, WriteIndex(root, data_type_, options, array));
     ASSERT_EQ(metas.size(), 1u);
     const auto& meta = metas[0];
@@ -247,13 +242,12 @@ TEST_F(TantivyGlobalIndexWriterTest, NullStringRowsBecomeEmptyDocuments) {
     std::string root = root_dir->Str();
 
     std::map<std::string, std::string> options;
-    std::shared_ptr<arrow::Array> array =
-        arrow::ipc::internal::json::ArrayFromJSON(data_type_, R"([
+    std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(data_type_, R"([
             ["nonempty"],
             [null],
             ["another"]
         ])")
-            .ValueOrDie();
+                                              .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto metas, WriteIndex(root, data_type_, options, array));
     ASSERT_EQ(metas.size(), 1u);
 }
@@ -270,8 +264,7 @@ TEST_F(TantivyGlobalIndexWriterTest, RejectsHmmTokenizeMode) {
         {kTantivyWriteTokenizer, "paimon_jieba"},
         {kJiebaTokenizeMode, "hmm"},
     };
-    auto res =
-        TantivyGlobalIndexWriter::Create("f0", data_type_, file_writer, options, pool_);
+    auto res = TantivyGlobalIndexWriter::Create("f0", data_type_, file_writer, options, pool_);
     ASSERT_FALSE(res.ok());
     EXPECT_TRUE(res.status().IsNotImplemented()) << res.status().ToString();
 }

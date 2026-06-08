@@ -53,16 +53,16 @@ Result<ArchiveLayout> ParseArchiveHeader(InputStream* in) {
     for (int32_t i = 0; i < file_count; ++i) {
         PAIMON_ASSIGN_OR_RAISE(int32_t name_len, dis.ReadValue<int32_t>());
         if (name_len <= 0 || name_len > 1 << 20) {
-            return Status::Invalid(fmt::format(
-                "ParseArchiveHeader: bad name_len {} at entry {}", name_len, i));
+            return Status::Invalid(
+                fmt::format("ParseArchiveHeader: bad name_len {} at entry {}", name_len, i));
         }
         std::string name(static_cast<std::size_t>(name_len), '\0');
         PAIMON_RETURN_NOT_OK(dis.Read(name.data(), static_cast<uint32_t>(name_len)));
 
         PAIMON_ASSIGN_OR_RAISE(int64_t data_len, dis.ReadValue<int64_t>());
         if (data_len < 0) {
-            return Status::Invalid(fmt::format(
-                "ParseArchiveHeader: negative data_len {} for '{}'", data_len, name));
+            return Status::Invalid(
+                fmt::format("ParseArchiveHeader: negative data_len {} for '{}'", data_len, name));
         }
 
         PAIMON_ASSIGN_OR_RAISE(int64_t data_offset, dis.GetPos());

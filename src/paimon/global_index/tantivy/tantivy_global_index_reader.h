@@ -40,8 +40,7 @@ class TantivyGlobalIndexReader : public GlobalIndexReader {
     static Result<std::shared_ptr<TantivyGlobalIndexReader>> Create(
         const std::string& field_name, const GlobalIndexIOMeta& io_meta,
         const std::shared_ptr<GlobalIndexFileReader>& file_reader,
-        const std::map<std::string, std::string>& options,
-        const std::shared_ptr<MemoryPool>& pool);
+        const std::map<std::string, std::string>& options, const std::shared_ptr<MemoryPool>& pool);
 
     // === FunctionVisitor surface — non-FTS predicates fall back to full range. ===
 

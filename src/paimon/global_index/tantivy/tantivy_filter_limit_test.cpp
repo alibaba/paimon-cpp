@@ -32,18 +32,16 @@
 #include "arrow/ipc/api.h"
 #include "arrow/type.h"
 #include "gtest/gtest.h"
-
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/global_index/global_index_file_manager.h"
 #include "paimon/core/index/index_path_factory.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/global_index/bitmap_scored_global_index_result.h"
-#include "paimon/testing/utils/testharness.h"
-
 #include "paimon/global_index/tantivy/tantivy_defs.h"
 #include "paimon/global_index/tantivy/tantivy_global_index_reader.h"
 #include "paimon/global_index/tantivy/tantivy_global_index_writer.h"
+#include "paimon/testing/utils/testharness.h"
 
 #ifndef JIEBA_TEST_DICT_DIR
 #error "JIEBA_TEST_DICT_DIR must be set at compile time"
@@ -137,9 +135,9 @@ TEST_F(TantivyFilterLimitTest, LimitProducesScoredResultTopN) {
     auto [fm, meta] = WriteAndOpen(array, {});
     ASSERT_OK_AND_ASSIGN(auto reader,
                          TantivyGlobalIndexReader::Create("f0", meta, fm, {}, GetDefaultPool()));
-    auto fts = std::make_shared<FullTextSearch>(
-        "f0", /*limit=*/2, "doc", FullTextSearch::SearchType::MATCH_ALL,
-        /*pre_filter=*/std::nullopt);
+    auto fts = std::make_shared<FullTextSearch>("f0", /*limit=*/2, "doc",
+                                                FullTextSearch::SearchType::MATCH_ALL,
+                                                /*pre_filter=*/std::nullopt);
     fts->with_score = true;  // v0.2: explicit score opt-in
     auto res = reader->VisitFullTextSearch(fts);
     ASSERT_TRUE(res.ok()) << res.status().ToString();
@@ -205,9 +203,9 @@ TEST_F(TantivyFilterLimitTest, PreFilterAppliedBeforeLimit) {
     auto [fm, meta] = WriteAndOpen(array, {});
     ASSERT_OK_AND_ASSIGN(auto reader,
                          TantivyGlobalIndexReader::Create("f0", meta, fm, {}, GetDefaultPool()));
-    auto fts = std::make_shared<FullTextSearch>(
-        "f0", /*limit=*/10, "doc", FullTextSearch::SearchType::MATCH_ALL,
-        /*pre_filter=*/RoaringBitmap64::From({1l}));
+    auto fts = std::make_shared<FullTextSearch>("f0", /*limit=*/10, "doc",
+                                                FullTextSearch::SearchType::MATCH_ALL,
+                                                /*pre_filter=*/RoaringBitmap64::From({1l}));
     fts->with_score = true;  // v0.2: explicit score opt-in
     auto res = reader->VisitFullTextSearch(fts);
     ASSERT_TRUE(res.ok()) << res.status().ToString();
@@ -245,9 +243,9 @@ TEST_F(TantivyFilterLimitTest, LimitGreaterThanMatchesReturnsAll) {
     auto [fm, meta] = WriteAndOpen(array, {});
     ASSERT_OK_AND_ASSIGN(auto reader,
                          TantivyGlobalIndexReader::Create("f0", meta, fm, {}, GetDefaultPool()));
-    auto fts = std::make_shared<FullTextSearch>(
-        "f0", /*limit=*/100, "doc", FullTextSearch::SearchType::MATCH_ALL,
-        /*pre_filter=*/std::nullopt);
+    auto fts = std::make_shared<FullTextSearch>("f0", /*limit=*/100, "doc",
+                                                FullTextSearch::SearchType::MATCH_ALL,
+                                                /*pre_filter=*/std::nullopt);
     fts->with_score = true;  // v0.2: explicit score opt-in
     auto res = reader->VisitFullTextSearch(fts);
     ASSERT_TRUE(res.ok()) << res.status().ToString();
@@ -273,9 +271,9 @@ TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitNone_AllRowsNoScore) {
     auto [fm, meta] = WriteAndOpen(array, {});
     ASSERT_OK_AND_ASSIGN(auto reader,
                          TantivyGlobalIndexReader::Create("f0", meta, fm, {}, GetDefaultPool()));
-    auto fts = std::make_shared<FullTextSearch>(
-        "f0", /*limit=*/std::nullopt, "doc", FullTextSearch::SearchType::MATCH_ALL,
-        /*pre_filter=*/std::nullopt);
+    auto fts = std::make_shared<FullTextSearch>("f0", /*limit=*/std::nullopt, "doc",
+                                                FullTextSearch::SearchType::MATCH_ALL,
+                                                /*pre_filter=*/std::nullopt);
     fts->with_score = false;
     auto res = reader->VisitFullTextSearch(fts);
     ASSERT_TRUE(res.ok()) << res.status().ToString();
@@ -299,9 +297,9 @@ TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitN_AnyNNoScore) {
     auto [fm, meta] = WriteAndOpen(array, {});
     ASSERT_OK_AND_ASSIGN(auto reader,
                          TantivyGlobalIndexReader::Create("f0", meta, fm, {}, GetDefaultPool()));
-    auto fts = std::make_shared<FullTextSearch>(
-        "f0", /*limit=*/2, "doc", FullTextSearch::SearchType::MATCH_ALL,
-        /*pre_filter=*/std::nullopt);
+    auto fts = std::make_shared<FullTextSearch>("f0", /*limit=*/2, "doc",
+                                                FullTextSearch::SearchType::MATCH_ALL,
+                                                /*pre_filter=*/std::nullopt);
     fts->with_score = false;
     auto res = reader->VisitFullTextSearch(fts);
     ASSERT_TRUE(res.ok()) << res.status().ToString();
@@ -330,9 +328,9 @@ TEST_F(TantivyFilterLimitTest, WithScoreTrueLimitNone_AllRowsWithScore) {
     auto [fm, meta] = WriteAndOpen(array, {});
     ASSERT_OK_AND_ASSIGN(auto reader,
                          TantivyGlobalIndexReader::Create("f0", meta, fm, {}, GetDefaultPool()));
-    auto fts = std::make_shared<FullTextSearch>(
-        "f0", /*limit=*/std::nullopt, "doc", FullTextSearch::SearchType::MATCH_ALL,
-        /*pre_filter=*/std::nullopt);
+    auto fts = std::make_shared<FullTextSearch>("f0", /*limit=*/std::nullopt, "doc",
+                                                FullTextSearch::SearchType::MATCH_ALL,
+                                                /*pre_filter=*/std::nullopt);
     fts->with_score = true;
     auto res = reader->VisitFullTextSearch(fts);
     ASSERT_TRUE(res.ok()) << res.status().ToString();
@@ -360,9 +358,9 @@ TEST_F(TantivyFilterLimitTest, WithScoreTrueLimitN_TopNWithScore) {
     auto [fm, meta] = WriteAndOpen(array, {});
     ASSERT_OK_AND_ASSIGN(auto reader,
                          TantivyGlobalIndexReader::Create("f0", meta, fm, {}, GetDefaultPool()));
-    auto fts = std::make_shared<FullTextSearch>(
-        "f0", /*limit=*/2, "doc", FullTextSearch::SearchType::MATCH_ALL,
-        /*pre_filter=*/std::nullopt);
+    auto fts = std::make_shared<FullTextSearch>("f0", /*limit=*/2, "doc",
+                                                FullTextSearch::SearchType::MATCH_ALL,
+                                                /*pre_filter=*/std::nullopt);
     fts->with_score = true;
     auto res = reader->VisitFullTextSearch(fts);
     ASSERT_TRUE(res.ok()) << res.status().ToString();
@@ -386,9 +384,9 @@ TEST_F(TantivyFilterLimitTest, WithScoreDefaultIsFalse) {
     ASSERT_OK_AND_ASSIGN(auto reader,
                          TantivyGlobalIndexReader::Create("f0", meta, fm, {}, GetDefaultPool()));
     // Note: NOT setting fts->with_score; relying on the default value.
-    auto fts = std::make_shared<FullTextSearch>(
-        "f0", /*limit=*/2, "doc", FullTextSearch::SearchType::MATCH_ALL,
-        /*pre_filter=*/std::nullopt);
+    auto fts = std::make_shared<FullTextSearch>("f0", /*limit=*/2, "doc",
+                                                FullTextSearch::SearchType::MATCH_ALL,
+                                                /*pre_filter=*/std::nullopt);
     auto res = reader->VisitFullTextSearch(fts);
     ASSERT_TRUE(res.ok()) << res.status().ToString();
     // v0.2 contract: with_score defaults to false, so even with limit set the

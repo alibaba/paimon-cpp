@@ -39,20 +39,17 @@ class TantivyGlobalIndexWriter : public GlobalIndexWriter {
     static Result<std::shared_ptr<TantivyGlobalIndexWriter>> Create(
         const std::string& field_name, const std::shared_ptr<arrow::DataType>& arrow_type,
         const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
-        const std::map<std::string, std::string>& options,
-        const std::shared_ptr<MemoryPool>& pool);
+        const std::map<std::string, std::string>& options, const std::shared_ptr<MemoryPool>& pool);
 
     ~TantivyGlobalIndexWriter() override = default;
 
-    Status AddBatch(::ArrowArray* arrow_array,
-                    std::vector<int64_t>&& relative_row_ids) override;
+    Status AddBatch(::ArrowArray* arrow_array, std::vector<int64_t>&& relative_row_ids) override;
 
     Result<std::vector<GlobalIndexIOMeta>> Finish() override;
 
  private:
     TantivyGlobalIndexWriter(const std::string& field_name,
-                             const std::shared_ptr<arrow::DataType>& arrow_type,
-                             WriterPtr writer,
+                             const std::shared_ptr<arrow::DataType>& arrow_type, WriterPtr writer,
                              const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
                              const std::map<std::string, std::string>& options,
                              const std::shared_ptr<MemoryPool>& pool);

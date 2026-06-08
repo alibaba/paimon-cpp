@@ -38,9 +38,8 @@
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/api.h"
 #include "arrow/type.h"
-#include "gtest/gtest.h"
-
 #include "fmt/format.h"
+#include "gtest/gtest.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/global_index/global_index_file_manager.h"
@@ -53,11 +52,10 @@
 #include "paimon/global_index/global_index_writer.h"
 #include "paimon/global_index/global_indexer.h"
 #include "paimon/global_index/global_indexer_factory.h"
-#include "paimon/predicate/full_text_search.h"
-#include "paimon/testing/utils/testharness.h"
-
 #include "paimon/global_index/lucene/lucene_defs.h"
 #include "paimon/global_index/tantivy/tantivy_defs.h"
+#include "paimon/predicate/full_text_search.h"
+#include "paimon/testing/utils/testharness.h"
 
 #ifndef JIEBA_TEST_DICT_DIR
 #error "JIEBA_TEST_DICT_DIR must be set at compile time"
@@ -92,9 +90,9 @@ class FakeIndexPathFactory : public IndexPathFactory {
 /// Adopt one of the two factory identifiers; everything else (paths, queries,
 /// arrow plumbing) is shared.
 struct ImplSpec {
-    std::string factory_id;       // "lucene-fts" or "tantivy-fulltext"
-    std::string file_prefix;      // "lucene-fts-global-index-" or "tantivy-fulltext-global-index-"
-    std::string option_prefix;    // "lucene-fts." or "tantivy-fulltext."
+    std::string factory_id;     // "lucene-fts" or "tantivy-fulltext"
+    std::string file_prefix;    // "lucene-fts-global-index-" or "tantivy-fulltext-global-index-"
+    std::string option_prefix;  // "lucene-fts." or "tantivy-fulltext."
 };
 
 class TantivyLuceneCoexistTest : public ::testing::Test {
@@ -118,14 +116,13 @@ class TantivyLuceneCoexistTest : public ::testing::Test {
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<GlobalIndexer> indexer,
                                GlobalIndexerFactory::Get(impl.factory_id, options));
         if (!indexer) {
-            return Status::Invalid(
-                fmt::format("factory returned null for {}", impl.factory_id));
+            return Status::Invalid(fmt::format("factory returned null for {}", impl.factory_id));
         }
         auto path_factory = std::make_shared<FakeIndexPathFactory>(root);
         auto file_writer = std::make_shared<GlobalIndexFileManager>(fs_, path_factory);
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexWriter> w,
-                               indexer->CreateWriter("f0", CreateArrowSchema(data_type).get(),
-                                                     file_writer, pool_));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<GlobalIndexWriter> w,
+            indexer->CreateWriter("f0", CreateArrowSchema(data_type).get(), file_writer, pool_));
         ::ArrowArray c_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &c_array));
         std::vector<int64_t> relative_row_ids(array->length());
@@ -133,8 +130,8 @@ class TantivyLuceneCoexistTest : public ::testing::Test {
         PAIMON_RETURN_NOT_OK(w->AddBatch(&c_array, std::move(relative_row_ids)));
         PAIMON_ASSIGN_OR_RAISE(auto metas, w->Finish());
         EXPECT_EQ(metas.size(), 1u);
-        EXPECT_TRUE(StringUtils::StartsWith(PathUtil::GetName(metas[0].file_path),
-                                            impl.file_prefix))
+        EXPECT_TRUE(
+            StringUtils::StartsWith(PathUtil::GetName(metas[0].file_path), impl.file_prefix))
             << metas[0].file_path << " did not start with " << impl.file_prefix;
         return metas[0];
     }
@@ -174,8 +171,7 @@ class TantivyLuceneCoexistTest : public ::testing::Test {
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
     std::shared_ptr<FileSystem> fs_ = std::make_shared<LocalFileSystem>();
 
-    inline static const ImplSpec kLucene{"lucene-fts", "lucene-fts-global-index-",
-                                         "lucene-fts."};
+    inline static const ImplSpec kLucene{"lucene-fts", "lucene-fts-global-index-", "lucene-fts."};
     inline static const ImplSpec kTantivy{"tantivy-fulltext", "tantivy-fulltext-global-index-",
                                           "tantivy-fulltext."};
 };
@@ -191,8 +187,7 @@ TEST_F(TantivyLuceneCoexistTest, BothFactoriesResolve) {
     // Sanity: factories return distinct types — different vtables → different
     // GetIndexType() once we open a reader (not testable here without an
     // index), so just check shared_ptr identity differs.
-    EXPECT_NE(static_cast<void*>(lucene_indexer.get()),
-              static_cast<void*>(tantivy_indexer.get()));
+    EXPECT_NE(static_cast<void*>(lucene_indexer.get()), static_cast<void*>(tantivy_indexer.get()));
 }
 
 TEST_F(TantivyLuceneCoexistTest, SideBySideEnglishCorpusReturnsSameDocIds) {
@@ -290,8 +285,7 @@ TEST_F(TantivyLuceneCoexistTest, IndependentLifecycleNoStateLeakage) {
             "f0", std::nullopt, "payload", FullTextSearch::SearchType::MATCH_ALL, std::nullopt));
         ASSERT_TRUE(lq.ok());
         ASSERT_TRUE(tq.ok());
-        EXPECT_EQ(ExtractDocIds(lq.value()), (std::set<int64_t>{0, 1}))
-            << "lucene round " << round;
+        EXPECT_EQ(ExtractDocIds(lq.value()), (std::set<int64_t>{0, 1})) << "lucene round " << round;
         EXPECT_EQ(ExtractDocIds(tq.value()), (std::set<int64_t>{0, 1}))
             << "tantivy round " << round;
     }

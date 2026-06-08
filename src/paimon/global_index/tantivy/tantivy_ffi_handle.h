@@ -23,7 +23,7 @@
 #include <memory>
 
 extern "C" {
-#include "paimon_tantivy_ffi.h"
+#include "paimon_tantivy_ffi.h"  // NOLINT(build/include_subdir)
 }
 
 namespace paimon::tantivy {
@@ -40,8 +40,7 @@ template <typename Handle>
 struct FfiDeleter {
     // Default unsupported so missing specializations fail at compile time
     void operator()(Handle*) const noexcept {
-        static_assert(sizeof(Handle) == 0,
-                      "FfiDeleter must be specialized for this handle type");
+        static_assert(sizeof(Handle) == 0, "FfiDeleter must be specialized for this handle type");
     }
 };
 

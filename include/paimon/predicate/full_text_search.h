@@ -109,7 +109,8 @@ struct PAIMON_EXPORT FullTextSearch {
     /// you want top-N by relevance, use `with_score=true, limit=N` and drop the
     /// scores in the caller if not needed.
     ///
-    /// Default is `false` to avoid silent score computation overhead for callers that don't need it.
+    /// Default is `false` to avoid silent score computation overhead for callers that don't need
+    /// it.
     bool with_score = false;
     /// Minimum BM25 score threshold (exclusive). Results with score ≤ this value are excluded.
     /// Only meaningful when scoring is active (i.e., `with_score = true` or `limit` is set).

@@ -22,7 +22,7 @@
 #include "glog/logging.h"
 
 extern "C" {
-#include "paimon_tantivy_ffi.h"
+#include "paimon_tantivy_ffi.h"  // NOLINT(build/include_subdir)
 }
 
 namespace paimon::tantivy {

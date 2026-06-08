@@ -24,13 +24,12 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-
 #include "paimon/global_index/tantivy/tantivy_ffi_handle.h"
 #include "paimon/global_index/tantivy/tantivy_ffi_log.h"
 #include "paimon/global_index/tantivy/tantivy_ffi_status.h"
 
 extern "C" {
-#include "paimon_tantivy_ffi.h"
+#include "paimon_tantivy_ffi.h"  // NOLINT(build/include_subdir)
 }
 
 namespace paimon::tantivy {

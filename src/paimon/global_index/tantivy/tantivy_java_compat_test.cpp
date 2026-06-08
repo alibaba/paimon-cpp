@@ -42,25 +42,22 @@
 
 #include "arrow/array.h"
 #include "arrow/c/bridge.h"
+#include "arrow/ipc/api.h"
 #include "arrow/type.h"
 #include "gtest/gtest.h"
-
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/global_index/global_index_file_manager.h"
 #include "paimon/core/index/index_path_factory.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/global_index/bitmap_scored_global_index_result.h"
-#include "paimon/predicate/full_text_search.h"
-#include "paimon/testing/utils/testharness.h"
-
-#include "arrow/ipc/api.h"
-
 #include "paimon/global_index/tantivy/tantivy_archive_layout.h"
 #include "paimon/global_index/tantivy/tantivy_defs.h"
 #include "paimon/global_index/tantivy/tantivy_global_index.h"
 #include "paimon/global_index/tantivy/tantivy_global_index_reader.h"
 #include "paimon/global_index/tantivy/tantivy_global_index_writer.h"
+#include "paimon/predicate/full_text_search.h"
+#include "paimon/testing/utils/testharness.h"
 
 #ifndef JIEBA_TEST_DICT_DIR
 #error "JIEBA_TEST_DICT_DIR must be set at compile time"
@@ -87,7 +84,9 @@ class FixturePathFactory : public IndexPathFactory {
     std::string ToPath(const std::string& file_name) const override {
         return PathUtil::JoinPath(root_, file_name);
     }
-    bool IsExternalPath() const override { return false; }
+    bool IsExternalPath() const override {
+        return false;
+    }
 
  private:
     std::string root_;
@@ -124,14 +123,13 @@ class JavaCompatTest : public ::testing::Test {
         auto c_schema = std::make_unique<::ArrowSchema>();
         EXPECT_TRUE(arrow::ExportType(*data_type, c_schema.get()).ok());
 
-        auto reader_res =
-            global_index->CreateReader(c_schema.get(), file_reader, {io_meta}, pool_);
+        auto reader_res = global_index->CreateReader(c_schema.get(), file_reader, {io_meta}, pool_);
         EXPECT_TRUE(reader_res.ok()) << reader_res.status().ToString();
         return reader_res.value();
     }
 
     std::shared_ptr<FullTextSearch> BuildFts(FullTextSearch::SearchType type,
-                                              const std::string& query) {
+                                             const std::string& query) {
         return std::make_shared<FullTextSearch>(
             /*_field_name=*/"f0",
             /*_limit=*/std::optional<int32_t>{},
@@ -211,8 +209,7 @@ TEST_F(JavaCompatTest, MatchAll_AppleBanana_Intersection) {
 
 TEST_F(JavaCompatTest, MatchAny_DurianElderberry_Union) {
     auto reader = OpenFixture("english_simple.archive");
-    auto ids = RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ANY,
-                                "durian elderberry");
+    auto ids = RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ANY, "durian elderberry");
     // durian: 1, 6   elderberry: 5, 8   union: {1, 5, 6, 8}
     EXPECT_EQ(ids, (std::vector<int64_t>{1, 5, 6, 8}));
 }
@@ -265,7 +262,7 @@ TEST_F(JavaCompatTest, AllDocsReachableByRowId) {
     auto reader = OpenFixture("english_simple.archive");
     // Union of all terms matches all 10 docs.
     auto ids = RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ANY,
-                                "apple banana cherry durian fig grape elderberry");
+                               "apple banana cherry durian fig grape elderberry");
     EXPECT_EQ(ids, (std::vector<int64_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
     // This confirms Java wrote row_ids 0..9 via `addDocument(rowId, text)` and
     // paimon-cpp V3 reader extracted them via fast_fields().u64("row_id") —
@@ -291,11 +288,9 @@ TEST_F(JavaCompatTest, ProductionSampleProbe) {
     auto layout_res = ParseArchiveHeader(stream.get());
     ASSERT_TRUE(layout_res.ok()) << layout_res.status().ToString();
     const auto& layout = layout_res.value();
-    std::cerr << "[PROBE] archive=" << fixture_name
-              << " file_count=" << layout.count << "\n";
+    std::cerr << "[PROBE] archive=" << fixture_name << " file_count=" << layout.count << "\n";
     for (std::size_t i = 0; i < layout.count; ++i) {
-        std::cerr << "  [" << i << "] " << layout.names[i]
-                  << "  offset=" << layout.offsets[i]
+        std::cerr << "  [" << i << "] " << layout.names[i] << "  offset=" << layout.offsets[i]
                   << "  length=" << layout.lengths[i] << "\n";
     }
 
@@ -307,10 +302,9 @@ TEST_F(JavaCompatTest, ProductionSampleProbe) {
     //    ("Apache Paimon / full-text search / vector / lumina / streaming / ...").
     //    tokenizer is "default" — lowercased word-granular tokens.
     const std::vector<std::string> probes = {
-            "apache",     "paimon",  "is",        "a",          "lake",
-            "format",     "supports", "full",     "text",       "search",
-            "in",         "vector",  "similarity", "using",     "lumina",
-            "streaming",  "and",     "batch",    "processing", "engine",
+        "apache", "paimon",    "is",     "a",     "lake",       "format",     "supports",
+        "full",   "text",      "search", "in",    "vector",     "similarity", "using",
+        "lumina", "streaming", "and",    "batch", "processing", "engine",
     };
 
     std::cerr << "[PROBE] MATCH_ALL per-term row_ids:\n";
@@ -340,7 +334,7 @@ TEST_F(JavaCompatTest, ProductionSampleProbe) {
 
     // 5) a few common phrases from the user's snippet
     for (const auto& phrase : std::vector<std::string>{
-                 "apache paimon", "full text", "vector similarity", "streaming and batch"}) {
+             "apache paimon", "full text", "vector similarity", "streaming and batch"}) {
         auto ids = RunSearchRowIds(reader, FullTextSearch::SearchType::PHRASE, phrase);
         std::cerr << "[PROBE] PHRASE \"" << phrase << "\" -> [";
         for (std::size_t i = 0; i < ids.size(); ++i) {
@@ -410,16 +404,16 @@ class FixedNameGlobalIndexFileWriter : public GlobalIndexFileWriter {
 /// "default") tokenizes identically on both sides for this subset, so the
 /// golden row_ids match byte-for-byte between cpp-write and java-read.
 constexpr const char* kEnglishDocs[] = {
-    "apple banana cherry",    // 0
-    "apple durian",           // 1
-    "banana cherry",          // 2
-    "fig grape",              // 3
-    "apple cherry fig",       // 4
-    "banana elderberry",      // 5
-    "cherry durian",          // 6
-    "apple",                  // 7
-    "grape fig elderberry",   // 8
-    "cherry fig",             // 9
+    "apple banana cherry",   // 0
+    "apple durian",          // 1
+    "banana cherry",         // 2
+    "fig grape",             // 3
+    "apple cherry fig",      // 4
+    "banana elderberry",     // 5
+    "cherry durian",         // 6
+    "apple",                 // 7
+    "grape fig elderberry",  // 8
+    "cherry fig",            // 9
 };
 
 }  // namespace
@@ -444,16 +438,15 @@ TEST_F(JavaCompatTest, CppWriteDefaultTokenizerForJavaCrossRead) {
         }
     }
 
-    auto file_writer =
-        std::make_shared<FixedNameGlobalIndexFileWriter>(fs_, out_dir, fixture_name);
+    auto file_writer = std::make_shared<FixedNameGlobalIndexFileWriter>(fs_, out_dir, fixture_name);
 
     auto data_type = arrow::struct_({arrow::field("f0", arrow::utf8())});
 
     std::map<std::string, std::string> options{
         {kTantivyWriteTokenizer, "default"},
     };
-    auto writer_res = TantivyGlobalIndexWriter::Create(
-        "f0", data_type, file_writer, options, pool_);
+    auto writer_res =
+        TantivyGlobalIndexWriter::Create("f0", data_type, file_writer, options, pool_);
     ASSERT_TRUE(writer_res.ok()) << writer_res.status().ToString();
     auto writer = writer_res.value();
 
@@ -477,8 +470,8 @@ TEST_F(JavaCompatTest, CppWriteDefaultTokenizerForJavaCrossRead) {
     ASSERT_EQ(metas_res.value().size(), 1u);
     const auto& meta = metas_res.value().front();
     const std::string archive_path = meta.file_path;
-    std::cerr << "[CPP-WRITE] archive_path=" << archive_path
-              << " file_size=" << meta.file_size << "\n";
+    std::cerr << "[CPP-WRITE] archive_path=" << archive_path << " file_size=" << meta.file_size
+              << "\n";
 
     // 2) Archive header sanity: 16+ files, meta.json present, tokenizer in schema.
     auto stream_res = fs_->Open(archive_path);
@@ -503,28 +496,25 @@ TEST_F(JavaCompatTest, CppWriteDefaultTokenizerForJavaCrossRead) {
     int64_t file_size = file_status->GetLen();
     auto meta_bytes = std::make_shared<Bytes>(std::string("{}"), pool_.get());
     GlobalIndexIOMeta io_meta(archive_path, file_size, meta_bytes);
-    auto reader_factory = std::make_shared<TantivyGlobalIndex>(
-        std::map<std::string, std::string>{});
+    auto reader_factory =
+        std::make_shared<TantivyGlobalIndex>(std::map<std::string, std::string>{});
     auto reader_path_factory = std::make_shared<FixturePathFactory>(out_dir);
-    auto reader_file_mgr =
-        std::make_shared<GlobalIndexFileManager>(fs_, reader_path_factory);
+    auto reader_file_mgr = std::make_shared<GlobalIndexFileManager>(fs_, reader_path_factory);
 
     auto c_schema = std::make_unique<::ArrowSchema>();
     ASSERT_TRUE(arrow::ExportType(*data_type, c_schema.get()).ok());
 
-    auto reader_res = reader_factory->CreateReader(
-        c_schema.get(), reader_file_mgr, {io_meta}, pool_);
+    auto reader_res =
+        reader_factory->CreateReader(c_schema.get(), reader_file_mgr, {io_meta}, pool_);
     ASSERT_TRUE(reader_res.ok()) << reader_res.status().ToString();
     auto reader = reader_res.value();
 
     // Golden expectations (identical to paimon-java's english_simple.golden.json)
     EXPECT_EQ(RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ALL, "apple"),
               (std::vector<int64_t>{0, 1, 4, 7}));
-    EXPECT_EQ(
-        RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ALL, "apple banana"),
-        (std::vector<int64_t>{0}));
-    EXPECT_EQ(RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ANY,
-                              "durian elderberry"),
+    EXPECT_EQ(RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ALL, "apple banana"),
+              (std::vector<int64_t>{0}));
+    EXPECT_EQ(RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ANY, "durian elderberry"),
               (std::vector<int64_t>{1, 5, 6, 8}));
     EXPECT_EQ(RunSearchRowIds(reader, FullTextSearch::SearchType::PHRASE, "apple banana"),
               (std::vector<int64_t>{0}));

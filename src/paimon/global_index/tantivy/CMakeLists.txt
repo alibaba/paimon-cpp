@@ -26,8 +26,7 @@ set(PAIMON_TANTIVY_SUPPORT_SRCS
     tantivy_global_index_writer.cpp
     tantivy_global_index_reader.cpp
     tantivy_global_index.cpp
-    tantivy_global_index_factory.cpp
-)
+    tantivy_global_index_factory.cpp)
 
 add_paimon_lib(paimon_tantivy_support
                SOURCES
@@ -94,13 +93,11 @@ if(PAIMON_BUILD_TESTS)
                         paimon_tantivy_ffi
                         ${GTEST_LINK_TOOLCHAIN})
         target_compile_definitions(paimon-tantivy-tokenizer-test
-                                   PRIVATE
-                                   JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}"
-                                   PAIMON_TANTIVY_GOLDEN_DIR="${CMAKE_SOURCE_DIR}/test/test_data/tokenizer_golden")
-        target_include_directories(paimon-tantivy-tokenizer-test
-                                   SYSTEM PRIVATE
-                                   ${JIEBA_INCLUDE_DIR}
-                                   ${JIEBA_DICT_DIR})
+                                   PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}"
+                                           PAIMON_TANTIVY_GOLDEN_DIR="${CMAKE_SOURCE_DIR}/test/test_data/tokenizer_golden"
+        )
+        target_include_directories(paimon-tantivy-tokenizer-test SYSTEM
+                                   PRIVATE ${JIEBA_INCLUDE_DIR} ${JIEBA_DICT_DIR})
     endif()
 
     # Stage 4 — Writer test. Builds an Arrow batch, runs the writer through
@@ -122,8 +119,7 @@ if(PAIMON_BUILD_TESTS)
                     fmt
                     ${GTEST_LINK_TOOLCHAIN})
     target_compile_definitions(paimon-tantivy-writer-test
-                               PRIVATE
-                               JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
+                               PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
 
     # Stage 6 — Reader + 5 query types end-to-end.
     add_paimon_test(tantivy_reader_test
@@ -142,8 +138,7 @@ if(PAIMON_BUILD_TESTS)
                     fmt
                     ${GTEST_LINK_TOOLCHAIN})
     target_compile_definitions(paimon-tantivy-reader-test
-                               PRIVATE
-                               JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
+                               PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
 
     # Stage 7 — limit + pre_filter + scoring.
     add_paimon_test(tantivy_filter_limit_test
@@ -162,8 +157,7 @@ if(PAIMON_BUILD_TESTS)
                     fmt
                     ${GTEST_LINK_TOOLCHAIN})
     target_compile_definitions(paimon-tantivy-filter-limit-test
-                               PRIVATE
-                               JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
+                               PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
 
     # Java → C++ cross-read test. Fixture produced by paimon-java's
     # `TantivyIndexFixtureGen` (see docs/dev/tantivy_java_cross_read_plan.md)
@@ -184,10 +178,10 @@ if(PAIMON_BUILD_TESTS)
                     fmt
                     ${GTEST_LINK_TOOLCHAIN})
     target_compile_definitions(paimon-tantivy-java-compat-test
-                               PRIVATE
-                               JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}"
-                               PAIMON_TANTIVY_JAVA_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/test/test_data/java_tantivy_fixtures"
-                               PAIMON_TANTIVY_CPP_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/test/test_data/cpp_tantivy_fixtures")
+                               PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}"
+                                       PAIMON_TANTIVY_JAVA_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/test/test_data/java_tantivy_fixtures"
+                                       PAIMON_TANTIVY_CPP_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/test/test_data/cpp_tantivy_fixtures"
+    )
 
     # K4 — V3 streaming reader + W1 streaming writer integration coverage:
     # ParseArchiveHeader fuzz, concurrent query on shared reader, concurrent
@@ -208,8 +202,7 @@ if(PAIMON_BUILD_TESTS)
                     fmt
                     ${GTEST_LINK_TOOLCHAIN})
     target_compile_definitions(paimon-tantivy-streaming-test
-                               PRIVATE
-                               JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
+                               PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
 
     # Stage 8 — TantivyGlobalIndex + factory + end-to-end integration test.
     # `--whole-archive` is required so the static REGISTER_PAIMON_FACTORY
@@ -230,8 +223,7 @@ if(PAIMON_BUILD_TESTS)
                     fmt
                     ${GTEST_LINK_TOOLCHAIN})
     target_compile_definitions(paimon-tantivy-index-test
-                               PRIVATE
-                               JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
+                               PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
 
     # Stage 9 — Cross-implementation coexistence. Links against BOTH the
     # lucene and tantivy support static libs to verify they resolve their
@@ -257,8 +249,7 @@ if(PAIMON_BUILD_TESTS)
                         fmt
                         ${GTEST_LINK_TOOLCHAIN})
         target_compile_definitions(paimon-tantivy-lucene-coexist-test
-                                   PRIVATE
-                                   JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
+                                   PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
 
         # Stage 10 — Equivalence + benchmark. Same link line as the coexist
         # test (needs both impls); benchmark output goes to stderr.
@@ -281,7 +272,6 @@ if(PAIMON_BUILD_TESTS)
                         fmt
                         ${GTEST_LINK_TOOLCHAIN})
         target_compile_definitions(paimon-tantivy-equivalence-test
-                                   PRIVATE
-                                   JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
+                                   PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
     endif()
 endif()

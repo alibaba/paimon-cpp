@@ -19,8 +19,8 @@
 
 #include "fmt/format.h"
 #include "paimon/common/utils/options_utils.h"
-#include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/common/utils/rapidjson_util.h"
+#include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/global_index/tantivy/tantivy_archive_layout.h"
 #include "paimon/global_index/tantivy/tantivy_ffi_log.h"  // [BUG_QPLEAK_RUST]
 #include "paimon/global_index/tantivy/tantivy_ffi_status.h"
@@ -60,7 +60,7 @@ Result<std::shared_ptr<TantivyGlobalIndexReader>> TantivyGlobalIndexReader::Crea
     const std::string& field_name, const GlobalIndexIOMeta& io_meta,
     const std::shared_ptr<GlobalIndexFileReader>& file_reader,
     const std::map<std::string, std::string>& options, const std::shared_ptr<MemoryPool>& pool) {
-    (void)field_name;  // Rust-side knows the field via the schema embedded in meta.json
+    (void)field_name;          // Rust-side knows the field via the schema embedded in meta.json
     EnsureTantivyLogBridge();  // [BUG_QPLEAK_RUST]
 
     std::map<std::string, std::string> write_options;
@@ -79,9 +79,9 @@ Result<std::shared_ptr<TantivyGlobalIndexReader>> TantivyGlobalIndexReader::Crea
         // see the comment block above. Do NOT treat the placeholder as a real default
         // for jieba indices; jieba archives written by paimon-cpp always stamp their
         // chosen mode into metadata, so the placeholder branch never applies to them.
-        PAIMON_ASSIGN_OR_RAISE(tokenize_mode, OptionsUtils::GetValueFromMap(
-                                                  write_options, kJiebaTokenizeMode,
-                                                  std::string(kDefaultJiebaTokenizeMode)));
+        PAIMON_ASSIGN_OR_RAISE(
+            tokenize_mode, OptionsUtils::GetValueFromMap(write_options, kJiebaTokenizeMode,
+                                                         std::string(kDefaultJiebaTokenizeMode)));
     }
     PAIMON_ASSIGN_OR_RAISE(
         bool omit_term_freq_and_positions,
@@ -118,15 +118,9 @@ Result<std::shared_ptr<TantivyGlobalIndexReader>> TantivyGlobalIndexReader::Crea
 
     PaimonTantivyReader* raw = nullptr;
     ::PaimonTantivyStatus st = paimon_tantivy_reader_new_streaming(
-        name_ptrs.data(),
-        layout.offsets.data(),
-        layout.lengths.data(),
-        layout.count,
-        callbacks,
+        name_ptrs.data(), layout.offsets.data(), layout.lengths.data(), layout.count, callbacks,
         tokenize_mode.c_str(),
-        /*with_position=*/!omit_term_freq_and_positions,
-        dict_dir.c_str(),
-        &raw);
+        /*with_position=*/!omit_term_freq_and_positions, dict_dir.c_str(), &raw);
     if (st != PAIMON_TANTIVY_STATUS_OK) {
         // On failure, Rust did NOT take ownership of ctx (FFI contract):
         // release it here so the stream doesn't leak.
@@ -162,16 +156,15 @@ Result<std::shared_ptr<GlobalIndexResult>> TantivyGlobalIndexReader::VisitFullTe
                             ? static_cast<int32_t>(full_text_search->limit.value())
                             : -1;
 
-    float min_score_arg = full_text_search->min_score.has_value()
-                              ? full_text_search->min_score.value()
-                              : 0.0f;
+    float min_score_arg =
+        full_text_search->min_score.has_value() ? full_text_search->min_score.value() : 0.0f;
 
     BufferGuard out;
     PaimonTantivyStatus st = paimon_tantivy_reader_search(
         reader_.get(), static_cast<int32_t>(full_text_search->search_type),
         full_text_search->query.data(), full_text_search->query.size(),
-        full_text_search->with_score, limit_arg,
-        pre_filter_ptr, pre_filter_len, min_score_arg, out.out());
+        full_text_search->with_score, limit_arg, pre_filter_ptr, pre_filter_len, min_score_arg,
+        out.out());
     PAIMON_TANTIVY_RETURN_NOT_OK(st);
 
     // Decode `[u8 has_scores | u64 count | u64 row_ids[] | optional f32 scores[]]`.

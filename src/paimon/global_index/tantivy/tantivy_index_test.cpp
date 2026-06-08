@@ -33,7 +33,6 @@
 #include "arrow/ipc/api.h"
 #include "arrow/type.h"
 #include "gtest/gtest.h"
-
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/global_index/global_index_file_manager.h"
@@ -42,12 +41,11 @@
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/global_index/bitmap_scored_global_index_result.h"
 #include "paimon/global_index/global_indexer_factory.h"
-#include "paimon/testing/utils/testharness.h"
-
 #include "paimon/global_index/tantivy/tantivy_defs.h"
 #include "paimon/global_index/tantivy/tantivy_global_index.h"
 #include "paimon/global_index/tantivy/tantivy_global_index_factory.h"
 #include "paimon/global_index/tantivy/tantivy_global_index_reader.h"
+#include "paimon/testing/utils/testharness.h"
 
 #ifndef JIEBA_TEST_DICT_DIR
 #error "JIEBA_TEST_DICT_DIR must be set at compile time"
@@ -199,9 +197,9 @@ TEST_F(TantivyGlobalIndexIntegrationTest, EnglishCorpus) {
     CheckResult(run("*or*er*", FullTextSearch::SearchType::WILDCARD, 10), {3});
 
     // pre_filter
-    CheckResult(run("document", FullTextSearch::SearchType::MATCH_ALL, 10,
-                    RoaringBitmap64::From({0l, 1l})),
-                {0, 1});
+    CheckResult(
+        run("document", FullTextSearch::SearchType::MATCH_ALL, 10, RoaringBitmap64::From({0l, 1l})),
+        {0, 1});
     CheckResult(run("document", FullTextSearch::SearchType::MATCH_ALL, 10,
                     RoaringBitmap64::From({2l, 100l})),
                 {2});
@@ -238,8 +236,9 @@ TEST_F(TantivyGlobalIndexIntegrationTest, ChineseCorpus) {
     ])")
                      .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto meta, WriteGlobalIndex(root, data_type_, options, array, 4));
-    EXPECT_EQ(std::string(meta.metadata->data(), meta.metadata->size()),
-              R"({"jieba.tokenize-mode":"query","tantivy.write.tokenizer":"paimon_jieba","write.omit-term-freq-and-position":"false"})");
+    EXPECT_EQ(
+        std::string(meta.metadata->data(), meta.metadata->size()),
+        R"({"jieba.tokenize-mode":"query","tantivy.write.tokenizer":"paimon_jieba","write.omit-term-freq-and-position":"false"})");
 
     ASSERT_OK_AND_ASSIGN(auto reader, CreateReader(root, data_type_, options, meta));
     auto t_reader = std::dynamic_pointer_cast<TantivyGlobalIndexReader>(reader);

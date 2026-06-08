@@ -24,7 +24,7 @@
 #include "gtest/gtest.h"
 
 extern "C" {
-#include "paimon_tantivy_ffi.h"
+#include "paimon_tantivy_ffi.h"  // NOLINT(build/include_subdir)
 }
 
 namespace paimon::tantivy {
@@ -36,8 +36,7 @@ TEST(TantivySmoke, VersionIsReachable) {
     const std::string v(version);
     EXPECT_FALSE(v.empty());
     // build.rs pins version from Cargo.toml (CARGO_PKG_VERSION), semver "x.y.z"
-    EXPECT_NE(v.find('.'), std::string::npos)
-        << "expected semver, got: " << v;
+    EXPECT_NE(v.find('.'), std::string::npos) << "expected semver, got: " << v;
 }
 
 TEST(TantivySmoke, VersionPointerIsStable) {

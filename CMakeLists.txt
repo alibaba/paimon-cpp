@@ -321,14 +321,10 @@ endif()
 # include dirs so C++ consumers pick it up via target_link_libraries.
 if(PAIMON_ENABLE_TANTIVY)
     include(CorrosionFetch)
-    corrosion_import_crate(
-        MANIFEST_PATH third_party/tantivy_ffi/Cargo.toml
-        CRATES paimon_tantivy_ffi
-    )
-    corrosion_experimental_cbindgen(
-        TARGET paimon_tantivy_ffi
-        HEADER_NAME paimon_tantivy_ffi.h
-    )
+    corrosion_import_crate(MANIFEST_PATH third_party/tantivy_ffi/Cargo.toml CRATES
+                           paimon_tantivy_ffi)
+    corrosion_experimental_cbindgen(TARGET paimon_tantivy_ffi HEADER_NAME
+                                    paimon_tantivy_ffi.h)
 endif()
 
 if(PAIMON_ENABLE_LUCENE)

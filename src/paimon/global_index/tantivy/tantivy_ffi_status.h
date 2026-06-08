@@ -22,7 +22,7 @@
 #include "paimon/status.h"
 
 extern "C" {
-#include "paimon_tantivy_ffi.h"
+#include "paimon_tantivy_ffi.h"  // NOLINT(build/include_subdir)
 }
 
 namespace paimon::tantivy {
@@ -61,8 +61,8 @@ inline Status FfiStatusToStatus(::PaimonTantivyStatus code) {
                 return "UnknownFfiStatus";
         }
     }();
-    std::string msg = fmt::format("tantivy-ffi[{}({})]: {}", name, static_cast<int>(code),
-                                  err ? err : "(null)");
+    std::string msg =
+        fmt::format("tantivy-ffi[{}({})]: {}", name, static_cast<int>(code), err ? err : "(null)");
     switch (code) {
         case PAIMON_TANTIVY_STATUS_NOT_FOUND:
             return Status::NotExist(msg);
@@ -81,12 +81,12 @@ inline Status FfiStatusToStatus(::PaimonTantivyStatus code) {
 }
 
 /// Like PAIMON_RETURN_NOT_OK but for FFI calls returning PaimonTantivyStatus.
-#define PAIMON_TANTIVY_RETURN_NOT_OK(expr)                                                  \
-    do {                                                                                    \
-        ::PaimonTantivyStatus _paimon_tantivy_status_ = (expr);                             \
-        if (_paimon_tantivy_status_ != PAIMON_TANTIVY_STATUS_OK) {                          \
-            return ::paimon::tantivy::FfiStatusToStatus(_paimon_tantivy_status_);           \
-        }                                                                                   \
+#define PAIMON_TANTIVY_RETURN_NOT_OK(expr)                                        \
+    do {                                                                          \
+        ::PaimonTantivyStatus _paimon_tantivy_status_ = (expr);                   \
+        if (_paimon_tantivy_status_ != PAIMON_TANTIVY_STATUS_OK) {                \
+            return ::paimon::tantivy::FfiStatusToStatus(_paimon_tantivy_status_); \
+        }                                                                         \
     } while (0)
 
 }  // namespace paimon::tantivy

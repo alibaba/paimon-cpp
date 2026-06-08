@@ -28,7 +28,7 @@ case "${cmd}" in
     build)
         # Prefetch rustup-init on the host. In-container network from Docker
         # Desktop builds is unreliable for CN mirrors (TLS/HTTP2 issues with
-        # old curl/wget on CentOS 7), but host curl works. The image COPYs
+        # old curl/wget on CentOS 7), but host curl works. The image copies
         # this blob in. Override mirror with RUSTUP_INIT_URL=... if needed.
         rustup_init="${here}/rustup-init.bin"
         rustup_url="${RUSTUP_INIT_URL:-https://mirrors.ustc.edu.cn/rust-static/rustup/dist/x86_64-unknown-linux-gnu/rustup-init}"

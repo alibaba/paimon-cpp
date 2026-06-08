@@ -45,7 +45,6 @@
 #include "arrow/type.h"
 #include "fmt/format.h"
 #include "gtest/gtest.h"
-
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/global_index/global_index_file_manager.h"
 #include "paimon/core/index/index_path_factory.h"
@@ -57,11 +56,10 @@
 #include "paimon/global_index/global_index_writer.h"
 #include "paimon/global_index/global_indexer.h"
 #include "paimon/global_index/global_indexer_factory.h"
-#include "paimon/predicate/full_text_search.h"
-#include "paimon/testing/utils/testharness.h"
-
 #include "paimon/global_index/lucene/lucene_defs.h"
 #include "paimon/global_index/tantivy/tantivy_defs.h"
+#include "paimon/predicate/full_text_search.h"
+#include "paimon/testing/utils/testharness.h"
 
 #ifndef JIEBA_TEST_DICT_DIR
 #error "JIEBA_TEST_DICT_DIR must be set at compile time"
@@ -139,10 +137,11 @@ class TantivyEquivalenceTest : public ::testing::Test {
         return metas_res.value()[0];
     }
 
-    std::shared_ptr<GlobalIndexReader> OpenOne(
-        const std::string& factory_id, const std::shared_ptr<arrow::DataType>& data_type,
-        const std::map<std::string, std::string>& options, const GlobalIndexIOMeta& meta,
-        const std::string& root) {
+    std::shared_ptr<GlobalIndexReader> OpenOne(const std::string& factory_id,
+                                               const std::shared_ptr<arrow::DataType>& data_type,
+                                               const std::map<std::string, std::string>& options,
+                                               const GlobalIndexIOMeta& meta,
+                                               const std::string& root) {
         auto indexer = GlobalIndexerFactory::Get(factory_id, options).value();
         auto path_factory = std::make_shared<FakeIndexPathFactory>(root);
         auto file_reader = std::make_shared<GlobalIndexFileManager>(fs_, path_factory);
@@ -161,10 +160,8 @@ class TantivyEquivalenceTest : public ::testing::Test {
         EXPECT_TRUE(lroot && troot);
         // lucene requires a tmp directory option; reuse lroot if caller didn't set one.
         lucene_opts.emplace("lucene-fts.write.tmp.directory", lroot->Str());
-        auto lmeta =
-            WriteOne("lucene-fts", data_type, lucene_opts, array, lroot->Str());
-        auto tmeta =
-            WriteOne("tantivy-fulltext", data_type, tantivy_opts, array, troot->Str());
+        auto lmeta = WriteOne("lucene-fts", data_type, lucene_opts, array, lroot->Str());
+        auto tmeta = WriteOne("tantivy-fulltext", data_type, tantivy_opts, array, troot->Str());
         ReaderPair p;
         p.lucene = OpenOne("lucene-fts", data_type, lucene_opts, lmeta, lroot->Str());
         p.tantivy = OpenOne("tantivy-fulltext", data_type, tantivy_opts, tmeta, troot->Str());
@@ -303,20 +300,20 @@ TEST_F(TantivyEquivalenceTest, PreFilterIntersectionEquivalent) {
 
     auto pf = RoaringBitmap64::From({0l, 2l, 4l});
     {
-        auto [l, t] = RunPair(pair, "alpha", FullTextSearch::SearchType::MATCH_ALL,
-                              std::nullopt, pf);
+        auto [l, t] =
+            RunPair(pair, "alpha", FullTextSearch::SearchType::MATCH_ALL, std::nullopt, pf);
         EXPECT_EQ(l, t);
         EXPECT_EQ(l, (std::set<int64_t>{0, 2}));
     }
     {
-        auto [l, t] = RunPair(pair, "beta gamma", FullTextSearch::SearchType::MATCH_ANY,
-                              std::nullopt, pf);
+        auto [l, t] =
+            RunPair(pair, "beta gamma", FullTextSearch::SearchType::MATCH_ANY, std::nullopt, pf);
         EXPECT_EQ(l, t);
     }
     {
         auto empty = RoaringBitmap64();
-        auto [l, t] = RunPair(pair, "alpha", FullTextSearch::SearchType::MATCH_ALL,
-                              std::nullopt, empty);
+        auto [l, t] =
+            RunPair(pair, "alpha", FullTextSearch::SearchType::MATCH_ALL, std::nullopt, empty);
         EXPECT_EQ(l, t);
         EXPECT_TRUE(l.empty());
     }
@@ -328,8 +325,8 @@ TEST_F(TantivyEquivalenceTest, BenchmarkBuildAndQuery) {
     // semantic correctness (each query returns >= 0 docs without erroring).
     constexpr int kDocCount = 200;
     constexpr int kQueryCount = 100;
-    std::vector<std::string> vocab = {"alpha", "beta",  "gamma", "delta", "epsilon",
-                                      "zeta",  "eta",   "theta", "iota",  "kappa",
+    std::vector<std::string> vocab = {"alpha",  "beta", "gamma", "delta", "epsilon",
+                                      "zeta",   "eta",  "theta", "iota",  "kappa",
                                       "lambda", "mu",   "nu",    "xi",    "omicron"};
     std::mt19937 rng(0xC0DE);
     std::uniform_int_distribution<size_t> word_pick(0, vocab.size() - 1);
@@ -361,8 +358,7 @@ TEST_F(TantivyEquivalenceTest, BenchmarkBuildAndQuery) {
 
     // -------- Lucene: write + open + queries --------
     auto lroot = paimon::test::UniqueTestDirectory::Create();
-    std::map<std::string, std::string> lopt = {
-        {"lucene-fts.write.tmp.directory", lroot->Str()}};
+    std::map<std::string, std::string> lopt = {{"lucene-fts.write.tmp.directory", lroot->Str()}};
     GlobalIndexIOMeta lmeta{"", 0, nullptr};
     auto lwrite_ms =
         time_ms([&] { lmeta = WriteOne("lucene-fts", data_type, lopt, array, lroot->Str()); });

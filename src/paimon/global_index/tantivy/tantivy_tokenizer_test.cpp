@@ -34,15 +34,13 @@
 
 #include "cppjieba/Jieba.hpp"
 #include "gtest/gtest.h"
-
 #include "paimon/global_index/lucene/jieba_analyzer.h"
 #include "paimon/global_index/lucene/lucene_utils.h"
-
 #include "paimon/global_index/tantivy/tantivy_ffi_handle.h"
 #include "paimon/global_index/tantivy/tantivy_ffi_status.h"
 
 extern "C" {
-#include "paimon_tantivy_ffi.h"
+#include "paimon_tantivy_ffi.h"  // NOLINT(build/include_subdir)
 }
 
 #ifndef JIEBA_TEST_DICT_DIR
@@ -96,8 +94,7 @@ std::vector<std::string> LoadKnownDiffLines() {
 }
 
 /// Tokenize via cppjieba + Normalize (mirrors JiebaAnalyzer runtime path).
-std::vector<std::string> TokenizeWithCppjieba(const cppjieba::Jieba& jieba,
-                                              const std::string& mode,
+std::vector<std::string> TokenizeWithCppjieba(const cppjieba::Jieba& jieba, const std::string& mode,
                                               const std::string& text) {
     std::vector<std::string> terms;
     ::paimon::lucene::JiebaTokenizer::CutWithMode(mode, &jieba, text, &terms);
@@ -131,11 +128,10 @@ std::vector<std::string> ExtractTokenTexts(const PaimonTantivyBuffer& buf) {
     return out;
 }
 
-std::vector<std::string> TokenizeWithTantivy(PaimonJiebaTokenizer* tok,
-                                             const std::string& text) {
+std::vector<std::string> TokenizeWithTantivy(PaimonJiebaTokenizer* tok, const std::string& text) {
     BufferGuard buf;
-    PaimonTantivyStatus st = paimon_tantivy_tokenizer_tokenize(tok, text.data(), text.size(),
-                                                               buf.out());
+    PaimonTantivyStatus st =
+        paimon_tantivy_tokenizer_tokenize(tok, text.data(), text.size(), buf.out());
     EXPECT_EQ(st, PaimonTantivyStatus::PAIMON_TANTIVY_STATUS_OK)
         << "FFI tokenize failed: " << paimon_tantivy_last_error();
     return ExtractTokenTexts(*buf.out());
@@ -144,10 +140,8 @@ std::vector<std::string> TokenizeWithTantivy(PaimonJiebaTokenizer* tok,
 /// Build a cppjieba::Jieba instance mirroring the one used at runtime.
 std::unique_ptr<cppjieba::Jieba> MakeJieba() {
     const std::string d = JIEBA_TEST_DICT_DIR;
-    return std::make_unique<cppjieba::Jieba>(d + "/jieba.dict.utf8",
-                                             d + "/hmm_model.utf8",
-                                             d + "/user.dict.utf8",
-                                             d + "/idf.utf8",
+    return std::make_unique<cppjieba::Jieba>(d + "/jieba.dict.utf8", d + "/hmm_model.utf8",
+                                             d + "/user.dict.utf8", d + "/idf.utf8",
                                              d + "/stop_words.utf8");
 }
 
@@ -157,14 +151,13 @@ struct DiffReport {
     std::vector<std::string> sample_diffs;  // first N diffs
 };
 
-void RunDiff(const std::vector<std::string>& lines, const std::string& mode,
-             DiffReport* report) {
+void RunDiff(const std::vector<std::string>& lines, const std::string& mode, DiffReport* report) {
     auto jieba = MakeJieba();
     std::string dict_dir = JIEBA_TEST_DICT_DIR;
 
     PaimonJiebaTokenizer* handle = nullptr;
-    PaimonTantivyStatus st = paimon_tantivy_tokenizer_new(
-        mode.c_str(), /*with_position=*/true, dict_dir.c_str(), &handle);
+    PaimonTantivyStatus st = paimon_tantivy_tokenizer_new(mode.c_str(), /*with_position=*/true,
+                                                          dict_dir.c_str(), &handle);
     ASSERT_EQ(st, PaimonTantivyStatus::PAIMON_TANTIVY_STATUS_OK)
         << "tokenizer_new failed for mode=" << mode << ": " << paimon_tantivy_last_error();
 
@@ -201,8 +194,8 @@ void RunDiff(const std::vector<std::string>& lines, const std::string& mode,
 TEST(TantivyTokenizer, HmmModeReturnsUnsupported) {
     std::string dict_dir = JIEBA_TEST_DICT_DIR;
     PaimonJiebaTokenizer* handle = nullptr;
-    PaimonTantivyStatus st = paimon_tantivy_tokenizer_new("hmm", /*with_position=*/true,
-                                                          dict_dir.c_str(), &handle);
+    PaimonTantivyStatus st =
+        paimon_tantivy_tokenizer_new("hmm", /*with_position=*/true, dict_dir.c_str(), &handle);
     EXPECT_EQ(st, PaimonTantivyStatus::PAIMON_TANTIVY_STATUS_UNSUPPORTED);
     EXPECT_EQ(handle, nullptr);
     std::string err = paimon_tantivy_last_error();
@@ -227,26 +220,23 @@ TEST_P(JiebaRsBehavior, ProducesExpectedTokens) {
     const auto& c = GetParam();
     std::string dict_dir = JIEBA_TEST_DICT_DIR;
     PaimonJiebaTokenizer* handle = nullptr;
-    PaimonTantivyStatus st = paimon_tantivy_tokenizer_new(
-        c.mode.c_str(), /*with_position=*/true, dict_dir.c_str(), &handle);
-    ASSERT_EQ(st, PaimonTantivyStatus::PAIMON_TANTIVY_STATUS_OK)
-        << paimon_tantivy_last_error();
+    PaimonTantivyStatus st = paimon_tantivy_tokenizer_new(c.mode.c_str(), /*with_position=*/true,
+                                                          dict_dir.c_str(), &handle);
+    ASSERT_EQ(st, PaimonTantivyStatus::PAIMON_TANTIVY_STATUS_OK) << paimon_tantivy_last_error();
     auto got = TokenizeWithTantivy(handle, c.input);
-    EXPECT_EQ(got, c.expected)
-        << "mode=" << c.mode << " input=" << c.input;
+    EXPECT_EQ(got, c.expected) << "mode=" << c.mode << " input=" << c.input;
     paimon_tantivy_tokenizer_free(handle);
 }
 
 INSTANTIATE_TEST_SUITE_P(
     BasicCases, JiebaRsBehavior,
-    ::testing::Values(
-        JiebaRsCase{"mix", "Hello World", {"hello", "world"}},
-        JiebaRsCase{"mix", "HELLO", {"hello"}},
-        JiebaRsCase{"mix", "中国人民", {"中国", "人民"}},
-        // 他/了 在 stop_words.utf8 里,被 Normalize 过滤
-        JiebaRsCase{"mix", "他来到了网易杭研大厦", {"来到", "网易", "杭研", "大厦"}},
-        JiebaRsCase{"full", "中国", {"中", "中国", "国"}},
-        JiebaRsCase{"query", "中国人民", {"中国", "人民"}}));
+    ::testing::Values(JiebaRsCase{"mix", "Hello World", {"hello", "world"}},
+                      JiebaRsCase{"mix", "HELLO", {"hello"}},
+                      JiebaRsCase{"mix", "中国人民", {"中国", "人民"}},
+                      // 他/了 在 stop_words.utf8 里,被 Normalize 过滤
+                      JiebaRsCase{"mix", "他来到了网易杭研大厦", {"来到", "网易", "杭研", "大厦"}},
+                      JiebaRsCase{"full", "中国", {"中", "中国", "国"}},
+                      JiebaRsCase{"query", "中国人民", {"中国", "人民"}}));
 
 // ---------------- advisory: log diffs vs cppjieba ----------------
 //
@@ -260,9 +250,7 @@ TEST_P(AdvisoryDiffTest, LogsStrictGoldenDiffs) {
     const auto mode = GetParam();
     DiffReport report;
     RunDiff(LoadGoldenLines(), mode, &report);
-    const double rate = report.total > 0
-                            ? static_cast<double>(report.differ) / report.total
-                            : 0.0;
+    const double rate = report.total > 0 ? static_cast<double>(report.differ) / report.total : 0.0;
     std::cerr << "ADVISORY-STRICT mode=" << mode << " total=" << report.total
               << " differ=" << report.differ << " rate=" << rate << "\n";
     for (const auto& d : report.sample_diffs) std::cerr << d << "\n";
@@ -275,9 +263,7 @@ TEST_P(AdvisoryDiffTest, LogsKnownDiffs) {
     auto lines = LoadKnownDiffLines();
     if (lines.empty()) GTEST_SKIP();
     RunDiff(lines, mode, &report);
-    const double rate = report.total > 0
-                            ? static_cast<double>(report.differ) / report.total
-                            : 0.0;
+    const double rate = report.total > 0 ? static_cast<double>(report.differ) / report.total : 0.0;
     std::cerr << "ADVISORY-KNOWN mode=" << mode << " total=" << report.total
               << " differ=" << report.differ << " rate=" << rate << "\n";
     for (const auto& d : report.sample_diffs) std::cerr << d << "\n";
@@ -285,9 +271,9 @@ TEST_P(AdvisoryDiffTest, LogsKnownDiffs) {
 }
 
 INSTANTIATE_TEST_SUITE_P(AllModes, AdvisoryDiffTest,
-                        ::testing::Values("mp", "mix", "full", "query"),
-                        [](const testing::TestParamInfo<std::string>& info) {
-                            return info.param;
-                        });
+                         ::testing::Values("mp", "mix", "full", "query"),
+                         [](const testing::TestParamInfo<std::string>& info) {
+                             return info.param;
+                         });
 
 }  // namespace paimon::tantivy
