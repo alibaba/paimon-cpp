@@ -35,7 +35,7 @@
 #include "paimon/utils/roaring_bitmap32.h"
 namespace {
 // Safe absolute value for int64_t that avoids undefined behavior when value == INT64_MIN.
-// This mirrors Java's Math.abs() wrapping semantics but produces the correct magnitude.
+// This mirrors Java's Math.abs() wrapping semantics.
 inline int64_t SafeAbs(int64_t value) {
     if (value == INT64_MIN) {
         return INT64_MIN;
