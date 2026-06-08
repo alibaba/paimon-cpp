@@ -26,6 +26,7 @@
 #include "paimon/common/fs/resolving_file_system.h"
 #include "paimon/common/options/memory_size.h"
 #include "paimon/common/options/time_duration.h"
+#include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/options/expire_config.h"
@@ -1174,11 +1175,10 @@ Result<bool> CoreOptions::FieldCollectAggDistinct(const std::string& field_name)
 }
 
 Result<MapStorageLayout> CoreOptions::GetMapStorageLayout(const std::string& field_name) const {
-    ConfigParser parser(impl_->raw_options);
-    std::string layout_str = "default";
     std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
                       std::string(Options::MAP_STORAGE_LAYOUT);
-    PAIMON_RETURN_NOT_OK(parser.Parse(key, &layout_str));
+    PAIMON_ASSIGN_OR_RAISE(std::string layout_str, OptionsUtils::GetValueFromMap<std::string>(
+                                                       impl_->raw_options, key, "default"));
     std::string lower = StringUtils::ToLowerCase(layout_str);
     if (lower == "extend") {
         return MapStorageLayout::EXTEND;
@@ -1189,14 +1189,13 @@ Result<MapStorageLayout> CoreOptions::GetMapStorageLayout(const std::string& fie
 }
 
 Result<int32_t> CoreOptions::GetMapExtendMaxColumns(const std::string& field_name) const {
-    ConfigParser parser(impl_->raw_options);
-    int32_t max_columns = 256;
     std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
                       std::string(Options::MAP_EXTEND_MAX_COLUMNS);
-    PAIMON_RETURN_NOT_OK(parser.Parse(key, &max_columns));
+    PAIMON_ASSIGN_OR_RAISE(int32_t max_columns,
+                           OptionsUtils::GetValueFromMap<int32_t>(impl_->raw_options, key, 256));
     if (max_columns <= 0) {
         return Status::Invalid(
-            fmt::format("options {} must > 1", std::string(Options::MAP_EXTEND_MAX_COLUMNS)));
+            fmt::format("options {} must > 0", std::string(Options::MAP_EXTEND_MAX_COLUMNS)));
     }
     return max_columns;
 }

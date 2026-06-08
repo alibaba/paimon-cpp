@@ -852,6 +852,18 @@ TEST(SchemaValidationTest, TestMapStorageLayout) {
         ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
                             "Field nonexist can not be found in table schema");
     }
+    // Invalid: non-MAP column configured with map-storage-layout (any value)
+    {
+        arrow::FieldVector fields = {f0, f1};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {{Options::BUCKET, "2"},
+                                                      {Options::BUCKET_KEY, "f0"},
+                                                      {"fields.f1.map-storage-layout", "default"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema), "not MAP");
+    }
     // Invalid: extend on non-MAP column
     {
         arrow::FieldVector fields = {f0, f1};
@@ -862,8 +874,7 @@ TEST(SchemaValidationTest, TestMapStorageLayout) {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
                              TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
                                                  /*primary_keys=*/{"f0", "f1"}, options));
-        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
-                            "not MAP<STRING, T>");
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema), "not MAP");
     }
     // Invalid: extend on MAP with non-STRING key
     {
@@ -878,17 +889,31 @@ TEST(SchemaValidationTest, TestMapStorageLayout) {
         ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
                             "not MAP<STRING, T>");
     }
-    // Valid: default layout does not trigger validation
+    // Valid: default layout on a MAP column
     {
-        arrow::FieldVector fields = {f0, f1};
+        arrow::FieldVector fields = {f0, f1, f2};
         auto schema = arrow::schema(fields);
         std::map<std::string, std::string> options = {{Options::BUCKET, "2"},
                                                       {Options::BUCKET_KEY, "f0"},
-                                                      {"fields.f1.map-storage-layout", "default"}};
+                                                      {"fields.f2.map-storage-layout", "default"}};
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
                              TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
                                                  /*primary_keys=*/{"f0", "f1"}, options));
         ASSERT_OK(SchemaValidation::ValidateTableSchema(*table_schema));
+    }
+    // Invalid: extend with invalid max-columns
+    {
+        arrow::FieldVector fields = {f0, f1, f2};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {{Options::BUCKET, "2"},
+                                                      {Options::BUCKET_KEY, "f0"},
+                                                      {"fields.f2.map-storage-layout", "extend"},
+                                                      {"fields.f2.map-extend.max-columns", "0"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "options map-extend.max-columns must > 0");
     }
 }
 

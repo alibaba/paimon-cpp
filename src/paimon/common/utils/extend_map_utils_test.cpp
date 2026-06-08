@@ -69,18 +69,6 @@ TEST(ExtendMapUtilsTest, DetectExtendColumnsNoExtend) {
     ASSERT_TRUE(indices.empty());
 }
 
-TEST(ExtendMapUtilsTest, DetectExtendColumnsInvalidType) {
-    auto schema = arrow::schema({
-        arrow::field("id", arrow::int32()),
-        arrow::field("not_a_map", arrow::utf8()),
-    });
-
-    ASSERT_OK_AND_ASSIGN(CoreOptions options,
-                         CoreOptions::FromMap({{"fields.not_a_map.map-storage-layout", "extend"}}));
-
-    ASSERT_NOK_WITH_MSG(ExtendMapUtils::DetectExtendColumns(schema, options), "not MAP<STRING, T>");
-}
-
 // ---- LogicalToPhysicalSchema ----
 
 TEST(ExtendMapUtilsTest, LogicalToPhysicalSchemaBasic) {
@@ -205,7 +193,7 @@ TEST(ExtendMapUtilsTest, BuildColumnToNumColumnsDefault) {
 // ---- SerializeMetadata / DeserializeMetadata roundtrip ----
 
 TEST(ExtendMapUtilsTest, MetadataRoundtripNoneCompression) {
-    ExtendMapFileMetadata original;
+    ExtendMapFileMeta original;
     original.name_to_id = {{"age", 0}, {"name", 1}};
     original.field_to_columns = {{0, {0}}, {1, {1, 2}}};
     original.overflow_field_set = {1, 5};
@@ -244,7 +232,7 @@ TEST(ExtendMapUtilsTest, MetadataRoundtripNoneCompression) {
 }
 
 TEST(ExtendMapUtilsTest, MetadataRoundtripCompression) {
-    ExtendMapFileMetadata original;
+    ExtendMapFileMeta original;
     original.name_to_id = {{"alpha", 0}, {"beta", 1}, {"gamma", 2}};
     original.field_to_columns = {{0, {0, 1, 2}}, {1, {3}}, {2, {4, 5}}};
     original.overflow_field_set = {2};
@@ -265,7 +253,7 @@ TEST(ExtendMapUtilsTest, MetadataRoundtripCompression) {
 }
 
 TEST(ExtendMapUtilsTest, MetadataRoundtripEmptyData) {
-    ExtendMapFileMetadata original;
+    ExtendMapFileMeta original;
 
     auto verify_roundtrip = [&](const std::string& compression) {
         auto metadata = std::make_shared<arrow::KeyValueMetadata>();
@@ -284,12 +272,13 @@ TEST(ExtendMapUtilsTest, MetadataRoundtripEmptyData) {
 
 TEST(ExtendMapUtilsTest, DeserializeMetadataErrors) {
     // nullptr
-    ASSERT_NOK_WITH_MSG(ExtendMapUtils::DeserializeMetadata(nullptr, "none"), "null");
+    ASSERT_NOK_WITH_MSG(ExtendMapUtils::DeserializeMetadata(nullptr, "none"), "metadata is null");
     // missing version
     {
         auto metadata = std::make_shared<arrow::KeyValueMetadata>();
         metadata->Append("some_key", "some_value");
-        ASSERT_NOK_WITH_MSG(ExtendMapUtils::DeserializeMetadata(metadata, "none"), "version");
+        ASSERT_NOK_WITH_MSG(ExtendMapUtils::DeserializeMetadata(metadata, "none"),
+                            "missing extend metadata key: paimon.map-extend.version");
     }
     // wrong version
     {
@@ -297,14 +286,16 @@ TEST(ExtendMapUtilsTest, DeserializeMetadataErrors) {
         metadata->Append(ExtendMapDefine::kVersion, "999");
         metadata->Append(ExtendMapDefine::kFieldDictOriginalSize, "2");
         metadata->Append(ExtendMapDefine::kFieldDict, "{}");
-        ASSERT_NOK_WITH_MSG(ExtendMapUtils::DeserializeMetadata(metadata, "none"), "unsupported");
+        ASSERT_NOK_WITH_MSG(ExtendMapUtils::DeserializeMetadata(metadata, "none"),
+                            "unsupported extend-map metadata version: 999");
     }
     // missing field_dict
     {
         auto metadata = std::make_shared<arrow::KeyValueMetadata>();
         metadata->Append(ExtendMapDefine::kVersion, "1");
         metadata->Append(ExtendMapDefine::kFieldDictOriginalSize, "2");
-        ASSERT_NOK_WITH_MSG(ExtendMapUtils::DeserializeMetadata(metadata, "none"), "field_dict");
+        ASSERT_NOK_WITH_MSG(ExtendMapUtils::DeserializeMetadata(metadata, "none"),
+                            "missing extend metadata key: paimon.map-extend.field-dict");
     }
 }
 

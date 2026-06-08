@@ -943,13 +943,13 @@ TEST(CoreOptionsTest, TestMapStorageLayout) {
         ASSERT_OK_AND_ASSIGN(CoreOptions options,
                              CoreOptions::FromMap({{"fields.col.map-extend.max-columns", "0"}}));
         ASSERT_NOK_WITH_MSG(options.GetMapExtendMaxColumns("col"),
-                            "options map-extend.max-columns must > 1");
+                            "options map-extend.max-columns must > 0");
     }
     {
         ASSERT_OK_AND_ASSIGN(CoreOptions options,
                              CoreOptions::FromMap({{"fields.col.map-extend.max-columns", "-1"}}));
         ASSERT_NOK_WITH_MSG(options.GetMapExtendMaxColumns("col"),
-                            "options map-extend.max-columns must > 1");
+                            "options map-extend.max-columns must > 0");
     }
 }
 

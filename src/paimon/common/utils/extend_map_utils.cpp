@@ -17,6 +17,7 @@
 #include "paimon/common/utils/extend_map_utils.h"
 
 #include <algorithm>
+#include <functional>
 
 #include "arrow/type.h"
 #include "arrow/util/key_value_metadata.h"
@@ -32,10 +33,6 @@
 #include "rapidjson/writer.h"
 
 namespace paimon {
-std::string ExtendMapDefine::PhysicalColumnName(int32_t index) {
-    return fmt::format("__col_{}", index);
-}
-
 // ---- Column detection ----
 
 bool ExtendMapUtils::IsStringKeyMap(const std::shared_ptr<arrow::DataType>& arrow_type) {
@@ -51,18 +48,13 @@ Result<std::vector<int32_t>> ExtendMapUtils::DetectExtendColumns(
     std::vector<int32_t> indices;
     for (int32_t i = 0; i < schema->num_fields(); ++i) {
         const auto& field = schema->field(i);
-        PAIMON_ASSIGN_OR_RAISE(MapStorageLayout layout, options.GetMapStorageLayout(field->name()));
-        if (layout != MapStorageLayout::EXTEND) {
+        if (!IsStringKeyMap(field->type())) {
             continue;
         }
-        // Validate: configured column must be MAP<STRING, T>
-        if (!IsStringKeyMap(field->type())) {
-            return Status::Invalid(
-                fmt::format("Column '{}' is configured with map-storage-layout=extend "
-                            "but its type is not MAP<STRING, T>",
-                            field->name()));
+        PAIMON_ASSIGN_OR_RAISE(MapStorageLayout layout, options.GetMapStorageLayout(field->name()));
+        if (layout == MapStorageLayout::EXTEND) {
+            indices.push_back(i);
         }
-        indices.push_back(i);
     }
     return indices;
 }
@@ -82,8 +74,9 @@ std::shared_ptr<arrow::DataType> ExtendMapUtils::BuildPhysicalStructType(
             arrow::field(ExtendMapDefine::PhysicalColumnName(i), value_type, value_nullable));
     }
 
-    struct_fields.push_back(
-        arrow::field(ExtendMapDefine::kOverflow, arrow::map(arrow::int32(), value_type), true));
+    struct_fields.push_back(arrow::field(
+        ExtendMapDefine::kOverflow,
+        arrow::map(arrow::int32(), arrow::field("value", value_type, value_nullable)), true));
 
     return arrow::struct_(std::move(struct_fields));
 }
@@ -129,10 +122,10 @@ Result<std::map<int32_t, int32_t>> ExtendMapUtils::BuildColumnToNumColumns(
 namespace {
 
 std::string JsonEncodeObject(
-    const std::function<void(rapidjson::Document&, rapidjson::Document::AllocatorType&)>& builder) {
+    std::function<void(rapidjson::Document*, rapidjson::Document::AllocatorType*)> builder) {
     rapidjson::Document doc(rapidjson::kObjectType);
-    auto& allocator = doc.GetAllocator();
-    builder(doc, allocator);
+    auto allocator = doc.GetAllocator();
+    builder(&doc, &allocator);
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     doc.Accept(writer);
@@ -140,10 +133,10 @@ std::string JsonEncodeObject(
 }
 
 std::string JsonEncodeArray(
-    const std::function<void(rapidjson::Document&, rapidjson::Document::AllocatorType&)>& builder) {
+    std::function<void(rapidjson::Document*, rapidjson::Document::AllocatorType*)> builder) {
     rapidjson::Document doc(rapidjson::kArrayType);
-    auto& allocator = doc.GetAllocator();
-    builder(doc, allocator);
+    auto allocator = doc.GetAllocator();
+    builder(&doc, &allocator);
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     doc.Accept(writer);
@@ -159,7 +152,7 @@ Result<std::string> CompressString(const std::string& input, const std::string& 
         return input;
     }
 
-    int32_t src_size = static_cast<int32_t>(input.size());
+    auto src_size = static_cast<int32_t>(input.size());
     int32_t max_compressed = compressor->GetMaxCompressedSize(src_size);
     std::string output(max_compressed, '\0');
 
@@ -208,38 +201,41 @@ Result<int32_t> GetRequiredInt32(const std::shared_ptr<arrow::KeyValueMetadata>&
     return parsed.value();
 }
 
-std::string SerializeFieldDict(const ExtendMapFileMetadata& file_metadata) {
-    return JsonEncodeObject([&](auto& doc, auto& alloc) {
-        for (const auto& [name, id] : file_metadata.name_to_id) {
-            doc.AddMember(rapidjson::Value(name.c_str(), alloc), rapidjson::Value(id), alloc);
+std::string SerializeFieldDict(const ExtendMapFileMeta& file_meta) {
+    return JsonEncodeObject([&](rapidjson::Document* doc,
+                                rapidjson::Document::AllocatorType* alloc) {
+        for (const auto& [name, id] : file_meta.name_to_id) {
+            doc->AddMember(rapidjson::Value(name.c_str(), *alloc), rapidjson::Value(id), *alloc);
         }
     });
 }
 
-std::string SerializeFieldColumns(const ExtendMapFileMetadata& file_metadata) {
-    return JsonEncodeObject([&](auto& doc, auto& alloc) {
-        for (const auto& [field_id, col_vec] : file_metadata.field_to_columns) {
-            rapidjson::Value array(rapidjson::kArrayType);
-            std::vector<int32_t> sorted_cols(col_vec.begin(), col_vec.end());
-            std::sort(sorted_cols.begin(), sorted_cols.end());
-            for (int32_t col : sorted_cols) {
-                array.PushBack(col, alloc);
+std::string SerializeFieldColumns(const ExtendMapFileMeta& file_meta) {
+    return JsonEncodeObject(
+        [&](rapidjson::Document* doc, rapidjson::Document::AllocatorType* alloc) {
+            for (const auto& [field_id, col_vec] : file_meta.field_to_columns) {
+                rapidjson::Value array(rapidjson::kArrayType);
+                std::vector<int32_t> sorted_cols(col_vec.begin(), col_vec.end());
+                std::sort(sorted_cols.begin(), sorted_cols.end());
+                for (int32_t col : sorted_cols) {
+                    array.PushBack(col, *alloc);
+                }
+                std::string key = std::to_string(field_id);
+                doc->AddMember(rapidjson::Value(key.c_str(), *alloc), array, *alloc);
             }
-            std::string key = std::to_string(field_id);
-            doc.AddMember(rapidjson::Value(key.c_str(), alloc), array, alloc);
-        }
-    });
+        });
 }
 
-std::string SerializeOverflowSet(const ExtendMapFileMetadata& file_metadata) {
-    return JsonEncodeArray([&](auto& doc, auto& alloc) {
-        std::vector<int32_t> sorted(file_metadata.overflow_field_set.begin(),
-                                    file_metadata.overflow_field_set.end());
-        std::sort(sorted.begin(), sorted.end());
-        for (int32_t field_id : sorted) {
-            doc.PushBack(field_id, alloc);
-        }
-    });
+std::string SerializeOverflowSet(const ExtendMapFileMeta& file_meta) {
+    return JsonEncodeArray(
+        [&](rapidjson::Document* doc, rapidjson::Document::AllocatorType* alloc) {
+            std::vector<int32_t> sorted(file_meta.overflow_field_set.begin(),
+                                        file_meta.overflow_field_set.end());
+            std::sort(sorted.begin(), sorted.end());
+            for (int32_t field_id : sorted) {
+                doc->PushBack(field_id, *alloc);
+            }
+        });
 }
 
 Result<std::map<std::string, int32_t>> DeserializeFieldDict(const std::string& json_str) {
@@ -297,28 +293,28 @@ Result<std::set<int32_t>> DeserializeOverflowSet(const std::string& json_str) {
 
 }  // namespace
 
-Status ExtendMapUtils::SerializeMetadata(const ExtendMapFileMetadata& file_metadata,
+Status ExtendMapUtils::SerializeMetadata(const ExtendMapFileMeta& file_meta,
                                          const std::string& compression,
                                          arrow::KeyValueMetadata* metadata) {
     metadata->Append(ExtendMapDefine::kVersion, std::to_string(ExtendMapDefine::kCurrentVersion));
     metadata->Append(ExtendMapDefine::kStorageLayout, ExtendMapDefine::kStorageLayoutExtend);
 
-    std::string field_dict_json = SerializeFieldDict(file_metadata);
+    std::string field_dict_json = SerializeFieldDict(file_meta);
     metadata->Append(ExtendMapDefine::kFieldDictOriginalSize,
                      std::to_string(field_dict_json.size()));
     PAIMON_ASSIGN_OR_RAISE(std::string compressed_dict,
                            CompressString(field_dict_json, compression));
     metadata->Append(ExtendMapDefine::kFieldDict, std::move(compressed_dict));
 
-    metadata->Append(ExtendMapDefine::kFieldColumns, SerializeFieldColumns(file_metadata));
-    metadata->Append(ExtendMapDefine::kOverflowSet, SerializeOverflowSet(file_metadata));
-    metadata->Append(ExtendMapDefine::kNumColumns, std::to_string(file_metadata.num_columns));
-    metadata->Append(ExtendMapDefine::kMaxRowWidth, std::to_string(file_metadata.max_row_width));
+    metadata->Append(ExtendMapDefine::kFieldColumns, SerializeFieldColumns(file_meta));
+    metadata->Append(ExtendMapDefine::kOverflowSet, SerializeOverflowSet(file_meta));
+    metadata->Append(ExtendMapDefine::kNumColumns, std::to_string(file_meta.num_columns));
+    metadata->Append(ExtendMapDefine::kMaxRowWidth, std::to_string(file_meta.max_row_width));
 
     return Status::OK();
 }
 
-Result<ExtendMapFileMetadata> ExtendMapUtils::DeserializeMetadata(
+Result<ExtendMapFileMeta> ExtendMapUtils::DeserializeMetadata(
     const std::shared_ptr<arrow::KeyValueMetadata>& metadata, const std::string& compression) {
     if (!metadata) {
         return Status::Invalid("metadata is null");
@@ -330,7 +326,7 @@ Result<ExtendMapFileMetadata> ExtendMapUtils::DeserializeMetadata(
                         ExtendMapDefine::kCurrentVersion));
     }
 
-    ExtendMapFileMetadata result;
+    ExtendMapFileMeta result;
 
     // field_dict (compressed)
     PAIMON_ASSIGN_OR_RAISE(int32_t original_len,

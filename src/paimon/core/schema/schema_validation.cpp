@@ -542,18 +542,28 @@ Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
                             field_name));
         }
 
+        // Any column configured with map-storage-layout must be a MAP type
+        const auto& field_type = it->second;
+        if (field_type->id() != arrow::Type::MAP) {
+            return Status::Invalid(
+                fmt::format("Column '{}' is configured with map-storage-layout "
+                            "but its type is not MAP.",
+                            field_name));
+        }
+
         PAIMON_ASSIGN_OR_RAISE(MapStorageLayout layout, options.GetMapStorageLayout(field_name));
         if (layout != MapStorageLayout::EXTEND) {
             continue;
         }
         // Column configured with extend must be MAP<STRING, T>
-        const auto& field_type = it->second;
         if (!ExtendMapUtils::IsStringKeyMap(field_type)) {
             return Status::Invalid(
                 fmt::format("Column '{}' is configured with map-storage-layout=extend "
                             "but its type is not MAP<STRING, T>.",
                             field_name));
         }
+        // Validate max-columns config
+        PAIMON_RETURN_NOT_OK(options.GetMapExtendMaxColumns(field_name));
     }
     return Status::OK();
 }
