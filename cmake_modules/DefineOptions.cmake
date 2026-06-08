@@ -107,6 +107,9 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
 
     define_option(PAIMON_BUILD_TESTS "Build the Paimon googletest unit tests" OFF)
 
+    define_option(PAIMON_BUILD_BENCHMARKS
+                  "Build the Paimon Google Benchmark performance benchmarks" OFF)
+
     if(PAIMON_BUILD_SHARED)
         set(PAIMON_TEST_LINKAGE_DEFAULT "shared")
     else()
@@ -237,6 +240,13 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
                          SYSTEM)
     define_option_string(GTest_SOURCE
                          "Dependency source for GoogleTest"
+                         ""
+                         AUTO
+                         BUNDLED
+                         SYSTEM)
+
+    define_option_string(benchmark_SOURCE
+                         "Dependency source for Google Benchmark"
                          ""
                          AUTO
                          BUNDLED

@@ -113,26 +113,6 @@ class DataConverterUtils {
                     return Status::OK();
                 };
                 break;
-            case arrow::Type::FLOAT:
-                converter = [](const std::string& value_str, int32_t field_idx,
-                               BinaryRowWriter* writer) {
-                    auto value = StringUtils::StringToValue<float>(value_str);
-                    RETURN_INVALID_WITH_FIELD_INFO(value, field_idx, value_str,
-                                                   arrow::internal::ToString(arrow::Type::FLOAT));
-                    writer->WriteFloat(field_idx, value.value());
-                    return Status::OK();
-                };
-                break;
-            case arrow::Type::DOUBLE:
-                converter = [](const std::string& value_str, int32_t field_idx,
-                               BinaryRowWriter* writer) {
-                    auto value = StringUtils::StringToValue<double>(value_str);
-                    RETURN_INVALID_WITH_FIELD_INFO(value, field_idx, value_str,
-                                                   arrow::internal::ToString(arrow::Type::DOUBLE));
-                    writer->WriteDouble(field_idx, value.value());
-                    return Status::OK();
-                };
-                break;
             case arrow::Type::STRING:
                 converter = [pool](const std::string& value_str, int32_t field_idx,
                                    BinaryRowWriter* writer) {
@@ -156,39 +136,6 @@ class DataConverterUtils {
                                 arrow::internal::ToString(type)));
         }
         return converter;
-    }
-
-    // support float and double
-    template <typename T>
-    static std::string FloatValueToString(const T& value, int32_t precision) {
-        std::stringstream oss;
-        if (value >= 1e-3 && value <= 1e7) {
-            oss << std::fixed << std::setprecision(sizeof(T)) << value;
-            std::string result = oss.str();
-            auto pos = result.find_last_not_of('0');
-            result.erase(pos + (result[pos] == '.') + 1, std::string::npos);
-            return result;
-        }
-        oss << std::uppercase << std::scientific << std::setprecision(precision) << value;
-        std::string result = oss.str();
-        auto e_pos = result.find('E');
-        if (e_pos != std::string::npos) {
-            if (result[e_pos + 1] == '+') {
-                result.erase(e_pos + 1, 1 + (result[e_pos + 2] == '0'));
-            } else {
-                if (result[e_pos + 1] == '-' && result[e_pos + 2] == '0') {
-                    result.erase(e_pos + 2, 1);
-                }
-            }
-            auto zero_pos = e_pos - 1;
-            while (zero_pos >= 1 && result[zero_pos] == '0' && result[zero_pos - 1] != '.') {
-                zero_pos--;
-            }
-            if (e_pos - zero_pos - 1 > 0) {
-                result.erase(zero_pos + 1, e_pos - zero_pos - 1);
-            }
-        }
-        return result;
     }
 
     static Result<BinaryRowFieldToStrConverter> CreateBinaryRowFieldToStringConverter(
@@ -224,18 +171,6 @@ class DataConverterUtils {
                 converter = [](const BinaryRow& row, int32_t field_idx) {
                     auto data = row.GetLong(field_idx);
                     return std::to_string(data);
-                };
-                break;
-            case arrow::Type::FLOAT:
-                converter = [](const BinaryRow& row, int32_t field_idx) {
-                    float data = row.GetFloat(field_idx);
-                    return FloatValueToString<float>(data, 6);
-                };
-                break;
-            case arrow::Type::DOUBLE:
-                converter = [](const BinaryRow& row, int32_t field_idx) {
-                    double data = row.GetDouble(field_idx);
-                    return FloatValueToString<double>(data, 15);
                 };
                 break;
             case arrow::Type::STRING:

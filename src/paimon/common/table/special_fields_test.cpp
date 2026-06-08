@@ -61,6 +61,7 @@ TEST(SpecialFieldsTest, TestIsSpecialFieldName) {
     ASSERT_TRUE(SpecialFields::IsSpecialFieldName("_SEQUENCE_NUMBER"));
     ASSERT_TRUE(SpecialFields::IsSpecialFieldName("_VALUE_KIND"));
     ASSERT_FALSE(SpecialFields::IsSpecialFieldName("VALUE_KIND"));
+    ASSERT_TRUE(SpecialFields::IsSpecialFieldName("rowkind"));
     ASSERT_TRUE(SpecialFields::IsSpecialFieldName("_ROW_ID"));
     ASSERT_TRUE(SpecialFields::IsSpecialFieldName("_INDEX_SCORE"));
 }

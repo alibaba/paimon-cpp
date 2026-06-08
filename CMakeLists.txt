@@ -45,6 +45,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(PAIMON_BUILD_STATIC "Build static library" ON)
 option(PAIMON_BUILD_SHARED "Build shared library" ON)
 option(PAIMON_BUILD_TESTS "Build tests" OFF)
+option(PAIMON_BUILD_BENCHMARKS "Build benchmarks" OFF)
 option(PAIMON_USE_ASAN "Use Address Sanitizer" OFF)
 option(PAIMON_USE_UBSAN "Use Undefined Behavior Sanitizer" OFF)
 option(PAIMON_USE_CXX11_ABI "Use C++11 ABI" ON)
@@ -354,6 +355,29 @@ endif()
 
 set(ENV{PAIMON_TEST_DATA} "${CMAKE_SOURCE_DIR}/test/test_data")
 
+if(PAIMON_BUILD_TESTS OR PAIMON_BUILD_BENCHMARKS)
+    resolve_dependency(GTest)
+    include_directories(SYSTEM ${GTEST_INCLUDE_DIR})
+
+    paimon_link_libraries_whole_archive(PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS
+                                        paimon_local_file_system_static)
+    paimon_link_libraries_no_as_needed(PAIMON_LOCAL_FILE_SYSTEM_SHARED_LINK_LIBS
+                                       paimon_local_file_system_shared)
+    paimon_link_libraries_whole_archive(PAIMON_BLOB_FILE_FORMAT_STATIC_LINK_LIBS
+                                        paimon_blob_file_format_static)
+    paimon_link_libraries_whole_archive(PAIMON_PARQUET_FILE_FORMAT_STATIC_LINK_LIBS
+                                        paimon_parquet_file_format_static)
+
+    if(PAIMON_ENABLE_ORC)
+        paimon_link_libraries_whole_archive(PAIMON_ORC_FILE_FORMAT_STATIC_LINK_LIBS
+                                            paimon_orc_file_format_static)
+    endif()
+    if(PAIMON_ENABLE_AVRO)
+        paimon_link_libraries_whole_archive(PAIMON_AVRO_FILE_FORMAT_STATIC_LINK_LIBS
+                                            paimon_avro_file_format_static)
+    endif()
+endif()
+
 if(PAIMON_BUILD_TESTS)
     if(NOT PAIMON_ENABLE_ORC)
         message(FATAL_ERROR "PAIMON_ENABLE_ORC must be enabled if PAIMON_BUILD_TESTS is enable"
@@ -365,7 +389,6 @@ if(PAIMON_BUILD_TESTS)
     endif()
     # Adding unit tests part of the "paimon" portion of the test suite
     add_custom_target(paimon-tests)
-    resolve_dependency(GTest)
 
     add_custom_target(unittest
                       ctest
@@ -375,7 +398,6 @@ if(PAIMON_BUILD_TESTS)
                       --output-on-failure)
     add_dependencies(unittest paimon-tests)
 
-    include_directories(SYSTEM ${GTEST_INCLUDE_DIR})
     include_directories("${CMAKE_SOURCE_DIR}/test/")
 
     paimon_link_libraries_whole_archive(
@@ -388,15 +410,6 @@ if(PAIMON_BUILD_TESTS)
         TEST_PLUGIN_LINK_LIBS paimon_parquet_file_format_shared
         paimon_blob_file_format_shared)
     set(TEST_STATIC_LINK_LIBS ${TEST_WHOLE_ARCHIVE_LINK_LIBS} ${TEST_PLUGIN_LINK_LIBS})
-    paimon_link_libraries_whole_archive(PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS
-                                        paimon_local_file_system_static)
-    paimon_link_libraries_no_as_needed(PAIMON_LOCAL_FILE_SYSTEM_SHARED_LINK_LIBS
-                                       paimon_local_file_system_shared)
-    paimon_link_libraries_whole_archive(PAIMON_BLOB_FILE_FORMAT_STATIC_LINK_LIBS
-                                        paimon_blob_file_format_static)
-    paimon_link_libraries_whole_archive(PAIMON_PARQUET_FILE_FORMAT_STATIC_LINK_LIBS
-                                        paimon_parquet_file_format_static)
-
     if(PAIMON_ENABLE_LANCE)
         paimon_link_libraries_whole_archive(PAIMON_LANCE_FILE_FORMAT_STATIC_LINK_LIBS
                                             paimon_lance_file_format_static)
@@ -405,15 +418,11 @@ if(PAIMON_BUILD_TESTS)
         list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
     endif()
     if(PAIMON_ENABLE_ORC)
-        paimon_link_libraries_whole_archive(PAIMON_ORC_FILE_FORMAT_STATIC_LINK_LIBS
-                                            paimon_orc_file_format_static)
         paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
                                            paimon_orc_file_format_shared)
         list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
     endif()
     if(PAIMON_ENABLE_AVRO)
-        paimon_link_libraries_whole_archive(PAIMON_AVRO_FILE_FORMAT_STATIC_LINK_LIBS
-                                            paimon_avro_file_format_static)
         paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
                                            paimon_avro_file_format_shared)
         list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
@@ -439,6 +448,19 @@ if(PAIMON_BUILD_TESTS)
                                            paimon_lucene_index_shared)
         list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
     endif()
+endif()
+
+if(PAIMON_BUILD_BENCHMARKS)
+    add_custom_target(paimon-benchmarks)
+    add_custom_target(benchmark
+                      ctest
+                      -j4
+                      -L
+                      benchmark
+                      --output-on-failure)
+    add_dependencies(benchmark paimon-benchmarks)
+
+    set(PAIMON_BENCHMARK_LINK_TOOLCHAIN benchmark::benchmark)
 endif()
 
 paimon_print_dependency_resolution_summary()
@@ -472,3 +494,6 @@ add_subdirectory(src/paimon/global_index/lucene)
 add_subdirectory(src/paimon/testing/mock)
 add_subdirectory(src/paimon/testing/utils)
 add_subdirectory(test/inte)
+if(PAIMON_BUILD_BENCHMARKS)
+    add_subdirectory(benchmark)
+endif()
