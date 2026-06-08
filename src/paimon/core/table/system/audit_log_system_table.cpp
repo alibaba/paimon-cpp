@@ -246,7 +246,8 @@ Result<std::unique_ptr<TableScan>> AuditLogSystemTable::NewScan(
         .WithStreamingMode(context->IsStreamingMode())
         .WithMemoryPool(context->GetMemoryPool())
         .WithExecutor(context->GetExecutor())
-        .WithFileSystem(context->GetSpecificFileSystem());
+        .WithFileSystem(context->GetSpecificFileSystem())
+        .WithCache(context->GetCache());
     if (scan_filter) {
         if (scan_filter->GetBucketFilter()) {
             builder.SetBucketFilter(scan_filter->GetBucketFilter().value());
@@ -295,7 +296,8 @@ Result<std::unique_ptr<TableRead>> AuditLogSystemTable::NewChangelogRead(
         .EnableMultiThreadRowToBatch(context->EnableMultiThreadRowToBatch())
         .SetRowToBatchThreadNumber(context->GetRowToBatchThreadNumber())
         .SetPrefetchCacheMode(context->GetPrefetchCacheMode())
-        .WithCacheConfig(context->GetCacheConfig());
+        .WithCacheConfig(context->GetCacheConfig())
+        .WithCache(context->GetCache());
 
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> data_context, builder.Finish());
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> data_read,

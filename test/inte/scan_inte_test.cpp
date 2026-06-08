@@ -52,6 +52,7 @@
 #include "paimon/table/source/startup_mode.h"
 #include "paimon/table/source/table_scan.h"
 #include "paimon/testing/utils/binary_row_generator.h"
+#include "paimon/testing/utils/manifest_cache_test_utils.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -240,6 +241,32 @@ class ScanInteTest : public testing::Test {
             /*first_row_id=*/std::nullopt,
             /*write_cols=*/std::nullopt);
 };
+
+TEST(ScanInteManifestCacheTest, TestRepeatedScanReusesManifestCache) {
+    auto manifest_cache = std::make_shared<CountingManifestRoutingCache>();
+    std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
+
+    auto run_scan = [&]() -> Result<std::shared_ptr<Plan>> {
+        ScanContextBuilder context_builder(table_path);
+        context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "1").WithCache(manifest_cache);
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ScanContext> scan_context, context_builder.Finish());
+        PAIMON_ASSIGN_OR_RAISE(auto table_scan, TableScan::Create(std::move(scan_context)));
+        return table_scan->CreatePlan();
+    };
+
+    ASSERT_OK_AND_ASSIGN(auto first_plan, run_scan());
+    ASSERT_TRUE(first_plan->SnapshotId());
+    ASSERT_EQ(1, first_plan->SnapshotId().value());
+    ASSERT_FALSE(first_plan->Splits().empty());
+    ASSERT_GT(manifest_cache->SupplierCallCount(), 0);
+    int64_t supplier_calls_after_first_scan = manifest_cache->SupplierCallCount();
+
+    ASSERT_OK_AND_ASSIGN(auto second_plan, run_scan());
+    ASSERT_EQ(first_plan->SnapshotId(), second_plan->SnapshotId());
+    ASSERT_EQ(first_plan->Splits().size(), second_plan->Splits().size());
+    ASSERT_GT(manifest_cache->GetCount(), supplier_calls_after_first_scan);
+    ASSERT_EQ(supplier_calls_after_first_scan, manifest_cache->SupplierCallCount());
+}
 
 TEST_F(ScanInteTest, TestScanAppendWithSnapshot1) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";

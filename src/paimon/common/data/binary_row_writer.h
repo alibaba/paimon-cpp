@@ -23,9 +23,9 @@
 #include "paimon/common/data/abstract_binary_writer.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/data_define.h"
-#include "paimon/common/memory/memory_segment.h"
 #include "paimon/common/memory/memory_segment_utils.h"
 #include "paimon/common/types/row_kind.h"
+#include "paimon/memory/memory_segment.h"
 #include "paimon/result.h"
 
 namespace arrow {

@@ -14,11 +14,21 @@
  * limitations under the License.
  */
 
-#include "paimon/common/memory/memory_segment.h"
+#include "paimon/memory/memory_segment.h"
 
 #include <algorithm>
 
+#include "paimon/common/utils/math.h"
+
 namespace paimon {
+
+uint64_t MemorySegment::GetLongBigEndian(int32_t index) const {
+    auto value = GetValue<uint64_t>(index);
+    if constexpr (SystemByteOrder() == ByteOrder::PAIMON_LITTLE_ENDIAN) {
+        return EndianSwapValue(value);
+    }
+    return value;
+}
 
 int32_t MemorySegment::Compare(const MemorySegment& seg2, int32_t offset1, int32_t offset2,
                                int32_t len) const {

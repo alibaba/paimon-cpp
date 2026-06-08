@@ -20,9 +20,9 @@
 #include <memory>
 #include <vector>
 
-#include "paimon/common/memory/memory_segment.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/memory/memory_segment.h"
 #include "paimon/visibility.h"
 
 namespace paimon {

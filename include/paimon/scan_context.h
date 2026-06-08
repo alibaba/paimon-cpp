@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 
+#include "paimon/cache/cache.h"
 #include "paimon/global_index/global_index_result.h"
 #include "paimon/predicate/predicate.h"
 #include "paimon/result.h"
@@ -48,7 +49,8 @@ class PAIMON_EXPORT ScanContext {
                 const std::shared_ptr<MemoryPool>& memory_pool,
                 const std::shared_ptr<Executor>& executor,
                 const std::shared_ptr<FileSystem>& specific_file_system,
-                const std::map<std::string, std::string>& options);
+                const std::map<std::string, std::string>& options,
+                const std::shared_ptr<Cache>& cache);
 
     ~ScanContext();
 
@@ -86,6 +88,10 @@ class PAIMON_EXPORT ScanContext {
         return specific_file_system_;
     }
 
+    std::shared_ptr<Cache> GetCache() const {
+        return cache_;
+    }
+
  private:
     std::string path_;
     bool is_streaming_mode_;
@@ -96,6 +102,7 @@ class PAIMON_EXPORT ScanContext {
     std::shared_ptr<Executor> executor_;
     std::shared_ptr<FileSystem> specific_file_system_;
     std::map<std::string, std::string> options_;
+    std::shared_ptr<Cache> cache_;
 };
 
 /// Filter configuration for table scan operations
@@ -177,6 +184,10 @@ class PAIMON_EXPORT ScanContextBuilder {
     /// @return Reference to this builder for method chaining.
     /// @note If not set, use default file system (configured in `Options::FILE_SYSTEM`)
     ScanContextBuilder& WithFileSystem(const std::shared_ptr<FileSystem>& file_system);
+
+    /// Inject a cache for scan operations. Passing nullptr disables cache.
+    /// @return Reference to this builder for method chaining.
+    ScanContextBuilder& WithCache(const std::shared_ptr<Cache>& cache);
 
     /// Build and return a `ScanContext` instance with input validation.
     /// @return Result containing the constructed `ScanContext` or an error status.

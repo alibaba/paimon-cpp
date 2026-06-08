@@ -15,36 +15,24 @@
  */
 
 #pragma once
+
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <unordered_map>
 
-#include "paimon/visibility.h"
+#include "paimon/cache/cache.h"
 
 namespace paimon {
 
-class CacheValue;
-
-class PAIMON_EXPORT CacheKey {
- public:
-    static std::shared_ptr<CacheKey> ForPosition(const std::string& file_path, int64_t position,
-                                                 int32_t length, bool is_index);
-
- public:
-    virtual ~CacheKey() = default;
-
-    virtual bool IsIndex() const = 0;
-
-    virtual bool Equals(const CacheKey& other) const = 0;
-
-    virtual size_t HashCode() const = 0;
-};
-
 class PositionCacheKey : public CacheKey {
  public:
-    PositionCacheKey(const std::string& file_path, int64_t position, int32_t length, bool is_index)
-        : file_path_(file_path), position_(position), length_(length), is_index_(is_index) {}
+    PositionCacheKey(const std::string& file_path, int64_t position, int32_t length, bool is_index,
+                     CacheKind kind)
+        : CacheKey(kind),
+          file_path_(file_path),
+          position_(position),
+          length_(length),
+          is_index_(is_index) {}
 
     bool IsIndex() const override;
     size_t HashCode() const override;

@@ -19,6 +19,7 @@
 #include <utility>
 
 #include "gtest/gtest.h"
+#include "paimon/common/io/cache/lru_cache.h"
 #include "paimon/defs.h"
 #include "paimon/executor.h"
 #include "paimon/memory/memory_pool.h"
@@ -77,6 +78,8 @@ TEST(ReadContextTest, TestSetContent) {
     builder.WithCacheConfig(cache_config);
     auto fs = std::make_shared<MockFileSystem>();
     builder.WithFileSystem(fs);
+    auto manifest_cache = std::make_shared<LruCache>(1024);
+    builder.WithCache(manifest_cache);
     ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
 
     // test result
@@ -106,6 +109,7 @@ TEST(ReadContextTest, TestSetContent) {
     std::map<std::string, std::string> expected_options = {{"key", "value"}};
     ASSERT_EQ(expected_options, ctx->GetOptions());
     ASSERT_EQ(ctx->GetSpecificFileSystem(), fs);
+    ASSERT_TRUE(ctx->GetCache());
 }
 
 TEST(ReadContextTest, TestSetOptionsOverridesAddedOptions) {

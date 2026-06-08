@@ -41,15 +41,16 @@ ManifestList::ManifestList(const std::shared_ptr<FileSystem>& file_system,
                            const std::shared_ptr<WriterBuilder>& writer_builder,
                            const std::string& compression,
                            const std::shared_ptr<PathFactory>& path_factory,
+                           const std::shared_ptr<Cache>& cache,
                            const std::shared_ptr<MemoryPool>& pool)
     : ObjectsFile<ManifestFileMeta>(file_system, reader_builder, writer_builder,
                                     std::make_unique<ManifestFileMetaSerializer>(pool), compression,
-                                    std::move(path_factory), pool) {}
+                                    std::move(path_factory), cache, pool) {}
 
 Result<std::unique_ptr<ManifestList>> ManifestList::Create(
     const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<FileFormat>& file_format,
     const std::string& compression, const std::shared_ptr<FileStorePathFactory>& path_factory,
-    const std::shared_ptr<MemoryPool>& pool) {
+    const std::shared_ptr<Cache>& cache, const std::shared_ptr<MemoryPool>& pool) {
     std::shared_ptr<arrow::DataType> data_type =
         VersionedObjectSerializer<ManifestFileMeta>::VersionType(ManifestFileMeta::DataType());
     // prepare format reader builder
@@ -69,7 +70,7 @@ Result<std::unique_ptr<ManifestList>> ManifestList::Create(
     std::shared_ptr<PathFactory> manifest_list_path_factory =
         path_factory->CreateManifestListFactory();
     return std::unique_ptr<ManifestList>(new ManifestList(
-        fs, reader_builder, writer_builder, compression, manifest_list_path_factory, pool));
+        fs, reader_builder, writer_builder, compression, manifest_list_path_factory, cache, pool));
 }
 
 Result<std::pair<std::string, int64_t>> ManifestList::Write(

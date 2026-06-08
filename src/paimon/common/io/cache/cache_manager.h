@@ -20,10 +20,10 @@
 #include <memory>
 #include <string>
 
-#include "paimon/common/io/cache/cache.h"
+#include "paimon/cache/cache.h"
 #include "paimon/common/io/cache/cache_key.h"
 #include "paimon/common/io/cache/lru_cache.h"
-#include "paimon/common/memory/memory_segment.h"
+#include "paimon/memory/memory_segment.h"
 #include "paimon/result.h"
 
 namespace paimon {

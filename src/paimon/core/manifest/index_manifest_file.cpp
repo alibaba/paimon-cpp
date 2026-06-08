@@ -59,9 +59,9 @@ Result<std::unique_ptr<IndexManifestFile>> IndexManifestFile::Create(
 
     std::shared_ptr<PathFactory> index_manifest_file_factory =
         path_factory->CreateIndexManifestFileFactory();
-    return std::unique_ptr<IndexManifestFile>(
-        new IndexManifestFile(file_system, reader_builder, writer_builder, compression,
-                              index_manifest_file_factory, bucket_mode, pool));
+    return std::unique_ptr<IndexManifestFile>(new IndexManifestFile(
+        file_system, reader_builder, writer_builder, compression, index_manifest_file_factory,
+        bucket_mode, options.GetCache(), pool));
 }
 
 IndexManifestFile::IndexManifestFile(const std::shared_ptr<FileSystem>& file_system,
@@ -69,10 +69,11 @@ IndexManifestFile::IndexManifestFile(const std::shared_ptr<FileSystem>& file_sys
                                      const std::shared_ptr<WriterBuilder>& writer_builder,
                                      const std::string& compression,
                                      const std::shared_ptr<PathFactory>& path_factory,
-                                     int32_t bucket_mode, const std::shared_ptr<MemoryPool>& pool)
+                                     int32_t bucket_mode, const std::shared_ptr<Cache>& cache,
+                                     const std::shared_ptr<MemoryPool>& pool)
     : ObjectsFile<IndexManifestEntry>(file_system, reader_builder, writer_builder,
                                       std::make_unique<IndexManifestEntrySerializer>(pool),
-                                      compression, path_factory, pool),
+                                      compression, path_factory, cache, pool),
       bucket_mode_(bucket_mode) {}
 
 Result<std::optional<std::string>> IndexManifestFile::WriteIndexFiles(

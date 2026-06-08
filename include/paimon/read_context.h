@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 
+#include "paimon/cache/cache.h"
 #include "paimon/predicate/predicate.h"
 #include "paimon/result.h"
 #include "paimon/type_fwd.h"
@@ -54,7 +55,8 @@ class PAIMON_EXPORT ReadContext {
                 const std::shared_ptr<FileSystem>& specific_file_system,
                 const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
                 const std::map<std::string, std::string>& options,
-                PrefetchCacheMode prefetch_cache_mode, const CacheConfig& cache_config);
+                PrefetchCacheMode prefetch_cache_mode, const CacheConfig& cache_config,
+                const std::shared_ptr<Cache>& cache);
     ~ReadContext();
 
     const std::string& GetPath() const {
@@ -124,6 +126,10 @@ class PAIMON_EXPORT ReadContext {
         return cache_config_;
     }
 
+    std::shared_ptr<Cache> GetCache() const {
+        return cache_;
+    }
+
  private:
     std::string path_;
     std::string branch_;
@@ -144,6 +150,7 @@ class PAIMON_EXPORT ReadContext {
     std::map<std::string, std::string> options_;
     PrefetchCacheMode prefetch_cache_mode_;
     CacheConfig cache_config_;
+    std::shared_ptr<Cache> cache_;
 };
 
 /// `ReadContextBuilder` used to build a `ReadContext`, has input validation.
@@ -338,6 +345,10 @@ class PAIMON_EXPORT ReadContextBuilder {
     /// @return Reference to this builder for method chaining.
     /// @note If not set, use default file system (configured in `Options::FILE_SYSTEM`)
     ReadContextBuilder& WithFileSystem(const std::shared_ptr<FileSystem>& file_system);
+
+    /// Inject a cache for read operations. Passing nullptr disables cache.
+    /// @return Reference to this builder for method chaining.
+    ReadContextBuilder& WithCache(const std::shared_ptr<Cache>& cache);
 
     /// Build and return a `ReadContext` instance with input validation.
     /// @return Result containing the constructed `ReadContext` or an error status.

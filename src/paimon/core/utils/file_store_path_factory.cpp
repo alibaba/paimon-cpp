@@ -19,7 +19,7 @@
 #include <cassert>
 
 #include "paimon/common/fs/external_path_provider.h"
-#include "paimon/common/memory/memory_segment.h"
+#include "paimon/memory/memory_segment.h"
 #include "paimon/common/utils/uuid.h"
 #include "paimon/core/index/index_file_meta.h"
 #include "paimon/core/index/index_in_data_file_dir_path_factory.h"

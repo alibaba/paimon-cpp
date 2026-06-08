@@ -35,6 +35,7 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
     PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options,
                            CoreOptions::FromMap(options, context->GetSpecificFileSystem(),
                                                 context->GetFileSystemSchemeToIdentifierMap()));
+    core_options.WithCache(context->GetCache());
     // prepare read schema
     std::vector<DataField> read_data_fields;
     if (!context->GetReadFieldIds().empty()) {

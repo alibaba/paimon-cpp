@@ -20,10 +20,10 @@
 #include "arrow/api.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_writer.h"
-#include "paimon/common/memory/memory_segment.h"
 #include "paimon/common/memory/memory_segment_utils.h"
 #include "paimon/common/memory/memory_slice.h"
 #include "paimon/common/utils/var_length_int_utils.h"
+#include "paimon/memory/memory_segment.h"
 namespace paimon {
 
 class RowCompactedSerializer {

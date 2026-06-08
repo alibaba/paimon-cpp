@@ -33,6 +33,7 @@
 
 namespace paimon {
 
+class Cache;
 class FileFormat;
 class FileSystem;
 class FileStorePathFactory;
@@ -50,7 +51,7 @@ class ManifestList : public ObjectsFile<ManifestFileMeta> {
         const std::shared_ptr<FileSystem>& file_system,
         const std::shared_ptr<FileFormat>& file_format, const std::string& compression,
         const std::shared_ptr<FileStorePathFactory>& path_factory,
-        const std::shared_ptr<MemoryPool>& pool);
+        const std::shared_ptr<Cache>& cache, const std::shared_ptr<MemoryPool>& pool);
 
     /// Write several `ManifestFileMeta`s into a manifest list.
     ///
@@ -122,7 +123,7 @@ class ManifestList : public ObjectsFile<ManifestFileMeta> {
                  const std::shared_ptr<ReaderBuilder>& reader_builder,
                  const std::shared_ptr<WriterBuilder>& writer_builder,
                  const std::string& compression, const std::shared_ptr<PathFactory>& path_factory,
-                 const std::shared_ptr<MemoryPool>& pool);
+                 const std::shared_ptr<Cache>& cache, const std::shared_ptr<MemoryPool>& pool);
 };
 
 }  // namespace paimon
