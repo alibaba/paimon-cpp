@@ -102,9 +102,14 @@ TEST_P(CompressionFactoryTest, TestCompressInsufficientOutputBuffer) {
     }
     // Output buffer too small: only HEADER_LENGTH bytes, no room for compressed payload
     std::string tiny_dst(8, '\0');
-    ASSERT_NOK_WITH_MSG(
-        compressor->Compress(data.data(), data.size(), tiny_dst.data(), tiny_dst.size()),
-        "Compression failed");
+    ASSERT_NOK(compressor->Compress(data.data(), data.size(), tiny_dst.data(), tiny_dst.size()));
+
+    // Output buffer smaller than HEADER_LENGTH — must not trigger UB from negative capacity
+    char micro_dst[4] = {};
+    ASSERT_NOK(compressor->Compress(data.data(), data.size(), micro_dst, sizeof(micro_dst)));
+
+    // Zero-length output buffer
+    ASSERT_NOK(compressor->Compress(data.data(), data.size(), nullptr, 0));
 }
 
 INSTANTIATE_TEST_SUITE_P(BlockCompressionTypeGroup, CompressionFactoryTest,

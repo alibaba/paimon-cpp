@@ -32,6 +32,11 @@ class Lz4BlockCompressor : public BlockCompressor {
 
     Result<int32_t> Compress(const char* src, int32_t src_length, char* dst,
                              int32_t dst_length) override {
+        if (dst_length < BlockCompressor::HEADER_LENGTH) {
+            return Status::Invalid(fmt::format(
+                "Output buffer too small for LZ4 block header, expected at least {} bytes, got {}",
+                BlockCompressor::HEADER_LENGTH, dst_length));
+        }
         int32_t compressed_size =
             LZ4_compress_default(src, dst + BlockCompressor::HEADER_LENGTH, src_length,
                                  dst_length - BlockCompressor::HEADER_LENGTH);
