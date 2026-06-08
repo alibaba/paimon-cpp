@@ -522,7 +522,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesPartialMatch) {
 
     auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
         parquet_reader.get(),
-        TargetRowGroup(/*row_group_index=*/0, /*is_page_filtered=*/true, /*row_ranges=*/row_ranges),
+        TargetRowGroup(/*rg_index=*/0, /*page_filtered=*/true, /*ranges=*/row_ranges),
         /*column_indices=*/{0});
 
     // Should have exactly 1 range (page 5 of column 0, no dictionary since disabled)
@@ -548,8 +548,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesAllMatch) {
 
     auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
         parquet_reader.get(),
-        TargetRowGroup(/*row_group_index=*/0, /*is_page_filtered=*/true, /*row_ranges=*/row_ranges),
-        {0});
+        TargetRowGroup(/*rg_index=*/0, /*page_filtered=*/true, /*ranges=*/row_ranges), {0});
 
     // 10 pages, all matching
     ASSERT_EQ(10, ranges.size());
@@ -574,8 +573,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesNoMatch) {
 
     auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
         parquet_reader.get(),
-        TargetRowGroup(/*row_group_index=*/0, /*is_page_filtered=*/true, /*row_ranges=*/row_ranges),
-        {0});
+        TargetRowGroup(/*rg_index=*/0, /*page_filtered=*/true, /*ranges=*/row_ranges), {0});
 
     ASSERT_EQ(0, ranges.size());
 }
@@ -597,8 +595,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesMultiColumn) {
 
     auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
         parquet_reader.get(),
-        TargetRowGroup(/*row_group_index=*/0, /*is_page_filtered=*/true, /*row_ranges=*/row_ranges),
-        {0, 1});
+        TargetRowGroup(/*rg_index=*/0, /*page_filtered=*/true, /*ranges=*/row_ranges), {0, 1});
 
     // 1 matching page per column = 2 ranges total
     ASSERT_EQ(2, ranges.size());
@@ -625,8 +622,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesMultiplePages) {
 
     auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
         parquet_reader.get(),
-        TargetRowGroup(/*row_group_index=*/0, /*is_page_filtered=*/true, /*row_ranges=*/row_ranges),
-        {0});
+        TargetRowGroup(/*rg_index=*/0, /*page_filtered=*/true, /*ranges=*/row_ranges), {0});
 
     // 2 matching pages for 1 column
     ASSERT_EQ(2, ranges.size());

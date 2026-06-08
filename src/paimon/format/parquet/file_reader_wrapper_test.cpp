@@ -264,8 +264,7 @@ TEST_F(FileReaderWrapperTest, PageFilteredZeroBatchSizeDoesNotHang) {
 
     std::vector<int32_t> all_columns = {0, 1, 2};
     ASSERT_OK(reader_wrapper->PrepareForReading(
-        {TargetRowGroup(/*row_group_index=*/0, /*is_page_filtered=*/true, /*row_ranges=*/rr)},
-        all_columns));
+        {TargetRowGroup(/*rg_index=*/0, /*page_filtered=*/true, /*ranges=*/rr)}, all_columns));
     int64_t total = 0;
     int64_t batch_count = 0;
     while (true) {
@@ -297,12 +296,12 @@ TEST_F(FileReaderWrapperTest, SeekBackToConsumedPageFilteredRowGroup) {
     row_ranges_map[1] = RowRanges(RowRanges::Range(100, 149));
 
     std::vector<int32_t> all_columns = {0, 1, 2};
-    ASSERT_OK(reader_wrapper->PrepareForReading(
-        {TargetRowGroup(/*row_group_index=*/0, /*is_page_filtered=*/true,
-                        /*row_ranges=*/row_ranges_map[0]),
-         TargetRowGroup(/*row_group_index=*/1, /*is_page_filtered=*/true,
-                        /*row_ranges=*/row_ranges_map[1])},
-        all_columns));
+    ASSERT_OK(
+        reader_wrapper->PrepareForReading({TargetRowGroup(/*rg_index=*/0, /*page_filtered=*/true,
+                                                          /*ranges=*/row_ranges_map[0]),
+                                           TargetRowGroup(/*rg_index=*/1, /*page_filtered=*/true,
+                                                          /*ranges=*/row_ranges_map[1])},
+                                          all_columns));
 
     auto count_all_rows = [&](int64_t* out_total) {
         int64_t total = 0;
@@ -353,8 +352,7 @@ TEST_F(FileReaderWrapperTest, PageFilteredRespectsBatchSize) {
         SCOPED_TRACE("batch_size=" + std::to_string(batch_size));
         ASSERT_OK_AND_ASSIGN(auto reader_wrapper, PrepareReaderWrapper(file_path, batch_size));
         ASSERT_OK(reader_wrapper->PrepareForReading(
-            {TargetRowGroup(/*row_group_index=*/0, /*is_page_filtered=*/true, /*row_ranges=*/rr)},
-            {0, 1, 2}));
+            {TargetRowGroup(/*rg_index=*/0, /*page_filtered=*/true, /*ranges=*/rr)}, {0, 1, 2}));
 
         int64_t total = 0;
         int64_t batch_count = 0;
@@ -392,16 +390,16 @@ TEST_F(FileReaderWrapperTest, ApplyReadRanges) {
 
     // Prepare with a subset of row groups: {0, 1, 2, 4, 5}
     std::vector<TargetRowGroup> initial_targets = {
-        TargetRowGroup(/*row_group_index=*/0, /*is_page_filtered=*/false,
-                       /*row_ranges=*/RowRanges()),
-        TargetRowGroup(/*row_group_index=*/1, /*is_page_filtered=*/false,
-                       /*row_ranges=*/RowRanges()),
-        TargetRowGroup(/*row_group_index=*/2, /*is_page_filtered=*/false,
-                       /*row_ranges=*/RowRanges()),
-        TargetRowGroup(/*row_group_index=*/4, /*is_page_filtered=*/false,
-                       /*row_ranges=*/RowRanges()),
-        TargetRowGroup(/*row_group_index=*/5, /*is_page_filtered=*/false,
-                       /*row_ranges=*/RowRanges())};
+        TargetRowGroup(/*rg_index=*/0, /*page_filtered=*/false,
+                       /*ranges=*/RowRanges()),
+        TargetRowGroup(/*rg_index=*/1, /*page_filtered=*/false,
+                       /*ranges=*/RowRanges()),
+        TargetRowGroup(/*rg_index=*/2, /*page_filtered=*/false,
+                       /*ranges=*/RowRanges()),
+        TargetRowGroup(/*rg_index=*/4, /*page_filtered=*/false,
+                       /*ranges=*/RowRanges()),
+        TargetRowGroup(/*rg_index=*/5, /*page_filtered=*/false,
+                       /*ranges=*/RowRanges())};
     std::vector<int32_t> all_columns = {0, 1, 2};
     ASSERT_OK(reader_wrapper->PrepareForReadingLazy(initial_targets, all_columns));
 
@@ -433,16 +431,16 @@ TEST_F(FileReaderWrapperTest, ApplyReadRangesWiderSecondCall) {
 
     // Prepare with row groups: {0, 1, 2, 4, 5}
     std::vector<TargetRowGroup> initial_targets = {
-        TargetRowGroup(/*row_group_index=*/0, /*is_page_filtered=*/false,
-                       /*row_ranges=*/RowRanges()),
-        TargetRowGroup(/*row_group_index=*/1, /*is_page_filtered=*/false,
-                       /*row_ranges=*/RowRanges()),
-        TargetRowGroup(/*row_group_index=*/2, /*is_page_filtered=*/false,
-                       /*row_ranges=*/RowRanges()),
-        TargetRowGroup(/*row_group_index=*/4, /*is_page_filtered=*/false,
-                       /*row_ranges=*/RowRanges()),
-        TargetRowGroup(/*row_group_index=*/5, /*is_page_filtered=*/false,
-                       /*row_ranges=*/RowRanges())};
+        TargetRowGroup(/*rg_index=*/0, /*page_filtered=*/false,
+                       /*ranges=*/RowRanges()),
+        TargetRowGroup(/*rg_index=*/1, /*page_filtered=*/false,
+                       /*ranges=*/RowRanges()),
+        TargetRowGroup(/*rg_index=*/2, /*page_filtered=*/false,
+                       /*ranges=*/RowRanges()),
+        TargetRowGroup(/*rg_index=*/4, /*page_filtered=*/false,
+                       /*ranges=*/RowRanges()),
+        TargetRowGroup(/*rg_index=*/5, /*page_filtered=*/false,
+                       /*ranges=*/RowRanges())};
     std::vector<int32_t> all_columns = {0, 1, 2};
     ASSERT_OK(reader_wrapper->PrepareForReadingLazy(initial_targets, all_columns));
 
@@ -467,7 +465,8 @@ TEST_F(FileReaderWrapperTest, PrepareForReading) {
     PrepareParquetFile(file_path, /*row_count=*/5500);
     ASSERT_OK_AND_ASSIGN(auto reader_wrapper, PrepareReaderWrapper(file_path));
     ASSERT_OK(reader_wrapper->PrepareForReading(
-        /*target_row_groups=*/{TargetRowGroup(1, false, RowRanges())},
+        /*target_row_groups=*/{TargetRowGroup(/*rg_index=*/1, /*page_filtered=*/false,
+                                              /*ranges=*/RowRanges())},
         /*column_indices=*/{0}));
     // seek before actual read range
     ASSERT_OK(reader_wrapper->SeekToRow(0));
@@ -489,8 +488,10 @@ TEST_F(FileReaderWrapperTest, PrepareForReading) {
 
     // empty column indices
     ASSERT_OK(reader_wrapper->PrepareForReading(
-        /*target_row_groups=*/{TargetRowGroup(0, false, RowRanges()),
-                               TargetRowGroup(1, false, RowRanges())},
+        /*target_row_groups=*/{TargetRowGroup(/*rg_index=*/0, /*page_filtered=*/false,
+                                              /*ranges=*/RowRanges()),
+                               TargetRowGroup(/*rg_index=*/1, /*page_filtered=*/false,
+                                              /*ranges=*/RowRanges())},
         /*column_indices=*/{}));
     ASSERT_EQ(0, reader_wrapper->GetNextRowToRead());
     ASSERT_EQ(std::numeric_limits<uint64_t>::max(),

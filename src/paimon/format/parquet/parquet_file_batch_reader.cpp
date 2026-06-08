@@ -199,12 +199,12 @@ Status ParquetFileBatchReader::SetReadSchema(
         for (int32_t rg_id : row_groups) {
             auto it = row_group_row_ranges.find(rg_id);
             if (it != row_group_row_ranges.end()) {
-                target_row_groups.emplace_back(/*row_group_index=*/rg_id, /*is_page_filtered=*/true,
-                                               /*row_ranges=*/it->second);
+                target_row_groups.emplace_back(/*rg_index=*/rg_id, /*page_filtered=*/true,
+                                               /*ranges=*/it->second);
             } else {
-                target_row_groups.emplace_back(/*row_group_index=*/rg_id,
-                                               /*is_page_filtered=*/false,
-                                               /*row_ranges=*/RowRanges());
+                target_row_groups.emplace_back(/*rg_index=*/rg_id,
+                                               /*page_filtered=*/false,
+                                               /*ranges=*/RowRanges());
             }
         }
         PAIMON_RETURN_NOT_OK(reader_->PrepareForReadingLazy(target_row_groups, column_indices));
