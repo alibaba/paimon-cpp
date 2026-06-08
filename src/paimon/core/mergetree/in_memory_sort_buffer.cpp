@@ -140,7 +140,7 @@ Result<int64_t> InMemorySortBuffer::EstimateMemoryUse(const std::shared_ptr<arro
             return null_bits_size_in_bytes + array->length() * sizeof(double);
         case arrow::Type::type::TIMESTAMP:
             return null_bits_size_in_bytes + array->length() * sizeof(int64_t);
-        case arrow::Type::type::DECIMAL:
+        case arrow::Type::type::DECIMAL128:
             return null_bits_size_in_bytes + array->length() * sizeof(Decimal::int128_t);
         case arrow::Type::type::STRING:
         case arrow::Type::type::BINARY: {

@@ -61,7 +61,7 @@ class FieldMinAgg : public FieldAggregator {
             case arrow::Type::type::FLOAT:
             case arrow::Type::type::DOUBLE:
             case arrow::Type::type::TIMESTAMP:
-            case arrow::Type::type::DECIMAL:
+            case arrow::Type::type::DECIMAL128:
             case arrow::Type::type::STRING:
             case arrow::Type::type::BINARY:
                 return FieldMinFunc([](const VariantType& accumulator,
