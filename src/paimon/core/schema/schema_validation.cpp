@@ -32,12 +32,14 @@
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/extend_map_utils.h"
 #include "paimon/common/utils/object_utils.h"
 #include "paimon/common/utils/preconditions.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/options/changelog_producer.h"
 #include "paimon/core/options/expire_config.h"
+#include "paimon/core/options/map_storage_layout.h"
 #include "paimon/core/options/merge_engine.h"
 #include "paimon/core/schema/arrow_schema_validator.h"
 #include "paimon/core/schema/table_schema.h"
@@ -119,6 +121,7 @@ Status SchemaValidation::ValidateTableSchema(const TableSchema& schema) {
 
     PAIMON_RETURN_NOT_OK(ValidateRowTracking(schema, options));
     PAIMON_RETURN_NOT_OK(ValidateBlobFields(schema, options));
+    PAIMON_RETURN_NOT_OK(ValidateMapStorageLayout(schema, options));
     return Status::OK();
 }
 
@@ -500,6 +503,56 @@ Status SchemaValidation::ValidateBlobFields(const TableSchema& schema, const Cor
             return Status::Invalid(fmt::format("'{}' must be set when '{}' is configured.",
                                                Options::BLOB_EXTERNAL_STORAGE_PATH,
                                                Options::BLOB_EXTERNAL_STORAGE_FIELD));
+        }
+    }
+    return Status::OK();
+}
+
+Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
+                                                  const CoreOptions& options) {
+    // Extract all field names that have map-storage-layout configured from options
+    const std::string layout_suffix = std::string(".") + std::string(Options::MAP_STORAGE_LAYOUT);
+    const auto& options_map = options.ToMap();
+    const auto& field_names = schema.FieldNames();
+
+    std::unordered_map<std::string, std::shared_ptr<arrow::DataType>> schema_fields;
+    for (const auto& field : schema.Fields()) {
+        schema_fields[field.Name()] = field.Type();
+    }
+
+    for (const auto& [key, value] : options_map) {
+        if (!StringUtils::StartsWith(key, Options::FIELDS_PREFIX)) {
+            continue;
+        }
+        if (!StringUtils::EndsWith(key, layout_suffix)) {
+            continue;
+        }
+        // key = "fields.<field_name>.map-storage-layout"
+        // Extract field_name: skip "fields." prefix and ".map-storage-layout" suffix
+        std::string field_name = key.substr(
+            std::string(Options::FIELDS_PREFIX).size() + 1,
+            key.size() - std::string(Options::FIELDS_PREFIX).size() - 1 - layout_suffix.size());
+
+        // Check field exists in schema
+        auto it = schema_fields.find(field_name);
+        if (it == schema_fields.end()) {
+            return Status::Invalid(
+                fmt::format("Column '{}' is configured with map-storage-layout "
+                            "but does not exist in table schema.",
+                            field_name));
+        }
+
+        PAIMON_ASSIGN_OR_RAISE(MapStorageLayout layout, options.GetMapStorageLayout(field_name));
+        if (layout != MapStorageLayout::EXTEND) {
+            continue;
+        }
+        // Column configured with extend must be MAP<STRING, T>
+        const auto& field_type = it->second;
+        if (!ExtendMapUtils::IsStringKeyMap(field_type)) {
+            return Status::Invalid(
+                fmt::format("Column '{}' is configured with map-storage-layout=extend "
+                            "but its type is not MAP<STRING, T>.",
+                            field_name));
         }
     }
     return Status::OK();

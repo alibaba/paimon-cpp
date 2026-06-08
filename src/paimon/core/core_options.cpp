@@ -1173,6 +1173,34 @@ Result<bool> CoreOptions::FieldCollectAggDistinct(const std::string& field_name)
     return distinct;
 }
 
+Result<MapStorageLayout> CoreOptions::GetMapStorageLayout(const std::string& field_name) const {
+    ConfigParser parser(impl_->raw_options);
+    std::string layout_str = "default";
+    std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
+                      std::string(Options::MAP_STORAGE_LAYOUT);
+    PAIMON_RETURN_NOT_OK(parser.Parse(key, &layout_str));
+    std::string lower = StringUtils::ToLowerCase(layout_str);
+    if (lower == "extend") {
+        return MapStorageLayout::EXTEND;
+    } else if (lower == "default") {
+        return MapStorageLayout::DEFAULT;
+    }
+    return Status::Invalid(fmt::format("invalid map-storage-layout: {}", layout_str));
+}
+
+Result<int32_t> CoreOptions::GetMapExtendMaxColumns(const std::string& field_name) const {
+    ConfigParser parser(impl_->raw_options);
+    int32_t max_columns = 256;
+    std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
+                      std::string(Options::MAP_EXTEND_MAX_COLUMNS);
+    PAIMON_RETURN_NOT_OK(parser.Parse(key, &max_columns));
+    if (max_columns <= 0) {
+        return Status::Invalid(
+            fmt::format("options {} must > 1", std::string(Options::MAP_EXTEND_MAX_COLUMNS)));
+    }
+    return max_columns;
+}
+
 bool CoreOptions::DeletionVectorsEnabled() const {
     return impl_->deletion_vectors_enabled;
 }

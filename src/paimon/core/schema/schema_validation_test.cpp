@@ -820,4 +820,76 @@ TEST(SchemaValidationTest, ValidateInvalidConfiguration) {
                             "Data evolution config must disabled with deletion-vectors.enabled");
     }
 }
+TEST(SchemaValidationTest, TestMapStorageLayout) {
+    auto f0 = arrow::field("f0", arrow::utf8());
+    auto f1 = arrow::field("f1", arrow::int32());
+    auto f2 = arrow::field("f2", arrow::map(arrow::utf8(), arrow::int64()));
+    auto f3 = arrow::field("f3", arrow::map(arrow::int32(), arrow::utf8()));
+
+    // Valid: extend on MAP<STRING, T> column
+    {
+        arrow::FieldVector fields = {f0, f1, f2};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {{Options::BUCKET, "2"},
+                                                      {Options::BUCKET_KEY, "f0"},
+                                                      {"fields.f2.map-storage-layout", "extend"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_OK(SchemaValidation::ValidateTableSchema(*table_schema));
+    }
+    // Invalid: field not in schema
+    {
+        arrow::FieldVector fields = {f0, f1};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {
+            {Options::BUCKET, "2"},
+            {Options::BUCKET_KEY, "f0"},
+            {"fields.nonexist.map-storage-layout", "extend"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "Field nonexist can not be found in table schema");
+    }
+    // Invalid: extend on non-MAP column
+    {
+        arrow::FieldVector fields = {f0, f1};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {{Options::BUCKET, "2"},
+                                                      {Options::BUCKET_KEY, "f0"},
+                                                      {"fields.f1.map-storage-layout", "extend"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "not MAP<STRING, T>");
+    }
+    // Invalid: extend on MAP with non-STRING key
+    {
+        arrow::FieldVector fields = {f0, f1, f3};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {{Options::BUCKET, "2"},
+                                                      {Options::BUCKET_KEY, "f0"},
+                                                      {"fields.f3.map-storage-layout", "extend"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "not MAP<STRING, T>");
+    }
+    // Valid: default layout does not trigger validation
+    {
+        arrow::FieldVector fields = {f0, f1};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {{Options::BUCKET, "2"},
+                                                      {Options::BUCKET_KEY, "f0"},
+                                                      {"fields.f1.map-storage-layout", "default"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_OK(SchemaValidation::ValidateTableSchema(*table_schema));
+    }
+}
+
 }  // namespace paimon::test

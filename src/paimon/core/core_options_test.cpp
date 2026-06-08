@@ -88,6 +88,8 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_FALSE(core_options.FieldAggIgnoreRetract("f1").value());
     ASSERT_EQ(",", core_options.FieldListAggDelimiter("f1").value());
     ASSERT_FALSE(core_options.FieldCollectAggDistinct("f1").value());
+    ASSERT_EQ(MapStorageLayout::DEFAULT, core_options.GetMapStorageLayout("any_col").value());
+    ASSERT_EQ(256, core_options.GetMapExtendMaxColumns("any_col").value());
     ASSERT_FALSE(core_options.DeletionVectorsEnabled());
     ASSERT_FALSE(core_options.DeletionVectorsBitmap64());
     ASSERT_EQ(2 * 1024 * 1024, core_options.DeletionVectorTargetFileSize());
@@ -260,7 +262,9 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::LOOKUP_REMOTE_LEVEL_THRESHOLD, "2"},
         {Options::TABLE_READ_SEQUENCE_NUMBER_ENABLED, "true"},
         {Options::KEY_VALUE_SEQUENCE_NUMBER_ENABLED, "true"},
-        {Options::BUCKET_FUNCTION_TYPE, "mod"}};
+        {Options::BUCKET_FUNCTION_TYPE, "mod"},
+        {"fields.metrics.map-storage-layout", "extend"},
+        {"fields.metrics.map-extend.max-columns", "128"}};
 
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
     auto fs = core_options.GetFileSystem();
@@ -400,6 +404,8 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_TRUE(core_options.LookupRemoteFileEnabled());
     ASSERT_EQ(core_options.GetLookupRemoteLevelThreshold(), 2);
     ASSERT_EQ(BucketFunctionType::MOD, core_options.GetBucketFunctionType());
+    ASSERT_EQ(MapStorageLayout::EXTEND, core_options.GetMapStorageLayout("metrics").value());
+    ASSERT_EQ(128, core_options.GetMapExtendMaxColumns("metrics").value());
 }
 
 TEST(CoreOptionsTest, TestInvalidCase) {
@@ -903,4 +909,48 @@ TEST(CoreOptionsTest, TestFallback) {
                   std::vector<std::string>({"new_b1", "new_b2"}));
     }
 }
+TEST(CoreOptionsTest, TestMapStorageLayout) {
+    // Test extend layout configured for a specific column
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{"fields.ext_map.map-storage-layout", "extend"},
+                                  {"fields.ext_map.map-extend.max-columns", "64"},
+                                  {"fields.normal_map.map-storage-layout", "default"}}));
+        ASSERT_EQ(MapStorageLayout::EXTEND, options.GetMapStorageLayout("ext_map").value());
+        ASSERT_EQ(64, options.GetMapExtendMaxColumns("ext_map").value());
+        ASSERT_EQ(MapStorageLayout::DEFAULT, options.GetMapStorageLayout("normal_map").value());
+        // Unconfigured column falls back to default
+        ASSERT_EQ(MapStorageLayout::DEFAULT, options.GetMapStorageLayout("other").value());
+        ASSERT_EQ(256, options.GetMapExtendMaxColumns("other").value());
+    }
+    // Test case-insensitive layout value
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{"fields.metrics.map-storage-layout", "Extend"}}));
+        ASSERT_EQ(MapStorageLayout::EXTEND, options.GetMapStorageLayout("metrics").value());
+    }
+    // Test invalid layout value
+    {
+        ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                             CoreOptions::FromMap({{"fields.col.map-storage-layout", "invalid"}}));
+        ASSERT_NOK_WITH_MSG(options.GetMapStorageLayout("col"),
+                            "invalid map-storage-layout: invalid");
+    }
+    // Test invalid max-columns value
+    {
+        ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                             CoreOptions::FromMap({{"fields.col.map-extend.max-columns", "0"}}));
+        ASSERT_NOK_WITH_MSG(options.GetMapExtendMaxColumns("col"),
+                            "options map-extend.max-columns must > 1");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                             CoreOptions::FromMap({{"fields.col.map-extend.max-columns", "-1"}}));
+        ASSERT_NOK_WITH_MSG(options.GetMapExtendMaxColumns("col"),
+                            "options map-extend.max-columns must > 1");
+    }
+}
+
 }  // namespace paimon::test
