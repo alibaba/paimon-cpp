@@ -44,6 +44,7 @@ class PAIMON_EXPORT PathUtil {
     static std::string GetParentDirPath(const std::string& path) noexcept;
     static std::string GetName(const std::string& path) noexcept;
     static void TrimLastDelim(std::string* dir_path) noexcept;
+    static Result<std::string> GetWorkingDirectory() noexcept;
     static Result<std::string> CreateTempPath(const std::string& path) noexcept;
     static Result<Path> ToPath(const std::string& path) noexcept;
     static Result<std::string> NormalizePath(const std::string& path) noexcept;

@@ -26,6 +26,7 @@
 #include <string>
 #include <vector>
 
+#include "paimon/macros.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 
@@ -36,25 +37,23 @@ class LocalFileStatus;
 
 class LocalFile {
  public:
-    explicit LocalFile(const std::string& path);
-    ~LocalFile() = default;
+    static Result<std::unique_ptr<LocalFile>> Create(const std::string& path_string);
+    PAIMON_DISALLOW_COPY_AND_ASSIGN(LocalFile);
+    ~LocalFile();
 
     Result<bool> Exists() const;
     Result<bool> IsFile() const;
     Result<bool> IsDir() const;
     Status List(std::vector<std::string>* file_list) const;
-    Status ListFiles(std::vector<LocalFile>* file_list) const;
+    Status ListFiles(std::vector<std::unique_ptr<LocalFile>>* file_list) const;
     Status Delete() const;
-    const std::string& GetAbsolutePath() const;
-    LocalFile GetParentFile() const;
+    const std::string& GetPath() const;
+    std::unique_ptr<LocalFile> GetParentFile() const;
     Result<bool> Mkdir() const;
     Result<std::unique_ptr<LocalFileStatus>> GetFileStatus() const;
     Result<uint64_t> Length() const;
     Result<int64_t> LastModifiedTimeMs() const;
     Status OpenFile(bool is_read_file);
-    Result<int32_t> Read() {
-        return Status::NotImplemented("");
-    }
     Result<int32_t> Read(char* buffer, uint32_t length);
     Result<int32_t> Read(char* buffer, uint32_t length, uint64_t offset);
     Result<int32_t> Write(const char* buffer, uint32_t length);
@@ -68,6 +67,8 @@ class LocalFile {
     }
 
  private:
+    explicit LocalFile(const std::string& path);
+
     const std::string path_;
     FILE* file_ = nullptr;
     IOHook* hook_;
