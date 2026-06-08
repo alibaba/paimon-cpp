@@ -261,7 +261,7 @@ Result<std::shared_ptr<FileIndexResult>> BitSliceIndexBitmapFileIndexReader::Vis
             PAIMON_ASSIGN_OR_RAISE(int64_t value, reader->value_mapper_(literal));
             if (value == INT64_MIN) {
                 // Writer cannot store INT64_MIN, so no row can match it
-                result_bitmaps.emplace_back(RoaringBitmap32());
+                result_bitmaps.emplace_back();
             } else if (value < 0) {
                 PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 equal,
                                        reader->negative_->Equal(SafeAbs(value)));
@@ -288,7 +288,7 @@ Result<std::shared_ptr<FileIndexResult>> BitSliceIndexBitmapFileIndexReader::Vis
             PAIMON_ASSIGN_OR_RAISE(int64_t value, reader->value_mapper_(literal));
             if (value == INT64_MIN) {
                 // Writer cannot store INT64_MIN, so no row can match it
-                result_bitmaps.emplace_back(RoaringBitmap32());
+                result_bitmaps.emplace_back();
             } else if (value < 0) {
                 PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 equal,
                                        reader->negative_->Equal(SafeAbs(value)));
