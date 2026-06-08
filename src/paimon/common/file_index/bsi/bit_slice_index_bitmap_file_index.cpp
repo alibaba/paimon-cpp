@@ -17,7 +17,9 @@
 #include "paimon/common/file_index/bsi/bit_slice_index_bitmap_file_index.h"
 
 #include <cassert>
+#include <climits>
 #include <cstddef>
+#include <cstdint>
 
 #include "fmt/format.h"
 #include "paimon/common/file_index/bsi/bit_slice_index_roaring_bitmap.h"
@@ -31,7 +33,17 @@
 #include "paimon/io/data_input_stream.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/utils/roaring_bitmap32.h"
+namespace {
+// Safe absolute value for int64_t that avoids undefined behavior when value == INT64_MIN.
+// This mirrors Java's Math.abs() wrapping semantics.
+inline int64_t SafeAbs(int64_t value) {
+    if (value == INT64_MIN) {
+        return INT64_MIN;
+    }
+    return value < 0 ? -value : value;
+}
 
+}  // namespace
 namespace paimon {
 class MemoryPool;
 
@@ -153,10 +165,14 @@ Result<std::shared_ptr<FileIndexResult>> BitSliceIndexBitmapFileIndexReader::Vis
     BitmapIndexResult::BitmapSupplier bitmap_supplier =
         [literal = literal, reader = shared_from_this()]() -> Result<RoaringBitmap32> {
         PAIMON_ASSIGN_OR_RAISE(int64_t value, reader->value_mapper_(literal));
-        if (value >= 0) {
+        if (value == INT64_MIN) {
+            // Everything is greater than INT64_MIN (writer cannot store it)
+            return RoaringBitmap32::Or(reader->positive_->IsNotNull(),
+                                       reader->negative_->IsNotNull());
+        } else if (value >= 0) {
             return reader->positive_->GreaterThan(value);
         } else {
-            PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 b1, reader->negative_->LessThan(-value));
+            PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 b1, reader->negative_->LessThan(SafeAbs(value)));
             RoaringBitmap32 b2 = reader->positive_->IsNotNull();
             b1 |= b2;
             return b1;
@@ -170,10 +186,15 @@ Result<std::shared_ptr<FileIndexResult>> BitSliceIndexBitmapFileIndexReader::Vis
     BitmapIndexResult::BitmapSupplier bitmap_supplier =
         [literal = literal, reader = shared_from_this()]() -> Result<RoaringBitmap32> {
         PAIMON_ASSIGN_OR_RAISE(int64_t value, reader->value_mapper_(literal));
-        if (value >= 0) {
+        if (value == INT64_MIN) {
+            // All non-null rows satisfy x >= INT64_MIN
+            return RoaringBitmap32::Or(reader->positive_->IsNotNull(),
+                                       reader->negative_->IsNotNull());
+        } else if (value >= 0) {
             return reader->positive_->GreaterOrEqual(value);
         } else {
-            PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 b1, reader->negative_->LessOrEqual(-value));
+            PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 b1,
+                                   reader->negative_->LessOrEqual(SafeAbs(value)));
             RoaringBitmap32 b2 = reader->positive_->IsNotNull();
             b1 |= b2;
             return b1;
@@ -187,8 +208,11 @@ Result<std::shared_ptr<FileIndexResult>> BitSliceIndexBitmapFileIndexReader::Vis
     BitmapIndexResult::BitmapSupplier bitmap_supplier =
         [literal = literal, reader = shared_from_this()]() -> Result<RoaringBitmap32> {
         PAIMON_ASSIGN_OR_RAISE(int64_t value, reader->value_mapper_(literal));
-        if (value < 0) {
-            return reader->negative_->GreaterThan(-value);
+        if (value == INT64_MIN) {
+            // Nothing is less than INT64_MIN
+            return RoaringBitmap32();
+        } else if (value < 0) {
+            return reader->negative_->GreaterThan(SafeAbs(value));
         } else {
             PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 b1, reader->positive_->LessThan(value));
             RoaringBitmap32 b2 = reader->negative_->IsNotNull();
@@ -203,8 +227,11 @@ Result<std::shared_ptr<FileIndexResult>> BitSliceIndexBitmapFileIndexReader::Vis
     BitmapIndexResult::BitmapSupplier bitmap_supplier =
         [literal = literal, reader = shared_from_this()]() -> Result<RoaringBitmap32> {
         PAIMON_ASSIGN_OR_RAISE(int64_t value, reader->value_mapper_(literal));
-        if (value < 0) {
-            return reader->negative_->GreaterOrEqual(-value);
+        if (value == INT64_MIN) {
+            // Writer cannot store INT64_MIN, so no row can match
+            return RoaringBitmap32();
+        } else if (value < 0) {
+            return reader->negative_->GreaterOrEqual(SafeAbs(value));
         } else {
             PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 b1, reader->positive_->LessOrEqual(value));
             RoaringBitmap32 b2 = reader->negative_->IsNotNull();
@@ -232,13 +259,17 @@ Result<std::shared_ptr<FileIndexResult>> BitSliceIndexBitmapFileIndexReader::Vis
         result_bitmaps.reserve(literals.size());
         for (const auto& literal : literals) {
             PAIMON_ASSIGN_OR_RAISE(int64_t value, reader->value_mapper_(literal));
-            RoaringBitmap32 equal;
-            if (value < 0) {
-                PAIMON_ASSIGN_OR_RAISE(equal, reader->negative_->Equal(-value));
+            if (value == INT64_MIN) {
+                // Writer cannot store INT64_MIN, so no row can match it
+                result_bitmaps.emplace_back();
+            } else if (value < 0) {
+                PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 equal,
+                                       reader->negative_->Equal(SafeAbs(value)));
+                result_bitmaps.emplace_back(std::move(equal));
             } else {
-                PAIMON_ASSIGN_OR_RAISE(equal, reader->positive_->Equal(value));
+                PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 equal, reader->positive_->Equal(value));
+                result_bitmaps.emplace_back(std::move(equal));
             }
-            result_bitmaps.emplace_back(std::move(equal));
         }
         return RoaringBitmap32::FastUnion(result_bitmaps);
     };
@@ -255,13 +286,17 @@ Result<std::shared_ptr<FileIndexResult>> BitSliceIndexBitmapFileIndexReader::Vis
         result_bitmaps.reserve(literals.size());
         for (const auto& literal : literals) {
             PAIMON_ASSIGN_OR_RAISE(int64_t value, reader->value_mapper_(literal));
-            RoaringBitmap32 equal;
-            if (value < 0) {
-                PAIMON_ASSIGN_OR_RAISE(equal, reader->negative_->Equal(-value));
+            if (value == INT64_MIN) {
+                // Writer cannot store INT64_MIN, so no row can match it
+                result_bitmaps.emplace_back();
+            } else if (value < 0) {
+                PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 equal,
+                                       reader->negative_->Equal(SafeAbs(value)));
+                result_bitmaps.emplace_back(std::move(equal));
             } else {
-                PAIMON_ASSIGN_OR_RAISE(equal, reader->positive_->Equal(value));
+                PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 equal, reader->positive_->Equal(value));
+                result_bitmaps.emplace_back(std::move(equal));
             }
-            result_bitmaps.emplace_back(std::move(equal));
         }
         auto in = RoaringBitmap32::FastUnion(result_bitmaps);
         ebm -= in;
