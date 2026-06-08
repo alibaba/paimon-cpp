@@ -16,6 +16,7 @@
 
 #include "paimon/common/file_index/bsi/bit_slice_index_bitmap_file_index.h"
 
+#include <cstdint>
 #include <utility>
 
 #include "gtest/gtest.h"
@@ -383,6 +384,51 @@ TEST_F(BitSliceIndexBitmapIndexReaderTest, TestUnInvalidType) {
         file_index.CreateReader(CreateArrowSchema(arrow::boolean()).get(),
                                 /*start=*/0, /*length=*/index_bytes.size(), input_stream, pool_),
         "BitSliceIndexBitmapFileIndex only support TINYINT/SMALLINT/INT/BIGINT/DATE");
+}
+
+TEST_F(BitSliceIndexBitmapIndexReaderTest, TestReaderPredicatePruningWithInt64Min) {
+    // Reuse TestPrimitiveType's index bytes.
+    // data: null, 1, null, 2, -1   (non-null rows: {1, 3, 4})
+    std::vector<char> index_bytes = {
+        1,  0, 0, 0,  5,  1,  1,  0, 0, 0, 0, 0,  0, 0, 0, 0,  0, 0,  0,  0, 0, 0, 2, 58,
+        48, 0, 0, 1,  0,  0,  0,  0, 0, 1, 0, 16, 0, 0, 0, 1,  0, 3,  0,  0, 0, 0, 2, 58,
+        48, 0, 0, 1,  0,  0,  0,  0, 0, 0, 0, 16, 0, 0, 0, 1,  0, 58, 48, 0, 0, 1, 0, 0,
+        0,  0, 0, 0,  0,  16, 0,  0, 0, 3, 0, 1,  1, 0, 0, 0,  0, 0,  0,  0, 0, 0, 0, 0,
+        0,  0, 0, 0,  1,  58, 48, 0, 0, 1, 0, 0,  0, 0, 0, 0,  0, 16, 0,  0, 0, 4, 0, 0,
+        0,  0, 1, 58, 48, 0,  0,  1, 0, 0, 0, 0,  0, 0, 0, 16, 0, 0,  0,  4, 0};
+    auto input_stream =
+        std::make_shared<ByteArrayInputStream>(index_bytes.data(), index_bytes.size());
+    BitSliceIndexBitmapFileIndex file_index({});
+    ASSERT_OK_AND_ASSIGN(
+        auto reader,
+        file_index.CreateReader(CreateArrowSchema(arrow::int64()).get(),
+                                /*start=*/0, /*length=*/index_bytes.size(), input_stream, pool_));
+
+    // x > INT64_MIN: all non-null rows (writer cannot store INT64_MIN)
+    CheckResult(reader->VisitGreaterThan(Literal(INT64_MIN)).value(), {1, 3, 4});
+
+    // x >= INT64_MIN: all non-null rows
+    CheckResult(reader->VisitGreaterOrEqual(Literal(INT64_MIN)).value(), {1, 3, 4});
+
+    // x < INT64_MIN: empty
+    CheckResult(reader->VisitLessThan(Literal(INT64_MIN)).value(), {});
+
+    // x <= INT64_MIN: empty (no row has INT64_MIN)
+    CheckResult(reader->VisitLessOrEqual(Literal(INT64_MIN)).value(), {});
+
+    // x == INT64_MIN: empty
+    CheckResult(reader->VisitEqual(Literal(INT64_MIN)).value(), {});
+
+    // x != INT64_MIN: all non-null rows
+    CheckResult(reader->VisitNotEqual(Literal(INT64_MIN)).value(), {1, 3, 4});
+
+    // x IN (INT64_MIN, -1): only -1 matches → row 4
+    CheckResult(reader->VisitIn({Literal(INT64_MIN), Literal(static_cast<int64_t>(-1))}).value(),
+                {4});
+
+    // x NOT IN (INT64_MIN, -1): all non-null except row 4
+    CheckResult(reader->VisitNotIn({Literal(INT64_MIN), Literal(static_cast<int64_t>(-1))}).value(),
+                {1, 3});
 }
 
 }  // namespace paimon::test
