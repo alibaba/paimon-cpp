@@ -79,6 +79,37 @@ TEST_P(CompressionFactoryTest, TESTCompressThenDecompress) {
     ASSERT_EQ(0, decompressor->ReadIntLE(read_write_le.data()));
 }
 
+TEST_P(CompressionFactoryTest, TestDecompressTruncatedHeader) {
+    BlockCompressionType type = GetParam();
+    ASSERT_OK_AND_ASSIGN(auto factory, BlockCompressionFactory::Create(type));
+    auto decompressor = factory->GetDecompressor();
+
+    // Source shorter than 8-byte header should return Invalid, not read out of bounds
+    char short_buf[] = {0x01, 0x02, 0x03};
+    char dst[64] = {};
+    ASSERT_NOK(decompressor->Decompress(short_buf, 3, dst, sizeof(dst)));
+
+    // Empty source
+    ASSERT_NOK(decompressor->Decompress(nullptr, 0, dst, sizeof(dst)));
+}
+
+TEST_P(CompressionFactoryTest, TestCompressInsufficientOutputBuffer) {
+    BlockCompressionType type = GetParam();
+    ASSERT_OK_AND_ASSIGN(auto factory, BlockCompressionFactory::Create(type));
+    auto compressor = factory->GetCompressor();
+
+    // Incompressible data with a tiny output buffer should fail, not produce a corrupt block
+    std::string data(1024, '\0');
+    for (int32_t i = 0; i < static_cast<int32_t>(data.size()); i++) {
+        data[i] = static_cast<char>(i % 251);
+    }
+    // Output buffer too small: only HEADER_LENGTH bytes, no room for compressed payload
+    std::string tiny_dst(8, '\0');
+    ASSERT_NOK_WITH_MSG(
+        compressor->Compress(data.data(), data.size(), tiny_dst.data(), tiny_dst.size()),
+        "Compression failed");
+}
+
 INSTANTIATE_TEST_SUITE_P(BlockCompressionTypeGroup, CompressionFactoryTest,
                          ::testing::Values(BlockCompressionType::LZ4, BlockCompressionType::ZSTD));
 
