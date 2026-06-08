@@ -21,7 +21,8 @@
 set -eux
 
 RUSTUP_VERSION=${RUSTUP_VERSION:-1.29.0}
-RUST_VERSION=${RUST_VERSION:-1.85.0}
+# 1.88.0 is the minimum required by transitive crates (e.g. time 0.3.47).
+RUST_VERSION=${RUST_VERSION:-1.88.0}
 CBINDGEN_VERSION=${CBINDGEN_VERSION:-0.29.2}
 
 # Install rustup + default toolchain if cargo isn't on PATH yet.
