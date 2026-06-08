@@ -412,7 +412,9 @@ TEST_F(FileReaderWrapperTest, ApplyReadRanges) {
     int64_t total_rows = 0;
     while (true) {
         ASSERT_OK_AND_ASSIGN(auto batch, reader_wrapper->Next());
-        if (!batch) break;
+        if (!batch) {
+            break;
+        }
         total_rows += batch->num_rows();
     }
     ASSERT_EQ(1500, total_rows);
