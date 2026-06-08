@@ -10,6 +10,7 @@
 
 #include "paimon/global_index/tantivy/tantivy_global_index_reader.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <memory>

@@ -61,32 +61,37 @@ if(PAIMON_BUILD_TESTS)
                     ${GTEST_LINK_TOOLCHAIN})
 
     # Golden-sample tokenizer diff (cppjieba vs jieba-rs). Links against the
-    # lucene index module to reuse JiebaTokenizer::CutWithMode + Normalize.
+    # lucene index module to reuse JiebaTokenizer::CutWithMode + Normalize, so it
+    # can only be built when lucene-fts is enabled (the C++ JiebaTokenizer lives
+    # in the lucene module). Guarded so the default LUCENE=OFF / TANTIVY=ON build
+    # doesn't try to link the non-existent paimon_lucene_index_static.
     # Note: we mirror the lucene-fts test's link line (see lucene/CMakeLists.txt)
     # rather than using the `jieba` imported target, whose INTERFACE_INCLUDE
     # concatenates two paths in one string (upstream quirk).
-    add_paimon_test(tantivy_tokenizer_test
-                    SOURCES
-                    tantivy_tokenizer_test.cpp
-                    EXTRA_INCLUDES
-                    ${LUCENE_INCLUDE_DIR}
-                    STATIC_LINK_LIBS
-                    paimon_shared
-                    test_utils_static
-                    "-Wl,--whole-archive"
-                    paimon_local_file_system_static
-                    paimon_lucene_index_static
-                    "-Wl,--no-whole-archive"
-                    paimon_tantivy_ffi
-                    ${GTEST_LINK_TOOLCHAIN})
-    target_compile_definitions(paimon-tantivy-tokenizer-test
-                               PRIVATE
-                               JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}"
-                               PAIMON_TANTIVY_GOLDEN_DIR="${CMAKE_SOURCE_DIR}/test/test_data/tokenizer_golden")
-    target_include_directories(paimon-tantivy-tokenizer-test
-                               SYSTEM PRIVATE
-                               ${JIEBA_INCLUDE_DIR}
-                               ${JIEBA_DICT_DIR})
+    if(PAIMON_ENABLE_LUCENE)
+        add_paimon_test(tantivy_tokenizer_test
+                        SOURCES
+                        tantivy_tokenizer_test.cpp
+                        EXTRA_INCLUDES
+                        ${LUCENE_INCLUDE_DIR}
+                        STATIC_LINK_LIBS
+                        paimon_shared
+                        test_utils_static
+                        "-Wl,--whole-archive"
+                        paimon_local_file_system_static
+                        paimon_lucene_index_static
+                        "-Wl,--no-whole-archive"
+                        paimon_tantivy_ffi
+                        ${GTEST_LINK_TOOLCHAIN})
+        target_compile_definitions(paimon-tantivy-tokenizer-test
+                                   PRIVATE
+                                   JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}"
+                                   PAIMON_TANTIVY_GOLDEN_DIR="${CMAKE_SOURCE_DIR}/test/test_data/tokenizer_golden")
+        target_include_directories(paimon-tantivy-tokenizer-test
+                                   SYSTEM PRIVATE
+                                   ${JIEBA_INCLUDE_DIR}
+                                   ${JIEBA_DICT_DIR})
+    endif()
 
     # Stage 4 — Writer test. Builds an Arrow batch, runs the writer through
     # GlobalIndexFileManager + LocalFileSystem, then validates the packed

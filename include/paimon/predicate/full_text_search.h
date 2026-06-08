@@ -55,7 +55,15 @@ struct PAIMON_EXPORT FullTextSearch {
 
     std::shared_ptr<FullTextSearch> ReplacePreFilter(
         const std::optional<RoaringBitmap64>& _pre_filter) const {
-        return std::make_shared<FullTextSearch>(field_name, limit, query, search_type, _pre_filter);
+        auto replaced =
+            std::make_shared<FullTextSearch>(field_name, limit, query, search_type, _pre_filter);
+        // `with_score` / `min_score` are not constructor args (they have in-class
+        // defaults), so carry them over explicitly — otherwise rewrapping the
+        // pre_filter (e.g. in OffsetGlobalIndexReader) would silently reset a
+        // scored / min_score query back to the unscored default.
+        replaced->with_score = with_score;
+        replaced->min_score = min_score;
+        return replaced;
     }
 
     /// Name of the field to search within (must be a full-text indexed field).

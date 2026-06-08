@@ -22,6 +22,7 @@
 #include "gtest/gtest.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/global_index/bitmap_scored_global_index_result.h"
+#include "paimon/predicate/full_text_search.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/testing/utils/testharness.h"
 #include "paimon/utils/roaring_bitmap64.h"
@@ -112,8 +113,13 @@ class FakeGlobalIndexReader : public GlobalIndexReader {
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitFullTextSearch(
         const std::shared_ptr<FullTextSearch>& full_text_search) override {
+        captured_fts = full_text_search;
         return MakeResult(default_result_);
     }
+
+    // Captures the (possibly pre_filter-rewritten) FullTextSearch the offset
+    // reader forwarded, so tests can assert field propagation.
+    std::shared_ptr<FullTextSearch> captured_fts;
 
     bool IsThreadSafe() const override {
         return true;
@@ -329,6 +335,37 @@ TEST_F(OffsetGlobalIndexReaderTest, TestVisitFullTextSearchWithOffset) {
     ASSERT_OK_AND_ASSIGN(auto result, offset_reader->VisitFullTextSearch(nullptr));
     // row ids {0, 3, 5} + offset 10 -> {10, 13, 15}
     CheckResult(result, {10, 13, 15});
+}
+
+TEST_F(OffsetGlobalIndexReaderTest, TestVisitFullTextSearchPreservesScoreFlags) {
+    // Regression (review finding #2): rewriting the pre_filter global->local ids
+    // in the offset reader must NOT drop with_score / min_score. Before the fix,
+    // FullTextSearch::ReplacePreFilter rebuilt via the 5-arg ctor and silently
+    // reset both back to their defaults, turning a scored / min_score query
+    // unscored as soon as it crossed any offset shard.
+    auto fake_reader = std::make_shared<FakeGlobalIndexReader>();
+    fake_reader->SetDefaultResult({0, 3, 5});
+    auto offset_reader = std::make_shared<OffsetGlobalIndexReader>(fake_reader, 10);
+
+    // pre_filter must be set so the offset reader takes the rewrite path.
+    auto fts = std::make_shared<FullTextSearch>(
+        "f0", /*limit=*/7, "q", FullTextSearch::SearchType::MATCH_ALL,
+        /*pre_filter=*/RoaringBitmap64::From({10l, 13l, 15l}));
+    fts->with_score = true;
+    fts->min_score = 1.5f;
+
+    ASSERT_OK_AND_ASSIGN(auto result, offset_reader->VisitFullTextSearch(fts));
+    CheckResult(result, {10, 13, 15});
+
+    ASSERT_TRUE(fake_reader->captured_fts);
+    EXPECT_TRUE(fake_reader->captured_fts->with_score)
+        << "with_score must survive the pre_filter rewrite";
+    ASSERT_TRUE(fake_reader->captured_fts->min_score.has_value())
+        << "min_score must survive the pre_filter rewrite";
+    EXPECT_FLOAT_EQ(fake_reader->captured_fts->min_score.value(), 1.5f);
+    // limit and the offset-rewritten local pre_filter should still be present.
+    EXPECT_EQ(fake_reader->captured_fts->limit, std::optional<int32_t>(7));
+    ASSERT_TRUE(fake_reader->captured_fts->pre_filter.has_value());
 }
 
 TEST_F(OffsetGlobalIndexReaderTest, TestVisitVectorSearchWithOffset) {

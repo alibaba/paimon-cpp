@@ -315,7 +315,24 @@ impl PaimonTantivyReader {
                     }
                     let truncated = Self::sort_by_score_desc_truncate(filtered, n);
                     Ok(truncated.into_iter().map(|(_, id)| (id, None)).collect())
+                } else if let Some(filter) = pre_filter {
+                    // pre_filter present: it MUST be applied to the full match set
+                    // before truncation. LimitedDocSetCollector stops after the
+                    // first N raw matches, which could all be filtered out while
+                    // valid matches exist further down the posting list — that
+                    // would under-return (fewer than N, or even empty). So collect
+                    // every matching row_id (filter-aware), then truncate to N.
+                    let mut row_ids: Vec<u64> = searcher
+                        .search(&*q, &RowIdCollector)
+                        .map_err(|e| format!("tantivy search: {e}"))?;
+                    row_ids.retain(|id| filter.contains(*id));
+                    row_ids.sort_unstable();
+                    row_ids.dedup();
+                    row_ids.truncate(n);
+                    Ok(row_ids.into_iter().map(|id| (id, None)).collect())
                 } else {
+                    // No pre_filter: fast path — stop collecting once N matches are
+                    // gathered per segment instead of materialising the full posting list.
                     let collector = LimitedDocSetCollector::new(n);
                     let mut docset = searcher
                         .search(&*q, &collector)
@@ -336,9 +353,6 @@ impl PaimonTantivyReader {
                         for &doc_id in doc_ids {
                             row_ids.push(fast.first(doc_id).unwrap_or(0));
                         }
-                    }
-                    if let Some(filter) = pre_filter {
-                        row_ids.retain(|id| filter.contains(*id));
                     }
                     row_ids.sort_unstable();
                     row_ids.dedup();
@@ -1026,6 +1040,26 @@ mod tests {
             .unwrap();
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].0, 1u64);
+    }
+
+    #[test]
+    fn unscored_limit_with_pre_filter_applies_filter_before_truncate() {
+        // Regression (review finding #1): with_score=false + limit=N + pre_filter
+        // must apply the filter to the FULL match set before truncating to N.
+        // All three docs match "doc" but only row_id 2 (the LAST one) passes the
+        // pre_filter; a truncate-before-filter impl (LimitedDocSetCollector that
+        // stops at N raw matches, then filters) would collect doc 0, filter it
+        // out, and wrongly return empty instead of {2}.
+        let bytes = build(&["doc", "doc", "doc"]);
+        let r = open(&bytes);
+        let mut tm = Treemap::new();
+        tm.add(2); // only row_id 2 passes the pre_filter
+        let rows = r
+            .search_with_limit_and_filter(SearchType::MatchAll, "doc", false, Some(1), Some(&tm), None)
+            .unwrap();
+        let ids: Vec<u64> = rows.iter().map(|(id, _)| *id).collect();
+        assert_eq!(ids, vec![2u64], "pre_filter must be applied before LIMIT truncation");
+        assert!(rows.iter().all(|(_, s)| s.is_none()));
     }
 
     #[test]
