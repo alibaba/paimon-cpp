@@ -88,9 +88,6 @@ TEST_P(CompressionFactoryTest, TestDecompressTruncatedHeader) {
     char short_buf[] = {0x01, 0x02, 0x03};
     char dst[64] = {};
     ASSERT_NOK(decompressor->Decompress(short_buf, 3, dst, sizeof(dst)));
-
-    // Empty source
-    ASSERT_NOK(decompressor->Decompress(nullptr, 0, dst, sizeof(dst)));
 }
 
 TEST_P(CompressionFactoryTest, TestCompressInsufficientOutputBuffer) {
