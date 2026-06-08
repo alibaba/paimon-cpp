@@ -78,8 +78,8 @@ std::vector<::arrow::io::ReadRange> MergeOverlappingRanges(
 }  // namespace
 
 Result<std::unique_ptr<FileReaderWrapper>> FileReaderWrapper::Create(
-    std::unique_ptr<::parquet::arrow::FileReader>&& file_reader, ::arrow::MemoryPool* pool,
-    int64_t batch_size) {
+    std::unique_ptr<::parquet::arrow::FileReader>&& file_reader,
+    std::shared_ptr<::arrow::MemoryPool> pool, int64_t batch_size) {
     try {
         if (file_reader == nullptr) {
             return Status::Invalid("file reader wrapper create failed. file reader is nullptr");
@@ -141,7 +141,7 @@ Status FileReaderWrapper::Close() {
 FileReaderWrapper::FileReaderWrapper(
     std::unique_ptr<::parquet::arrow::FileReader>&& file_reader,
     const std::vector<std::pair<uint64_t, uint64_t>>& all_row_group_ranges, uint64_t num_rows,
-    ::arrow::MemoryPool* pool, int64_t batch_size)
+    std::shared_ptr<::arrow::MemoryPool> pool, int64_t batch_size)
     : file_reader_(std::move(file_reader)),
       all_row_group_ranges_(all_row_group_ranges),
       pool_(pool),
@@ -398,7 +398,7 @@ std::vector<::arrow::io::ReadRange> FileReaderWrapper::CollectPreBufferRanges(
 
 void FileReaderWrapper::DispatchPreBuffer(std::vector<::arrow::io::ReadRange> ranges) {
     const auto& cache_opts = file_reader_->properties().cache_options();
-    ::arrow::io::IOContext io_ctx(pool_);
+    ::arrow::io::IOContext io_ctx(pool_.get());
     auto merged_ranges = MergeOverlappingRanges(std::move(ranges));
     try {
         file_reader_->parquet_reader()->PreBufferRanges(merged_ranges, io_ctx, cache_opts);

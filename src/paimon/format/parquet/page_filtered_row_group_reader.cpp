@@ -123,7 +123,7 @@ std::pair<RowRanges, int64_t> PageFilteredRowGroupReader::ComputeCompressedRowRa
 }
 
 Status PageFilteredRowGroupReader::ExecuteSkipReadPattern(
-    ::parquet::internal::RecordReader* record_reader, const RowRanges& ranges,
+    std::shared_ptr<::parquet::internal::RecordReader> record_reader, const RowRanges& ranges,
     int64_t total_row_count, int32_t row_group_index, int32_t column_index) {
     int64_t current_row = 0;
     for (const auto& range : ranges.GetRanges()) {
@@ -160,7 +160,7 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
     const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
     int32_t row_group_index, int32_t column_index, const RowRanges& row_ranges,
     const std::shared_ptr<arrow::Field>& field, int64_t row_group_row_count,
-    ::arrow::MemoryPool* pool) {
+    std::shared_ptr<::arrow::MemoryPool> pool) {
     auto file_metadata = parquet_reader->metadata();
     const auto* col_descriptor = file_metadata->schema()->Column(column_index);
 
@@ -189,34 +189,35 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
     // Create RecordReader
     ::parquet::internal::LevelInfo leaf_info =
         ::parquet::internal::LevelInfo::ComputeLevelInfo(col_descriptor);
-    auto record_reader = ::parquet::internal::RecordReader::Make(col_descriptor, leaf_info, pool);
+    auto record_reader =
+        ::parquet::internal::RecordReader::Make(col_descriptor, leaf_info, pool.get());
     record_reader->SetPageReader(std::move(page_reader));
 
     PAIMON_RETURN_NOT_OK(ExecuteSkipReadPattern(
-        record_reader.get(), effective_ranges, effective_row_count, row_group_index, column_index));
+        record_reader, effective_ranges, effective_row_count, row_group_index, column_index));
 
     std::shared_ptr<arrow::ChunkedArray> chunked_array;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(::parquet::arrow::TransferColumnData(
-        record_reader.get(), field, col_descriptor, pool, &chunked_array));
+        record_reader.get(), field, col_descriptor, pool.get(), &chunked_array));
 
     return chunked_array;
 }
 
 Status PageFilteredRowGroupReader::WaitForPreBuffer(
     ::parquet::ParquetFileReader* parquet_reader, int32_t row_group_index,
-    const std::vector<int32_t>& column_indices, ::arrow::MemoryPool* pool,
+    const std::vector<int32_t>& column_indices, std::shared_ptr<::arrow::MemoryPool> pool,
     const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
     const std::vector<::arrow::io::ReadRange>& page_ranges) {
     std::vector<int> rg_vec = {row_group_index};
     std::vector<int> col_vec(column_indices.begin(), column_indices.end());
     if (!pre_buffered) {
-        ::arrow::io::IOContext io_ctx(pool);
+        ::arrow::io::IOContext io_ctx(pool.get());
         parquet_reader->PreBuffer(rg_vec, col_vec, io_ctx, cache_options);
     }
     if (!page_ranges.empty()) {
         auto status = parquet_reader->WhenBufferedRanges(page_ranges).status();
         if (!status.ok()) {
-            ::arrow::io::IOContext io_ctx(pool);
+            ::arrow::io::IOContext io_ctx(pool.get());
             parquet_reader->PreBuffer(rg_vec, col_vec, io_ctx, cache_options);
             PAIMON_RETURN_NOT_OK_FROM_ARROW(parquet_reader->WhenBuffered(rg_vec, col_vec).status());
         }
@@ -229,14 +230,15 @@ Status PageFilteredRowGroupReader::WaitForPreBuffer(
 Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::ReadFilteredRowGroup(
     ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
     const std::vector<int32_t>& column_indices, const std::shared_ptr<arrow::Schema>& arrow_schema,
-    ::arrow::MemoryPool* pool, const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
-    const std::vector<::arrow::io::ReadRange>& page_ranges, int64_t max_chunksize) {
+    std::shared_ptr<::arrow::MemoryPool> pool, const ::arrow::io::CacheOptions& cache_options,
+    bool pre_buffered, const std::vector<::arrow::io::ReadRange>& page_ranges,
+    int64_t max_chunksize) {
     const auto& row_ranges = target_row_group.row_ranges;
     int32_t row_group_index = target_row_group.row_group_index;
 
     if (row_ranges.IsEmpty()) {
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Table> empty_table,
-                                          arrow::Table::MakeEmpty(arrow_schema, pool));
+                                          arrow::Table::MakeEmpty(arrow_schema, pool.get()));
         return std::make_unique<TableRecordBatchReader>(std::move(empty_table), max_chunksize);
     }
 

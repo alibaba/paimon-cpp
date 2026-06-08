@@ -58,7 +58,8 @@ class PageFilteredRowGroupReader {
     static Result<std::unique_ptr<arrow::RecordBatchReader>> ReadFilteredRowGroup(
         ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
         const std::vector<int32_t>& column_indices,
-        const std::shared_ptr<arrow::Schema>& arrow_schema, ::arrow::MemoryPool* pool,
+        const std::shared_ptr<arrow::Schema>& arrow_schema,
+        std::shared_ptr<::arrow::MemoryPool> pool,
         const ::arrow::io::CacheOptions& cache_options = ::arrow::io::CacheOptions::Defaults(),
         bool pre_buffered = false, const std::vector<::arrow::io::ReadRange>& page_ranges = {},
         int64_t max_chunksize = std::numeric_limits<int64_t>::max());
@@ -81,15 +82,15 @@ class PageFilteredRowGroupReader {
     static Status WaitForPreBuffer(::parquet::ParquetFileReader* parquet_reader,
                                    int32_t row_group_index,
                                    const std::vector<int32_t>& column_indices,
-                                   ::arrow::MemoryPool* pool,
+                                   std::shared_ptr<::arrow::MemoryPool> pool,
                                    const ::arrow::io::CacheOptions& cache_options,
                                    bool pre_buffered,
                                    const std::vector<::arrow::io::ReadRange>& page_ranges);
 
     /// Execute the skip/read pattern on a RecordReader based on RowRanges.
-    static Status ExecuteSkipReadPattern(::parquet::internal::RecordReader* record_reader,
-                                         const RowRanges& ranges, int64_t total_row_count,
-                                         int32_t row_group_index, int32_t column_index);
+    static Status ExecuteSkipReadPattern(
+        std::shared_ptr<::parquet::internal::RecordReader> record_reader, const RowRanges& ranges,
+        int64_t total_row_count, int32_t row_group_index, int32_t column_index);
 
     /// Create a data_page_filter callback for a column based on RowRanges + OffsetIndex.
     static std::function<bool(const ::parquet::DataPageStats&)> MakePageFilter(
@@ -103,7 +104,7 @@ class PageFilteredRowGroupReader {
         const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
         int32_t row_group_index, int32_t column_index, const RowRanges& row_ranges,
         const std::shared_ptr<arrow::Field>& field, int64_t row_group_row_count,
-        ::arrow::MemoryPool* pool);
+        std::shared_ptr<::arrow::MemoryPool> pool);
 
     /// Compute compressed RowRanges after data_page_filter skips non-matching pages.
     static std::pair<RowRanges, int64_t> ComputeCompressedRowRanges(
