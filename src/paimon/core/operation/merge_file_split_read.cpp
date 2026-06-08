@@ -233,8 +233,10 @@ Result<std::unique_ptr<FileBatchReader>> MergeFileSplitRead::ApplyIndexAndDvRead
 Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateMergeReader(
     const std::shared_ptr<DataSplitImpl>& data_split,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) {
-    auto dv_factory = DeletionVector::CreateFactory(options_.GetFileSystem(),
-                                                    CreateDeletionFileMap(*data_split), pool_);
+    auto dv_factory = DeletionVector::CreateFactory(
+        options_.GetFileSystem(),
+        DeletionVector::CreateDeletionFileMap(data_split->DataFiles(), data_split->DeletionFiles()),
+        pool_);
 
     std::vector<std::vector<SortedRun>> sections =
         IntervalPartition(data_split->DataFiles(), key_comparator_).Partition();
@@ -255,8 +257,10 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateMergeReader(
 Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateNoMergeReader(
     const std::shared_ptr<DataSplitImpl>& data_split, bool only_filter_key,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
-    auto dv_factory = DeletionVector::CreateFactory(options_.GetFileSystem(),
-                                                    CreateDeletionFileMap(*data_split), pool_);
+    auto dv_factory = DeletionVector::CreateFactory(
+        options_.GetFileSystem(),
+        DeletionVector::CreateDeletionFileMap(data_split->DataFiles(), data_split->DeletionFiles()),
+        pool_);
 
     // create read schema without extra fields (e.g., completed key, sequence fields)
     auto row_kind_field = DataField::ConvertDataFieldToArrowField(SpecialFields::ValueKind());

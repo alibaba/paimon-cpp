@@ -27,6 +27,10 @@ class FallbackDataSplit : public DataSplit {
     FallbackDataSplit(const std::shared_ptr<DataSplit>& split, bool is_fallback)
         : is_fallback_(is_fallback), split_(split) {}
 
+    int32_t Bucket() const override {
+        return split_->Bucket();
+    }
+
     std::vector<SimpleDataFileMeta> GetFileList() const override {
         return split_->GetFileList();
     }

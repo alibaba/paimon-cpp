@@ -28,6 +28,11 @@ class Lz4BlockDecompressor : public BlockDecompressor {
  public:
     Result<int32_t> Decompress(const char* src, int32_t src_length, char* dst,
                                int32_t dst_length) override {
+        if (src_length < HEADER_LENGTH) {
+            return Status::Invalid(fmt::format(
+                "Source data too short for LZ4 block header, expected at least {} bytes, got {}",
+                HEADER_LENGTH, src_length));
+        }
         auto compressed_len = ReadIntLE(src);
         auto original_len = ReadIntLE(src + 4);
         PAIMON_RETURN_NOT_OK(ValidateLength(compressed_len, original_len));

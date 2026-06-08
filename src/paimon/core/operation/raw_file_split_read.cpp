@@ -96,7 +96,8 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
     const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
     const std::vector<std::optional<DeletionFile>>& deletion_files) {
     auto dv_factory = DeletionVector::CreateFactory(
-        options_.GetFileSystem(), CreateDeletionFileMap(data_files, deletion_files), pool_);
+        options_.GetFileSystem(), DeletionVector::CreateDeletionFileMap(data_files, deletion_files),
+        pool_);
     return CreateReader(partition, bucket, data_files, dv_factory);
 }
 

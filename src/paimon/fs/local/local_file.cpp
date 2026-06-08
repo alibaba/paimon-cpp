@@ -27,6 +27,7 @@
 #include "fmt/format.h"
 #include "paimon/common/factories/io_hook.h"
 #include "paimon/common/utils/path_util.h"
+#include "paimon/common/utils/string_utils.h"
 #include "paimon/fs/local/local_file_status.h"
 
 namespace paimon {
@@ -37,7 +38,33 @@ namespace paimon {
         PAIMON_RETURN_NOT_OK(hook_->Try(path_)); \
     }
 
+Result<std::unique_ptr<LocalFile>> LocalFile::Create(const std::string& path_string) {
+    if (path_string.empty()) {
+        PAIMON_ASSIGN_OR_RAISE(std::string current_path, PathUtil::GetWorkingDirectory());
+        return std::unique_ptr<LocalFile>(new LocalFile(current_path));
+    }
+
+    // local file system does not support path_string with scheme, e.g., "file:/tmp" will be
+    // rewritten to "/tmp"
+    PAIMON_ASSIGN_OR_RAISE(Path path, PathUtil::ToPath(path_string));
+    if (!path.scheme.empty() && StringUtils::ToLowerCase(path.scheme) != "file") {
+        return Status::Invalid(fmt::format("invalid scheme {} for local file system", path.scheme));
+    }
+    if (path.path.empty() || path.path[0] != '/') {
+        PAIMON_ASSIGN_OR_RAISE(std::string current_path, PathUtil::GetWorkingDirectory());
+        return std::unique_ptr<LocalFile>(
+            new LocalFile(PathUtil::JoinPath(current_path, path.path)));
+    }
+    return std::unique_ptr<LocalFile>(new LocalFile(path.path));
+}
+
 LocalFile::LocalFile(const std::string& path) : path_(path), hook_(IOHook::GetInstance()) {}
+
+LocalFile::~LocalFile() {
+    if (file_) {
+        std::fclose(file_);
+    }
+}
 
 Result<bool> LocalFile::Exists() const {
     CHECK_HOOK();
@@ -98,13 +125,15 @@ Status LocalFile::List(std::vector<std::string>* file_list) const {
     return Status::OK();
 }
 
-Status LocalFile::ListFiles(std::vector<LocalFile>* file_list) const {
+Status LocalFile::ListFiles(std::vector<std::unique_ptr<LocalFile>>* file_list) const {
     CHECK_HOOK();
     file_list->clear();
     std::vector<std::string> file_names;
     PAIMON_RETURN_NOT_OK(List(&file_names));
     for (const auto& file_name : file_names) {
-        file_list->emplace_back(PathUtil::JoinPath(path_, file_name));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> file,
+                               LocalFile::Create(PathUtil::JoinPath(path_, file_name)));
+        file_list->push_back(std::move(file));
     }
     return Status::OK();
 }
@@ -152,17 +181,17 @@ Result<int64_t> LocalFile::LastModifiedTimeMs() const {
     return file_status->GetModificationTime();
 }
 
-LocalFile LocalFile::GetParentFile() const {
+std::unique_ptr<LocalFile> LocalFile::GetParentFile() const {
     size_t pos = path_.rfind('/');
     if (pos == std::string::npos) {
-        return LocalFile("");
+        return std::unique_ptr<LocalFile>(new LocalFile(""));
     } else {
         std::string parent_dir = path_.substr(0, pos);
-        return LocalFile(parent_dir);
+        return std::unique_ptr<LocalFile>(new LocalFile(parent_dir));
     }
 }
 
-const std::string& LocalFile::GetAbsolutePath() const {
+const std::string& LocalFile::GetPath() const {
     return path_;
 }
 
@@ -181,9 +210,8 @@ Result<int32_t> LocalFile::Read(char* buffer, uint32_t length, uint64_t offset) 
         while (more > 0) {
             ret = ::pread(fd, buffer + off, more, offset + off);
             if (ret == -1) {
-                return Status::IOError(
-                    fmt::format("pread file '{}' fail at off {}, with error {}, ec: {}", path_, off,
-                                strerror(errno), std::strerror(errno)));
+                return Status::IOError(fmt::format("pread file '{}' fail at off {}, ec: {}", path_,
+                                                   off, std::strerror(errno)));
             }
             if (ret == 0) {
                 break;
@@ -211,9 +239,8 @@ Result<int32_t> LocalFile::Read(char* buffer, uint32_t length) {
         while (more > 0) {
             ret = fread(buffer + off, 1, more, file_);
             if (ferror(file_) != 0) {
-                return Status::IOError(
-                    fmt::format("read file '{}' fail at off {}, with error {}, ec: {}", path_, off,
-                                strerror(errno), std::strerror(errno)));
+                return Status::IOError(fmt::format("read file '{}' fail at off {}, ec: {}", path_,
+                                                   off, std::strerror(errno)));
             }
             more -= ret;
             off += ret;
@@ -242,9 +269,8 @@ Result<int32_t> LocalFile::Write(const char* buffer, uint32_t length) {
         while (more > 0) {
             ret = fwrite(buffer + off, 1, more, file_);
             if (ferror(file_) != 0) {
-                return Status::IOError(fmt::format("write file '{}' fail, with error {}, ec: {}",
-                                                   path_, off, strerror(errno),
-                                                   std::strerror(errno)));
+                return Status::IOError(fmt::format("write file '{}' fail at off {}, ec: {}", path_,
+                                                   off, std::strerror(errno)));
             }
             more -= ret;
             off += ret;
