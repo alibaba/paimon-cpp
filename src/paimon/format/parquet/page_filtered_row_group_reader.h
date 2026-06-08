@@ -59,10 +59,9 @@ class PageFilteredRowGroupReader {
         ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
         const std::vector<int32_t>& column_indices,
         const std::shared_ptr<arrow::Schema>& arrow_schema,
-        std::shared_ptr<::arrow::MemoryPool> pool,
-        const ::arrow::io::CacheOptions& cache_options = ::arrow::io::CacheOptions::Defaults(),
-        bool pre_buffered = false, const std::vector<::arrow::io::ReadRange>& page_ranges = {},
-        int64_t max_chunksize = std::numeric_limits<int64_t>::max());
+        const ::arrow::io::CacheOptions& cache_options,
+        bool pre_buffered, const std::vector<::arrow::io::ReadRange>& page_ranges,
+        int64_t max_chunksize, std::shared_ptr<::arrow::MemoryPool> pool);
 
     /// Compute the byte ranges of pages that overlap with the given RowRanges.
     /// Uses OffsetIndex to determine per-page file offsets and sizes.
@@ -82,10 +81,10 @@ class PageFilteredRowGroupReader {
     static Status WaitForPreBuffer(::parquet::ParquetFileReader* parquet_reader,
                                    int32_t row_group_index,
                                    const std::vector<int32_t>& column_indices,
-                                   std::shared_ptr<::arrow::MemoryPool> pool,
                                    const ::arrow::io::CacheOptions& cache_options,
                                    bool pre_buffered,
-                                   const std::vector<::arrow::io::ReadRange>& page_ranges);
+                                   const std::vector<::arrow::io::ReadRange>& page_ranges,
+                                   std::shared_ptr<::arrow::MemoryPool> pool);
 
     /// Execute the skip/read pattern on a RecordReader based on RowRanges.
     static Status ExecuteSkipReadPattern(

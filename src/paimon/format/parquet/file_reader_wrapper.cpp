@@ -79,7 +79,7 @@ std::vector<::arrow::io::ReadRange> MergeOverlappingRanges(
 
 Result<std::unique_ptr<FileReaderWrapper>> FileReaderWrapper::Create(
     std::unique_ptr<::parquet::arrow::FileReader>&& file_reader,
-    std::shared_ptr<::arrow::MemoryPool> pool, int64_t batch_size) {
+    int64_t batch_size, std::shared_ptr<::arrow::MemoryPool> pool) {
     try {
         if (file_reader == nullptr) {
             return Status::Invalid("file reader wrapper create failed. file reader is nullptr");
@@ -102,7 +102,7 @@ Result<std::unique_ptr<FileReaderWrapper>> FileReaderWrapper::Create(
         std::vector<int32_t> columns_indices =
             arrow::internal::Iota(file_reader->parquet_reader()->metadata()->num_columns());
         auto file_reader_wrapper = std::unique_ptr<FileReaderWrapper>(new FileReaderWrapper(
-            std::move(file_reader), all_row_group_ranges, num_rows, pool, batch_size));
+            std::move(file_reader), all_row_group_ranges, num_rows, batch_size, pool));
         std::vector<TargetRowGroup> all_target_row_groups;
         for (int32_t i = 0; i < file_reader_wrapper->GetNumberOfRowGroups(); i++) {
             all_target_row_groups.emplace_back(/*rg_index=*/i, /*page_filtered=*/false,
@@ -141,7 +141,7 @@ Status FileReaderWrapper::Close() {
 FileReaderWrapper::FileReaderWrapper(
     std::unique_ptr<::parquet::arrow::FileReader>&& file_reader,
     const std::vector<std::pair<uint64_t, uint64_t>>& all_row_group_ranges, uint64_t num_rows,
-    std::shared_ptr<::arrow::MemoryPool> pool, int64_t batch_size)
+    int64_t batch_size, std::shared_ptr<::arrow::MemoryPool> pool)
     : file_reader_(std::move(file_reader)),
       all_row_group_ranges_(all_row_group_ranges),
       pool_(pool),
@@ -235,8 +235,8 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::NextPageFiltered(
             current_page_filtered_reader_,
             PageFilteredRowGroupReader::ReadFilteredRowGroup(
                 file_reader_->parquet_reader(), target_rg, target_column_indices_,
-                page_filtered_read_schema_, pool_, file_reader_->properties().cache_options(),
-                pre_buffered, page_ranges, max_chunksize));
+                page_filtered_read_schema_, file_reader_->properties().cache_options(),
+                pre_buffered, page_ranges, max_chunksize, pool_));
         current_filtered_row_ranges_ = target_rg.row_ranges;
         current_filtered_rg_start_ = all_row_group_ranges_[rg_id].first;
         filtered_global_offset_ = 0;

@@ -205,9 +205,10 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
 
 Status PageFilteredRowGroupReader::WaitForPreBuffer(
     ::parquet::ParquetFileReader* parquet_reader, int32_t row_group_index,
-    const std::vector<int32_t>& column_indices, std::shared_ptr<::arrow::MemoryPool> pool,
+    const std::vector<int32_t>& column_indices,
     const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
-    const std::vector<::arrow::io::ReadRange>& page_ranges) {
+    const std::vector<::arrow::io::ReadRange>& page_ranges,
+    std::shared_ptr<::arrow::MemoryPool> pool) {
     std::vector<int> rg_vec = {row_group_index};
     std::vector<int> col_vec(column_indices.begin(), column_indices.end());
     if (!pre_buffered) {
@@ -230,9 +231,9 @@ Status PageFilteredRowGroupReader::WaitForPreBuffer(
 Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::ReadFilteredRowGroup(
     ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
     const std::vector<int32_t>& column_indices, const std::shared_ptr<arrow::Schema>& arrow_schema,
-    std::shared_ptr<::arrow::MemoryPool> pool, const ::arrow::io::CacheOptions& cache_options,
+    const ::arrow::io::CacheOptions& cache_options,
     bool pre_buffered, const std::vector<::arrow::io::ReadRange>& page_ranges,
-    int64_t max_chunksize) {
+    int64_t max_chunksize, std::shared_ptr<::arrow::MemoryPool> pool) {
     const auto& row_ranges = target_row_group.row_ranges;
     int32_t row_group_index = target_row_group.row_group_index;
 
@@ -244,8 +245,8 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
 
     int64_t expected_rows = row_ranges.RowCount();
 
-    PAIMON_RETURN_NOT_OK(WaitForPreBuffer(parquet_reader, row_group_index, column_indices, pool,
-                                          cache_options, pre_buffered, page_ranges));
+    PAIMON_RETURN_NOT_OK(WaitForPreBuffer(parquet_reader, row_group_index, column_indices,
+                                          cache_options, pre_buffered, page_ranges, pool));
 
     auto row_group_reader = parquet_reader->RowGroup(row_group_index);
     auto rg_metadata = parquet_reader->metadata()->RowGroup(row_group_index);

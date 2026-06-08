@@ -56,7 +56,7 @@ class FileReaderWrapper {
 
     static Result<std::unique_ptr<FileReaderWrapper>> Create(
         std::unique_ptr<::parquet::arrow::FileReader>&& reader,
-        std::shared_ptr<arrow::MemoryPool> pool, int64_t batch_size);
+         int64_t batch_size, std::shared_ptr<arrow::MemoryPool> pool);
 
     /// Seek to the specified row number.
     /// @param row_number The row to seek to (must be at a row group boundary).
@@ -138,8 +138,8 @@ class FileReaderWrapper {
  private:
     FileReaderWrapper(std::unique_ptr<::parquet::arrow::FileReader>&& file_reader,
                       const std::vector<std::pair<uint64_t, uint64_t>>& all_row_group_ranges,
-                      uint64_t num_rows, std::shared_ptr<::arrow::MemoryPool> pool,
-                      int64_t batch_size);
+                      uint64_t num_rows, int64_t batch_size,
+                      std::shared_ptr<::arrow::MemoryPool> pool);
 
     /// Wait for all pending PreBuffer operations to complete.
     void WaitForPendingPreBuffer();
