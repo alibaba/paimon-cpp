@@ -362,35 +362,31 @@ Status FileReaderWrapper::BuildPageFilteredSchema(const std::vector<int32_t>& co
 }
 
 std::vector<::arrow::io::ReadRange> FileReaderWrapper::CollectPreBufferRanges(
-    const std::vector<int32_t>& fully_matched_row_groups,
     const std::vector<int32_t>& column_indices) {
     std::vector<::arrow::io::ReadRange> ranges;
+    auto file_metadata = file_reader_->parquet_reader()->metadata();
 
-    // Page-filtered RGs: only matching page byte ranges.
     for (const auto& trg : target_row_groups_) {
-        if (trg.excluded_by_read_range) {
-            continue;
-        }
+        if (trg.excluded_by_read_range) continue;
+
         if (trg.is_partially_matched) {
+            // Page-filtered RGs: only matching page byte ranges.
             auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
                 file_reader_->parquet_reader(), trg, column_indices);
             ranges.insert(ranges.end(), std::make_move_iterator(page_ranges.begin()),
                           std::make_move_iterator(page_ranges.end()));
-        }
-    }
-
-    // Fully-matched RGs: entire column chunk ranges.
-    auto file_metadata = file_reader_->parquet_reader()->metadata();
-    for (int32_t rg_idx : fully_matched_row_groups) {
-        auto rg_metadata = file_metadata->RowGroup(rg_idx);
-        for (int32_t col_idx : column_indices) {
-            auto col_chunk = rg_metadata->ColumnChunk(col_idx);
-            int64_t offset = col_chunk->data_page_offset();
-            if (col_chunk->has_dictionary_page() && col_chunk->dictionary_page_offset() > 0 &&
-                offset > col_chunk->dictionary_page_offset()) {
-                offset = col_chunk->dictionary_page_offset();
+        } else {
+            // Fully-matched RGs: entire column chunk ranges.
+            auto rg_metadata = file_metadata->RowGroup(trg.row_group_index);
+            for (int32_t col_idx : column_indices) {
+                auto col_chunk = rg_metadata->ColumnChunk(col_idx);
+                int64_t offset = col_chunk->data_page_offset();
+                if (col_chunk->has_dictionary_page() && col_chunk->dictionary_page_offset() > 0 &&
+                    offset > col_chunk->dictionary_page_offset()) {
+                    offset = col_chunk->dictionary_page_offset();
+                }
+                ranges.push_back({offset, col_chunk->total_compressed_size()});
             }
-            ranges.push_back({offset, col_chunk->total_compressed_size()});
         }
     }
     return ranges;
@@ -446,7 +442,7 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
         // When page-filtered RGs exist, issue a single PreBuffer covering both kinds.
         // Otherwise GetRecordBatchReader already issued PreBuffer internally.
         if (has_page_filtered) {
-            auto all_ranges = CollectPreBufferRanges(fully_matched_row_groups, column_indices);
+            auto all_ranges = CollectPreBufferRanges(column_indices);
             DispatchPreBuffer(std::move(all_ranges));
         }
 

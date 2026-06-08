@@ -158,7 +158,6 @@ class FileReaderWrapper {
 
     /// Collect all byte ranges that need pre-buffering (page-filtered + fully-matched).
     std::vector<::arrow::io::ReadRange> CollectPreBufferRanges(
-        const std::vector<int32_t>& fully_matched_row_groups,
         const std::vector<int32_t>& column_indices);
 
     /// Dispatch a single PreBufferRanges call with merged ranges.
