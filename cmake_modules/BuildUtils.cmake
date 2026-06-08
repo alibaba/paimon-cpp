@@ -89,6 +89,8 @@ function(add_paimon_lib LIB_NAME)
     # Generate a single "objlib" from all C++ modules and link
     # that "objlib" into each library kind, to avoid compiling twice
     add_library(${LIB_NAME}_objlib OBJECT ${ARG_SOURCES})
+    target_link_libraries(${LIB_NAME}_objlib
+                          PRIVATE "$<BUILD_INTERFACE:paimon_sanitizer_flags>")
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(${LIB_NAME}_objlib PRIVATE -Wno-global-constructors)
     endif()

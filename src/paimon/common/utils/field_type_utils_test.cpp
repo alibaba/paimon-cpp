@@ -99,8 +99,7 @@ TEST(FieldTypeUtilsTest, ConvertToFieldType) {
     ASSERT_EQ(result, FieldType::STRUCT);
 
     // Test unsupported Arrow type
-    ASSERT_NOK(FieldTypeUtils::ConvertToFieldType(
-        static_cast<arrow::Type::type>(999)));  // Invalid Arrow type
+    ASSERT_NOK(FieldTypeUtils::ConvertToFieldType(arrow::Type::type::UINT8));
 }
 
 // Test case: FieldTypeToString

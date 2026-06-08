@@ -53,7 +53,7 @@ class HiveBucketFunction : public BucketFunction {
     explicit HiveBucketFunction(const std::vector<HiveFieldInfo>& field_infos);
 
     /// Compute the Hive hash for a single field value.
-    int32_t ComputeHash(const BinaryRow& row, int32_t field_index) const;
+    uint32_t ComputeHash(const BinaryRow& row, int32_t field_index) const;
 
     /// Mod operation that always returns non-negative result.
     static int32_t Mod(int32_t value, int32_t divisor);
