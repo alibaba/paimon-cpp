@@ -226,13 +226,13 @@ TEST(ExtendMapUtilsTest, MetadataRoundtripNoneCompression) {
     ASSERT_EQ(find_value(ExtendMapDefine::kNumColumns), "3");
     ASSERT_EQ(find_value(ExtendMapDefine::kMaxRowWidth), "2");
 
-    std::string expected_dict = "{\"age\":0,\"name\":1}";
+    std::string expected_dict = R"({"age":0,"name":1})";
     ASSERT_EQ(find_value(ExtendMapDefine::kFieldDict), expected_dict);
     // field_dict_original_size should be the length of the JSON string
     std::string field_dict_original_size = find_value(ExtendMapDefine::kFieldDictOriginalSize);
     ASSERT_EQ(field_dict_original_size, std::to_string(expected_dict.size()));
 
-    std::string expected_field_to_columns = "{\"0\":[0],\"1\":[1,2]}";
+    std::string expected_field_to_columns = R"({"0":[0],"1":[1,2]})";
     ASSERT_EQ(find_value(ExtendMapDefine::kFieldColumns), expected_field_to_columns);
 
     // overflow_set is a JSON array of sorted field_ids
@@ -284,7 +284,7 @@ TEST(ExtendMapUtilsTest, MetadataRoundtripEmptyData) {
 
 TEST(ExtendMapUtilsTest, DeserializeMetadataErrors) {
     // nullptr
-    { ASSERT_NOK_WITH_MSG(ExtendMapUtils::DeserializeMetadata(nullptr, "none"), "null"); }
+    ASSERT_NOK_WITH_MSG(ExtendMapUtils::DeserializeMetadata(nullptr, "none"), "null");
     // missing version
     {
         auto metadata = std::make_shared<arrow::KeyValueMetadata>();
@@ -311,6 +311,7 @@ TEST(ExtendMapUtilsTest, DeserializeMetadataErrors) {
 // ---- HasExtendMetadata ----
 
 TEST(ExtendMapUtilsTest, HasExtendMetadata) {
+    ASSERT_FALSE(ExtendMapUtils::HasExtendMetadata(nullptr));
     {
         auto metadata = std::make_shared<arrow::KeyValueMetadata>();
         metadata->Append(ExtendMapDefine::kStorageLayout, ExtendMapDefine::kStorageLayoutExtend);
@@ -321,7 +322,6 @@ TEST(ExtendMapUtilsTest, HasExtendMetadata) {
         metadata->Append(ExtendMapDefine::kStorageLayout, "default");
         ASSERT_FALSE(ExtendMapUtils::HasExtendMetadata(metadata));
     }
-    { ASSERT_FALSE(ExtendMapUtils::HasExtendMetadata(nullptr)); }
     {
         auto metadata = std::make_shared<arrow::KeyValueMetadata>();
         ASSERT_FALSE(ExtendMapUtils::HasExtendMetadata(metadata));
