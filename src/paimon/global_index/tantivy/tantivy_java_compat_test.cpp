@@ -188,7 +188,7 @@ TEST_F(JavaCompatTest, OpenJavaArchiveSucceeds) {
 // 2. MATCH_ALL — single and multi-term
 // ============================================================================
 
-TEST_F(JavaCompatTest, MatchAll_Apple) {
+TEST_F(JavaCompatTest, MatchAllApple) {
     auto reader = OpenFixture("english_simple.archive");
     auto ids = RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ALL, "apple");
     // Docs containing "apple": 0 ("apple banana cherry"), 1 ("apple durian"),
@@ -196,7 +196,7 @@ TEST_F(JavaCompatTest, MatchAll_Apple) {
     EXPECT_EQ(ids, (std::vector<int64_t>{0, 1, 4, 7}));
 }
 
-TEST_F(JavaCompatTest, MatchAll_AppleBanana_Intersection) {
+TEST_F(JavaCompatTest, MatchAllAppleBananaIntersection) {
     auto reader = OpenFixture("english_simple.archive");
     auto ids = RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ALL, "apple banana");
     // Only doc 0 contains both "apple" and "banana"
@@ -207,7 +207,7 @@ TEST_F(JavaCompatTest, MatchAll_AppleBanana_Intersection) {
 // 3. MATCH_ANY — union
 // ============================================================================
 
-TEST_F(JavaCompatTest, MatchAny_DurianElderberry_Union) {
+TEST_F(JavaCompatTest, MatchAnyDurianElderberryUnion) {
     auto reader = OpenFixture("english_simple.archive");
     auto ids = RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ANY, "durian elderberry");
     // durian: 1, 6   elderberry: 5, 8   union: {1, 5, 6, 8}
@@ -218,14 +218,14 @@ TEST_F(JavaCompatTest, MatchAny_DurianElderberry_Union) {
 // 4. PHRASE — consecutive term order matters
 // ============================================================================
 
-TEST_F(JavaCompatTest, Phrase_AppleBanana) {
+TEST_F(JavaCompatTest, PhraseAppleBanana) {
     auto reader = OpenFixture("english_simple.archive");
     auto ids = RunSearchRowIds(reader, FullTextSearch::SearchType::PHRASE, "apple banana");
     // Only doc 0 has "apple banana" as consecutive phrase
     EXPECT_EQ(ids, (std::vector<int64_t>{0}));
 }
 
-TEST_F(JavaCompatTest, Phrase_BananaCherry) {
+TEST_F(JavaCompatTest, PhraseBananaCherry) {
     auto reader = OpenFixture("english_simple.archive");
     auto ids = RunSearchRowIds(reader, FullTextSearch::SearchType::PHRASE, "banana cherry");
     // "banana cherry" consecutive in doc 0 ("apple banana cherry") and doc 2 ("banana cherry")
@@ -236,7 +236,7 @@ TEST_F(JavaCompatTest, Phrase_BananaCherry) {
 // 5. PREFIX — byte-level (not tokenized) via RegexQuery
 // ============================================================================
 
-TEST_F(JavaCompatTest, Prefix_Ap) {
+TEST_F(JavaCompatTest, PrefixAp) {
     auto reader = OpenFixture("english_simple.archive");
     auto ids = RunSearchRowIds(reader, FullTextSearch::SearchType::PREFIX, "ap");
     // Tokens starting with "ap": "apple" → docs 0, 1, 4, 7
@@ -247,7 +247,7 @@ TEST_F(JavaCompatTest, Prefix_Ap) {
 // 6. WILDCARD — glob-style via regex
 // ============================================================================
 
-TEST_F(JavaCompatTest, Wildcard_Err) {
+TEST_F(JavaCompatTest, WildcardErr) {
     auto reader = OpenFixture("english_simple.archive");
     auto ids = RunSearchRowIds(reader, FullTextSearch::SearchType::WILDCARD, "*err*");
     // Tokens matching *err*: "cherry" (0,2,4,6,9), "elderberry" (5,8)

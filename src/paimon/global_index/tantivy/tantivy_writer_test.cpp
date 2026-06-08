@@ -108,12 +108,12 @@ struct PackedEntry {
 std::vector<PackedEntry> ParsePacked(const std::vector<uint8_t>& bytes) {
     std::vector<PackedEntry> entries;
     EXPECT_GE(bytes.size(), 4u);
-    int32_t file_count = ReadBE<int32_t>(bytes.data());
+    auto file_count = ReadBE<int32_t>(bytes.data());
     EXPECT_GT(file_count, 0);
     std::size_t off = 4;
     for (int32_t i = 0; i < file_count; ++i) {
         EXPECT_LE(off + 4, bytes.size());
-        int32_t nlen = ReadBE<int32_t>(bytes.data() + off);
+        auto nlen = ReadBE<int32_t>(bytes.data() + off);
         off += 4;
         EXPECT_GT(nlen, 0);
         EXPECT_LE(off + static_cast<std::size_t>(nlen), bytes.size());
@@ -121,7 +121,7 @@ std::vector<PackedEntry> ParsePacked(const std::vector<uint8_t>& bytes) {
                          static_cast<std::size_t>(nlen));
         off += nlen;
         EXPECT_LE(off + 8, bytes.size());
-        int64_t flen = ReadBE<int64_t>(bytes.data() + off);
+        auto flen = ReadBE<int64_t>(bytes.data() + off);
         off += 8;
         EXPECT_GE(flen, 0);
         EXPECT_LE(off + static_cast<std::size_t>(flen), bytes.size());

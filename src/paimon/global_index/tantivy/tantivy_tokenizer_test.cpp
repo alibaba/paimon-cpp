@@ -19,7 +19,8 @@
  * `test/test_data/tokenizer_golden/golden_*.txt` twice: once with cppjieba
  * (the existing JiebaTokenizer::CutWithMode + Normalize), once with the
  * FFI-exposed PaimonJiebaTokenizer. Compare the token text sequences.
- * Pass if diff rate <= 1% per mode.
+ * Diffs are advisory only (logged to stderr) — per
+ * docs/dev/tokenizer_diff_report.md we do not require cppjieba<->jieba-rs parity.
  *
  * `hmm` mode is tested separately: FFI must return Unsupported.
  */
@@ -53,8 +54,6 @@ extern "C" {
 
 namespace paimon::tantivy {
 namespace {
-
-constexpr double kMaxDiffRate = 0.01;  // 1%
 
 /// Load lines from all `golden_*.txt` files (the strict corpus).
 /// Files named `known_diffs*.txt` are excluded — those document known

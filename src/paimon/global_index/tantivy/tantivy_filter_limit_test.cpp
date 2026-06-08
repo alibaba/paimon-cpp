@@ -263,7 +263,7 @@ TEST_F(TantivyFilterLimitTest, LimitGreaterThanMatchesReturnsAll) {
 // correct concrete result type and content. See docs/dev/tantivy_bm25_score_contract.md §4.
 
 // Path A: with_score=false, limit=None → BitmapGlobalIndexResult, all rows, no score.
-TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitNone_AllRowsNoScore) {
+TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitNoneAllRowsNoScore) {
     auto array = arrow::ipc::internal::json::ArrayFromJSON(DataType(), R"([
         ["doc"], ["doc doc"], ["doc doc doc"]
     ])")
@@ -287,7 +287,7 @@ TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitNone_AllRowsNoScore) {
 
 // Path B: with_score=false, limit=N → BitmapGlobalIndexResult, any N matches,
 // no scoring (no BM25 sort). Used by `WHERE MATCH ... LIMIT N` without ORDER BY.
-TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitN_AnyNNoScore) {
+TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitNAnyNNoScore) {
     auto array = arrow::ipc::internal::json::ArrayFromJSON(DataType(), R"([
         ["doc"],
         ["doc doc doc doc doc"],
@@ -320,7 +320,7 @@ TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitN_AnyNNoScore) {
 
 // Path C (new in v0.2): with_score=true, limit=None → BitmapScoredGlobalIndexResult,
 // all rows + all scores, ordered by row_id asc.
-TEST_F(TantivyFilterLimitTest, WithScoreTrueLimitNone_AllRowsWithScore) {
+TEST_F(TantivyFilterLimitTest, WithScoreTrueLimitNoneAllRowsWithScore) {
     auto array = arrow::ipc::internal::json::ArrayFromJSON(DataType(), R"([
         ["doc"], ["doc doc"], ["doc doc doc"]
     ])")
@@ -348,7 +348,7 @@ TEST_F(TantivyFilterLimitTest, WithScoreTrueLimitNone_AllRowsWithScore) {
 // Path D: with_score=true, limit=N → BitmapScoredGlobalIndexResult, top-N with scores.
 // Equivalent to the v0.1 happy-path (LimitProducesScoredResultTopN), kept here
 // as an explicit anchor of the 4-path matrix.
-TEST_F(TantivyFilterLimitTest, WithScoreTrueLimitN_TopNWithScore) {
+TEST_F(TantivyFilterLimitTest, WithScoreTrueLimitNTopNWithScore) {
     auto array = arrow::ipc::internal::json::ArrayFromJSON(DataType(), R"([
         ["doc"],
         ["doc doc doc doc doc"],
