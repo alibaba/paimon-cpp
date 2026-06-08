@@ -74,7 +74,8 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
     /// @param max_row_group_length Controls row group size
     void WriteTestFile(const std::string& file_name,
                        const std::shared_ptr<arrow::StructArray>& struct_array,
-                       int32_t write_batch_size, int64_t max_row_group_length) {
+                       int32_t write_batch_size, int64_t max_row_group_length,
+                       bool enable_dictionary = false) {
         auto data_type = struct_array->struct_type();
         auto data_schema = arrow::schema(data_type->fields());
         auto data_arrow_array = std::make_unique<ArrowArray>();
@@ -84,7 +85,11 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
         ::parquet::WriterProperties::Builder builder;
         builder.write_batch_size(write_batch_size);
         builder.max_row_group_length(max_row_group_length);
-        builder.disable_dictionary();       // Ensure page index min/max are meaningful
+        if (enable_dictionary) {
+            builder.enable_dictionary();
+        } else {
+            builder.disable_dictionary();  // Ensure page index min/max are meaningful
+        }
         builder.enable_write_page_index();  // Enable page index for page-level filtering
         // Set data page size to 1 byte to force a new page after every write_batch_size rows.
         // The writer flushes a page when accumulated data exceeds data_pagesize, so setting
@@ -749,26 +754,8 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
     auto struct_array = arrow::StructArray::Make({val_array}, {field}).ValueOrDie();
 
     // Write with dictionary encoding enabled (the key difference from other tests).
-    auto data_type = struct_array->struct_type();
-    auto data_schema = arrow::schema(data_type->fields());
-    auto data_arrow_array = std::make_unique<ArrowArray>();
-    ASSERT_TRUE(arrow::ExportArray(*struct_array, data_arrow_array.get()).ok());
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
-                         fs_->Create(file_name, /*overwrite=*/false));
-    ::parquet::WriterProperties::Builder builder;
-    builder.write_batch_size(10);
-    builder.max_row_group_length(100);
-    builder.enable_dictionary();  // Enable dictionary → triggers the bug
-    builder.enable_write_page_index();
-    builder.data_pagesize(1);  // Force small pages
-    auto writer_properties = builder.build();
-    ASSERT_OK_AND_ASSIGN(
-        auto format_writer,
-        ParquetFormatWriter::Create(out, data_schema, writer_properties,
-                                    DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE, arrow_pool_));
-    ASSERT_OK(format_writer->AddBatch(data_arrow_array.get()));
-    ASSERT_OK(format_writer->Finish());
-    ASSERT_OK(out->Close());
+    WriteTestFile(file_name, struct_array, /*write_batch_size=*/10,
+                  /*max_row_group_length=*/100, /*enable_dictionary=*/true);
 
     // Open the file and verify metadata confirms dictionary page presence
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
