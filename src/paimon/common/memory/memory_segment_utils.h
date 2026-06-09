@@ -41,9 +41,6 @@ class PAIMON_EXPORT MemorySegmentUtils {
     MemorySegmentUtils() = delete;
     ~MemorySegmentUtils() = delete;
 
-    /// Allocate bytes in pool
-    static std::shared_ptr<Bytes> AllocateBytes(size_t length, MemoryPool* pool);
-
     /// Copy target segments from source byte[].
     ///
     /// @param segments target segments.

@@ -184,10 +184,9 @@ Result<std::unique_ptr<::ArrowSchema>> AvroFileBatchReader::GetFileSchema() cons
 Result<uint64_t> AvroFileBatchReader::GetNumberOfRows() const {
     if (!total_rows_) {
         PAIMON_ASSIGN_OR_RAISE(int64_t current_pos, input_stream_->GetPos());
-        auto seek_pos = current_pos;
-        ScopeGuard stream_guard([this, seek_pos]() -> void {
+        ScopeGuard stream_guard([this, current_pos]() -> void {
             // reset input stream position to original position
-            Status status = input_stream_->Seek(seek_pos, SeekOrigin::FS_SEEK_SET);
+            Status status = input_stream_->Seek(current_pos, SeekOrigin::FS_SEEK_SET);
             (void)status;
         });
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::avro::DataFileReaderBase> reader,

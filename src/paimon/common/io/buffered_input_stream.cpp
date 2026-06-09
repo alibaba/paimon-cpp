@@ -127,7 +127,10 @@ Status BufferedInputStream::Fill() {
 
 Result<int64_t> BufferedInputStream::InnerRead(char* buffer, int64_t size) {
     assert(size > 0);
-    assert(pos_ <= count_);
+    if (PAIMON_UNLIKELY(pos_ > count_)) {
+        return Status::Invalid(fmt::format(
+            "BufferedInputStream internal error: pos_ {} exceeds count_ {}", pos_, count_));
+    }
     int64_t avail = count_ - pos_;
     if (avail == 0) {
         /* If the requested length is at least as large as the buffer, and
@@ -139,7 +142,7 @@ Result<int64_t> BufferedInputStream::InnerRead(char* buffer, int64_t size) {
         }
         PAIMON_RETURN_NOT_OK(Fill());
         avail = count_ - pos_;
-        if (avail == 0) {
+        if (avail <= 0) {
             return Status::Invalid(fmt::format(
                 "InnerRead failed, after Fill(), still no bytes available (may read eof), but "
                 "expect read {} bytes",

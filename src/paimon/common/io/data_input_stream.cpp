@@ -102,10 +102,10 @@ Status DataInputStream::AssertBoundary(int64_t need_length) const {
     // of I/O calls.
     PAIMON_ASSIGN_OR_RAISE(int64_t pos, input_stream_->GetPos());
     PAIMON_ASSIGN_OR_RAISE(int64_t length, input_stream_->Length());
-    if (pos > length || need_length > length - pos) {
+    if (pos < 0 || length < 0 || pos > length || need_length > length - pos) {
         return Status::Invalid(
-            fmt::format("DataInputStream assert boundary failed: need length {}, current position "
-                        "{}, exceed length {}",
+            fmt::format("DataInputStream boundary check failed: read size {}, position {}, "
+                        "stream length {}",
                         need_length, pos, length));
     }
     return Status::OK();

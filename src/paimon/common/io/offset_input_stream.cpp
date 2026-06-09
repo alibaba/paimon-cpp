@@ -28,8 +28,6 @@ Result<std::unique_ptr<OffsetInputStream>> OffsetInputStream::Create(
     if (PAIMON_UNLIKELY(wrapped == nullptr)) {
         return Status::Invalid("input stream is null pointer");
     }
-    PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(offset, "offset"));
-    PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(length, "length"));
     PAIMON_ASSIGN_OR_RAISE(int64_t total_length, wrapped->Length());
     return Create(wrapped, length, offset, total_length);
 }

@@ -65,7 +65,7 @@ class LuceneIndexInput : public Lucene::BufferedIndexInput {
             throw Lucene::IOException(
                 LuceneUtils::StringToWstring(read_result.status().ToString()));
         }
-        if (static_cast<int32_t>(read_result.value()) != length) {
+        if (read_result.value() != static_cast<int64_t>(length)) {
             throw Lucene::IOException(L"actual read len and expect read len mismatch");
         }
     }

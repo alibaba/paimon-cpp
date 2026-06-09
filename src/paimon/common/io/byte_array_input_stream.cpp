@@ -75,8 +75,8 @@ Result<int64_t> ByteArrayInputStream::Read(char* buffer, int64_t size) {
 Result<int64_t> ByteArrayInputStream::Read(char* buffer, int64_t size, int64_t offset) {
     if (size < 0 || offset < 0 || offset > length_ || size > length_ - offset) {
         return Status::Invalid(
-            fmt::format("ByteArrayInputStream assert boundary failed: need length {}, read offset "
-                        "{}, exceed length {}",
+            fmt::format("ByteArrayInputStream boundary check failed: read size {}, offset {}, "
+                        "stream length {}",
                         size, offset, length_));
     }
     memcpy(buffer, buffer_ + offset, static_cast<size_t>(size));
