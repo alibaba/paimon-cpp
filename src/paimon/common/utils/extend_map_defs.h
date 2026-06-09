@@ -24,6 +24,7 @@
 
 #include "arrow/type.h"
 #include "fmt/format.h"
+
 namespace paimon {
 
 /// Constants for the columnar-extend MAP storage layout.

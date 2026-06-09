@@ -513,7 +513,6 @@ Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
     // Extract all field names that have map-storage-layout configured from options
     const std::string layout_suffix = std::string(".") + std::string(Options::MAP_STORAGE_LAYOUT);
     const auto& options_map = options.ToMap();
-    const auto& field_names = schema.FieldNames();
 
     std::unordered_map<std::string, std::shared_ptr<arrow::DataType>> schema_fields;
     for (const auto& field : schema.Fields()) {
