@@ -179,12 +179,12 @@ function(add_paimon_lib LIB_NAME)
                               PUBLIC "$<BUILD_INTERFACE:paimon_sanitizer_flags>")
 
         if(NOT APPLE)
-            target_link_options(${LIB_NAME}_shared
-                                PRIVATE
-                                -Wl,--exclude-libs,ALL
-                                -Wl,-Bsymbolic
-                                -Wl,-z,defs
-                                -Wl,--gc-sections)
+            set(SHARED_LINK_OPTIONS -Wl,--exclude-libs,ALL -Wl,-Bsymbolic
+                                    -Wl,--gc-sections)
+            if(NOT PAIMON_USE_ASAN AND NOT PAIMON_USE_UBSAN)
+                list(APPEND SHARED_LINK_OPTIONS -Wl,-z,defs)
+            endif()
+            target_link_options(${LIB_NAME}_shared PRIVATE ${SHARED_LINK_OPTIONS})
         endif()
 
         install(TARGETS ${LIB_NAME}_shared ${INSTALL_IS_OPTIONAL}

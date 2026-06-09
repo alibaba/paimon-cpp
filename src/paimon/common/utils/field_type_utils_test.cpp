@@ -123,8 +123,8 @@ TEST(FieldTypeUtilsTest, FieldTypeToString) {
     ASSERT_EQ(FieldTypeUtils::FieldTypeToString(FieldType::STRUCT), "STRUCT");
 
     // Test UNKNOWN type
-    auto unknown_type = static_cast<FieldType>(999);
-    ASSERT_EQ(FieldTypeUtils::FieldTypeToString(unknown_type), "UNKNOWN, type id:999");
+    auto unknown_type = static_cast<FieldType>(128);
+    ASSERT_EQ(FieldTypeUtils::FieldTypeToString(unknown_type), "UNKNOWN, type id:128");
 }
 
 }  // namespace paimon::test
