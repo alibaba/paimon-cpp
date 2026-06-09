@@ -245,6 +245,18 @@ else()
     endif()
 endif()
 
+if(DEFINED ENV{PAIMON_BENCHMARK_URL})
+    set(BENCHMARK_SOURCE_URL "$ENV{PAIMON_BENCHMARK_URL}")
+else()
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_BENCHMARK_PKG_NAME}")
+        set_urls(BENCHMARK_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_BENCHMARK_PKG_NAME}")
+    else()
+        set_urls(BENCHMARK_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/google/benchmark/archive/refs/tags/v${PAIMON_BENCHMARK_BUILD_VERSION}.tar.gz"
+        )
+    endif()
+endif()
+
 if(DEFINED ENV{PAIMON_TBB_URL})
     set(TBB_SOURCE_URL "$ENV{PAIMON_TBB_URL}")
 else()
@@ -500,6 +512,8 @@ function(paimon_get_dependency_compat_target DEPENDENCY_NAME OUT_VAR)
         set(_target libprotobuf)
     elseif("${DEPENDENCY_NAME}" STREQUAL "GTest")
         set(_target GTest::gtest)
+    elseif("${DEPENDENCY_NAME}" STREQUAL "benchmark")
+        set(_target benchmark::benchmark)
     elseif("${DEPENDENCY_NAME}" STREQUAL "RE2")
         set(_target re2::re2)
     elseif("${DEPENDENCY_NAME}" STREQUAL "Snappy")
@@ -586,6 +600,8 @@ macro(paimon_build_dependency DEPENDENCY_NAME)
         build_avro()
     elseif("${DEPENDENCY_NAME}" STREQUAL "GTest")
         build_gtest()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "benchmark")
+        build_benchmark()
     else()
         message(FATAL_ERROR "No bundled build rule for ${DEPENDENCY_NAME}")
     endif()
@@ -1743,6 +1759,49 @@ macro(build_tbb)
 
 endmacro(build_tbb)
 
+macro(build_benchmark)
+    message(STATUS "Building benchmark from source")
+
+    set(BENCHMARK_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/benchmark_ep-install")
+    set(BENCHMARK_INCLUDE_DIR "${BENCHMARK_PREFIX}/include")
+    set(BENCHMARK_STATIC_LIB
+        "${BENCHMARK_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}benchmark${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    )
+    set(BENCHMARK_MAIN_STATIC_LIB
+        "${BENCHMARK_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}benchmark_main${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    )
+
+    set(BENCHMARK_CMAKE_ARGS
+        ${EP_COMMON_CMAKE_ARGS}
+        "-DCMAKE_INSTALL_PREFIX=${BENCHMARK_PREFIX}"
+        -DBENCHMARK_ENABLE_TESTING=OFF
+        -DBENCHMARK_ENABLE_GTEST_TESTS=OFF
+        -DBENCHMARK_DOWNLOAD_DEPENDENCIES=OFF)
+
+    externalproject_add(benchmark_ep
+                        URL ${BENCHMARK_SOURCE_URL}
+                        URL_HASH "SHA256=${PAIMON_BENCHMARK_BUILD_SHA256_CHECKSUM}"
+                        CMAKE_ARGS ${BENCHMARK_CMAKE_ARGS}
+                        BUILD_BYPRODUCTS "${BENCHMARK_STATIC_LIB}"
+                                         "${BENCHMARK_MAIN_STATIC_LIB}")
+
+    file(MAKE_DIRECTORY "${BENCHMARK_INCLUDE_DIR}")
+
+    add_library(benchmark::benchmark STATIC IMPORTED)
+    set_target_properties(benchmark::benchmark
+                          PROPERTIES IMPORTED_LOCATION "${BENCHMARK_STATIC_LIB}"
+                                     INTERFACE_INCLUDE_DIRECTORIES
+                                     "${BENCHMARK_INCLUDE_DIR}")
+    add_dependencies(benchmark::benchmark benchmark_ep)
+
+    add_library(benchmark::benchmark_main STATIC IMPORTED)
+    set_target_properties(benchmark::benchmark_main
+                          PROPERTIES IMPORTED_LOCATION "${BENCHMARK_MAIN_STATIC_LIB}"
+                                     INTERFACE_INCLUDE_DIRECTORIES
+                                     "${BENCHMARK_INCLUDE_DIR}")
+    add_dependencies(benchmark::benchmark_main benchmark_ep)
+endmacro()
+
 macro(build_glog)
     message(STATUS "Building glog from source")
     set(GLOG_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/glog_ep-install")
@@ -1809,6 +1868,9 @@ endif()
 if(PAIMON_ENABLE_ORC)
     resolve_dependency(Protobuf)
     resolve_dependency(ORC)
+endif()
+if(PAIMON_BUILD_BENCHMARKS)
+    resolve_dependency(benchmark)
 endif()
 if(PAIMON_ENABLE_JINDO)
     build_jindosdk_c()

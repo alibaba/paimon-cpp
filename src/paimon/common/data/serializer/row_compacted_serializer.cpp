@@ -94,7 +94,7 @@ Result<int32_t> RowCompactedSerializer::CompareField(const FieldInfo& field_info
             PAIMON_ASSIGN_OR_RAISE(Timestamp val2, reader2->ReadTimestamp(field_info.precision));
             return val1 == val2 ? 0 : (val1 < val2 ? -1 : 1);
         }
-        case arrow::Type::type::DECIMAL: {
+        case arrow::Type::type::DECIMAL128: {
             PAIMON_ASSIGN_OR_RAISE(Decimal val1,
                                    reader1->ReadDecimal(field_info.precision, field_info.scale));
             PAIMON_ASSIGN_OR_RAISE(Decimal val2,
@@ -124,7 +124,7 @@ Result<MemorySlice::SliceComparator> RowCompactedSerializer::CreateSliceComparat
                 arrow::internal::checked_pointer_cast<arrow::TimestampType>(field_type);
             assert(timestamp_type);
             field_infos[i].precision = DateTimeUtils::GetPrecisionFromType(timestamp_type);
-        } else if (field_type->id() == arrow::Type::type::DECIMAL) {
+        } else if (field_type->id() == arrow::Type::type::DECIMAL128) {
             auto decimal_type =
                 arrow::internal::checked_pointer_cast<arrow::Decimal128Type>(field_type);
             assert(decimal_type);
@@ -275,7 +275,7 @@ Result<RowCompactedSerializer::FieldReader> RowCompactedSerializer::CreateFieldR
             };
             break;
         }
-        case arrow::Type::type::DECIMAL: {
+        case arrow::Type::type::DECIMAL128: {
             auto* decimal_type =
                 arrow::internal::checked_cast<arrow::Decimal128Type*>(field_type.get());
             assert(decimal_type);
@@ -410,7 +410,7 @@ Result<RowCompactedSerializer::FieldWriter> RowCompactedSerializer::CreateFieldW
             };
             break;
         }
-        case arrow::Type::type::DECIMAL: {
+        case arrow::Type::type::DECIMAL128: {
             auto* decimal_type =
                 arrow::internal::checked_cast<arrow::Decimal128Type*>(field_type.get());
             assert(decimal_type);
