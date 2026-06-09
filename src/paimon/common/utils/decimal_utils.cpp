@@ -74,7 +74,7 @@ Result<Decimal::int128_t> DecimalUtils::StrToInt128(const std::string& str) {
     try {
         size_t length = str.length();
         if (length == 0) {
-            return Decimal::int128_t{0};
+            return Status::Invalid("invalid string: [], cannot convert to int128");
         }
         bool is_negative = str[0] == '-';
         size_t posn = is_negative ? 1 : 0;
