@@ -220,7 +220,7 @@ index 4d3acb491e..3906ff3c59 100644
 
 --- a/cpp/src/parquet/file_reader.cc
 +++ b/cpp/src/parquet/file_reader.cc
-@@ -207,6 +207,100 @@
+@@ -207,6 +207,117 @@
    return {col_start, col_length};
  }
 
@@ -308,6 +308,23 @@ index 4d3acb491e..3906ff3c59 100644
 +    return std::shared_ptr<::arrow::Buffer>(std::move(buf));
 +  }
 +
++  // Override Advance to avoid real I/O for skipped pages.
++  // The default InputStream::Advance() calls Read() and discards the result,
++  // which would trigger source_->ReadAt() on cache miss — defeating page-level
++  // I/O skipping via data_page_filter. Since Advance() is only used to skip
++  // over data that will not be consumed, we can safely just move the position.
++  ::arrow::Status Advance(int64_t nbytes) override {
++    if (nbytes <= 0) {
++      return ::arrow::Status::OK();
++    }
++    int64_t remaining = length_ - position_;
++    if (remaining <= 0) {
++      return ::arrow::Status::OK();
++    }
++    position_ += std::min(nbytes, remaining);
++    return ::arrow::Status::OK();
++  }
++
 + private:
 +  std::shared_ptr<::arrow::io::internal::ReadRangeCache> cache_;
 +  std::shared_ptr<ArrowInputFile> source_;
@@ -321,7 +338,7 @@ index 4d3acb491e..3906ff3c59 100644
  // RowGroupReader::Contents implementation for the Parquet file specification
  class SerializedRowGroup : public RowGroupReader::Contents {
   public:
-@@ -242,6 +336,11 @@
+@@ -242,6 +343,11 @@
        // segments.
        PARQUET_ASSIGN_OR_THROW(auto buffer, cached_source_->Read(col_range));
        stream = std::make_shared<::arrow::io::BufferReader>(buffer);
@@ -333,7 +350,7 @@ index 4d3acb491e..3906ff3c59 100644
      } else {
        stream = properties_.GetStream(source_, col_range.offset, col_range.length);
      }
-@@ -417,6 +516,26 @@
+@@ -417,6 +523,26 @@
      return cached_source_->WaitFor(ranges);
    }
 
@@ -360,7 +377,7 @@ index 4d3acb491e..3906ff3c59 100644
    // Metadata/footer parsing. Divided up to separate sync/async paths, and to use
    // exceptions for error handling (with the async path converting to Future/Status).
 
-@@ -911,6 +1030,22 @@
+@@ -911,6 +1037,22 @@
    return file->WhenBuffered(row_groups, column_indices);
  }
 
@@ -410,3 +427,13 @@ diff --git a/cpp/cmake_modules/BuildUtils.cmake b/cpp/cmake_modules/BuildUtils.c
        message(FATAL_ERROR "libtool found appears to be the incompatible GNU libtool: ${LIBTOOL_MACOS}"
        )
      endif()
+
+diff --git a/cpp/src/arrow/io/interfaces.h b/cpp/src/arrow/io/interfaces.h
+--- a/cpp/src/arrow/io/interfaces.h
++++ b/cpp/src/arrow/io/interfaces.h
+@@ -211,7 +211,7 @@
+   /// \brief Advance or skip stream indicated number of bytes
+   /// \param[in] nbytes the number to move forward
+   /// \return Status
+-  Status Advance(int64_t nbytes);
++  virtual Status Advance(int64_t nbytes);
