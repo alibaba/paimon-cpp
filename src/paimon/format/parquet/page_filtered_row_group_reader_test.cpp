@@ -835,7 +835,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
 
     // --- Check 4: No range exceeds file size ---
     for (const auto& range : ranges) {
-        EXPECT_LE(range.offset + range.length, static_cast<int64_t>(length))
+        ASSERT_LE(range.offset + range.length, static_cast<int64_t>(length))
             << "Range exceeds file size";
     }
 
@@ -851,28 +851,31 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
     ASSERT_EQ(100, result_all->length())
         << "End-to-end read with dictionary encoding should return all 100 rows";
 
-    // --- End-to-end check 2: manual row-level filtering ---
-    // Page-level filter does not do row-level filtering. Verify data content by
-    // scanning all returned rows and checking val == 5 appears exactly 10 times
-    // (val = i % 10, so rows 5,15,25,...,95 have val == 5).
+    // --- End-to-end check 2: verify data content using Equals ---
+    // Build expected array: val = i % 10 for i in [0, 100), wrapped in a struct.
+    arrow::Int32Builder expected_val_builder;
+    ASSERT_TRUE(expected_val_builder.Reserve(100).ok());
+    for (int i = 0; i < 100; ++i) {
+        expected_val_builder.UnsafeAppend(static_cast<int32_t>(i % 10));
+    }
+    auto expected_val_arr = expected_val_builder.Finish().ValueOrDie();
+
+    auto expected_struct_arr = arrow::StructArray::Make({expected_val_arr}, {field}).ValueOrDie();
+
+    // Concatenate all chunks and compare with Equals
+    auto actual_struct_arr = arrow::Concatenate(result_all->chunks()).ValueOrDie();
+    ASSERT_TRUE(actual_struct_arr->Equals(*expected_struct_arr))
+        << "Struct array content mismatch: actual values differ from expected (val = i % 10)";
+
+    // val == 5 appears exactly 10 times (rows 5,15,25,...,95)
+    auto actual_val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(
+        std::dynamic_pointer_cast<arrow::StructArray>(actual_struct_arr)->field(0));
     int32_t count_val5 = 0;
-    int64_t total_rows_checked = 0;
-    for (int i = 0; i < result_all->num_chunks(); ++i) {
-        auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(result_all->chunk(i));
-        ASSERT_TRUE(struct_arr);
-        auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
-        ASSERT_TRUE(val_arr);
-        for (int64_t j = 0; j < val_arr->length(); ++j) {
-            auto expected = static_cast<int32_t>(total_rows_checked % 10);
-            ASSERT_EQ(expected, val_arr->Value(j))
-                << "Value mismatch at row " << total_rows_checked;
-            if (val_arr->Value(j) == 5) {
-                ++count_val5;
-            }
-            ++total_rows_checked;
+    for (int64_t i = 0; i < actual_val_arr->length(); ++i) {
+        if (actual_val_arr->Value(i) == 5) {
+            ++count_val5;
         }
     }
-    ASSERT_EQ(100, total_rows_checked);
     ASSERT_EQ(10, count_val5) << "val == 5 should appear exactly 10 times in 100 rows";
 }
 
