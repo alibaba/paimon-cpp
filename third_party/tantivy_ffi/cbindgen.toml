@@ -1,10 +1,10 @@
-# cbindgen 配置: Rust FFI -> C 头文件生成器
-# 由 build.rs 调用,输出到 $OUT_DIR/paimon_tantivy_ffi.h
-# CMake 通过 Corrosion 拿到 $OUT_DIR 并 include 到 C++ target
+# cbindgen config: Rust FFI -> C header generator.
+# Invoked by build.rs, outputs to $OUT_DIR/paimon_tantivy_ffi.h.
+# CMake picks up $OUT_DIR via Corrosion and adds it to the C++ include path.
 
 language = "C"
 
-# 头文件顶部标注
+# Header banner written at the top of the generated file.
 header = """
 /* Copyright 2026-present Alibaba Inc. */
 /*
@@ -17,22 +17,23 @@ header = """
 
 include_guard = "PAIMON_TANTIVY_FFI_H"
 cpp_compat = true
-pragma_once = false   # 已经手写在 header 里
+pragma_once = false   # already written by hand in the header banner above
 documentation = true
 documentation_style = "c"
 line_length = 100
 tab_width = 4
 
 [export]
-# 不给类型加前缀 (Rust 侧类型名已经自带 PaimonTantivy... 前缀)。
-# 函数名天然以 paimon_tantivy_ 开头(Rust 源里直接这样命名)。
+# No type prefix (Rust type names already carry the PaimonTantivy... prefix).
+# Function names already start with paimon_tantivy_ (named that way in the Rust source).
 prefix = ""
-# 强制导出仅作为句柄/返回值的类型(没有 FFI 函数直接 take/return 它们时,
-# cbindgen 默认不导出;显式列在这里)。
+# Force-export types that only appear as handles / return values; cbindgen does
+# not export them by default when no FFI function directly takes/returns them,
+# so list them explicitly here.
 include = ["PaimonTantivyStatus"]
 
 [export.rename]
-# Rust enum 名 -> C 里的 typedef 名(避免重复 prefix 之类)
+# Rust enum name -> C typedef name (to avoid duplicated prefixes, etc.)
 
 [fn]
 prefix = ""

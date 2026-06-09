@@ -204,8 +204,9 @@ TEST(TantivyTokenizer, HmmModeReturnsUnsupported) {
 // ---------------- positive jieba-rs behavior assertions ----------------
 //
 // Per decision in docs/dev/tokenizer_diff_report.md: we do NOT require
-// byte-level parity with cppjieba (共存 + 各自索引不互读). Instead assert
-// jieba-rs produces expected token sequences for a curated set of inputs.
+// byte-level parity with cppjieba (the two backends coexist and each reads
+// only its own index). Instead assert jieba-rs produces expected token
+// sequences for a curated set of inputs.
 
 struct JiebaRsCase {
     std::string mode;
@@ -232,7 +233,8 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values(JiebaRsCase{"mix", "Hello World", {"hello", "world"}},
                       JiebaRsCase{"mix", "HELLO", {"hello"}},
                       JiebaRsCase{"mix", "中国人民", {"中国", "人民"}},
-                      // 他/了 在 stop_words.utf8 里,被 Normalize 过滤
+                      // the two single-char stop words in the input are in
+                      // stop_words.utf8, so Normalize drops them from the output
                       JiebaRsCase{"mix", "他来到了网易杭研大厦", {"来到", "网易", "杭研", "大厦"}},
                       JiebaRsCase{"full", "中国", {"中", "中国", "国"}},
                       JiebaRsCase{"query", "中国人民", {"中国", "人民"}}));

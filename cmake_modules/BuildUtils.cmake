@@ -341,9 +341,10 @@ function(add_test_case REL_TEST_NAME)
         target_compile_options(${TEST_NAME} PRIVATE -Wno-global-constructors)
     endif()
     target_compile_options(${TEST_NAME} PRIVATE -fno-access-control)
-    # test 源文件里用 {1, -1, ...} 这样的方式初始化 char/vector<char> 代表原始字节;
-    # aarch64 默认 char 是 unsigned,会触发 -Wnarrowing。这里统一关掉,避免测试
-    # 源文件里大量 static_cast<char>(-1) 污染。生产代码(src/paimon/...)不关。
+    # Test sources initialize char / vector<char> from raw byte values like
+    # {1, -1, ...}; char is unsigned by default on aarch64, which triggers
+    # -Wnarrowing. Disable it for tests so we don't have to sprinkle
+    # static_cast<char>(-1) everywhere. Production code (src/paimon/...) keeps it.
     target_compile_options(${TEST_NAME} PRIVATE -Wno-narrowing)
 
     add_test(${TEST_NAME}

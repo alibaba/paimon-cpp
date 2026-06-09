@@ -133,7 +133,7 @@ fn load_jieba(dict_dir: &Path) -> Result<Jieba, String> {
         Jieba::new()
     };
     // Optional user dict. cppjieba's user.dict.utf8 is lenient: lines are
-    // `word [freq] [tag]` where freq can be omitted (e.g. "蓝翔 nz"), but
+    // `word [freq] [tag]` where freq can be omitted (e.g. `<word> nz`), but
     // jieba-rs's load_dict strictly requires `word freq [tag]` and fails if
     // freq is not an integer. We parse line-by-line with `add_word` to stay
     // compatible.

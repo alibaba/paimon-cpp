@@ -13,9 +13,10 @@
 # limitations under the License.
 
 cmake_minimum_required(VERSION 3.22)
-# 3.22 是 Corrosion-rs (用于 Rust-C++ FFI 集成,见 third_party/tantivy_ffi) 的
-# 最低要求。Ubuntu 24.04 默认 CMake 3.28,CentOS 8+/RHEL 9+ 默认 3.20+。
-# 如果需要在更老的发行版构建,请参考 docs/dev/tantivy_fts_migration_plan.md。
+# 3.22 is the minimum required by Corrosion-rs (used for the Rust<->C++ FFI
+# integration, see third_party/tantivy_ffi). Ubuntu 24.04 ships CMake 3.28 and
+# CentOS 8+/RHEL 9+ ship 3.20+. To build on older distros, see
+# docs/dev/tantivy_fts_migration_plan.md.
 message(STATUS "Building using CMake version: ${CMAKE_VERSION}")
 
 # https://cmake.org/cmake/help/latest/policy/CMP0135.html

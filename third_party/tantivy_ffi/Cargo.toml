@@ -8,8 +8,8 @@ publish = false
 
 [lib]
 name = "paimon_tantivy_ffi"
-# staticlib: 给 CMake + Corrosion 链接成 libpaimon_tantivy_ffi.a
-# rlib:      给 cargo test 生成 test 可执行文件时能用到 Rust 原生 linkage
+# staticlib: linked by CMake + Corrosion into libpaimon_tantivy_ffi.a
+# rlib:      lets `cargo test` use native Rust linkage when building test binaries
 crate-type = ["staticlib", "rlib"]
 
 [dependencies]
@@ -29,5 +29,6 @@ codegen-units = 1
 panic = "abort"
 
 [profile.dev]
-# FFI 异常传播通过 status code,Rust 侧 panic 应当 abort 避免穿过 FFI 边界
+# Errors propagate across the FFI via status codes; a Rust panic must abort
+# rather than unwind across the FFI boundary.
 panic = "abort"

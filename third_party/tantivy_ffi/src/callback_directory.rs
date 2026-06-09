@@ -95,8 +95,9 @@ pub struct PaimonCallbackDirectory {
     /// via `atomic_write`; we keep them in memory instead of pushing back
     /// through C++ (read-only archive). Shared across clones.
     atomic_data: Arc<Mutex<HashMap<PathBuf, Vec<u8>>>>,
-    /// V3 保守路线:串行 seek+read(对齐 Java JniDir `stream_lock`)。
-    /// V3.5 升级去掉此锁,见 `tantivy_directory_upgrade_plan.md` §5。
+    /// V3 conservative approach: serialize seek+read (mirrors Java JniDir's
+    /// `stream_lock`). V3.5 will drop this lock; see
+    /// `tantivy_directory_upgrade_plan.md` §5.
     stream_mutex: Arc<Mutex<()>>,
 }
 
@@ -414,7 +415,7 @@ mod tests {
     #[test]
     fn pread_out_of_range_propagates_error() {
         let data = b"short".to_vec();
-        let entries = vec![("bad.txt".to_string(), 0, 100)]; // 长度超出 data
+        let entries = vec![("bad.txt".to_string(), 0, 100)]; // length exceeds data
         let (dir, _backend) = build_mock_directory(data, entries);
         let handle = dir.get_file_handle(Path::new("bad.txt")).unwrap();
         let err = handle.read_bytes(0..100).unwrap_err();

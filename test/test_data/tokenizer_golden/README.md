@@ -1,21 +1,29 @@
-# Tokenizer 黄金样本
+# Tokenizer golden samples
 
-供 `paimon-tantivy-tokenizer-test` 比对 cppjieba vs jieba-rs 的分词输出。
+Used by `paimon-tantivy-tokenizer-test` to compare cppjieba vs jieba-rs
+tokenization output.
 
-## 文件
+## Files
 
-- `golden_synthetic.txt` — 手写边界 case（混合中英文、数字、标点、emoji、空白、超长词…）
-- `golden_corpus.txt` — 公开语料短句摘录（通用知识、无版权敏感）
+- `golden_synthetic.txt` — hand-written edge cases (mixed Chinese/English,
+  digits, punctuation, emoji, whitespace, very long words, ...)
+- `golden_corpus.txt` — short excerpts from public corpora (general knowledge,
+  no copyright concerns)
 
-## 使用
+## Usage
 
-测试代码（见 `src/paimon/global_index/tantivy/tantivy_tokenizer_test.cpp`）：
-1. 逐行读取
-2. 每行用 cppjieba `JiebaTokenizer::CutWithMode` + `Normalize` 得到 token 序列 A
-3. 每行用 jieba-rs FFI `paimon_tantivy_tokenizer_tokenize` 得到 token 序列 B
-4. 比对 A 和 B：如果完全相同则本行 pass；否则记入 diff 报告
-5. 通过条件：diff 率 ≤ 1%（见 plan Stage 3 验收标准）
+The test code (see `src/paimon/global_index/tantivy/tantivy_tokenizer_test.cpp`):
+1. reads the files line by line
+2. tokenizes each line with cppjieba `JiebaTokenizer::CutWithMode` + `Normalize`
+   to get token sequence A
+3. tokenizes each line with the jieba-rs FFI `paimon_tantivy_tokenizer_tokenize`
+   to get token sequence B
+4. compares A and B: the line passes if they are identical, otherwise it is
+   recorded in the diff report
+5. (historical) the original acceptance bar was a diff rate <= 1%; the test is
+   now advisory only and logs diffs without failing
 
-## 扩充
+## Extending
 
-后续补充业务 query log 时，新增文件 `golden_business.txt` 放在同目录，测试代码自动扫描 `golden_*.txt`。
+To add business query logs later, drop a new `golden_business.txt` in this
+directory; the test scans `golden_*.txt` automatically.
