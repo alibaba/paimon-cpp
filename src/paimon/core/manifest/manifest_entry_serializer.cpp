@@ -53,7 +53,7 @@ Result<ManifestEntry> ManifestEntrySerializer::ConvertFrom(int32_t version,
         return Status::Invalid("ManifestEntry convert from row failed, with null DataFileMeta");
     }
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFileMeta> meta,
-                           data_file_meta_serializer_.FromRow(*file))
+                           data_file_meta_serializer_.FromRow(*file));
     return ManifestEntry(file_kind, partition, bucket, total_buckets, meta);
 }
 
