@@ -753,8 +753,9 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
     auto field = arrow::field("val", arrow::int32());
     auto struct_array = arrow::StructArray::Make({val_array}, {field}).ValueOrDie();
 
-    // Write with dictionary encoding enabled (the key difference from other tests).
-    WriteTestFile(file_name, struct_array, /*write_batch_size=*/10,
+    // Write with dictionary encoding enabled and 1 row per page.
+    // Each page has min==max==val for that row, enabling precise page-level skipping.
+    WriteTestFile(file_name, struct_array, /*write_batch_size=*/1,
                   /*max_row_group_length=*/100, /*enable_dictionary=*/true);
 
     // Open the file and verify metadata confirms dictionary page presence
@@ -769,8 +770,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
     auto col_chunk = rg_metadata->ColumnChunk(0);
 
     // Precondition: dictionary page must exist for this test to be meaningful
-    ASSERT_TRUE(col_chunk->has_dictionary_page())
-        << "Dictionary page not present - test setup error";
+    ASSERT_TRUE(col_chunk->has_dictionary_page());
 
     int64_t dict_offset = col_chunk->dictionary_page_offset();
     int64_t data_page_offset = col_chunk->data_page_offset();
@@ -782,11 +782,8 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
     int64_t buggy_chunk_end = data_page_offset + total_compressed_size;
 
     // Sanity: dict page is before data pages, so buggy end > true end
-    ASSERT_LT(dict_offset, data_page_offset)
-        << "Dictionary offset should be before data page offset";
-    ASSERT_GT(buggy_chunk_end, true_chunk_end)
-        << "Buggy chunk_end should exceed true chunk_end when dictionary is present";
-
+    ASSERT_LT(dict_offset, data_page_offset);
+    ASSERT_GT(buggy_chunk_end, true_chunk_end);
     // Now call ComputePageRanges with all rows matching
     RowRanges row_ranges;
     row_ranges.Add(RowRanges::Range(0, 99));
@@ -801,12 +798,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
     // total_compressed_size, which overshoots by the dictionary page size.
     for (size_t i = 0; i < ranges.size(); ++i) {
         int64_t range_end = ranges[i].offset + ranges[i].length;
-        ASSERT_LE(range_end, true_chunk_end)
-            << "Range " << i << " [offset=" << ranges[i].offset << ", length=" << ranges[i].length
-            << "] exceeds true chunk end (" << true_chunk_end << "). "
-            << "This indicates chunk_end is computed as data_page_offset + "
-               "total_compressed_size instead of dictionary_page_offset + "
-               "total_compressed_size.";
+        ASSERT_LE(range_end, true_chunk_end);
     }
 
     // --- Check 2: At least one non-dictionary data-page range is present ---
@@ -818,9 +810,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
             ++data_page_range_count;
         }
     }
-    ASSERT_GE(data_page_range_count, 1)
-        << "Expected at least one data-page range (offset >= " << data_page_offset
-        << "), but only dictionary range(s) were returned.";
+    ASSERT_GE(data_page_range_count, 1);
 
     // --- Check 3: Maximum range_end equals true_chunk_end when requesting all rows ---
     int64_t max_range_end = 0;
@@ -828,15 +818,11 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
         int64_t range_end = range.offset + range.length;
         max_range_end = std::max(max_range_end, range_end);
     }
-    ASSERT_EQ(max_range_end, true_chunk_end)
-        << "When requesting all rows, the maximum range_end should exactly equal "
-        << "true_chunk_end (" << true_chunk_end << "), but got " << max_range_end
-        << ". The last data page range may be truncated or missing.";
+    ASSERT_EQ(max_range_end, true_chunk_end);
 
     // --- Check 4: No range exceeds file size ---
     for (const auto& range : ranges) {
-        ASSERT_LE(range.offset + range.length, static_cast<int64_t>(length))
-            << "Range exceeds file size";
+        ASSERT_LE(range.offset + range.length, static_cast<int64_t>(length));
     }
 
     // --- End-to-end check 1: read all rows (no predicate filtering) ---
@@ -848,35 +834,35 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
     std::shared_ptr<arrow::ChunkedArray> result_all;
     ReadWithPredicateImpl(file_name, read_schema, predicate_all, &result_all);
     ASSERT_TRUE(result_all);
-    ASSERT_EQ(100, result_all->length())
-        << "End-to-end read with dictionary encoding should return all 100 rows";
+    ASSERT_EQ(100, result_all->length());
 
-    // --- End-to-end check 2: verify data content using Equals ---
+    // --- End-to-end check 2: full range query with page level skipping ---
     // Build expected array: val = i % 10 for i in [0, 100), wrapped in a struct.
-    arrow::Int32Builder expected_val_builder;
-    ASSERT_TRUE(expected_val_builder.Reserve(100).ok());
-    for (int i = 0; i < 100; ++i) {
-        expected_val_builder.UnsafeAppend(static_cast<int32_t>(i % 10));
-    }
-    auto expected_val_arr = expected_val_builder.Finish().ValueOrDie();
-
-    auto expected_struct_arr = arrow::StructArray::Make({expected_val_arr}, {field}).ValueOrDie();
-
     // Concatenate all chunks and compare with Equals
     auto actual_struct_arr = arrow::Concatenate(result_all->chunks()).ValueOrDie();
-    ASSERT_TRUE(actual_struct_arr->Equals(*expected_struct_arr))
-        << "Struct array content mismatch: actual values differ from expected (val = i % 10)";
+    ASSERT_TRUE(actual_struct_arr->Equals(struct_array));
 
-    // val == 5 appears exactly 10 times (rows 5,15,25,...,95)
-    auto actual_val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(
-        std::dynamic_pointer_cast<arrow::StructArray>(actual_struct_arr)->field(0));
-    int32_t count_val5 = 0;
-    for (int64_t i = 0; i < actual_val_arr->length(); ++i) {
-        if (actual_val_arr->Value(i) == 5) {
-            ++count_val5;
+    // --- End-to-end check 3: partial-row query with page-level skipping ---
+    // Predicate val >= 7 skips pages where val < 7, keeping only val in {7,8,9}.
+    // Out of 100 rows, 30 rows satisfy val >= 7 (3 per cycle × 10 cycles).
+    auto predicate_partial = PredicateBuilder::GreaterOrEqual(
+        /*field_index=*/0, /*field_name=*/"val", FieldType::INT, Literal(7));
+    std::shared_ptr<arrow::ChunkedArray> result_partial;
+    ReadWithPredicateImpl(file_name, read_schema, predicate_partial, &result_partial);
+    ASSERT_TRUE(result_partial);
+
+    // Build expected StructArray and compare with Equals
+    arrow::Int32Builder expected_builder;
+    ASSERT_TRUE(expected_builder.Reserve(30).ok());
+    for (int32_t i = 0; i < 100; ++i) {
+        if (i % 10 >= 7) {
+            expected_builder.UnsafeAppend(i % 10);
         }
     }
-    ASSERT_EQ(10, count_val5) << "val == 5 should appear exactly 10 times in 100 rows";
+    auto expected_array = expected_builder.Finish().ValueOrDie();
+    auto expected_struct = arrow::StructArray::Make({expected_array}, {field}).ValueOrDie();
+    auto partial_concat = arrow::Concatenate(result_partial->chunks()).ValueOrDie();
+    ASSERT_TRUE(partial_concat->Equals(expected_struct));
 }
 
 }  // namespace paimon::parquet::test
