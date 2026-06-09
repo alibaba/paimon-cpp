@@ -801,7 +801,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
     // total_compressed_size, which overshoots by the dictionary page size.
     for (size_t i = 0; i < ranges.size(); ++i) {
         int64_t range_end = ranges[i].offset + ranges[i].length;
-        EXPECT_LE(range_end, true_chunk_end)
+        ASSERT_LE(range_end, true_chunk_end)
             << "Range " << i << " [offset=" << ranges[i].offset << ", length=" << ranges[i].length
             << "] exceeds true chunk end (" << true_chunk_end << "). "
             << "This indicates chunk_end is computed as data_page_offset + "
