@@ -78,9 +78,15 @@ BloomFilterFileIndexReader::BloomFilterFileIndexReader(const FastHash::HashFunct
 
 Result<std::shared_ptr<FileIndexResult>> BloomFilterFileIndexReader::VisitEqual(
     const Literal& literal) {
+    // This returns `Remain` to align with the current Java implementation in BF index, even though
+    // its predicate semantics are inconsistent here. In practice, equality tests in predicate
+    // evaluation always return false when the literal is null. See
+    // `null_false_leaf_binary_function.h`.
+    if (literal.IsNull()) {
+        return FileIndexResult::Remain();
+    }
     int64_t hash = hash_function_(literal);
-    return literal.IsNull() || filter_.TestHash(hash) ? FileIndexResult::Remain()
-                                                      : FileIndexResult::Skip();
+    return filter_.TestHash(hash) ? FileIndexResult::Remain() : FileIndexResult::Skip();
 }
 
 }  // namespace paimon

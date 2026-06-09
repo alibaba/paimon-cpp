@@ -254,7 +254,7 @@ class FileStoreCommitImplTest : public testing::Test {
         EXPECT_OK_AND_ASSIGN(std::unique_ptr<InputStream> in_stream, file_system->Open(path));
         EXPECT_TRUE(in_stream);
         EXPECT_OK_AND_ASSIGN([[maybe_unused]] int64_t length,
-                             in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()))
+                             in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
         EXPECT_OK(in_stream->Close());
         auto pool = GetDefaultPool();
 
@@ -1686,6 +1686,64 @@ TEST_F(FileStoreCommitImplTest, TestObjectStoreAllowedWithRESTCatalogCommit) {
     ASSERT_OK(commit->Commit(msgs));
     ASSERT_OK_AND_ASSIGN(auto json, commit->GetLastCommitTableRequest());
     ASSERT_FALSE(json.empty());
+}
+
+// Verify that FileStoreCommit::Create succeeds for PK tables with postpone bucket mode (bucket=-2)
+// without requiring the enable-pk-commit-in-inte-test workaround flag.
+TEST_F(FileStoreCommitImplTest, TestPostponeBucketPKTableCommitAllowed) {
+    auto pk_dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(pk_dir);
+    std::string pk_root = pk_dir->Str();
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(pk_root, {}));
+    ASSERT_OK(catalog->CreateDatabase("db", {}, false));
+
+    arrow::Schema pk_schema(
+        {arrow::field("pk", arrow::int32()), arrow::field("val", arrow::utf8())});
+    ::ArrowSchema arrow_schema;
+    ASSERT_TRUE(arrow::ExportSchema(pk_schema, &arrow_schema).ok());
+    std::map<std::string, std::string> table_options = {{Options::BUCKET, "-2"}};
+    ASSERT_OK(catalog->CreateTable(Identifier("db", "pk_tbl"), &arrow_schema,
+                                   /*partition_keys=*/{}, /*primary_keys=*/{"pk"}, table_options,
+                                   /*ignore_if_exists=*/false));
+
+    std::string pk_table_path = PathUtil::JoinPath(pk_root, "db.db/pk_tbl");
+
+    // Create FileStoreCommit WITHOUT the workaround flag — should succeed for postpone bucket
+    CommitContextBuilder builder(pk_table_path, "test_user");
+    builder.AddOption(Options::FILE_SYSTEM, "local").UseRESTCatalogCommit(true);
+    ASSERT_OK_AND_ASSIGN(auto commit_context, builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto committer, FileStoreCommit::Create(std::move(commit_context)));
+    ASSERT_TRUE(committer != nullptr);
+}
+
+// Verify that FileStoreCommit::Create still rejects PK tables with fixed bucket (bucket > 0)
+// when the workaround flag is not set.
+TEST_F(FileStoreCommitImplTest, TestFixedBucketPKTableCommitRejected) {
+    auto pk_dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(pk_dir);
+    std::string pk_root = pk_dir->Str();
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(pk_root, {}));
+    ASSERT_OK(catalog->CreateDatabase("db", {}, false));
+
+    arrow::Schema pk_schema(
+        {arrow::field("pk", arrow::int32()), arrow::field("val", arrow::utf8())});
+    ::ArrowSchema arrow_schema;
+    ASSERT_TRUE(arrow::ExportSchema(pk_schema, &arrow_schema).ok());
+    std::map<std::string, std::string> table_options = {{Options::BUCKET, "4"}};
+    ASSERT_OK(catalog->CreateTable(Identifier("db", "pk_tbl_fixed"), &arrow_schema,
+                                   /*partition_keys=*/{}, /*primary_keys=*/{"pk"}, table_options,
+                                   /*ignore_if_exists=*/false));
+
+    std::string pk_table_path = PathUtil::JoinPath(pk_root, "db.db/pk_tbl_fixed");
+
+    CommitContextBuilder builder(pk_table_path, "test_user");
+    builder.AddOption(Options::FILE_SYSTEM, "local").UseRESTCatalogCommit(true);
+    ASSERT_OK_AND_ASSIGN(auto commit_context, builder.Finish());
+    auto result = FileStoreCommit::Create(std::move(commit_context));
+    ASSERT_FALSE(result.ok());
+    ASSERT_TRUE(result.status().IsNotImplemented());
+    ASSERT_TRUE(result.status().ToString().find("not support pk table commit") !=
+                std::string::npos);
 }
 
 }  // namespace paimon::test

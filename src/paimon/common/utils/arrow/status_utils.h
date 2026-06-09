@@ -96,10 +96,10 @@ inline Status ToPaimonStatus(const arrow::Status& status) {
     auto&& result_name = (rexpr);                                                  \
     PAIMON_RETURN_IF_(!(result_name).ok(), ToPaimonStatus((result_name).status()), \
                       PAIMON_STRINGIFY(rexpr));                                    \
-    lhs = std::move(result_name).ValueUnsafe();
+    lhs = std::move(result_name).ValueUnsafe()
 
 #define PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(lhs, rexpr) \
     PAIMON_ASSIGN_OR_RAISE_IMPL_FROM_ARROW(           \
-        PAIMON_ASSIGN_OR_RAISE_NAME(_error_or_value, __COUNTER__), lhs, (rexpr));
+        PAIMON_ASSIGN_OR_RAISE_NAME(_error_or_value, __COUNTER__), lhs, (rexpr))
 
 }  // namespace paimon

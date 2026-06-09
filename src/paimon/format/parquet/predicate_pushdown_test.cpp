@@ -343,7 +343,7 @@ TEST_F(PredicatePushdownTest, TestStringData) {
         CheckResult(read_schema, predicate, /*expected_array=*/expected_array);
     }
     {
-        // f0 like 'me', no data
+        // f0 like 'me', has data
         ASSERT_OK_AND_ASSIGN(const auto predicate,
                              PredicateBuilder::Like(
                                  /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
