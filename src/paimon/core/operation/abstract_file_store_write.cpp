@@ -126,7 +126,7 @@ Status AbstractFileStoreWrite::Write(std::unique_ptr<RecordBatch>&& batch) {
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*data, batch->GetData()));
 
     PAIMON_ASSIGN_OR_RAISE(BinaryRow partition,
-                           file_store_path_factory_->ToBinaryRow(batch->GetPartition()))
+                           file_store_path_factory_->ToBinaryRow(batch->GetPartition()));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BatchWriter> writer,
                            GetWriter(partition, batch->GetBucket()));
     assert(writer);

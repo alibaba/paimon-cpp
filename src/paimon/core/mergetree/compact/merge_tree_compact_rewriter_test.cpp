@@ -117,7 +117,7 @@ TEST_F(MergeTreeCompactRewriterTest, TestSimple) {
 
     // generate sorted runs and rewrite
     ASSERT_OK_AND_ASSIGN(auto runs, GenerateSortedRuns(table_path, table_schema, /*bucket=*/1,
-                                                       /*partition=*/{{"f1", "10"}}))
+                                                       /*partition=*/{{"f1", "10"}}));
     ASSERT_OK_AND_ASSIGN(auto compact_result, rewriter->Rewrite(
                                                   /*output_level=*/5, /*drop_delete=*/true, runs));
     // check compact result
@@ -214,7 +214,7 @@ TEST_F(MergeTreeCompactRewriterTest, TestNotDropDelete) {
 
     // generate sorted runs and rewrite
     ASSERT_OK_AND_ASSIGN(auto runs, GenerateSortedRuns(table_path, table_schema, /*bucket=*/1,
-                                                       /*partition=*/{{"f1", "10"}}))
+                                                       /*partition=*/{{"f1", "10"}}));
     ASSERT_OK_AND_ASSIGN(auto compact_result, rewriter->Rewrite(
                                                   /*output_level=*/5, /*drop_delete=*/false, runs));
     // check compact result
@@ -285,7 +285,7 @@ TEST_F(MergeTreeCompactRewriterTest, TestIOException) {
 
         // generate sorted runs and rewrite
         ASSERT_OK_AND_ASSIGN(auto runs, GenerateSortedRuns(table_path, table_schema, /*bucket=*/1,
-                                                           /*partition=*/{{"f1", "10"}}))
+                                                           /*partition=*/{{"f1", "10"}}));
         // rewrite may trigger I/O exception
         ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
         io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
