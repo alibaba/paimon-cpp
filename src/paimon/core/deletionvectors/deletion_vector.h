@@ -49,6 +49,14 @@ class DeletionVector {
 
     static Factory CreateFactory(const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer);
 
+    /// Builds a map from data file name to its deletion file.
+    ///
+    /// Entries whose deletion file is absent are skipped. Returns an empty map when
+    /// `deletion_files` is empty.
+    static std::unordered_map<std::string, DeletionFile> CreateDeletionFileMap(
+        const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
+        const std::vector<std::optional<DeletionFile>>& deletion_files);
+
     virtual ~DeletionVector() = default;
 
     /// Marks the row at the specified position as deleted.

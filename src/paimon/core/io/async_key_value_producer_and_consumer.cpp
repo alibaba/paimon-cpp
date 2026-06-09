@@ -38,7 +38,7 @@ AsyncKeyValueProducerAndConsumer<T, R>::AsyncKeyValueProducerAndConsumer(
       pool_(pool),
       sort_merge_reader_(std::move(sort_merge_reader)),
       create_consumer_(std::move(create_consumer)) {
-    kv_queue_.set_capacity(batch_size);
+    kv_queue_.set_capacity(consumer_thread_num * 2);
     result_queue_.set_capacity(RESULT_BATCH_COUNT);
 }
 
@@ -79,8 +79,8 @@ Result<R> AsyncKeyValueProducerAndConsumer<T, R>::NextBatch() {
             Result<std::unique_ptr<RowToArrowArrayConverter<T, R>>> consumer = create_consumer_();
             PAIMON_RETURN_NOT_OK(consumer.status());
             auto async_consumer = std::make_unique<AsyncKeyValueConsumer<T, R>>(
-                batch_size_ / consumer_thread_num_, std::move(consumer).value(), consume_finished_,
-                consumer_finished_count_, kv_queue_, result_queue_);
+                std::move(consumer).value(), consume_finished_, consumer_finished_count_, kv_queue_,
+                result_queue_);
             consumers_.push_back(std::move(async_consumer));
         }
     }
@@ -107,24 +107,33 @@ Result<R> AsyncKeyValueProducerAndConsumer<T, R>::NextBatch() {
 
 template <typename T, typename R>
 Status AsyncKeyValueProducerAndConsumer<T, R>::ProduceLoop() {
+    std::vector<KeyValue> batch;
+    batch.reserve(batch_size_);
     while (!consume_finished_) {
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortMergeReader::Iterator> iterator,
                                sort_merge_reader_->NextBatch());
         if (iterator == nullptr) {
-            // all iterator is all visited
-            kv_queue_.push(std::nullopt);
             break;
         }
         while (!consume_finished_) {
             PAIMON_ASSIGN_OR_RAISE(bool has_next, iterator->HasNext());
             if (!has_next) {
-                // current iterator is all visited
                 break;
             }
-            std::optional<KeyValue> kv = std::move(iterator->Next());
-            kv_queue_.push(std::move(kv));
+            batch.push_back(std::move(iterator->Next()));
+            if (static_cast<int32_t>(batch.size()) >= batch_size_) {
+                kv_queue_.push(std::move(batch));
+                batch = std::vector<KeyValue>();
+                batch.reserve(batch_size_);
+            }
         }
     }
+    // Push remaining rows
+    if (!batch.empty()) {
+        kv_queue_.push(std::move(batch));
+    }
+    // Push empty batch as EOF signal
+    kv_queue_.push(std::vector<KeyValue>());
     return Status::OK();
 }
 
@@ -157,8 +166,8 @@ void AsyncKeyValueProducerAndConsumer<T, R>::CleanUpQueue() {
         }
     }
 
-    std::optional<KeyValue> kv;
-    while (kv_queue_.try_pop(kv)) {
+    std::vector<KeyValue> kv_batch;
+    while (kv_queue_.try_pop(kv_batch)) {
     }
 }
 
@@ -167,12 +176,11 @@ template class AsyncKeyValueProducerAndConsumer<KeyValue, KeyValueBatch>;
 
 template <typename T, typename R>
 AsyncKeyValueConsumer<T, R>::AsyncKeyValueConsumer(
-    int32_t batch_size, std::unique_ptr<RowToArrowArrayConverter<T, R>>&& key_value_consumer,
+    std::unique_ptr<RowToArrowArrayConverter<T, R>>&& key_value_consumer,
     std::atomic<bool>& consume_finished, std::atomic<int32_t>& consumer_finished_count,
-    tbb::concurrent_bounded_queue<std::optional<KeyValue>>& kv_queue,
+    tbb::concurrent_bounded_queue<std::vector<KeyValue>>& kv_queue,
     tbb::concurrent_bounded_queue<R>& result_queue)
-    : batch_size_(batch_size),
-      key_value_consumer_(std::move(key_value_consumer)),
+    : key_value_consumer_(std::move(key_value_consumer)),
       consume_finished_(consume_finished),
       consumer_finished_count_(consumer_finished_count),
       kv_queue_(kv_queue),
@@ -195,30 +203,18 @@ Status AsyncKeyValueConsumer<T, R>::GetStatus() const {
 template <typename T, typename R>
 Status AsyncKeyValueConsumer<T, R>::ConsumeLoop() {
     while (!consume_finished_) {
-        int32_t cur_batch_size = 0;
         std::vector<KeyValue> key_value_vec;
-        key_value_vec.reserve(batch_size_);
-        while (!consume_finished_) {
-            std::optional<KeyValue> kv;
-            if (!kv_queue_.try_pop(kv)) {
-                usleep(1);
-                continue;
-            }
-            if (!kv) {
-                consume_finished_ = true;
-                break;
-            }
-            key_value_vec.push_back(std::move(kv).value());
-            cur_batch_size++;
-            if (cur_batch_size >= batch_size_) {
-                break;
-            }
+        if (!kv_queue_.try_pop(key_value_vec)) {
+            usleep(100);
+            continue;
         }
-
-        if (cur_batch_size > 0) {
-            PAIMON_ASSIGN_OR_RAISE(R result, key_value_consumer_->NextBatch(key_value_vec));
-            result_queue_.push(std::move(result));
+        if (key_value_vec.empty()) {
+            // Empty batch is EOF signal; re-push for other consumers
+            kv_queue_.push(std::move(key_value_vec));
+            break;
         }
+        PAIMON_ASSIGN_OR_RAISE(R result, key_value_consumer_->NextBatch(key_value_vec));
+        result_queue_.push(std::move(result));
     }
     consumer_finished_count_++;
     return Status::OK();

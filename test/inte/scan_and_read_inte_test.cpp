@@ -37,6 +37,7 @@
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/core/table/source/deletion_file.h"
+#include "paimon/core/table/source/key_value_table_read.h"
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/local/local_file_system.h"
@@ -333,6 +334,10 @@ TEST_P(ScanAndReadInteTest, TestWithAppendSnapshot1) {
             .ValueOrDie());
     ASSERT_TRUE(expected);
     ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+
+    ASSERT_OK_AND_ASSIGN(auto count_reader, table_read->CreateCountReader(splits));
+    ASSERT_OK_AND_ASSIGN(int64_t count, count_reader->CountRows());
+    ASSERT_EQ(count, read_result->length());
 }
 
 TEST_P(ScanAndReadInteTest, TestWithAppendSnapshot3) {
@@ -418,6 +423,10 @@ TEST_P(ScanAndReadInteTest, TestWithAppendSnapshot5) {
             .ValueOrDie());
     ASSERT_TRUE(expected);
     ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+
+    ASSERT_OK_AND_ASSIGN(auto count_reader, table_read->CreateCountReader(splits));
+    ASSERT_OK_AND_ASSIGN(int64_t count, count_reader->CountRows());
+    ASSERT_EQ(count, read_result->length());
 }
 
 TEST_P(ScanAndReadInteTest, TestWithAppendSnapshotWithStreamWithDefaultMode) {
@@ -596,6 +605,12 @@ TEST_F(ScanAndReadInteTest, TestWithPKWithDvBatchScanSnapshot6) {
                 .ValueOrDie());
         ASSERT_TRUE(expected);
         ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+
+        // CountRows should match the number of visible rows returned by CreateReader.
+        ASSERT_OK_AND_ASSIGN(auto count_reader,
+                             table_read->CreateCountReader(result_plan->Splits()));
+        ASSERT_OK_AND_ASSIGN(int64_t count, count_reader->CountRows());
+        ASSERT_EQ(count, read_result->length());
     };
     for (auto [file_format, enable_prefetch] : GetTestValuesForScanAndReadInteTest()) {
         check_result(file_format);
@@ -1066,7 +1081,8 @@ TEST_P(ScanAndReadInteTest, TestWithPKWithMorBatchScanLatestSnapshot) {
 
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     ASSERT_EQ(result_plan->SnapshotId().value(), 5);
-    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(result_plan->Splits()));
+    auto splits = result_plan->Splits();
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(splits));
     ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
 
     // check result
@@ -1087,6 +1103,10 @@ TEST_P(ScanAndReadInteTest, TestWithPKWithMorBatchScanLatestSnapshot) {
             .ValueOrDie());
     ASSERT_TRUE(expected);
     ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+
+    ASSERT_OK_AND_ASSIGN(auto count_reader, table_read->CreateCountReader(splits));
+    ASSERT_OK_AND_ASSIGN(int64_t count, count_reader->CountRows());
+    ASSERT_EQ(count, read_result->length());
 }
 
 TEST_P(ScanAndReadInteTest, TestWithPKWithMorBatchScanSnapshot2) {
@@ -1108,7 +1128,8 @@ TEST_P(ScanAndReadInteTest, TestWithPKWithMorBatchScanSnapshot2) {
 
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     ASSERT_EQ(result_plan->SnapshotId().value(), 2);
-    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(result_plan->Splits()));
+    auto splits = result_plan->Splits();
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(splits));
     ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
 
     // check result
@@ -1126,6 +1147,10 @@ TEST_P(ScanAndReadInteTest, TestWithPKWithMorBatchScanSnapshot2) {
             .ValueOrDie());
     ASSERT_TRUE(expected);
     ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+
+    ASSERT_OK_AND_ASSIGN(auto count_reader, table_read->CreateCountReader(splits));
+    ASSERT_OK_AND_ASSIGN(int64_t count, count_reader->CountRows());
+    ASSERT_EQ(count, read_result->length());
 }
 
 TEST_P(ScanAndReadInteTest, TestWithPKWithMorBatchScanSnapshot5WithPartitionAndBucketFilter) {
@@ -1791,7 +1816,9 @@ TEST_P(ScanAndReadInteTest, TestWithPKWith09VersionDvBatchScanLatestSnapshot) {
 [0, "Emily", 10, 0, 13.1],
 [0, "Alice", 10, 1, 21.1],
 [0, "Two roads diverged in a wood, and I took the one less traveled by, And that has made all the difference.", 10, 1, 11.0],
-[0, "Whether I shall turn out to be the hero of my own life.", 10, 1, 19.1]
+[0, "Whether I shall turn out to be the hero of my own life.", 10, 1, 19.1],
+[0, "Lucy", 20, 1, 14.1],
+[0, "Paul", 20, 1, 18.1]
    ])")
             .ValueOrDie());
     ASSERT_TRUE(expected);
@@ -2773,6 +2800,104 @@ TEST_P(ScanAndReadInteTest, TestWithPKBucketSelectByPredicate) {
             .ValueOrDie());
     ASSERT_TRUE(expected);
     ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+}
+
+TEST_P(ScanAndReadInteTest, TestCountRowsEmptySplits) {
+    auto [file_format, enable_prefetch] = GetParam();
+    std::string table_path = paimon::test::GetDataDir() + file_format +
+                             "/pk_table_scan_and_read_mor.db/pk_table_scan_and_read_mor/";
+
+    ReadContextBuilder read_context_builder(table_path);
+    AddReadOptionsForPrefetch(&read_context_builder);
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+
+    // CreateCountReader with empty splits should return 0 rows.
+    std::vector<std::shared_ptr<Split>> empty_splits;
+    ASSERT_OK_AND_ASSIGN(auto count_reader, table_read->CreateCountReader(empty_splits));
+    ASSERT_OK_AND_ASSIGN(int64_t count, count_reader->CountRows());
+    ASSERT_EQ(count, 0);
+}
+
+TEST_P(ScanAndReadInteTest, TestCountRowsConsistencyWithCreateReader) {
+    auto [file_format, enable_prefetch] = GetParam();
+    std::string table_path = paimon::test::GetDataDir() + file_format +
+                             "/pk_table_scan_and_read_mor.db/pk_table_scan_and_read_mor/";
+
+    // Scan latest snapshot
+    ScanContextBuilder scan_context_builder(table_path);
+    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+    ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
+
+    // Method 1: CreateCountReader + iterate batches
+    ReadContextBuilder count_context_builder(table_path);
+    AddReadOptionsForPrefetch(&count_context_builder);
+    ASSERT_OK_AND_ASSIGN(auto count_read_context, count_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto count_table_read, TableRead::Create(std::move(count_read_context)));
+    ASSERT_OK_AND_ASSIGN(auto count_reader,
+                         count_table_read->CreateCountReader(result_plan->Splits()));
+    ASSERT_OK_AND_ASSIGN(int64_t count_result, count_reader->CountRows());
+
+    // Method 2: CreateReader + iterate batches
+    ReadContextBuilder read_context_builder(table_path);
+    AddReadOptionsForPrefetch(&read_context_builder);
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(result_plan->Splits()));
+    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
+    int64_t iterate_count = read_result ? read_result->length() : 0;
+
+    // Both methods should return the same count
+    ASSERT_EQ(count_result, iterate_count);
+}
+
+TEST_P(ScanAndReadInteTest, TestCreateCountReaderWithPredicateNotSupported) {
+    auto [file_format, enable_prefetch] = GetParam();
+    std::string table_path = paimon::test::GetDataDir() + file_format +
+                             "/pk_table_scan_and_read_mor.db/pk_table_scan_and_read_mor/";
+
+    // Create splits from latest snapshot.
+    ScanContextBuilder scan_context_builder(table_path);
+    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+    ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
+
+    // Set predicate in read context. CountReader currently does not support predicate pushdown.
+    auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT,
+                                             Literal(static_cast<int32_t>(0)));
+    ReadContextBuilder read_context_builder(table_path);
+    AddReadOptionsForPrefetch(&read_context_builder);
+    read_context_builder.SetPredicate(predicate);
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+
+    ASSERT_NOK_WITH_MSG(table_read->CreateCountReader(result_plan->Splits()),
+                        "predicate pushdown is not supported");
+}
+
+TEST_P(ScanAndReadInteTest, TestCreateCountReaderWithForceKeepDeleteNotSupported) {
+    auto [file_format, enable_prefetch] = GetParam();
+    std::string table_path = paimon::test::GetDataDir() + file_format +
+                             "/pk_table_scan_and_read_mor.db/pk_table_scan_and_read_mor/";
+
+    // Create splits from latest snapshot.
+    ScanContextBuilder scan_context_builder(table_path);
+    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+    ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
+
+    ReadContextBuilder read_context_builder(table_path);
+    AddReadOptionsForPrefetch(&read_context_builder);
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+
+    auto* key_value_table_read = dynamic_cast<KeyValueTableRead*>(table_read.get());
+    ASSERT_TRUE(key_value_table_read != nullptr);
+    key_value_table_read->ForceKeepDelete(true);
+
+    ASSERT_NOK_WITH_MSG(table_read->CreateCountReader(result_plan->Splits()),
+                        "force_keep_delete is not supported");
 }
 
 }  // namespace paimon::test

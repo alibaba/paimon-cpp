@@ -70,9 +70,9 @@ Status SchemaValidation::ValidateTableSchema(const TableSchema& schema) {
         ValidateOnlyContainPrimitiveType(schema.Fields(), schema.PrimaryKeys(), "primary key"));
     PAIMON_RETURN_NOT_OK(
         ValidateOnlyContainPrimitiveType(schema.Fields(), schema.PartitionKeys(), "partition"));
-    // TODO(lisizhuo.lsz): C++ Paimon do not support timestamp & decimal type in partition keys for
-    // now.
-    PAIMON_RETURN_NOT_OK(ValidateNotContainComplexType(schema.Fields(), schema.PartitionKeys()));
+    // TODO(lisizhuo.lsz): C++ Paimon do not support timestamp & decimal & float & double type in
+    // partition keys for now.
+    PAIMON_RETURN_NOT_OK(ValidateNotContainSpecificType(schema.Fields(), schema.PartitionKeys()));
 
     PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(schema.Options()));
     PAIMON_RETURN_NOT_OK(ValidateBucket(schema, options));
@@ -160,7 +160,7 @@ Status SchemaValidation::ValidateOnlyContainPrimitiveType(
     return Status::OK();
 }
 
-Status SchemaValidation::ValidateNotContainComplexType(
+Status SchemaValidation::ValidateNotContainSpecificType(
     const std::vector<DataField>& fields, const std::vector<std::string>& field_names) {
     if (field_names.empty()) {
         return Status::OK();
@@ -175,8 +175,12 @@ Status SchemaValidation::ValidateNotContainComplexType(
             auto field = it->second;
             if (IsComplexType(field)) {
                 return Status::Invalid(
-                    fmt::format("The field {} in partition field {} is unsupported",
-                                field->ToString(), it->first));
+                    fmt::format("partition field {} cannot be TIMESTAMP/DECIMAL/BLOB", field_name));
+            }
+            if (field->type()->id() == arrow::Type::FLOAT ||
+                field->type()->id() == arrow::Type::DOUBLE) {
+                return Status::Invalid(
+                    fmt::format("partition field {} cannot be FLOAT/DOUBLE", field_name));
             }
         } else {
             assert(false);
@@ -444,12 +448,8 @@ Status SchemaValidation::ValidateBlobFields(const TableSchema& schema, const Cor
     const auto& blob_descriptor_names = options.GetBlobDescriptorFields();
     const auto& blob_view_names = options.GetBlobViewFields();
     const auto& blob_external_storage_names = options.GetBlobExternalStorageFields();
-    std::vector<std::string> configured_blob_like_names = configured_blob_names;
-    configured_blob_like_names.insert(configured_blob_like_names.end(),
-                                      blob_descriptor_names.begin(), blob_descriptor_names.end());
-    configured_blob_like_names.insert(configured_blob_like_names.end(), blob_view_names.begin(),
-                                      blob_view_names.end());
-    if (configured_blob_like_names.empty() && blob_external_storage_names.empty()) {
+    if (configured_blob_names.empty() && blob_descriptor_names.empty() && blob_view_names.empty() &&
+        blob_external_storage_names.empty()) {
         return Status::OK();
     }
 

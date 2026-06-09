@@ -34,6 +34,7 @@
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/decimal_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
+#include "paimon/core/casting/binary_to_blob_cast_executor.h"
 #include "paimon/core/casting/binary_to_string_cast_executor.h"
 #include "paimon/core/casting/boolean_to_decimal_cast_executor.h"
 #include "paimon/core/casting/boolean_to_numeric_cast_executor.h"
@@ -162,8 +163,23 @@ class CastExecutorTest : public ::testing::Test {
         for (size_t i = 0; i < src_data.size(); i++) {
             ASSERT_OK_AND_ASSIGN(Literal result, cast_executor->Cast(src_literals[i], target_type));
             ASSERT_FALSE(result.IsNull());
-            ASSERT_EQ(target_literals[i], result)
-                << target_literals[i].ToString() << "->" << result.ToString();
+            if (target_literals[i] != result) {
+                // Fall back to approximate comparison for floating-point types, because
+                // different conversion paths (e.g. decimal->float vs float literal) may
+                // produce slightly different bit representations.
+                if (target_field_type == FieldType::FLOAT) {
+                    ASSERT_NEAR(target_literals[i].GetValue<float>(), result.GetValue<float>(),
+                                1E-5)
+                        << target_literals[i].ToString() << "->" << result.ToString();
+                } else if (target_field_type == FieldType::DOUBLE) {
+                    ASSERT_NEAR(target_literals[i].GetValue<double>(), result.GetValue<double>(),
+                                1E-5)
+                        << target_literals[i].ToString() << "->" << result.ToString();
+                } else {
+                    ASSERT_EQ(target_literals[i], result)
+                        << target_literals[i].ToString() << "->" << result.ToString();
+                }
+            }
         }
         // test null
         Literal null_literal(src_type);
@@ -1282,6 +1298,43 @@ TEST_F(CastExecutorTest, TestBinaryToStringCastExecutorCastArray) {
         CheckArrayResult(cast_executor, arrow::binary(), arrow::utf8(), invalid_utf8_str,
                          invalid_utf8_str);
     }
+}
+
+TEST_F(CastExecutorTest, TestBinaryToBlobCastExecutorCastLiteral) {
+    auto cast_executor = std::make_shared<BinaryToBlobCastExecutor>();
+    std::string src_data = "blob-descriptor-bytes";
+    ASSERT_NOK_WITH_MSG(
+        cast_executor->Cast(Literal(FieldType::BINARY, src_data.data(), src_data.size()),
+                            arrow::large_binary()),
+        "BinaryToBlobCastExecutor does not support literal cast");
+}
+
+TEST_F(CastExecutorTest, TestBinaryToBlobCastExecutorCastArray) {
+    auto cast_executor = std::make_shared<BinaryToBlobCastExecutor>();
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(
+                         arrow::binary(), R"(["foo", "bar", "", null, "blob"])")
+                         .ValueOrDie();
+    auto expected_array = arrow::ipc::internal::json::ArrayFromJSON(
+                              arrow::large_binary(), R"(["foo", "bar", "", null, "blob"])")
+                              .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<arrow::Array> target_array,
+        cast_executor->Cast(src_array, arrow::large_binary(), arrow::default_memory_pool()));
+    ASSERT_TRUE(target_array->Equals(expected_array));
+    ASSERT_EQ(target_array->data()->buffers[2], src_array->data()->buffers[2]);
+}
+
+TEST_F(CastExecutorTest, TestBinaryToBlobCastExecutorCastArrayWithOffset) {
+    auto cast_executor = std::make_shared<BinaryToBlobCastExecutor>();
+    auto src_array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::binary(), R"(["skip", "foo", "bar"])")
+            .ValueOrDie()
+            ->Slice(1, 2);
+
+    ASSERT_NOK_WITH_MSG(
+        cast_executor->Cast(src_array, arrow::large_binary(), arrow::default_memory_pool()),
+        "BinaryToBlobCastExecutor only supports arrays with zero offset");
 }
 
 TEST_F(CastExecutorTest, TestDateToStringCastExecutorCastLiteral) {

@@ -56,6 +56,10 @@ TEST_F(BlobDescriptorTest, TestDeserializeCompatibilityForJavaWithVersion1) {
     ASSERT_EQ(descriptor->Uri(), "test_uri");
     ASSERT_EQ(descriptor->Offset(), 1024);
     ASSERT_EQ(descriptor->Length(), 2048);
+
+    PAIMON_UNIQUE_PTR<Bytes> cpp_serialized = descriptor->Serialize(pool_);
+    auto cpp_serialized_string = std::string(cpp_serialized->data(), cpp_serialized->size());
+    ASSERT_NE(cpp_serialized_string, java_serialized);
 }
 
 TEST_F(BlobDescriptorTest, TestDeserializeCompatibilityForJavaWithVersion2) {

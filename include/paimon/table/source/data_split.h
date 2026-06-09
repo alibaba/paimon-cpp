@@ -74,6 +74,9 @@ class PAIMON_EXPORT DataSplit : public Split {
         std::string ToString() const;
     };
 
+    /// Get the bucket id of this data split.
+    virtual int32_t Bucket() const = 0;
+
     /// Get the list of metadata for all data files in this split.
     /// @note This method will be removed in future versions and is only used for append tables.
     virtual std::vector<SimpleDataFileMeta> GetFileList() const = 0;

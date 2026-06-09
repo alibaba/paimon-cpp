@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if(PAIMON_BUILD_TESTS)
+if(PAIMON_BUILD_TESTS OR PAIMON_BUILD_BENCHMARKS)
 
     set(PAIMON_TEST_UTILS testharness.cpp data_generator.cpp)
 
@@ -25,6 +25,9 @@ if(PAIMON_BUILD_TESTS)
                    STATIC_LINK_LIBS
                    paimon_static
                    ${GTEST_LINK_TOOLCHAIN})
+endif()
+
+if(PAIMON_BUILD_TESTS)
 
     add_paimon_test(test_utils_test
                     SOURCES

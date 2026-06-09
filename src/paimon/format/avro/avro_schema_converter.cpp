@@ -267,6 +267,7 @@ Result<::avro::Schema> AvroSchemaConverter::ArrowTypeToAvroSchema(
         case arrow::Type::STRING:
             return nullable ? NullableSchema(::avro::StringSchema()) : ::avro::StringSchema();
         case arrow::Type::BINARY:
+        case arrow::Type::LARGE_BINARY:
             return nullable ? NullableSchema(::avro::BytesSchema()) : ::avro::BytesSchema();
         case arrow::Type::type::DATE32: {
             ::avro::IntSchema date_schema;
