@@ -44,7 +44,7 @@ class FileStorePathFactoryTest : public ::testing::Test {
     }
     void TearDown() override {}
 
-    std::unique_ptr<FileStorePathFactory> CreateFactory(const std::string& root) const {
+    std::shared_ptr<FileStorePathFactory> CreateFactory(const std::string& root) const {
         arrow::FieldVector fields = {arrow::field("f0", arrow::boolean()),
                                      arrow::field("f1", arrow::int8()),
                                      arrow::field("f2", arrow::int8()),
