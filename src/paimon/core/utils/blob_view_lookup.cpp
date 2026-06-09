@@ -142,35 +142,13 @@ Result<BlobViewLookup::DescriptorMapping> BlobViewLookup::LoadTableDescriptorChu
     const std::shared_ptr<CatalogContext>& catalog_context, const Identifier& identifier,
     const std::vector<int32_t>& field_ids, const std::vector<Range>& row_ranges,
     const std::shared_ptr<MemoryPool>& pool) {
-    auto file_system = catalog_context->file_system;
-    PAIMON_ASSIGN_OR_RAISE(
-        std::unique_ptr<Catalog> catalog,
-        Catalog::Create(catalog_context->root_path, catalog_context->options, file_system));
-
-    // The table path may be either xxx/test_database/test_table or xxx/test_database.db/test_table.
-    // If neither path exists or both paths exist, it means we cannot infer the table path, and an
-    // error will be reported. If only one of the paths exists, we will use that path.
-    PAIMON_ASSIGN_OR_RAISE(std::string source_table_path, catalog->GetTableLocation(identifier));
-    std::string database_name = identifier.GetDatabaseName();
-    PAIMON_ASSIGN_OR_RAISE(std::string data_table_name, identifier.GetDataTableName());
-    std::string fallback_source_table_path = PathUtil::JoinPath(
-        PathUtil::JoinPath(catalog_context->root_path, database_name), data_table_name);
-
-    PAIMON_ASSIGN_OR_RAISE(bool exist, file_system->Exists(source_table_path));
-    PAIMON_ASSIGN_OR_RAISE(bool fallback_exist, file_system->Exists(fallback_source_table_path));
-
-    if (exist == fallback_exist) {
-        return Status::Invalid(
-            fmt::format("Ambiguous table path: both table path {} and fallback table path {} are "
-                        "present or absent",
-                        source_table_path, fallback_source_table_path));
-    }
-    std::string final_table_path = exist ? source_table_path : fallback_source_table_path;
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> branch, identifier.GetBranchName());
     if (branch) {
         return Status::Invalid("do not support upstream table with branch");
     }
-    ScanContextBuilder scan_builder(final_table_path);
+    auto file_system = catalog_context->file_system;
+    PAIMON_ASSIGN_OR_RAISE(std::string table_path, GetTableLocation(catalog_context, identifier));
+    ScanContextBuilder scan_builder(table_path);
     auto global_index_result = BitmapGlobalIndexResult::FromRanges(row_ranges);
     scan_builder.SetGlobalIndexResult(global_index_result)
         .WithMemoryPool(pool)
@@ -180,7 +158,7 @@ Result<BlobViewLookup::DescriptorMapping> BlobViewLookup::LoadTableDescriptorChu
                            TableScan::Create(std::move(scan_context)));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Plan> plan, table_scan->CreatePlan());
 
-    ReadContextBuilder read_builder(final_table_path);
+    ReadContextBuilder read_builder(table_path);
     std::vector<int32_t> read_field_ids = field_ids;
     read_field_ids.push_back(SpecialFieldIds::ROW_ID);
     read_builder.SetReadFieldIds(read_field_ids)
@@ -198,6 +176,34 @@ Result<BlobViewLookup::DescriptorMapping> BlobViewLookup::LoadTableDescriptorChu
     PAIMON_RETURN_NOT_OK(
         ExtractBlobDescriptors(identifier, read_field_ids, pool, reader.get(), &mapping));
     return mapping;
+}
+
+Result<std::string> BlobViewLookup::GetTableLocation(
+    const std::shared_ptr<CatalogContext>& catalog_context, const Identifier& identifier) {
+    auto file_system = catalog_context->file_system;
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<Catalog> catalog,
+        Catalog::Create(catalog_context->root_path, catalog_context->options, file_system));
+    // The table path may be either xxx/test_database/test_table or
+    // xxx/test_database.db/test_table. If neither path exists or both paths exist, it means we
+    // cannot infer the table path, and an error will be reported. If only one of the paths
+    // exists, we will use that path.
+    PAIMON_ASSIGN_OR_RAISE(std::string source_table_path, catalog->GetTableLocation(identifier));
+    std::string database_name = identifier.GetDatabaseName();
+    PAIMON_ASSIGN_OR_RAISE(std::string data_table_name, identifier.GetDataTableName());
+    std::string fallback_source_table_path = PathUtil::JoinPath(
+        PathUtil::JoinPath(catalog_context->root_path, database_name), data_table_name);
+
+    PAIMON_ASSIGN_OR_RAISE(bool exist, catalog_context->file_system->Exists(source_table_path));
+    PAIMON_ASSIGN_OR_RAISE(bool fallback_exist, file_system->Exists(fallback_source_table_path));
+    if (exist == fallback_exist) {
+        return Status::Invalid(
+            fmt::format("Ambiguous table path: both table path {} and fallback table path {} are "
+                        "present or absent",
+                        source_table_path, fallback_source_table_path));
+    }
+    std::string final_table_path = exist ? source_table_path : fallback_source_table_path;
+    return final_table_path;
 }
 
 Status BlobViewLookup::ExtractBlobDescriptors(const Identifier& identifier,

@@ -90,6 +90,9 @@ class BlobViewLookup {
 
     static std::vector<std::vector<Range>> SplitRowRanges(const std::vector<Range>& row_ranges,
                                                           int64_t target_rows_per_task);
+
+    static Result<std::string> GetTableLocation(
+        const std::shared_ptr<CatalogContext>& catalog_context, const Identifier& identifier);
 };
 
 }  // namespace paimon
