@@ -2522,7 +2522,7 @@ TEST_F(CastExecutorTest, TestBooleanToDecimalCastExecutorCastLiteral) {
     }
     {
         ASSERT_OK_AND_ASSIGN(Literal valid_literal,
-                             cast_executor->Cast(Literal(false), arrow::decimal128(3, 3)))
+                             cast_executor->Cast(Literal(false), arrow::decimal128(3, 3)));
         ASSERT_EQ(valid_literal, Literal(Decimal(3, 3, 0)));
     }
 }
