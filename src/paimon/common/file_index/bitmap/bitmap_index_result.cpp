@@ -48,7 +48,7 @@ Result<std::shared_ptr<FileIndexResult>> BitmapIndexResult::And(
              typed_other]() -> Result<RoaringBitmap32> {
                 PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap32* bitmap, result->GetBitmap());
                 PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap32* other_bitmap,
-                                       typed_other->GetBitmap())
+                                       typed_other->GetBitmap());
                 return RoaringBitmap32::And(*bitmap, *other_bitmap);
             });
     }
@@ -64,7 +64,7 @@ Result<std::shared_ptr<FileIndexResult>> BitmapIndexResult::Or(
              typed_other]() -> Result<RoaringBitmap32> {
                 PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap32* bitmap, result->GetBitmap());
                 PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap32* other_bitmap,
-                                       typed_other->GetBitmap())
+                                       typed_other->GetBitmap());
                 return RoaringBitmap32::Or(*bitmap, *other_bitmap);
             });
     }
