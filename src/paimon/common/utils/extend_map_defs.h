@@ -22,9 +22,6 @@
 #include <string>
 #include <vector>
 
-#include "arrow/type.h"
-#include "fmt/format.h"
-
 namespace paimon {
 
 /// Constants for the columnar-extend MAP storage layout.
@@ -64,7 +61,7 @@ struct ExtendMapDefine {
 
     /// Returns the name of the i-th physical column: "__col_0", "__col_1", etc.
     static std::string PhysicalColumnName(int32_t index) {
-        return fmt::format("__col_{}", index);
+        return "__col_" + std::to_string(index);
     }
 };
 

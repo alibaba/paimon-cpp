@@ -519,8 +519,9 @@ Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
         schema_fields[field.Name()] = field.Type();
     }
 
+    std::string fields_prefix_str = std::string(Options::FIELDS_PREFIX);
     for (const auto& [key, value] : options_map) {
-        if (!StringUtils::StartsWith(key, Options::FIELDS_PREFIX)) {
+        if (!StringUtils::StartsWith(key, fields_prefix_str)) {
             continue;
         }
         if (!StringUtils::EndsWith(key, layout_suffix)) {
@@ -528,9 +529,9 @@ Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
         }
         // key = "fields.<field_name>.map-storage-layout"
         // Extract field_name: skip "fields." prefix and ".map-storage-layout" suffix
-        std::string field_name = key.substr(
-            std::string(Options::FIELDS_PREFIX).size() + 1,
-            key.size() - std::string(Options::FIELDS_PREFIX).size() - 1 - layout_suffix.size());
+        std::string field_name =
+            key.substr(fields_prefix_str.size() + 1,
+                       key.size() - fields_prefix_str.size() - 1 - layout_suffix.size());
 
         // Check field exists in schema
         auto it = schema_fields.find(field_name);

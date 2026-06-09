@@ -838,7 +838,7 @@ TEST(SchemaValidationTest, TestMapStorageLayout) {
                                                  /*primary_keys=*/{"f0", "f1"}, options));
         ASSERT_OK(SchemaValidation::ValidateTableSchema(*table_schema));
     }
-    // Invalid: field not in schema
+    // Invalid: field not in schema failed in ValidateFieldsPrefix
     {
         arrow::FieldVector fields = {f0, f1};
         auto schema = arrow::schema(fields);
@@ -852,6 +852,23 @@ TEST(SchemaValidationTest, TestMapStorageLayout) {
         ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
                             "Field nonexist can not be found in table schema");
     }
+    // Invalid: field not in schema failed in ValidateMapStorageLayout
+    {
+        arrow::FieldVector fields = {f0, f1};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {
+            {Options::BUCKET, "2"},
+            {Options::BUCKET_KEY, "f0"},
+            {"fields.nonexist.map-storage-layout", "extend"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateMapStorageLayout(*table_schema, core_options),
+                            "Column 'nonexist' is configured with map-storage-layout but does not "
+                            "exist in table schema.");
+    }
+
     // Invalid: non-MAP column configured with map-storage-layout (any value)
     {
         arrow::FieldVector fields = {f0, f1};

@@ -909,6 +909,7 @@ TEST(CoreOptionsTest, TestFallback) {
                   std::vector<std::string>({"new_b1", "new_b2"}));
     }
 }
+
 TEST(CoreOptionsTest, TestMapStorageLayout) {
     // Test extend layout configured for a specific column
     {

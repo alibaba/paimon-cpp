@@ -238,6 +238,15 @@ std::string SerializeOverflowSet(const ExtendMapFileMeta& file_meta) {
         });
 }
 
+// Macro for safe JSON integer extraction with error propagation.
+#define PAIMON_JSON_GET_INT(val, context_msg)                                                  \
+    ([&]() -> Result<int32_t> {                                                                \
+        if (!(val).IsInt()) {                                                                  \
+            return Status::Invalid(fmt::format("malformed extend metadata: {}", context_msg)); \
+        }                                                                                      \
+        return (val).GetInt();                                                                 \
+    }())
+
 Result<std::map<std::string, int32_t>> DeserializeFieldDict(const std::string& json_str) {
     rapidjson::Document doc;
     doc.Parse(json_str.c_str());
@@ -246,7 +255,9 @@ Result<std::map<std::string, int32_t>> DeserializeFieldDict(const std::string& j
     }
     std::map<std::string, int32_t> name_to_id;
     for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) {
-        name_to_id[it->name.GetString()] = it->value.GetInt();
+        PAIMON_ASSIGN_OR_RAISE(int32_t id,
+                               PAIMON_JSON_GET_INT(it->value, "field_dict value is not int"));
+        name_to_id[it->name.GetString()] = id;
     }
     return name_to_id;
 }
@@ -271,7 +282,9 @@ Result<std::map<int32_t, std::vector<int32_t>>> DeserializeFieldColumns(
         std::vector<int32_t> cols;
         cols.reserve(array.Size());
         for (rapidjson::SizeType i = 0; i < array.Size(); ++i) {
-            cols.push_back(array[i].GetInt());
+            PAIMON_ASSIGN_OR_RAISE(
+                int32_t col, PAIMON_JSON_GET_INT(array[i], "field_columns element is not int"));
+            cols.push_back(col);
         }
         field_to_columns[field_id.value()] = std::move(cols);
     }
@@ -286,7 +299,9 @@ Result<std::set<int32_t>> DeserializeOverflowSet(const std::string& json_str) {
     }
     std::set<int32_t> overflow_set;
     for (rapidjson::SizeType i = 0; i < doc.Size(); ++i) {
-        overflow_set.insert(doc[i].GetInt());
+        PAIMON_ASSIGN_OR_RAISE(int32_t field_id,
+                               PAIMON_JSON_GET_INT(doc[i], "overflow_set element is not int"));
+        overflow_set.insert(field_id);
     }
     return overflow_set;
 }
