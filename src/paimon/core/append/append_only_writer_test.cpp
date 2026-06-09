@@ -768,8 +768,7 @@ TEST_F(AppendOnlyWriterTest, TestWriteInvalidBlobViewFieldRejected) {
     auto view_array = view_builder.Finish().ValueOrDie();
 
     ASSERT_NOK_WITH_MSG(writer.Write(CreateStructBatch(schema, {int_array, view_array})),
-                        "BLOB inline field view configured by blob-view-field require values to be "
-                        "a BlobViewStruct.");
+                        "BLOB inline field view require values to be set as corresponding type.");
     ASSERT_OK(writer.Close());
 }
 

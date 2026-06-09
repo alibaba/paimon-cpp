@@ -128,53 +128,18 @@ std::shared_ptr<arrow::Field> BlobUtils::ToArrowField(
                         std::make_shared<arrow::KeyValueMetadata>(metadata));
 }
 
-Status BlobUtils::ValidateInlineBlobDescriptors(
-    const std::shared_ptr<arrow::StructArray>& struct_array,
-    const std::set<std::string>& inline_descriptor_fields) {
-    if (inline_descriptor_fields.empty()) {
+Status BlobUtils::ValidateBlobInlineFields(const std::shared_ptr<arrow::StructArray>& struct_array,
+                                           const std::set<std::string>& field_names,
+                                           const std::string& config_label) {
+    if (field_names.empty()) {
         return Status::OK();
     }
     if (!struct_array) {
-        return Status::Invalid("array in ValidateInlineBlobDescriptors must be a struct_array");
+        return Status::Invalid("array in ValidateBlobInlineFields must be a struct_array");
     }
-    for (const auto& field_name : inline_descriptor_fields) {
-        auto field_array = struct_array->GetFieldByName(field_name);
-        if (!field_array) {
-            continue;
-        }
-        const auto* binary_array =
-            arrow::internal::checked_cast<const arrow::LargeBinaryArray*>(field_array.get());
-        if (!binary_array) {
-            return Status::Invalid(
-                fmt::format("cannot cast array for field {} to LargeBinaryArray", field_name));
-        }
-        for (int64_t row = 0; row < binary_array->length(); ++row) {
-            if (binary_array->IsNull(row)) {
-                continue;
-            }
-            auto value = binary_array->GetView(row);
-            PAIMON_ASSIGN_OR_RAISE(bool is_descriptor,
-                                   BlobDescriptor::IsBlobDescriptor(value.data(), value.size()));
-            if (!is_descriptor) {
-                return Status::Invalid(
-                    fmt::format("BLOB inline field {} configured by blob-descriptor-field require "
-                                "values to be a BlobDescriptor.",
-                                field_name));
-            }
-        }
-    }
-    return Status::OK();
-}
 
-Status BlobUtils::ValidateBlobViewFields(const std::shared_ptr<arrow::StructArray>& struct_array,
-                                         const std::set<std::string>& view_fields) {
-    if (view_fields.empty()) {
-        return Status::OK();
-    }
-    if (!struct_array) {
-        return Status::Invalid("array in ValidateBlobViewFields must be a struct_array");
-    }
-    for (const auto& field_name : view_fields) {
+    bool is_descriptor = (config_label == "blob-descriptor-field");
+    for (const auto& field_name : field_names) {
         auto field_array = struct_array->GetFieldByName(field_name);
         if (!field_array) {
             continue;
@@ -190,13 +155,14 @@ Status BlobUtils::ValidateBlobViewFields(const std::shared_ptr<arrow::StructArra
                 continue;
             }
             auto value = binary_array->GetView(row);
-            PAIMON_ASSIGN_OR_RAISE(bool is_view,
-                                   BlobViewStruct::IsBlobViewStruct(value.data(), value.size()));
-            if (!is_view) {
-                return Status::Invalid(
-                    fmt::format("BLOB inline field {} configured by blob-view-field require values "
-                                "to be a BlobViewStruct.",
-                                field_name));
+            Result<bool> valid = is_descriptor
+                                     ? BlobDescriptor::IsBlobDescriptor(value.data(), value.size())
+                                     : BlobViewStruct::IsBlobViewStruct(value.data(), value.size());
+            PAIMON_ASSIGN_OR_RAISE(bool is_valid, std::move(valid));
+            if (!is_valid) {
+                return Status::Invalid(fmt::format(
+                    "BLOB inline field {} require values to be set as corresponding type.",
+                    field_name));
             }
         }
     }

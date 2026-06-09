@@ -238,7 +238,7 @@ TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsEmptyFields) {
     auto struct_array =
         arrow::StructArray::Make({array}, {BlobUtils::ToArrowField("b0")}).ValueOrDie();
     auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
-    ASSERT_OK(BlobUtils::ValidateInlineBlobDescriptors(sa, {}));
+    ASSERT_OK(BlobUtils::ValidateBlobInlineFields(sa, {}, "blob-descriptor-field"));
 }
 
 TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsFieldNotPresent) {
@@ -250,7 +250,7 @@ TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsFieldNotPresent) {
         arrow::StructArray::Make({int_array}, {arrow::field("f0", arrow::int32())}).ValueOrDie();
     auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
     // "b0" does not exist in the struct -> should pass
-    ASSERT_OK(BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0"}));
+    ASSERT_OK(BlobUtils::ValidateBlobInlineFields(sa, {"b0"}, "blob-descriptor-field"));
 }
 
 TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsWithValidDescriptor) {
@@ -264,7 +264,7 @@ TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsWithValidDescriptor) {
     auto struct_array =
         arrow::StructArray::Make({blob_array}, {BlobUtils::ToArrowField("b0")}).ValueOrDie();
     auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
-    ASSERT_OK(BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0"}));
+    ASSERT_OK(BlobUtils::ValidateBlobInlineFields(sa, {"b0"}, "blob-descriptor-field"));
 }
 
 TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsWithNullValue) {
@@ -275,7 +275,7 @@ TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsWithNullValue) {
     auto struct_array =
         arrow::StructArray::Make({blob_array}, {BlobUtils::ToArrowField("b0")}).ValueOrDie();
     auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
-    ASSERT_OK(BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0"}));
+    ASSERT_OK(BlobUtils::ValidateBlobInlineFields(sa, {"b0"}, "blob-descriptor-field"));
 }
 
 TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsWithRawBytes) {
@@ -286,9 +286,8 @@ TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsWithRawBytes) {
     auto struct_array =
         arrow::StructArray::Make({blob_array}, {BlobUtils::ToArrowField("b0")}).ValueOrDie();
     auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
-    ASSERT_NOK_WITH_MSG(BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0"}),
-                        "BLOB inline field b0 configured by blob-descriptor-field require values "
-                        "to be a BlobDescriptor.");
+    ASSERT_NOK_WITH_MSG(BlobUtils::ValidateBlobInlineFields(sa, {"b0"}, "blob-descriptor-field"),
+                        "BLOB inline field b0 require values to be set as corresponding type.");
 }
 
 TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsMixedValidAndInvalid) {
@@ -302,9 +301,8 @@ TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsMixedValidAndInvalid) {
     auto struct_array =
         arrow::StructArray::Make({blob_array}, {BlobUtils::ToArrowField("b0")}).ValueOrDie();
     auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
-    ASSERT_NOK_WITH_MSG(BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0"}),
-                        "BLOB inline field b0 configured by blob-descriptor-field require values "
-                        "to be a BlobDescriptor.");
+    ASSERT_NOK_WITH_MSG(BlobUtils::ValidateBlobInlineFields(sa, {"b0"}, "blob-descriptor-field"),
+                        "BLOB inline field b0 require values to be set as corresponding type.");
 }
 
 TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsMultipleFields) {
@@ -325,9 +323,9 @@ TEST_F(BlobUtilsTest, ValidateInlineBlobDescriptorsMultipleFields) {
                                  {BlobUtils::ToArrowField("b0"), BlobUtils::ToArrowField("b1")})
             .ValueOrDie();
     auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
-    ASSERT_NOK_WITH_MSG(BlobUtils::ValidateInlineBlobDescriptors(sa, {"b0", "b1"}),
-                        "BLOB inline field b1 configured by blob-descriptor-field require values "
-                        "to be a BlobDescriptor.");
+    ASSERT_NOK_WITH_MSG(
+        BlobUtils::ValidateBlobInlineFields(sa, {"b0", "b1"}, "blob-descriptor-field"),
+        "BLOB inline field b1 require values to be set as corresponding type.");
 }
 
 TEST_F(BlobUtilsTest, ValidateBlobViewFieldsEmptyFields) {
@@ -338,7 +336,7 @@ TEST_F(BlobUtilsTest, ValidateBlobViewFieldsEmptyFields) {
     auto struct_array =
         arrow::StructArray::Make({array}, {BlobUtils::ToArrowField("view")}).ValueOrDie();
     auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
-    ASSERT_OK(BlobUtils::ValidateBlobViewFields(sa, {}));
+    ASSERT_OK(BlobUtils::ValidateBlobInlineFields(sa, {}, "blob-view-field"));
 }
 
 TEST_F(BlobUtilsTest, ValidateBlobViewFieldsFieldNotPresent) {
@@ -349,7 +347,7 @@ TEST_F(BlobUtilsTest, ValidateBlobViewFieldsFieldNotPresent) {
     auto struct_array =
         arrow::StructArray::Make({int_array}, {arrow::field("f0", arrow::int32())}).ValueOrDie();
     auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
-    ASSERT_OK(BlobUtils::ValidateBlobViewFields(sa, {"view"}));
+    ASSERT_OK(BlobUtils::ValidateBlobInlineFields(sa, {"view"}, "blob-view-field"));
 }
 
 TEST_F(BlobUtilsTest, ValidateBlobViewFieldsWithValidViewStruct) {
@@ -363,7 +361,7 @@ TEST_F(BlobUtilsTest, ValidateBlobViewFieldsWithValidViewStruct) {
     auto struct_array =
         arrow::StructArray::Make({blob_array}, {BlobUtils::ToArrowField("view")}).ValueOrDie();
     auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
-    ASSERT_OK(BlobUtils::ValidateBlobViewFields(sa, {"view"}));
+    ASSERT_OK(BlobUtils::ValidateBlobInlineFields(sa, {"view"}, "blob-view-field"));
 }
 
 TEST_F(BlobUtilsTest, ValidateBlobViewFieldsWithNullValue) {
@@ -374,7 +372,7 @@ TEST_F(BlobUtilsTest, ValidateBlobViewFieldsWithNullValue) {
     auto struct_array =
         arrow::StructArray::Make({blob_array}, {BlobUtils::ToArrowField("view")}).ValueOrDie();
     auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
-    ASSERT_OK(BlobUtils::ValidateBlobViewFields(sa, {"view"}));
+    ASSERT_OK(BlobUtils::ValidateBlobInlineFields(sa, {"view"}, "blob-view-field"));
 }
 
 TEST_F(BlobUtilsTest, ValidateBlobViewFieldsWithRawBytes) {
@@ -385,9 +383,8 @@ TEST_F(BlobUtilsTest, ValidateBlobViewFieldsWithRawBytes) {
     auto struct_array =
         arrow::StructArray::Make({blob_array}, {BlobUtils::ToArrowField("view")}).ValueOrDie();
     auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
-    ASSERT_NOK_WITH_MSG(BlobUtils::ValidateBlobViewFields(sa, {"view"}),
-                        "BLOB inline field view configured by blob-view-field require values to be "
-                        "a BlobViewStruct.");
+    ASSERT_NOK_WITH_MSG(BlobUtils::ValidateBlobInlineFields(sa, {"view"}, "blob-view-field"),
+                        "BLOB inline field view require values to be set as corresponding type.");
 }
 
 TEST_F(BlobUtilsTest, ValidateBlobViewFieldsRejectsBlobDescriptor) {
@@ -402,9 +399,8 @@ TEST_F(BlobUtilsTest, ValidateBlobViewFieldsRejectsBlobDescriptor) {
     auto struct_array =
         arrow::StructArray::Make({blob_array}, {BlobUtils::ToArrowField("view")}).ValueOrDie();
     auto sa = std::dynamic_pointer_cast<arrow::StructArray>(struct_array);
-    ASSERT_NOK_WITH_MSG(BlobUtils::ValidateBlobViewFields(sa, {"view"}),
-                        "BLOB inline field view configured by blob-view-field require values "
-                        "to be a BlobViewStruct.");
+    ASSERT_NOK_WITH_MSG(BlobUtils::ValidateBlobInlineFields(sa, {"view"}, "blob-view-field"),
+                        "BLOB inline field view require values to be set as corresponding type.");
 }
 
 TEST_F(BlobUtilsTest, TestConvertBlobInlineDataFields) {

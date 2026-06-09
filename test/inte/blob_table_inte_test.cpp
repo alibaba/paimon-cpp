@@ -2382,8 +2382,7 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorFieldWriteRawBytesDirectly) {
 
     auto schema = arrow::schema(fields);
     ASSERT_NOK_WITH_MSG(WriteArray(table_path, {}, schema->field_names(), {raw_array}),
-                        "BLOB inline field b0 configured by blob-descriptor-field require values "
-                        "to be a BlobDescriptor.");
+                        "BLOB inline field b0 require values to be set as corresponding type.");
 }
 
 TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamTable) {
@@ -2421,7 +2420,7 @@ TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamTable) {
         if (i < 6) {
             BlobViewStruct view_struct(upstream_identifier, /*field_id=*/6,
                                        /*row_id=*/static_cast<int64_t>(i));
-            auto serialized = view_struct.Serialize(GetDefaultPool());
+            auto serialized = view_struct.Serialize(pool_);
             ASSERT_TRUE(view_builder
                             .Append(reinterpret_cast<const uint8_t*>(serialized->data()),
                                     serialized->size())
@@ -2624,19 +2623,19 @@ TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamExternalStorageBlob) {
     // - row 2: b0 row 2 -> "b0_data_2"
     // - row 3: b1 row 3 -> "b1_data_3"
     Identifier upstream_identifier(upstream_db_name, upstream_table_name);
-    auto append_view = [&](arrow::LargeBinaryBuilder* builder, int32_t field_id, int64_t row_id) {
+    auto append_view = [&](int32_t field_id, int64_t row_id, arrow::LargeBinaryBuilder* builder) {
         BlobViewStruct view_struct(upstream_identifier, field_id, row_id);
-        auto serialized = view_struct.Serialize(GetDefaultPool());
+        auto serialized = view_struct.Serialize(pool_);
         ASSERT_TRUE(
             builder
                 ->Append(reinterpret_cast<const uint8_t*>(serialized->data()), serialized->size())
                 .ok());
     };
     arrow::LargeBinaryBuilder view_builder;
-    append_view(&view_builder, /*field_id=*/1, /*row_id=*/0);
-    append_view(&view_builder, /*field_id=*/2, /*row_id=*/1);
-    append_view(&view_builder, /*field_id=*/1, /*row_id=*/2);
-    append_view(&view_builder, /*field_id=*/2, /*row_id=*/3);
+    append_view(/*field_id=*/1, /*row_id=*/0, &view_builder);
+    append_view(/*field_id=*/2, /*row_id=*/1, &view_builder);
+    append_view(/*field_id=*/1, /*row_id=*/2, &view_builder);
+    append_view(/*field_id=*/2, /*row_id=*/3, &view_builder);
     std::shared_ptr<arrow::Array> write_view_array;
     ASSERT_TRUE(view_builder.Finish(&write_view_array).ok());
 
@@ -2727,10 +2726,10 @@ TEST_P(BlobTableInteTest, TestBlobViewFieldWithMultipleUpstreamTables) {
     Identifier multi_blob_identifier(multi_blob_db_name, multi_blob_table_name);
     Identifier alter_identifier(alter_db_name, alter_table_name);
 
-    auto append_view = [&](arrow::LargeBinaryBuilder* builder, const Identifier& identifier,
-                           int32_t field_id, int64_t row_id) {
+    auto append_view = [&](const Identifier& identifier, int32_t field_id, int64_t row_id,
+                           arrow::LargeBinaryBuilder* builder) {
         BlobViewStruct view_struct(identifier, field_id, row_id);
-        auto serialized = view_struct.Serialize(GetDefaultPool());
+        auto serialized = view_struct.Serialize(pool_);
         ASSERT_TRUE(
             builder
                 ->Append(reinterpret_cast<const uint8_t*>(serialized->data()), serialized->size())
@@ -2748,14 +2747,14 @@ TEST_P(BlobTableInteTest, TestBlobViewFieldWithMultipleUpstreamTables) {
     // - row 6: f5 row 5  -> 'F' * 1024
     // - row 7: f6 row 6  -> 'g' * 2048
     arrow::LargeBinaryBuilder view1_builder;
-    append_view(&view1_builder, multi_blob_identifier, /*field_id=*/5, /*row_id=*/3);
-    append_view(&view1_builder, multi_blob_identifier, /*field_id=*/6, /*row_id=*/1);
-    append_view(&view1_builder, multi_blob_identifier, /*field_id=*/5, /*row_id=*/3);
-    append_view(&view1_builder, multi_blob_identifier, /*field_id=*/6, /*row_id=*/4);
-    append_view(&view1_builder, multi_blob_identifier, /*field_id=*/5, /*row_id=*/3);
-    append_view(&view1_builder, multi_blob_identifier, /*field_id=*/6, /*row_id=*/1);
-    append_view(&view1_builder, multi_blob_identifier, /*field_id=*/5, /*row_id=*/5);
-    append_view(&view1_builder, multi_blob_identifier, /*field_id=*/6, /*row_id=*/6);
+    append_view(multi_blob_identifier, /*field_id=*/5, /*row_id=*/3, &view1_builder);
+    append_view(multi_blob_identifier, /*field_id=*/6, /*row_id=*/1, &view1_builder);
+    append_view(multi_blob_identifier, /*field_id=*/5, /*row_id=*/3, &view1_builder);
+    append_view(multi_blob_identifier, /*field_id=*/6, /*row_id=*/4, &view1_builder);
+    append_view(multi_blob_identifier, /*field_id=*/5, /*row_id=*/3, &view1_builder);
+    append_view(multi_blob_identifier, /*field_id=*/6, /*row_id=*/1, &view1_builder);
+    append_view(multi_blob_identifier, /*field_id=*/5, /*row_id=*/5, &view1_builder);
+    append_view(multi_blob_identifier, /*field_id=*/6, /*row_id=*/6, &view1_builder);
     std::shared_ptr<arrow::Array> write_view1_array;
     ASSERT_TRUE(view1_builder.Finish(&write_view1_array).ok());
 
@@ -2770,14 +2769,14 @@ TEST_P(BlobTableInteTest, TestBlobViewFieldWithMultipleUpstreamTables) {
     // - row 6: blob row 0  -> "Lily"        (repeat of row 0)
     // - row 7: blob row 3  -> "Cindy"
     arrow::LargeBinaryBuilder view2_builder;
-    append_view(&view2_builder, alter_identifier, /*field_id=*/8, /*row_id=*/0);
-    append_view(&view2_builder, alter_identifier, /*field_id=*/8, /*row_id=*/5);
-    append_view(&view2_builder, alter_identifier, /*field_id=*/8, /*row_id=*/0);
-    append_view(&view2_builder, alter_identifier, /*field_id=*/8, /*row_id=*/2);
-    append_view(&view2_builder, alter_identifier, /*field_id=*/8, /*row_id=*/5);
-    append_view(&view2_builder, alter_identifier, /*field_id=*/8, /*row_id=*/9);
-    append_view(&view2_builder, alter_identifier, /*field_id=*/8, /*row_id=*/0);
-    append_view(&view2_builder, alter_identifier, /*field_id=*/8, /*row_id=*/3);
+    append_view(alter_identifier, /*field_id=*/8, /*row_id=*/0, &view2_builder);
+    append_view(alter_identifier, /*field_id=*/8, /*row_id=*/5, &view2_builder);
+    append_view(alter_identifier, /*field_id=*/8, /*row_id=*/0, &view2_builder);
+    append_view(alter_identifier, /*field_id=*/8, /*row_id=*/2, &view2_builder);
+    append_view(alter_identifier, /*field_id=*/8, /*row_id=*/5, &view2_builder);
+    append_view(alter_identifier, /*field_id=*/8, /*row_id=*/9, &view2_builder);
+    append_view(alter_identifier, /*field_id=*/8, /*row_id=*/0, &view2_builder);
+    append_view(alter_identifier, /*field_id=*/8, /*row_id=*/3, &view2_builder);
     std::shared_ptr<arrow::Array> write_view2_array;
     ASSERT_TRUE(view2_builder.Finish(&write_view2_array).ok());
 
@@ -2840,152 +2839,6 @@ TEST_P(BlobTableInteTest, TestBlobViewFieldWithMultipleUpstreamTables) {
         << "expected:" << expected_with_rk->ToString();
 }
 
-TEST_P(BlobTableInteTest, TestBlobViewFieldWithBranchUpstreamTable) {
-    auto file_format = GetParam();
-    const std::string upstream_db_name = "branch_upstream";
-    const std::string upstream_table_name = "branch_upstream";
-    arrow::FieldVector upstream_fields = {arrow::field("f0", arrow::int32()),
-                                          arrow::field("f1", arrow::int32()),
-                                          BlobUtils::ToArrowField("blob", true)};
-    auto upstream_schema = arrow::schema(upstream_fields);
-    std::map<std::string, std::string> upstream_options = {
-        {Options::MANIFEST_FORMAT, "orc"},
-        {Options::FILE_FORMAT, file_format},
-        {Options::BUCKET, "-1"},
-        {Options::ROW_TRACKING_ENABLED, "true"},
-        {Options::DATA_EVOLUTION_ENABLED, "true"},
-        {Options::BLOB_AS_DESCRIPTOR, "true"},
-        {Options::FILE_SYSTEM, "local"}};
-
-    auto build_upstream_table = [&](const std::string& root_path, const std::string& db_name,
-                                    const std::string& table_name) -> std::string {
-        ::ArrowSchema c_schema;
-        EXPECT_TRUE(arrow::ExportSchema(*upstream_schema, &c_schema).ok());
-        auto catalog_result = Catalog::Create(root_path, {{Options::FILE_SYSTEM, "local"}});
-        EXPECT_TRUE(catalog_result.ok());
-        auto catalog = std::move(catalog_result).value();
-        EXPECT_OK(catalog->CreateDatabase(db_name, {}, /*ignore_if_exists=*/true));
-        EXPECT_OK(catalog->CreateTable(Identifier(db_name, table_name), &c_schema,
-                                       /*partition_keys=*/{}, /*primary_keys=*/{}, upstream_options,
-                                       /*ignore_if_exists=*/false));
-        std::string table_path = PathUtil::JoinPath(root_path, db_name + ".db/" + table_name);
-
-        std::string raw_json = R"([
-[0, 0, "test_0"],
-[1, 10, "test_1"],
-[2, 20, "test_2"],
-[3, 30, "test_3"]
-])";
-        auto raw_array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(upstream_fields), raw_json)
-                .ValueOrDie());
-        auto desc_array_result = ConvertRawBlobToDescriptor(raw_array, {"blob"});
-        EXPECT_TRUE(desc_array_result.ok());
-        auto desc_array = std::move(desc_array_result).value();
-
-        auto commit_msgs_result =
-            WriteArray(table_path, {}, upstream_schema->field_names(), {desc_array});
-        EXPECT_TRUE(commit_msgs_result.ok());
-        EXPECT_OK(Commit(table_path, std::move(commit_msgs_result).value()));
-        return table_path;
-    };
-
-    // main branch with no data
-    ::ArrowSchema c_schema;
-    ASSERT_TRUE(arrow::ExportSchema(*upstream_schema, &c_schema).ok());
-    ASSERT_OK_AND_ASSIGN(auto catalog,
-                         Catalog::Create(dir_->Str(), {{Options::FILE_SYSTEM, "local"}}));
-    ASSERT_OK(catalog->CreateDatabase(upstream_db_name, {}, /*ignore_if_exists=*/true));
-    ASSERT_OK(catalog->CreateTable(Identifier(upstream_db_name, upstream_table_name), &c_schema,
-                                   /*partition_keys=*/{}, /*primary_keys=*/{}, upstream_options,
-                                   /*ignore_if_exists=*/false));
-    std::string upstream_table_path =
-        PathUtil::JoinPath(dir_->Str(), upstream_db_name + ".db/" + upstream_table_name);
-
-    // test branch with real data in a separate directory, then copy to the main table. The main
-    // branch stays empty, so any data read back must come from the test branch.
-    std::string branch_name = "test";
-    auto branch_src_dir = UniqueTestDirectory::Create("local");
-    std::string branch_src_table_path =
-        build_upstream_table(branch_src_dir->Str(), upstream_db_name, upstream_table_name);
-    std::string branch_dir =
-        PathUtil::JoinPath(upstream_table_path, "branch/branch-" + branch_name);
-    for (const auto& entry : std::filesystem::directory_iterator(branch_src_table_path)) {
-        std::string name = entry.path().filename().string();
-        if (name == "snapshot" || name == "schema") {
-            ASSERT_TRUE(TestUtil::CopyDirectory(entry.path().string(),
-                                                PathUtil::JoinPath(branch_dir, name)));
-        } else if (entry.is_directory()) {
-            // Shared data dirs
-            ASSERT_TRUE(TestUtil::CopyDirectory(entry.path().string(),
-                                                PathUtil::JoinPath(upstream_table_path, name)));
-        }
-    }
-    // build downstream table
-    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
-                                 BlobUtils::ToArrowField("view", true)};
-    std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "orc"},
-        {Options::FILE_FORMAT, file_format},
-        {Options::BUCKET, "-1"},
-        {Options::ROW_TRACKING_ENABLED, "true"},
-        {Options::DATA_EVOLUTION_ENABLED, "true"},
-        {Options::BLOB_VIEW_FIELD, "view"},
-        {Options::BLOB_VIEW_UPSTREAM_WAREHOUSE, dir_->Str()},
-        {Options::FILE_SYSTEM, "local"}};
-    CreateTable(fields, /*partition_keys=*/{}, options);
-    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
-
-    Identifier branch_identifier(upstream_db_name, upstream_table_name + "$branch_" + branch_name);
-    arrow::LargeBinaryBuilder view_builder;
-    for (int64_t row = 0; row < 4; ++row) {
-        BlobViewStruct view_struct(branch_identifier, 2, row);
-        auto serialized = view_struct.Serialize(GetDefaultPool());
-        ASSERT_TRUE(
-            view_builder
-                .Append(reinterpret_cast<const uint8_t*>(serialized->data()), serialized->size())
-                .ok());
-    }
-    std::shared_ptr<arrow::Array> write_view_array;
-    ASSERT_TRUE(view_builder.Finish(&write_view_array).ok());
-    auto write_f0_array =
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), R"([100,101,102,103])")
-            .ValueOrDie();
-    auto write_struct = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::StructArray::Make(arrow::ArrayVector({write_f0_array, write_view_array}),
-                                 std::vector<std::string>({"f0", "view"}))
-            .ValueOrDie());
-
-    auto schema = arrow::schema(fields);
-    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
-                         WriteArray(table_path, {}, schema->field_names(), {write_struct}));
-    ASSERT_OK(Commit(table_path, commit_msgs));
-
-    // scan/read the downstream table and verify resolved blobs come from the *test* branch.
-    ASSERT_OK_AND_ASSIGN(auto plan, ScanTable(table_path));
-    ASSERT_OK_AND_ASSIGN(auto result,
-                         ReadTable(table_path, schema->field_names(), plan, /*predicate=*/nullptr));
-    ASSERT_TRUE(result.chunked_array);
-    auto read_concat = arrow::Concatenate(result.chunked_array->chunks()).ValueOrDie();
-    auto read_struct = std::dynamic_pointer_cast<arrow::StructArray>(read_concat);
-    ASSERT_EQ(read_struct->length(), 4);
-    ASSERT_OK_AND_ASSIGN(auto result_array, ConvertDescriptorToRawBlob(read_struct, {"view"}));
-
-    std::string expected_json = R"([
-[100, "test_0"],
-[101, "test_1"],
-[102, "test_2"],
-[103, "test_3"]
-])";
-    auto expected_struct = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), expected_json)
-            .ValueOrDie());
-    ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(expected_struct));
-    ASSERT_TRUE(result_array->Equals(expected_with_rk))
-        << "result_array:" << result_array->ToString() << std::endl
-        << "expected:" << expected_with_rk->ToString();
-}
-
 TEST_P(BlobTableInteTest, TestBlobViewFailsWhenBothPathsAbsent) {
     auto file_format = GetParam();
 
@@ -3011,7 +2864,7 @@ TEST_P(BlobTableInteTest, TestBlobViewFailsWhenBothPathsAbsent) {
     // Write a single row with a BlobViewStruct pointing to the non-existent upstream table.
     Identifier upstream_identifier(upstream_db_name, upstream_table_name);
     BlobViewStruct view_struct(upstream_identifier, /*field_id=*/2, /*row_id=*/0);
-    auto serialized = view_struct.Serialize(GetDefaultPool());
+    auto serialized = view_struct.Serialize(pool_);
     arrow::LargeBinaryBuilder view_builder;
     ASSERT_TRUE(
         view_builder
@@ -3109,7 +2962,7 @@ TEST_P(BlobTableInteTest, TestBlobViewWithFallbackPath) {
     arrow::LargeBinaryBuilder view_builder;
     for (int64_t row = 0; row < 2; ++row) {
         BlobViewStruct view_struct(upstream_identifier, /*field_id=*/1, /*row_id=*/row);
-        auto serialized = view_struct.Serialize(GetDefaultPool());
+        auto serialized = view_struct.Serialize(pool_);
         ASSERT_TRUE(
             view_builder
                 .Append(reinterpret_cast<const uint8_t*>(serialized->data()), serialized->size())

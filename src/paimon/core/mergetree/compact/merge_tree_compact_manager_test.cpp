@@ -50,7 +50,7 @@ class InlineExecutor final : public Executor {
     void ShutdownNow() override {}
 
     uint32_t GetThreadNum() const override {
-        return 0;
+        return 1;
     }
 };
 
@@ -63,7 +63,7 @@ class QueuedExecutor final : public Executor {
     void ShutdownNow() override {}
 
     uint32_t GetThreadNum() const override {
-        return 0;
+        return 1;
     }
 
     void RunAll() {

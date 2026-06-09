@@ -111,16 +111,17 @@ Result<BlobViewLookup::DescriptorMapping> BlobViewLookup::PreloadDescriptors(
 
     std::vector<std::future<Result<DescriptorMapping>>> futures;
     for (const auto& [identifier, table_read_plan] : plan_by_identifier) {
+        const auto& id = identifier;
         std::vector<int32_t> field_ids = table_read_plan.GetFieldIds();
         std::vector<std::vector<Range>> range_chunks =
             SplitRowRanges(table_read_plan.GetSortedDistinctRanges(), target_rows_per_task);
         for (const auto& range_chunk : range_chunks) {
-            futures.push_back(Via(executor.get(),
-                                  [catalog_context, identifier, field_ids, range_chunk,
-                                   pool]() -> Result<DescriptorMapping> {
-                                      return LoadTableDescriptorChunk(catalog_context, identifier,
-                                                                      field_ids, range_chunk, pool);
-                                  }));
+            futures.push_back(Via(
+                executor.get(),
+                [catalog_context, id, field_ids, range_chunk, pool]() -> Result<DescriptorMapping> {
+                    return LoadTableDescriptorChunk(catalog_context, id, field_ids, range_chunk,
+                                                    pool);
+                }));
         }
     }
 
@@ -146,8 +147,10 @@ Result<BlobViewLookup::DescriptorMapping> BlobViewLookup::LoadTableDescriptorChu
         std::unique_ptr<Catalog> catalog,
         Catalog::Create(catalog_context->root_path, catalog_context->options, file_system));
 
+    // The table path may be either xxx/test_database/test_table or xxx/test_database.db/test_table.
+    // If neither path exists or both paths exist, it means we cannot infer the table path, and an
+    // error will be reported. If only one of the paths exists, we will use that path.
     PAIMON_ASSIGN_OR_RAISE(std::string source_table_path, catalog->GetTableLocation(identifier));
-
     std::string database_name = identifier.GetDatabaseName();
     PAIMON_ASSIGN_OR_RAISE(std::string data_table_name, identifier.GetDataTableName());
     std::string fallback_source_table_path = PathUtil::JoinPath(
@@ -164,14 +167,14 @@ Result<BlobViewLookup::DescriptorMapping> BlobViewLookup::LoadTableDescriptorChu
     }
     std::string final_table_path = exist ? source_table_path : fallback_source_table_path;
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> branch, identifier.GetBranchName());
+    if (branch) {
+        return Status::Invalid("do not support upstream table with branch");
+    }
     ScanContextBuilder scan_builder(final_table_path);
     auto global_index_result = BitmapGlobalIndexResult::FromRanges(row_ranges);
     scan_builder.SetGlobalIndexResult(global_index_result)
         .WithMemoryPool(pool)
         .WithFileSystem(file_system);
-    if (branch) {
-        scan_builder.AddOption(Options::BRANCH, branch.value());
-    }
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ScanContext> scan_context, scan_builder.Finish());
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableScan> table_scan,
                            TableScan::Create(std::move(scan_context)));
@@ -185,9 +188,6 @@ Result<BlobViewLookup::DescriptorMapping> BlobViewLookup::LoadTableDescriptorChu
         .EnablePrefetch(true)
         .WithMemoryPool(pool)
         .WithFileSystem(file_system);
-    if (branch) {
-        read_builder.WithBranch(branch.value());
-    }
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context, read_builder.Finish());
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> table_read,
                            TableRead::Create(std::move(read_context)));

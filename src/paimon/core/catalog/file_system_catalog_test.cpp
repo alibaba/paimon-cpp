@@ -177,8 +177,8 @@ TEST(FileSystemCatalogTest, TestOptionsSystemTableCatalog) {
     ASSERT_FALSE(exists);
     ASSERT_OK_AND_ASSIGN(exists, catalog.TableExists(Identifier("db1", "missing$options")));
     ASSERT_FALSE(exists);
-    std::string table_path =
-        PathUtil::JoinPath(PathUtil::JoinPath(dir->Str(), "db1.db"), "tbl1$options");
+    ASSERT_OK_AND_ASSIGN(auto table_path, catalog.GetTableLocation(options_identifier));
+    ASSERT_EQ(table_path, PathUtil::JoinPath(PathUtil::JoinPath(dir->Str(), "db1.db"), "tbl1"));
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> system_schema,
                          catalog.LoadTableSchema(options_identifier));
