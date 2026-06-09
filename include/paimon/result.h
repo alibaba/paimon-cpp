@@ -270,11 +270,11 @@ inline Status GenericToStatus(Result<T>&& res) {
 #define PAIMON_ASSIGN_OR_RAISE_IMPL(result_name, lhs, rexpr)                                 \
     auto&& result_name = (rexpr);                                                            \
     PAIMON_RETURN_IF_(!(result_name).ok(), (result_name).status(), PAIMON_STRINGIFY(rexpr)); \
-    lhs = std::move(result_name).value();
+    lhs = std::move(result_name).value()
 
 #define PAIMON_ASSIGN_OR_RAISE_NAME(x, y) PAIMON_CONCAT(x, y)
 
 #define PAIMON_ASSIGN_OR_RAISE(lhs, rexpr)                                                      \
     PAIMON_ASSIGN_OR_RAISE_IMPL(PAIMON_ASSIGN_OR_RAISE_NAME(_error_or_value, __COUNTER__), lhs, \
-                                (rexpr));
+                                (rexpr))
 }  // namespace paimon
