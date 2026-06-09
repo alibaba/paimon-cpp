@@ -20,6 +20,8 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "arrow/io/caching.h"
@@ -63,10 +65,8 @@ class PageFilteredRowGroupReader {
     /// @param max_chunksize Per-batch row cap for the returned reader.
     /// @return A RecordBatchReader streaming the filtered rows.
     static Result<std::unique_ptr<arrow::RecordBatchReader>> ReadFilteredRowGroup(
-        ::parquet::arrow::FileReader* arrow_file_reader,
-        const TargetRowGroup& target_row_group,
-        const std::vector<int32_t>& column_indices,
-        const std::vector<int32_t>& leaf_to_field_idx,
+        ::parquet::arrow::FileReader* arrow_file_reader, const TargetRowGroup& target_row_group,
+        const std::vector<int32_t>& column_indices, const std::vector<int32_t>& leaf_to_field_idx,
         const std::shared_ptr<arrow::Schema>& arrow_schema,
         const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
         const std::vector<::arrow::io::ReadRange>& page_ranges, int64_t max_chunksize,
@@ -118,6 +118,33 @@ class PageFilteredRowGroupReader {
     static std::pair<RowRanges, int64_t> ComputeCompressedRowRanges(
         const RowRanges& original_ranges,
         const std::shared_ptr<::parquet::OffsetIndex>& offset_index, int64_t row_group_row_count);
+
+    /// Build an Int64 array of row indices from RowRanges for use with arrow::compute::Take.
+    static Result<std::shared_ptr<arrow::Array>> BuildTakeIndices(
+        const RowRanges& row_ranges, int64_t expected_rows,
+        std::shared_ptr<::arrow::MemoryPool> pool);
+
+    /// Read all nested columns for a row group via arrow FileReader fallback,
+    /// then filter them using Take with the given row_ranges.
+    /// Returns a map from field name to filtered ChunkedArray.
+    static Result<std::unordered_map<std::string, std::shared_ptr<arrow::ChunkedArray>>>
+    ReadNestedColumns(::parquet::arrow::FileReader* arrow_file_reader, int32_t row_group_index,
+                      const std::vector<int32_t>& column_indices,
+                      const std::vector<int32_t>& leaf_to_field_idx, const RowRanges& row_ranges,
+                      int64_t expected_rows, std::shared_ptr<::arrow::MemoryPool> pool);
+
+    /// Assemble output columns by dispatching each arrow field to either
+    /// ReadFilteredColumn (non-nested) or the pre-computed nested columns map.
+    static Result<std::vector<std::shared_ptr<arrow::ChunkedArray>>> AssembleFilteredColumns(
+        const std::shared_ptr<::parquet::RowGroupReader>& row_group_reader,
+        ::parquet::ParquetFileReader* parquet_reader,
+        const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
+        int32_t row_group_index, const std::vector<int32_t>& column_indices,
+        const std::vector<int32_t>& leaf_to_field_idx, const RowRanges& row_ranges,
+        int64_t row_group_row_count, int64_t expected_rows,
+        const std::shared_ptr<arrow::Schema>& arrow_schema,
+        const std::unordered_map<std::string, std::shared_ptr<arrow::ChunkedArray>>& nested_columns,
+        std::shared_ptr<::arrow::MemoryPool> pool);
 };
 
 }  // namespace paimon::parquet

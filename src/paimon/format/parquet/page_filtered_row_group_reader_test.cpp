@@ -894,7 +894,8 @@ static std::shared_ptr<arrow::StructArray> MakeNestedStructData(int32_t num_rows
 
     auto field_x = arrow::field("x", arrow::int32());
     auto field_y = arrow::field("y", arrow::int32());
-    auto inner_struct = arrow::StructArray::Make({x_array, y_array}, {field_x, field_y}).ValueOrDie();
+    auto inner_struct =
+        arrow::StructArray::Make({x_array, y_array}, {field_x, field_y}).ValueOrDie();
 
     auto field_id = arrow::field("id", arrow::int32());
     auto field_info = arrow::field("info", arrow::struct_({field_x, field_y}));
@@ -919,9 +920,8 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnPageFilter) {
 
     auto field_x = arrow::field("x", arrow::int32());
     auto field_y = arrow::field("y", arrow::int32());
-    auto read_schema = arrow::schema(
-        {arrow::field("id", arrow::int32()),
-         arrow::field("info", arrow::struct_({field_x, field_y}))});
+    auto read_schema = arrow::schema({arrow::field("id", arrow::int32()),
+                                      arrow::field("info", arrow::struct_({field_x, field_y}))});
 
     auto predicate = PredicateBuilder::GreaterOrEqual(
         /*field_index=*/0, /*field_name=*/"id", FieldType::INT, Literal(50));
@@ -954,8 +954,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnOnlyReadNestedField) {
     auto field_x = arrow::field("x", arrow::int32());
     auto field_y = arrow::field("y", arrow::int32());
     // Read only the nested "info" column
-    auto read_schema = arrow::schema(
-        {arrow::field("info", arrow::struct_({field_x, field_y}))});
+    auto read_schema = arrow::schema({arrow::field("info", arrow::struct_({field_x, field_y}))});
 
     // Predicate is on "id" (field_index=0 in file schema, not in read schema)
     auto predicate = PredicateBuilder::GreaterOrEqual(
@@ -973,9 +972,10 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnOnlyReadNestedField) {
     auto sliced = std::dynamic_pointer_cast<arrow::StructArray>(full_data->Slice(50, 50));
     ASSERT_TRUE(sliced);
     // Extract only the "info" column (field index 1) and wrap as struct with single field
-    auto expected = arrow::StructArray::Make(
-        {sliced->field(1)},
-        {arrow::field("info", arrow::struct_({field_x, field_y}))}).ValueOrDie();
+    auto expected =
+        arrow::StructArray::Make({sliced->field(1)},
+                                 {arrow::field("info", arrow::struct_({field_x, field_y}))})
+            .ValueOrDie();
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
 
@@ -1031,8 +1031,7 @@ static std::shared_ptr<arrow::StructArray> MakeMapColumnData(int32_t num_rows) {
     auto map_array = map_builder.Finish().ValueOrDie();
 
     auto field_id = arrow::field("id", arrow::int32());
-    auto field_props = arrow::field(
-        "props", arrow::map(arrow::utf8(), arrow::int32()));
+    auto field_props = arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()));
     return arrow::StructArray::Make({id_array, map_array}, {field_id, field_props}).ValueOrDie();
 }
 
@@ -1046,9 +1045,9 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnPageFilter) {
     auto data = MakeListColumnData(100);
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
 
-    auto read_schema = arrow::schema(
-        {arrow::field("id", arrow::int32()),
-         arrow::field("tags", arrow::list(arrow::field("item", arrow::int32())))});
+    auto read_schema =
+        arrow::schema({arrow::field("id", arrow::int32()),
+                       arrow::field("tags", arrow::list(arrow::field("item", arrow::int32())))});
 
     auto predicate = PredicateBuilder::GreaterOrEqual(
         /*field_index=*/0, /*field_name=*/"id", FieldType::INT, Literal(50));
@@ -1074,9 +1073,9 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnPageFilter) {
     auto data = MakeMapColumnData(100);
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
 
-    auto read_schema = arrow::schema(
-        {arrow::field("id", arrow::int32()),
-         arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()))});
+    auto read_schema =
+        arrow::schema({arrow::field("id", arrow::int32()),
+                       arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()))});
 
     auto predicate = PredicateBuilder::GreaterOrEqual(
         /*field_index=*/0, /*field_name=*/"id", FieldType::INT, Literal(50));
@@ -1128,8 +1127,9 @@ TEST_F(PageFilteredRowGroupReaderTest, MultipleAdjacentNestedColumns) {
     auto field_id = arrow::field("id", arrow::int32());
     auto field_info = arrow::field("info", arrow::struct_({field_x, field_y}));
     auto field_tags = arrow::field("tags", arrow::list(arrow::field("item", arrow::int32())));
-    auto data = arrow::StructArray::Make(
-        {id_array, inner_struct, list_array}, {field_id, field_info, field_tags}).ValueOrDie();
+    auto data = arrow::StructArray::Make({id_array, inner_struct, list_array},
+                                         {field_id, field_info, field_tags})
+                    .ValueOrDie();
 
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
 

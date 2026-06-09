@@ -227,7 +227,6 @@ Result<std::shared_ptr<ArrowType>> GetArrowType(
                         primitive.type_length(), int96_arrow_time_unit);
 }
 
-
 // Recursively flatten a nested Arrow type into its constituent parquet leaf column indices.
 void FlattenSchema(const std::shared_ptr<arrow::DataType>& type, int32_t* index,
                    std::vector<int32_t>* index_vector) {

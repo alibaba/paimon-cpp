@@ -103,8 +103,7 @@ Result<std::unique_ptr<FileReaderWrapper>> FileReaderWrapper::Create(
                 "unexpected error. row group ranges not match with num rows {}", num_rows));
         }
         int num_cols = file_reader->parquet_reader()->metadata()->num_columns();
-        std::vector<int32_t> columns_indices =
-            arrow::internal::Iota(num_cols);
+        std::vector<int32_t> columns_indices = arrow::internal::Iota(num_cols);
         auto file_reader_wrapper = std::unique_ptr<FileReaderWrapper>(new FileReaderWrapper(
             std::move(file_reader), all_row_group_ranges, num_rows, num_cols, batch_size, pool));
         std::vector<TargetRowGroup> all_target_row_groups;
@@ -144,8 +143,8 @@ Status FileReaderWrapper::Close() {
 
 FileReaderWrapper::FileReaderWrapper(
     std::unique_ptr<::parquet::arrow::FileReader>&& file_reader,
-    const std::vector<std::pair<uint64_t, uint64_t>>& all_row_group_ranges, uint64_t num_rows,uint32_t num_cols,
-    int64_t batch_size, std::shared_ptr<::arrow::MemoryPool> pool)
+    const std::vector<std::pair<uint64_t, uint64_t>>& all_row_group_ranges, uint64_t num_rows,
+    uint32_t num_cols, int64_t batch_size, std::shared_ptr<::arrow::MemoryPool> pool)
     : file_reader_(std::move(file_reader)),
       all_row_group_ranges_(all_row_group_ranges),
       pool_(pool),
@@ -240,8 +239,7 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::NextPageFiltered(
         PAIMON_ASSIGN_OR_RAISE(
             current_page_filtered_reader_,
             PageFilteredRowGroupReader::ReadFilteredRowGroup(
-                file_reader_.get(),
-                target_rg, target_column_indices_, leaf_to_field_idx_,
+                file_reader_.get(), target_rg, target_column_indices_, leaf_to_field_idx_,
                 page_filtered_read_schema_, file_reader_->properties().cache_options(),
                 pre_buffered, page_ranges, max_chunksize, pool_));
         current_filtered_row_ranges_ = target_rg.row_ranges;
@@ -362,9 +360,9 @@ Status FileReaderWrapper::BuildPageFilteredSchema(const std::vector<int32_t>& co
         const auto& field = schema->field(field_idx);
         std::vector<int32_t> leaf_indices;
         FlattenSchema(field->type(), &leaf_idx, &leaf_indices);
-        bool is_nested = (field->type()->id() == arrow::Type::STRUCT ||
-                          field->type()->id() == arrow::Type::LIST ||
-                          field->type()->id() == arrow::Type::MAP);
+        bool is_nested =
+            (field->type()->id() == arrow::Type::STRUCT ||
+             field->type()->id() == arrow::Type::LIST || field->type()->id() == arrow::Type::MAP);
 
         // Mark nested leaves in the global mapping.
         if (is_nested) {
@@ -375,8 +373,7 @@ Status FileReaderWrapper::BuildPageFilteredSchema(const std::vector<int32_t>& co
 
         // If any leaf of this field is requested, add to output schema (deduplicated).
         for (int32_t idx : leaf_indices) {
-            if (requested_leaves.count(idx) &&
-                seen_field_names.insert(field->name()).second) {
+            if (requested_leaves.count(idx) && seen_field_names.insert(field->name()).second) {
                 fields.push_back(field);
                 break;
             }
