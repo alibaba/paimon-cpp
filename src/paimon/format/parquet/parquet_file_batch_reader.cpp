@@ -89,8 +89,7 @@ Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
                                             ->Build(&file_reader));
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileReaderWrapper> reader,
                                FileReaderWrapper::Create(std::move(file_reader),
-                                                         static_cast<int64_t>(batch_size),
-                                                        pool));
+                                                         static_cast<int64_t>(batch_size), pool));
         auto parquet_file_batch_reader = std::unique_ptr<ParquetFileBatchReader>(
             new ParquetFileBatchReader(std::move(input_stream), std::move(reader), options, pool));
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::ArrowSchema> file_schema,

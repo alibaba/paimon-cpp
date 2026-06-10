@@ -205,9 +205,8 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
 
 Status PageFilteredRowGroupReader::WaitForPreBuffer(
     ::parquet::ParquetFileReader* parquet_reader, int32_t row_group_index,
-    const std::vector<int32_t>& column_indices,
-    const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
-    const std::vector<::arrow::io::ReadRange>& page_ranges,
+    const std::vector<int32_t>& column_indices, const ::arrow::io::CacheOptions& cache_options,
+    bool pre_buffered, const std::vector<::arrow::io::ReadRange>& page_ranges,
     std::shared_ptr<::arrow::MemoryPool> pool) {
     std::vector<int> rg_vec = {row_group_index};
     std::vector<int> col_vec(column_indices.begin(), column_indices.end());
@@ -231,9 +230,9 @@ Status PageFilteredRowGroupReader::WaitForPreBuffer(
 Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::ReadFilteredRowGroup(
     ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
     const std::vector<int32_t>& column_indices, const std::shared_ptr<arrow::Schema>& arrow_schema,
-    const ::arrow::io::CacheOptions& cache_options,
-    bool pre_buffered, const std::vector<::arrow::io::ReadRange>& page_ranges,
-    int64_t max_chunksize, std::shared_ptr<::arrow::MemoryPool> pool) {
+    const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
+    const std::vector<::arrow::io::ReadRange>& page_ranges, int64_t max_chunksize,
+    std::shared_ptr<::arrow::MemoryPool> pool) {
     const auto& row_ranges = target_row_group.row_ranges;
     int32_t row_group_index = target_row_group.row_group_index;
 

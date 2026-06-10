@@ -59,9 +59,9 @@ class PageFilteredRowGroupReader {
         ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
         const std::vector<int32_t>& column_indices,
         const std::shared_ptr<arrow::Schema>& arrow_schema,
-        const ::arrow::io::CacheOptions& cache_options,
-        bool pre_buffered, const std::vector<::arrow::io::ReadRange>& page_ranges,
-        int64_t max_chunksize, std::shared_ptr<::arrow::MemoryPool> pool);
+        const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
+        const std::vector<::arrow::io::ReadRange>& page_ranges, int64_t max_chunksize,
+        std::shared_ptr<::arrow::MemoryPool> pool);
 
     /// Compute the byte ranges of pages that overlap with the given RowRanges.
     /// Uses OffsetIndex to determine per-page file offsets and sizes.

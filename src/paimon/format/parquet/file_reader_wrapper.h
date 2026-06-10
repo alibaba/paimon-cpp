@@ -55,8 +55,8 @@ class FileReaderWrapper {
     ~FileReaderWrapper();
 
     static Result<std::unique_ptr<FileReaderWrapper>> Create(
-        std::unique_ptr<::parquet::arrow::FileReader>&& reader,
-         int64_t batch_size, std::shared_ptr<arrow::MemoryPool> pool);
+        std::unique_ptr<::parquet::arrow::FileReader>&& reader, int64_t batch_size,
+        std::shared_ptr<arrow::MemoryPool> pool);
 
     /// Seek to the specified row number.
     /// @param row_number The row to seek to (must be at a row group boundary).
