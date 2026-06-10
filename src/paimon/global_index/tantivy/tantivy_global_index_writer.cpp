@@ -6,11 +6,19 @@
  * You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include "paimon/global_index/tantivy/tantivy_global_index_writer.h"
 
-#include <cstdlib>
+#include <optional>
+#include <string>
+#include <utility>
 
 #include "arrow/c/bridge.h"
 #include "fmt/format.h"
@@ -28,22 +36,6 @@ namespace paimon::tantivy {
             return Status::Invalid(error_msg); \
         }                                      \
     } while (0)
-
-namespace {
-
-/// Resolve the jieba dictionary directory for the writer. Mirrors lucene-fts'
-/// LuceneUtils::GetJiebaDictionaryDir but kept separate to avoid coupling
-/// tantivy-fulltext to the lucene module.
-Result<std::string> GetJiebaDictionaryDir() {
-    const char* env_dir = std::getenv(kJiebaDictDirEnv);
-    if (env_dir && *env_dir != '\0') {
-        return std::string(env_dir);
-    }
-    return Status::Invalid(
-        fmt::format("jieba dictionary dir not found, please set {} env var", kJiebaDictDirEnv));
-}
-
-}  // namespace
 
 Result<std::shared_ptr<TantivyGlobalIndexWriter>> TantivyGlobalIndexWriter::Create(
     const std::string& field_name, const std::shared_ptr<arrow::DataType>& arrow_type,
@@ -63,7 +55,12 @@ Result<std::shared_ptr<TantivyGlobalIndexWriter>> TantivyGlobalIndexWriter::Crea
     // dict dir — pass an empty string and Rust skips jieba construction.
     std::string dict_dir;
     if (tokenizer == "paimon_jieba") {
-        PAIMON_ASSIGN_OR_RAISE(dict_dir, GetJiebaDictionaryDir());
+        std::optional<std::string> env_dir = GetJiebaDictionaryDirFromEnv();
+        if (!env_dir.has_value()) {
+            return Status::Invalid(fmt::format(
+                "jieba dictionary dir not found, please set {} env var", kJiebaDictDirEnv));
+        }
+        dict_dir = std::move(*env_dir);
     }
 
     PaimonTantivyWriter* raw = nullptr;

@@ -6,6 +6,12 @@
  * You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include "paimon/global_index/tantivy/tantivy_global_index_reader.h"
@@ -35,23 +41,6 @@ namespace {
 void EnsureTantivyLogBridge() {
     static std::once_flag flag;
     std::call_once(flag, [] { InstallTantivyLogBridge(); });
-}
-
-/// Returns the jieba dictionary dir from the env var, or an empty string if the env
-/// var is missing/empty. We intentionally do NOT error here: paimon-java tantivy
-/// archives use the built-in `"default"` (SimpleTokenizer) and do not need jieba —
-/// the Rust reader's tokenizer-registration branch skips dict_dir entirely in that
-/// case (third_party/tantivy_ffi/src/reader.rs:111 → `let _ = (mode, dict_dir)`).
-/// For archives that DO use jieba (paimon-cpp-written with `tantivy.write.tokenizer
-/// = paimon_jieba`), the Rust side will surface a clear "create paimon_jieba
-/// tokenizer" failure when it tries to load the dictionary from an empty path, so
-/// the error stays actionable.
-std::string GetJiebaDictionaryDir() {
-    const char* env_dir = std::getenv(kJiebaDictDirEnv);
-    if (env_dir && *env_dir != '\0') {
-        return std::string(env_dir);
-    }
-    return std::string();
 }
 
 }  // namespace
@@ -87,7 +76,15 @@ Result<std::shared_ptr<TantivyGlobalIndexReader>> TantivyGlobalIndexReader::Crea
         bool omit_term_freq_and_positions,
         OptionsUtils::GetValueFromMap(write_options, kTantivyWriteOmitTermFreqAndPositions, false));
 
-    std::string dict_dir = GetJiebaDictionaryDir();
+    // Tolerate a missing jieba dict dir on the read path: paimon-java tantivy
+    // archives use the built-in `"default"` (SimpleTokenizer) and do not need
+    // jieba — the Rust reader's tokenizer-registration branch skips dict_dir
+    // entirely in that case (third_party/tantivy_ffi/src/reader.rs:111 →
+    // `let _ = (mode, dict_dir)`). For archives that DO use jieba (paimon-cpp
+    // written with `tantivy.write.tokenizer = paimon_jieba`), the Rust side
+    // surfaces a clear "create paimon_jieba tokenizer" failure when it tries to
+    // load the dictionary from an empty path, so the error stays actionable.
+    std::string dict_dir = GetJiebaDictionaryDirFromEnv().value_or(std::string());
 
     // V3 streaming read path:
     //   1) open stream
