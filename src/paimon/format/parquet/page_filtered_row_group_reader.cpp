@@ -316,17 +316,19 @@ std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRange
     for (int32_t col_idx : column_indices) {
         auto col_chunk = rg_metadata->ColumnChunk(col_idx);
         int64_t data_page_offset = col_chunk->data_page_offset();
-        int64_t total_compressed_size = col_chunk->total_compressed_size();
-        int64_t chunk_end = data_page_offset + total_compressed_size;
-
+        int64_t data_page_compressed_size = col_chunk->total_compressed_size();
         // Dictionary page: always include if present
         if (col_chunk->has_dictionary_page()) {
             int64_t dict_offset = col_chunk->dictionary_page_offset();
             int64_t dict_size = data_page_offset - dict_offset;
             if (dict_size > 0) {
+                // if dictionary exists, the data page size should be reduced by the dictionary
+                data_page_compressed_size -= dict_size;
                 ranges.push_back({dict_offset, dict_size});
             }
         }
+
+        int64_t chunk_end = data_page_offset + data_page_compressed_size;
 
         // Try to get OffsetIndex for page-level ranges
         std::shared_ptr<::parquet::OffsetIndex> offset_index;
@@ -336,7 +338,7 @@ std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRange
 
         if (!offset_index) {
             // No OffsetIndex: fall back to entire column chunk
-            ranges.push_back({data_page_offset, total_compressed_size});
+            ranges.push_back({data_page_offset, data_page_compressed_size});
             continue;
         }
 

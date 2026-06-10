@@ -163,7 +163,7 @@ Result<FieldsComparator::FieldComparatorFunc> FieldsComparator::CompareField(
                     return lvalue == rvalue ? 0 : (lvalue < rvalue ? -1 : 1);
                 });
         }
-        case arrow::Type::type::DECIMAL: {
+        case arrow::Type::type::DECIMAL128: {
             auto* decimal_type =
                 arrow::internal::checked_cast<arrow::Decimal128Type*>(input_type.get());
             assert(decimal_type);

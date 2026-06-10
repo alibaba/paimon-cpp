@@ -177,19 +177,19 @@ Status BlobFormatWriter::WriteBlob(std::string_view blob_data) {
     } else {
         in = std::make_unique<ByteArrayInputStream>(blob_data.data(), blob_data.size());
     }
-    PAIMON_ASSIGN_OR_RAISE(uint64_t file_length, in->Length());
-    uint64_t total_read_length = 0;
-    auto read_len = static_cast<uint32_t>(std::min<uint64_t>(file_length, tmp_buffer_->size()));
+    PAIMON_ASSIGN_OR_RAISE(int64_t file_length, in->Length());
+    int64_t total_read_length = 0;
+    int64_t read_len = std::min(file_length, static_cast<int64_t>(tmp_buffer_->size()));
     while (read_len > 0) {
-        PAIMON_ASSIGN_OR_RAISE(int32_t actual_read_len, in->Read(tmp_buffer_->data(), read_len));
-        if (static_cast<uint32_t>(actual_read_len) != read_len) {
+        PAIMON_ASSIGN_OR_RAISE(int64_t actual_read_len, in->Read(tmp_buffer_->data(), read_len));
+        if (actual_read_len != read_len) {
             return Status::Invalid("actual read length {}, not match with expect length {}",
                                    actual_read_len, read_len);
         }
         PAIMON_RETURN_NOT_OK(WriteWithCrc32(tmp_buffer_->data(), actual_read_len));
         total_read_length += actual_read_len;
-        read_len = static_cast<uint32_t>(
-            std::min<uint64_t>(file_length - total_read_length, tmp_buffer_->size()));
+        read_len =
+            std::min(file_length - total_read_length, static_cast<int64_t>(tmp_buffer_->size()));
     }
 
     // write bin length
@@ -209,8 +209,8 @@ Status BlobFormatWriter::WriteBlob(std::string_view blob_data) {
     return Status::OK();
 }
 
-Status BlobFormatWriter::WriteBytes(const char* data, int32_t length) {
-    PAIMON_ASSIGN_OR_RAISE(int32_t actual, out_->Write(data, length));
+Status BlobFormatWriter::WriteBytes(const char* data, int64_t length) {
+    PAIMON_ASSIGN_OR_RAISE(int64_t actual, out_->Write(data, length));
     if (actual != length) {
         return Status::Invalid("not suppose actual length {} not match with expect {}", actual,
                                length);
@@ -218,7 +218,7 @@ Status BlobFormatWriter::WriteBytes(const char* data, int32_t length) {
     return Status::OK();
 }
 
-Status BlobFormatWriter::WriteWithCrc32(const char* data, int32_t length) {
+Status BlobFormatWriter::WriteWithCrc32(const char* data, int64_t length) {
     crc32_ = arrow::internal::crc32(crc32_, data, length);
     return WriteBytes(data, length);
 }

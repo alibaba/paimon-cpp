@@ -206,7 +206,7 @@ static Result<WriteFunction> WriteBucketRow(int32_t col_id,
             };
             return writer_func;
         }
-        case arrow::Type::type::DECIMAL: {
+        case arrow::Type::type::DECIMAL128: {
             const auto* decimal_type =
                 arrow::internal::checked_cast<const arrow::Decimal128Type*>(field->type().get());
             assert(decimal_type);

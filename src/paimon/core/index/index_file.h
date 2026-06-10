@@ -38,11 +38,11 @@ class IndexFile {
         return path_factory_->ToPath(file);
     }
 
-    virtual Result<uint64_t> FileSize(const std::shared_ptr<IndexFileMeta>& file) const {
+    virtual Result<int64_t> FileSize(const std::shared_ptr<IndexFileMeta>& file) const {
         return FileSize(Path(file));
     }
 
-    virtual Result<uint64_t> FileSize(const std::string& file) const {
+    virtual Result<int64_t> FileSize(const std::string& file) const {
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStatus> file_status, fs_->GetFileStatus(file));
         return file_status->GetLen();
     }

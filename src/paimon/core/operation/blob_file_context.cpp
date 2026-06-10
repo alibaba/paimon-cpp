@@ -39,51 +39,61 @@ BlobFileContext::BlobFileContext(std::set<std::string> descriptor_fields,
 
 std::unique_ptr<BlobFileContext> BlobFileContext::Create(
     const std::shared_ptr<arrow::Schema>& schema, const CoreOptions& options) {
-    // Check if there are any BLOB fields in the schema
-    bool has_blob = false;
+    // Collect the BLOB field names that are present in the given schema. The schema may
+    // only contain a subset of the table columns (e.g. a projected read/write schema), so all
+    // field categories below must be derived from this set rather than from the options
+    // alone, which describe the full table.
+    std::set<std::string> schema_blob_fields;
     for (int i = 0; i < schema->num_fields(); ++i) {
-        if (BlobUtils::IsBlobField(schema->field(i))) {
-            has_blob = true;
-            break;
+        const auto& field = schema->field(i);
+        if (BlobUtils::IsBlobField(field)) {
+            schema_blob_fields.insert(field->name());
         }
     }
-    if (!has_blob) {
+    if (schema_blob_fields.empty()) {
         return nullptr;
     }
 
     // Populate descriptor fields
     std::set<std::string> descriptor_fields;
     for (const auto& name : options.GetBlobDescriptorFields()) {
-        descriptor_fields.insert(name);
+        if (schema_blob_fields.count(name) > 0) {
+            descriptor_fields.insert(name);
+        }
     }
 
     // Populate view fields
     std::set<std::string> view_fields;
     for (const auto& name : options.GetBlobViewFields()) {
-        view_fields.insert(name);
+        if (schema_blob_fields.count(name) > 0) {
+            view_fields.insert(name);
+        }
     }
 
     // Populate inline fields from options (descriptor ∪ view)
     std::set<std::string> inline_fields;
     for (const auto& name : options.GetBlobInlineFields()) {
-        inline_fields.insert(name);
+        if (schema_blob_fields.count(name) > 0) {
+            inline_fields.insert(name);
+        }
     }
 
     // Populate external storage fields
     std::set<std::string> external_storage_fields;
     for (const auto& name : options.GetBlobExternalStorageFields()) {
-        external_storage_fields.insert(name);
+        if (schema_blob_fields.count(name) > 0) {
+            external_storage_fields.insert(name);
+        }
     }
 
     // Populate external storage path
     std::optional<std::string> external_storage_path = options.GetBlobExternalStoragePath();
 
-    // Determine blob_file_fields: BLOB fields that are NOT inline
+    // Determine blob_file_fields: schema BLOB fields that are NOT inline
     std::set<std::string> blob_file_fields;
-    for (int i = 0; i < schema->num_fields(); ++i) {
-        const auto& field = schema->field(i);
-        if (BlobUtils::IsBlobField(field) && inline_fields.count(field->name()) == 0) {
-            blob_file_fields.insert(field->name());
+    for (const auto& name : schema_blob_fields) {
+        if (inline_fields.count(name) == 0) {
+            blob_file_fields.insert(name);
         }
     }
 
@@ -91,26 +101,6 @@ std::unique_ptr<BlobFileContext> BlobFileContext::Create(
         new BlobFileContext(std::move(descriptor_fields), std::move(view_fields),
                             std::move(inline_fields), std::move(external_storage_fields),
                             std::move(blob_file_fields), std::move(external_storage_path)));
-}
-
-bool BlobFileContext::IsInlineField(const std::string& field_name) const {
-    return inline_fields_.count(field_name) > 0;
-}
-
-bool BlobFileContext::IsBlobFileField(const std::string& field_name) const {
-    return blob_file_fields_.count(field_name) > 0;
-}
-
-bool BlobFileContext::IsDescriptorField(const std::string& field_name) const {
-    return descriptor_fields_.count(field_name) > 0;
-}
-
-bool BlobFileContext::IsViewField(const std::string& field_name) const {
-    return view_fields_.count(field_name) > 0;
-}
-
-bool BlobFileContext::IsExternalStorageField(const std::string& field_name) const {
-    return external_storage_fields_.count(field_name) > 0;
 }
 
 bool BlobFileContext::RequireBlobFileWriter() const {

@@ -20,6 +20,7 @@
 #include <memory>
 #include <string>
 
+#include "paimon/common/utils/math.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/utils/read_ahead_cache.h"
 
@@ -37,12 +38,14 @@ class CacheInputStream : public InputStream {
     Result<int64_t> GetPos() const override {
         return input_stream_->GetPos();
     }
-    Result<int32_t> Read(char* buffer, uint32_t size) override {
+    Result<int64_t> Read(char* buffer, int64_t size) override {
         return input_stream_->Read(buffer, size);
     }
-    Result<int32_t> Read(char* buffer, uint32_t size, uint64_t offset) override {
+    Result<int64_t> Read(char* buffer, int64_t size, int64_t offset) override {
         if (cache_) {
-            ByteRange range{offset, static_cast<uint64_t>(size)};
+            PAIMON_RETURN_NOT_OK(ValidateValueInRange<uint64_t>(offset, "read offset"));
+            PAIMON_RETURN_NOT_OK(ValidateValueInRange<uint64_t>(size, "read size"));
+            ByteRange range{static_cast<uint64_t>(offset), static_cast<uint64_t>(size)};
             PAIMON_ASSIGN_OR_RAISE(ByteSlice slice, cache_->Read(range));
             if (slice.buffer) {
                 std::memcpy(buffer, slice.buffer->data() + slice.offset, slice.length);
@@ -51,10 +54,20 @@ class CacheInputStream : public InputStream {
         }
         return input_stream_->Read(buffer, size, offset);
     }
-    void ReadAsync(char* buffer, uint32_t size, uint64_t offset,
+    void ReadAsync(char* buffer, int64_t size, int64_t offset,
                    std::function<void(Status)>&& callback) override {
         if (cache_) {
-            ByteRange range{offset, static_cast<uint64_t>(size)};
+            Status status = ValidateValueInRange<uint64_t>(offset, "read offset");
+            if (!status.ok()) {
+                callback(status);
+                return;
+            }
+            status = ValidateValueInRange<uint64_t>(size, "read size");
+            if (!status.ok()) {
+                callback(status);
+                return;
+            }
+            ByteRange range{static_cast<uint64_t>(offset), static_cast<uint64_t>(size)};
             Result<ByteSlice> slice = cache_->Read(range);
             if (!slice.ok()) {
                 callback(slice.status());
@@ -78,7 +91,7 @@ class CacheInputStream : public InputStream {
         return input_stream_->GetUri();
     }
 
-    Result<uint64_t> Length() const override {
+    Result<int64_t> Length() const override {
         return input_stream_->Length();
     }
 

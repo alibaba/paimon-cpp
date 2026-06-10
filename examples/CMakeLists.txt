@@ -24,20 +24,18 @@ find_package(Paimon CONFIG REQUIRED)
 add_executable(read_write_demo read_write_demo.cpp)
 add_executable(clean_demo clean_demo.cpp)
 
-include_directories(${PAIMON_INCLUDE_DIRS})
-
 set(CMAKE_EXE_LINKER_FLAGS "-Wl,--no-as-needed ${CMAKE_EXE_LINKER_FLAGS}")
 
 target_link_libraries(read_write_demo
-                      PRIVATE arrow_shared
-                              paimon_shared
-                              paimon_parquet_file_format_shared
-                              paimon_orc_file_format_shared
-                              paimon_local_file_system_shared)
+                      PRIVATE Arrow::arrow_shared
+                              Paimon::paimon_shared
+                              Paimon::paimon_parquet_file_format_shared
+                              Paimon::paimon_orc_file_format_shared
+                              Paimon::paimon_local_file_system_shared)
 
 target_link_libraries(clean_demo
-                      PRIVATE arrow_shared
-                              paimon_shared
-                              paimon_parquet_file_format_shared
-                              paimon_orc_file_format_shared
-                              paimon_local_file_system_shared)
+                      PRIVATE Arrow::arrow_shared
+                              Paimon::paimon_shared
+                              Paimon::paimon_parquet_file_format_shared
+                              Paimon::paimon_orc_file_format_shared
+                              Paimon::paimon_local_file_system_shared)

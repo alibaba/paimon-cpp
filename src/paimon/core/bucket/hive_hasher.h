@@ -28,21 +28,21 @@ namespace paimon {
 /// hash implementation, ensuring consistent bucket assignment between Paimon C++ and Java.
 class HiveHasher {
  public:
-    /// Hash an int value (identity function, same as Hive).
-    static int32_t HashInt(int32_t input) {
+    /// Hash an int value (identity function, same as Hive's 32-bit int hash).
+    static uint32_t HashInt(uint32_t input) {
         return input;
     }
 
     /// Hash a long value (same as Java's Long.hashCode).
-    static int32_t HashLong(int64_t input) {
-        return static_cast<int32_t>(input ^ (static_cast<uint64_t>(input) >> 32));
+    static uint32_t HashLong(uint64_t input) {
+        return static_cast<uint32_t>(input ^ (input >> 32));
     }
 
     /// Hash a byte array.
-    static int32_t HashBytes(const char* bytes, int32_t length) {
-        int32_t result = 0;
+    static uint32_t HashBytes(const char* bytes, int32_t length) {
+        uint32_t result = 0;
         for (int32_t i = 0; i < length; i++) {
-            result = (result * 31) + static_cast<int32_t>(bytes[i]);
+            result = result * 31U + static_cast<uint32_t>(static_cast<int32_t>(bytes[i]));
         }
         return result;
     }
@@ -58,7 +58,7 @@ class HiveHasher {
     ///
     /// @param decimal The decimal value to normalize.
     /// @return The hash code of the normalized decimal, computed as Java BigDecimal.hashCode().
-    static int32_t HashDecimal(const Decimal& decimal) {
+    static uint32_t HashDecimal(const Decimal& decimal) {
         // Java BigDecimal.hashCode() = unscaledValue.intValue() * 31 + scale
         // For compact decimals (precision <= 18), we can use the long value directly.
         // For non-compact decimals, we need to handle the 128-bit value.
@@ -90,7 +90,9 @@ class HiveHasher {
         }
 
         // Count integer digits
-        auto abs_value = value < 0 ? -value : value;
+        auto abs_value =
+            value < 0 ? static_cast<unsigned __int128>(0) - static_cast<unsigned __int128>(value)
+                      : static_cast<unsigned __int128>(value);
         int32_t total_digits = 0;
         auto temp = abs_value;
         while (temp > 0) {
@@ -146,8 +148,8 @@ class HiveHasher {
         // Compute Java BigDecimal.hashCode():
         // hashCode = intValue(unscaledValue) * 31 + scale
         // intValue() returns the low 32 bits of the value
-        auto int_value = static_cast<int32_t>(static_cast<int64_t>(value));
-        return int_value * 31 + scale;
+        auto int_value = static_cast<uint32_t>(value);
+        return int_value * 31U + static_cast<uint32_t>(scale);
     }
 
  private:

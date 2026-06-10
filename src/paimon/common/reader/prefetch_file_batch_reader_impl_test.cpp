@@ -533,7 +533,7 @@ TEST_F(PrefetchFileBatchReaderImplTest, WorkloopSetReadStatusWhenCacheInitFailed
     MockFormatReaderBuilder reader_builder(data_array, data_type_, batch_size);
     CacheConfig invalid_cache_config(
         /*buffer_size_limit=*/512 * 1024,
-        /*range_size_limit=*/static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) + 1,
+        /*range_size_limit=*/4 * 1024,
         /*hole_size_limit=*/8 * 1024,
         /*pre_buffer_limit=*/128 * 1024);
 
@@ -549,9 +549,8 @@ TEST_F(PrefetchFileBatchReaderImplTest, WorkloopSetReadStatusWhenCacheInitFailed
     auto prefetch_reader = dynamic_cast<PrefetchFileBatchReaderImpl*>(reader.get());
     prefetch_reader->Workloop();
 
-    Status status = prefetch_reader->GetReadStatus();
-    ASSERT_FALSE(status.ok());
-    ASSERT_TRUE(status.IsInvalid());
+    ASSERT_NOK_WITH_MSG(prefetch_reader->GetReadStatus(),
+                        "range size limit 4096 should be larger than hole size limit 8192");
 }
 
 TEST_F(PrefetchFileBatchReaderImplTest, DoReadBatchReturnOkWhenShutdown) {

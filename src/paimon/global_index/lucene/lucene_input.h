@@ -44,7 +44,7 @@ class LuceneIndexInput : public Lucene::BufferedIndexInput {
         if (!result.ok()) {
             throw Lucene::IOException(LuceneUtils::StringToWstring(result.status().ToString()));
         }
-        return static_cast<int64_t>(result.value());
+        return result.value();
     }
     void close() override {
         if (is_clone_) {
@@ -65,7 +65,7 @@ class LuceneIndexInput : public Lucene::BufferedIndexInput {
             throw Lucene::IOException(
                 LuceneUtils::StringToWstring(read_result.status().ToString()));
         }
-        if (read_result.value() != length) {
+        if (read_result.value() != static_cast<int64_t>(length)) {
             throw Lucene::IOException(L"actual read len and expect read len mismatch");
         }
     }

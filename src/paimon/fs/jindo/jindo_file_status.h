@@ -47,7 +47,7 @@ class JindoFileStatus : public FileStatus {
         return file_info_.getPath();
     }
 
-    uint64_t GetLen() const override {
+    int64_t GetLen() const override {
         return file_info_.getLength();
     }
 

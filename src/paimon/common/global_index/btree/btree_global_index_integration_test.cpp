@@ -52,7 +52,7 @@ class FakeGlobalIndexFileWriter : public GlobalIndexFileWriter {
 
     Result<int64_t> GetFileSize(const std::string& file_name) const override {
         PAIMON_ASSIGN_OR_RAISE(auto file_status, fs_->GetFileStatus(base_path_ + "/" + file_name));
-        return static_cast<int64_t>(file_status->GetLen());
+        return file_status->GetLen();
     }
 
     std::string ToPath(const std::string& file_name) const override {

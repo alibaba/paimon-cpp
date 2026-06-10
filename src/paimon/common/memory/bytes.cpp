@@ -19,7 +19,6 @@
 #include <cassert>
 #include <cstring>
 #include <memory>
-#include <new>
 #include <string_view>
 #include <utility>
 
@@ -30,7 +29,7 @@ const std::shared_ptr<Bytes>& Bytes::EmptyBytes() {
     return empty_bytes;
 }
 
-PAIMON_UNIQUE_PTR<Bytes> Bytes::AllocateBytes(int32_t length, MemoryPool* pool) {
+PAIMON_UNIQUE_PTR<Bytes> Bytes::AllocateBytes(size_t length, MemoryPool* pool) {
     return pool->AllocateUnique<Bytes>(length, pool);
 }
 

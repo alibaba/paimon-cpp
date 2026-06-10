@@ -78,7 +78,7 @@ class PAIMON_EXPORT Bytes {
     /// @param length Number of bytes to allocate.
     /// @param pool Memory pool to use for allocation.
     /// @return Unique pointer to the newly allocated Bytes object.
-    static PAIMON_UNIQUE_PTR<Bytes> AllocateBytes(int32_t length, MemoryPool* pool);
+    static PAIMON_UNIQUE_PTR<Bytes> AllocateBytes(size_t length, MemoryPool* pool);
 
     /// Allocate a new Bytes object from string data.
     ///

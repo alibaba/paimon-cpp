@@ -191,7 +191,7 @@ class ReadInteTest : public testing::Test, public ::testing::WithParamInterface<
         auto file_system = std::make_shared<LocalFileSystem>();
         EXPECT_OK_AND_ASSIGN(auto input_stream, file_system->Open(split_file_name));
         std::vector<char> split_bytes(input_stream->Length().value_or(0), 0);
-        EXPECT_OK_AND_ASSIGN([[maybe_unused]] int32_t read_len,
+        EXPECT_OK_AND_ASSIGN([[maybe_unused]] int64_t read_len,
                              input_stream->Read(split_bytes.data(), split_bytes.size()));
         EXPECT_OK(input_stream->Close());
 
@@ -2955,15 +2955,15 @@ TEST_P(ReadInteTest, TestSpecificFs) {
         Result<int64_t> GetPos() const override {
             return input_->GetPos();
         }
-        Result<int32_t> Read(char* buffer, uint32_t size) override {
+        Result<int64_t> Read(char* buffer, int64_t size) override {
             (*io_count_)++;
             return input_->Read(buffer, size);
         }
-        Result<int32_t> Read(char* buffer, uint32_t size, uint64_t offset) override {
+        Result<int64_t> Read(char* buffer, int64_t size, int64_t offset) override {
             (*io_count_)++;
             return input_->Read(buffer, size, offset);
         }
-        void ReadAsync(char* buffer, uint32_t size, uint64_t offset,
+        void ReadAsync(char* buffer, int64_t size, int64_t offset,
                        std::function<void(Status)>&& callback) override {
             (*io_count_)++;
             return input_->ReadAsync(buffer, size, offset, std::move(callback));
@@ -2975,7 +2975,7 @@ TEST_P(ReadInteTest, TestSpecificFs) {
         Result<std::string> GetUri() const override {
             return input_->GetUri();
         }
-        Result<uint64_t> Length() const override {
+        Result<int64_t> Length() const override {
             return input_->Length();
         }
 
