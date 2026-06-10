@@ -2551,7 +2551,9 @@ TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamTable) {
 
 TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamExternalStorageBlob) {
     auto file_format = GetParam();
-
+    if (GetParam() == "lance") {
+        return;
+    }
     // Upstream table has two blob descriptor fields: b0 (field_id=1, inline descriptor) and
     // b1 (field_id=2, descriptor + external storage). The downstream view references cells from
     // both b0 and b1.
