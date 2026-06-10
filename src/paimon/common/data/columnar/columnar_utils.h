@@ -108,7 +108,9 @@ class ColumnarUtils {
                                            MemoryPool* pool) {
         auto view = GetView(array, pos);
         std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes(view.size(), pool);
-        memcpy(bytes->data(), view.data(), view.size());
+        if (!view.empty()) {
+            memcpy(bytes->data(), view.data(), view.size());
+        }
         return bytes;
     }
 };

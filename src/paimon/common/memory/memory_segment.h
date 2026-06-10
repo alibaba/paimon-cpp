@@ -109,14 +109,18 @@ class PAIMON_EXPORT MemorySegment {
     inline void Get(int32_t index, T* dst, int32_t offset, int32_t length) const {
         assert(static_cast<int32_t>(dst->size()) >= (offset + length));
         assert(size_ >= (index + length));
-        std::memcpy(const_cast<char*>(dst->data()) + offset, data_ + index, length);
+        if (length != 0) {
+            std::memcpy(const_cast<char*>(dst->data()) + offset, data_ + index, length);
+        }
     }
 
     template <typename T>
     inline void Put(int32_t index, const T& src, int32_t offset, int32_t length) {
         assert(static_cast<int32_t>(src.size()) >= (offset + length));
         assert(size_ >= (index + length));
-        std::memcpy(MutableData() + index, src.data() + offset, length);
+        if (length != 0) {
+            std::memcpy(MutableData() + index, src.data() + offset, length);
+        }
     }
 
     template <typename T>
@@ -147,13 +151,16 @@ class PAIMON_EXPORT MemorySegment {
         assert(offset >= 0);
         assert(target_offset >= 0);
         assert(num_bytes >= 0);
-
-        std::memcpy(target->MutableData() + target_offset, data_ + offset, num_bytes);
+        if (num_bytes != 0) {
+            std::memcpy(target->MutableData() + target_offset, data_ + offset, num_bytes);
+        }
     }
 
     void CopyToUnsafe(int32_t offset, void* target, int32_t target_offset,
                       int32_t num_bytes) const {
-        std::memcpy(static_cast<char*>(target) + target_offset, data_ + offset, num_bytes);
+        if (num_bytes != 0) {
+            std::memcpy(static_cast<char*>(target) + target_offset, data_ + offset, num_bytes);
+        }
     }
 
     int32_t Compare(const MemorySegment& seg2, int32_t offset1, int32_t offset2, int32_t len) const;

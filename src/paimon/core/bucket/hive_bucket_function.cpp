@@ -69,15 +69,15 @@ Result<std::unique_ptr<HiveBucketFunction>> HiveBucketFunction::Create(
 }
 
 int32_t HiveBucketFunction::Bucket(const BinaryRow& row, int32_t num_buckets) const {
-    static constexpr int32_t SEED = 0;
-    int32_t hash = SEED;
+    static constexpr uint32_t SEED = 0;
+    uint32_t hash = SEED;
     for (int32_t i = 0; i < row.GetFieldCount(); i++) {
-        hash = (31 * hash) + ComputeHash(row, i);
+        hash = 31U * hash + ComputeHash(row, i);
     }
-    return Mod(hash & std::numeric_limits<int32_t>::max(), num_buckets);
+    return Mod(static_cast<int32_t>(hash & 0x7FFFFFFF), num_buckets);
 }
 
-int32_t HiveBucketFunction::ComputeHash(const BinaryRow& row, int32_t field_index) const {
+uint32_t HiveBucketFunction::ComputeHash(const BinaryRow& row, int32_t field_index) const {
     if (row.IsNullAt(field_index)) {
         return 0;
     }
@@ -87,17 +87,17 @@ int32_t HiveBucketFunction::ComputeHash(const BinaryRow& row, int32_t field_inde
         case FieldType::BOOLEAN:
             return HiveHasher::HashInt(row.GetBoolean(field_index) ? 1 : 0);
         case FieldType::TINYINT:
-            return HiveHasher::HashInt(static_cast<int32_t>(row.GetByte(field_index)));
+            return HiveHasher::HashInt(static_cast<uint32_t>(row.GetByte(field_index)));
         case FieldType::SMALLINT:
-            return HiveHasher::HashInt(static_cast<int32_t>(row.GetShort(field_index)));
+            return HiveHasher::HashInt(static_cast<uint32_t>(row.GetShort(field_index)));
         case FieldType::INT:
         case FieldType::DATE:
-            return HiveHasher::HashInt(row.GetInt(field_index));
+            return HiveHasher::HashInt(static_cast<uint32_t>(row.GetInt(field_index)));
         case FieldType::BIGINT:
-            return HiveHasher::HashLong(row.GetLong(field_index));
+            return HiveHasher::HashLong(static_cast<uint64_t>(row.GetLong(field_index)));
         case FieldType::FLOAT: {
             float float_value = row.GetFloat(field_index);
-            int32_t bits;
+            uint32_t bits;
             if (float_value == -0.0f) {
                 bits = 0;
             } else {
@@ -107,9 +107,9 @@ int32_t HiveBucketFunction::ComputeHash(const BinaryRow& row, int32_t field_inde
         }
         case FieldType::DOUBLE: {
             double double_value = row.GetDouble(field_index);
-            int64_t bits;
+            uint64_t bits;
             if (double_value == -0.0) {
-                bits = 0L;
+                bits = 0;
             } else {
                 std::memcpy(&bits, &double_value, sizeof(bits));
             }
