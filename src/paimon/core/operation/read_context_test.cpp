@@ -75,7 +75,6 @@ TEST(ReadContextTest, TestSetContent) {
     builder.SetTableSchema("table-schema-json");
     builder.WithBranch("rt");
     builder.WithCacheConfig(cache_config);
-    builder.WithFileSystemSchemeToIdentifierMap({{"file", "local"}});
     auto fs = std::make_shared<MockFileSystem>();
     builder.WithFileSystem(fs);
     ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
@@ -103,8 +102,7 @@ TEST(ReadContextTest, TestSetContent) {
     ASSERT_EQ(512U, ctx->GetCacheConfig().GetRangeSizeLimit());
     ASSERT_EQ(128U, ctx->GetCacheConfig().GetHoleSizeLimit());
     ASSERT_EQ(2048U, ctx->GetCacheConfig().GetPreBufferLimit());
-    std::map<std::string, std::string> expected_fs_map = {{"file", "local"}};
-    ASSERT_EQ(expected_fs_map, ctx->GetFileSystemSchemeToIdentifierMap());
+    ASSERT_TRUE(ctx->GetFileSystemSchemeToIdentifierMap().empty());
     std::map<std::string, std::string> expected_options = {{"key", "value"}};
     ASSERT_EQ(expected_options, ctx->GetOptions());
     ASSERT_EQ(ctx->GetSpecificFileSystem(), fs);
@@ -119,6 +117,32 @@ TEST(ReadContextTest, TestSetOptionsOverridesAddedOptions) {
 
     std::map<std::string, std::string> expected_options = {{"key1", "value1"}, {"key2", "value2"}};
     ASSERT_EQ(expected_options, ctx->GetOptions());
+}
+
+TEST(ReadContextTest, TestFileSystemAndSchemeMapConflict) {
+    ReadContextBuilder builder("table_root_path");
+    auto fs = std::make_shared<MockFileSystem>();
+    builder.WithFileSystem(fs);
+    builder.WithFileSystemSchemeToIdentifierMap({{"file", "local"}});
+    ASSERT_NOK_WITH_MSG(
+        builder.Finish(),
+        "WithFileSystem() and WithFileSystemSchemeToIdentifierMap() cannot be used together");
+}
+
+TEST(ReadContextTest, TestSchemeMapWithoutFileSystem) {
+    ReadContextBuilder builder("table_root_path");
+    builder.WithFileSystemSchemeToIdentifierMap({{"file", "local"}});
+    ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
+    std::map<std::string, std::string> expected_fs_map = {{"file", "local"}};
+    ASSERT_EQ(expected_fs_map, ctx->GetFileSystemSchemeToIdentifierMap());
+    ASSERT_FALSE(ctx->GetSpecificFileSystem());
+}
+
+TEST(ReadContextTest, TestPrefetchMaxParallelNumZero) {
+    ReadContextBuilder builder("table_root_path");
+    builder.EnablePrefetch(true);
+    builder.SetPrefetchMaxParallelNum(0);
+    ASSERT_NOK_WITH_MSG(builder.Finish(), "prefetch max parallel num should be greater than 0");
 }
 
 }  // namespace paimon::test

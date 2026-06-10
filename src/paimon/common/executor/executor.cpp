@@ -49,7 +49,8 @@ class DefaultExecutor : public Executor {
     int32_t active_tasks_ = 0;
 };
 
-DefaultExecutor::DefaultExecutor(uint32_t thread_count) : thread_count_(thread_count) {
+DefaultExecutor::DefaultExecutor(uint32_t thread_count)
+    : thread_count_(thread_count == 0 ? 1 : thread_count) {
     for (uint32_t i = 0; i < thread_count_; ++i) {
         workers_.emplace_back(&DefaultExecutor::WorkerThread, this);
     }
@@ -130,7 +131,7 @@ void DefaultExecutor::WorkerThread() {
 PAIMON_EXPORT std::shared_ptr<Executor> GetGlobalDefaultExecutor() {
     static uint32_t all_cores = std::thread::hardware_concurrency();
     static std::shared_ptr<Executor> internal =
-        std::make_shared<DefaultExecutor>(/*thread_count=*/all_cores);
+        std::make_shared<DefaultExecutor>(/*thread_count=*/all_cores > 0 ? all_cores : 1);
     return internal;
 }
 
