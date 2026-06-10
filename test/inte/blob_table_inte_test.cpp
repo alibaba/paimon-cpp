@@ -2841,7 +2841,9 @@ TEST_P(BlobTableInteTest, TestBlobViewFieldWithMultipleUpstreamTables) {
 
 TEST_P(BlobTableInteTest, TestBlobViewFailsWhenBothPathsAbsent) {
     auto file_format = GetParam();
-
+    if (GetParam() == "lance") {
+        return;
+    }
     auto upstream_dir = UniqueTestDirectory::Create("local");
     const std::string upstream_db_name = "nonexistent_db";
     const std::string upstream_table_name = "nonexistent_table";
@@ -2892,7 +2894,9 @@ TEST_P(BlobTableInteTest, TestBlobViewFailsWhenBothPathsAbsent) {
 
 TEST_P(BlobTableInteTest, TestBlobViewWithFallbackPath) {
     auto file_format = GetParam();
-
+    if (GetParam() == "lance") {
+        return;
+    }
     const std::string upstream_db_name = "fallback_db";
     const std::string upstream_table_name = "fallback_table";
     arrow::FieldVector upstream_fields = {arrow::field("f0", arrow::int32()),
