@@ -796,7 +796,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
     // --- Check 1: No range should extend beyond the true chunk end ---
     // With the bug, the last data page's range would use chunk_end = data_page_offset +
     // total_compressed_size, which overshoots by the dictionary page size.
-    for (auto & range : ranges) {
+    for (auto& range : ranges) {
         int64_t range_end = range.offset + range.length;
         ASSERT_LE(range_end, true_chunk_end);
     }
