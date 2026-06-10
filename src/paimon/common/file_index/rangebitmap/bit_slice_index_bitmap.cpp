@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <string>
 
 #include "paimon/common/io/memory_segment_output_stream.h"

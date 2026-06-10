@@ -50,12 +50,12 @@ Result<std::unique_ptr<BlobFileBatchReader>> BlobFileBatchReader::Create(
             batch_size));
     }
 
-    PAIMON_ASSIGN_OR_RAISE(uint64_t file_size, input_stream->Length());
+    PAIMON_ASSIGN_OR_RAISE(int64_t file_size, input_stream->Length());
     PAIMON_RETURN_NOT_OK(
         input_stream->Seek(file_size - BlobDefs::kBlobFileHeaderLength, FS_SEEK_SET));
     int8_t header[BlobDefs::kBlobFileHeaderLength];
     PAIMON_ASSIGN_OR_RAISE(
-        int32_t actual_size,
+        int64_t actual_size,
         input_stream->Read(reinterpret_cast<char*>(header), BlobDefs::kBlobFileHeaderLength));
     if (actual_size != BlobDefs::kBlobFileHeaderLength) {
         return Status::Invalid(

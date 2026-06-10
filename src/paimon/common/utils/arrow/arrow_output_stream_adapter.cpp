@@ -19,7 +19,6 @@
 #include "arrow/result.h"
 #include "fmt/format.h"
 #include "paimon/common/utils/arrow/status_utils.h"
-#include "paimon/common/utils/math.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/result.h"
 
@@ -48,14 +47,16 @@ bool ArrowOutputStreamAdapter::closed() const {
 }
 
 arrow::Status ArrowOutputStreamAdapter::Write(const void* data, int64_t nbytes) {
-    if (!InRange<uint32_t>(nbytes)) {
-        return arrow::Status::Invalid(
-            fmt::format("nbytes value {} is out of bound of uint32_t", nbytes));
+    if (nbytes < 0) {
+        return arrow::Status::Invalid(fmt::format("write size {} is less than 0", nbytes));
     }
-    Result<int32_t> len =
-        out_->Write(static_cast<const char*>(data), static_cast<uint32_t>(nbytes));
+    Result<int64_t> len = out_->Write(static_cast<const char*>(data), nbytes);
     if (!len.ok()) {
         return ToArrowStatus(len.status());
+    }
+    if (len.value() != nbytes) {
+        return arrow::Status::IOError(
+            fmt::format("expect write len {} mismatch actual write len {}", nbytes, len.value()));
     }
     return arrow::Status::OK();
 }

@@ -103,7 +103,7 @@ TEST_F(RangeBitmapIoTest, TestSimple) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
                          fs_->Create(file_path, /*overwrite=*/false));
     ASSERT_OK_AND_ASSIGN(
-        int32_t write_len,
+        int64_t write_len,
         out->Write(reinterpret_cast<char*>(serialized_bytes->data()), serialized_bytes->size()));
     ASSERT_EQ(write_len, serialized_bytes->size());
     ASSERT_OK(out->Flush());

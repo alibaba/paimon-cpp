@@ -113,7 +113,7 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
                                std::shared_ptr<arrow::ChunkedArray>* out,
                                int32_t batch_size = 1024) {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
-        ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
+        ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
         auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
 
         std::map<std::string, std::string> options;
@@ -516,7 +516,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesPartialMatch) {
 
     // Open as raw ParquetFileReader
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
-    ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
+    ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
     auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
     ASSERT_TRUE(parquet_reader);
@@ -541,7 +541,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesAllMatch) {
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
-    ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
+    ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
     auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
 
@@ -567,7 +567,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesNoMatch) {
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
-    ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
+    ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
     auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
 
@@ -586,7 +586,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesMultiColumn) {
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
-    ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
+    ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
     auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
 
@@ -612,7 +612,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesMultiplePages) {
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
-    ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
+    ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
     auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
 

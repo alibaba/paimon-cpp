@@ -116,7 +116,7 @@ TEST_F(BlobTest, TestNewInputStreamWithOffsetAndLength) {
     ASSERT_OK_AND_ASSIGN(auto input_stream, blob->NewInputStream(file_system_));
     ASSERT_TRUE(input_stream);
 
-    ASSERT_OK_AND_ASSIGN(uint64_t length, input_stream->Length());
+    ASSERT_OK_AND_ASSIGN(int64_t length, input_stream->Length());
     ASSERT_EQ(6, length);
 
     // Test reading with offset and length applied
@@ -133,7 +133,7 @@ TEST_F(BlobTest, TestNewInputStreamWithDynamicLength) {
     ASSERT_OK_AND_ASSIGN(auto input_stream, blob->NewInputStream(file_system_));
     ASSERT_TRUE(input_stream);
 
-    ASSERT_OK_AND_ASSIGN(uint64_t length, input_stream->Length());
+    ASSERT_OK_AND_ASSIGN(int64_t length, input_stream->Length());
     ASSERT_EQ(12, length);
 
     // Test reading from offset to end (should read "cdefghijklmn")

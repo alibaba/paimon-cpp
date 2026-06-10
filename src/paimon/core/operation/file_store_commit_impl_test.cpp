@@ -254,7 +254,7 @@ class FileStoreCommitImplTest : public testing::Test {
         EXPECT_OK_AND_ASSIGN(std::unique_ptr<InputStream> in_stream, file_system->Open(path));
         EXPECT_TRUE(in_stream);
         EXPECT_OK_AND_ASSIGN(
-            [[maybe_unused]] int32_t length,
+            [[maybe_unused]] int64_t length,
             in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
         EXPECT_OK(in_stream->Close());
         auto pool = GetDefaultPool();

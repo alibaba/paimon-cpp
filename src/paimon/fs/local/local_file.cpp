@@ -26,6 +26,7 @@
 
 #include "fmt/format.h"
 #include "paimon/common/factories/io_hook.h"
+#include "paimon/common/utils/math.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/fs/local/local_file_status.h"
@@ -169,7 +170,7 @@ Result<std::unique_ptr<LocalFileStatus>> LocalFile::GetFileStatus() const {
                                              S_ISDIR(buf.st_mode));
 }
 
-Result<uint64_t> LocalFile::Length() const {
+Result<int64_t> LocalFile::Length() const {
     CHECK_HOOK();
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFileStatus> file_status, GetFileStatus());
     return file_status->GetLen();
@@ -195,18 +196,16 @@ const std::string& LocalFile::GetPath() const {
     return path_;
 }
 
-Result<int32_t> LocalFile::Read(char* buffer, uint32_t length, uint64_t offset) {
+Result<int64_t> LocalFile::Read(char* buffer, int64_t length, int64_t offset) {
     if (file_) {
         CHECK_HOOK();
+        PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(length, "read length"));
+        PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(offset, "read offset"));
         int32_t fd = fileno(file_);
-        auto more = static_cast<int32_t>(length);
-        if (more < 0) {
-            return Status::IOError(fmt::format(
-                "pread file '{}' fail, length overflow int32_t, ec: EC_BADARGS", path_));
-        }
 
-        uint64_t off = 0;
-        int32_t ret = 0;
+        int64_t more = length;
+        int64_t off = 0;
+        int64_t ret = 0;
         while (more > 0) {
             ret = ::pread(fd, buffer + off, more, offset + off);
             if (ret == -1) {
@@ -225,17 +224,14 @@ Result<int32_t> LocalFile::Read(char* buffer, uint32_t length, uint64_t offset) 
         "read file '{}' fail, can not read file which is opened fail, ec: EBADF", path_));
 }
 
-Result<int32_t> LocalFile::Read(char* buffer, uint32_t length) {
+Result<int64_t> LocalFile::Read(char* buffer, int64_t length) {
     if (file_) {
         CHECK_HOOK();
-        auto more = static_cast<int32_t>(length);
-        if (more < 0) {
-            return Status::IOError(
-                fmt::format("fileName '{}', length '{}', ec: EC_BADARGS", path_, length));
-        }
+        PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(length, "read length"));
 
-        int32_t ret = 0;
-        uint64_t off = 0;
+        int64_t more = length;
+        int64_t ret = 0;
+        int64_t off = 0;
         while (more > 0) {
             ret = fread(buffer + off, 1, more, file_);
             if (ferror(file_) != 0) {
@@ -255,22 +251,24 @@ Result<int32_t> LocalFile::Read(char* buffer, uint32_t length) {
         "read file '{}' fail, can not read file which is opened fail, ec: EBADF", path_));
 }
 
-Result<int32_t> LocalFile::Write(const char* buffer, uint32_t length) {
+Result<int64_t> LocalFile::Write(const char* buffer, int64_t length) {
     if (file_) {
         CHECK_HOOK();
-        auto more = static_cast<int32_t>(length);
-        if (more < 0) {
-            return Status::IOError(fmt::format(
-                "write file '{}' fail, length overflow int32_t, ec: EC_BADARGS", path_));
-        }
+        PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(length, "write length"));
 
-        int32_t ret = 0;
-        uint64_t off = 0;
+        int64_t more = length;
+        int64_t ret = 0;
+        int64_t off = 0;
         while (more > 0) {
             ret = fwrite(buffer + off, 1, more, file_);
             if (ferror(file_) != 0) {
                 return Status::IOError(fmt::format("write file '{}' fail at off {}, ec: {}", path_,
                                                    off, std::strerror(errno)));
+            }
+            if (ret == 0) {
+                return Status::IOError(
+                    fmt::format("write file '{}' fail at off {}, wrote zero bytes, ec: {}", path_,
+                                off, std::strerror(errno)));
             }
             more -= ret;
             off += ret;

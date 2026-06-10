@@ -70,7 +70,6 @@ class RangeBitmapGlobalIndexTest : public ::testing::Test {
 
         auto wrapper = std::dynamic_pointer_cast<FileIndexWriterWrapper>(global_writer);
         EXPECT_TRUE(wrapper);
-        wrapper->max_write_size_ = 128;
 
         ArrowArray c_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &c_array));

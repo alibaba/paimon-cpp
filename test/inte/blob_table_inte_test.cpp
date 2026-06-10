@@ -326,13 +326,12 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
             [&](const std::string_view& raw_value, arrow::LargeBinaryBuilder* builder) -> Status {
                 std::string file_path =
                     blob_dir_->Str() + "/blob_" + std::to_string(blob_file_counter_++) + ".bin";
+                auto raw_size = static_cast<int64_t>(raw_value.size());
                 PAIMON_ASSIGN_OR_RAISE(auto out, fs->Create(file_path, /*overwrite=*/true));
-                PAIMON_ASSIGN_OR_RAISE(
-                    auto written,
-                    out->Write(raw_value.data(), static_cast<uint32_t>(raw_value.size())));
+                PAIMON_ASSIGN_OR_RAISE(auto written, out->Write(raw_value.data(), raw_size));
                 PAIMON_RETURN_NOT_OK(out->Flush());
                 PAIMON_RETURN_NOT_OK(out->Close());
-                if (static_cast<size_t>(written) != raw_value.size()) {
+                if (written != raw_size) {
                     return Status::Invalid("Short write: expected {}, wrote {}", raw_value.size(),
                                            written);
                 }

@@ -97,7 +97,7 @@ TEST(DecimalTest, TestCompatibleWithJava) {
     auto pool = GetDefaultPool();
     auto file_system = std::make_unique<LocalFileSystem>();
     auto file_name = paimon::test::GetDataDir() + "/decimal_bytes.data";
-    uint64_t file_length = file_system->GetFileStatus(file_name).value()->GetLen();
+    int64_t file_length = file_system->GetFileStatus(file_name).value()->GetLen();
     ASSERT_GT(file_length, 0);
     ASSERT_OK_AND_ASSIGN(auto input_stream, file_system->Open(file_name));
     auto data_bytes = Bytes::AllocateBytes(file_length, pool.get());
