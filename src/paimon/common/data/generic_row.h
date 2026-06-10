@@ -220,6 +220,15 @@ class GenericRow : public InternalRow {
         return row;
     }
 
+    void ResetFields() {
+        for (auto& field : fields_) {
+            field = VariantType{};
+        }
+        kind_ = RowKind::Insert();
+        row_holder_.clear();
+        bytes_holder_.reset();
+    }
+
  private:
     /// The array to store the actual internal format values.
     std::vector<VariantType> fields_;

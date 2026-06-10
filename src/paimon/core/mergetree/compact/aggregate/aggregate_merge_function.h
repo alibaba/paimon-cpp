@@ -52,7 +52,11 @@ class AggregateMergeFunction : public MergeFunction {
     void Reset() override {
         latest_kv_ = std::nullopt;
         current_delete_row_ = false;
-        row_ = std::make_unique<GenericRow>(getters_.size());
+        if (row_) {
+            row_->ResetFields();
+        } else {
+            row_ = std::make_unique<GenericRow>(getters_.size());
+        }
         for (const auto& agg : aggregators_) {
             agg->Reset();
         }

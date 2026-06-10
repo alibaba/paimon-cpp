@@ -62,7 +62,11 @@ Status AggregateMergeFunction::Add(KeyValue&& kv) {
     // mark the current row for deletion and initialize the row with input values.
     if (remove_record_on_delete_ && kv.value_kind == RowKind::Delete()) {
         current_delete_row_ = true;
-        row_ = std::make_unique<GenericRow>(getters_.size());
+        if (row_) {
+            row_->ResetFields();
+        } else {
+            row_ = std::make_unique<GenericRow>(getters_.size());
+        }
         for (size_t i = 0; i < getters_.size(); i++) {
             row_->SetField(i, getters_[i](*(kv.value)));
         }
