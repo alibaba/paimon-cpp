@@ -23,11 +23,6 @@ Add: 2, "img_1", "vid_1", "raw_2_1", null
 Add: 3, "img_2", null,    "raw_2_2", "raw_3_2"
 NoCompact
 
-Expected data files after commit:
-  [0] main orc file (f0, b0, b1), 3 rows
-  [1] .blob file (b2), 3 rows
-  [2] .blob file (b3), 3 rows
-
 C++ read note:
   Descriptor URIs contain absolute paths from the Java generation machine.
   ConvertDescriptorToRawBlob uses BlobDescriptorPathRewrite{"raw_blob", "external_blob"}

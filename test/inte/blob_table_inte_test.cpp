@@ -366,16 +366,6 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
                 return PathUtil::JoinPath(rewrite.table_path, relative_blob_path);
             }
         }
-
-        std::string file_name = PathUtil::GetName(descriptor_uri);
-        for (const auto& blob_dir : rewrite.table_relative_blob_dirs) {
-            std::string candidate =
-                PathUtil::JoinPath(PathUtil::JoinPath(rewrite.table_path, blob_dir), file_name);
-            auto exists = fs->Exists(candidate);
-            if (exists.ok() && exists.value()) {
-                return candidate;
-            }
-        }
         return std::nullopt;
     }
 
@@ -2131,12 +2121,7 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorFieldPartialExternalStorageNoAsDescr
     auto read_concat = arrow::Concatenate(result.chunked_array->chunks()).ValueOrDie();
     auto read_struct = std::dynamic_pointer_cast<arrow::StructArray>(read_concat);
 
-    // After read, b0 and b1 are both descriptor-stored; resolve all back to raw bytes.
-    // Java-generated descriptors may contain absolute paths from the generation machine.
-    // Rewrite them to the portable blob directories inside the copied table path.
-    BlobDescriptorPathRewrite rewrite{table_path, {"raw_blob", "external_blob"}};
-    ASSERT_OK_AND_ASSIGN(auto resolved,
-                         ConvertDescriptorToRawBlob(read_struct, {"b0", "b1"}, rewrite));
+    ASSERT_OK_AND_ASSIGN(auto resolved, ConvertDescriptorToRawBlob(read_struct, {"b0", "b1"}));
     ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(raw_array));
     ASSERT_TRUE(resolved->Equals(expected_with_rk));
 
