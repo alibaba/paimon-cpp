@@ -188,7 +188,7 @@ function(add_paimon_lib LIB_NAME)
         endif()
 
         install(TARGETS ${LIB_NAME}_shared ${INSTALL_IS_OPTIONAL}
-                EXPORT ${LIB_NAME}_targets
+                EXPORT PaimonTargets
                 RUNTIME DESTINATION ${RUNTIME_INSTALL_DIR}
                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -235,7 +235,7 @@ function(add_paimon_lib LIB_NAME)
                               PUBLIC "$<BUILD_INTERFACE:paimon_sanitizer_flags>")
 
         install(TARGETS ${LIB_NAME}_static ${INSTALL_IS_OPTIONAL}
-                EXPORT ${LIB_NAME}_targets
+                EXPORT PaimonTargets
                 RUNTIME DESTINATION ${RUNTIME_INSTALL_DIR}
                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
