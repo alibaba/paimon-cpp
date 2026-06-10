@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 
+#include "arrow/c/abi.h"
 #include "paimon/cache/cache.h"
 #include "paimon/predicate/predicate.h"
 #include "paimon/result.h"
@@ -75,7 +76,7 @@ class PAIMON_EXPORT ReadContext {
         return options_;
     }
 
-    const std::vector<std::string>& GetReadSchema() const {
+    const std::vector<std::string>& GetReadFieldNames() const {
         return read_schema_;
     }
 
@@ -130,6 +131,22 @@ class PAIMON_EXPORT ReadContext {
         return cache_;
     }
 
+    /// Whether a read schema (C ArrowSchema) for nested column pruning was provided.
+    bool HasReadSchema() const {
+        return has_read_schema_;
+    }
+
+    /// Get the read schema as a mutable C ArrowSchema pointer.
+    /// ImportSchema will consume (release) the schema content.
+    ArrowSchema* GetReadSchema() {
+        return &read_schema_c_;
+    }
+
+    /// Set the read schema from a C ArrowSchema. Moves the content into this object.
+    /// The input schema's release will be set to nullptr after the move.
+    /// Called internally by ReadContextBuilder.
+    void SetReadSchema(ArrowSchema* schema);
+
  private:
     std::string path_;
     std::string branch_;
@@ -151,6 +168,8 @@ class PAIMON_EXPORT ReadContext {
     PrefetchCacheMode prefetch_cache_mode_;
     CacheConfig cache_config_;
     std::shared_ptr<Cache> cache_;
+    ArrowSchema read_schema_c_{};   // C ABI schema for nested column pruning
+    bool has_read_schema_ = false;  // whether read_schema_c_ holds valid content
 };
 
 /// `ReadContextBuilder` used to build a `ReadContext`, has input validation.
@@ -173,9 +192,9 @@ class PAIMON_EXPORT ReadContextBuilder {
     ///
     /// @param read_field_names Vector of field names to read from the table.
     /// @return Reference to this builder for method chaining.
-    /// @note Currently supports top-level field selection. Future versions may support
-    ///       nested field selection using ArrowSchema for more granular projection
-    ReadContextBuilder& SetReadSchema(const std::vector<std::string>& read_field_names);
+    /// @note Currently supports top-level field selection. For nested field selection
+    ///       use SetReadSchema(ArrowSchema*) instead.
+    ReadContextBuilder& SetReadFieldNames(const std::vector<std::string>& read_field_names);
     /// Set the schema fields to read from the table.
     ///
     /// If not set, all fields from the table schema will be read. This is useful for
@@ -186,9 +205,22 @@ class PAIMON_EXPORT ReadContextBuilder {
     /// @return Reference to this builder for method chaining.
     /// @note Currently supports top-level field selection. Future versions may support
     ///       nested field selection using ArrowSchema for more granular projection.
-    /// @note SetReadFieldIds() and SetReadSchema() are mutually exclusive.
-    ///       Calling both will ignore the read schema set by SetReadSchema().
+    /// @note SetReadFieldIds() and SetReadFieldNames() are mutually exclusive.
+    ///       Calling both will ignore the read schema set by SetReadFieldNames().
     ReadContextBuilder& SetReadFieldIds(const std::vector<int32_t>& read_field_ids);
+
+    /// Set the projected Arrow Schema for nested column pruning.
+    ///
+    /// The projected schema is an Arrow C Data Interface schema where STRUCT types
+    /// may contain only a subset of the original sub-fields, enabling nested column
+    /// pruning to reduce I/O. Each Arrow field must carry a "paimon.id" metadata
+    /// entry for field matching.
+    ///
+    /// @param projected_schema Arrow C Schema (consumed/released by this call).
+    /// @return Reference to this builder for method chaining.
+    /// @note Priority: projected_arrow_schema > read_field_ids > read_field_names.
+    ///       When set, read_field_ids and read_field_names are ignored.
+    ReadContextBuilder& SetReadSchema(ArrowSchema* projected_schema);
 
     /// Set a configuration options map to set some option entries which are not defined in the
     /// table schema or whose values you want to overwrite.

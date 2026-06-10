@@ -18,6 +18,8 @@
 
 #include <utility>
 
+#include "arrow/c/abi.h"
+#include "arrow/c/bridge.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/utils/branch_manager.h"
 #include "paimon/executor.h"
@@ -59,7 +61,20 @@ ReadContext::ReadContext(
       cache_config_(cache_config),
       cache_(cache) {}
 
-ReadContext::~ReadContext() = default;
+ReadContext::~ReadContext() {
+    if (has_read_schema_ && read_schema_c_.release) {
+        read_schema_c_.release(&read_schema_c_);
+    }
+}
+
+void ReadContext::SetReadSchema(ArrowSchema* schema) {
+    if (schema && schema->release) {
+        // Move the C schema content into our member. After move, source's release is nullptr.
+        read_schema_c_ = *schema;
+        schema->release = nullptr;
+        has_read_schema_ = true;
+    }
+}
 
 class ReadContextBuilder::Impl {
  public:
@@ -68,6 +83,10 @@ class ReadContextBuilder::Impl {
         branch_ = BranchManager::DEFAULT_MAIN_BRANCH;
         read_field_names_.clear();
         read_field_ids_.clear();
+        if (projected_c_schema_.release) {
+            projected_c_schema_.release(&projected_c_schema_);
+        }
+        projected_c_schema_ = {};
         fs_scheme_to_identifier_map_.clear();
         options_.clear();
         predicate_.reset();
@@ -91,6 +110,7 @@ class ReadContextBuilder::Impl {
     std::string branch_ = BranchManager::DEFAULT_MAIN_BRANCH;
     std::vector<std::string> read_field_names_;
     std::vector<int32_t> read_field_ids_;
+    ArrowSchema projected_c_schema_{};
     std::map<std::string, std::string> fs_scheme_to_identifier_map_;
     std::map<std::string, std::string> options_;
     std::shared_ptr<Predicate> predicate_;
@@ -130,7 +150,7 @@ ReadContextBuilder& ReadContextBuilder::SetOptions(const std::map<std::string, s
     return *this;
 }
 
-ReadContextBuilder& ReadContextBuilder::SetReadSchema(
+ReadContextBuilder& ReadContextBuilder::SetReadFieldNames(
     const std::vector<std::string>& read_field_names) {
     impl_->read_field_names_ = read_field_names;
     return *this;
@@ -139,6 +159,22 @@ ReadContextBuilder& ReadContextBuilder::SetReadSchema(
 ReadContextBuilder& ReadContextBuilder::SetReadFieldIds(
     const std::vector<int32_t>& read_field_ids) {
     impl_->read_field_ids_ = read_field_ids;
+    return *this;
+}
+
+ReadContextBuilder& ReadContextBuilder::SetReadSchema(ArrowSchema* projected_schema) {
+    if (projected_schema && projected_schema->release) {
+        // Import consumes the input C schema, then export a fresh copy into our member.
+        auto import_result = arrow::ImportSchema(projected_schema);
+        if (import_result.ok()) {
+            // Release any previously held schema.
+            if (impl_->projected_c_schema_.release) {
+                impl_->projected_c_schema_.release(&impl_->projected_c_schema_);
+            }
+            impl_->projected_c_schema_ = {};
+            (void)arrow::ExportSchema(*import_result.ValueUnsafe(), &impl_->projected_c_schema_);
+        }
+    }
     return *this;
 }
 
@@ -262,6 +298,9 @@ Result<std::unique_ptr<ReadContext>> ReadContextBuilder::Finish() {
         impl_->table_schema_, impl_->memory_pool_, impl_->executor_, impl_->specific_file_system_,
         impl_->fs_scheme_to_identifier_map_, impl_->options_, impl_->prefetch_cache_mode_,
         impl_->cache_config_, impl_->cache_);
+    if (impl_->projected_c_schema_.release) {
+        ctx->SetReadSchema(&impl_->projected_c_schema_);
+    }
     impl_->Reset();
     return ctx;
 }

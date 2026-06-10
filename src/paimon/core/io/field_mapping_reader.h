@@ -96,11 +96,11 @@ class FieldMappingReader : public FileBatchReader {
     Result<std::shared_ptr<arrow::Array>> CastNonPartitionArrayIfNeed(
         const std::shared_ptr<arrow::Array>& src_array) const;
 
-    static void MappingFields(const std::shared_ptr<arrow::Array>& src_array,
-                              const std::vector<DataField>& read_fields_of_data_array,
-                              const std::vector<int32_t>& idx_in_target_schema,
-                              arrow::ArrayVector* target_array,
-                              std::vector<std::string>* target_field_names);
+    static Status MappingFields(const std::shared_ptr<arrow::Array>& src_array,
+                               const std::vector<DataField>& read_fields_of_data_array,
+                               const std::vector<int32_t>& idx_in_target_schema,
+                               arrow::ArrayVector* target_array,
+                               std::vector<std::string>* target_field_names);
 
  private:
     bool need_mapping_ = false;

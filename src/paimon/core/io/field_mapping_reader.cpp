@@ -35,6 +35,7 @@
 #include "paimon/core/casting/cast_executor.h"
 #include "paimon/core/casting/casting_utils.h"
 #include "paimon/core/utils/field_mapping.h"
+#include "paimon/core/utils/nested_projection_utils.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/reader/batch_reader.h"
 
@@ -70,8 +71,12 @@ FieldMappingReader::FieldMappingReader(int32_t field_count,
         // post-rename logical name. If we skipped mapping, the inner reader's
         // batch would be passed through with the old physical name and the
         // consumer's name-based lookup against the read schema would fail.
+        // Nested type difference (nested column pruning) also requires mapping
+        // so that PruneArray can trim excess sub-fields from the format reader.
         if (non_partition_info_.non_partition_data_schema[i].Name() !=
-            non_partition_info_.non_partition_read_schema[i].Name()) {
+                non_partition_info_.non_partition_read_schema[i].Name() ||
+            !non_partition_info_.non_partition_data_schema[i].Type()->Equals(
+                non_partition_info_.non_partition_read_schema[i].Type())) {
             need_mapping_ = true;
         }
     }
@@ -142,9 +147,10 @@ Result<BatchReader::ReadBatchWithBitmap> FieldMappingReader::NextBatchWithBitmap
     // mapping non-partition array
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> casted_non_partition_array,
                            CastNonPartitionArrayIfNeed(non_partition_array));
-    MappingFields(casted_non_partition_array, non_partition_info_.non_partition_read_schema,
-                  non_partition_info_.idx_in_target_read_schema, &target_array,
-                  &target_field_names);
+    PAIMON_RETURN_NOT_OK(
+        MappingFields(casted_non_partition_array, non_partition_info_.non_partition_read_schema,
+                      non_partition_info_.idx_in_target_read_schema, &target_array,
+                      &target_field_names));
 
     // mapping partition array
     if (partition_info_ != std::nullopt) {
@@ -153,9 +159,10 @@ Result<BatchReader::ReadBatchWithBitmap> FieldMappingReader::NextBatchWithBitmap
                                    GeneratePartitionArray(non_partition_array->length()));
         }
         auto trim_partition_array = partition_array_->Slice(0, non_partition_array->length());
-        MappingFields(trim_partition_array, partition_info_.value().partition_read_schema,
-                      partition_info_.value().idx_in_target_read_schema, &target_array,
-                      &target_field_names);
+        PAIMON_RETURN_NOT_OK(
+            MappingFields(trim_partition_array, partition_info_.value().partition_read_schema,
+                          partition_info_.value().idx_in_target_read_schema, &target_array,
+                          &target_field_names));
     }
     // mapping non-exist array
     if (non_exist_field_info_ != std::nullopt) {
@@ -164,9 +171,10 @@ Result<BatchReader::ReadBatchWithBitmap> FieldMappingReader::NextBatchWithBitmap
                                    GenerateNonExistArray(non_partition_array->length()));
         }
         auto trim_non_exist_array = non_exist_array_->Slice(0, non_partition_array->length());
-        MappingFields(trim_non_exist_array, non_exist_field_info_.value().non_exist_read_schema,
-                      non_exist_field_info_.value().idx_in_target_read_schema, &target_array,
-                      &target_field_names);
+        PAIMON_RETURN_NOT_OK(
+            MappingFields(trim_non_exist_array, non_exist_field_info_.value().non_exist_read_schema,
+                          non_exist_field_info_.value().idx_in_target_read_schema, &target_array,
+                          &target_field_names));
     }
 
     // construct target array
@@ -283,20 +291,28 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::GenerateNonExistArray(
     return arrow_array;
 }
 
-void FieldMappingReader::MappingFields(const std::shared_ptr<arrow::Array>& data_array,
-                                       const std::vector<DataField>& read_fields_of_data_array,
-                                       const std::vector<int32_t>& idx_in_target_schema,
-                                       arrow::ArrayVector* target_array,
-                                       std::vector<std::string>* target_field_names) {
+Status FieldMappingReader::MappingFields(const std::shared_ptr<arrow::Array>& data_array,
+                                        const std::vector<DataField>& read_fields_of_data_array,
+                                        const std::vector<int32_t>& idx_in_target_schema,
+                                        arrow::ArrayVector* target_array,
+                                        std::vector<std::string>* target_field_names) {
     auto* struct_array = arrow::internal::checked_cast<arrow::StructArray*>(data_array.get());
     assert(struct_array);
     assert(struct_array->fields().size() == idx_in_target_schema.size());
     for (size_t i = 0; i < idx_in_target_schema.size(); i++) {
-        // target type may be string type, but after adapter transform, type may be dictionary,
-        // need reconstruct struct type
-        (*target_array)[idx_in_target_schema[i]] = struct_array->field(i);
+        std::shared_ptr<arrow::Array> field_array = struct_array->field(i);
+
+        // Fallback nested pruning: if the format reader returned more nested
+        // sub-fields than requested, prune the excess here.
+        const std::shared_ptr<arrow::DataType>& target_type = read_fields_of_data_array[i].Type();
+        if (!field_array->type()->Equals(target_type)) {
+            PAIMON_ASSIGN_OR_RAISE(field_array, PruneArray(field_array, target_type));
+        }
+
+        (*target_array)[idx_in_target_schema[i]] = std::move(field_array);
         (*target_field_names)[idx_in_target_schema[i]] = read_fields_of_data_array[i].Name();
     }
+    return Status::OK();
 }
 
 }  // namespace paimon

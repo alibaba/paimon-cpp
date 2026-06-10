@@ -408,6 +408,137 @@ void FileReaderWrapper::DispatchPreBuffer(std::vector<::arrow::io::ReadRange> ra
 Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& target_row_groups,
                                             const std::vector<int32_t>& column_indices) {
     try {
+        std::vector<std::pair<uint64_t, uint64_t>> target_row_groups;
+        PAIMON_ASSIGN_OR_RAISE(target_row_groups, GetRowGroupRanges(target_row_group_indices));
+
+        // Build position map: rg_index -> position in target_row_groups (O(1) lookup)
+        std::map<int32_t, uint64_t> rg_idx_to_position;
+        {
+            uint64_t pos = 0;
+            for (int32_t rg_idx : target_row_group_indices) {
+                rg_idx_to_position[rg_idx] = pos++;
+            }
+        }
+
+        // Separate row groups into fully matched (Arrow's standard reader) and partially
+        // matched (page-filtered, per-RG reader constructed on demand in Next()).
+        // Per-RG metadata for the page-filtered path is NOT cached on the wrapper — it's
+        // recomputed on demand in Next() from row_group_row_ranges_ + target_column_indices_,
+        // mirroring how the fully-matched path lets Arrow's FileReader own all metadata.
+        std::vector<int32_t> fully_matched_row_groups;
+        page_filtered_indices_.clear();
+        page_filtered_read_schema_.reset();
+
+        // Page-level byte ranges collected here only for the bulk PreBuffer call below;
+        // discarded once PreBuffer is dispatched.
+        std::vector<::arrow::io::ReadRange> page_filtered_byte_ranges;
+
+        for (int32_t rg_idx : target_row_group_indices) {
+            auto range_it = row_group_row_ranges_.find(rg_idx);
+            if (range_it != row_group_row_ranges_.end()) {
+                uint64_t pos = rg_idx_to_position[rg_idx];
+                page_filtered_indices_.insert(pos);
+
+                // Build the page-filter read_schema once on first encounter — it's identical
+                // across all page-filtered RGs in this session.
+                if (!page_filtered_read_schema_) {
+                    if (external_read_schema_) {
+                        // Use externally provided read schema (handles nested column pruning
+                        // correctly where leaf-column-name inference would fail).
+                        page_filtered_read_schema_ = external_read_schema_;
+                    } else {
+                        std::shared_ptr<arrow::Schema> schema;
+                        PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetSchema(&schema));
+                        std::vector<std::shared_ptr<arrow::Field>> fields;
+                        auto parquet_schema = file_reader_->parquet_reader()->metadata()->schema();
+                        for (int32_t col_idx : column_indices) {
+                            const std::string& col_name = parquet_schema->Column(col_idx)->name();
+                            auto field = schema->GetFieldByName(col_name);
+                            if (!field) {
+                                return Status::Invalid(fmt::format(
+                                    "PrepareForReading: Parquet column {} ('{}') has no "
+                                    "matching Arrow field in file schema",
+                                    col_idx, col_name));
+                            }
+                            fields.push_back(field);
+                        }
+                        page_filtered_read_schema_ = arrow::schema(fields);
+                    }
+                }
+
+                auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
+                    file_reader_->parquet_reader(), rg_idx, range_it->second, column_indices);
+                page_filtered_byte_ranges.insert(page_filtered_byte_ranges.end(),
+                                                 std::make_move_iterator(page_ranges.begin()),
+                                                 std::make_move_iterator(page_ranges.end()));
+            } else {
+                fully_matched_row_groups.push_back(rg_idx);
+            }
+        }
+
+        // Wait for any previously pre-buffered data before starting new pre-buffer.
+        WaitForPendingPreBuffer();
+
+        // Create standard reader for fully matched row groups FIRST.
+        // GetRecordBatchReader internally calls PreBuffer, but we'll override it below
+        // with a single PreBuffer covering ALL row groups (page-filtered + fully-matched)
+        // so that async I/O for all files starts in parallel.
+        std::unique_ptr<arrow::RecordBatchReader> batch_reader;
+        if (!fully_matched_row_groups.empty()) {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetRecordBatchReader(
+                fully_matched_row_groups, column_indices, &batch_reader));
+        }
+
+        // Collect all byte ranges for a single PreBufferRanges call.
+        // Page-filtered RGs: only matching page ranges (from ComputePageRanges).
+        // Fully-matched RGs: entire column chunk ranges.
+        //
+        // When there are no page-filtered RGs, skip the manual PreBufferRanges entirely:
+        // GetRecordBatchReader has already issued PreBuffer internally (driven by
+        // ArrowReaderProperties::pre_buffer=true), and a second PreBufferRanges call here
+        // would tear down and rebuild cached_source_, redundantly re-issuing the same IO
+        // on remote filesystems. The manual path is only needed to merge page-level ranges
+        // with column-chunk ranges into a single PreBuffer covering both kinds of RGs.
+        if (!page_filtered_indices_.empty()) {
+            std::vector<::arrow::io::ReadRange> all_ranges = std::move(page_filtered_byte_ranges);
+
+            // Fully-matched row groups: add entire column chunk ranges
+            // The correct calculation follows Arrow's ColumnChunkMetaData::file_range():
+            // - col_start = data_page_offset (or dictionary_page_offset if present and lower)
+            // - col_length = total_compressed_size (includes all pages: dictionary + data)
+            auto file_metadata = file_reader_->parquet_reader()->metadata();
+            for (int32_t rg_idx : fully_matched_row_groups) {
+                auto rg_metadata = file_metadata->RowGroup(rg_idx);
+                for (int32_t col_idx : column_indices) {
+                    auto col_chunk = rg_metadata->ColumnChunk(col_idx);
+                    int64_t offset = col_chunk->data_page_offset();
+                    if (col_chunk->has_dictionary_page() &&
+                        col_chunk->dictionary_page_offset() > 0 &&
+                        offset > col_chunk->dictionary_page_offset()) {
+                        offset = col_chunk->dictionary_page_offset();
+                    }
+                    int64_t size = col_chunk->total_compressed_size();
+                    all_ranges.push_back({offset, size});
+                }
+            }
+
+            const auto& cache_opts = file_reader_->properties().cache_options();
+            ::arrow::io::IOContext io_ctx(pool_);
+            // Merge overlapping ranges before calling PreBufferRanges, which rejects overlapping
+            // ranges.
+            auto merged_ranges = MergeOverlappingRanges(std::move(all_ranges));
+            // PreBuffer is an optimization - if it fails (e.g., IO error during testing),
+            // continue without pre-buffering. Subsequent reads will fetch data on-demand.
+            try {
+                file_reader_->parquet_reader()->PreBufferRanges(merged_ranges, io_ctx, cache_opts);
+                // Track for cleanup on destruction
+                prebuffered_ranges_ = std::move(merged_ranges);
+            } catch (const std::exception& e) {
+                // Pre-buffering failed, clear ranges to indicate no pre-buffered data available.
+                // Reading will fall back to on-demand I/O.
+                prebuffered_ranges_.clear();
+            }
+        }
         target_row_groups_ = target_row_groups;
         target_column_indices_ = column_indices;
         page_filtered_read_schema_.reset();

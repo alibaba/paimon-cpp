@@ -343,6 +343,7 @@ set(PAIMON_CORE_SRCS
     core/utils/blob_view_lookup.cpp
     core/utils/consumer_manager.cpp
     core/utils/field_mapping.cpp
+    core/utils/nested_projection_utils.cpp
     core/utils/file_store_path_factory.cpp
     core/utils/file_utils.cpp
     core/utils/manifest_meta_reader.cpp
@@ -737,6 +738,7 @@ if(PAIMON_BUILD_TESTS)
                     core/utils/consumer_manager_test.cpp
                     core/utils/file_store_path_factory_cache_test.cpp
                     core/utils/field_mapping_test.cpp
+                    core/utils/nested_projection_utils_test.cpp
                     core/utils/file_store_path_factory_test.cpp
                     core/utils/file_utils_test.cpp
                     core/utils/manifest_meta_reader_test.cpp

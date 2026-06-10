@@ -203,7 +203,7 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
                                  const std::map<std::string, std::string>& options = {}) const {
         auto splits = plan->Splits();
         ReadContextBuilder read_context_builder(table_path);
-        read_context_builder.SetReadSchema(read_schema).SetPredicate(predicate);
+        read_context_builder.SetReadFieldNames(read_schema).SetPredicate(predicate);
         if (!options.empty()) {
             read_context_builder.SetOptions(options);
         }

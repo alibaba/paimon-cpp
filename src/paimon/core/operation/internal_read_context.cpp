@@ -18,15 +18,14 @@
 
 #include <utility>
 
+#include "arrow/c/abi.h"
+#include "arrow/c/bridge.h"
 #include "paimon/common/predicate/predicate_validator.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/core/schema/arrow_schema_validator.h"
 #include "paimon/status.h"
-
-namespace arrow {
-class Schema;
-}  // namespace arrow
 
 namespace paimon {
 Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
@@ -37,8 +36,25 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
                                                 context->GetFileSystemSchemeToIdentifierMap()));
     core_options.WithCache(context->GetCache());
     // prepare read schema
+    // Priority: projected_arrow_schema > read_field_ids > read_field_names
     std::vector<DataField> read_data_fields;
-    if (!context->GetReadFieldIds().empty()) {
+    if (context->HasReadSchema()) {
+        // Nested column pruning path: user provided a projected C ArrowSchema
+        // where STRUCT types may contain only a subset of sub-fields.
+        // ImportSchema consumes the C schema — that's fine, it's one-shot usage.
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+            std::shared_ptr<arrow::Schema> projected_schema,
+            arrow::ImportSchema(context->GetReadSchema()));
+        PAIMON_ASSIGN_OR_RAISE(read_data_fields,
+                               DataField::ConvertArrowSchemaToDataFields(projected_schema));
+        // Validate that every top-level field exists in the table schema by field ID.
+        for (const auto& field : read_data_fields) {
+            if (!SpecialFields::IsSpecialFieldName(field.Name())) {
+                PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] DataField unused,
+                                       table_schema->GetField(field.Id()));
+            }
+        }
+    } else if (!context->GetReadFieldIds().empty()) {
         read_data_fields.reserve(context->GetReadFieldIds().size());
         for (const auto& field_id : context->GetReadFieldIds()) {
             // if enable row tracking or data evolution, check special fields
@@ -64,9 +80,9 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
             PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema->GetField(field_id));
             read_data_fields.push_back(field);
         }
-    } else if (!context->GetReadSchema().empty()) {
-        read_data_fields.reserve(context->GetReadSchema().size());
-        for (const auto& name : context->GetReadSchema()) {
+    } else if (!context->GetReadFieldNames().empty()) {
+        read_data_fields.reserve(context->GetReadFieldNames().size());
+        for (const auto& name : context->GetReadFieldNames()) {
             // if enable row tracking or data evolution, check special fields
             if (core_options.RowTrackingEnabled() && name == SpecialFields::RowId().Name()) {
                 read_data_fields.push_back(SpecialFields::RowId());

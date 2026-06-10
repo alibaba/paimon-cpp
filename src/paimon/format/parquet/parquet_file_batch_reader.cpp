@@ -40,6 +40,7 @@
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/core/schema/arrow_schema_validator.h"
+#include "paimon/core/utils/nested_projection_utils.h"
 #include "paimon/format/parquet/parquet_field_id_converter.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/parquet_timestamp_converter.h"
@@ -146,14 +147,32 @@ Status ParquetFileBatchReader::SetReadSchema(
             field_index_map[field->name()] = v;
         }
 
-        std::vector<int32_t> column_indices;
-        for (const auto& field : read_schema->field_names()) {
-            if (field_index_map.find(field) != field_index_map.end()) {
-                for (int32_t index : field_index_map[field]) {
-                    column_indices.push_back(index);
-                }
-            } else {
-                return Status::Invalid(fmt::format("Field {} is not found in schema.", field));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> raw_file_schema,
+                               reader_->GetSchema());
+        // Convert PARQUET:field_id to paimon.id so that nested column matching works.
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<arrow::Schema> file_schema,
+            ParquetFieldIdConverter::GetPaimonIdsFromParquetIds(raw_file_schema));
+
+        // Recursively match read_schema against file_schema using paimon field IDs.
+        // For STRUCT fields with nested projection, only the requested sub-fields'
+        // leaf columns are collected.
+        PAIMON_ASSIGN_OR_RAISE(std::vector<int32_t> column_indices,
+                               ComputeNestedColumnIndices(read_schema, file_schema));
+
+        // Build column name to index map for page-level filtering.
+        // We still need the full per-top-level-field leaf indices for predicate pushdown.
+        std::unordered_map<std::string, std::vector<int32_t>> field_index_map;
+        int32_t flat_idx = 0;
+        for (const auto& field : file_schema->fields()) {
+            std::vector<int32_t> leaf_indices;
+            FlattenSchema(field->type(), &flat_idx, &leaf_indices);
+            field_index_map[field->name()] = leaf_indices;
+        }
+        std::map<std::string, int32_t> column_name_to_index;
+        for (const auto& [name, indices] : field_index_map) {
+            if (!indices.empty()) {
+                column_name_to_index[name] = indices[0];
             }
         }
 
@@ -201,6 +220,12 @@ Status ParquetFileBatchReader::SetReadSchema(
         }
 
         read_data_type_ = arrow::struct_(read_schema->fields());
+
+        // Provide the read schema to FileReaderWrapper for page-filtered reading.
+        // This is needed because nested column pruning produces leaf column indices
+        // whose names don't correspond to top-level Arrow fields, so the wrapper
+        // cannot infer the correct schema from leaf column names alone.
+        reader_->SetReadSchemaForPageFilter(read_schema);
 
         metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_TOTAL,
                              reader_->GetNumberOfRowGroups());
@@ -438,6 +463,80 @@ Result<::parquet::ArrowReaderProperties> ParquetFileBatchReader::CreateArrowRead
     cache_option.range_size_limit = cache_range_size_limit;
     arrow_reader_props.set_cache_options(cache_option);
     return arrow_reader_props;
+}
+
+// ---------------------------------------------------------------------------
+// Nested column index computation
+// ---------------------------------------------------------------------------
+
+void ParquetFileBatchReader::CollectLeafIndices(const std::shared_ptr<arrow::DataType>& read_type,
+                                                const std::shared_ptr<arrow::DataType>& file_type,
+                                                int32_t* leaf_index,
+                                                std::vector<int32_t>* indices) {
+    if (file_type->id() == arrow::Type::STRUCT) {
+        for (const auto& file_child : file_type->fields()) {
+            int32_t file_child_id = GetPaimonFieldId(file_child);
+            std::shared_ptr<arrow::Field> read_child =
+                FindFieldByPaimonId(read_type, file_child_id);
+            if (read_child) {
+                CollectLeafIndices(read_child->type(), file_child->type(), leaf_index, indices);
+            } else {
+                SkipLeafIndices(file_child->type(), leaf_index);
+            }
+        }
+    } else if (file_type->id() == arrow::Type::LIST || file_type->id() == arrow::Type::MAP) {
+        // LIST/MAP: recurse into all structural children (offsets are not leaf
+        // columns in Parquet, only the value/key fields are).
+        for (int i = 0; i < file_type->num_fields(); i++) {
+            if (i < read_type->num_fields()) {
+                CollectLeafIndices(read_type->field(i)->type(), file_type->field(i)->type(),
+                                   leaf_index, indices);
+            } else {
+                SkipLeafIndices(file_type->field(i)->type(), leaf_index);
+            }
+        }
+    } else {
+        // Leaf column — collect its index.
+        indices->push_back((*leaf_index)++);
+    }
+}
+
+void ParquetFileBatchReader::SkipLeafIndices(const std::shared_ptr<arrow::DataType>& file_type,
+                                             int32_t* leaf_index) {
+    if (file_type->id() == arrow::Type::STRUCT || file_type->id() == arrow::Type::LIST ||
+        file_type->id() == arrow::Type::MAP) {
+        for (int i = 0; i < file_type->num_fields(); i++) {
+            SkipLeafIndices(file_type->field(i)->type(), leaf_index);
+        }
+    } else {
+        (*leaf_index)++;
+    }
+}
+
+Result<std::vector<int32_t>> ParquetFileBatchReader::ComputeNestedColumnIndices(
+    const std::shared_ptr<arrow::Schema>& read_schema,
+    const std::shared_ptr<arrow::Schema>& file_schema) {
+    std::vector<int32_t> indices;
+    int32_t leaf_index = 0;
+
+    for (const auto& file_field : file_schema->fields()) {
+        int32_t file_field_id = GetPaimonFieldId(file_field);
+        // Find matching field in read_schema by paimon field ID.
+        std::shared_ptr<arrow::Field> read_field = nullptr;
+        for (const auto& candidate : read_schema->fields()) {
+            if (GetPaimonFieldId(candidate) == file_field_id) {
+                read_field = candidate;
+                break;
+            }
+        }
+
+        if (read_field) {
+            CollectLeafIndices(read_field->type(), file_field->type(), &leaf_index, &indices);
+        } else {
+            SkipLeafIndices(file_field->type(), &leaf_index);
+        }
+    }
+    return indices;
 }
 
 }  // namespace paimon::parquet

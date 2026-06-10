@@ -27,6 +27,7 @@
 #include "paimon/common/utils/object_utils.h"
 #include "paimon/core/casting/cast_executor_factory.h"
 #include "paimon/core/casting/casting_utils.h"
+#include "paimon/core/utils/nested_projection_utils.h"
 #include "paimon/defs.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
@@ -72,8 +73,8 @@ Result<std::unique_ptr<FieldMapping>> FieldMappingBuilder::CreateFieldMapping(
     // generate non-exist field info
     std::optional<NonExistFieldInfo> non_exist_field_info = CreateNonExistFieldInfo(data_fields);
 
-    // generate exist field info
-    ExistFieldInfo exist_field_info = CreateExistFieldInfo(data_fields);
+    // generate exist field info (includes nested type pruning)
+    PAIMON_ASSIGN_OR_RAISE(ExistFieldInfo exist_field_info, CreateExistFieldInfo(data_fields));
 
     // key: partition key, value: partition idx
     std::map<std::string, int32_t> partition_key_to_idx =
@@ -87,7 +88,7 @@ Result<std::unique_ptr<FieldMapping>> FieldMappingBuilder::CreateFieldMapping(
     return std::make_unique<FieldMapping>(partition_info, non_partition_info, non_exist_field_info);
 }
 
-ExistFieldInfo FieldMappingBuilder::CreateExistFieldInfo(
+Result<ExistFieldInfo> FieldMappingBuilder::CreateExistFieldInfo(
     const std::vector<DataField>& data_fields) const {
     // key:field id, value: {target_idx, read field}
     std::map<int32_t, std::pair<int32_t, DataField>> field_id_to_read_fields;
@@ -101,8 +102,22 @@ ExistFieldInfo FieldMappingBuilder::CreateExistFieldInfo(
         auto iter = field_id_to_read_fields.find(data_field.Id());
         if (iter != field_id_to_read_fields.end()) {
             const auto& [target_idx, read_field] = iter->second;
+
+            // Recursively prune nested types in data_field to match read_field's
+            // projection. For atomic types this is a no-op.
+            PAIMON_ASSIGN_OR_RAISE(
+                std::optional<std::shared_ptr<arrow::DataType>> pruned_type,
+                PruneDataType(read_field.Type(), data_field.Type()));
+            if (!pruned_type.has_value()) {
+                // All sub-fields pruned away — treat as non-existent.
+                continue;
+            }
+
+            DataField pruned_data_field(data_field.Id(),
+                                        data_field.ArrowField()->WithType(pruned_type.value()),
+                                        data_field.Description());
             exist_field_info.exist_read_schema.push_back(read_field);
-            exist_field_info.exist_data_schema.push_back(data_field);
+            exist_field_info.exist_data_schema.push_back(pruned_data_field);
             exist_field_info.idx_in_target_read_schema.push_back(target_idx);
         }
     }
@@ -146,7 +161,11 @@ Result<std::vector<std::shared_ptr<CastExecutor>>> FieldMappingBuilder::CreateDa
         if (!read_fields[i].Type()->Equals(data_fields[i].Type())) {
             if (read_type == FieldType::MAP || read_type == FieldType::ARRAY ||
                 read_type == FieldType::STRUCT) {
-                return Status::Invalid("Only support column type evolution in atomic data type.");
+                // Nested types may differ due to nested column pruning (different
+                // number of sub-fields). No cast is needed — pruning is handled
+                // separately by PruneDataType / PruneArray.
+                cast_executors.push_back(nullptr);
+                continue;
             }
             auto executor_factory = CastExecutorFactory::GetCastExecutorFactory();
             auto cast_executor =

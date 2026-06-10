@@ -611,7 +611,7 @@ TEST_P(MergeFileSplitReadTest, TestSimple) {
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(raw_read_fields);
     ASSERT_TRUE(read_schema);
 
-    context_builder.SetReadSchema({"k1", "p1", "s1", "v0", "v1"});
+    context_builder.SetReadFieldNames({"k1", "p1", "s1", "v0", "v1"});
     context_builder.SetOptions({{Options::SEQUENCE_FIELD, "s0,s1"},
                                 {Options::MERGE_ENGINE, "deduplicate"},
                                 {Options::IGNORE_DELETE, "true"}});
@@ -677,7 +677,7 @@ TEST_P(MergeFileSplitReadTest, TestLookUp) {
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(raw_read_fields);
     ASSERT_TRUE(read_schema);
 
-    context_builder.SetReadSchema({"k1", "p1", "s1", "v0", "v1"});
+    context_builder.SetReadFieldNames({"k1", "p1", "s1", "v0", "v1"});
     context_builder.SetOptions({{Options::SEQUENCE_FIELD, "s0,s1"},
                                 {Options::MERGE_ENGINE, "deduplicate"},
                                 {Options::IGNORE_DELETE, "true"},
@@ -751,7 +751,7 @@ TEST_P(MergeFileSplitReadTest, TestDeduplicateMergeEngineWithDeleteMsg) {
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(raw_read_fields);
     ASSERT_TRUE(read_schema);
 
-    context_builder.SetReadSchema({"k0", "k1", "v0", "v1", "v2"});
+    context_builder.SetReadFieldNames({"k0", "k1", "v0", "v1", "v2"});
     context_builder.SetOptions({{Options::MERGE_ENGINE, "deduplicate"}});
     AddOptions(&context_builder);
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<ReadContext> read_context, context_builder.Finish());
@@ -792,7 +792,7 @@ TEST_P(MergeFileSplitReadTest, TestReadWithPredicate) {
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(raw_read_fields);
     ASSERT_TRUE(read_schema);
 
-    context_builder.SetReadSchema({"k1", "p1", "s1", "s0", "v0", "v1"});
+    context_builder.SetReadFieldNames({"k1", "p1", "s1", "s0", "v0", "v1"});
     context_builder.SetOptions({{Options::SEQUENCE_FIELD, "s0,s1"},
                                 {Options::MERGE_ENGINE, "deduplicate"},
                                 {Options::IGNORE_DELETE, "true"}});
@@ -857,7 +857,7 @@ TEST_P(MergeFileSplitReadTest, TestReadWithAlterTable) {
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(raw_read_fields);
     ASSERT_TRUE(read_schema);
 
-    context_builder.SetReadSchema({"k1", "k0", "p0", "p1", "s1", "s0", "v0", "v1", "v2"});
+    context_builder.SetReadFieldNames({"k1", "k0", "p0", "p1", "s1", "s0", "v0", "v1", "v2"});
     context_builder.SetOptions({{Options::SEQUENCE_FIELD, "s0,s1"},
                                 {Options::MERGE_ENGINE, "deduplicate"},
                                 {Options::IGNORE_DELETE, "true"}});
@@ -906,7 +906,7 @@ TEST_P(MergeFileSplitReadTest, TestReadWithAlterTableWithReverseSequence) {
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(raw_read_fields);
     ASSERT_TRUE(read_schema);
 
-    context_builder.SetReadSchema({"v2", "p1", "k0", "p0", "s0", "v0"});
+    context_builder.SetReadFieldNames({"v2", "p1", "k0", "p0", "s0", "v0"});
     context_builder.SetOptions({{Options::SEQUENCE_FIELD, "s0,s1"},
                                 {Options::MERGE_ENGINE, "deduplicate"},
                                 {Options::IGNORE_DELETE, "true"}});
@@ -954,7 +954,7 @@ TEST_P(MergeFileSplitReadTest, TestAggregateMergeEngine) {
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(raw_read_fields);
     ASSERT_TRUE(read_schema);
 
-    context_builder.SetReadSchema({"k1", "p1", "s1", "v0", "v1"});
+    context_builder.SetReadFieldNames({"k1", "p1", "s1", "v0", "v1"});
     context_builder.SetOptions({{Options::SEQUENCE_FIELD, "s0,s1"},
                                 {Options::MERGE_ENGINE, "aggregation"},
                                 {"fields.v1.aggregate-function", "bool_and"},
@@ -1001,7 +1001,7 @@ TEST_P(MergeFileSplitReadTest, TestPartialUpdateMergeEngine) {
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(raw_read_fields);
     ASSERT_TRUE(read_schema);
 
-    context_builder.SetReadSchema({"k1", "p1", "s1", "v0"});
+    context_builder.SetReadFieldNames({"k1", "p1", "s1", "v0"});
     context_builder.SetOptions({{Options::SEQUENCE_FIELD, "s0,s1"},
                                 {Options::MERGE_ENGINE, "partial-update"},
                                 {"fields.v1.sequence-group", "v0"},
@@ -1049,7 +1049,7 @@ TEST_P(MergeFileSplitReadTest, TestPartialUpdateMergeEngineWithIgnoreDelete) {
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(raw_read_fields);
     ASSERT_TRUE(read_schema);
 
-    context_builder.SetReadSchema({"k0", "k1", "v0", "v1", "v2"});
+    context_builder.SetReadFieldNames({"k0", "k1", "v0", "v1", "v2"});
     context_builder.SetOptions(
         {{Options::MERGE_ENGINE, "partial-update"}, {Options::IGNORE_DELETE, "true"}});
     AddOptions(&context_builder);
@@ -1089,7 +1089,7 @@ TEST_P(MergeFileSplitReadTest, TestPartialUpdateMergeEngineWithRemoveRecordOnDel
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(raw_read_fields);
     ASSERT_TRUE(read_schema);
 
-    context_builder.SetReadSchema({"k0", "k1", "v0", "v1", "v2"});
+    context_builder.SetReadFieldNames({"k0", "k1", "v0", "v1", "v2"});
     context_builder.SetOptions({{Options::MERGE_ENGINE, "partial-update"},
                                 {Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETE, "true"}});
     AddOptions(&context_builder);
@@ -1129,7 +1129,7 @@ TEST_P(MergeFileSplitReadTest, TestEmptyPlan) {
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(raw_read_fields);
     ASSERT_TRUE(read_schema);
 
-    context_builder.SetReadSchema({"k0", "k1", "v0", "v1", "v2"});
+    context_builder.SetReadFieldNames({"k0", "k1", "v0", "v1", "v2"});
     context_builder.SetOptions({{Options::MERGE_ENGINE, "partial-update"},
                                 {Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETE, "true"}});
     AddOptions(&context_builder);
@@ -1156,7 +1156,7 @@ TEST_P(MergeFileSplitReadTest, TestIOException) {
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(raw_read_fields);
     ASSERT_TRUE(read_schema);
 
-    context_builder.SetReadSchema({"k1", "p1", "s1", "v0", "v1"});
+    context_builder.SetReadFieldNames({"k1", "p1", "s1", "v0", "v1"});
     context_builder.SetOptions({{Options::SEQUENCE_FIELD, "s0,s1"},
                                 {Options::MERGE_ENGINE, "deduplicate"},
                                 {Options::IGNORE_DELETE, "true"}});
@@ -1210,7 +1210,7 @@ TEST_P(MergeFileSplitReadTest, Test09VersionWithoutInlineFieldId) {
                                               DataField(1, arrow::field("f1", arrow::int32()))};
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(raw_read_fields);
     ASSERT_TRUE(read_schema);
-    context_builder.SetReadSchema({"f3", "f2", "f0", "f1"});
+    context_builder.SetReadFieldNames({"f3", "f2", "f0", "f1"});
     context_builder.SetOptions({{Options::FILE_FORMAT, "orc"},
                                 {Options::MERGE_ENGINE, "deduplicate"},
                                 {"orc.read.enable-metrics", "true"}});

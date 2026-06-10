@@ -154,6 +154,24 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         }
     }
 
+    /// Recursively collect leaf column indices for the sub-fields in read_type
+    /// that match file_type by paimon field ID. Unmatched sub-fields in file_type
+    /// have their leaf indices skipped.
+    static void CollectLeafIndices(const std::shared_ptr<arrow::DataType>& read_type,
+                                   const std::shared_ptr<arrow::DataType>& file_type,
+                                   int32_t* leaf_index, std::vector<int32_t>* indices);
+
+    /// Skip over all leaf column indices of the given file_type without collecting.
+    static void SkipLeafIndices(const std::shared_ptr<arrow::DataType>& file_type,
+                                int32_t* leaf_index);
+
+    /// Compute leaf column indices by recursively matching read_schema against
+    /// file_schema using paimon field IDs. For STRUCT fields, only the requested
+    /// sub-fields are collected; unmatched ones are skipped.
+    static Result<std::vector<int32_t>> ComputeNestedColumnIndices(
+        const std::shared_ptr<arrow::Schema>& read_schema,
+        const std::shared_ptr<arrow::Schema>& file_schema);
+
     // precondition: predicate supposed not be empty
     Result<std::vector<int32_t>> FilterRowGroupsByPredicate(
         const std::shared_ptr<Predicate>& predicate,

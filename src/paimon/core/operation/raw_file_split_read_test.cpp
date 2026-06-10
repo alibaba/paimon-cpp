@@ -133,7 +133,7 @@ class RawFileSplitReadTest : public ::testing::Test {
                            "/orc/multi_partition_append_table.db/"
                            "multi_partition_append_table";
         ReadContextBuilder context_builder(path);
-        context_builder.SetReadSchema(read_schema->field_names());
+        context_builder.SetReadFieldNames(read_schema->field_names());
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<ReadContext> read_context, context_builder.Finish());
         SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
         ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));
@@ -428,7 +428,7 @@ TEST_F(RawFileSplitReadTest, TestMatch) {
     std::string path = paimon::test::GetDataDir() +
                        "/orc/pk_table_with_total_buckets.db/pk_table_with_total_buckets";
     ReadContextBuilder context_builder(path);
-    context_builder.SetReadSchema({"f0", "f1", "f2", "f3"});
+    context_builder.SetReadFieldNames({"f0", "f1", "f2", "f3"});
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<ReadContext> read_context, context_builder.Finish());
     SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
     ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));

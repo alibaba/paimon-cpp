@@ -122,6 +122,14 @@ class FileReaderWrapper {
     /// Resets reader state so that the next Next() call will re-initialize.
     Status ApplyReadRanges(const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges);
 
+    /// Set the read schema for page-filtered reading. When nested column pruning
+    /// is used, the leaf-column-name-based schema inference in PrepareForReading
+    /// cannot correctly reconstruct nested types. This setter allows the caller
+    /// to provide the correct pruned schema directly.
+    void SetReadSchemaForPageFilter(const std::shared_ptr<arrow::Schema>& schema) {
+        external_read_schema_ = schema;
+    }
+
     /// Get the page index reader for the file.
     /// Returns nullptr if page index is not available.
     std::shared_ptr<::parquet::PageIndexReader> GetPageIndexReader();
@@ -193,6 +201,10 @@ class FileReaderWrapper {
     // page-filtered reader. Cached in PrepareForReading because it's identical across
     // all page-filtered RGs in a session.
     std::shared_ptr<arrow::Schema> page_filtered_read_schema_;
+
+    // Externally provided read schema for page-filtered reading.
+    // When set, PrepareForReading uses this instead of inferring from leaf column names.
+    std::shared_ptr<arrow::Schema> external_read_schema_;
 
     // Track pre-buffered ranges so we can wait on destruction
     std::vector<::arrow::io::ReadRange> prebuffered_ranges_;

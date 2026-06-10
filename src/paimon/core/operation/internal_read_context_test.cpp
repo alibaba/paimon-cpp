@@ -50,7 +50,7 @@ TEST(InternalReadContext, TestReadWithUnspecifiedSchema) {
 TEST(InternalReadContext, TestReadWithSpecifiedSchema) {
     std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
     ReadContextBuilder context_builder(path);
-    context_builder.SetReadSchema({"f3", "f0"});
+    context_builder.SetReadFieldNames({"f3", "f0"});
     ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
     SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
     ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));
@@ -84,7 +84,7 @@ TEST(InternalReadContext, TestReadWithSpecifiedFieldIdAndSchema) {
     ReadContextBuilder context_builder(path);
     // read schema is specified, read fields in schema
     // will use field ids instead of field names.
-    context_builder.SetReadSchema({"f0"});
+    context_builder.SetReadFieldNames({"f0"});
     context_builder.SetReadFieldIds({3, 0});
     ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
     SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
@@ -103,7 +103,7 @@ TEST(InternalReadContext, TestReadWithRowTrackingAndScoreFields) {
         // test simple
         std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
         ReadContextBuilder context_builder(path);
-        context_builder.SetReadSchema({"f3", "f0", "_ROW_ID", "_SEQUENCE_NUMBER", "_INDEX_SCORE"});
+        context_builder.SetReadFieldNames({"f3", "f0", "_ROW_ID", "_SEQUENCE_NUMBER", "_INDEX_SCORE"});
         ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
         SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
         ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));
@@ -124,7 +124,7 @@ TEST(InternalReadContext, TestReadWithRowTrackingAndScoreFields) {
         // test invalid case: disable row tracking while read row tracking fields
         std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
         ReadContextBuilder context_builder(path);
-        context_builder.SetReadSchema({"f3", "f0", "_ROW_ID", "_SEQUENCE_NUMBER"});
+        context_builder.SetReadFieldNames({"f3", "f0", "_ROW_ID", "_SEQUENCE_NUMBER"});
         ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
         SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
         ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));
@@ -136,7 +136,7 @@ TEST(InternalReadContext, TestReadWithRowTrackingAndScoreFields) {
         // test invalid case: disable data evolution while read score fields
         std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
         ReadContextBuilder context_builder(path);
-        context_builder.SetReadSchema({"f3", "f0", "_INDEX_SCORE"});
+        context_builder.SetReadFieldNames({"f3", "f0", "_INDEX_SCORE"});
         ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
         SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
         ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));
@@ -149,7 +149,7 @@ TEST(InternalReadContext, TestReadWithRowTrackingAndScoreFields) {
 TEST(InternalReadContext, TestReadWithValueKindField) {
     std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
     ReadContextBuilder context_builder(path);
-    context_builder.SetReadSchema({"f3", "_VALUE_KIND", "f0"});
+    context_builder.SetReadFieldNames({"f3", "_VALUE_KIND", "f0"});
     ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
     SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
     ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));

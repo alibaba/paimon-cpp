@@ -83,7 +83,7 @@ Result<std::unique_ptr<BatchReader>> CreateBatchReader(
         .WithFileSystem(core_options.GetFileSystem())
         .EnablePrefetch(true)
         .WithMemoryPool(pool)
-        .SetReadSchema({field_name, SpecialFields::RowId().Name()});
+        .SetReadFieldNames({field_name, SpecialFields::RowId().Name()});
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
                            read_context_builder.Finish());
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> table_read,
