@@ -249,6 +249,8 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
                 // Pre-buffering failed, fall back to row-group level PreBuffer
                 ::arrow::io::IOContext io_ctx(pool);
                 parquet_reader->PreBuffer(rg_vec, col_vec, io_ctx, cache_options);
+                PAIMON_RETURN_NOT_OK_FROM_ARROW(
+                    parquet_reader->WhenBuffered(rg_vec, col_vec).status());
             }
         } else {
             PAIMON_RETURN_NOT_OK_FROM_ARROW(parquet_reader->WhenBuffered(rg_vec, col_vec).status());
