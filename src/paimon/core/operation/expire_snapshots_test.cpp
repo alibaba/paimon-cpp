@@ -107,7 +107,7 @@ class ExpireSnapshotsTest : public testing::Test {
         return true;
     }
 
-    std::unique_ptr<FileStorePathFactory> CreateFactory(const std::string& root) const {
+    std::shared_ptr<FileStorePathFactory> CreateFactory(const std::string& root) const {
         std::map<std::string, std::string> raw_options;
         raw_options[Options::FILE_FORMAT] = "orc";
         raw_options[Options::MANIFEST_FORMAT] = "orc";
