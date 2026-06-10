@@ -409,7 +409,8 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
 };
 
 std::vector<std::string> GetTestValuesForBlobTableInteTest() {
-    std::vector<std::string> values = {"parquet"};
+    std::vector<std::string> values;
+    values.emplace_back("parquet");
 #ifdef PAIMON_ENABLE_ORC
     values.emplace_back("orc");
 #endif
