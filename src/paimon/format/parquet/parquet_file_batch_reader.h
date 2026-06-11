@@ -102,11 +102,7 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     }
 
     Status SetReadRanges(const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) override {
-        read_ranges_ = read_ranges;
-        PAIMON_ASSIGN_OR_RAISE(
-            std::set<int32_t> ordered_row_groups,
-            reader_->FilterRowGroupsByReadRanges(read_ranges_, read_row_groups_));
-        return reader_->PrepareForReadingLazy(ordered_row_groups, read_column_indices_);
+        return reader_->ApplyReadRanges(read_ranges);
     }
 
     std::shared_ptr<Metrics> GetReaderMetrics() const override {
@@ -179,17 +175,12 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     std::unique_ptr<FileReaderWrapper> reader_;
 
     std::shared_ptr<arrow::DataType> read_data_type_;
-    std::vector<std::pair<uint64_t, uint64_t>> read_ranges_;
 
     std::shared_ptr<Metrics> metrics_;
     std::unique_ptr<Logger> logger_;
 
     uint64_t read_rows_ = 0;
     uint64_t read_batch_count_ = 0;
-
-    // last time set read schema
-    std::vector<int32_t> read_row_groups_;
-    std::vector<int32_t> read_column_indices_;
 };
 
 }  // namespace paimon::parquet
