@@ -23,7 +23,7 @@
 #include <vector>
 
 #include "arrow/type.h"
-#include "paimon/common/utils/extend_map_defs.h"
+#include "paimon/common/data/shredding/map_shredding_defs.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 
@@ -36,71 +36,71 @@ namespace paimon {
 
 class CoreOptions;
 
-/// Utility functions for columnar-extend MAP storage layout.
-class ExtendMapUtils {
+/// Utility functions for shared-shredding MAP storage layout.
+class MapSharedShreddingUtils {
  public:
-    ExtendMapUtils() = delete;
-    ~ExtendMapUtils() = delete;
+    MapSharedShreddingUtils() = delete;
+    ~MapSharedShreddingUtils() = delete;
 
     // ---- Column detection ----
 
-    /// Checks whether a given arrow field is MAP<STRING, T> (the type prerequisite for extend).
+    /// Checks whether a given arrow field is MAP<STRING, T> (the type prerequisite for shredding).
     /// @param arrow_type The Arrow data type of the column.
     /// @return true if the type is MAP<STRING, T>.
     static bool IsStringKeyMap(const std::shared_ptr<arrow::DataType>& arrow_type);
 
-    /// Finds all extend MAP column indices in a schema by checking per-column config
+    /// Finds all shredding MAP column indices in a schema by checking per-column config
     /// via CoreOptions.
     /// @param schema The logical Arrow schema.
     /// @param options CoreOptions containing per-column configuration.
-    /// @return Vector of column indices whose map-storage-layout is "extend", or error
+    /// @return Vector of column indices whose map.storage-layout is "shared-shredding", or error
     ///         if validation fails.
-    static Result<std::vector<int32_t>> DetectExtendColumns(
+    static Result<std::vector<int32_t>> DetectShreddingColumns(
         const std::shared_ptr<arrow::Schema>& schema, const CoreOptions& options);
 
     // ---- Schema conversion ----
 
-    /// Converts a logical schema to a physical schema by replacing extend MAP columns
+    /// Converts a logical schema to a physical schema by replacing shredding MAP columns
     /// with their physical Struct representation.
     /// @param logical_schema The original schema with MAP<STRING, T> columns.
     /// @param column_to_num_columns Map from column index to its physical column count K.
-    ///        Each extend column can have its own width.
+    ///        Each shredding column can have its own width.
     /// @return The physical schema for file writing.
     static Result<std::shared_ptr<arrow::Schema>> LogicalToPhysicalSchema(
         const std::shared_ptr<arrow::Schema>& logical_schema,
         const std::map<int32_t, int32_t>& column_to_num_columns);
 
-    /// Builds column_to_num_columns map from DetectExtendColumns result and CoreOptions.
-    /// @param extend_column_indices Indices returned by DetectExtendColumns.
+    /// Builds column_to_num_columns map from DetectShreddingColumns result and CoreOptions.
+    /// @param shredding_column_indices Indices returned by DetectShreddingColumns.
     /// @param schema The logical Arrow schema (used to get field names).
     /// @param options CoreOptions containing per-column max-columns config.
     /// @return Map from column index to K (max physical columns for that column).
     static Result<std::map<int32_t, int32_t>> BuildColumnToNumColumns(
-        const std::vector<int32_t>& extend_column_indices,
+        const std::vector<int32_t>& shredding_column_indices,
         const std::shared_ptr<arrow::Schema>& schema, const CoreOptions& options);
 
     // ---- Metadata serialization ----
 
-    /// Serializes extend metadata and appends entries to an existing KeyValueMetadata.
-    /// @param file_meta The file-level extend metadata to serialize.
+    /// Serializes shredding metadata and appends entries to an existing KeyValueMetadata.
+    /// @param file_meta The file-level shredding metadata to serialize.
     /// @param compression Compression codec name for field_dict compression.
     /// @param[out] metadata The KeyValueMetadata to append entries to.
-    static Status SerializeMetadata(const ExtendMapFileMeta& file_meta,
+    static Status SerializeMetadata(const MapSharedShreddingFileMeta& file_meta,
                                     const std::string& compression,
                                     arrow::KeyValueMetadata* metadata);
 
-    /// Deserializes extend metadata from file footer KeyValueMetadata.
+    /// Deserializes shredding metadata from file footer KeyValueMetadata.
     /// @param metadata The KeyValueMetadata from file footer.
     /// @param compression Compression codec name.
-    /// @return Parsed ExtendMapFileMeta, or error if metadata is missing/malformed.
-    static Result<ExtendMapFileMeta> DeserializeMetadata(
+    /// @return Parsed MapSharedShreddingFileMeta, or error if metadata is missing/malformed.
+    static Result<MapSharedShreddingFileMeta> DeserializeMetadata(
         const std::shared_ptr<arrow::KeyValueMetadata>& metadata, const std::string& compression);
 
-    /// Checks whether a KeyValueMetadata contains extend MAP metadata.
-    static bool HasExtendMetadata(const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
+    /// Checks whether a KeyValueMetadata contains shredding MAP metadata.
+    static bool HasShreddingMetadata(const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
 
  private:
-    /// Builds the physical Arrow type for one extend MAP column.
+    /// Builds the physical Arrow type for one shredding MAP column.
     /// @param value_type The value type of the original MAP.
     /// @param num_columns Number of physical columns K.
     /// @param value_nullable Whether the MAP's value field is nullable.

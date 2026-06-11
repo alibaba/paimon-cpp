@@ -21,7 +21,7 @@ namespace paimon {
 enum class MapStorageLayout {
     /// Default KV-array storage (keys array + values array).
     DEFAULT = 0,
-    /// Columnar-extend layout: K reusable typed columns with per-row field mapping.
-    EXTEND = 1
+    /// Shared-shredding layout: K reusable typed columns with per-row field mapping.
+    SHARED_SHREDDING = 1
 };
 }  // namespace paimon

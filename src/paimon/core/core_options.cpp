@@ -1184,22 +1184,22 @@ Result<MapStorageLayout> CoreOptions::GetMapStorageLayout(const std::string& fie
     PAIMON_ASSIGN_OR_RAISE(std::string layout_str, OptionsUtils::GetValueFromMap<std::string>(
                                                        impl_->raw_options, key, "default"));
     std::string lower = StringUtils::ToLowerCase(layout_str);
-    if (lower == "extend") {
-        return MapStorageLayout::EXTEND;
+    if (lower == "shared-shredding") {
+        return MapStorageLayout::SHARED_SHREDDING;
     } else if (lower == "default") {
         return MapStorageLayout::DEFAULT;
     }
-    return Status::Invalid(fmt::format("invalid map-storage-layout: {}", layout_str));
+    return Status::Invalid(fmt::format("invalid map.storage-layout: {}", layout_str));
 }
 
-Result<int32_t> CoreOptions::GetMapExtendMaxColumns(const std::string& field_name) const {
+Result<int32_t> CoreOptions::GetMapSharedShreddingMaxColumns(const std::string& field_name) const {
     std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
-                      std::string(Options::MAP_EXTEND_MAX_COLUMNS);
+                      std::string(Options::MAP_SHREDDING_MAX_COLUMNS);
     PAIMON_ASSIGN_OR_RAISE(int32_t max_columns,
                            OptionsUtils::GetValueFromMap<int32_t>(impl_->raw_options, key, 256));
     if (max_columns <= 0) {
         return Status::Invalid(
-            fmt::format("options {} must > 0", std::string(Options::MAP_EXTEND_MAX_COLUMNS)));
+            fmt::format("options {} must > 0", std::string(Options::MAP_SHREDDING_MAX_COLUMNS)));
     }
     return max_columns;
 }

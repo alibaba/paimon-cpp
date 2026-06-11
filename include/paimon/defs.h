@@ -365,19 +365,19 @@ struct PAIMON_EXPORT Options {
     /// "partition.legacy-name" - The legacy partition name is using `ToString` for all types. If
     /// false, using casting to string for all types. Default value is "true".
     static const char PARTITION_GENERATE_LEGACY_NAME[];
-    /// "map-storage-layout" - Suffix for per-column MAP storage layout configuration.
-    /// Used as `fields.<column>.map-storage-layout`. Values: "default" (standard KV arrays)
-    /// or "extend" (columnar-extend with column reuse). Default is "default".
+    /// "map.storage-layout" - Suffix for per-column MAP storage layout configuration.
+    /// Used as `fields.<column>.map.storage-layout`. Values: "default" (standard KV arrays)
+    /// or "shared-shredding" (columnar shredding with column reuse). Default is "default".
     /// The column must be of type MAP<STRING, T>. Each column must be configured individually.
-    /// For example, to enable extend layout for two columns "metrics" and "tags":
-    ///   fields.metrics.map-storage-layout = extend
-    ///   fields.tags.map-storage-layout = extend
+    /// For example, to enable shared-shredding layout for two columns "metrics" and "tags":
+    ///   fields.metrics.map.storage-layout = shared-shredding
+    ///   fields.tags.map.storage-layout = shared-shredding
     static const char MAP_STORAGE_LAYOUT[];
-    /// "map-extend.max-columns" - Suffix for per-column upper bound K_max configuration.
-    /// Used as `fields.<column>.map-extend.max-columns`. Only effective when
-    /// map-storage-layout = extend. Rows with more fields than K_max spill to __overflow.
-    /// Default value is 256. Each column can have its own max-columns setting.
-    static const char MAP_EXTEND_MAX_COLUMNS[];
+    /// "map.shared-shredding.max-columns" - Suffix for per-column upper bound K_max configuration.
+    /// Used as `fields.<column>.map.shared-shredding.max-columns`. Only effective when
+    /// map.storage-layout = shared-shredding. Rows with more fields than K_max spill to
+    /// __overflow. Default value is 256. Each column can have its own max-columns setting.
+    static const char MAP_SHREDDING_MAX_COLUMNS[];
 
     /// "blob-as-descriptor" - Read blob field using blob descriptor rather than blob
     /// bytes. Default value is "false".

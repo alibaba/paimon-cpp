@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/common/utils/extend_map_utils.h"
+#include "paimon/common/data/shredding/map_shared_shredding_utils.h"
 
 #include <algorithm>
 #include <functional>
@@ -35,7 +35,7 @@
 namespace paimon {
 // ---- Column detection ----
 
-bool ExtendMapUtils::IsStringKeyMap(const std::shared_ptr<arrow::DataType>& arrow_type) {
+bool MapSharedShreddingUtils::IsStringKeyMap(const std::shared_ptr<arrow::DataType>& arrow_type) {
     if (arrow_type->id() != arrow::Type::MAP) {
         return false;
     }
@@ -43,7 +43,7 @@ bool ExtendMapUtils::IsStringKeyMap(const std::shared_ptr<arrow::DataType>& arro
     return map_type->key_type()->id() == arrow::Type::STRING;
 }
 
-Result<std::vector<int32_t>> ExtendMapUtils::DetectExtendColumns(
+Result<std::vector<int32_t>> MapSharedShreddingUtils::DetectShreddingColumns(
     const std::shared_ptr<arrow::Schema>& schema, const CoreOptions& options) {
     std::vector<int32_t> indices;
     for (int32_t i = 0; i < schema->num_fields(); ++i) {
@@ -52,7 +52,7 @@ Result<std::vector<int32_t>> ExtendMapUtils::DetectExtendColumns(
             continue;
         }
         PAIMON_ASSIGN_OR_RAISE(MapStorageLayout layout, options.GetMapStorageLayout(field->name()));
-        if (layout == MapStorageLayout::EXTEND) {
+        if (layout == MapStorageLayout::SHARED_SHREDDING) {
             indices.push_back(i);
         }
     }
@@ -61,27 +61,27 @@ Result<std::vector<int32_t>> ExtendMapUtils::DetectExtendColumns(
 
 // ---- Schema conversion ----
 
-std::shared_ptr<arrow::DataType> ExtendMapUtils::BuildPhysicalStructType(
+std::shared_ptr<arrow::DataType> MapSharedShreddingUtils::BuildPhysicalStructType(
     const std::shared_ptr<arrow::DataType>& value_type, int32_t num_columns, bool value_nullable) {
     arrow::FieldVector struct_fields;
     struct_fields.reserve(num_columns + 2);
 
     struct_fields.push_back(
-        arrow::field(ExtendMapDefine::kFieldMapping, arrow::list(arrow::int32()), false));
+        arrow::field(MapSharedShreddingDefine::kFieldMapping, arrow::list(arrow::int32()), false));
 
     for (int32_t i = 0; i < num_columns; ++i) {
-        struct_fields.push_back(
-            arrow::field(ExtendMapDefine::PhysicalColumnName(i), value_type, value_nullable));
+        struct_fields.push_back(arrow::field(MapSharedShreddingDefine::PhysicalColumnName(i),
+                                             value_type, value_nullable));
     }
 
     struct_fields.push_back(arrow::field(
-        ExtendMapDefine::kOverflow,
+        MapSharedShreddingDefine::kOverflow,
         arrow::map(arrow::int32(), arrow::field("value", value_type, value_nullable)), true));
 
     return arrow::struct_(std::move(struct_fields));
 }
 
-Result<std::shared_ptr<arrow::Schema>> ExtendMapUtils::LogicalToPhysicalSchema(
+Result<std::shared_ptr<arrow::Schema>> MapSharedShreddingUtils::LogicalToPhysicalSchema(
     const std::shared_ptr<arrow::Schema>& logical_schema,
     const std::map<int32_t, int32_t>& column_to_num_columns) {
     arrow::FieldVector physical_fields;
@@ -105,13 +105,14 @@ Result<std::shared_ptr<arrow::Schema>> ExtendMapUtils::LogicalToPhysicalSchema(
     return arrow::schema(std::move(physical_fields));
 }
 
-Result<std::map<int32_t, int32_t>> ExtendMapUtils::BuildColumnToNumColumns(
-    const std::vector<int32_t>& extend_column_indices, const std::shared_ptr<arrow::Schema>& schema,
-    const CoreOptions& options) {
+Result<std::map<int32_t, int32_t>> MapSharedShreddingUtils::BuildColumnToNumColumns(
+    const std::vector<int32_t>& shredding_column_indices,
+    const std::shared_ptr<arrow::Schema>& schema, const CoreOptions& options) {
     std::map<int32_t, int32_t> column_to_num_columns;
-    for (int32_t col_index : extend_column_indices) {
+    for (int32_t col_index : shredding_column_indices) {
         const std::string& field_name = schema->field(col_index)->name();
-        PAIMON_ASSIGN_OR_RAISE(int32_t max_columns, options.GetMapExtendMaxColumns(field_name));
+        PAIMON_ASSIGN_OR_RAISE(int32_t max_columns,
+                               options.GetMapSharedShreddingMaxColumns(field_name));
         column_to_num_columns[col_index] = max_columns;
     }
     return column_to_num_columns;
@@ -186,7 +187,7 @@ Result<std::string> GetRequiredValue(const std::shared_ptr<arrow::KeyValueMetada
                                      const char* key) {
     int32_t index = metadata->FindKey(key);
     if (index < 0) {
-        return Status::Invalid(fmt::format("missing extend metadata key: {}", key));
+        return Status::Invalid(fmt::format("missing shredding metadata key: {}", key));
     }
     return metadata->value(index);
 }
@@ -196,12 +197,12 @@ Result<int32_t> GetRequiredInt32(const std::shared_ptr<arrow::KeyValueMetadata>&
     PAIMON_ASSIGN_OR_RAISE(std::string value, GetRequiredValue(metadata, key));
     std::optional<int32_t> parsed = StringUtils::StringToValue<int32_t>(value);
     if (!parsed.has_value()) {
-        return Status::Invalid(fmt::format("malformed extend metadata value for key: {}", key));
+        return Status::Invalid(fmt::format("malformed shredding metadata value for key: {}", key));
     }
     return parsed.value();
 }
 
-std::string SerializeFieldDict(const ExtendMapFileMeta& file_meta) {
+std::string SerializeFieldDict(const MapSharedShreddingFileMeta& file_meta) {
     return JsonEncodeObject([&](rapidjson::Document* doc,
                                 rapidjson::Document::AllocatorType* alloc) {
         for (const auto& [name, id] : file_meta.name_to_id) {
@@ -210,7 +211,7 @@ std::string SerializeFieldDict(const ExtendMapFileMeta& file_meta) {
     });
 }
 
-std::string SerializeFieldColumns(const ExtendMapFileMeta& file_meta) {
+std::string SerializeFieldColumns(const MapSharedShreddingFileMeta& file_meta) {
     return JsonEncodeObject(
         [&](rapidjson::Document* doc, rapidjson::Document::AllocatorType* alloc) {
             for (const auto& [field_id, col_vec] : file_meta.field_to_columns) {
@@ -226,7 +227,7 @@ std::string SerializeFieldColumns(const ExtendMapFileMeta& file_meta) {
         });
 }
 
-std::string SerializeOverflowSet(const ExtendMapFileMeta& file_meta) {
+std::string SerializeOverflowSet(const MapSharedShreddingFileMeta& file_meta) {
     return JsonEncodeArray(
         [&](rapidjson::Document* doc, rapidjson::Document::AllocatorType* alloc) {
             std::vector<int32_t> sorted(file_meta.overflow_field_set.begin(),
@@ -239,19 +240,19 @@ std::string SerializeOverflowSet(const ExtendMapFileMeta& file_meta) {
 }
 
 // Macro for safe JSON integer extraction with error propagation.
-#define PAIMON_JSON_GET_INT(val, context_msg)                                                  \
-    ([&]() -> Result<int32_t> {                                                                \
-        if (!(val).IsInt()) {                                                                  \
-            return Status::Invalid(fmt::format("malformed extend metadata: {}", context_msg)); \
-        }                                                                                      \
-        return (val).GetInt();                                                                 \
+#define PAIMON_JSON_GET_INT(val, context_msg)                                                     \
+    ([&]() -> Result<int32_t> {                                                                   \
+        if (!(val).IsInt()) {                                                                     \
+            return Status::Invalid(fmt::format("malformed shredding metadata: {}", context_msg)); \
+        }                                                                                         \
+        return (val).GetInt();                                                                    \
     }())
 
 Result<std::map<std::string, int32_t>> DeserializeFieldDict(const std::string& json_str) {
     rapidjson::Document doc;
     doc.Parse(json_str.c_str());
     if (doc.HasParseError() || !doc.IsObject()) {
-        return Status::Invalid("malformed extend field_dict metadata");
+        return Status::Invalid("malformed shredding field_dict metadata");
     }
     std::map<std::string, int32_t> name_to_id;
     for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) {
@@ -267,17 +268,17 @@ Result<std::map<int32_t, std::vector<int32_t>>> DeserializeFieldColumns(
     rapidjson::Document doc;
     doc.Parse(json_str.c_str());
     if (doc.HasParseError() || !doc.IsObject()) {
-        return Status::Invalid("malformed extend field_columns metadata");
+        return Status::Invalid("malformed shredding field_columns metadata");
     }
     std::map<int32_t, std::vector<int32_t>> field_to_columns;
     for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) {
         std::optional<int32_t> field_id = StringUtils::StringToValue<int32_t>(it->name.GetString());
         if (!field_id.has_value()) {
-            return Status::Invalid("malformed extend field_columns: invalid field_id key");
+            return Status::Invalid("malformed shredding field_columns: invalid field_id key");
         }
         const auto& array = it->value;
         if (!array.IsArray()) {
-            return Status::Invalid("malformed extend field_columns: value is not array");
+            return Status::Invalid("malformed shredding field_columns: value is not array");
         }
         std::vector<int32_t> cols;
         cols.reserve(array.Size());
@@ -295,7 +296,7 @@ Result<std::set<int32_t>> DeserializeOverflowSet(const std::string& json_str) {
     rapidjson::Document doc;
     doc.Parse(json_str.c_str());
     if (doc.HasParseError() || !doc.IsArray()) {
-        return Status::Invalid("malformed extend overflow_set metadata");
+        return Status::Invalid("malformed shredding overflow_set metadata");
     }
     std::set<int32_t> overflow_set;
     for (rapidjson::SizeType i = 0; i < doc.Size(); ++i) {
@@ -308,78 +309,93 @@ Result<std::set<int32_t>> DeserializeOverflowSet(const std::string& json_str) {
 
 }  // namespace
 
-Status ExtendMapUtils::SerializeMetadata(const ExtendMapFileMeta& file_meta,
-                                         const std::string& compression,
-                                         arrow::KeyValueMetadata* metadata) {
-    metadata->Append(ExtendMapDefine::kVersion, std::to_string(ExtendMapDefine::kCurrentVersion));
-    metadata->Append(ExtendMapDefine::kStorageLayout, ExtendMapDefine::kStorageLayoutExtend);
+Status MapSharedShreddingUtils::SerializeMetadata(const MapSharedShreddingFileMeta& file_meta,
+                                                  const std::string& compression,
+                                                  arrow::KeyValueMetadata* metadata) {
+    metadata->Append(MapShreddingDefine::kStorageLayout,
+                     MapShreddingDefine::kStorageLayoutSharedShredding);
+    metadata->Append(MapSharedShreddingDefine::kVersion,
+                     std::to_string(MapSharedShreddingDefine::kCurrentVersion));
 
     std::string field_dict_json = SerializeFieldDict(file_meta);
-    metadata->Append(ExtendMapDefine::kFieldDictOriginalSize,
+    metadata->Append(MapSharedShreddingDefine::kFieldDictOriginalSize,
                      std::to_string(field_dict_json.size()));
     PAIMON_ASSIGN_OR_RAISE(std::string compressed_dict,
                            CompressString(field_dict_json, compression));
-    metadata->Append(ExtendMapDefine::kFieldDict, std::move(compressed_dict));
+    metadata->Append(MapSharedShreddingDefine::kFieldDict, std::move(compressed_dict));
 
-    metadata->Append(ExtendMapDefine::kFieldColumns, SerializeFieldColumns(file_meta));
-    metadata->Append(ExtendMapDefine::kOverflowSet, SerializeOverflowSet(file_meta));
-    metadata->Append(ExtendMapDefine::kNumColumns, std::to_string(file_meta.num_columns));
-    metadata->Append(ExtendMapDefine::kMaxRowWidth, std::to_string(file_meta.max_row_width));
+    metadata->Append(MapSharedShreddingDefine::kFieldColumns, SerializeFieldColumns(file_meta));
+    metadata->Append(MapSharedShreddingDefine::kOverflowSet, SerializeOverflowSet(file_meta));
+    metadata->Append(MapSharedShreddingDefine::kNumColumns, std::to_string(file_meta.num_columns));
+    metadata->Append(MapSharedShreddingDefine::kMaxRowWidth,
+                     std::to_string(file_meta.max_row_width));
 
     return Status::OK();
 }
 
-Result<ExtendMapFileMeta> ExtendMapUtils::DeserializeMetadata(
+Result<MapSharedShreddingFileMeta> MapSharedShreddingUtils::DeserializeMetadata(
     const std::shared_ptr<arrow::KeyValueMetadata>& metadata, const std::string& compression) {
     if (!metadata) {
         return Status::Invalid("metadata is null");
     }
-    PAIMON_ASSIGN_OR_RAISE(int32_t version, GetRequiredInt32(metadata, ExtendMapDefine::kVersion));
-    if (version != ExtendMapDefine::kCurrentVersion) {
+    // Check storage layout
+    auto layout_index = metadata->FindKey(MapShreddingDefine::kStorageLayout);
+    if (layout_index < 0 ||
+        metadata->value(layout_index) != MapShreddingDefine::kStorageLayoutSharedShredding) {
         return Status::Invalid(
-            fmt::format("unsupported extend-map metadata version: {}, expected: {}", version,
-                        ExtendMapDefine::kCurrentVersion));
+            fmt::format("expected storage layout '{}', but got '{}'",
+                        MapShreddingDefine::kStorageLayoutSharedShredding,
+                        layout_index < 0 ? "<missing>" : metadata->value(layout_index)));
+    }
+    PAIMON_ASSIGN_OR_RAISE(int32_t version,
+                           GetRequiredInt32(metadata, MapSharedShreddingDefine::kVersion));
+    if (version != MapSharedShreddingDefine::kCurrentVersion) {
+        return Status::Invalid(
+            fmt::format("unsupported shared-shredding metadata version: {}, expected: {}", version,
+                        MapSharedShreddingDefine::kCurrentVersion));
     }
 
-    ExtendMapFileMeta result;
+    MapSharedShreddingFileMeta result;
 
     // field_dict (compressed)
-    PAIMON_ASSIGN_OR_RAISE(int32_t original_len,
-                           GetRequiredInt32(metadata, ExtendMapDefine::kFieldDictOriginalSize));
+    PAIMON_ASSIGN_OR_RAISE(
+        int32_t original_len,
+        GetRequiredInt32(metadata, MapSharedShreddingDefine::kFieldDictOriginalSize));
     PAIMON_ASSIGN_OR_RAISE(std::string compressed_dict,
-                           GetRequiredValue(metadata, ExtendMapDefine::kFieldDict));
+                           GetRequiredValue(metadata, MapSharedShreddingDefine::kFieldDict));
     PAIMON_ASSIGN_OR_RAISE(std::string field_dict_json,
                            DecompressString(compressed_dict, original_len, compression));
     PAIMON_ASSIGN_OR_RAISE(result.name_to_id, DeserializeFieldDict(field_dict_json));
 
     // field_columns
     PAIMON_ASSIGN_OR_RAISE(std::string field_columns_json,
-                           GetRequiredValue(metadata, ExtendMapDefine::kFieldColumns));
+                           GetRequiredValue(metadata, MapSharedShreddingDefine::kFieldColumns));
     PAIMON_ASSIGN_OR_RAISE(result.field_to_columns, DeserializeFieldColumns(field_columns_json));
 
     // overflow_set
     PAIMON_ASSIGN_OR_RAISE(std::string overflow_json,
-                           GetRequiredValue(metadata, ExtendMapDefine::kOverflowSet));
+                           GetRequiredValue(metadata, MapSharedShreddingDefine::kOverflowSet));
     PAIMON_ASSIGN_OR_RAISE(result.overflow_field_set, DeserializeOverflowSet(overflow_json));
 
     // num_columns & max_row_width
     PAIMON_ASSIGN_OR_RAISE(result.num_columns,
-                           GetRequiredInt32(metadata, ExtendMapDefine::kNumColumns));
+                           GetRequiredInt32(metadata, MapSharedShreddingDefine::kNumColumns));
     PAIMON_ASSIGN_OR_RAISE(result.max_row_width,
-                           GetRequiredInt32(metadata, ExtendMapDefine::kMaxRowWidth));
+                           GetRequiredInt32(metadata, MapSharedShreddingDefine::kMaxRowWidth));
 
     return result;
 }
 
-bool ExtendMapUtils::HasExtendMetadata(const std::shared_ptr<arrow::KeyValueMetadata>& metadata) {
+bool MapSharedShreddingUtils::HasShreddingMetadata(
+    const std::shared_ptr<arrow::KeyValueMetadata>& metadata) {
     if (!metadata) {
         return false;
     }
-    auto index = metadata->FindKey(ExtendMapDefine::kStorageLayout);
+    auto index = metadata->FindKey(MapShreddingDefine::kStorageLayout);
     if (index < 0) {
         return false;
     }
-    return metadata->value(index) == ExtendMapDefine::kStorageLayoutExtend;
+    return metadata->value(index) == MapShreddingDefine::kStorageLayoutSharedShredding;
 }
 
 }  // namespace paimon

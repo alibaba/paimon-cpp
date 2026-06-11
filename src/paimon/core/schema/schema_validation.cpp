@@ -30,9 +30,9 @@
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "paimon/common/data/blob_utils.h"
+#include "paimon/common/data/shredding/map_shared_shredding_utils.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
-#include "paimon/common/utils/extend_map_utils.h"
 #include "paimon/common/utils/object_utils.h"
 #include "paimon/common/utils/preconditions.h"
 #include "paimon/common/utils/string_utils.h"
@@ -511,7 +511,7 @@ Status SchemaValidation::ValidateBlobFields(const TableSchema& schema, const Cor
 
 Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
                                                   const CoreOptions& options) {
-    // Extract all field names that have map-storage-layout configured from options
+    // Extract all field names that have map.storage-layout configured from options
     const std::string layout_suffix = std::string(".") + std::string(Options::MAP_STORAGE_LAYOUT);
     const auto& options_map = options.ToMap();
 
@@ -528,8 +528,8 @@ Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
         if (!StringUtils::EndsWith(key, layout_suffix)) {
             continue;
         }
-        // key = "fields.<field_name>.map-storage-layout"
-        // Extract field_name: skip "fields." prefix and ".map-storage-layout" suffix
+        // key = "fields.<field_name>.map.storage-layout"
+        // Extract field_name: skip "fields." prefix and ".map.storage-layout" suffix
         std::string field_name =
             key.substr(fields_prefix_str.size() + 1,
                        key.size() - fields_prefix_str.size() - 1 - layout_suffix.size());
@@ -538,33 +538,33 @@ Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
         auto it = schema_fields.find(field_name);
         if (it == schema_fields.end()) {
             return Status::Invalid(
-                fmt::format("Column '{}' is configured with map-storage-layout "
+                fmt::format("Column '{}' is configured with map.storage-layout "
                             "but does not exist in table schema.",
                             field_name));
         }
 
-        // Any column configured with map-storage-layout must be a MAP type
+        // Any column configured with map.storage-layout must be a MAP type
         const auto& field_type = it->second;
         if (field_type->id() != arrow::Type::MAP) {
             return Status::Invalid(
-                fmt::format("Column '{}' is configured with map-storage-layout "
+                fmt::format("Column '{}' is configured with map.storage-layout "
                             "but its type is not MAP.",
                             field_name));
         }
 
         PAIMON_ASSIGN_OR_RAISE(MapStorageLayout layout, options.GetMapStorageLayout(field_name));
-        if (layout != MapStorageLayout::EXTEND) {
+        if (layout != MapStorageLayout::SHARED_SHREDDING) {
             continue;
         }
-        // Column configured with extend must be MAP<STRING, T>
-        if (!ExtendMapUtils::IsStringKeyMap(field_type)) {
+        // Column configured with shared-shredding must be MAP<STRING, T>
+        if (!MapSharedShreddingUtils::IsStringKeyMap(field_type)) {
             return Status::Invalid(
-                fmt::format("Column '{}' is configured with map-storage-layout=extend "
+                fmt::format("Column '{}' is configured with map.storage-layout=shared-shredding "
                             "but its type is not MAP<STRING, T>.",
                             field_name));
         }
         // Validate max-columns config
-        PAIMON_RETURN_NOT_OK(options.GetMapExtendMaxColumns(field_name));
+        PAIMON_RETURN_NOT_OK(options.GetMapSharedShreddingMaxColumns(field_name));
     }
     return Status::OK();
 }

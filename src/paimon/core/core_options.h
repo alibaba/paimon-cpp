@@ -118,7 +118,7 @@ class PAIMON_EXPORT CoreOptions {
     Result<bool> FieldCollectAggDistinct(const std::string& field_name) const;
 
     Result<MapStorageLayout> GetMapStorageLayout(const std::string& field_name) const;
-    Result<int32_t> GetMapExtendMaxColumns(const std::string& field_name) const;
+    Result<int32_t> GetMapSharedShreddingMaxColumns(const std::string& field_name) const;
 
     bool DeletionVectorsEnabled() const;
     bool DeletionVectorsBitmap64() const;
