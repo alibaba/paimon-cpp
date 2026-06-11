@@ -49,6 +49,20 @@ Result<std::unique_ptr<GlobalIndexScanImpl>> GlobalIndexScanImpl::Create(
     const Snapshot& snapshot, const std::shared_ptr<PredicateFilter>& partitions,
     const CoreOptions& options, const std::shared_ptr<Executor>& executor,
     const std::shared_ptr<MemoryPool>& pool) {
+    auto final_executor = executor;
+    if (!final_executor) {
+        std::optional<int32_t> thread_num = options.GetGlobalIndexThreadNum();
+        if (thread_num) {
+            if (thread_num.value() <= 0) {
+                return Status::Invalid(
+                    fmt::format("invalid global index thread number {}", thread_num.value()));
+            }
+        } else {
+            uint32_t cpu_count = std::thread::hardware_concurrency();
+            thread_num = cpu_count > 0 ? static_cast<int32_t>(cpu_count) : 1;
+        }
+        final_executor = CreateDefaultExecutor(static_cast<uint32_t>(thread_num.value()));
+    }
     auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> external_paths, options.CreateExternalPaths());
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> global_index_external_path,
@@ -99,15 +113,6 @@ Result<std::unique_ptr<GlobalIndexScanImpl>> GlobalIndexScanImpl::Create(
         Range range(index_meta->row_range_start, index_meta->row_range_end);
         index_metas[index_meta->index_field_id][index_file_meta->IndexType()][range].push_back(
             index_file_meta);
-    }
-    auto final_executor = executor;
-    if (!final_executor) {
-        std::optional<int32_t> thread_num = options.GetGlobalIndexThreadNum();
-        if (!thread_num) {
-            uint32_t cpu_count = std::thread::hardware_concurrency();
-            thread_num = cpu_count > 0 ? static_cast<int32_t>(cpu_count) : 1;
-        }
-        final_executor = CreateDefaultExecutor(static_cast<uint32_t>(thread_num.value()));
     }
     return std::unique_ptr<GlobalIndexScanImpl>(new GlobalIndexScanImpl(
         table_schema, options, path_factory, std::move(index_metas), final_executor, pool));

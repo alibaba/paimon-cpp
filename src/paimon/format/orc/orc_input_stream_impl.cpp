@@ -22,6 +22,7 @@
 #include "fmt/format.h"
 #include "orc/Exceptions.hh"
 #include "orc/Reader.hh"
+#include "paimon/common/utils/math.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/status.h"
 
@@ -29,9 +30,10 @@ namespace paimon::orc {
 Result<std::unique_ptr<OrcInputStreamImpl>> OrcInputStreamImpl::Create(
     const std::shared_ptr<paimon::InputStream>& input_stream, uint64_t natural_read_size) {
     PAIMON_ASSIGN_OR_RAISE(std::string name, input_stream->GetUri());
-    PAIMON_ASSIGN_OR_RAISE(uint64_t length, input_stream->Length());
-    return std::unique_ptr<OrcInputStreamImpl>(
-        new OrcInputStreamImpl(input_stream, name, length, natural_read_size));
+    PAIMON_ASSIGN_OR_RAISE(int64_t length, input_stream->Length());
+    PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(length, "file length"));
+    return std::unique_ptr<OrcInputStreamImpl>(new OrcInputStreamImpl(
+        input_stream, name, static_cast<uint64_t>(length), natural_read_size));
 }
 
 OrcInputStreamImpl::OrcInputStreamImpl(const std::shared_ptr<paimon::InputStream>& input_stream,
@@ -61,11 +63,20 @@ void OrcInputStreamImpl::read(void* buf, uint64_t length, uint64_t offset) {
         metrics_->IOCount.fetch_add(1);
     }
 
-    Result<int32_t> read_bytes = input_stream_->Read(static_cast<char*>(buf), length, offset);
+    Status status = ValidateValueInRange<int64_t>(length, "read length");
+    if (!status.ok()) {
+        throw ::orc::ParseError(status.ToString());
+    }
+    status = ValidateValueInRange<int64_t>(offset, "read offset");
+    if (!status.ok()) {
+        throw ::orc::ParseError(status.ToString());
+    }
+    Result<int64_t> read_bytes = input_stream_->Read(
+        static_cast<char*>(buf), static_cast<int64_t>(length), static_cast<int64_t>(offset));
     if (!read_bytes.ok()) {
         throw ::orc::ParseError("read failed, status: " + read_bytes.status().ToString());
     }
-    if (static_cast<uint64_t>(read_bytes.value()) != length) {
+    if (read_bytes.value() != static_cast<int64_t>(length)) {
         throw ::orc::ParseError(
             fmt::format("read failed, expected length: {}, actual read length: {}", length,
                         read_bytes.value()));

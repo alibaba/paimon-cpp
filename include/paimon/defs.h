@@ -390,7 +390,13 @@ struct PAIMON_EXPORT Options {
     /// "blob-external-storage-path" - The external storage path where raw BLOB data from fields
     /// configured by 'blob-external-storage-field' is written at write time. Orphan file cleanup is
     /// not applied to this path. No default value.
+    /// @note: this option differs from the Java paimon and will be deprecated once
+    /// RestCatalog is supported.
     static const char BLOB_EXTERNAL_STORAGE_PATH[];
+    /// "blob-view-upstream-warehouse" - Since the catalog capabilities are partially missing, when
+    /// Blob View is enabled, cpp paimon cannot automatically obtain the upstream table warehouse
+    /// path and requires manual configuration by the user. No default value.
+    static const char BLOB_VIEW_UPSTREAM_WAREHOUSE[];
     /// "global-index.enabled" - Whether to enable global index for scan. Default value is "true".
     static const char GLOBAL_INDEX_ENABLED[];
     /// "global-index.thread-num" - The maximum number of concurrent scanner for global index. No

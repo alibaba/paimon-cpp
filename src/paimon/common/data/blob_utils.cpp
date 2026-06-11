@@ -26,6 +26,7 @@
 #include "fmt/format.h"
 #include "paimon/common/data/blob_defs.h"
 #include "paimon/common/data/blob_descriptor.h"
+#include "paimon/common/data/blob_view_struct.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/string_utils.h"
@@ -127,16 +128,18 @@ std::shared_ptr<arrow::Field> BlobUtils::ToArrowField(
                         std::make_shared<arrow::KeyValueMetadata>(metadata));
 }
 
-Status BlobUtils::ValidateInlineBlobDescriptors(
-    const std::shared_ptr<arrow::StructArray>& struct_array,
-    const std::set<std::string>& inline_descriptor_fields) {
-    if (inline_descriptor_fields.empty()) {
+Status BlobUtils::ValidateBlobInlineFields(const std::shared_ptr<arrow::StructArray>& struct_array,
+                                           const std::set<std::string>& field_names,
+                                           const std::string& config_label) {
+    if (field_names.empty()) {
         return Status::OK();
     }
     if (!struct_array) {
-        return Status::Invalid("array in ValidateInlineBlobDescriptors must be a struct_array");
+        return Status::Invalid("array in ValidateBlobInlineFields must be a struct_array");
     }
-    for (const auto& field_name : inline_descriptor_fields) {
+
+    bool is_descriptor = (config_label == "blob-descriptor-field");
+    for (const auto& field_name : field_names) {
         auto field_array = struct_array->GetFieldByName(field_name);
         if (!field_array) {
             continue;
@@ -152,12 +155,13 @@ Status BlobUtils::ValidateInlineBlobDescriptors(
                 continue;
             }
             auto value = binary_array->GetView(row);
-            PAIMON_ASSIGN_OR_RAISE(bool is_descriptor,
-                                   BlobDescriptor::IsBlobDescriptor(value.data(), value.size()));
-            if (!is_descriptor) {
+            Result<bool> valid = is_descriptor
+                                     ? BlobDescriptor::IsBlobDescriptor(value.data(), value.size())
+                                     : BlobViewStruct::IsBlobViewStruct(value.data(), value.size());
+            PAIMON_ASSIGN_OR_RAISE(bool is_valid, std::move(valid));
+            if (!is_valid) {
                 return Status::Invalid(fmt::format(
-                    "BLOB inline field {} configured by blob-descriptor-field or blob-view-field "
-                    "require values to be a BlobDescriptor or BlobViewStruct.",
+                    "BLOB inline field {} require values to be set as corresponding type.",
                     field_name));
             }
         }

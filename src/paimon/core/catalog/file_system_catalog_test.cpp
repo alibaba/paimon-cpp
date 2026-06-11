@@ -177,8 +177,8 @@ TEST(FileSystemCatalogTest, TestOptionsSystemTableCatalog) {
     ASSERT_FALSE(exists);
     ASSERT_OK_AND_ASSIGN(exists, catalog.TableExists(Identifier("db1", "missing$options")));
     ASSERT_FALSE(exists);
-    ASSERT_EQ(catalog.GetTableLocation(options_identifier),
-              PathUtil::JoinPath(PathUtil::JoinPath(dir->Str(), "db1.db"), "tbl1$options"));
+    ASSERT_OK_AND_ASSIGN(auto table_path, catalog.GetTableLocation(options_identifier));
+    ASSERT_EQ(table_path, PathUtil::JoinPath(PathUtil::JoinPath(dir->Str(), "db1.db"), "tbl1"));
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> system_schema,
                          catalog.LoadTableSchema(options_identifier));
@@ -542,8 +542,8 @@ TEST(FileSystemCatalogTest, TestCreateTableWhileTableExist) {
         ASSERT_OK(catalog.CreateTable(identifier, &schema, {"f1"}, {}, options,
                                       /*ignore_if_exists=*/true));
         ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
-        ASSERT_OK(fs->Delete(
-            PathUtil::JoinPath(catalog.GetTableLocation(identifier), "schema/schema-0")));
+        ASSERT_OK_AND_ASSIGN(std::string table_path, catalog.GetTableLocation(identifier));
+        ASSERT_OK(fs->Delete(PathUtil::JoinPath(table_path, "schema/schema-0")));
         ASSERT_OK(catalog.CreateTable(identifier, &schema, {"f1"}, {}, options,
                                       /*ignore_if_exists=*/false));
     }
@@ -610,8 +610,8 @@ TEST(FileSystemCatalogTest, TestValidateTableSchema) {
     ASSERT_NOK(table_schema->GetFieldType("f4"));
 
     ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
-    std::string schema_path =
-        PathUtil::JoinPath(catalog.GetTableLocation(identifier), "schema/schema-0");
+    ASSERT_OK_AND_ASSIGN(std::string table_path, catalog.GetTableLocation(identifier));
+    std::string schema_path = PathUtil::JoinPath(table_path, "schema/schema-0");
     std::string expected_json_schema;
     ASSERT_OK(fs->ReadFile(schema_path, &expected_json_schema));
 

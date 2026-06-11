@@ -25,6 +25,7 @@
 #include <utility>
 
 #include "avro/Exception.hh"
+#include "paimon/common/utils/math.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/status.h"
@@ -34,9 +35,10 @@ namespace paimon::avro {
 Result<std::unique_ptr<AvroInputStreamImpl>> AvroInputStreamImpl::Create(
     const std::shared_ptr<paimon::InputStream>& input_stream, size_t buffer_size,
     const std::shared_ptr<MemoryPool>& pool) {
-    PAIMON_ASSIGN_OR_RAISE(uint64_t length, input_stream->Length());
+    PAIMON_ASSIGN_OR_RAISE(int64_t length, input_stream->Length());
+    PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(length, "file length"));
     return std::unique_ptr<AvroInputStreamImpl>(
-        new AvroInputStreamImpl(input_stream, buffer_size, length, pool));
+        new AvroInputStreamImpl(input_stream, buffer_size, static_cast<uint64_t>(length), pool));
 }
 
 AvroInputStreamImpl::AvroInputStreamImpl(const std::shared_ptr<paimon::InputStream>& input_stream,
@@ -67,9 +69,12 @@ bool AvroInputStreamImpl::next(const uint8_t** data, size_t* len) {
     if (remaining == 0) {
         return false;  // eof
     }
-    auto read_length =
-        in_->Read(reinterpret_cast<char*>(buffer_),
-                  static_cast<uint32_t>(std::min<uint64_t>(buffer_size_, remaining)));
+    uint64_t read_size = std::min<uint64_t>(buffer_size_, remaining);
+    Status status = ValidateValueInRange<int64_t>(read_size, "read length");
+    if (!status.ok()) {
+        throw ::avro::Exception("Read failed: {}", status.ToString());
+    }
+    auto read_length = in_->Read(reinterpret_cast<char*>(buffer_), static_cast<int64_t>(read_size));
     if (!read_length.ok()) {
         throw ::avro::Exception("Read failed: {}", read_length.status().ToString());
     }

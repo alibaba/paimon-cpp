@@ -135,6 +135,7 @@ class AppendOnlyWriter : public BatchWriter {
     std::unique_ptr<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>> writer_;
     std::unique_ptr<ExternalStorageBlobWriter> external_storage_writer_;
     std::set<std::string> inline_descriptor_fields_;
+    std::set<std::string> inline_view_fields_;
 };
 
 }  // namespace paimon

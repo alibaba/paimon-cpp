@@ -106,4 +106,50 @@ TEST_F(BlobViewStructTest, TestEqual) {
     }
 }
 
+TEST_F(BlobViewStructTest, TestIsBlobViewStructValid) {
+    auto serialized = view_struct_.Serialize(pool_);
+    ASSERT_OK_AND_ASSIGN(bool result,
+                         BlobViewStruct::IsBlobViewStruct(serialized->data(), serialized->size()));
+    ASSERT_TRUE(result);
+}
+
+TEST_F(BlobViewStructTest, TestIsBlobViewStructWithTooShortBuffer) {
+    // Buffer shorter than 9 bytes should return false
+    std::vector<char> short_buffer = {0x02, 0x43, 0x53, 0x45, 0x44, 0x42, 0x4F, 0x4C};
+    ASSERT_OK_AND_ASSIGN(
+        bool result, BlobViewStruct::IsBlobViewStruct(short_buffer.data(), short_buffer.size()));
+    ASSERT_FALSE(result);
+
+    // Empty buffer
+    ASSERT_OK_AND_ASSIGN(bool empty_result, BlobViewStruct::IsBlobViewStruct(nullptr, 0));
+    ASSERT_FALSE(empty_result);
+}
+
+TEST_F(BlobViewStructTest, TestIsBlobViewStructWithFutureVersion) {
+    // Version > CURRENT_VERSION should return false (not an error)
+    auto serialized = view_struct_.Serialize(pool_);
+    (*serialized)[0] = '\x02';  // set version to 2 (> CURRENT_VERSION)
+    ASSERT_OK_AND_ASSIGN(bool result,
+                         BlobViewStruct::IsBlobViewStruct(serialized->data(), serialized->size()));
+    ASSERT_FALSE(result);
+}
+
+TEST_F(BlobViewStructTest, TestIsBlobViewStructWithWrongMagic) {
+    // Wrong magic number should return false
+    auto serialized = view_struct_.Serialize(pool_);
+    // Corrupt the magic bytes (bytes 1-8)
+    (*serialized)[1] = '\x00';
+    (*serialized)[2] = '\x00';
+    ASSERT_OK_AND_ASSIGN(bool result,
+                         BlobViewStruct::IsBlobViewStruct(serialized->data(), serialized->size()));
+    ASSERT_FALSE(result);
+}
+
+TEST_F(BlobViewStructTest, TestIsBlobViewStructWithRandomData) {
+    // Random data that doesn't match format
+    std::vector<char> random_data = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09};
+    ASSERT_OK_AND_ASSIGN(bool result,
+                         BlobViewStruct::IsBlobViewStruct(random_data.data(), random_data.size()));
+    ASSERT_FALSE(result);
+}
 }  // namespace paimon::test

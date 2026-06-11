@@ -184,8 +184,8 @@ class TestHelper {
             PAIMON_ASSIGN_OR_RAISE(auto result_stream, result_blobs[i]->NewInputStream(fs));
             PAIMON_ASSIGN_OR_RAISE(auto expected_stream, expected_blobs[i]->NewInputStream(fs));
 
-            PAIMON_ASSIGN_OR_RAISE(uint64_t result_length, result_stream->Length());
-            PAIMON_ASSIGN_OR_RAISE(uint64_t expected_length, expected_stream->Length());
+            PAIMON_ASSIGN_OR_RAISE(int64_t result_length, result_stream->Length());
+            PAIMON_ASSIGN_OR_RAISE(int64_t expected_length, expected_stream->Length());
             if (result_length != expected_length) {
                 auto result_descriptor_bytes = result_blobs[i]->ToDescriptor(GetDefaultPool());
                 auto expected_descriptor_bytes = expected_blobs[i]->ToDescriptor(GetDefaultPool());

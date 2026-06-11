@@ -33,7 +33,7 @@ class JindoFileSystemTest : public ::testing::Test {
         fs_.reset();
     }
 
- private:
+ protected:
     std::unique_ptr<paimon::test::UniqueTestDirectory> dir_;
     std::string test_dir_;
     std::shared_ptr<FileSystem> fs_;
@@ -50,7 +50,7 @@ TEST_F(JindoFileSystemTest, TestLifeCycle) {
     // read process
     ASSERT_OK_AND_ASSIGN(auto in_stream, tmp_fs->Open(file_path));
     std::string read_content(content.size(), '\0');
-    ASSERT_OK_AND_ASSIGN(int32_t read_len,
+    ASSERT_OK_AND_ASSIGN(int64_t read_len,
                          in_stream->Read(read_content.data(), read_content.size()));
     ASSERT_EQ(read_len, read_content.size());
     ASSERT_EQ(content, read_content);
@@ -77,7 +77,7 @@ TEST_F(JindoFileSystemTest, TestSeek) {
     std::string file_path = test_dir_ + "file.data";
     // write process
     ASSERT_OK_AND_ASSIGN(auto out_stream, fs_->Create(file_path, /*overwrite=*/true));
-    ASSERT_OK_AND_ASSIGN(int32_t write_len, out_stream->Write(content.data(), content.size()));
+    ASSERT_OK_AND_ASSIGN(int64_t write_len, out_stream->Write(content.data(), content.size()));
     ASSERT_EQ(write_len, content.size());
     ASSERT_OK(out_stream->Flush());
     ASSERT_OK(out_stream->Close());
@@ -107,7 +107,7 @@ TEST_F(JindoFileSystemTest, TestSeek) {
 
     // read from cur pos
     std::string read_content(3, '\0');
-    ASSERT_OK_AND_ASSIGN(int32_t read_len,
+    ASSERT_OK_AND_ASSIGN(int64_t read_len,
                          in_stream->Read(read_content.data(), read_content.size()));
     ASSERT_EQ(read_len, read_content.size());
     ASSERT_EQ("ijk", read_content);

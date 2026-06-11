@@ -26,6 +26,9 @@
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "gtest/gtest.h"
+#include "paimon/common/predicate/equal.h"
+#include "paimon/common/predicate/in.h"
+#include "paimon/common/predicate/leaf_predicate_impl.h"
 #include "paimon/common/utils/arrow/arrow_input_stream_adapter.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/defs.h"
@@ -248,7 +251,7 @@ class ColumnIndexFilterTest : public ::testing::Test {
 
         // Open as raw ParquetFileReader
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name_));
-        ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
+        ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
         auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
         parquet_reader_ = ::parquet::ParquetFileReader::Open(in_stream);
         ASSERT_TRUE(parquet_reader_);
@@ -478,6 +481,25 @@ TEST_F(ColumnIndexFilterTest, UnknownColumnReturnsError) {
 TEST_F(ColumnIndexFilterTest, NullPredicateReturnsAllRows) {
     ASSERT_OK_AND_ASSIGN(auto ranges, Filter(nullptr));
     EXPECT_EQ(row_group_row_count_, ranges.RowCount());
+}
+
+/// Predicates other than IsNull/IsNotNull are not allowed without a literal.
+/// PredicateBuilder (public API) does not support constructing them without
+/// a literal, so the filter should return an error for this invalid input.
+TEST_F(ColumnIndexFilterTest, EmptyLiteralsReturnsError) {
+    auto pred = std::make_shared<paimon::LeafPredicateImpl>(paimon::Equal::Instance(), 0, "val",
+                                                            FieldType::INT, std::vector<Literal>());
+    auto result = Filter(pred);
+    EXPECT_FALSE(result.ok());
+}
+
+/// Empty literals for IN predicate — same rule applies: non-IS_NULL/IS_NOT_NULL
+/// predicates without literals are invalid and should return an error.
+TEST_F(ColumnIndexFilterTest, EmptyLiteralsInReturnsError) {
+    auto pred = std::make_shared<paimon::LeafPredicateImpl>(paimon::In::Instance(), 0, "val",
+                                                            FieldType::INT, std::vector<Literal>());
+    auto result = Filter(pred);
+    EXPECT_FALSE(result.ok());
 }
 
 }  // namespace paimon::parquet::test

@@ -54,6 +54,9 @@ class PAIMON_EXPORT Executor {
 
     /// Shutdown the executor immediately, discarding all pending tasks.
     virtual void ShutdownNow() = 0;
+
+    /// Get thread number.
+    virtual uint32_t GetThreadNum() const = 0;
 };
 
 }  // namespace paimon
