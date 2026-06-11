@@ -67,13 +67,13 @@ class JindoInputStream : public InputStream {
                      std::unique_ptr<JdoReader>&& reader);
     Status Seek(int64_t offset, SeekOrigin origin) override;
     Result<int64_t> GetPos() const override;
-    Result<int32_t> Read(char* buffer, uint32_t size) override;
-    Result<int32_t> Read(char* buffer, uint32_t size, uint64_t offset) override;
-    void ReadAsync(char* buffer, uint32_t size, uint64_t offset,
+    Result<int64_t> Read(char* buffer, int64_t size) override;
+    Result<int64_t> Read(char* buffer, int64_t size, int64_t offset) override;
+    void ReadAsync(char* buffer, int64_t size, int64_t offset,
                    std::function<void(Status)>&& callback) override;
     Status Close() override;
     Result<std::string> GetUri() const override;
-    Result<uint64_t> Length() const override;
+    Result<int64_t> Length() const override;
 
  private:
     // The lifecycle of the fs used to create the Jindo Reader must be longer than the lifecycle of
@@ -89,7 +89,7 @@ class JindoOutputStream : public OutputStream {
                       std::unique_ptr<JdoWriter>&& writer);
 
     Result<int64_t> GetPos() const override;
-    Result<int32_t> Write(const char* buffer, uint32_t size) override;
+    Result<int64_t> Write(const char* buffer, int64_t size) override;
     Status Flush() override;
     Status Close() override;
     Result<std::string> GetUri() const override;

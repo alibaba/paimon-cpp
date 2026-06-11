@@ -46,8 +46,8 @@ TEST(LocalFileTest, TestReadWriteEmptyContent) {
     ASSERT_OK(file->OpenFile(/*is_read_file=*/false));
 
     const char* str = "";
-    const int32_t str_size = 0;
-    ASSERT_OK_AND_ASSIGN(int32_t write_size, file->Write(str, str_size));
+    constexpr int64_t str_size = 0;
+    ASSERT_OK_AND_ASSIGN(int64_t write_size, file->Write(str, str_size));
     ASSERT_EQ(write_size, str_size);
 
     ASSERT_OK(file->Flush());
@@ -58,7 +58,7 @@ TEST(LocalFileTest, TestReadWriteEmptyContent) {
     ASSERT_OK_AND_ASSIGN(auto file2, LocalFile::Create(path));
     ASSERT_OK(file2->OpenFile(/*is_read_file=*/true));
     char buffer[10];
-    ASSERT_OK_AND_ASSIGN(int32_t read_len, file2->Read(buffer, 10));
+    ASSERT_OK_AND_ASSIGN(int64_t read_len, file2->Read(buffer, 10));
     ASSERT_EQ(0, read_len);
 }
 
@@ -83,8 +83,8 @@ TEST(LocalFileTest, TestSimple) {
     ASSERT_OK(file->OpenFile(/*is_read_file=*/false));
 
     const char* str = "test_data";
-    const int32_t str_size = 9;
-    ASSERT_OK_AND_ASSIGN(int32_t write_size, file->Write(str, str_size));
+    constexpr int64_t str_size = 9;
+    ASSERT_OK_AND_ASSIGN(int64_t write_size, file->Write(str, str_size));
     ASSERT_EQ(write_size, str_size);
 
     ASSERT_OK(file->Flush());
@@ -99,7 +99,7 @@ TEST(LocalFileTest, TestSimple) {
     std::vector<std::string> file_list;
     ASSERT_NOK(file->List(&file_list));
 
-    ASSERT_OK_AND_ASSIGN(size_t len, file->Length());
+    ASSERT_OK_AND_ASSIGN(int64_t len, file->Length());
     ASSERT_EQ(len, str_size);
 
     ASSERT_OK_AND_ASSIGN(auto file2, LocalFile::Create(path));
@@ -108,7 +108,7 @@ TEST(LocalFileTest, TestSimple) {
     ASSERT_OK(file2->OpenFile(true));
     char str_read[str_size + 1];
     {
-        ASSERT_OK_AND_ASSIGN(int32_t read_size, file2->Read(str_read, 4));
+        ASSERT_OK_AND_ASSIGN(int64_t read_size, file2->Read(str_read, 4));
         ASSERT_EQ(read_size, 4);
         str_read[read_size] = '\0';
         ASSERT_EQ(strcmp(str_read, "test"), 0);
@@ -117,13 +117,13 @@ TEST(LocalFileTest, TestSimple) {
         ASSERT_OK_AND_ASSIGN(int64_t pos, file2->Tell());
         ASSERT_EQ(pos, 4);
         ASSERT_OK(file2->Seek(5, SEEK_SET));
-        ASSERT_OK_AND_ASSIGN(int32_t read_size, file2->Read(str_read, 4));
+        ASSERT_OK_AND_ASSIGN(int64_t read_size, file2->Read(str_read, 4));
         ASSERT_EQ(read_size, 4);
         str_read[read_size] = '\0';
         ASSERT_EQ(strcmp(str_read, "data"), 0);
     }
     {
-        ASSERT_OK_AND_ASSIGN(int32_t read_size, file2->Read(str_read, str_size, 0));
+        ASSERT_OK_AND_ASSIGN(int64_t read_size, file2->Read(str_read, str_size, 0));
         ASSERT_EQ(read_size, str_size);
         str_read[read_size] = '\0';
         ASSERT_EQ(strcmp(str_read, "test_data"), 0);

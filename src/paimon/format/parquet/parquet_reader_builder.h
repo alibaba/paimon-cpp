@@ -43,7 +43,7 @@ class ParquetReaderBuilder : public ReaderBuilder {
 
     Result<std::unique_ptr<FileBatchReader>> Build(
         const std::shared_ptr<InputStream>& path) const override {
-        PAIMON_ASSIGN_OR_RAISE(uint64_t file_length, path->Length());
+        PAIMON_ASSIGN_OR_RAISE(int64_t file_length, path->Length());
         std::shared_ptr<arrow::MemoryPool> arrow_pool = GetArrowPool(pool_);
         auto input_stream =
             std::make_unique<ArrowInputStreamAdapter>(path, arrow_pool, file_length);

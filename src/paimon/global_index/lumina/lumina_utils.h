@@ -34,11 +34,11 @@ namespace paimon::lumina {
     auto&& result_name = (rexpr);                                                             \
     PAIMON_RETURN_IF_(!(result_name).IsOk(), LuminaToPaimonStatus((result_name).GetStatus()), \
                       PAIMON_STRINGIFY(rexpr));                                               \
-    lhs = std::move(result_name).TakeValue();
+    lhs = std::move(result_name).TakeValue()
 
 #define PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(lhs, rexpr) \
     PAIMON_ASSIGN_OR_RAISE_IMPL_FROM_LUMINA(           \
-        PAIMON_ASSIGN_OR_RAISE_NAME(_error_or_value, __COUNTER__), lhs, (rexpr));
+        PAIMON_ASSIGN_OR_RAISE_NAME(_error_or_value, __COUNTER__), lhs, (rexpr))
 
 inline ::lumina::core::Status PaimonToLuminaStatus(const Status& status) {
     switch (status.code()) {

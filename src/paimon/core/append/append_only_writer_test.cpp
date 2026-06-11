@@ -33,7 +33,9 @@
 #include "arrow/c/helpers.h"
 #include "arrow/type.h"
 #include "gtest/gtest.h"
+#include "paimon/common/data/blob_descriptor.h"
 #include "paimon/common/data/blob_utils.h"
+#include "paimon/common/data/blob_view_struct.h"
 #include "paimon/common/fs/external_path_provider.h"
 #include "paimon/core/compact/compact_deletion_file.h"
 #include "paimon/core/compact/compact_result.h"
@@ -702,6 +704,71 @@ TEST_F(AppendOnlyWriterTest, TestMultiplePrepareCommitSequenceContinuity) {
     ASSERT_EQ(first.GetNewFilesIncrement().NewFiles()[0]->max_sequence_number, 2);
     ASSERT_EQ(second.GetNewFilesIncrement().NewFiles()[0]->min_sequence_number, 3);
     ASSERT_EQ(second.GetNewFilesIncrement().NewFiles()[0]->max_sequence_number, 4);
+    ASSERT_OK(writer.Close());
+}
+
+TEST_F(AppendOnlyWriterTest, TestWriteValidBlobViewField) {
+    auto options = CreateOptions({{Options::FILE_FORMAT, "orc"},
+                                  {Options::MANIFEST_FORMAT, "orc"},
+                                  {Options::BLOB_VIEW_FIELD, "view"}});
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = CreatePathFactory(dir->Str(), "orc", options);
+
+    auto schema =
+        arrow::schema({arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("view", true)});
+    AppendOnlyWriter writer(options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
+                            /*max_sequence_number=*/-1, path_factory, compact_manager_,
+                            memory_pool_);
+
+    // Build f0 column
+    arrow::Int32Builder int_builder;
+    ASSERT_TRUE(int_builder.AppendValues({1, 2}).ok());
+    auto int_array = int_builder.Finish().ValueOrDie();
+
+    // Build view column with valid BlobViewStruct values
+    arrow::LargeBinaryBuilder view_builder;
+    BlobViewStruct view_struct_0(Identifier("db", "tbl"), /*field_id=*/1, /*row_id=*/0);
+    auto view_bytes_0 = view_struct_0.Serialize(memory_pool_);
+    ASSERT_TRUE(view_builder.Append(view_bytes_0->data(), view_bytes_0->size()).ok());
+
+    BlobViewStruct view_struct_1(Identifier("db", "tbl"), /*field_id=*/1, /*row_id=*/1);
+    auto view_bytes_1 = view_struct_1.Serialize(memory_pool_);
+    ASSERT_TRUE(view_builder.Append(view_bytes_1->data(), view_bytes_1->size()).ok());
+
+    auto view_array = view_builder.Finish().ValueOrDie();
+    ASSERT_OK(writer.Write(CreateStructBatch(schema, {int_array, view_array})));
+    ASSERT_OK_AND_ASSIGN(auto inc, writer.PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_FALSE(inc.GetNewFilesIncrement().NewFiles().empty());
+    ASSERT_OK(writer.Close());
+}
+
+TEST_F(AppendOnlyWriterTest, TestWriteInvalidBlobViewFieldRejected) {
+    auto options = CreateOptions({{Options::FILE_FORMAT, "orc"},
+                                  {Options::MANIFEST_FORMAT, "orc"},
+                                  {Options::BLOB_VIEW_FIELD, "view"}});
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = CreatePathFactory(dir->Str(), "orc", options);
+
+    auto schema =
+        arrow::schema({arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("view", true)});
+    AppendOnlyWriter writer(options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
+                            /*max_sequence_number=*/-1, path_factory, compact_manager_,
+                            memory_pool_);
+
+    // Build f0 column
+    arrow::Int32Builder int_builder;
+    ASSERT_TRUE(int_builder.Append(1).ok());
+    auto int_array = int_builder.Finish().ValueOrDie();
+
+    // Build view column with raw bytes
+    arrow::LargeBinaryBuilder view_builder;
+    ASSERT_TRUE(view_builder.Append("not_a_valid_blob_view_or_descriptor").ok());
+    auto view_array = view_builder.Finish().ValueOrDie();
+
+    ASSERT_NOK_WITH_MSG(writer.Write(CreateStructBatch(schema, {int_array, view_array})),
+                        "BLOB inline field view require values to be set as corresponding type.");
     ASSERT_OK(writer.Close());
 }
 

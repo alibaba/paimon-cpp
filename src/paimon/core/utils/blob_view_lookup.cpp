@@ -17,16 +17,21 @@
 #include "paimon/core/utils/blob_view_lookup.h"
 
 #include <algorithm>
+#include <future>
 #include <utility>
+#include <vector>
 
 #include "arrow/array.h"
 #include "arrow/c/bridge.h"
 #include "fmt/format.h"
 #include "paimon/catalog/catalog.h"
 #include "paimon/common/data/blob_descriptor.h"
+#include "paimon/common/executor/future.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/arrow/status_utils.h"
+#include "paimon/common/utils/path_util.h"
 #include "paimon/defs.h"
+#include "paimon/executor.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/read_context.h"
@@ -45,6 +50,10 @@ BlobViewLookup::TableReadPlan::TableReadPlan(const BlobViewStruct& view_struct)
 void BlobViewLookup::TableReadPlan::Add(const BlobViewStruct& view_struct) {
     references_by_field_id_.insert(view_struct.FieldId());
     row_ranges_.push_back(view_struct.RowId());
+}
+
+const Identifier& BlobViewLookup::TableReadPlan::GetIdentifier() const {
+    return identifier_;
 }
 
 std::vector<int32_t> BlobViewLookup::TableReadPlan::GetFieldIds() const {
@@ -77,10 +86,10 @@ std::vector<Range> BlobViewLookup::TableReadPlan::GetSortedDistinctRanges() cons
 
 Result<BlobViewResolver> BlobViewLookup::CreateResolver(
     const std::unordered_set<BlobViewStruct>& view_structs,
-    const std::shared_ptr<CatalogContext>& catalog_context,
-    const std::shared_ptr<MemoryPool>& pool) {
+    const std::shared_ptr<CatalogContext>& catalog_context, const std::shared_ptr<MemoryPool>& pool,
+    const std::shared_ptr<Executor>& executor) {
     PAIMON_ASSIGN_OR_RAISE(DescriptorMapping mapping,
-                           PreloadDescriptors(view_structs, catalog_context, pool));
+                           PreloadDescriptors(view_structs, catalog_context, pool, executor));
     return BlobViewResolver([cached = std::move(mapping)](const BlobViewStruct& view_struct)
                                 -> Result<std::shared_ptr<Bytes>> {
         auto iter = cached.find(view_struct);
@@ -94,51 +103,107 @@ Result<BlobViewResolver> BlobViewLookup::CreateResolver(
 
 Result<BlobViewLookup::DescriptorMapping> BlobViewLookup::PreloadDescriptors(
     const std::unordered_set<BlobViewStruct>& view_structs,
-    const std::shared_ptr<CatalogContext>& catalog_context,
-    const std::shared_ptr<MemoryPool>& pool) {
+    const std::shared_ptr<CatalogContext>& catalog_context, const std::shared_ptr<MemoryPool>& pool,
+    const std::shared_ptr<Executor>& executor) {
     std::unordered_map<Identifier, BlobViewLookup::TableReadPlan> plan_by_identifier =
         GroupByIdentifier(view_structs);
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<Catalog> catalog,
-                           Catalog::Create(catalog_context->root_path, catalog_context->options,
-                                           catalog_context->file_system));
-    DescriptorMapping mapping;
-    for (const auto& [identifier, table_read_plan] : plan_by_identifier) {
-        std::string source_table_path = catalog->GetTableLocation(identifier);
-        PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> branch, identifier.GetBranchName());
-        ScanContextBuilder scan_builder(source_table_path);
-        auto global_index_result =
-            BitmapGlobalIndexResult::FromRanges(table_read_plan.GetSortedDistinctRanges());
-        scan_builder.SetGlobalIndexResult(global_index_result)
-            .WithMemoryPool(pool)
-            .WithFileSystem(catalog_context->file_system);
-        if (branch) {
-            scan_builder.AddOption(Options::BRANCH, branch.value());
-        }
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ScanContext> scan_context, scan_builder.Finish());
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableScan> table_scan,
-                               TableScan::Create(std::move(scan_context)));
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Plan> plan, table_scan->CreatePlan());
+    int64_t target_rows_per_task = TargetRowsPerTask(plan_by_identifier, executor->GetThreadNum());
 
-        ReadContextBuilder read_builder(source_table_path);
+    std::vector<std::future<Result<DescriptorMapping>>> futures;
+    for (const auto& [identifier, table_read_plan] : plan_by_identifier) {
+        const auto& id = identifier;
         std::vector<int32_t> field_ids = table_read_plan.GetFieldIds();
-        field_ids.push_back(SpecialFieldIds::ROW_ID);
-        read_builder.SetReadFieldIds(field_ids)
-            .AddOption(Options::BLOB_AS_DESCRIPTOR, "true")
-            .EnablePrefetch(true)
-            .WithMemoryPool(pool)
-            .WithFileSystem(catalog_context->file_system);
-        if (branch) {
-            read_builder.WithBranch(branch.value());
+        std::vector<std::vector<Range>> range_chunks =
+            SplitRowRanges(table_read_plan.GetSortedDistinctRanges(), target_rows_per_task);
+        for (const auto& range_chunk : range_chunks) {
+            futures.push_back(Via(
+                executor.get(),
+                [catalog_context, id, field_ids, range_chunk, pool]() -> Result<DescriptorMapping> {
+                    return LoadTableDescriptorChunk(catalog_context, id, field_ids, range_chunk,
+                                                    pool);
+                }));
         }
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context, read_builder.Finish());
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> table_read,
-                               TableRead::Create(std::move(read_context)));
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> reader,
-                               table_read->CreateReader(plan->Splits()));
-        PAIMON_RETURN_NOT_OK(
-            ExtractBlobDescriptors(identifier, field_ids, pool, reader.get(), &mapping));
+    }
+
+    DescriptorMapping mapping;
+    std::vector<Result<DescriptorMapping>> chunk_results = CollectAll(futures);
+    for (auto& chunk_result : chunk_results) {
+        if (!chunk_result.ok()) {
+            return chunk_result.status();
+        }
+        for (const auto& [view_struct, descriptor] : chunk_result.value()) {
+            mapping[view_struct] = descriptor;
+        }
     }
     return mapping;
+}
+
+Result<BlobViewLookup::DescriptorMapping> BlobViewLookup::LoadTableDescriptorChunk(
+    const std::shared_ptr<CatalogContext>& catalog_context, const Identifier& identifier,
+    const std::vector<int32_t>& field_ids, const std::vector<Range>& row_ranges,
+    const std::shared_ptr<MemoryPool>& pool) {
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> branch, identifier.GetBranchName());
+    if (branch) {
+        return Status::Invalid("do not support upstream table with branch");
+    }
+    auto file_system = catalog_context->file_system;
+    PAIMON_ASSIGN_OR_RAISE(std::string table_path, GetTableLocation(catalog_context, identifier));
+    ScanContextBuilder scan_builder(table_path);
+    auto global_index_result = BitmapGlobalIndexResult::FromRanges(row_ranges);
+    scan_builder.SetGlobalIndexResult(global_index_result)
+        .WithMemoryPool(pool)
+        .WithFileSystem(file_system);
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ScanContext> scan_context, scan_builder.Finish());
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableScan> table_scan,
+                           TableScan::Create(std::move(scan_context)));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Plan> plan, table_scan->CreatePlan());
+
+    ReadContextBuilder read_builder(table_path);
+    std::vector<int32_t> read_field_ids = field_ids;
+    read_field_ids.push_back(SpecialFieldIds::ROW_ID);
+    read_builder.SetReadFieldIds(read_field_ids)
+        .AddOption(Options::BLOB_AS_DESCRIPTOR, "true")
+        .EnablePrefetch(true)
+        .WithMemoryPool(pool)
+        .WithFileSystem(file_system);
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context, read_builder.Finish());
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> table_read,
+                           TableRead::Create(std::move(read_context)));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> reader,
+                           table_read->CreateReader(plan->Splits()));
+
+    DescriptorMapping mapping;
+    PAIMON_RETURN_NOT_OK(
+        ExtractBlobDescriptors(identifier, read_field_ids, pool, reader.get(), &mapping));
+    return mapping;
+}
+
+Result<std::string> BlobViewLookup::GetTableLocation(
+    const std::shared_ptr<CatalogContext>& catalog_context, const Identifier& identifier) {
+    auto file_system = catalog_context->file_system;
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<Catalog> catalog,
+        Catalog::Create(catalog_context->root_path, catalog_context->options, file_system));
+    // The table path may be either xxx/test_database/test_table or
+    // xxx/test_database.db/test_table. If neither path exists or both paths exist, it means we
+    // cannot infer the table path, and an error will be reported. If only one of the paths
+    // exists, we will use that path.
+    PAIMON_ASSIGN_OR_RAISE(std::string source_table_path, catalog->GetTableLocation(identifier));
+    std::string database_name = identifier.GetDatabaseName();
+    PAIMON_ASSIGN_OR_RAISE(std::string data_table_name, identifier.GetDataTableName());
+    std::string fallback_source_table_path = PathUtil::JoinPath(
+        PathUtil::JoinPath(catalog_context->root_path, database_name), data_table_name);
+
+    PAIMON_ASSIGN_OR_RAISE(bool exist, catalog_context->file_system->Exists(source_table_path));
+    PAIMON_ASSIGN_OR_RAISE(bool fallback_exist, file_system->Exists(fallback_source_table_path));
+    if (exist == fallback_exist) {
+        return Status::Invalid(
+            fmt::format("Ambiguous table path: both table path {} and fallback table path {} are "
+                        "present or absent",
+                        source_table_path, fallback_source_table_path));
+    }
+    std::string final_table_path = exist ? source_table_path : fallback_source_table_path;
+    return final_table_path;
 }
 
 Status BlobViewLookup::ExtractBlobDescriptors(const Identifier& identifier,
@@ -236,6 +301,48 @@ std::unordered_map<Identifier, BlobViewLookup::TableReadPlan> BlobViewLookup::Gr
         }
     }
     return grouped;
+}
+
+int64_t BlobViewLookup::TargetRowsPerTask(
+    const std::unordered_map<Identifier, TableReadPlan>& plan_by_identifier, uint32_t thread_num) {
+    int64_t total_rows = 0;
+    for (const auto& [identifier, table_read_plan] : plan_by_identifier) {
+        for (const auto& row_range : table_read_plan.GetSortedDistinctRanges()) {
+            total_rows += row_range.Count();
+        }
+    }
+    int64_t balanced_rows = (total_rows + thread_num - 1) / thread_num;
+    return std::max(MIN_ROW_PER_TASK, balanced_rows);
+}
+
+std::vector<std::vector<Range>> BlobViewLookup::SplitRowRanges(const std::vector<Range>& row_ranges,
+                                                               int64_t target_rows_per_task) {
+    if (row_ranges.empty()) {
+        return {};
+    }
+    std::vector<std::vector<Range>> chunks;
+    std::vector<Range> current_chunk;
+    int64_t current_chunk_rows = 0;
+    for (const auto& row_range : row_ranges) {
+        int64_t next_from = row_range.from;
+        while (next_from <= row_range.to) {
+            if (current_chunk_rows == target_rows_per_task) {
+                chunks.push_back(current_chunk);
+                current_chunk.clear();
+                current_chunk_rows = 0;
+            }
+
+            int64_t remaining_rows = target_rows_per_task - current_chunk_rows;
+            int64_t next_to = std::min(row_range.to, next_from + remaining_rows - 1);
+            current_chunk.emplace_back(next_from, next_to);
+            current_chunk_rows += next_to - next_from + 1;
+            next_from = next_to + 1;
+        }
+    }
+    if (!current_chunk.empty()) {
+        chunks.push_back(current_chunk);
+    }
+    return chunks;
 }
 
 }  // namespace paimon

@@ -50,7 +50,7 @@ class FileStorePathFactory : public std::enable_shared_from_this<FileStorePathFa
  public:
     static constexpr char BUCKET_PATH_PREFIX[] = "bucket-";
 
-    static Result<std::unique_ptr<FileStorePathFactory>> Create(
+    static Result<std::shared_ptr<FileStorePathFactory>> Create(
         const std::string& root, const std::shared_ptr<arrow::Schema>& schema,
         const std::vector<std::string>& partition_keys, const std::string& default_part_value,
         const std::string& identifier, const std::string& data_file_prefix,

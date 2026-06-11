@@ -117,7 +117,7 @@ std::string FileSystemCatalog::GetDatabaseLocation(const std::string& db_name) c
     return NewDatabasePath(warehouse_, db_name);
 }
 
-std::string FileSystemCatalog::GetTableLocation(const Identifier& identifier) const {
+Result<std::string> FileSystemCatalog::GetTableLocation(const Identifier& identifier) const {
     return NewDataTablePath(warehouse_, identifier);
 }
 
@@ -156,7 +156,8 @@ Status FileSystemCatalog::CreateTable(const Identifier& identifier, ArrowSchema*
         return Status::NotImplemented(
             "create table operation does not support object store file system for now");
     }
-    SchemaManager schema_manager(fs_, NewDataTablePath(warehouse_, identifier));
+    PAIMON_ASSIGN_OR_RAISE(std::string table_path, NewDataTablePath(warehouse_, identifier));
+    SchemaManager schema_manager(fs_, table_path);
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<TableSchema> table_schema,
         schema_manager.CreateTable(schema, partition_keys, primary_keys, options));
@@ -170,7 +171,8 @@ Result<std::optional<std::shared_ptr<TableSchema>>> FileSystemCatalog::TableSche
         return Status::NotImplemented(
             "do not support checking TableSchemaExists for system table.");
     }
-    SchemaManager schema_manager(fs_, NewDataTablePath(warehouse_, identifier));
+    PAIMON_ASSIGN_OR_RAISE(std::string table_path, NewDataTablePath(warehouse_, identifier));
+    SchemaManager schema_manager(fs_, table_path);
     return schema_manager.Latest();
 }
 
@@ -202,10 +204,11 @@ std::string FileSystemCatalog::NewDatabasePath(const std::string& warehouse,
     return PathUtil::JoinPath(warehouse, db_name + DB_SUFFIX);
 }
 
-std::string FileSystemCatalog::NewDataTablePath(const std::string& warehouse,
-                                                const Identifier& identifier) {
+Result<std::string> FileSystemCatalog::NewDataTablePath(const std::string& warehouse,
+                                                        const Identifier& identifier) {
+    PAIMON_ASSIGN_OR_RAISE(std::string data_table_name, identifier.GetDataTableName());
     return PathUtil::JoinPath(NewDatabasePath(warehouse, identifier.GetDatabaseName()),
-                              identifier.GetTableName());
+                              data_table_name);
 }
 
 Result<std::vector<std::string>> FileSystemCatalog::ListDatabases() const {
@@ -277,9 +280,9 @@ Result<std::shared_ptr<Schema>> FileSystemCatalog::LoadTableSchema(
         if (branch) {
             dynamic_options[Options::BRANCH] = branch.value();
         }
+        PAIMON_ASSIGN_OR_RAISE(std::string table_path, GetTableLocation(data_identifier));
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<SystemTable> system_table,
-                               SystemTableLoader::Load(system_table_name.value(), fs_,
-                                                       GetTableLocation(data_identifier),
+                               SystemTableLoader::Load(system_table_name.value(), fs_, table_path,
                                                        latest_schema.value(), dynamic_options));
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> arrow_schema,
                                system_table->ArrowSchema());
@@ -300,7 +303,8 @@ Result<std::shared_ptr<Table>> FileSystemCatalog::GetTable(const Identifier& ide
         return std::make_shared<Table>(schema, identifier.GetDatabaseName(),
                                        identifier.GetTableName());
     }
-    return Table::Create(fs_, GetTableLocation(identifier), identifier);
+    PAIMON_ASSIGN_OR_RAISE(std::string table_path, GetTableLocation(identifier));
+    return Table::Create(fs_, table_path, identifier);
 }
 
 Status FileSystemCatalog::DropDatabase(const std::string& name, bool ignore_if_not_exists,
@@ -375,7 +379,7 @@ Result<std::vector<std::string>> FileSystemCatalog::GetTableBranches(
 
 Status FileSystemCatalog::DropTableImpl(const Identifier& identifier,
                                         const std::vector<std::string>& external_paths) {
-    std::string table_path = GetTableLocation(identifier);
+    PAIMON_ASSIGN_OR_RAISE(std::string table_path, GetTableLocation(identifier));
 
     // Delete external paths first
     for (const auto& external_path : external_paths) {
@@ -395,8 +399,7 @@ Status FileSystemCatalog::DropTable(const Identifier& identifier, bool ignore_if
     if (is_system_table) {
         return Status::Invalid(fmt::format("Cannot drop system table {}.", identifier.ToString()));
     }
-
-    std::string table_path = GetTableLocation(identifier);
+    PAIMON_ASSIGN_OR_RAISE(std::string table_path, GetTableLocation(identifier));
     PAIMON_ASSIGN_OR_RAISE(bool exist, fs_->Exists(table_path));
     if (!exist) {
         if (ignore_if_not_exists) {
@@ -482,8 +485,8 @@ Status FileSystemCatalog::RenameTable(const Identifier& from_table, const Identi
         return Status::Invalid(fmt::format("target table {} already exists", to_table.ToString()));
     }
 
-    std::string from_path = GetTableLocation(from_table);
-    std::string to_path = GetTableLocation(to_table);
+    PAIMON_ASSIGN_OR_RAISE(std::string from_path, GetTableLocation(from_table));
+    PAIMON_ASSIGN_OR_RAISE(std::string to_path, GetTableLocation(to_table));
     PAIMON_RETURN_NOT_OK(fs_->Rename(from_path, to_path));
     return Status::OK();
 }
@@ -512,8 +515,7 @@ Result<std::vector<SnapshotInfo>> FileSystemCatalog::ListSnapshots(
     if (!exists) {
         return Status::NotExist(fmt::format("table {} does not exist", identifier.ToString()));
     }
-
-    auto table_path = GetTableLocation(identifier);
+    PAIMON_ASSIGN_OR_RAISE(std::string table_path, GetTableLocation(identifier));
     SnapshotManager mgr(fs_, table_path, branch);
     PAIMON_ASSIGN_OR_RAISE(std::vector<Snapshot> snapshots, mgr.GetAllSnapshots());
     std::sort(snapshots.begin(), snapshots.end(),

@@ -31,6 +31,10 @@
 #include <limits>
 #include <type_traits>
 
+#include "fmt/format.h"
+#include "paimon/common/utils/options_utils.h"
+#include "paimon/status.h"
+
 namespace paimon {
 
 template <typename To, typename From>
@@ -56,6 +60,23 @@ constexpr bool InRange(From value) {
         const auto max_value = static_cast<CompareType>(std::numeric_limits<To>::max());
         return numeric_value >= min_value && numeric_value <= max_value;
     }
+}
+
+template <typename To, typename From>
+Status ValidateValueInRange(From value, const char* value_name) {
+    if (PAIMON_UNLIKELY(!InRange<To>(value))) {
+        return Status::Invalid(fmt::format("{} {} is out of bound of type {}", value_name, value,
+                                           OptionsUtils::GetTypeName<To>()));
+    }
+    return Status::OK();
+}
+
+template <typename T>
+Status ValidateValueNonNegative(T value, const char* value_name) {
+    if (PAIMON_UNLIKELY(value < 0)) {
+        return Status::Invalid(fmt::format("{} {} is less than 0", value_name, value));
+    }
+    return Status::OK();
 }
 
 // Swaps between big and little endian. Can be used in combination with the

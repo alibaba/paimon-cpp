@@ -21,10 +21,8 @@
 #include <utility>
 
 #include "arrow/api.h"
-#include "fmt/format.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/math.h"
-#include "paimon/common/utils/options_utils.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/macros.h"
 #include "paimon/result.h"
@@ -34,11 +32,10 @@ namespace paimon {
 
 namespace {
 
-template <typename To, typename From>
-arrow::Status ValidateArrowIoRange(From value, const char* name) {
-    if (!InRange<To>(value)) {
-        return arrow::Status::Invalid(fmt::format("{} value {} is out of bound of type {}", name,
-                                                  value, OptionsUtils::GetTypeName<To>()));
+arrow::Status ValidateArrowIoRange(int64_t value, const char* name) {
+    Status status = ValidateValueNonNegative(value, name);
+    if (!status.ok()) {
+        return ToArrowStatus(status);
     }
     return arrow::Status::OK();
 }
@@ -47,8 +44,10 @@ arrow::Status ValidateArrowIoRange(From value, const char* name) {
 
 ArrowInputStreamAdapter::ArrowInputStreamAdapter(
     const std::shared_ptr<paimon::InputStream>& input_stream,
-    const std::shared_ptr<arrow::MemoryPool>& pool, uint64_t file_size)
-    : input_stream_(input_stream), pool_(pool), file_size_(file_size) {}
+    const std::shared_ptr<arrow::MemoryPool>& pool, int64_t file_size)
+    : input_stream_(input_stream), pool_(pool), file_size_(file_size) {
+    assert(file_size >= 0);
+}
 
 ArrowInputStreamAdapter::~ArrowInputStreamAdapter() {
     [[maybe_unused]] auto status = DoClose();
@@ -59,9 +58,8 @@ arrow::Status ArrowInputStreamAdapter::Seek(int64_t position) {
 }
 
 arrow::Result<int64_t> ArrowInputStreamAdapter::Read(int64_t nbytes, void* out) {
-    ARROW_RETURN_NOT_OK(ValidateArrowIoRange<uint32_t>(nbytes, "nbytes"));
-    Result<int32_t> read_bytes =
-        input_stream_->Read(static_cast<char*>(out), static_cast<uint32_t>(nbytes));
+    ARROW_RETURN_NOT_OK(ValidateArrowIoRange(nbytes, "nbytes"));
+    Result<int64_t> read_bytes = input_stream_->Read(static_cast<char*>(out), nbytes);
     if (!read_bytes.ok()) {
         return ToArrowStatus(read_bytes.status());
     }
@@ -80,10 +78,9 @@ arrow::Result<std::shared_ptr<arrow::Buffer>> ArrowInputStreamAdapter::Read(int6
 
 arrow::Result<int64_t> ArrowInputStreamAdapter::ReadAt(int64_t position, int64_t nbytes,
                                                        void* out) {
-    ARROW_RETURN_NOT_OK(ValidateArrowIoRange<uint64_t>(position, "position"));
-    ARROW_RETURN_NOT_OK(ValidateArrowIoRange<uint32_t>(nbytes, "nbytes"));
-    Result<int32_t> read_bytes = input_stream_->Read(
-        static_cast<char*>(out), static_cast<uint32_t>(nbytes), static_cast<uint64_t>(position));
+    ARROW_RETURN_NOT_OK(ValidateArrowIoRange(position, "position"));
+    ARROW_RETURN_NOT_OK(ValidateArrowIoRange(nbytes, "nbytes"));
+    Result<int64_t> read_bytes = input_stream_->Read(static_cast<char*>(out), nbytes, position);
     if (!read_bytes.ok()) {
         return ToArrowStatus(read_bytes.status());
     }
@@ -104,12 +101,12 @@ arrow::Result<std::shared_ptr<arrow::Buffer>> ArrowInputStreamAdapter::ReadAt(in
 arrow::Future<std::shared_ptr<arrow::Buffer>> ArrowInputStreamAdapter::ReadAsync(
     const arrow::io::IOContext& io_context, int64_t position, int64_t nbytes) {
     auto fut = arrow::Future<std::shared_ptr<arrow::Buffer>>::Make();
-    auto range_status = ValidateArrowIoRange<uint64_t>(position, "position");
+    auto range_status = ValidateArrowIoRange(position, "position");
     if (!range_status.ok()) {
         fut.MarkFinished(range_status);
         return fut;
     }
-    range_status = ValidateArrowIoRange<uint32_t>(nbytes, "nbytes");
+    range_status = ValidateArrowIoRange(nbytes, "nbytes");
     if (!range_status.ok()) {
         fut.MarkFinished(range_status);
         return fut;
@@ -122,8 +119,7 @@ arrow::Future<std::shared_ptr<arrow::Buffer>> ArrowInputStreamAdapter::ReadAsync
         return fut;
     }
     std::shared_ptr<arrow::Buffer> buffer = std::move(buffer_result).ValueUnsafe();
-    input_stream_->ReadAsync(reinterpret_cast<char*>(buffer->mutable_data()),
-                             static_cast<uint32_t>(nbytes), static_cast<uint64_t>(position),
+    input_stream_->ReadAsync(reinterpret_cast<char*>(buffer->mutable_data()), nbytes, position,
                              [fut, buffer](Status callback_status) mutable {
                                  if (callback_status.ok()) {
                                      fut.MarkFinished(std::move(buffer));
@@ -143,7 +139,7 @@ arrow::Result<int64_t> ArrowInputStreamAdapter::Tell() const {
 }
 
 arrow::Result<int64_t> ArrowInputStreamAdapter::GetSize() {
-    return static_cast<int64_t>(file_size_);
+    return file_size_;
 }
 
 bool ArrowInputStreamAdapter::closed() const {

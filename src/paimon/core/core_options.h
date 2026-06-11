@@ -183,6 +183,7 @@ class PAIMON_EXPORT CoreOptions {
     const std::vector<std::string>& GetBlobFields() const;
     const std::vector<std::string>& GetBlobDescriptorFields() const;
     const std::vector<std::string>& GetBlobViewFields() const;
+    std::optional<std::string> GetBlobViewUpstreamWarehouse() const;
     std::vector<std::string> GetBlobInlineFields() const;
     const std::vector<std::string>& GetBlobExternalStorageFields() const;
     std::optional<std::string> GetBlobExternalStoragePath() const;

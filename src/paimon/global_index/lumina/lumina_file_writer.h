@@ -16,12 +16,11 @@
 
 #pragma once
 
-#include <algorithm>
-#include <limits>
 #include <memory>
 
 #include "fmt/format.h"
 #include "lumina/io/FileWriter.h"
+#include "paimon/common/utils/math.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/global_index/lumina/lumina_utils.h"
 namespace paimon::lumina {
@@ -39,21 +38,19 @@ class LuminaFileWriter : public ::lumina::io::FileWriter {
     }
 
     ::lumina::core::Status Write(const char* data, uint64_t size) noexcept override {
-        uint64_t total_write_size = 0;
-        while (total_write_size < size) {
-            uint64_t current_write_size = std::min(size - total_write_size, max_write_size_);
-            Result<int32_t> write_result =
-                out_->Write(data + total_write_size, static_cast<uint32_t>(current_write_size));
-            if (!write_result.ok()) {
-                return PaimonToLuminaStatus(write_result.status());
-            }
-            if (static_cast<uint64_t>(write_result.value()) != current_write_size) {
-                return ::lumina::core::Status(
-                    ::lumina::core::ErrorCode::IoError,
-                    fmt::format("expect write len {} mismatch actual write len {}",
-                                current_write_size, write_result.value()));
-            }
-            total_write_size += current_write_size;
+        Status status = ValidateValueInRange<int64_t>(size, "write size");
+        if (!status.ok()) {
+            return PaimonToLuminaStatus(status);
+        }
+        Result<int64_t> write_result = out_->Write(data, static_cast<int64_t>(size));
+        if (!write_result.ok()) {
+            return PaimonToLuminaStatus(write_result.status());
+        }
+        if (write_result.value() != static_cast<int64_t>(size)) {
+            return ::lumina::core::Status(
+                ::lumina::core::ErrorCode::IoError,
+                fmt::format("expect write len {} mismatch actual write len {}", size,
+                            write_result.value()));
         }
         return ::lumina::core::Status::Ok();
     }
@@ -67,10 +64,6 @@ class LuminaFileWriter : public ::lumina::io::FileWriter {
     }
 
  private:
-    static constexpr uint64_t kMaxWriteSize = std::numeric_limits<int32_t>::max();
-
- private:
-    uint64_t max_write_size_ = kMaxWriteSize;
     std::shared_ptr<OutputStream> out_;
 };
 }  // namespace paimon::lumina

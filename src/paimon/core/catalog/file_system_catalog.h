@@ -57,7 +57,7 @@ class FileSystemCatalog : public Catalog {
     Result<bool> DatabaseExists(const std::string& db_name) const override;
     Result<bool> TableExists(const Identifier& identifier) const override;
     std::string GetDatabaseLocation(const std::string& db_name) const override;
-    std::string GetTableLocation(const Identifier& identifier) const override;
+    Result<std::string> GetTableLocation(const Identifier& identifier) const override;
     Result<std::shared_ptr<Schema>> LoadTableSchema(const Identifier& identifier) const override;
     std::string GetRootPath() const override;
     std::shared_ptr<FileSystem> GetFileSystem() const override;
@@ -67,7 +67,8 @@ class FileSystemCatalog : public Catalog {
 
  private:
     static std::string NewDatabasePath(const std::string& warehouse, const std::string& db_name);
-    static std::string NewDataTablePath(const std::string& warehouse, const Identifier& identifier);
+    static Result<std::string> NewDataTablePath(const std::string& warehouse,
+                                                const Identifier& identifier);
     static bool IsSystemDatabase(const std::string& db_name);
     static Result<bool> IsSpecifiedSystemTable(const Identifier& identifier);
     static Result<bool> IsSystemTable(const Identifier& identifier);

@@ -42,8 +42,7 @@ renameColumn("f3", "f0")
 renameColumn("f5", "f3")
 updateColumnPosition(SchemaChange.Move.first("f4"))
 addColumn("f6", INT())
-renameColumn("blob", "f5")
-updateColumnPosition(SchemaChange.Move.after("f5", "f2"))
+updateColumnPosition(SchemaChange.Move.after("blob", "f2"))
 
 f4:TIMESTAMP(9):6
 key0:INT:0
@@ -51,7 +50,7 @@ key1:INT:1
 f3:INT:2
 f1:STRING:3
 f2:DECIMAL(6, 3):4
-f5:BLOB NOT NULL:8
+blob:BLOB NOT NULL:8
 f0:BOOLEAN:5
 f6:INT:9
 
@@ -66,7 +65,7 @@ set first row id to 5
 commit snapshot-2
 NoCompact
 
-write "f4", "key0", "key1", "f2", "f0", "f6", "f5"
+write "f4", "key0", "key1", "f2", "f0", "f6", "blob"
 Add(Timestamp(1732603136054l, 154), 0, 1, "55.002", true, 56, "Apple")
 Add(Timestamp(1732603136064l, 164), 0, 1, "666.012", false, 66, "Banana")
 Add(Timestamp(1732603136074l, 174), 0, 1, "-77.022", true, 76, "Cherry")
@@ -78,7 +77,7 @@ commit snapshot-3
 NoCompact
 
 Recall with schema-1, with _ROW_ID and _SEQUENCE_NUMBER, result:
-[f4, key0, key1, f3, f1, f2, f5, f0, f6, _ROW_ID, _SEQUENCE_NUMBER]
+[f4, key0, key1, f3, f1, f2, blob, f0, f6, _ROW_ID, _SEQUENCE_NUMBER]
 [TIMESTAMP(9), INT, INT, INT, STRING, DECIMAL(6, 3), BLOB NOT NULL, BOOLEAN, INT, BIGINT, BIGINT NOT NULL]
 INSERT: 1970-01-05T00:00, 0, 1, 100, 2024-11-26 06:38:56.001000001, 0.020, Lily, true, NULL, 0, 1
 INSERT: 1969-11-18T00:00, 0, 1, 110, 2024-11-26 06:38:56.011000011, 11.120, Alice, true, NULL, 1, 1

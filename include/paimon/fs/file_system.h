@@ -73,7 +73,7 @@ class PAIMON_EXPORT InputStream : public Stream {
     /// @return Result containing the actual number of bytes read on success, or an error status on
     ///         failure.
     /// @note The stream position advances by the number of bytes actually read.
-    virtual Result<int32_t> Read(char* buffer, uint32_t size) = 0;
+    virtual Result<int64_t> Read(char* buffer, int64_t size) = 0;
 
     /// Read data from given position in the stream.
     ///
@@ -83,7 +83,7 @@ class PAIMON_EXPORT InputStream : public Stream {
     /// @param[out] buffer The buffer to store the read content.
     /// @param size The number of bytes to read.
     /// @param offset The position in the stream to read from.
-    virtual Result<int32_t> Read(char* buffer, uint32_t size, uint64_t offset) = 0;
+    virtual Result<int64_t> Read(char* buffer, int64_t size, int64_t offset) = 0;
 
     /// Asynchronously read data from the input stream.
     ///
@@ -98,7 +98,7 @@ class PAIMON_EXPORT InputStream : public Stream {
     /// @param callback The callback function to be invoked upon completion of the read operation.
     ///                 The callback will receive a Status object indicating the success or failure
     ///                 of the read operation.
-    virtual void ReadAsync(char* buffer, uint32_t size, uint64_t offset,
+    virtual void ReadAsync(char* buffer, int64_t size, int64_t offset,
                            std::function<void(Status)>&& callback) = 0;
 
     /// Get an identifier that uniquely identify the underlying content.
@@ -107,7 +107,7 @@ class PAIMON_EXPORT InputStream : public Stream {
     virtual Result<std::string> GetUri() const = 0;
 
     /// Get the total length of the file in bytes.
-    virtual Result<uint64_t> Length() const = 0;
+    virtual Result<int64_t> Length() const = 0;
 };
 
 /// Abstract class for output stream operations.
@@ -121,7 +121,7 @@ class PAIMON_EXPORT OutputStream : public Stream {
     /// @return Result containing the actual number of bytes written on success, or an error status
     ///         on failure.
     /// @note The stream position advances by the number of bytes actually written.
-    virtual Result<int32_t> Write(const char* buffer, uint32_t size) = 0;
+    virtual Result<int64_t> Write(const char* buffer, int64_t size) = 0;
 
     /// Flush pending data to the disk.
     virtual Status Flush() = 0;
@@ -160,7 +160,7 @@ class PAIMON_EXPORT FileStatus {
 
     /// Get the size of the file in bytes.
     /// @note For directories, this method is undefined behavior.
-    virtual uint64_t GetLen() const = 0;
+    virtual int64_t GetLen() const = 0;
 
     /// Check if this entry represents a directory.
     virtual bool IsDir() const = 0;

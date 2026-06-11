@@ -22,13 +22,14 @@
 #include <utility>
 
 #include "fmt/format.h"
+#include "paimon/common/utils/math.h"
 #include "paimon/memory/bytes.h"
 
 namespace paimon {
 class MemoryPool;
 
 BufferedInputStream::BufferedInputStream(const std::shared_ptr<InputStream>& in,
-                                         int32_t buffer_size, MemoryPool* pool)
+                                         int64_t buffer_size, MemoryPool* pool)
     : buffer_size_(buffer_size), in_(in) {
     assert(buffer_size > 0);
     buffer_ = std::make_unique<Bytes>(buffer_size, pool);
@@ -57,7 +58,7 @@ Status BufferedInputStream::Seek(int64_t offset, SeekOrigin origin) {
         const int64_t buf_start_abs = in_pos - count_;
         const int64_t buf_end_abs = in_pos;
         if (target_abs_offset >= buf_start_abs && target_abs_offset <= buf_end_abs) {
-            pos_ = static_cast<int32_t>(target_abs_offset - buf_start_abs);
+            pos_ = target_abs_offset - buf_start_abs;
             return Status::OK();
         }
     }
@@ -75,10 +76,11 @@ Result<int64_t> BufferedInputStream::GetPos() const {
     return in_pos - count_ + pos_;
 }
 
-Result<int32_t> BufferedInputStream::Read(char* buffer, uint32_t size) {
-    uint32_t actual_read_len = 0;
+Result<int64_t> BufferedInputStream::Read(char* buffer, int64_t size) {
+    PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(size, "read length"));
+    int64_t actual_read_len = 0;
     while (actual_read_len < size) {
-        PAIMON_ASSIGN_OR_RAISE(int32_t nread,
+        PAIMON_ASSIGN_OR_RAISE(int64_t nread,
                                InnerRead(buffer + actual_read_len, size - actual_read_len));
         assert(nread > 0);
         actual_read_len += nread;
@@ -87,16 +89,16 @@ Result<int32_t> BufferedInputStream::Read(char* buffer, uint32_t size) {
     return actual_read_len;
 }
 
-Result<int32_t> BufferedInputStream::Read(char* buffer, uint32_t size, uint64_t offset) {
+Result<int64_t> BufferedInputStream::Read(char* buffer, int64_t size, int64_t offset) {
     return Status::Invalid("BufferedInputStream does not support Read from offset");
 }
 
-void BufferedInputStream::ReadAsync(char* buffer, uint32_t size, uint64_t offset,
+void BufferedInputStream::ReadAsync(char* buffer, int64_t size, int64_t offset,
                                     std::function<void(Status)>&& callback) {
     callback(Status::NotImplemented("BufferedInputStream do not support ReadAsync"));
 }
 
-Result<uint64_t> BufferedInputStream::Length() const {
+Result<int64_t> BufferedInputStream::Length() const {
     return in_->Length();
 }
 
@@ -116,18 +118,21 @@ Status BufferedInputStream::Fill() {
     count_ = 0;
     PAIMON_ASSIGN_OR_RAISE(int64_t in_pos, in_->GetPos());
     PAIMON_ASSIGN_OR_RAISE(int64_t length, in_->Length());
-    int64_t left_to_read = std::min((length - in_pos), static_cast<int64_t>(buffer_size_));
-    PAIMON_ASSIGN_OR_RAISE(int32_t actual_read_len, in_->Read(buffer_->data(), left_to_read));
+    int64_t left_to_read = std::min(length - in_pos, buffer_size_);
+    PAIMON_ASSIGN_OR_RAISE(int64_t actual_read_len, in_->Read(buffer_->data(), left_to_read));
     PAIMON_RETURN_NOT_OK(AssertReadLength(left_to_read, actual_read_len));
     count_ = actual_read_len;
     return Status::OK();
 }
 
-Result<int32_t> BufferedInputStream::InnerRead(char* buffer, int32_t size) {
+Result<int64_t> BufferedInputStream::InnerRead(char* buffer, int64_t size) {
     assert(size > 0);
-    int32_t avail = count_ - pos_;
-    if (avail <= 0) {
-        assert(avail == 0);
+    if (PAIMON_UNLIKELY(pos_ > count_)) {
+        return Status::Invalid(fmt::format(
+            "BufferedInputStream internal error: pos_ {} exceeds count_ {}", pos_, count_));
+    }
+    int64_t avail = count_ - pos_;
+    if (avail == 0) {
         /* If the requested length is at least as large as the buffer, and
            if there is no mark/reset activity, do not bother to copy the
            bytes into the local buffer.  In this way buffered streams will
@@ -144,14 +149,14 @@ Result<int32_t> BufferedInputStream::InnerRead(char* buffer, int32_t size) {
                 size));
         }
     }
-    int32_t copy_length = std::min(avail, size);
-    memcpy(buffer, buffer_->data() + pos_, copy_length);
+    int64_t copy_length = std::min(avail, size);
+    memcpy(buffer, buffer_->data() + pos_, static_cast<size_t>(copy_length));
     pos_ += copy_length;
     return copy_length;
 }
 
-Status BufferedInputStream::AssertReadLength(int32_t read_length,
-                                             int32_t actual_read_length) const {
+Status BufferedInputStream::AssertReadLength(int64_t read_length,
+                                             int64_t actual_read_length) const {
     if (read_length != actual_read_length) {
         return Status::Invalid(
             fmt::format("assert read length failed: read length not match, read length {}, actual "

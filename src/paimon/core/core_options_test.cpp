@@ -118,6 +118,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_TRUE(core_options.GetBlobViewFields().empty());
     ASSERT_TRUE(core_options.GetBlobInlineFields().empty());
     ASSERT_TRUE(core_options.GetBlobExternalStorageFields().empty());
+    ASSERT_EQ(std::nullopt, core_options.GetBlobViewUpstreamWarehouse());
     ASSERT_EQ(std::nullopt, core_options.GetBlobExternalStoragePath());
     ASSERT_TRUE(core_options.LegacyPartitionNameEnabled());
     ASSERT_TRUE(core_options.GlobalIndexEnabled());
@@ -223,6 +224,7 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::BLOB_VIEW_FIELD, "blob5"},
         {Options::BLOB_EXTERNAL_STORAGE_FIELD, "blob3,blob4"},
         {Options::BLOB_EXTERNAL_STORAGE_PATH, "FILE:///tmp/blob_external_storage/"},
+        {Options::BLOB_VIEW_UPSTREAM_WAREHOUSE, "FILE:///tmp/blob_view_upstream_warehouse/"},
         {Options::PARTITION_GENERATE_LEGACY_NAME, "false"},
         {Options::GLOBAL_INDEX_ENABLED, "false"},
         {Options::GLOBAL_INDEX_THREAD_NUM, "4"},
@@ -360,6 +362,8 @@ TEST(CoreOptionsTest, TestFromMap) {
               std::vector<std::string>({"blob3", "blob4"}));
     ASSERT_EQ(core_options.GetBlobExternalStoragePath(),
               std::optional<std::string>("FILE:///tmp/blob_external_storage/"));
+    ASSERT_EQ(core_options.GetBlobViewUpstreamWarehouse(),
+              std::optional<std::string>("FILE:///tmp/blob_view_upstream_warehouse/"));
     ASSERT_FALSE(core_options.LegacyPartitionNameEnabled());
     ASSERT_FALSE(core_options.GlobalIndexEnabled());
     ASSERT_EQ(core_options.GetGlobalIndexThreadNum(), 4);

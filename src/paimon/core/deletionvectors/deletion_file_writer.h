@@ -19,9 +19,7 @@
 #include <memory>
 #include <string>
 
-#include "fmt/format.h"
 #include "paimon/common/utils/linked_hash_map.h"
-#include "paimon/common/utils/path_util.h"
 #include "paimon/core/deletionvectors/deletion_vector.h"
 #include "paimon/core/index/deletion_vector_meta.h"
 #include "paimon/core/index/index_path_factory.h"

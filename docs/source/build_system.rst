@@ -49,10 +49,10 @@ for data format and file system.
    find_package(Paimon REQUIRED)
 
    add_executable(my_example my_example.cc)
-   target_link_libraries(my_example PRIVATE arrow_shared
-                                            paimon_shared
-                                            paimon_parquet_file_format_shared
-                                            paimon_local_file_system_shared)
+   target_link_libraries(my_example PRIVATE Arrow::arrow_shared
+                                            Paimon::paimon_shared
+                                            Paimon::paimon_parquet_file_format_shared
+                                            Paimon::paimon_local_file_system_shared)
 
 Available variables and targets
 -------------------------------
@@ -61,10 +61,10 @@ The directive ``find_package(Paimon REQUIRED)`` instructs CMake to locate a
 Paimon C++ installation on your system. If successful, it sets ``Paimon_FOUND``
 to true if the Paimon C++ libraries were found.
 
-It also defines the following linkable targets (plain strings, not variables):
+It also defines the following linkable imported targets:
 
-* ``paimon_shared`` links to the Paimon shared libraries
-* ``paimon_static`` links to the Paimon static libraries
+* ``Paimon::paimon_shared`` links to the Paimon shared libraries
+* ``Paimon::paimon_static`` links to the Paimon static libraries
 
 In most cases, it is recommended to use the Paimon shared libraries.
 
@@ -75,21 +75,21 @@ Paimon provides a set of built-in optional plugins that you can link to as neede
 
 - File format plugins:
 
-  - ``paimon_parquet_file_format_shared`` / ``paimon_parquet_file_format_static``
-  - ``paimon_orc_file_format_shared`` / ``paimon_orc_file_format_static``
-  - ``paimon_avro_file_format_shared`` / ``paimon_avro_file_format_static``
-  - ``paimon_blob_file_format_shared`` / ``paimon_blob_file_format_static``
-  - ``paimon_lance_file_format_shared`` / ``paimon_lance_file_format_static``
+  - ``Paimon::paimon_parquet_file_format_shared`` / ``Paimon::paimon_parquet_file_format_static``
+  - ``Paimon::paimon_orc_file_format_shared`` / ``Paimon::paimon_orc_file_format_static``
+  - ``Paimon::paimon_avro_file_format_shared`` / ``Paimon::paimon_avro_file_format_static``
+  - ``Paimon::paimon_blob_file_format_shared`` / ``Paimon::paimon_blob_file_format_static``
+  - ``Paimon::paimon_lance_file_format_shared`` / ``Paimon::paimon_lance_file_format_static``
 
 - File system plugins:
 
-  - ``paimon_local_file_system_shared`` / ``paimon_local_file_system_static``
-  - ``paimon_jindo_file_system_shared`` / ``paimon_jindo_file_system_static``
+  - ``Paimon::paimon_local_file_system_shared`` / ``Paimon::paimon_local_file_system_static``
+  - ``Paimon::paimon_jindo_file_system_shared`` / ``Paimon::paimon_jindo_file_system_static``
 
 - Index plugins:
 
-  - ``paimon_file_index_shared`` / ``paimon_file_index_static``
-  - ``paimon_lumina_index_shared`` / ``paimon_lumina_index_static``
+  - ``Paimon::paimon_file_index_shared`` / ``Paimon::paimon_file_index_static``
+  - ``Paimon::paimon_lumina_index_shared`` / ``Paimon::paimon_lumina_index_static``
 
 .. note::
 

@@ -394,6 +394,7 @@ struct CoreOptions::Impl {
     std::optional<std::string> scan_fallback_branch;
     std::optional<std::string> data_file_external_paths;
     std::optional<std::string> blob_external_storage_path;
+    std::optional<std::string> blob_view_upstream_warehouse;
 
     std::map<std::string, std::string> raw_options;
 
@@ -558,6 +559,9 @@ struct CoreOptions::Impl {
         PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(Options::BLOB_VIEW_FIELD,
                                                            Options::FIELDS_SEPARATOR,
                                                            &blob_view_fields, /*need_trim=*/true));
+        // Parse blob-view-upstream-warehouse - warehouse path for configured blob view fields
+        PAIMON_RETURN_NOT_OK(
+            parser.Parse(Options::BLOB_VIEW_UPSTREAM_WAREHOUSE, &blob_view_upstream_warehouse));
         // Parse blob-external-storage-field - descriptor BLOB fields written to external storage
         PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
             Options::BLOB_EXTERNAL_STORAGE_FIELD, Options::FIELDS_SEPARATOR,
@@ -1421,6 +1425,10 @@ const std::vector<std::string>& CoreOptions::GetBlobDescriptorFields() const {
 
 const std::vector<std::string>& CoreOptions::GetBlobViewFields() const {
     return impl_->blob_view_fields;
+}
+
+std::optional<std::string> CoreOptions::GetBlobViewUpstreamWarehouse() const {
+    return impl_->blob_view_upstream_warehouse;
 }
 
 std::vector<std::string> CoreOptions::GetBlobInlineFields() const {

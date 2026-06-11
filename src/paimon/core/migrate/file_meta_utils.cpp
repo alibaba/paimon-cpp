@@ -148,7 +148,7 @@ Result<std::unique_ptr<CommitMessage>> FileMetaUtils::GenerateCommitMessage(
 
     // generate bucket path
     PAIMON_ASSIGN_OR_RAISE(
-        std::unique_ptr<FileStorePathFactory> file_store_path_factory,
+        std::shared_ptr<FileStorePathFactory> file_store_path_factory,
         FileStorePathFactory::Create(dst_table_path, schema, table_schema->PartitionKeys(),
                                      core_options.GetPartitionDefaultName(), format->Identifier(),
                                      core_options.DataFilePrefix(),

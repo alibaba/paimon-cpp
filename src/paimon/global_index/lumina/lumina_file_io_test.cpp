@@ -26,50 +26,42 @@ class LuminaFileIOTest : public ::testing::Test {
 };
 
 TEST_F(LuminaFileIOTest, TestSimple) {
-    auto check_write_and_read = [](uint64_t max_write_size, uint64_t max_read_size) {
-        std::string content = "Hello World.";
-        auto dir = paimon::test::UniqueTestDirectory::Create("local");
-        auto fs = dir->GetFileSystem();
-        std::string index_path = dir->Str() + "/lumina_test.index";
-        // write content
-        ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
-                             fs->Create(index_path, /*overwrite=*/false));
-        auto writer = std::make_shared<LuminaFileWriter>(out);
-        writer->max_write_size_ = max_write_size;
-        ASSERT_EQ(writer->GetLength().Value(), 0);
-        ASSERT_TRUE(writer->Write(content.data(), content.length()).IsOk());
-        ASSERT_TRUE(writer->Close().IsOk());
+    std::string content = "Hello World.";
+    auto dir = paimon::test::UniqueTestDirectory::Create("local");
+    auto fs = dir->GetFileSystem();
+    std::string index_path = dir->Str() + "/lumina_test.index";
+    // write content
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
+                         fs->Create(index_path, /*overwrite=*/false));
+    auto writer = std::make_shared<LuminaFileWriter>(out);
+    ASSERT_EQ(writer->GetLength().Value(), 0);
+    ASSERT_TRUE(writer->Write(content.data(), content.length()).IsOk());
+    ASSERT_TRUE(writer->Close().IsOk());
 
-        // check file exist
-        ASSERT_OK_AND_ASSIGN(bool exist, fs->Exists(index_path));
-        ASSERT_TRUE(exist);
-        ASSERT_OK_AND_ASSIGN(std::unique_ptr<FileStatus> file_status,
-                             fs->GetFileStatus(index_path));
-        ASSERT_FALSE(file_status->IsDir());
-        ASSERT_EQ(file_status->GetLen(), content.length());
+    // check file exist
+    ASSERT_OK_AND_ASSIGN(bool exist, fs->Exists(index_path));
+    ASSERT_TRUE(exist);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FileStatus> file_status, fs->GetFileStatus(index_path));
+    ASSERT_FALSE(file_status->IsDir());
+    ASSERT_EQ(file_status->GetLen(), content.length());
 
-        // read content
-        ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs->Open(index_path));
-        auto reader = std::make_shared<LuminaFileReader>(in);
-        reader->max_read_size_ = max_read_size;
-        ASSERT_EQ(reader->GetLength().Value(), content.length());
-        ASSERT_EQ(reader->GetPosition().Value(), 0);
-        std::string read_content(content.size(), 0);
-        ASSERT_TRUE(reader->Read(read_content.data(), read_content.size()).IsOk());
-        ASSERT_EQ(read_content, content);
-        ASSERT_EQ(reader->GetPosition().Value(), content.size());
+    // read content
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs->Open(index_path));
+    auto reader = std::make_shared<LuminaFileReader>(in);
+    ASSERT_EQ(reader->GetLength().Value(), content.length());
+    ASSERT_EQ(reader->GetPosition().Value(), 0);
+    std::string read_content(content.size(), 0);
+    ASSERT_TRUE(reader->Read(read_content.data(), read_content.size()).IsOk());
+    ASSERT_EQ(read_content, content);
+    ASSERT_EQ(reader->GetPosition().Value(), content.size());
 
-        // test seek
-        ASSERT_TRUE(reader->Seek(2).IsOk());
-        std::string read_content2(3, 0);
-        ASSERT_TRUE(reader->Read(read_content2.data(), read_content2.size()).IsOk());
-        ASSERT_EQ(read_content2, "llo");
-        ASSERT_EQ(reader->GetPosition().Value(), 5);
-        ASSERT_TRUE(reader->Close().IsOk());
-    };
-
-    check_write_and_read(LuminaFileWriter::kMaxWriteSize, LuminaFileReader::kMaxReadSize);
-    check_write_and_read(2, 2);
+    // test seek
+    ASSERT_TRUE(reader->Seek(2).IsOk());
+    std::string read_content2(3, 0);
+    ASSERT_TRUE(reader->Read(read_content2.data(), read_content2.size()).IsOk());
+    ASSERT_EQ(read_content2, "llo");
+    ASSERT_EQ(reader->GetPosition().Value(), 5);
+    ASSERT_TRUE(reader->Close().IsOk());
 }
 
 TEST_F(LuminaFileIOTest, TestReadAsync) {
@@ -82,8 +74,7 @@ TEST_F(LuminaFileIOTest, TestReadAsync) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs->Open(index_path));
     auto reader = std::make_shared<LuminaFileReader>(in);
 
-    auto check_read_result = [&](uint64_t max_read_size, std::string& read_content) {
-        reader->max_read_size_ = max_read_size;
+    auto check_read_result = [&](std::string& read_content) {
         bool read_finished = false;
         std::promise<int32_t> promise;
         std::future<int32_t> future = promise.get_future();
@@ -103,12 +94,10 @@ TEST_F(LuminaFileIOTest, TestReadAsync) {
         ASSERT_EQ(content.substr(0, read_content.size()), read_content);
     };
 
-    for (auto max_read_size : {1, 2, 3, 4, 5, 10, 100}) {
-        std::string read_content(content.size(), '\0');
-        check_read_result(max_read_size, read_content);
-        // test read empty
-        std::string empty_content;
-        check_read_result(max_read_size, empty_content);
-    }
+    std::string read_content(content.size(), '\0');
+    check_read_result(read_content);
+    // test read empty
+    std::string empty_content;
+    check_read_result(empty_content);
 }
 }  // namespace paimon::lumina::test

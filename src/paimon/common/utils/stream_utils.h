@@ -43,11 +43,11 @@ class StreamUtils {
     static Result<PAIMON_UNIQUE_PTR<Bytes>> ReadFully(std::unique_ptr<InputStream> input_stream,
                                                       const std::shared_ptr<MemoryPool>& pool) {
         PAIMON_RETURN_NOT_OK(input_stream->Seek(0, FS_SEEK_SET));
-        PAIMON_ASSIGN_OR_RAISE(uint64_t file_length, input_stream->Length());
+        PAIMON_ASSIGN_OR_RAISE(int64_t file_length, input_stream->Length());
         PAIMON_UNIQUE_PTR<Bytes> content = Bytes::AllocateBytes(file_length, pool.get());
-        PAIMON_ASSIGN_OR_RAISE(int32_t actual_read_len,
-                               input_stream->Read(content->data(), content->size()));
-        if (static_cast<uint32_t>(actual_read_len) != file_length) {
+        PAIMON_ASSIGN_OR_RAISE(int64_t actual_read_len,
+                               input_stream->Read(content->data(), file_length));
+        if (actual_read_len != file_length) {
             return Status::Invalid("actual read length {}, not match with expect length {}",
                                    actual_read_len, file_length);
         }
@@ -56,7 +56,7 @@ class StreamUtils {
 
     static Result<PAIMON_UNIQUE_PTR<Bytes>> ReadAsyncFully(
         std::unique_ptr<InputStream> input_stream, const std::shared_ptr<MemoryPool>& pool) {
-        PAIMON_ASSIGN_OR_RAISE(uint64_t file_length, input_stream->Length());
+        PAIMON_ASSIGN_OR_RAISE(int64_t file_length, input_stream->Length());
         PAIMON_UNIQUE_PTR<Bytes> content = Bytes::AllocateBytes(file_length, pool.get());
         PAIMON_RETURN_NOT_OK(ReadAsyncFully(std::move(input_stream), content->data()));
         return content;
@@ -64,10 +64,10 @@ class StreamUtils {
 
     static Status ReadAsyncFully(std::unique_ptr<InputStream> input_stream, char* content) {
         PAIMON_RETURN_NOT_OK(input_stream->Seek(0, FS_SEEK_SET));
-        PAIMON_ASSIGN_OR_RAISE(uint64_t file_length, input_stream->Length());
+        PAIMON_ASSIGN_OR_RAISE(int64_t file_length, input_stream->Length());
 
-        uint64_t read_offset = 0;
-        uint32_t read_len = std::min(file_length, kDefaultReadChunkSize);
+        int64_t read_offset = 0;
+        int64_t read_len = std::min(file_length, kDefaultReadChunkSize);
         std::vector<std::future<Status>> futures;
         futures.reserve(file_length / kDefaultReadChunkSize + 1);
         while (read_len > 0) {
@@ -93,7 +93,7 @@ class StreamUtils {
     }
 
  private:
-    static constexpr uint64_t kDefaultReadChunkSize = 1024 * 1024;
+    static constexpr int64_t kDefaultReadChunkSize = 1024 * 1024;
 };
 
 }  // namespace paimon

@@ -39,10 +39,10 @@ Status DataInputStream::Seek(int64_t offset) const {
 template <typename T>
 Result<T> DataInputStream::ReadValue() const {
     static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
-    int32_t read_length = sizeof(T);
+    int64_t read_length = sizeof(T);
     PAIMON_RETURN_NOT_OK(AssertBoundary(read_length));
     T value;
-    PAIMON_ASSIGN_OR_RAISE(int32_t actual_read_length,
+    PAIMON_ASSIGN_OR_RAISE(int64_t actual_read_length,
                            input_stream_->Read(reinterpret_cast<char*>(&value), read_length));
     PAIMON_RETURN_NOT_OK(AssertReadLength(read_length, actual_read_length));
     if (NeedSwap()) {
@@ -52,17 +52,17 @@ Result<T> DataInputStream::ReadValue() const {
 }
 
 Status DataInputStream::ReadBytes(Bytes* bytes) const {
-    int32_t read_length = bytes->size();
+    int64_t read_length = bytes->size();
     PAIMON_RETURN_NOT_OK(AssertBoundary(read_length));
-    PAIMON_ASSIGN_OR_RAISE(int32_t actual_read_length,
+    PAIMON_ASSIGN_OR_RAISE(int64_t actual_read_length,
                            input_stream_->Read(bytes->data(), read_length));
     PAIMON_RETURN_NOT_OK(AssertReadLength(read_length, actual_read_length));
     return Status::OK();
 }
 
-Status DataInputStream::Read(char* data, uint32_t size) const {
+Status DataInputStream::Read(char* data, int64_t size) const {
     PAIMON_RETURN_NOT_OK(AssertBoundary(size));
-    PAIMON_ASSIGN_OR_RAISE(int32_t actual_read_length, input_stream_->Read(data, size));
+    PAIMON_ASSIGN_OR_RAISE(int64_t actual_read_length, input_stream_->Read(data, size));
     PAIMON_RETURN_NOT_OK(AssertReadLength(size, actual_read_length));
     return Status::OK();
 }
@@ -72,7 +72,7 @@ Result<std::string> DataInputStream::ReadString() const {
     PAIMON_ASSIGN_OR_RAISE(read_length, ReadValue<uint16_t>());
     PAIMON_RETURN_NOT_OK(AssertBoundary(read_length));
     std::string value(read_length, '\0');
-    PAIMON_ASSIGN_OR_RAISE(int32_t actual_read_length,
+    PAIMON_ASSIGN_OR_RAISE(int64_t actual_read_length,
                            input_stream_->Read(value.data(), read_length));
     PAIMON_RETURN_NOT_OK(AssertReadLength(read_length, actual_read_length));
     return value;
@@ -82,11 +82,11 @@ Result<int64_t> DataInputStream::GetPos() const {
     return input_stream_->GetPos();
 }
 
-Result<uint64_t> DataInputStream::Length() const {
+Result<int64_t> DataInputStream::Length() const {
     return input_stream_->Length();
 }
 
-Status DataInputStream::AssertReadLength(int32_t read_length, int32_t actual_read_length) const {
+Status DataInputStream::AssertReadLength(int64_t read_length, int64_t actual_read_length) const {
     if (read_length != actual_read_length) {
         return Status::Invalid(
             fmt::format("assert read length failed: read length not match, read length {}, actual "
@@ -96,15 +96,16 @@ Status DataInputStream::AssertReadLength(int32_t read_length, int32_t actual_rea
     return Status::OK();
 }
 
-Status DataInputStream::AssertBoundary(int32_t need_length) const {
+Status DataInputStream::AssertBoundary(int64_t need_length) const {
+    PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(need_length, "DataInputStream need length"));
     // TODO(jinli.zjw): Store current_pos and file_length as member variables to reduce the overhead
     // of I/O calls.
     PAIMON_ASSIGN_OR_RAISE(int64_t pos, input_stream_->GetPos());
-    PAIMON_ASSIGN_OR_RAISE(uint64_t length, input_stream_->Length());
-    if (pos + need_length > static_cast<int64_t>(length)) {
+    PAIMON_ASSIGN_OR_RAISE(int64_t length, input_stream_->Length());
+    if (pos < 0 || length < 0 || pos > length || need_length > length - pos) {
         return Status::Invalid(
-            fmt::format("DataInputStream assert boundary failed: need length {}, current position "
-                        "{}, exceed length {}",
+            fmt::format("DataInputStream boundary check failed: read size {}, position {}, "
+                        "stream length {}",
                         need_length, pos, length));
     }
     return Status::OK();

@@ -45,9 +45,9 @@ class PAIMON_EXPORT DataOutputStream {
         if (NeedSwap()) {
             write_value = EndianSwapValue(value);
         }
-        int32_t write_length = sizeof(T);
+        int64_t write_length = sizeof(T);
         PAIMON_ASSIGN_OR_RAISE(
-            int32_t actual_write_length,
+            int64_t actual_write_length,
             output_stream_->Write(reinterpret_cast<char*>(&write_value), write_length));
         PAIMON_RETURN_NOT_OK(AssertWriteLength(write_length, actual_write_length));
         return Status::OK();
@@ -63,7 +63,7 @@ class PAIMON_EXPORT DataOutputStream {
     }
 
  private:
-    Status AssertWriteLength(int32_t write_length, int32_t actual_write_length) const;
+    Status AssertWriteLength(int64_t write_length, int64_t actual_write_length) const;
 
     bool NeedSwap() const;
 

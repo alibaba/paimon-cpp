@@ -55,7 +55,7 @@ class PAIMON_EXPORT DataInputStream {
     /// Read raw data of specified size from the stream.
     /// @param data Buffer to store the read data.
     /// @param size Number of bytes to read.
-    Status Read(char* data, uint32_t size) const;
+    Status Read(char* data, int64_t size) const;
 
     /// Read string from the stream.
     /// @note First read length (int16), then read string bytes.
@@ -65,7 +65,7 @@ class PAIMON_EXPORT DataInputStream {
     Result<int64_t> GetPos() const;
 
     /// Get the total length of the underlying input stream.
-    Result<uint64_t> Length() const;
+    Result<int64_t> Length() const;
 
     /// Set the byte order for endianness conversion.
     /// @param order The byte order to use `PAIMON_BIG_ENDIAN` or `PAIMON_LITTLE_ENDIAN`.
@@ -77,11 +77,11 @@ class PAIMON_EXPORT DataInputStream {
     /// Validate that the expected number of bytes were read.
     /// @param read_length Expected number of bytes to read.
     /// @param actual_read_length Actual number of bytes read.
-    Status AssertReadLength(int32_t read_length, int32_t actual_read_length) const;
+    Status AssertReadLength(int64_t read_length, int64_t actual_read_length) const;
 
     /// Check if there are enough bytes available to read.
     /// @param need_length Number of bytes needed.
-    Status AssertBoundary(int32_t need_length) const;
+    Status AssertBoundary(int64_t need_length) const;
 
     /// Determine if byte swapping is needed based on current byte order and system endianness.
     /// @return `true` if byte swapping is required, `false` otherwise.

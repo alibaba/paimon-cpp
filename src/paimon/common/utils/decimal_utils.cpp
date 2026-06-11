@@ -17,6 +17,7 @@
 #include "paimon/common/utils/decimal_utils.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cstddef>
 #include <utility>
 
@@ -71,27 +72,51 @@ std::optional<arrow::Decimal128> DecimalUtils::RescaleDecimalWithOverflowCheck(
 
 Result<Decimal::int128_t> DecimalUtils::StrToInt128(const std::string& str) {
     try {
-        Decimal::int128_t ret = 0;
         size_t length = str.length();
-        if (length > 0) {
-            bool is_negative = str[0] == '-';
-            size_t posn = is_negative ? 1 : 0;
-            while (posn < length) {
-                size_t group = std::min(18ul, length - posn);
-                int64_t chunk = std::stoll(str.substr(posn, group));
-                int64_t multiple = 1;
-                for (size_t i = 0; i < group; ++i) {
-                    multiple *= 10;
-                }
-                ret *= multiple;
-                ret += chunk;
-                posn += group;
-            }
-            if (is_negative) {
-                ret = -ret;
-            }
+        if (length == 0) {
+            return Status::Invalid("invalid string: [], cannot convert to int128");
         }
-        return ret;
+        bool is_negative = str[0] == '-';
+        size_t posn = is_negative ? 1 : 0;
+        if (posn == length) {
+            return Status::Invalid(
+                fmt::format("invalid string: [{}], cannot convert to int128", str));
+        }
+
+        Decimal::uint128_t magnitude = 0;
+        Decimal::uint128_t max_magnitude = (static_cast<Decimal::uint128_t>(1) << 127) - 1;
+        if (is_negative) {
+            max_magnitude += 1;
+        }
+        while (posn < length) {
+            size_t group = std::min(18ul, length - posn);
+            for (size_t i = 0; i < group; ++i) {
+                if (!std::isdigit(static_cast<unsigned char>(str[posn + i]))) {
+                    return Status::Invalid(
+                        fmt::format("invalid string: [{}], cannot convert to int128", str));
+                }
+            }
+            uint64_t chunk = std::stoull(str.substr(posn, group));
+            uint64_t multiple = 1;
+            for (size_t i = 0; i < group; ++i) {
+                multiple *= 10;
+            }
+            if (magnitude > (max_magnitude - chunk) / multiple) {
+                return Status::Invalid(
+                    fmt::format("invalid string: [{}], cannot convert to int128", str));
+            }
+            magnitude = magnitude * multiple + chunk;
+            posn += group;
+        }
+        if (is_negative) {
+            if (magnitude == max_magnitude) {
+                auto max_value =
+                    static_cast<Decimal::int128_t>((static_cast<Decimal::uint128_t>(1) << 127) - 1);
+                return -max_value - 1;
+            }
+            return -static_cast<Decimal::int128_t>(magnitude);
+        }
+        return static_cast<Decimal::int128_t>(magnitude);
     } catch (...) {
         return Status::Invalid(fmt::format("invalid string: [{}], cannot convert to int128", str));
     }

@@ -35,13 +35,13 @@ class MockInputStream : public InputStream {
     Result<int64_t> GetPos() const override {
         return 0;
     }
-    Result<int32_t> Read(char* buffer, uint32_t size) override {
+    Result<int64_t> Read(char* buffer, int64_t size) override {
         return 0;
     }
-    Result<int32_t> Read(char* buffer, uint32_t size, uint64_t offset) override {
+    Result<int64_t> Read(char* buffer, int64_t size, int64_t offset) override {
         return 0;
     }
-    void ReadAsync(char* buffer, uint32_t size, uint64_t offset,
+    void ReadAsync(char* buffer, int64_t size, int64_t offset,
                    std::function<void(Status)>&& callback) override {}
 
     Status Close() override {
@@ -50,7 +50,7 @@ class MockInputStream : public InputStream {
     Result<std::string> GetUri() const override {
         return std::string();
     }
-    Result<uint64_t> Length() const override {
+    Result<int64_t> Length() const override {
         return 0;
     }
 };
@@ -63,7 +63,7 @@ class MockOutputStream : public OutputStream {
     Result<int64_t> GetPos() const override {
         return 0;
     }
-    Result<int32_t> Write(const char* buffer, uint32_t size) override {
+    Result<int64_t> Write(const char* buffer, int64_t size) override {
         return 0;
     }
     Status Flush() override {
@@ -85,7 +85,7 @@ class MockFileStatus : public FileStatus {
     std::string GetPath() const override {
         return "";
     }
-    uint64_t GetLen() const override {
+    int64_t GetLen() const override {
         return 0;
     }
     int64_t GetModificationTime() const override {
