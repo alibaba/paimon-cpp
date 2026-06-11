@@ -553,7 +553,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesAllMatch) {
 
     auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
         parquet_reader.get(),
-        TargetRowGroup(/*rg_index=*/0, /*page_filtered=*/true, /*ranges=*/row_ranges), {0});
+        TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true, /*ranges=*/row_ranges), {0});
 
     // 10 pages, all matching
     ASSERT_EQ(10, ranges.size());
@@ -578,7 +578,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesNoMatch) {
 
     auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
         parquet_reader.get(),
-        TargetRowGroup(/*rg_index=*/0, /*page_filtered=*/true, /*ranges=*/row_ranges), {0});
+        TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true, /*ranges=*/row_ranges), {0});
 
     ASSERT_EQ(0, ranges.size());
 }
@@ -600,7 +600,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesMultiColumn) {
 
     auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
         parquet_reader.get(),
-        TargetRowGroup(/*rg_index=*/0, /*page_filtered=*/true, /*ranges=*/row_ranges), {0, 1});
+        TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true, /*ranges=*/row_ranges), {0, 1});
 
     // 1 matching page per column = 2 ranges total
     ASSERT_EQ(2, ranges.size());
