@@ -1,0 +1,29 @@
+f0:int b0:blob b1:blob b2:blob b3:blob (all can be null)
+bucket count: -1
+target-file-size: 700
+row-tracking.enabled: true
+data-evolution.enabled: true
+blob-descriptor-field: b0,b1
+blob-external-storage-field: b1
+blob-external-storage-path: <table>/external_blob (absolute path at generation time)
+
+b0: descriptor field, inline in main file, source .bin files in raw_blob/
+b1: descriptor field, repacked to external storage in external_blob/
+b2: regular blob, written to .blob files
+b3: regular blob, written to .blob files
+
+Note: b0 is passed as descriptor via Blob.fromLocal(); b1/b2/b3 are raw bytes.
+Paimon auto-converts b1 to descriptor internally.
+
+Msgs:
+snapshot-1
+write field: "f0", "b0", "b1", "b2", "b3"
+Add: 1, "img_0", null,    "raw_2_0", "raw_3_0"
+Add: 2, "img_1", "vid_1", "raw_2_1", null
+Add: 3, "img_2", null,    "raw_2_2", "raw_3_2"
+NoCompact
+
+C++ read note:
+  Descriptor URIs contain absolute paths from the Java generation machine.
+  ConvertDescriptorToRawBlob uses BlobDescriptorPathRewrite{"raw_blob", "external_blob"}
+  to redirect them to <table>/raw_blob/ and <table>/external_blob/ at read time.
