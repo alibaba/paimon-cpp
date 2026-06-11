@@ -264,7 +264,8 @@ TEST_F(FileReaderWrapperTest, PageFilteredZeroBatchSizeDoesNotHang) {
 
     std::vector<int32_t> all_columns = {0, 1, 2};
     ASSERT_OK(reader_wrapper->PrepareForReading(
-        {TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true, /*ranges=*/rr)}, all_columns));
+        {TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true, /*ranges=*/rr)},
+        all_columns));
     int64_t total = 0;
     int64_t batch_count = 0;
     while (true) {
@@ -296,12 +297,12 @@ TEST_F(FileReaderWrapperTest, SeekBackToConsumedPageFilteredRowGroup) {
     row_ranges_map[1] = RowRanges(RowRanges::Range(100, 149));
 
     std::vector<int32_t> all_columns = {0, 1, 2};
-    ASSERT_OK(
-        reader_wrapper->PrepareForReading({TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true,
-                                                          /*ranges=*/row_ranges_map[0]),
-                                           TargetRowGroup(/*rg_index=*/1, /*is_partially_matched=*/true,
-                                                          /*ranges=*/row_ranges_map[1])},
-                                          all_columns));
+    ASSERT_OK(reader_wrapper->PrepareForReading(
+        {TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true,
+                        /*ranges=*/row_ranges_map[0]),
+         TargetRowGroup(/*rg_index=*/1, /*is_partially_matched=*/true,
+                        /*ranges=*/row_ranges_map[1])},
+        all_columns));
 
     auto count_all_rows = [&](int64_t* out_total) {
         int64_t total = 0;
@@ -352,7 +353,8 @@ TEST_F(FileReaderWrapperTest, PageFilteredRespectsBatchSize) {
         SCOPED_TRACE("batch_size=" + std::to_string(batch_size));
         ASSERT_OK_AND_ASSIGN(auto reader_wrapper, PrepareReaderWrapper(file_path, batch_size));
         ASSERT_OK(reader_wrapper->PrepareForReading(
-            {TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true, /*ranges=*/rr)}, {0, 1, 2}));
+            {TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true, /*ranges=*/rr)},
+            {0, 1, 2}));
 
         int64_t total = 0;
         int64_t batch_count = 0;
