@@ -1,0 +1,41 @@
+{
+  "version" : 3,
+  "id" : 0,
+  "fields" : [ {
+    "id" : 0,
+    "name" : "f0",
+    "type" : "INT"
+  }, {
+    "id" : 1,
+    "name" : "b0",
+    "type" : "BLOB"
+  }, {
+    "id" : 2,
+    "name" : "b1",
+    "type" : "BLOB"
+  }, {
+    "id" : 3,
+    "name" : "b2",
+    "type" : "BLOB"
+  }, {
+    "id" : 4,
+    "name" : "b3",
+    "type" : "BLOB"
+  } ],
+  "highestFieldId" : 4,
+  "partitionKeys" : [ ],
+  "primaryKeys" : [ ],
+  "options" : {
+    "bucket" : "-1",
+    "row-tracking.enabled" : "true",
+    "blob-external-storage-path" : "external_blob",
+    "target-file-size" : "700",
+    "blob-external-storage-field" : "b1",
+    "data-evolution.enabled" : "true",
+    "file-system" : "local",
+    "manifest.format" : "avro",
+    "file.format" : "parquet",
+    "blob-descriptor-field" : "b0,b1"
+  },
+  "timeMillis" : 1781088620905
+}
