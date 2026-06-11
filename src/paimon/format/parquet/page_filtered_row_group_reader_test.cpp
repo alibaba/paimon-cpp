@@ -969,8 +969,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnOnlyReadNestedField) {
     ASSERT_EQ(50, result->length());
 
     // Build expected: only the "info" field from rows 50-99
-    auto full_data = MakeNestedStructData(100);
-    auto sliced = std::dynamic_pointer_cast<arrow::StructArray>(full_data->Slice(50, 50));
+    auto sliced = std::dynamic_pointer_cast<arrow::StructArray>(data->Slice(50, 50));
     ASSERT_TRUE(sliced);
     // Extract only the "info" column (field index 1) and wrap as struct with single field
     auto expected =
