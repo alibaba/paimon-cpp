@@ -2121,6 +2121,7 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorFieldPartialExternalStorageNoAsDescr
     auto read_concat = arrow::Concatenate(result.chunked_array->chunks()).ValueOrDie();
     auto read_struct = std::dynamic_pointer_cast<arrow::StructArray>(read_concat);
 
+    // After read, b0 and b1 are both descriptor-stored; resolve all back to raw bytes
     ASSERT_OK_AND_ASSIGN(auto resolved, ConvertDescriptorToRawBlob(read_struct, {"b0", "b1"}));
     ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(raw_array));
     ASSERT_TRUE(resolved->Equals(expected_with_rk));
