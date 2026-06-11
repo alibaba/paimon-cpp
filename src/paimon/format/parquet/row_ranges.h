@@ -117,9 +117,9 @@ struct TargetRowGroup {
     bool excluded_by_read_range{false};
 
     TargetRowGroup() = default;
-    TargetRowGroup(int32_t rg_index, bool page_filtered, RowRanges ranges)
+    TargetRowGroup(int32_t rg_index, bool is_partially_matched, RowRanges ranges)
         : row_group_index(rg_index),
-          is_partially_matched(page_filtered),
+          is_partially_matched(is_partially_matched),
           row_ranges(std::move(ranges)) {}
 };
 }  // namespace paimon::parquet
