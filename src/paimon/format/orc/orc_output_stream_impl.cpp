@@ -21,6 +21,7 @@
 #include <utility>
 
 #include "fmt/format.h"
+#include "paimon/common/utils/math.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/status.h"
 
@@ -42,17 +43,26 @@ uint64_t OrcOutputStreamImpl::getLength() const {
     if (!pos.ok()) {
         throw std::runtime_error(fmt::format("get length failed, file name {}, error msg {}",
                                              file_name_, pos.status().ToString()));
-    } else {
-        return pos.value();
     }
+    Status status = ValidateValueInRange<uint64_t>(pos.value(), "file position");
+    if (!status.ok()) {
+        throw std::runtime_error(fmt::format("get length failed, file name {}, error msg {}",
+                                             file_name_, status.ToString()));
+    }
+    return static_cast<uint64_t>(pos.value());
 }
 
 void OrcOutputStreamImpl::write(const void* buf, size_t length) {
-    Result<int32_t> write_len = output_stream_->Write(static_cast<const char*>(buf), length);
+    Status status = ValidateValueInRange<int64_t>(length, "write length");
+    if (!status.ok()) {
+        throw std::runtime_error("write failed, status: " + status.ToString());
+    }
+    Result<int64_t> write_len =
+        output_stream_->Write(static_cast<const char*>(buf), static_cast<int64_t>(length));
     if (!write_len.ok()) {
         throw std::runtime_error("write failed, status: " + write_len.status().ToString());
     }
-    if (static_cast<size_t>(write_len.value()) != length) {
+    if (write_len.value() != static_cast<int64_t>(length)) {
         throw std::runtime_error(
             fmt::format("write failed, expected length: {}, actual write length: {}", length,
                         write_len.value()));

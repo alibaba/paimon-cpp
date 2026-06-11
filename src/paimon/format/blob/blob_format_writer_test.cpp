@@ -317,7 +317,7 @@ TEST_P(BlobFormatWriterTest, TestEmptyWriter) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream,
                          file_system_->Open(dir_->Str() + "/file.blob"));
     ASSERT_TRUE(input_stream);
-    ASSERT_OK_AND_ASSIGN(uint64_t file_length, input_stream->Length());
+    ASSERT_OK_AND_ASSIGN(int64_t file_length, input_stream->Length());
     ASSERT_EQ(file_length, 5);  // Should have footer even if no data
     std::vector<char> buffer(file_length);
     ASSERT_OK_AND_ASSIGN(auto read_length, input_stream->Read(buffer.data(), buffer.size()));
@@ -339,7 +339,7 @@ TEST_P(BlobFormatWriterTest, TestLargeBlob) {
     // Write data larger than TMP_BUFFER_SIZE (1MB)
     const size_t large_size = BlobFormatWriter::kTmpBufferSize * 2 + 1000;  // ~2MB
     std::vector<char> large_data(large_size, 'A');
-    ASSERT_OK_AND_ASSIGN(int32_t written, large_file_stream->Write(large_data.data(), large_size));
+    ASSERT_OK_AND_ASSIGN(int64_t written, large_file_stream->Write(large_data.data(), large_size));
     ASSERT_EQ(written, large_size);
     ASSERT_OK(large_file_stream->Flush());
     ASSERT_OK(large_file_stream->Close());
@@ -463,7 +463,7 @@ TEST_P(BlobFormatWriterTest, TestAddBatchWithZeroLengthBlob) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream,
                          file_system_->Open(dir_->Str() + "/file.blob"));
     ASSERT_TRUE(input_stream);
-    ASSERT_OK_AND_ASSIGN(uint64_t file_length, input_stream->Length());
+    ASSERT_OK_AND_ASSIGN(int64_t file_length, input_stream->Length());
     ASSERT_EQ(file_length, 22);
     std::vector<uint8_t> buffer(file_length);
     ASSERT_OK_AND_ASSIGN(auto read_length,

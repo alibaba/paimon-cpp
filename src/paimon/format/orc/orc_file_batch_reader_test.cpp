@@ -154,7 +154,7 @@ class OrcFileBatchReaderTest : public ::testing::Test,
         const std::optional<RoaringBitmap32>& selection_bitmap, int32_t batch_size) const {
         EXPECT_OK_AND_ASSIGN(
             auto orc_batch_reader,
-            OrcFileBatchReader::Create(std::move(in_stream), pool_, options, batch_size))
+            OrcFileBatchReader::Create(std::move(in_stream), pool_, options, batch_size));
         EXPECT_TRUE(orc_batch_reader);
         std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
         auto arrow_status = arrow::ExportSchema(*read_schema, c_schema.get());

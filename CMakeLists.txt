@@ -97,9 +97,9 @@ set(PAIMON_SOURCE_DIR ${PROJECT_SOURCE_DIR})
 set(PAIMON_BINARY_DIR ${PROJECT_BINARY_DIR})
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules")
 set(BUILD_SUPPORT_DIR "${CMAKE_SOURCE_DIR}/build_support")
-set(PAIMON_CMAKE_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
 include(GNUInstallDirs)
+set(PAIMON_CMAKE_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/Paimon")
 include(DefineOptions)
 
 if(PAIMON_OPTIONAL_INSTALL)
@@ -473,11 +473,11 @@ write_basic_package_version_file(
 
 configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/PaimonConfig.cmake.in"
                               "${CMAKE_CURRENT_BINARY_DIR}/PaimonConfig.cmake"
-                              INSTALL_DESTINATION lib/cmake/Paimon)
+                              INSTALL_DESTINATION ${PAIMON_CMAKE_INSTALL_DIR})
 
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/PaimonConfig.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/PaimonConfigVersion.cmake"
-        DESTINATION lib/cmake/Paimon)
+        DESTINATION ${PAIMON_CMAKE_INSTALL_DIR})
 
 config_summary_message()
 
@@ -497,3 +497,7 @@ add_subdirectory(test/inte)
 if(PAIMON_BUILD_BENCHMARKS)
     add_subdirectory(benchmark)
 endif()
+
+install(EXPORT PaimonTargets
+        NAMESPACE Paimon::
+        DESTINATION ${PAIMON_CMAKE_INSTALL_DIR})

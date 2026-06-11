@@ -623,7 +623,7 @@ TEST_F(BitmapIndexTest, TestHighCardinalityForCompatibility) {
         auto file_system = std::make_unique<LocalFileSystem>();
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream,
                              file_system->Open(index_file_name));
-        ASSERT_OK_AND_ASSIGN(uint64_t length, input_stream->Length());
+        ASSERT_OK_AND_ASSIGN(int64_t length, input_stream->Length());
 
         BitmapFileIndex file_index({});
         ASSERT_OK_AND_ASSIGN(auto reader, file_index.CreateReader(CreateArrowSchema(type).get(),

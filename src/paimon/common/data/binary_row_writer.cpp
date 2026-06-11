@@ -140,7 +140,7 @@ Result<BinaryRowWriter::FieldSetterFunc> BinaryRowWriter::CreateFieldSetter(
             };
             return field_setter;
         }
-        case arrow::Type::type::DECIMAL: {
+        case arrow::Type::type::DECIMAL128: {
             auto* decimal_type =
                 arrow::internal::checked_cast<arrow::Decimal128Type*>(field_type.get());
             assert(decimal_type);

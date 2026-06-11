@@ -19,6 +19,7 @@
 #include <limits>
 
 #include "gtest/gtest.h"
+#include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
 
@@ -71,6 +72,15 @@ TEST(MathTest, InRange) {
     ASSERT_FALSE(InRange<int16_t>(std::numeric_limits<int32_t>::max()));
     ASSERT_TRUE(InRange<uint32_t>(std::numeric_limits<uint32_t>::max()));
     ASSERT_FALSE(InRange<uint32_t>(static_cast<int64_t>(std::numeric_limits<uint32_t>::max()) + 1));
+
+    ASSERT_OK(ValidateValueInRange<int32_t>(
+        static_cast<int64_t>(std::numeric_limits<int32_t>::lowest()), "signed value"));
+    ASSERT_NOK_WITH_MSG(ValidateValueInRange<uint32_t>(-1, "negative value"),
+                        "negative value -1 is out of bound of type");
+
+    ASSERT_OK(ValidateValueNonNegative(0, "non-negative value"));
+    ASSERT_NOK_WITH_MSG(ValidateValueNonNegative(-1, "negative value"),
+                        "negative value -1 is less than 0");
 }
 
 }  // namespace paimon::test

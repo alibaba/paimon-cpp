@@ -41,7 +41,7 @@ class LocalBasicFileStatus : public BasicFileStatus {
 
 class LocalFileStatus : public FileStatus {
  public:
-    LocalFileStatus(const std::string& path, uint64_t length, int64_t last_modification_time,
+    LocalFileStatus(const std::string& path, int64_t length, int64_t last_modification_time,
                     bool is_dir)
         : path_(path),
           length_(length),
@@ -52,7 +52,7 @@ class LocalFileStatus : public FileStatus {
         return path_;
     }
 
-    uint64_t GetLen() const override {
+    int64_t GetLen() const override {
         return length_;
     }
 
@@ -66,7 +66,7 @@ class LocalFileStatus : public FileStatus {
 
  private:
     std::string path_;
-    uint64_t length_;
+    int64_t length_;
     int64_t last_modification_time_;
     bool is_dir_;
 };

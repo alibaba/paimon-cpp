@@ -50,8 +50,9 @@
 namespace paimon {
 
 bool SchemaValidation::IsComplexType(const std::shared_ptr<arrow::Field>& field) {
-    return (field->type()->id() == arrow::Type::TIMESTAMP ||
-            field->type()->id() == arrow::Type::DECIMAL || BlobUtils::IsBlobField(field));
+    arrow::Type::type arrow_type_id = field->type()->id();
+    return (arrow_type_id == arrow::Type::TIMESTAMP || arrow_type_id == arrow::Type::DECIMAL128 ||
+            BlobUtils::IsBlobField(field));
 }
 
 Status SchemaValidation::ValidateTableSchema(const TableSchema& schema) {

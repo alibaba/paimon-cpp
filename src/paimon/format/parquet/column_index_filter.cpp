@@ -96,6 +96,11 @@ Result<RowRanges> ColumnIndexFilter::VisitLeafPredicate(
     const auto& literals = leaf_predicate->Literals();
     FieldType field_type = leaf_predicate->GetFieldType();
 
+    if (function_type != Function::Type::IS_NULL && function_type != Function::Type::IS_NOT_NULL &&
+        literals.empty()) {
+        return Status::Invalid(
+            fmt::format("predicate on column '{}' requires at least one literal", field_name));
+    }
     std::vector<int32_t> matching_pages;
 
     switch (function_type) {
@@ -106,37 +111,22 @@ Result<RowRanges> ColumnIndexFilter::VisitLeafPredicate(
             matching_pages = FilterPagesByIsNotNull(column_index_ptr);
             break;
         case Function::Type::EQUAL:
-            if (!literals.empty()) {
-                matching_pages = FilterPagesByEqual(column_index_ptr, literals[0], field_type);
-            }
+            matching_pages = FilterPagesByEqual(column_index_ptr, literals[0], field_type);
             break;
         case Function::Type::NOT_EQUAL:
-            if (!literals.empty()) {
-                matching_pages = FilterPagesByNotEqual(column_index_ptr, literals[0], field_type);
-            }
+            matching_pages = FilterPagesByNotEqual(column_index_ptr, literals[0], field_type);
             break;
         case Function::Type::LESS_THAN:
-            if (!literals.empty()) {
-                matching_pages = FilterPagesByLessThan(column_index_ptr, literals[0], field_type);
-            }
+            matching_pages = FilterPagesByLessThan(column_index_ptr, literals[0], field_type);
             break;
         case Function::Type::LESS_OR_EQUAL:
-            if (!literals.empty()) {
-                matching_pages =
-                    FilterPagesByLessOrEqual(column_index_ptr, literals[0], field_type);
-            }
+            matching_pages = FilterPagesByLessOrEqual(column_index_ptr, literals[0], field_type);
             break;
         case Function::Type::GREATER_THAN:
-            if (!literals.empty()) {
-                matching_pages =
-                    FilterPagesByGreaterThan(column_index_ptr, literals[0], field_type);
-            }
+            matching_pages = FilterPagesByGreaterThan(column_index_ptr, literals[0], field_type);
             break;
         case Function::Type::GREATER_OR_EQUAL:
-            if (!literals.empty()) {
-                matching_pages =
-                    FilterPagesByGreaterOrEqual(column_index_ptr, literals[0], field_type);
-            }
+            matching_pages = FilterPagesByGreaterOrEqual(column_index_ptr, literals[0], field_type);
             break;
         case Function::Type::IN:
             matching_pages = FilterPagesByIn(column_index_ptr, literals, field_type);

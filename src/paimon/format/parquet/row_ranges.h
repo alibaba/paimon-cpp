@@ -43,6 +43,9 @@ class RowRanges {
     /// Creates a RowRanges from a list of ranges.
     explicit RowRanges(const std::vector<Range>& ranges) : ranges_(ranges) {}
 
+    /// Creates a RowRanges from a list of ranges, taking ownership of the vector.
+    explicit RowRanges(std::vector<Range>&& ranges) : ranges_(std::move(ranges)) {}
+
     /// Creates a RowRanges with a single range [0, row_count - 1].
     static RowRanges CreateSingle(int64_t row_count) {
         if (row_count <= 0) {

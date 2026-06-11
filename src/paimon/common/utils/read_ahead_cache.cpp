@@ -27,6 +27,7 @@
 #include <shared_mutex>
 
 #include "paimon/common/utils/byte_range_combiner.h"
+#include "paimon/common/utils/math.h"
 
 namespace paimon {
 
@@ -125,18 +126,13 @@ Status ReadAheadCache::Impl::Init(std::vector<ByteRange>&& ranges) {
     if (is_initialized_) {
         return Status::Invalid("Cache has already been initialized");
     }
-    if (config_.GetRangeSizeLimit() > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
-        return Status::Invalid("CacheConfig range_size_limit exceeds uint32_t max");
-    }
-
     PAIMON_ASSIGN_OR_RAISE(
         std::vector<ByteRange> pending_ranges,
         ByteRangeCombiner::CoalesceByteRanges(std::move(ranges), config_.GetHoleSizeLimit(),
                                               config_.GetRangeSizeLimit()));
     for (const auto& pending_range : pending_ranges) {
-        if (pending_range.length > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
-            return Status::Invalid("range length should not be larger than uint32_t max");
-        }
+        PAIMON_RETURN_NOT_OK(ValidateValueInRange<int64_t>(pending_range.offset, "range offset"));
+        PAIMON_RETURN_NOT_OK(ValidateValueInRange<int64_t>(pending_range.length, "range length"));
     }
     pending_ranges_ = pending_ranges;
     is_cached_ = std::vector<std::atomic<bool>>(pending_ranges_.size());
@@ -227,8 +223,10 @@ std::vector<RangeCacheEntry> ReadAheadCache::Impl::MakeCacheEntries(
         auto promise = std::make_shared<std::promise<Status>>();
         auto future = promise->get_future();
         auto buffer = std::make_shared<Bytes>(range.length, memory_pool_.get());
+        auto read_size = static_cast<int64_t>(buffer->size());
+        auto read_offset = static_cast<int64_t>(range.offset);
         stream_->ReadAsync(
-            buffer->data(), static_cast<uint32_t>(buffer->size()), range.offset,
+            buffer->data(), read_size, read_offset,
             [promise, buffer](Status status) mutable { promise->set_value(status); });
         new_entries.emplace_back(range, std::move(buffer), std::move(future));
     }

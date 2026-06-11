@@ -39,6 +39,8 @@ class BatchReader;
 class BlobViewLookup {
  public:
     using DescriptorMapping = std::unordered_map<BlobViewStruct, std::shared_ptr<Bytes>>;
+    /// The minimum number of rows handled by a single parallel task.
+    static constexpr int64_t MIN_ROW_PER_TASK = 100;
 
     BlobViewLookup() = delete;
     ~BlobViewLookup() = delete;
@@ -46,7 +48,7 @@ class BlobViewLookup {
     static Result<BlobViewResolver> CreateResolver(
         const std::unordered_set<BlobViewStruct>& view_structs,
         const std::shared_ptr<CatalogContext>& catalog_context,
-        const std::shared_ptr<MemoryPool>& pool);
+        const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<Executor>& executor);
 
  private:
     class TableReadPlan {
@@ -54,6 +56,7 @@ class BlobViewLookup {
         explicit TableReadPlan(const BlobViewStruct& view_struct);
 
         void Add(const BlobViewStruct& view_struct);
+        const Identifier& GetIdentifier() const;
         std::vector<int32_t> GetFieldIds() const;
         std::vector<Range> GetSortedDistinctRanges() const;
 
@@ -66,6 +69,11 @@ class BlobViewLookup {
     static Result<DescriptorMapping> PreloadDescriptors(
         const std::unordered_set<BlobViewStruct>& view_structs,
         const std::shared_ptr<CatalogContext>& catalog_context,
+        const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<Executor>& executor);
+
+    static Result<DescriptorMapping> LoadTableDescriptorChunk(
+        const std::shared_ptr<CatalogContext>& catalog_context, const Identifier& identifier,
+        const std::vector<int32_t>& field_ids, const std::vector<Range>& row_ranges,
         const std::shared_ptr<MemoryPool>& pool);
 
     static Status ExtractBlobDescriptors(const Identifier& identifier,
@@ -75,6 +83,16 @@ class BlobViewLookup {
 
     static std::unordered_map<Identifier, TableReadPlan> GroupByIdentifier(
         const std::unordered_set<BlobViewStruct>& view_structs);
+
+    static int64_t TargetRowsPerTask(
+        const std::unordered_map<Identifier, TableReadPlan>& plan_by_identifier,
+        uint32_t thread_num);
+
+    static std::vector<std::vector<Range>> SplitRowRanges(const std::vector<Range>& row_ranges,
+                                                          int64_t target_rows_per_task);
+
+    static Result<std::string> GetTableLocation(
+        const std::shared_ptr<CatalogContext>& catalog_context, const Identifier& identifier);
 };
 
 }  // namespace paimon

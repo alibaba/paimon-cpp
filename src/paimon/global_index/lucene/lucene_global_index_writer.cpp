@@ -205,10 +205,9 @@ Result<std::string> LuceneGlobalIndexWriter::FlushIndexToFinal() {
                                                       static_cast<int64_t>(kDefaultReadBufferSize));
                 input->readBytes(reinterpret_cast<uint8_t*>(buffer->data()), /*offset=*/0,
                                  static_cast<int32_t>(current_write_size));
-                PAIMON_ASSIGN_OR_RAISE(
-                    int32_t actual_write_size,
-                    out->Write(buffer->data(), static_cast<uint32_t>(current_write_size)));
-                if (static_cast<int64_t>(actual_write_size) != current_write_size) {
+                PAIMON_ASSIGN_OR_RAISE(int64_t actual_write_size,
+                                       out->Write(buffer->data(), current_write_size));
+                if (actual_write_size != current_write_size) {
                     return Status::Invalid(
                         fmt::format("invalid write, try to write {} while actual write {}",
                                     current_write_size, actual_write_size));

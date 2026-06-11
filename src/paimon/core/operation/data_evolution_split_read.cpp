@@ -19,6 +19,7 @@
 #include <map>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <unordered_set>
 #include <utility>
 
@@ -170,17 +171,24 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::WrapWithBlobViewRes
     if (read_blob_view_fields.empty()) {
         return std::move(inner_reader);
     }
+    std::optional<std::string> warehouse_path = options_.GetBlobViewUpstreamWarehouse();
+    if (!warehouse_path) {
+        return Status::Invalid(
+            "invalid config for blob view, supposed to set BLOB_VIEW_UPSTREAM_WAREHOUSE");
+    }
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> pre_reader,
                            CreateBlobViewReader(data_split, read_blob_view_fields));
     PAIMON_ASSIGN_OR_RAISE(std::unordered_set<BlobViewStruct> blob_view_structs,
                            ExtractBlobViewStructs(pre_reader.get()));
-    std::string warehouse_path =
-        PathUtil::GetParentDirPath(PathUtil::GetParentDirPath(context_->GetPath()));
-    auto catalog_context = std::make_shared<CatalogContext>(warehouse_path, options_.ToMap(),
-                                                            options_.GetFileSystem());
+    auto catalog_context = std::make_shared<CatalogContext>(
+        warehouse_path.value(), options_.ToMap(), options_.GetFileSystem());
+    // use global thread number
+    uint32_t cpu_count = std::thread::hardware_concurrency();
+    uint32_t thread_num = cpu_count > 0 ? cpu_count : 1;
+    std::shared_ptr<Executor> executor = CreateDefaultExecutor(thread_num);
     PAIMON_ASSIGN_OR_RAISE(
         BlobViewResolver resolver,
-        BlobViewLookup::CreateResolver(blob_view_structs, catalog_context, pool_));
+        BlobViewLookup::CreateResolver(blob_view_structs, catalog_context, pool_, executor));
     return std::make_unique<BlobViewResolvingBatchReader>(
         std::move(inner_reader), std::move(read_blob_view_fields), std::move(resolver), pool_);
 }

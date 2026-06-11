@@ -45,7 +45,7 @@ Result<std::shared_ptr<FileIndexReader>> BloomFilterFileIndex::CreateReader(
 
     PAIMON_RETURN_NOT_OK(input_stream->Seek(start, SeekOrigin::FS_SEEK_SET));
     auto bytes = std::make_shared<Bytes>(length, pool.get());
-    PAIMON_ASSIGN_OR_RAISE(int32_t actual_read_len,
+    PAIMON_ASSIGN_OR_RAISE(int64_t actual_read_len,
                            input_stream->Read(bytes->data(), bytes->size()));
     if (static_cast<size_t>(actual_read_len) != bytes->size()) {
         return Status::Invalid(
