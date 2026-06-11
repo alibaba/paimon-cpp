@@ -17,6 +17,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <set>
 #include <utility>
 
 #include "arrow/api.h"
@@ -78,6 +79,16 @@ FieldMappingReader::FieldMappingReader(int32_t field_count,
             !non_partition_info_.non_partition_data_schema[i].Type()->Equals(
                 non_partition_info_.non_partition_read_schema[i].Type())) {
             need_mapping_ = true;
+        }
+        // Map selected-keys metadata also requires mapping so that
+        // FilterMapArrayBySelectedKeys can filter out unwanted entries.
+        if (!need_mapping_ &&
+            non_partition_info_.non_partition_read_schema[i].Type()->id() == arrow::Type::MAP) {
+            std::set<std::string> selected_keys = NestedProjectionUtils::GetMapSelectedKeys(
+                non_partition_info_.non_partition_read_schema[i].ArrowField());
+            if (!selected_keys.empty()) {
+                need_mapping_ = true;
+            }
         }
     }
 }
@@ -306,7 +317,21 @@ Status FieldMappingReader::MappingFields(const std::shared_ptr<arrow::Array>& da
         // sub-fields than requested, prune the excess here.
         const std::shared_ptr<arrow::DataType>& target_type = read_fields_of_data_array[i].Type();
         if (!field_array->type()->Equals(target_type)) {
-            PAIMON_ASSIGN_OR_RAISE(field_array, PruneArray(field_array, target_type));
+            PAIMON_ASSIGN_OR_RAISE(field_array,
+                                   NestedProjectionUtils::PruneArray(field_array, target_type));
+        }
+
+        // Filter map entries by selected keys if metadata is present.
+        if (field_array->type()->id() == arrow::Type::MAP) {
+            std::set<std::string> selected_keys =
+                NestedProjectionUtils::GetMapSelectedKeys(
+                    read_fields_of_data_array[i].ArrowField());
+            if (!selected_keys.empty()) {
+                PAIMON_ASSIGN_OR_RAISE(
+                    field_array,
+                    NestedProjectionUtils::FilterMapArrayBySelectedKeys(
+                        field_array, selected_keys));
+            }
         }
 
         (*target_array)[idx_in_target_schema[i]] = std::move(field_array);

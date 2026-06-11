@@ -107,7 +107,7 @@ Result<ExistFieldInfo> FieldMappingBuilder::CreateExistFieldInfo(
             // projection. For atomic types this is a no-op.
             PAIMON_ASSIGN_OR_RAISE(
                 std::optional<std::shared_ptr<arrow::DataType>> pruned_type,
-                PruneDataType(read_field.Type(), data_field.Type()));
+                NestedProjectionUtils::PruneDataType(read_field.Type(), data_field.Type()));
             if (!pruned_type.has_value()) {
                 // All sub-fields pruned away — treat as non-existent.
                 continue;

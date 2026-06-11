@@ -475,9 +475,9 @@ void ParquetFileBatchReader::CollectLeafIndices(const std::shared_ptr<arrow::Dat
                                                 std::vector<int32_t>* indices) {
     if (file_type->id() == arrow::Type::STRUCT) {
         for (const auto& file_child : file_type->fields()) {
-            int32_t file_child_id = GetPaimonFieldId(file_child);
+            int32_t file_child_id = NestedProjectionUtils::GetPaimonFieldId(file_child);
             std::shared_ptr<arrow::Field> read_child =
-                FindFieldByPaimonId(read_type, file_child_id);
+                NestedProjectionUtils::FindFieldByPaimonId(read_type, file_child_id);
             if (read_child) {
                 CollectLeafIndices(read_child->type(), file_child->type(), leaf_index, indices);
             } else {
@@ -520,11 +520,11 @@ Result<std::vector<int32_t>> ParquetFileBatchReader::ComputeNestedColumnIndices(
     int32_t leaf_index = 0;
 
     for (const auto& file_field : file_schema->fields()) {
-        int32_t file_field_id = GetPaimonFieldId(file_field);
+        int32_t file_field_id = NestedProjectionUtils::GetPaimonFieldId(file_field);
         // Find matching field in read_schema by paimon field ID.
         std::shared_ptr<arrow::Field> read_field = nullptr;
         for (const auto& candidate : read_schema->fields()) {
-            if (GetPaimonFieldId(candidate) == file_field_id) {
+            if (NestedProjectionUtils::GetPaimonFieldId(candidate) == file_field_id) {
                 read_field = candidate;
                 break;
             }
