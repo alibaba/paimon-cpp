@@ -107,10 +107,8 @@ Result<std::unique_ptr<GlobalIndexScanImpl>> GlobalIndexScanImpl::Create(
             uint32_t cpu_count = std::thread::hardware_concurrency();
             thread_num = cpu_count > 0 ? static_cast<int32_t>(cpu_count) : 1;
         }
-        if (thread_num.value() <= 0) {
-            thread_num = 1;
-        }
-        final_executor = CreateDefaultExecutor(static_cast<uint32_t>(thread_num.value()));
+        PAIMON_ASSIGN_OR_RAISE(final_executor,
+                               CreateDefaultExecutor(static_cast<uint32_t>(thread_num.value())));
     }
     return std::unique_ptr<GlobalIndexScanImpl>(new GlobalIndexScanImpl(
         table_schema, options, path_factory, std::move(index_metas), final_executor, pool));

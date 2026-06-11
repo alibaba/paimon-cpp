@@ -240,7 +240,7 @@ Result<std::unique_ptr<ReadContext>> ReadContextBuilder::Finish() {
     if (!impl_->executor_) {
         // If the user do not set executor, create default executor by prefetch batch count
         uint32_t thread_count = impl_->enable_prefetch_ ? impl_->prefetch_max_parallel_num_ : 1;
-        impl_->executor_ = CreateDefaultExecutor(thread_count);
+        PAIMON_ASSIGN_OR_RAISE(impl_->executor_, CreateDefaultExecutor(thread_count));
     }
 
     if (impl_->enable_multi_thread_row_to_batch_ && impl_->row_to_batch_thread_number_ <= 0) {

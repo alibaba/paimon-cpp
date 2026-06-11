@@ -2563,7 +2563,8 @@ TEST_P(GlobalIndexTest, TestBTreeWithPartitionAndCustomExecutor) {
                          /*options=*/{}, Range(5, 7)));
 
     // Create a GlobalIndexScan with an explicit 8-thread executor
-    std::shared_ptr<Executor> executor = CreateDefaultExecutor(/*thread_count=*/8);
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Executor> executor,
+                         CreateDefaultExecutor(/*thread_count=*/8));
     ASSERT_OK_AND_ASSIGN(
         std::shared_ptr<GlobalIndexScan> global_index_scan,
         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
