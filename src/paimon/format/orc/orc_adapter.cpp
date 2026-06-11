@@ -639,19 +639,26 @@ Result<std::shared_ptr<arrow::ArrayBuilder>> MakeOrcBackedTimestampBuilder(
                                      : nullptr;
     const int64_t* seconds = typed_batch->data.data();
     const int64_t* nanos = typed_batch->nanoseconds.data();
+    const bool has_nulls = typed_batch->hasNulls;
+    const auto* not_null = typed_batch->notNull.data();
+    auto is_null = [has_nulls, not_null](int64_t index) { return has_nulls && !not_null[index]; };
     auto timestamp_type = arrow::internal::checked_pointer_cast<arrow::TimestampType>(type);
     assert(timestamp_type);
     int32_t precision = DateTimeUtils::GetPrecisionFromType(timestamp_type);
     // TODO(lisizhuo.lsz): check nano overflow in arrow
     if (precision == Timestamp::MIN_PRECISION) {
         auto transform_iter = arrow::internal::MakeLazyRange(
-            [seconds](int64_t index) { return seconds[index]; }, typed_batch->numElements);
+            [seconds, is_null](int64_t index) { return is_null(index) ? 0 : seconds[index]; },
+            typed_batch->numElements);
         PAIMON_RETURN_NOT_OK_FROM_ARROW(
             builder->AppendValues(transform_iter.begin(), transform_iter.end(), valid_bytes));
         return builder;
     } else if (precision == Timestamp::MILLIS_PRECISION) {
         auto transform_iter = arrow::internal::MakeLazyRange(
-            [seconds, nanos](int64_t index) {
+            [seconds, nanos, is_null](int64_t index) {
+                if (is_null(index)) {
+                    return int64_t{0};
+                }
                 return seconds[index] *
                            DateTimeUtils::CONVERSION_FACTORS[DateTimeUtils::TimeType::MILLISECOND] +
                        nanos[index] /
@@ -663,7 +670,10 @@ Result<std::shared_ptr<arrow::ArrayBuilder>> MakeOrcBackedTimestampBuilder(
         return builder;
     } else if (precision == Timestamp::DEFAULT_PRECISION) {
         auto transform_iter = arrow::internal::MakeLazyRange(
-            [seconds, nanos](int64_t index) {
+            [seconds, nanos, is_null](int64_t index) {
+                if (is_null(index)) {
+                    return int64_t{0};
+                }
                 return seconds[index] *
                            DateTimeUtils::CONVERSION_FACTORS[DateTimeUtils::TimeType::MICROSECOND] +
                        nanos[index] /
@@ -675,7 +685,10 @@ Result<std::shared_ptr<arrow::ArrayBuilder>> MakeOrcBackedTimestampBuilder(
         return builder;
     } else if (precision == Timestamp::MAX_PRECISION) {
         auto transform_iter = arrow::internal::MakeLazyRange(
-            [seconds, nanos](int64_t index) {
+            [seconds, nanos, is_null](int64_t index) {
+                if (is_null(index)) {
+                    return int64_t{0};
+                }
                 return seconds[index] *
                            DateTimeUtils::CONVERSION_FACTORS[DateTimeUtils::TimeType::NANOSECOND] +
                        nanos[index];

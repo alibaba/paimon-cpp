@@ -65,7 +65,7 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
 Result<std::shared_ptr<SstFileReader>> SstFileReader::CreateForSortLookupStore(
     const std::shared_ptr<InputStream>& in, MemorySlice::SliceComparator comparator,
     const std::shared_ptr<BlockCache>& block_cache, const std::shared_ptr<MemoryPool>& pool) {
-    PAIMON_ASSIGN_OR_RAISE(uint64_t file_len, in->Length());
+    PAIMON_ASSIGN_OR_RAISE(int64_t file_len, in->Length());
     PAIMON_RETURN_NOT_OK(
         in->Seek(file_len - SortLookupStoreFooter::ENCODED_LENGTH, SeekOrigin::FS_SEEK_SET));
     auto footer_bytes = Bytes::AllocateBytes(SortLookupStoreFooter::ENCODED_LENGTH, pool.get());

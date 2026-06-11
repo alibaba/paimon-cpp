@@ -14,3 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+
+# Arrow's ISO8601 string-to-timestamp parser intentionally reaches the int64
+# nanosecond boundary for values such as 1677-09-21 00:12:43.145224192.
+signed-integer-overflow:std::chrono::__duration_cast_impl

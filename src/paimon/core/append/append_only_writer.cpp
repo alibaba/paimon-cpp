@@ -94,22 +94,22 @@ Status AppendOnlyWriter::Write(std::unique_ptr<RecordBatch>&& batch) {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> transformed,
                                external_storage_writer_->TransformBatch(struct_array));
         auto transformed_struct = std::dynamic_pointer_cast<arrow::StructArray>(transformed);
-        // TODO(lc.lsz): validate blob view
-        PAIMON_RETURN_NOT_OK(BlobUtils::ValidateInlineBlobDescriptors(transformed_struct,
-                                                                      inline_descriptor_fields_));
+        PAIMON_RETURN_NOT_OK(BlobUtils::ValidateBlobInlineFields(
+            transformed_struct, inline_descriptor_fields_, "blob-descriptor-field"));
         ::ArrowArray c_transformed;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*transformed, &c_transformed));
         return writer_->Write(&c_transformed);
     }
 
-    if (!inline_descriptor_fields_.empty()) {
+    if (!inline_descriptor_fields_.empty() || !inline_view_fields_.empty()) {
         auto data_type = arrow::struct_(write_schema_->fields());
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> arrow_array,
                                           arrow::ImportArray(batch->GetData(), data_type));
         auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(arrow_array);
-        // TODO(lc.lsz): validate blob view
-        PAIMON_RETURN_NOT_OK(
-            BlobUtils::ValidateInlineBlobDescriptors(struct_array, inline_descriptor_fields_));
+        PAIMON_RETURN_NOT_OK(BlobUtils::ValidateBlobInlineFields(
+            struct_array, inline_descriptor_fields_, "blob-descriptor-field"));
+        PAIMON_RETURN_NOT_OK(BlobUtils::ValidateBlobInlineFields(struct_array, inline_view_fields_,
+                                                                 "blob-view-field"));
         ::ArrowArray c_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*struct_array, &c_array));
         return writer_->Write(&c_array);
@@ -189,9 +189,10 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingRowWrit
     auto blob_context = BlobFileContext::Create(write_schema_, options_);
     std::optional<std::vector<std::string>> main_write_cols = write_cols_;
 
-    // Save inline descriptor fields for validation in Write()
+    // Save inline descriptor and view fields for validation in Write()
     if (blob_context) {
         inline_descriptor_fields_ = blob_context->GetDescriptorFields();
+        inline_view_fields_ = blob_context->GetViewFields();
     }
 
     // Initialize ExternalStorageBlobWriter if needed

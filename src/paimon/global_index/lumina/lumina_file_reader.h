@@ -16,13 +16,12 @@
 
 #pragma once
 
-#include <algorithm>
-#include <limits>
+#include <functional>
 #include <memory>
-#include <utility>
 
 #include "fmt/format.h"
 #include "lumina/io/FileReader.h"
+#include "paimon/common/utils/math.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/global_index/lumina/lumina_utils.h"
 namespace paimon::lumina {
@@ -32,12 +31,16 @@ class LuminaFileReader : public ::lumina::io::FileReader {
     ~LuminaFileReader() override = default;
 
     ::lumina::core::Result<uint64_t> GetLength() const noexcept override {
-        Result<uint64_t> length_result = in_->Length();
+        Result<int64_t> length_result = in_->Length();
         if (!length_result.ok()) {
             return ::lumina::core::Result<uint64_t>::Err(
                 PaimonToLuminaStatus(length_result.status()));
         }
-        return ::lumina::core::Result<uint64_t>::Ok(length_result.value());
+        Status status = ValidateValueInRange<uint64_t>(length_result.value(), "file length");
+        if (!status.ok()) {
+            return ::lumina::core::Result<uint64_t>::Err(PaimonToLuminaStatus(status));
+        }
+        return ::lumina::core::Result<uint64_t>::Ok(static_cast<uint64_t>(length_result.value()));
     }
 
     ::lumina::core::Result<uint64_t> GetPosition() const noexcept override {
@@ -45,29 +48,36 @@ class LuminaFileReader : public ::lumina::io::FileReader {
         if (!pos_result.ok()) {
             return ::lumina::core::Result<uint64_t>::Err(PaimonToLuminaStatus(pos_result.status()));
         }
+        Status status = ValidateValueInRange<uint64_t>(pos_result.value(), "file position");
+        if (!status.ok()) {
+            return ::lumina::core::Result<uint64_t>::Err(PaimonToLuminaStatus(status));
+        }
         return ::lumina::core::Result<uint64_t>::Ok(static_cast<uint64_t>(pos_result.value()));
     }
 
     ::lumina::core::Status Seek(uint64_t position) noexcept override {
-        return PaimonToLuminaStatus(in_->Seek(position, SeekOrigin::FS_SEEK_SET));
+        Status status = ValidateValueInRange<int64_t>(position, "seek position");
+        if (!status.ok()) {
+            return PaimonToLuminaStatus(status);
+        }
+        return PaimonToLuminaStatus(
+            in_->Seek(static_cast<int64_t>(position), SeekOrigin::FS_SEEK_SET));
     }
 
     ::lumina::core::Status Read(char* data, uint64_t size) noexcept override {
-        uint64_t total_read_size = 0;
-        while (total_read_size < size) {
-            uint64_t current_read_size = std::min(size - total_read_size, max_read_size_);
-            Result<int32_t> read_result =
-                in_->Read(data + total_read_size, static_cast<uint32_t>(current_read_size));
-            if (!read_result.ok()) {
-                return PaimonToLuminaStatus(read_result.status());
-            }
-            if (static_cast<uint64_t>(read_result.value()) != current_read_size) {
-                return ::lumina::core::Status(
-                    ::lumina::core::ErrorCode::IoError,
-                    fmt::format("expect read len {} mismatch actual read len {}", current_read_size,
-                                read_result.value()));
-            }
-            total_read_size += current_read_size;
+        Status status = ValidateValueInRange<int64_t>(size, "read size");
+        if (!status.ok()) {
+            return PaimonToLuminaStatus(status);
+        }
+        Result<int64_t> read_result = in_->Read(data, static_cast<int64_t>(size));
+        if (!read_result.ok()) {
+            return PaimonToLuminaStatus(read_result.status());
+        }
+        if (read_result.value() != static_cast<int64_t>(size)) {
+            return ::lumina::core::Status(
+                ::lumina::core::ErrorCode::IoError,
+                fmt::format("expect read len {} mismatch actual read len {}", size,
+                            read_result.value()));
         }
         return ::lumina::core::Status::Ok();
     }
@@ -79,50 +89,20 @@ class LuminaFileReader : public ::lumina::io::FileReader {
             return;
         }
 
-        struct ReadContext {
-            char* current_data;
-            uint64_t remaining;
-            uint64_t current_offset;
-            std::function<void(::lumina::core::Status)> final_call_back;
-            std::shared_ptr<InputStream> in;
-        };
-
-        auto ctx = std::make_shared<ReadContext>(
-            ReadContext{data, size, offset, std::move(call_back), in_});
-
-        // recursive lambda to read next chunk
-        std::function<void()> read_next;
-        read_next = [ctx, max_read_size = max_read_size_, &read_next]() {
-            if (ctx->remaining == 0) {
-                // all done
-                ctx->final_call_back(::lumina::core::Status::Ok());
-                return;
-            }
-
-            // determine this chunk's size
-            uint64_t chunk_size = std::min(ctx->remaining, max_read_size);
-            auto safe_size = static_cast<int32_t>(chunk_size);
-
-            // issue async read for this chunk
-            ctx->in->ReadAsync(ctx->current_data, safe_size, ctx->current_offset,
-                               [ctx, safe_size, read_next](const Status& status) {
-                                   if (!status.ok()) {
-                                       // propagate error immediately
-                                       ctx->final_call_back(PaimonToLuminaStatus(status));
-                                       return;
-                                   }
-                                   // advance pointers and counters
-                                   ctx->current_data += safe_size;
-                                   ctx->current_offset += safe_size;
-                                   ctx->remaining -= safe_size;
-
-                                   // continue with next chunk
-                                   read_next();
-                               });
-        };
-
-        // start the first read
-        read_next();
+        Status status = ValidateValueInRange<int64_t>(size, "read size");
+        if (!status.ok()) {
+            call_back(PaimonToLuminaStatus(status));
+            return;
+        }
+        status = ValidateValueInRange<int64_t>(offset, "read offset");
+        if (!status.ok()) {
+            call_back(PaimonToLuminaStatus(status));
+            return;
+        }
+        in_->ReadAsync(data, static_cast<int64_t>(size), static_cast<int64_t>(offset),
+                       [call_back = std::move(call_back)](const Status& status) {
+                           call_back(PaimonToLuminaStatus(status));
+                       });
     }
 
     ::lumina::core::Status Close() noexcept override {
@@ -130,10 +110,6 @@ class LuminaFileReader : public ::lumina::io::FileReader {
     }
 
  private:
-    static constexpr uint64_t kMaxReadSize = std::numeric_limits<int32_t>::max();
-
- private:
-    uint64_t max_read_size_ = kMaxReadSize;
     std::shared_ptr<InputStream> in_;
 };
 }  // namespace paimon::lumina

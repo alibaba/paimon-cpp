@@ -30,7 +30,7 @@ class InputStream;
 class PAIMON_EXPORT ArrowInputStreamAdapter : public arrow::io::RandomAccessFile {
  public:
     ArrowInputStreamAdapter(const std::shared_ptr<paimon::InputStream>& input_stream,
-                            const std::shared_ptr<arrow::MemoryPool>& pool, uint64_t file_size);
+                            const std::shared_ptr<arrow::MemoryPool>& pool, int64_t file_size);
     ~ArrowInputStreamAdapter() override;
 
     // NOTE: In paimon file system definition, position + nbytes should not exceed file_size_.
@@ -54,7 +54,7 @@ class PAIMON_EXPORT ArrowInputStreamAdapter : public arrow::io::RandomAccessFile
 
     std::shared_ptr<paimon::InputStream> input_stream_;
     std::shared_ptr<arrow::MemoryPool> pool_;
-    uint64_t file_size_;
+    int64_t file_size_;
     bool closed_ = false;
 };
 

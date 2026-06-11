@@ -48,17 +48,6 @@
 #include "parquet/arrow/reader.h"
 #include "parquet/properties.h"
 
-// Convert any std::exception thrown by underlying Parquet/Arrow APIs into a
-// Status. Used as the trailing catch clauses of a try block in every public
-// method that calls into the parquet C++ API, so the read layer never throws.
-#define PAIMON_PARQUET_CATCH_AND_RETURN_STATUS(context)                     \
-    catch (const std::exception& e) {                                       \
-        return Status::Invalid(fmt::format("{}: {}", (context), e.what())); \
-    }                                                                       \
-    catch (...) {                                                           \
-        return Status::UnknownError((context), ": unknown error");          \
-    }
-
 namespace arrow {
 class MemoryPool;
 }  // namespace arrow
@@ -159,18 +148,6 @@ Status ParquetFileBatchReader::SetReadSchema(
             }
         }
 
-        // Build column name to index map for page-level filtering.
-        // For leaf columns, indices[0] is the correct leaf column index in Parquet.
-        // For nested types (struct/list/map), FlattenSchema produces multiple leaf indices,
-        // but predicate pushdown only targets leaf columns with simple types, so indices[0]
-        // is always the correct single leaf index for predicate evaluation.
-        std::map<std::string, int32_t> column_name_to_index;
-        for (const auto& [name, indices] : field_index_map) {
-            if (!indices.empty()) {
-                column_name_to_index[name] = indices[0];
-            }
-        }
-
         std::vector<int32_t> row_groups = arrow::internal::Iota(reader_->GetNumberOfRowGroups());
         if (predicate) {
             PAIMON_ASSIGN_OR_RAISE(row_groups,
@@ -188,6 +165,18 @@ Status ParquetFileBatchReader::SetReadSchema(
                 OptionsUtils::GetValueFromMap<bool>(options_, PARQUET_READ_ENABLE_PAGE_INDEX_FILTER,
                                                     DEFAULT_PARQUET_READ_ENABLE_PAGE_INDEX_FILTER));
             if (enable_page_index_filter) {
+                // Build column name to index map for page-level filtering.
+                // For leaf columns, indices[0] is the correct leaf column index in Parquet.
+                // For nested types (struct/list/map), FlattenSchema produces multiple leaf indices,
+                // but predicate pushdown only targets leaf columns with simple types, so indices[0]
+                // is always the correct single leaf index for predicate evaluation.
+                std::map<std::string, int32_t> column_name_to_index;
+                for (const auto& [name, indices] : field_index_map) {
+                    if (!indices.empty()) {
+                        column_name_to_index[name] = indices[0];
+                    }
+                }
+
                 PAIMON_ASSIGN_OR_RAISE(
                     auto page_filter_result,
                     FilterRowGroupsByPageIndex(predicate, column_name_to_index, row_groups));

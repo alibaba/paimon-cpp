@@ -275,9 +275,9 @@ TEST_F(RemoteLookupFileManagerTest, TryToDownloadLargeFileAcrossMultipleBuffers)
         for (uint64_t i = 0; i < file_size; ++i) {
             write_buffer[i] = static_cast<char>(i % 251);
         }
-        ASSERT_OK_AND_ASSIGN(int32_t bytes_written,
+        ASSERT_OK_AND_ASSIGN(int64_t bytes_written,
                              output_stream->Write(write_buffer.data(), file_size));
-        ASSERT_EQ(static_cast<uint64_t>(bytes_written), file_size);
+        ASSERT_EQ(bytes_written, file_size);
         ASSERT_OK(output_stream->Flush());
         ASSERT_OK(output_stream->Close());
     }
@@ -295,8 +295,8 @@ TEST_F(RemoteLookupFileManagerTest, TryToDownloadLargeFileAcrossMultipleBuffers)
     {
         ASSERT_OK_AND_ASSIGN(auto input_stream, fs_->Open(local_file_path));
         std::vector<char> read_buffer(file_size);
-        ASSERT_OK_AND_ASSIGN(int32_t bytes_read, input_stream->Read(read_buffer.data(), file_size));
-        ASSERT_EQ(static_cast<uint64_t>(bytes_read), file_size);
+        ASSERT_OK_AND_ASSIGN(int64_t bytes_read, input_stream->Read(read_buffer.data(), file_size));
+        ASSERT_EQ(bytes_read, file_size);
         for (uint64_t i = 0; i < file_size; ++i) {
             ASSERT_EQ(read_buffer[i], static_cast<char>(i % 251))
                 << "Data mismatch at byte offset " << i;

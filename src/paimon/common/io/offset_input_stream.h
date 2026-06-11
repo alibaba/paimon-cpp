@@ -32,20 +32,23 @@ class PAIMON_EXPORT OffsetInputStream : public InputStream {
  public:
     static Result<std::unique_ptr<OffsetInputStream>> Create(
         const std::shared_ptr<InputStream>& wrapped, int64_t length, int64_t offset);
+    static Result<std::unique_ptr<OffsetInputStream>> Create(
+        const std::shared_ptr<InputStream>& wrapped, int64_t length, int64_t offset,
+        int64_t total_length);
     ~OffsetInputStream() override = default;
 
     Status Seek(int64_t offset, SeekOrigin origin) override;
 
     Result<int64_t> GetPos() const override;
 
-    Result<int32_t> Read(char* buffer, uint32_t size) override;
+    Result<int64_t> Read(char* buffer, int64_t size) override;
 
-    Result<int32_t> Read(char* buffer, uint32_t size, uint64_t offset) override;
+    Result<int64_t> Read(char* buffer, int64_t size, int64_t offset) override;
 
-    void ReadAsync(char* buffer, uint32_t size, uint64_t offset,
+    void ReadAsync(char* buffer, int64_t size, int64_t offset,
                    std::function<void(Status)>&& callback) override;
 
-    Result<uint64_t> Length() const override;
+    Result<int64_t> Length() const override;
 
     Status Close() override;
 
@@ -53,7 +56,7 @@ class PAIMON_EXPORT OffsetInputStream : public InputStream {
 
  private:
     OffsetInputStream(const std::shared_ptr<InputStream>& wrapped, int64_t length, int64_t offset);
-    Status AssertBoundary(int32_t inner_pos) const;
+    Status AssertBoundary(int64_t inner_pos) const;
 
  private:
     std::shared_ptr<InputStream> wrapped_;

@@ -107,10 +107,14 @@ Decimal Decimal::FromUnscaledBytes(int32_t precision, int32_t scale, Bytes* byte
 
 int32_t Decimal::clz_u128(uint128_t u) {
     uint64_t hi = u >> 64;
+    if (hi != 0) {
+        return __builtin_clzll(hi);
+    }
     uint64_t lo = u;
-    int32_t retval[3] = {__builtin_clzll(hi), __builtin_clzll(lo) + 64, 128};
-    int32_t idx = !hi + ((!lo) & (!hi));
-    return retval[idx];
+    if (lo != 0) {
+        return __builtin_clzll(lo) + 64;
+    }
+    return 128;
 }
 
 int32_t Decimal::count_leading_zero_bytes(uint128_t u) {

@@ -156,7 +156,9 @@ Literal::Literal(FieldType binary_type, const char* str, size_t size, bool own_d
     impl_->own_data_ = own_data;
     if (own_data) {
         impl_->value_.Buffer = new char[size];
-        memcpy(impl_->value_.Buffer, str, size);
+        if (size > 0) {
+            memcpy(impl_->value_.Buffer, str, size);
+        }
         impl_->hash_code_ = impl_->CalculateHashCode();
     } else {
         impl_->value_.Buffer = const_cast<char*>(str);
@@ -219,7 +221,9 @@ Literal& Literal::operator=(const Literal& other) {
          impl_->type_ == FieldType::BLOB) &&
         impl_->own_data_) {
         impl_->value_.Buffer = new char[other.impl_->size_];
-        memcpy(impl_->value_.Buffer, other.impl_->value_.Buffer, other.impl_->size_);
+        if (other.impl_->size_ > 0) {
+            memcpy(impl_->value_.Buffer, other.impl_->value_.Buffer, other.impl_->size_);
+        }
     } else {
         impl_->value_ = other.impl_->value_;
     }

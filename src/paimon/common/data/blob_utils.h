@@ -76,9 +76,9 @@ class PAIMON_EXPORT BlobUtils {
         const std::string& field_name, bool nullable = false,
         std::unordered_map<std::string, std::string> metadata = {});
 
-    static Status ValidateInlineBlobDescriptors(
-        const std::shared_ptr<arrow::StructArray>& struct_array,
-        const std::set<std::string>& inline_descriptor_fields);
+    static Status ValidateBlobInlineFields(const std::shared_ptr<arrow::StructArray>& struct_array,
+                                           const std::set<std::string>& field_names,
+                                           const std::string& config_label);
 
     /// Converts inline blob DataFields from large_binary to binary type.
     /// Inline blob fields use large_binary in the table schema (because they are BLOB type),
