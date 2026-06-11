@@ -795,7 +795,9 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
     row_ranges.Add(RowRanges::Range(0, 99));
 
     auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
-        parquet_reader.get(), /*row_group_index=*/0, row_ranges, /*column_indices=*/{0});
+        parquet_reader.get(),
+        {TargetRowGroup(/*rg_index=*/0, /*page_filtered=*/false, /*ranges=*/row_ranges)},
+        /*column_indices=*/{0});
 
     ASSERT_FALSE(ranges.empty());
 
