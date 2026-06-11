@@ -838,6 +838,39 @@ TEST(SystemTableReadInteTest, TestReadFilesSystemTableForPartitionedTable) {
     ASSERT_EQ(max_value_stats_array->GetString(0), "{dt=20260527, pk=a, v=1}");
 }
 
+TEST(SystemTableReadInteTest, TestReadFilesSystemTableForDatePartition) {
+    arrow::FieldVector fields = {
+        arrow::field("dt", arrow::date32()),
+        arrow::field("v", arrow::int32()),
+    };
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
+                                                  {Options::FILE_FORMAT, "orc"},
+                                                  {Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::BUCKET, "1"}};
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(dir->Str(), schema, /*partition_keys=*/{"dt"},
+                                            /*primary_keys=*/{}, options,
+                                            /*is_streaming_mode=*/true));
+
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<RecordBatch> batch,
+        TestHelper::MakeRecordBatch(arrow::struct_(fields), R"([[10440, 1]])",
+                                    /*partition_map=*/{{"dt", "1998-08-02"}}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    std::string table_path = PathUtil::JoinPath(dir->Str(), "foo.db/bar");
+    ASSERT_OK_AND_ASSIGN(auto files_result, ReadSystemTable(table_path + "$files", options));
+    auto files_array = SingleStructChunk(files_result);
+    ASSERT_EQ(files_array->length(), 1);
+    auto partition_array = std::dynamic_pointer_cast<arrow::StringArray>(files_array->field(0));
+    ASSERT_TRUE(partition_array);
+    ASSERT_EQ(partition_array->GetString(0), "{1998-08-02}");
+}
+
 TEST(SystemTableReadInteTest, TestReadFilesSystemTableWithSchemaEvolutionStats) {
     std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"}};
     std::string table_path = paimon::test::GetDataDir() +

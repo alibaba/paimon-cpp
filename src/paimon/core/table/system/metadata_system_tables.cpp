@@ -39,10 +39,12 @@
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/binary_row_partition_computer.h"
 #include "paimon/common/utils/date_time_utils.h"
+#include "paimon/common/utils/field_type_utils.h"
 #include "paimon/common/utils/internal_row_utils.h"
 #include "paimon/common/utils/object_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/rapidjson_util.h"
+#include "paimon/core/casting/cast_executor_factory.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/manifest/file_entry.h"
@@ -290,8 +292,9 @@ Result<std::optional<std::string>> OptionalPartitionString(
     }
     PAIMON_ASSIGN_OR_RAISE(std::string value,
                            BinaryRowPartitionComputer::PartToSimpleString(
-                               partition_schema, row, ",", kMaxPartitionStatsLength));
-    return std::optional<std::string>(value);
+                               partition_schema, row, ",", kMaxPartitionStatsLength,
+                               /*legacy_partition_name_enabled=*/false));
+    return std::optional<std::string>(fmt::format("{{{}}}", value));
 }
 
 Result<VariantType> OptionalPartitionStringValue(
@@ -311,6 +314,21 @@ Result<std::string> FilePath(const std::shared_ptr<FileStorePathFactory>& path_f
     return PathUtil::JoinPath(bucket_path, file.file_name);
 }
 
+Result<std::string> FieldValueString(const DataField& field, const VariantType& value) {
+    PAIMON_ASSIGN_OR_RAISE(FieldType field_type,
+                           FieldTypeUtils::ConvertToFieldType(field.Type()->id()));
+    std::shared_ptr<CastExecutor> cast_executor =
+        CastExecutorFactory::GetCastExecutorFactory()->GetCastExecutor(field_type,
+                                                                       FieldType::STRING);
+    if (!cast_executor) {
+        return DataDefine::VariantValueToString(value);
+    }
+    PAIMON_ASSIGN_OR_RAISE(Literal literal,
+                           DataDefine::VariantValueToLiteral(value, field.Type()->id()));
+    PAIMON_ASSIGN_OR_RAISE(Literal string_literal, cast_executor->Cast(literal, arrow::utf8()));
+    return string_literal.GetValue<std::string>();
+}
+
 Result<std::vector<std::string>> RowValueStrings(const std::vector<DataField>& fields,
                                                  const InternalRow& row) {
     std::shared_ptr<arrow::Schema> schema = DataField::ConvertDataFieldsToArrowSchema(fields);
@@ -323,7 +341,7 @@ Result<std::vector<std::string>> RowValueStrings(const std::vector<DataField>& f
         std::string value = "null";
         if (!row.IsNullAt(i)) {
             VariantType field_value = getters[i](row);
-            value = DataDefine::VariantValueToString(field_value);
+            PAIMON_ASSIGN_OR_RAISE(value, FieldValueString(fields[i], field_value));
         }
         values.push_back(std::move(value));
     }
@@ -406,14 +424,15 @@ Result<std::vector<DataField>> ProjectWriteFields(const std::shared_ptr<TableSch
     std::vector<DataField> fields;
     fields.reserve(file.write_cols->size() + data_schema->PartitionKeys().size());
     for (const auto& write_col : file.write_cols.value()) {
-        if (write_col == SpecialFields::RowId().Name() ||
-            write_col == SpecialFields::SequenceNumber().Name()) {
+        if (SpecialFields::IsSpecialFieldName(write_col)) {
             continue;
         }
         PAIMON_ASSIGN_OR_RAISE(DataField field, data_schema->GetField(write_col));
         fields.push_back(std::move(field));
     }
 
+    // Partial writes may omit partition columns from write_cols. Keep them in the stats source
+    // fields so SimpleStatsEvolution can map partition stats consistently.
     for (const auto& partition_key : data_schema->PartitionKeys()) {
         if (!ObjectUtils::Contains(file.write_cols.value(), partition_key)) {
             PAIMON_ASSIGN_OR_RAISE(DataField field, data_schema->GetField(partition_key));
@@ -421,6 +440,17 @@ Result<std::vector<DataField>> ProjectWriteFields(const std::shared_ptr<TableSch
         }
     }
     return fields;
+}
+
+Result<std::vector<DataField>> KeyFieldsForFilesTable(
+    const std::shared_ptr<TableSchema>& data_schema) {
+    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> key_fields,
+                           data_schema->TrimmedPrimaryKeyFields());
+    // Java FilesTable falls back to logicalRowType when logicalTrimmedPrimaryKeysType is empty.
+    if (key_fields.empty()) {
+        return data_schema->Fields();
+    }
+    return key_fields;
 }
 
 Result<std::shared_ptr<InternalArray>> WriteColsValue(
@@ -816,9 +846,11 @@ Result<std::vector<GenericRow>> FilesSystemTable::BuildRows() const {
                            CreatePathFactory(context_, core_options, pool));
     PAIMON_ASSIGN_OR_RAISE(std::vector<ManifestEntry> entries,
                            ReadLatestDataFiles(context_, path_factory, core_options, pool));
+    std::shared_ptr<arrow::Schema> arrow_schema =
+        DataField::ConvertDataFieldsToArrowSchema(context_.table_schema->Fields());
     PAIMON_ASSIGN_OR_RAISE(
-        std::vector<DataField> partition_fields,
-        context_.table_schema->GetFields(context_.table_schema->PartitionKeys()));
+        std::shared_ptr<arrow::Schema> partition_schema,
+        FieldMapping::GetPartitionSchema(arrow_schema, context_.table_schema->PartitionKeys()));
     const std::vector<DataField>& value_stats_fields = context_.table_schema->Fields();
 
     std::vector<GenericRow> rows;
@@ -834,10 +866,7 @@ Result<std::vector<GenericRow>> FilesSystemTable::BuildRows() const {
         PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> data_stats_fields,
                                ProjectWriteFields(data_schema, *file));
         PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> key_fields,
-                               data_schema->TrimmedPrimaryKeyFields());
-        if (key_fields.empty()) {
-            key_fields = data_schema->Fields();
-        }
+                               KeyFieldsForFilesTable(data_schema));
         auto stats_evolution = std::make_shared<SimpleStatsEvolution>(
             data_stats_fields, value_stats_fields,
             data_schema->Id() != context_.table_schema->Id() || file->write_cols.has_value(), pool);
@@ -849,9 +878,9 @@ Result<std::vector<GenericRow>> FilesSystemTable::BuildRows() const {
         if (context_.table_schema->PartitionKeys().empty()) {
             row.SetField(0, NullType());
         } else {
-            PAIMON_ASSIGN_OR_RAISE(std::string partition,
-                                   RowValuesString(partition_fields, entry.Partition(), "{", "}"));
-            row.SetField(0, StringValue(partition));
+            PAIMON_ASSIGN_OR_RAISE(VariantType partition, OptionalPartitionStringValue(
+                                                              entry.Partition(), partition_schema));
+            row.SetField(0, partition);
         }
         row.SetField(1, entry.Bucket());
         PAIMON_ASSIGN_OR_RAISE(std::string file_path, FilePath(path_factory, entry, *file));
