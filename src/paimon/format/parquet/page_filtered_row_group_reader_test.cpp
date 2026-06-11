@@ -872,6 +872,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
     auto expected_struct = arrow::StructArray::Make({expected_array}, {field}).ValueOrDie();
     auto partial_concat = arrow::Concatenate(result_partial->chunks()).ValueOrDie();
     ASSERT_TRUE(partial_concat->Equals(expected_struct));
+}
 /// Helper: build a StructArray with a top-level int32 "id" column and a nested struct column
 /// "info" containing two int32 fields: "x" and "y".
 /// id[i] = i, info.x[i] = i * 100, info.y[i] = i * 100 + 1, for i in [0, N).
