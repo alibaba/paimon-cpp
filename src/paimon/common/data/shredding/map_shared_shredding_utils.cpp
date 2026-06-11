@@ -239,14 +239,13 @@ std::string SerializeOverflowSet(const MapSharedShreddingFileMeta& file_meta) {
         });
 }
 
-// Macro for safe JSON integer extraction with error propagation.
-#define PAIMON_JSON_GET_INT(val, context_msg)                                                     \
-    ([&]() -> Result<int32_t> {                                                                   \
-        if (!(val).IsInt()) {                                                                     \
-            return Status::Invalid(fmt::format("malformed shredding metadata: {}", context_msg)); \
-        }                                                                                         \
-        return (val).GetInt();                                                                    \
-    }())
+/// Safe JSON integer extraction with error propagation.
+Result<int32_t> JsonGetInt(const rapidjson::Value& val, const char* context_msg) {
+    if (!val.IsInt()) {
+        return Status::Invalid(fmt::format("malformed shredding metadata: {}", context_msg));
+    }
+    return val.GetInt();
+}
 
 Result<std::map<std::string, int32_t>> DeserializeFieldDict(const std::string& json_str) {
     rapidjson::Document doc;
@@ -256,8 +255,7 @@ Result<std::map<std::string, int32_t>> DeserializeFieldDict(const std::string& j
     }
     std::map<std::string, int32_t> name_to_id;
     for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) {
-        PAIMON_ASSIGN_OR_RAISE(int32_t id,
-                               PAIMON_JSON_GET_INT(it->value, "field_dict value is not int"));
+        PAIMON_ASSIGN_OR_RAISE(int32_t id, JsonGetInt(it->value, "field_dict value is not int"));
         name_to_id[it->name.GetString()] = id;
     }
     return name_to_id;
@@ -283,8 +281,8 @@ Result<std::map<int32_t, std::vector<int32_t>>> DeserializeFieldColumns(
         std::vector<int32_t> cols;
         cols.reserve(array.Size());
         for (rapidjson::SizeType i = 0; i < array.Size(); ++i) {
-            PAIMON_ASSIGN_OR_RAISE(
-                int32_t col, PAIMON_JSON_GET_INT(array[i], "field_columns element is not int"));
+            PAIMON_ASSIGN_OR_RAISE(int32_t col,
+                                   JsonGetInt(array[i], "field_columns element is not int"));
             cols.push_back(col);
         }
         field_to_columns[field_id.value()] = std::move(cols);
@@ -301,7 +299,7 @@ Result<std::set<int32_t>> DeserializeOverflowSet(const std::string& json_str) {
     std::set<int32_t> overflow_set;
     for (rapidjson::SizeType i = 0; i < doc.Size(); ++i) {
         PAIMON_ASSIGN_OR_RAISE(int32_t field_id,
-                               PAIMON_JSON_GET_INT(doc[i], "overflow_set element is not int"));
+                               JsonGetInt(doc[i], "overflow_set element is not int"));
         overflow_set.insert(field_id);
     }
     return overflow_set;
@@ -335,17 +333,8 @@ Status MapSharedShreddingUtils::SerializeMetadata(const MapSharedShreddingFileMe
 
 Result<MapSharedShreddingFileMeta> MapSharedShreddingUtils::DeserializeMetadata(
     const std::shared_ptr<arrow::KeyValueMetadata>& metadata, const std::string& compression) {
-    if (!metadata) {
-        return Status::Invalid("metadata is null");
-    }
-    // Check storage layout
-    auto layout_index = metadata->FindKey(MapShreddingDefine::kStorageLayout);
-    if (layout_index < 0 ||
-        metadata->value(layout_index) != MapShreddingDefine::kStorageLayoutSharedShredding) {
-        return Status::Invalid(
-            fmt::format("expected storage layout '{}', but got '{}'",
-                        MapShreddingDefine::kStorageLayoutSharedShredding,
-                        layout_index < 0 ? "<missing>" : metadata->value(layout_index)));
+    if (!HasShreddingMetadata(metadata)) {
+        return Status::Invalid("metadata is null or storage layout is not shared-shredding");
     }
     PAIMON_ASSIGN_OR_RAISE(int32_t version,
                            GetRequiredInt32(metadata, MapSharedShreddingDefine::kVersion));

@@ -281,22 +281,23 @@ TEST(MapSharedShreddingUtilsTest, MetadataRoundtripEmptyData) {
 // ---- DeserializeMetadata error cases ----
 
 TEST(MapSharedShreddingUtilsTest, DeserializeMetadataErrors) {
+    const std::string layout_error = "metadata is null or storage layout is not shared-shredding";
     // nullptr
     ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::DeserializeMetadata(nullptr, "none"),
-                        "metadata is null");
+                        layout_error);
     // missing storage layout
     {
         auto metadata = std::make_shared<arrow::KeyValueMetadata>();
         metadata->Append("some_key", "some_value");
         ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::DeserializeMetadata(metadata, "none"),
-                            "expected storage layout 'shared-shredding', but got '<missing>'");
+                            layout_error);
     }
     // wrong storage layout
     {
         auto metadata = std::make_shared<arrow::KeyValueMetadata>();
         metadata->Append(MapShreddingDefine::kStorageLayout, "default");
         ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::DeserializeMetadata(metadata, "none"),
-                            "expected storage layout 'shared-shredding', but got 'default'");
+                            layout_error);
     }
     // missing version
     {
