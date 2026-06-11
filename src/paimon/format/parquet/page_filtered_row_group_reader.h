@@ -32,6 +32,10 @@
 #include "parquet/file_reader.h"
 #include "parquet/page_index.h"
 
+namespace parquet::arrow {
+class FileReader;
+}  // namespace parquet::arrow
+
 namespace paimon::parquet {
 
 /// Reads a single row group using page-level filtering.
@@ -45,8 +49,11 @@ class PageFilteredRowGroupReader {
 
     /// Read a row group with page-level filtering.
     /// @param parquet_reader The underlying ParquetFileReader
+    /// @param arrow_file_reader The Arrow FileReader for fallback nested-column reads
     /// @param target_row_group Target row group with index and row ranges
     /// @param column_indices Leaf column indices to read
+    /// @param leaf_to_field_idx Global mapping from parquet leaf column index to arrow field index.
+    ///        -1 for non-nested, >=0 for nested (owning field index in file schema).
     /// @param arrow_schema The target Arrow schema for output columns
     /// @param pool Memory pool
     /// @param cache_options Cache options for PreBuffer
@@ -56,8 +63,10 @@ class PageFilteredRowGroupReader {
     /// @param max_chunksize Per-batch row cap for the returned reader.
     /// @return A RecordBatchReader streaming the filtered rows.
     static Result<std::unique_ptr<arrow::RecordBatchReader>> ReadFilteredRowGroup(
-        ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
+        ::parquet::arrow::FileReader* arrow_file_reader,
+        const TargetRowGroup& target_row_group,
         const std::vector<int32_t>& column_indices,
+        const std::vector<int32_t>& leaf_to_field_idx,
         const std::shared_ptr<arrow::Schema>& arrow_schema,
         const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
         const std::vector<::arrow::io::ReadRange>& page_ranges, int64_t max_chunksize,

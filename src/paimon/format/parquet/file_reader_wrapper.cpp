@@ -19,14 +19,17 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <set>
 
 #include "arrow/io/interfaces.h"
 #include "arrow/record_batch.h"
+#include "arrow/type.h"
 #include "arrow/util/range.h"
 #include "fmt/format.h"
 #include "paimon/format/parquet/column_index_filter.h"
 #include "paimon/format/parquet/page_filtered_row_group_reader.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
+#include "paimon/format/parquet/parquet_schema_util.h"
 #include "paimon/macros.h"
 #include "parquet/arrow/reader.h"
 #include "parquet/file_reader.h"
@@ -99,10 +102,11 @@ Result<std::unique_ptr<FileReaderWrapper>> FileReaderWrapper::Create(
             return Status::Invalid(fmt::format(
                 "unexpected error. row group ranges not match with num rows {}", num_rows));
         }
+        int num_cols = file_reader->parquet_reader()->metadata()->num_columns();
         std::vector<int32_t> columns_indices =
-            arrow::internal::Iota(file_reader->parquet_reader()->metadata()->num_columns());
+            arrow::internal::Iota(num_cols);
         auto file_reader_wrapper = std::unique_ptr<FileReaderWrapper>(new FileReaderWrapper(
-            std::move(file_reader), all_row_group_ranges, num_rows, batch_size, pool));
+            std::move(file_reader), all_row_group_ranges, num_rows, num_cols, batch_size, pool));
         std::vector<TargetRowGroup> all_target_row_groups;
         for (int32_t i = 0; i < file_reader_wrapper->GetNumberOfRowGroups(); i++) {
             all_target_row_groups.emplace_back(/*rg_index=*/i, /*page_filtered=*/false,
@@ -140,13 +144,15 @@ Status FileReaderWrapper::Close() {
 
 FileReaderWrapper::FileReaderWrapper(
     std::unique_ptr<::parquet::arrow::FileReader>&& file_reader,
-    const std::vector<std::pair<uint64_t, uint64_t>>& all_row_group_ranges, uint64_t num_rows,
+    const std::vector<std::pair<uint64_t, uint64_t>>& all_row_group_ranges, uint64_t num_rows,uint32_t num_cols,
     int64_t batch_size, std::shared_ptr<::arrow::MemoryPool> pool)
     : file_reader_(std::move(file_reader)),
       all_row_group_ranges_(all_row_group_ranges),
       pool_(pool),
       batch_size_(batch_size),
-      num_rows_(num_rows) {}
+      num_rows_(num_rows),
+      num_cols_(num_cols),
+      leaf_to_field_idx_(num_cols, -1) {}
 
 void FileReaderWrapper::WaitForPendingPreBuffer() {
     if (!prebuffered_ranges_.empty() && file_reader_) {
@@ -234,7 +240,8 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::NextPageFiltered(
         PAIMON_ASSIGN_OR_RAISE(
             current_page_filtered_reader_,
             PageFilteredRowGroupReader::ReadFilteredRowGroup(
-                file_reader_->parquet_reader(), target_rg, target_column_indices_,
+                file_reader_.get(),
+                target_rg, target_column_indices_, leaf_to_field_idx_,
                 page_filtered_read_schema_, file_reader_->properties().cache_options(),
                 pre_buffered, page_ranges, max_chunksize, pool_));
         current_filtered_row_ranges_ = target_rg.row_ranges;
@@ -344,19 +351,38 @@ Status FileReaderWrapper::BuildPageFilteredSchema(const std::vector<int32_t>& co
     }
     std::shared_ptr<arrow::Schema> schema;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetSchema(&schema));
-    auto parquet_schema = file_reader_->parquet_reader()->metadata()->schema();
+    leaf_to_field_idx_.assign(num_cols_, -1);
+
+    std::set<int32_t> requested_leaves(column_indices.begin(), column_indices.end());
     std::vector<std::shared_ptr<arrow::Field>> fields;
-    for (int32_t col_idx : column_indices) {
-        const std::string& col_name = parquet_schema->Column(col_idx)->name();
-        auto field = schema->GetFieldByName(col_name);
-        if (!field) {
-            return Status::Invalid(fmt::format(
-                "PrepareForReading: Parquet column {} ('{}') has no matching Arrow field in "
-                "file schema",
-                col_idx, col_name));
+    std::set<std::string> seen_field_names;
+
+    int32_t leaf_idx = 0;
+    for (int field_idx = 0; field_idx < schema->num_fields(); ++field_idx) {
+        const auto& field = schema->field(field_idx);
+        std::vector<int32_t> leaf_indices;
+        FlattenSchema(field->type(), &leaf_idx, &leaf_indices);
+        bool is_nested = (field->type()->id() == arrow::Type::STRUCT ||
+                          field->type()->id() == arrow::Type::LIST ||
+                          field->type()->id() == arrow::Type::MAP);
+
+        // Mark nested leaves in the global mapping.
+        if (is_nested) {
+            for (int32_t idx : leaf_indices) {
+                leaf_to_field_idx_[idx] = field_idx;
+            }
         }
-        fields.push_back(field);
+
+        // If any leaf of this field is requested, add to output schema (deduplicated).
+        for (int32_t idx : leaf_indices) {
+            if (requested_leaves.count(idx) &&
+                seen_field_names.insert(field->name()).second) {
+                fields.push_back(field);
+                break;
+            }
+        }
     }
+
     page_filtered_read_schema_ = arrow::schema(fields);
     return Status::OK();
 }
@@ -366,15 +392,40 @@ std::vector<::arrow::io::ReadRange> FileReaderWrapper::CollectPreBufferRanges(
     std::vector<::arrow::io::ReadRange> ranges;
     auto file_metadata = file_reader_->parquet_reader()->metadata();
 
+    // Separate non-nested and nested columns using leaf_to_field_idx_ (globally indexed).
+    std::vector<int32_t> non_nested_column_indices;
+    std::vector<int32_t> nested_column_indices;
+    for (int32_t col_idx : column_indices) {
+        if (col_idx < static_cast<int32_t>(leaf_to_field_idx_.size()) &&
+            leaf_to_field_idx_[col_idx] >= 0) {
+            nested_column_indices.push_back(col_idx);
+        } else {
+            non_nested_column_indices.push_back(col_idx);
+        }
+    }
+
     for (const auto& trg : target_row_groups_) {
         if (trg.excluded_by_read_range) continue;
 
         if (trg.is_partially_matched) {
-            // Page-filtered RGs: only matching page byte ranges.
-            auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
-                file_reader_->parquet_reader(), trg, column_indices);
-            ranges.insert(ranges.end(), std::make_move_iterator(page_ranges.begin()),
-                          std::make_move_iterator(page_ranges.end()));
+            // Non-nested columns: only matching page byte ranges.
+            if (!non_nested_column_indices.empty()) {
+                auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
+                    file_reader_->parquet_reader(), trg, non_nested_column_indices);
+                ranges.insert(ranges.end(), std::make_move_iterator(page_ranges.begin()),
+                              std::make_move_iterator(page_ranges.end()));
+            }
+            // Nested columns: entire column chunk ranges (needed for fallback full-RG read).
+            auto rg_metadata = file_metadata->RowGroup(trg.row_group_index);
+            for (int32_t col_idx : nested_column_indices) {
+                auto col_chunk = rg_metadata->ColumnChunk(col_idx);
+                int64_t offset = col_chunk->data_page_offset();
+                if (col_chunk->has_dictionary_page() && col_chunk->dictionary_page_offset() > 0 &&
+                    offset > col_chunk->dictionary_page_offset()) {
+                    offset = col_chunk->dictionary_page_offset();
+                }
+                ranges.push_back({offset, col_chunk->total_compressed_size()});
+            }
         } else {
             // Fully-matched RGs: entire column chunk ranges.
             auto rg_metadata = file_metadata->RowGroup(trg.row_group_index);

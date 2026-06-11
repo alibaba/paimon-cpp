@@ -138,7 +138,7 @@ class FileReaderWrapper {
  private:
     FileReaderWrapper(std::unique_ptr<::parquet::arrow::FileReader>&& file_reader,
                       const std::vector<std::pair<uint64_t, uint64_t>>& all_row_group_ranges,
-                      uint64_t num_rows, int64_t batch_size,
+                      uint64_t num_rows, uint32_t num_cols, int64_t batch_size,
                       std::shared_ptr<::arrow::MemoryPool> pool);
 
     /// Wait for all pending PreBuffer operations to complete.
@@ -173,6 +173,7 @@ class FileReaderWrapper {
     int64_t batch_size_;  // 0 means no limit
 
     const uint64_t num_rows_;
+    const uint32_t num_cols_;
     uint64_t next_row_to_read_ = std::numeric_limits<uint64_t>::max();
     uint64_t previous_first_row_ = std::numeric_limits<uint64_t>::max();
     uint64_t current_row_group_idx_ = 0;
@@ -193,6 +194,9 @@ class FileReaderWrapper {
     // page-filtered reader. Cached in PrepareForReading because it's identical across
     // all page-filtered RGs in a session.
     std::shared_ptr<arrow::Schema> page_filtered_read_schema_;
+
+    // Mapping from leaf column index to arrow field index in the file schema, -1 if the column is non-nested
+    std::vector<int32_t> leaf_to_field_idx_;
 
     // Track pre-buffered ranges so we can wait on destruction
     std::vector<::arrow::io::ReadRange> prebuffered_ranges_;

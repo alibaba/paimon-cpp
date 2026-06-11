@@ -55,4 +55,9 @@ namespace paimon::parquet {
     const ::parquet::schema::PrimitiveNode& primitive,
     ::arrow::TimeUnit::type int96_arrow_time_unit = ::arrow::TimeUnit::NANO);
 
+
+// Recursively flatten a nested Arrow type into its constituent parquet leaf column indices.
+void FlattenSchema(const std::shared_ptr<arrow::DataType>& type, int32_t* index,
+                   std::vector<int32_t>* index_vector);
+
 }  // namespace paimon::parquet

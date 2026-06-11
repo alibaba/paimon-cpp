@@ -227,4 +227,18 @@ Result<std::shared_ptr<ArrowType>> GetArrowType(
                         primitive.type_length(), int96_arrow_time_unit);
 }
 
+
+// Recursively flatten a nested Arrow type into its constituent parquet leaf column indices.
+void FlattenSchema(const std::shared_ptr<arrow::DataType>& type, int32_t* index,
+                   std::vector<int32_t>* index_vector) {
+    if (type->id() == arrow::Type::STRUCT || type->id() == arrow::Type::LIST ||
+        type->id() == arrow::Type::MAP) {
+        for (int32_t i = 0; i < type->num_fields(); i++) {
+            FlattenSchema(type->field(i)->type(), index, index_vector);
+        }
+    } else {
+        index_vector->push_back((*index)++);
+    }
+}
+
 }  // namespace paimon::parquet

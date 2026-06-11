@@ -43,6 +43,7 @@
 #include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/parquet_timestamp_converter.h"
 #include "paimon/format/parquet/predicate_converter.h"
+#include "paimon/format/parquet/parquet_schema_util.h"
 #include "paimon/reader/batch_reader.h"
 #include "paimon/utils/roaring_bitmap32.h"
 #include "parquet/arrow/reader.h"
