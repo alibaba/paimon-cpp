@@ -207,14 +207,14 @@ Result<std::shared_ptr<FileStorePathFactory>> CreatePathFactory(
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> global_index_external_path,
                            core_options.CreateGlobalIndexExternalPath());
     PAIMON_ASSIGN_OR_RAISE(
-        std::unique_ptr<FileStorePathFactory> path_factory,
+        std::shared_ptr<FileStorePathFactory> path_factory,
         FileStorePathFactory::Create(
             context.table_path, arrow_schema, context.table_schema->PartitionKeys(),
             core_options.GetPartitionDefaultName(), core_options.GetFileFormat()->Identifier(),
             core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
             external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
             pool));
-    return std::shared_ptr<FileStorePathFactory>(std::move(path_factory));
+    return path_factory;
 }
 
 Result<std::optional<Snapshot>> LatestSnapshot(const MetadataSystemTableContext& context) {
