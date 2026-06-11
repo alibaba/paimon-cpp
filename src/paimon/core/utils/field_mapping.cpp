@@ -16,10 +16,8 @@
 
 #include "paimon/core/utils/field_mapping.h"
 
-#include <algorithm>
-#include <cassert>
 #include <cstddef>
-#include <set>
+#include <vector>
 
 #include "arrow/type.h"
 #include "fmt/format.h"

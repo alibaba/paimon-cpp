@@ -138,9 +138,10 @@ std::pair<RowRanges, int64_t> PageFilteredRowGroupReader::ComputeCompressedRowRa
 Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFilteredColumn(
     const std::shared_ptr<::parquet::RowGroupReader>& row_group_reader,
     ::parquet::ParquetFileReader* parquet_reader,
-    const std::shared_ptr<::parquet::PageIndexReader>& page_index_reader, int32_t row_group_index,
-    int32_t column_index, const RowRanges& row_ranges, const std::shared_ptr<arrow::Field>& field,
-    int64_t row_group_row_count, ::arrow::MemoryPool* pool) {
+    const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
+    int32_t row_group_index, int32_t column_index, const RowRanges& row_ranges,
+    const std::shared_ptr<arrow::Field>& field, int64_t row_group_row_count,
+    ::arrow::MemoryPool* pool) {
     auto file_metadata = parquet_reader->metadata();
     const auto* col_descriptor = file_metadata->schema()->Column(column_index);
 
@@ -149,11 +150,8 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
     int64_t effective_row_count = row_group_row_count;
 
     std::shared_ptr<::parquet::OffsetIndex> offset_index;
-    if (page_index_reader) {
-        auto rg_page_index_reader = page_index_reader->RowGroup(row_group_index);
-        if (rg_page_index_reader) {
-            offset_index = rg_page_index_reader->GetOffsetIndex(column_index);
-        }
+    if (rg_page_index_reader) {
+        offset_index = rg_page_index_reader->GetOffsetIndex(column_index);
     }
 
     auto page_reader = row_group_reader->GetColumnPageReader(column_index);
@@ -251,6 +249,8 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
                 // Pre-buffering failed, fall back to row-group level PreBuffer
                 ::arrow::io::IOContext io_ctx(pool);
                 parquet_reader->PreBuffer(rg_vec, col_vec, io_ctx, cache_options);
+                PAIMON_RETURN_NOT_OK_FROM_ARROW(
+                    parquet_reader->WhenBuffered(rg_vec, col_vec).status());
             }
         } else {
             PAIMON_RETURN_NOT_OK_FROM_ARROW(parquet_reader->WhenBuffered(rg_vec, col_vec).status());
@@ -263,6 +263,13 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
     int64_t row_group_row_count = rg_metadata->num_rows();
     auto page_index_reader = parquet_reader->GetPageIndexReader();
 
+    // reuse RowGroupPageIndexReader for multiple columns in the same row group to avoid redundant
+    // metadata reads
+    std::shared_ptr<::parquet::RowGroupPageIndexReader> rg_page_index_reader;
+    if (page_index_reader) {
+        rg_page_index_reader = page_index_reader->RowGroup(row_group_index);
+    }
+
     // Read each column with page filtering
     std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
     columns.reserve(column_indices.size());
@@ -270,8 +277,8 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
     for (size_t i = 0; i < column_indices.size(); ++i) {
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<arrow::ChunkedArray> chunked_array,
-            ReadFilteredColumn(row_group_reader, parquet_reader, page_index_reader, row_group_index,
-                               column_indices[i], row_ranges,
+            ReadFilteredColumn(row_group_reader, parquet_reader, rg_page_index_reader,
+                               row_group_index, column_indices[i], row_ranges,
                                arrow_schema->field(static_cast<int>(i)), row_group_row_count,
                                pool));
 
@@ -311,17 +318,19 @@ std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRange
     for (int32_t col_idx : column_indices) {
         auto col_chunk = rg_metadata->ColumnChunk(col_idx);
         int64_t data_page_offset = col_chunk->data_page_offset();
-        int64_t total_compressed_size = col_chunk->total_compressed_size();
-        int64_t chunk_end = data_page_offset + total_compressed_size;
-
+        int64_t data_page_compressed_size = col_chunk->total_compressed_size();
         // Dictionary page: always include if present
         if (col_chunk->has_dictionary_page()) {
             int64_t dict_offset = col_chunk->dictionary_page_offset();
             int64_t dict_size = data_page_offset - dict_offset;
             if (dict_size > 0) {
+                // if dictionary exists, the data page size should be reduced by the dictionary
+                data_page_compressed_size -= dict_size;
                 ranges.push_back({dict_offset, dict_size});
             }
         }
+
+        int64_t chunk_end = data_page_offset + data_page_compressed_size;
 
         // Try to get OffsetIndex for page-level ranges
         std::shared_ptr<::parquet::OffsetIndex> offset_index;
@@ -331,7 +340,7 @@ std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRange
 
         if (!offset_index) {
             // No OffsetIndex: fall back to entire column chunk
-            ranges.push_back({data_page_offset, total_compressed_size});
+            ranges.push_back({data_page_offset, data_page_compressed_size});
             continue;
         }
 

@@ -16,7 +16,6 @@
 
 #include "paimon/common/sst/sst_file_writer.h"
 
-#include "paimon/common/sst/sst_file_utils.h"
 #include "paimon/common/utils/crc32c.h"
 #include "paimon/common/utils/murmurhash_utils.h"
 

@@ -18,6 +18,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -181,12 +182,13 @@ TEST_F(OrcAdapterTest, TestGetOrcType) {
     auto col21_field = arrow::field("col21", arrow::timestamp(arrow::TimeUnit::MILLI, timezone));
     auto col22_field = arrow::field("col22", arrow::timestamp(arrow::TimeUnit::MICRO, timezone));
     auto col23_field = arrow::field("col23", arrow::timestamp(arrow::TimeUnit::NANO, timezone));
+    auto col24_field = arrow::field("col24", arrow::large_binary());
 
     auto arrow_schema = std::make_shared<arrow::Schema>(arrow::FieldVector(
         {col1_field,  col2_field,  col3_field,  col4_field,  col5_field,  col6_field,
          col7_field,  col8_field,  col9_field,  col10_field, col11_field, col12_field,
          col13_field, col14_field, col15_field, col16_field, col17_field, col18_field,
-         col19_field, col20_field, col21_field, col22_field, col23_field}));
+         col19_field, col20_field, col21_field, col22_field, col23_field, col24_field}));
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<::orc::Type> orc_type,
                          OrcAdapter::GetOrcType(*arrow_schema));
     ASSERT_TRUE(orc_type);
@@ -196,18 +198,13 @@ TEST_F(OrcAdapterTest, TestGetOrcType) {
         "array<bigint>,col14:map<string,bigint>,col15:timestamp,col16:struct<sub1:tinyint,sub2:"
         "smallint,sub3:bigint>,col17:timestamp,col18:timestamp,col19:timestamp,col20:timestamp "
         "with local time zone,col21:timestamp with local time zone,col22:timestamp with local time "
-        "zone,col23:timestamp with local time zone>",
+        "zone,col23:timestamp with local time zone,col24:binary>",
         orc_type->toString());
 }
 
 TEST_F(OrcAdapterTest, TestGetOrcTypeWithInvalidArrowType) {
     {
         auto col1_field = arrow::field("col1", arrow::large_utf8());
-        auto arrow_schema = arrow::schema(arrow::FieldVector({col1_field}));
-        ASSERT_NOK(OrcAdapter::GetOrcType(*arrow_schema));
-    }
-    {
-        auto col1_field = arrow::field("col1", arrow::large_binary());
         auto arrow_schema = arrow::schema(arrow::FieldVector({col1_field}));
         ASSERT_NOK(OrcAdapter::GetOrcType(*arrow_schema));
     }
@@ -565,6 +562,39 @@ TEST_P(OrcAdapterTest, TestAppendBatchWithBinaryForAllNull) {
                                                    target_array, arrow::default_memory_pool()));
     ASSERT_TRUE(converted_array);
     ASSERT_TRUE(converted_array->Equals(src_array)) << converted_array->ToString();
+}
+
+TEST_P(OrcAdapterTest, TestWriteBatchWithLargeBinary) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::large_binary())};
+    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+        ["descriptor-1"],
+        [""],
+        [null],
+        ["descriptor-2"]
+    ])")
+            .ValueOrDie());
+
+    auto [orc_reader_holder, read_batch] = GenerateOrcReadBatch(src_array);
+    auto* struct_batch = dynamic_cast<::orc::StructVectorBatch*>(read_batch.get());
+    ASSERT_TRUE(struct_batch);
+    ASSERT_EQ(1, struct_batch->fields.size());
+
+    auto* large_binary_batch = dynamic_cast<::orc::StringVectorBatch*>(struct_batch->fields[0]);
+    ASSERT_TRUE(large_binary_batch);
+    ASSERT_EQ(4, large_binary_batch->numElements);
+
+    std::vector<std::string> expected_values = {"descriptor-1", "", "descriptor-2"};
+    ASSERT_TRUE(large_binary_batch->notNull[0]);
+    ASSERT_EQ(expected_values[0],
+              std::string(large_binary_batch->data[0], large_binary_batch->length[0]));
+    ASSERT_TRUE(large_binary_batch->notNull[1]);
+    ASSERT_EQ(expected_values[1],
+              std::string(large_binary_batch->data[1], large_binary_batch->length[1]));
+    ASSERT_FALSE(large_binary_batch->notNull[2]);
+    ASSERT_TRUE(large_binary_batch->notNull[3]);
+    ASSERT_EQ(expected_values[2],
+              std::string(large_binary_batch->data[3], large_binary_batch->length[3]));
 }
 
 TEST_P(OrcAdapterTest, TestDecimalAndTimestamp) {

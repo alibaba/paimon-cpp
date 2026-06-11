@@ -45,7 +45,7 @@ Result<std::shared_ptr<FileIndexReader>> BloomFilterFileIndex::CreateReader(
 
     PAIMON_RETURN_NOT_OK(input_stream->Seek(start, SeekOrigin::FS_SEEK_SET));
     auto bytes = std::make_shared<Bytes>(length, pool.get());
-    PAIMON_ASSIGN_OR_RAISE(int32_t actual_read_len,
+    PAIMON_ASSIGN_OR_RAISE(int64_t actual_read_len,
                            input_stream->Read(bytes->data(), bytes->size()));
     if (static_cast<size_t>(actual_read_len) != bytes->size()) {
         return Status::Invalid(
@@ -78,9 +78,15 @@ BloomFilterFileIndexReader::BloomFilterFileIndexReader(const FastHash::HashFunct
 
 Result<std::shared_ptr<FileIndexResult>> BloomFilterFileIndexReader::VisitEqual(
     const Literal& literal) {
+    // This returns `Remain` to align with the current Java implementation in BF index, even though
+    // its predicate semantics are inconsistent here. In practice, equality tests in predicate
+    // evaluation always return false when the literal is null. See
+    // `null_false_leaf_binary_function.h`.
+    if (literal.IsNull()) {
+        return FileIndexResult::Remain();
+    }
     int64_t hash = hash_function_(literal);
-    return literal.IsNull() || filter_.TestHash(hash) ? FileIndexResult::Remain()
-                                                      : FileIndexResult::Skip();
+    return filter_.TestHash(hash) ? FileIndexResult::Remain() : FileIndexResult::Skip();
 }
 
 }  // namespace paimon

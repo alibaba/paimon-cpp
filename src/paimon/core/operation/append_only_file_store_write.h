@@ -115,7 +115,6 @@ class AppendOnlyFileStoreWrite : public AbstractFileStoreWrite {
         const std::vector<std::shared_ptr<DataFileMeta>>& files) const;
 
     std::optional<std::vector<std::string>> write_cols_;
-    bool with_blob_ = false;
     std::unique_ptr<Logger> logger_;
 };
 

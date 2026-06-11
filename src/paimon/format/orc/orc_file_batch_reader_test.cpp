@@ -154,7 +154,7 @@ class OrcFileBatchReaderTest : public ::testing::Test,
         const std::optional<RoaringBitmap32>& selection_bitmap, int32_t batch_size) const {
         EXPECT_OK_AND_ASSIGN(
             auto orc_batch_reader,
-            OrcFileBatchReader::Create(std::move(in_stream), pool_, options, batch_size))
+            OrcFileBatchReader::Create(std::move(in_stream), pool_, options, batch_size));
         EXPECT_TRUE(orc_batch_reader);
         std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
         auto arrow_status = arrow::ExportSchema(*read_schema, c_schema.get());
@@ -193,6 +193,50 @@ class OrcFileBatchReaderTest : public ::testing::Test,
 INSTANTIATE_TEST_SUITE_P(TestParam, OrcFileBatchReaderTest,
                          ::testing::Values(TestParam{128 * 1024, false}, TestParam{16, false},
                                            TestParam{16, true}));
+
+TEST_F(OrcFileBatchReaderTest, TestReadBinaryWrittenFromBinaryAndLargeBinary) {
+    auto dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto file_system = dir->GetFileSystem();
+
+    auto check_binary_read_result = [&](const std::shared_ptr<arrow::DataType>& write_type,
+                                        const std::string& file_name) {
+        std::string data_json = R"([
+        ["descriptor-1"],
+        [""],
+        [null],
+        ["descriptor-2"]
+    ])";
+        auto write_field = arrow::field("f0", write_type);
+        auto write_schema = arrow::schema({write_field});
+        auto write_array = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({write_field}), data_json)
+                .ValueOrDie());
+
+        std::string file_path = dir->Str() + "/" + file_name;
+        WriteArray(file_system, file_path, write_array, write_schema, /*options=*/{});
+
+        auto read_field = arrow::field("f0", arrow::binary());
+        arrow::Schema read_schema({read_field});
+        auto orc_batch_reader = PrepareOrcFileBatchReader(file_path, &read_schema, batch_size_,
+                                                          DEFAULT_NATURAL_READ_SIZE);
+
+        ASSERT_OK_AND_ASSIGN(auto c_file_schema, orc_batch_reader->GetFileSchema());
+        auto file_schema = arrow::ImportSchema(c_file_schema.get()).ValueOrDie();
+        ASSERT_TRUE(file_schema->Equals(read_schema));
+
+        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({read_field}), data_json)
+                .ValueOrDie());
+        auto expected_chunked_array = std::make_shared<arrow::ChunkedArray>(expected_array);
+        ASSERT_OK_AND_ASSIGN(auto result_array, paimon::test::ReadResultCollector::CollectResult(
+                                                    orc_batch_reader.get()));
+        ASSERT_TRUE(result_array->Equals(expected_chunked_array));
+    };
+
+    check_binary_read_result(arrow::binary(), "binary.orc");
+    check_binary_read_result(arrow::large_binary(), "large-binary.orc");
+}
 
 TEST_F(OrcFileBatchReaderTest, TestSetReadSchema) {
     std::string file_name = paimon::test::GetDataDir() +

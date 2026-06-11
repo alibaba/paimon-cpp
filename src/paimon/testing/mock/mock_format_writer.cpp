@@ -38,8 +38,8 @@ MockFormatWriter::MockFormatWriter(const std::shared_ptr<OutputStream>& out,
 Status MockFormatWriter::AddBatch(ArrowArray* batch) {
     ArrowArrayRelease(batch);
     std::string str = std::to_string(DateTimeUtils::GetCurrentUTCTimeUs()) + "\n";
-    PAIMON_ASSIGN_OR_RAISE(int32_t res, out_->Write(str.data(), str.size()));
-    if (res != static_cast<int32_t>(str.size())) {
+    PAIMON_ASSIGN_OR_RAISE(int64_t res, out_->Write(str.data(), str.size()));
+    if (res != static_cast<int64_t>(str.size())) {
         return Status::IOError("write size does not match");
     }
     counter_++;

@@ -406,6 +406,8 @@ TEST_F(StringUtilsTest, TestStringToDate) {
     ASSERT_NOK(StringUtils::StringToDate("-1970-01-02"));
     ASSERT_NOK(StringUtils::StringToDate(""));
     ASSERT_NOK(StringUtils::StringToDate("1970-XX-02"));
+    ASSERT_NOK(StringUtils::StringToDate("2023-02-29"));
+    ASSERT_NOK(StringUtils::StringToDate("2024-00-01"));
 }
 
 TEST_F(StringUtilsTest, TestStringToTimestampMillis) {
@@ -453,6 +455,8 @@ TEST_F(StringUtilsTest, TestStringToTimestampMillis) {
     ASSERT_NOK(StringUtils::StringToTimestampMillis("2023-06-01 00:00:00.12 "));
     // Trailing dot with no digits
     ASSERT_NOK(StringUtils::StringToTimestampMillis("2023-06-01 00:00:00."));
+    ASSERT_NOK(StringUtils::StringToTimestampMillis("2023-02-29 12:00:00"));
+    ASSERT_NOK(StringUtils::StringToTimestampMillis("2024-00-15 00:00:00"));
 }
 
 TEST_F(StringUtilsTest, TestVectorToString) {

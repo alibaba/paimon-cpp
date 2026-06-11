@@ -143,43 +143,6 @@ TEST(OffsetInputStreamTest, TestBoundaryValidation) {
                         "assert boundary failed: inner pos 9 exceed length 6");
 }
 
-TEST(OffsetInputStreamTest, TestReadWithUnspecifiedLength) {
-    auto inner_stream = std::make_unique<ByteArrayInputStream>("abcdefghij", /*length=*/10);
-    // Use -1 for length to test dynamic length calculation
-    ASSERT_OK_AND_ASSIGN(
-        auto offset_stream,
-        OffsetInputStream::Create(std::move(inner_stream), /*length=*/-1, /*offset=*/2));
-
-    // Test that length is calculated correctly
-    ASSERT_OK_AND_ASSIGN(auto length, offset_stream->Length());
-    // Should be total length (10) minus offset (2) = 8
-    ASSERT_EQ(8, length);
-
-    // Test sequential read within the calculated bounds
-    std::string buffer(4, '\0');
-    ASSERT_OK_AND_ASSIGN(auto bytes_read, offset_stream->Read(buffer.data(), /*size=*/4));
-    ASSERT_EQ(4, bytes_read);
-    ASSERT_EQ("cdef", buffer);
-
-    ASSERT_OK_AND_ASSIGN(auto pos, offset_stream->GetPos());
-    ASSERT_EQ(4, pos);
-
-    // Test read with offset within the calculated bounds
-    std::string buffer2(3, '\0');
-    ASSERT_OK_AND_ASSIGN(bytes_read, offset_stream->Read(buffer2.data(), /*size=*/3, /*offset=*/5));
-    ASSERT_EQ(3, bytes_read);
-    ASSERT_EQ("hij", buffer2);
-
-    // Position should not change after offset read
-    ASSERT_OK_AND_ASSIGN(pos, offset_stream->GetPos());
-    ASSERT_EQ(4, pos);
-
-    // Test boundary validation with dynamic length
-    std::string buffer3(10, '\0');
-    ASSERT_NOK_WITH_MSG(offset_stream->Read(buffer3.data(), /*size=*/10),
-                        "assert boundary failed: inner pos 14 exceed length 8");
-}
-
 TEST(OffsetInputStreamTest, TestInvalidParameters) {
     // Test null wrapped stream
     ASSERT_NOK_WITH_MSG(OffsetInputStream::Create(nullptr, /*length=*/6, /*offset=*/2),
@@ -191,11 +154,11 @@ TEST(OffsetInputStreamTest, TestInvalidParameters) {
         OffsetInputStream::Create(std::move(inner_stream), /*length=*/6, /*offset=*/-1),
         "offset -1 is less than 0");
 
-    // Test length less than -1
+    // Test negative length
     inner_stream = std::make_unique<ByteArrayInputStream>("abcdefghij", /*length=*/10);
     ASSERT_NOK_WITH_MSG(
         OffsetInputStream::Create(std::move(inner_stream), /*length=*/-2, /*offset=*/2),
-        "length -2 is less than -1");
+        "length -2 is less than 0");
 
     // Test length + offset beyond wrapped stream length
     inner_stream = std::make_unique<ByteArrayInputStream>("abcdefghij", /*length=*/10);
@@ -203,10 +166,10 @@ TEST(OffsetInputStreamTest, TestInvalidParameters) {
         OffsetInputStream::Create(std::move(inner_stream), /*length=*/8, /*offset=*/7),
         "offset 7 + length 8 exceed total length 10");
 
-    // Test dynamic length with offset beyond wrapped stream length
+    // Test offset beyond wrapped stream length
     inner_stream = std::make_unique<ByteArrayInputStream>("abcdefghij", /*length=*/10);
     ASSERT_NOK_WITH_MSG(
-        OffsetInputStream::Create(std::move(inner_stream), /*length=*/-1, /*offset=*/15),
+        OffsetInputStream::Create(std::move(inner_stream), /*length=*/1, /*offset=*/15),
         "offset 15 exceed total length 10");
 }
 

@@ -90,7 +90,7 @@ class PageFilteredRowGroupReader {
     static Result<std::shared_ptr<arrow::ChunkedArray>> ReadFilteredColumn(
         const std::shared_ptr<::parquet::RowGroupReader>& row_group_reader,
         ::parquet::ParquetFileReader* parquet_reader,
-        const std::shared_ptr<::parquet::PageIndexReader>& page_index_reader,
+        const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
         int32_t row_group_index, int32_t column_index, const RowRanges& row_ranges,
         const std::shared_ptr<arrow::Field>& field, int64_t row_group_row_count,
         ::arrow::MemoryPool* pool);

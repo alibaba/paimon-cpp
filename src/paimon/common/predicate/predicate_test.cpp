@@ -1519,6 +1519,125 @@ TEST_F(PredicateTest, TestLikeLongPatternHeapAlloc) {
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({non_matching_field})).value());
 }
 
+TEST_F(PredicateTest, TestLikeInvalidEscapeSequence) {
+    auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", arrow::utf8())}));
+
+    // Trailing backslash is invalid (Java throws "Invalid escape sequence")
+    ASSERT_OK_AND_ASSIGN(auto predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "abc\\", 4)));
+    auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_NOK_WITH_MSG(predicate->Test(arrow_schema, CreateStringRow({"abc"})),
+                        "Invalid escape sequence");
+
+    // Backslash followed by non-special char is invalid (only \_, \%, \\ are legal)
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "a\\bc", 4)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_NOK_WITH_MSG(predicate->Test(arrow_schema, CreateStringRow({"abc"})),
+                        "Invalid escape sequence");
+
+    // \n is not a valid escape
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "a\\nf", 4)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_NOK_WITH_MSG(predicate->Test(arrow_schema, CreateStringRow({"anf"})),
+                        "Invalid escape sequence");
+}
+
+TEST_F(PredicateTest, TestLikeEscapeBackslash) {
+    auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", arrow::utf8())}));
+
+    // \\\\ in C++ string literal = "\\" in the pattern = escaped backslash
+    ASSERT_OK_AND_ASSIGN(auto predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "a\\\\b", 4)));
+    auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    // Field "a\b" should match pattern "a\\b" (escaped backslash)
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"a\\b"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"axb"})).value());
+
+    // Escaped percent: "a\%b" matches literal "a%b"
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "a\\%b", 4)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"a%b"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"axb"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"axxb"})).value());
+}
+
+TEST_F(PredicateTest, TestLikeUtf8MultibyteUnderscore) {
+    auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", arrow::utf8())}));
+
+    // Single '_' should match one Unicode character, not one byte.
+    ASSERT_OK_AND_ASSIGN(auto predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "_", 1)));
+    auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"中"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"中文"})).value());
+
+    // "a_c" where _ matches one Chinese character
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "a_c", 3)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"a中c"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"a中文c"})).value());
+
+    // "___" should match exactly 3 Unicode characters
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "___", 3)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"中文字"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"中文"})).value());
+
+    // '%' should still work with multi-byte characters
+    std::string pattern_contains = std::string("%") + "中" + "%";
+    ASSERT_OK_AND_ASSIGN(
+        predicate_base,
+        PredicateBuilder::Like(
+            /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+            Literal(FieldType::STRING, pattern_contains.data(), pattern_contains.size())));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"hello中world"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"helloworld"})).value());
+}
+
+TEST_F(PredicateTest, TestLikeJavaRegexLineTerminatorSemantics) {
+    auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", arrow::utf8())}));
+
+    // Java regex '.' does not match line terminators, so '_' should not match them either.
+    ASSERT_OK_AND_ASSIGN(auto predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "_", 1)));
+    auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"\n"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"\r"})).value());
+
+    // Java LIKE '%' uses (?s:.*), so it should still match line terminators.
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "%", 1)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"\n"})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"\r"})).value());
+}
+
 TEST_F(PredicateTest, TestCompound) {
     ASSERT_OK_AND_ASSIGN(
         const auto startswith_predicate,

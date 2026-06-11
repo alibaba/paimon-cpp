@@ -16,9 +16,7 @@
 
 #pragma once
 
-#include <algorithm>
 #include <cassert>
-#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -60,19 +58,10 @@ class FileIndexWriterWrapper : public GlobalIndexWriter {
                                file_manager_->NewOutputStream(file_name));
         PAIMON_ASSIGN_OR_RAISE(PAIMON_UNIQUE_PTR<Bytes> bytes, writer_->SerializedBytes());
 
-        uint64_t total_write_size = 0;
-        while (total_write_size < bytes->size()) {
-            uint64_t current_write_size =
-                std::min(bytes->size() - total_write_size, max_write_size_);
-            PAIMON_ASSIGN_OR_RAISE(int32_t actual_size,
-                                   out->Write(bytes->data() + total_write_size,
-                                              static_cast<uint32_t>(current_write_size)));
-            if (static_cast<uint64_t>(actual_size) != current_write_size) {
-                return Status::IOError(
-                    fmt::format("expect write len {} mismatch actual write len {}",
-                                current_write_size, actual_size));
-            }
-            total_write_size += current_write_size;
+        PAIMON_ASSIGN_OR_RAISE(int64_t actual_size, out->Write(bytes->data(), bytes->size()));
+        if (actual_size < 0 || static_cast<size_t>(actual_size) != bytes->size()) {
+            return Status::IOError(fmt::format("expect write len {} mismatch actual write len {}",
+                                               bytes->size(), actual_size));
         }
         PAIMON_RETURN_NOT_OK(out->Flush());
         PAIMON_RETURN_NOT_OK(out->Close());
@@ -82,11 +71,8 @@ class FileIndexWriterWrapper : public GlobalIndexWriter {
     }
 
  private:
-    static constexpr uint64_t kMaxWriteSize = std::numeric_limits<int32_t>::max();
-
     std::string index_type_;
     int64_t count_ = 0;
-    uint64_t max_write_size_ = kMaxWriteSize;
     std::shared_ptr<GlobalIndexFileWriter> file_manager_;
     std::shared_ptr<FileIndexWriter> writer_;
 };

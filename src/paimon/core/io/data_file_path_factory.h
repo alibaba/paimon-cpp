@@ -62,6 +62,12 @@ class DataFilePathFactory : public PathFactory {
         return NewPathFromName(NewFileName(data_file_prefix_, ".blob"));
     }
 
+    /// Creates a new blob file path under the given external storage path for descriptor fields.
+    std::string NewExternalStorageBlobPath(const std::string& external_storage_path) const {
+        std::string file_name = NewFileName(data_file_prefix_, ".blob");
+        return PathUtil::JoinPath(external_storage_path, file_name);
+    }
+
     std::string NewPathFromName(const std::string& file_name) const {
         if (external_path_provider_ != nullptr) {
             return external_path_provider_->GetNextExternalDataPath(file_name);

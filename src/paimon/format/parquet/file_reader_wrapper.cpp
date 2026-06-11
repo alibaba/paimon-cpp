@@ -26,22 +26,12 @@
 #include "fmt/format.h"
 #include "paimon/format/parquet/column_index_filter.h"
 #include "paimon/format/parquet/page_filtered_row_group_reader.h"
+#include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/macros.h"
 #include "parquet/arrow/reader.h"
 #include "parquet/file_reader.h"
 #include "parquet/metadata.h"
 #include "parquet/page_index.h"
-
-// Convert any std::exception thrown by underlying Parquet/Arrow APIs into a
-// Status. Used as the trailing catch clauses of a try block in every public
-// method that calls into the parquet C++ API, so the read layer never throws.
-#define PAIMON_PARQUET_CATCH_AND_RETURN_STATUS(context)                     \
-    catch (const std::exception& e) {                                       \
-        return Status::Invalid(fmt::format("{}: {}", (context), e.what())); \
-    }                                                                       \
-    catch (...) {                                                           \
-        return Status::UnknownError((context), ": unknown error");          \
-    }
 
 namespace paimon::parquet {
 

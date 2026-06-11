@@ -71,7 +71,7 @@ Result<FieldSumAgg::FieldSumFunc> FieldSumAgg::CreateSumFunc(
                                  DataDefine::GetVariantValue<double>(input_field);
                     return sum;
                 });
-        case arrow::Type::type::DECIMAL: {
+        case arrow::Type::type::DECIMAL128: {
             return FieldSumFunc(
                 [](const VariantType& accumulator, const VariantType& input_field) -> VariantType {
                     auto v1 = DataDefine::GetVariantValue<Decimal>(accumulator);
@@ -120,7 +120,7 @@ Result<FieldSumAgg::FieldNegFunc> FieldSumAgg::CreateNegFunc(
                 auto value = DataDefine::GetVariantValue<double>(input_field);
                 return (-value);
             });
-        case arrow::Type::type::DECIMAL: {
+        case arrow::Type::type::DECIMAL128: {
             return FieldNegFunc([](const VariantType& input_field) -> VariantType {
                 auto value = DataDefine::GetVariantValue<Decimal>(input_field);
                 return Decimal(value.Precision(), value.Scale(), -value.Value());

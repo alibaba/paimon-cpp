@@ -32,14 +32,14 @@ class DefaultExecutor : public Executor {
     ~DefaultExecutor() override;
 
     void Add(std::function<void()> func) override;
-
     void ShutdownNow() override;
+    uint32_t GetThreadNum() const override;
 
  private:
     void WorkerThread();
-
     void ShutdownInternal(bool wait_for_pending_tasks);
 
+ private:
     uint32_t thread_count_;
     std::vector<std::thread> workers_;
     std::queue<std::function<void()>> tasks_;
@@ -53,6 +53,10 @@ DefaultExecutor::DefaultExecutor(uint32_t thread_count) : thread_count_(thread_c
     for (uint32_t i = 0; i < thread_count_; ++i) {
         workers_.emplace_back(&DefaultExecutor::WorkerThread, this);
     }
+}
+
+uint32_t DefaultExecutor::GetThreadNum() const {
+    return thread_count_;
 }
 
 void DefaultExecutor::ShutdownInternal(bool wait_for_pending_tasks) {

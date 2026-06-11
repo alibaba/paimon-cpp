@@ -44,8 +44,12 @@ class AppendOnlyTableRead : public TableRead {
     Result<std::unique_ptr<BatchReader>> CreateReader(
         const std::shared_ptr<Split>& data_split) override;
 
+    Result<std::unique_ptr<CountReader>> CreateCountReader(
+        const std::vector<std::shared_ptr<Split>>& splits) override;
+
  private:
     std::vector<std::unique_ptr<SplitRead>> split_reads_;
+    std::shared_ptr<InternalReadContext> context_;
 };
 
 }  // namespace paimon

@@ -51,7 +51,7 @@ Result<std::shared_ptr<DataFileMeta>> RemoteLookupFileManager::GenRemoteLookupFi
     // Get the file size from the local file system
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStatus> local_file_status,
                            file_system_->GetFileStatus(local_file_path));
-    auto length = static_cast<int64_t>(local_file_status->GetLen());
+    int64_t length = local_file_status->GetLen();
 
     std::string remote_sst_name = lookup_levels->NewRemoteSst(file, length);
     std::string remote_sst_path = RemoteSstPath(file, remote_sst_name);
@@ -104,24 +104,25 @@ Status RemoteLookupFileManager::CopyFromInputToOutput(
     std::unique_ptr<InputStream>&& input_stream,
     std::unique_ptr<OutputStream>&& output_stream) const {
     auto buffer = std::make_shared<Bytes>(kBufferSize, pool_.get());
-    PAIMON_ASSIGN_OR_RAISE(uint64_t total_length, input_stream->Length());
-    uint64_t write_size = 0;
+    PAIMON_ASSIGN_OR_RAISE(int64_t total_length, input_stream->Length());
+    PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(total_length, "input stream length"));
+    int64_t write_size = 0;
     while (write_size < total_length) {
-        uint64_t current_read_size = std::min(total_length - write_size, kBufferSize);
-        PAIMON_ASSIGN_OR_RAISE(int32_t bytes_read,
+        int64_t current_read_size =
+            std::min(total_length - write_size, static_cast<int64_t>(kBufferSize));
+        PAIMON_ASSIGN_OR_RAISE(int64_t bytes_read,
                                input_stream->Read(buffer->data(), current_read_size));
-        if (static_cast<uint64_t>(bytes_read) != current_read_size) {
-            return Status::Invalid(
-                fmt::format("CopyFromInputToOutput failed: expected read {} bytes, while "
-                            "actual read {} bytes",
-                            current_read_size, bytes_read));
+        if (bytes_read != current_read_size) {
+            return Status::Invalid(fmt::format(
+                "CopyFromInputToOutput failed: expected read {} bytes, while actual read {} bytes",
+                current_read_size, bytes_read));
         }
-        PAIMON_ASSIGN_OR_RAISE(int32_t bytes_written,
+        PAIMON_ASSIGN_OR_RAISE(int64_t bytes_written,
                                output_stream->Write(buffer->data(), bytes_read));
         if (bytes_written != bytes_read) {
             return Status::Invalid(
-                fmt::format("CopyFromInputToOutput failed: expected write {} bytes, while "
-                            "actual write {} bytes",
+                fmt::format("CopyFromInputToOutput failed: expected write {} bytes, while actual "
+                            "write {} bytes",
                             bytes_read, bytes_written));
         }
         write_size += current_read_size;

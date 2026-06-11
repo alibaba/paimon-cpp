@@ -92,6 +92,7 @@ Result<std::unique_ptr<ColumnStats>> AvroStatsExtractor::FetchColumnStatistics(
         case arrow::Type::type::DOUBLE:
             return ColumnStats::CreateDoubleColumnStats(std::nullopt, std::nullopt, std::nullopt);
         case arrow::Type::type::BINARY:
+        case arrow::Type::type::LARGE_BINARY:
             return ColumnStats::CreateStringColumnStats(std::nullopt, std::nullopt, std::nullopt);
         case arrow::Type::type::STRING:
             return ColumnStats::CreateStringColumnStats(std::nullopt, std::nullopt, std::nullopt);

@@ -46,22 +46,6 @@ class BlobFileContext {
     static std::unique_ptr<BlobFileContext> Create(const std::shared_ptr<arrow::Schema>& schema,
                                                    const CoreOptions& options);
 
-    /// Returns true if the given field should be stored inline in the main data file
-    /// (either as descriptor bytes or view bytes).
-    bool IsInlineField(const std::string& field_name) const;
-
-    /// Returns true if the given field should be written to a separate .blob file.
-    bool IsBlobFileField(const std::string& field_name) const;
-
-    /// Returns true if the given field is a descriptor field.
-    bool IsDescriptorField(const std::string& field_name) const;
-
-    /// Returns true if the given field is a view field.
-    bool IsViewField(const std::string& field_name) const;
-
-    /// Returns true if the given field should be written to external storage.
-    bool IsExternalStorageField(const std::string& field_name) const;
-
     /// Returns true if there are any BLOB fields that need a .blob file writer.
     bool RequireBlobFileWriter() const;
 

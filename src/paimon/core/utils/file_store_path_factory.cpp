@@ -52,7 +52,7 @@ FileStorePathFactory::FileStorePathFactory(
       global_index_external_path_(global_index_external_path),
       index_file_in_data_file_dir_(index_file_in_data_file_dir) {}
 
-Result<std::unique_ptr<FileStorePathFactory>> FileStorePathFactory::Create(
+Result<std::shared_ptr<FileStorePathFactory>> FileStorePathFactory::Create(
     const std::string& root, const std::shared_ptr<arrow::Schema>& schema,
     const std::vector<std::string>& partition_keys, const std::string& default_part_value,
     const std::string& identifier, const std::string& data_file_prefix,
@@ -70,7 +70,7 @@ Result<std::unique_ptr<FileStorePathFactory>> FileStorePathFactory::Create(
         std::unique_ptr<BinaryRowPartitionComputer> partition_computer,
         BinaryRowPartitionComputer::Create(partition_keys, schema, default_part_value,
                                            legacy_partition_name_enabled, memory_pool));
-    return std::unique_ptr<FileStorePathFactory>(new FileStorePathFactory(
+    return std::shared_ptr<FileStorePathFactory>(new FileStorePathFactory(
         root, identifier, data_file_prefix, uuid, std::move(partition_computer), external_paths,
         global_index_external_path, index_file_in_data_file_dir));
 }
@@ -219,24 +219,44 @@ Result<std::string> FileStorePathFactory::GetPartitionString(const BinaryRow& pa
     if (partition.GetSizeInBytes() == 0) {
         return Status::Invalid("invalid binary row partition");
     }
+    {
+        std::shared_lock<std::shared_mutex> read_lock(cache_mutex_);
+        auto iter = row_to_str_cache_.find(partition);
+        if (PAIMON_LIKELY(iter != row_to_str_cache_.end())) {
+            return iter->second;
+        }
+    }
+
+    std::vector<std::pair<std::string, std::string>> part_values;
+    PAIMON_ASSIGN_OR_RAISE(part_values, partition_computer_->GeneratePartitionVector(partition));
+    PAIMON_ASSIGN_OR_RAISE(std::string part_str,
+                           PartitionPathUtils::GeneratePartitionPath(part_values));
+
+    std::unique_lock<std::shared_mutex> write_lock(cache_mutex_);
     auto iter = row_to_str_cache_.find(partition);
     if (PAIMON_LIKELY(iter != row_to_str_cache_.end())) {
         return iter->second;
     }
-    std::vector<std::pair<std::string, std::string>> part_values;
-    PAIMON_ASSIGN_OR_RAISE(part_values, partition_computer_->GeneratePartitionVector(partition));
-    PAIMON_ASSIGN_OR_RAISE(std::string part_str,
-                           PartitionPathUtils::GeneratePartitionPath(part_values))
     return row_to_str_cache_.insert({partition, part_str}).first->second;
 }
 
 Result<BinaryRow> FileStorePathFactory::ToBinaryRow(
     const std::map<std::string, std::string>& partition) const {
+    {
+        std::shared_lock<std::shared_mutex> read_lock(cache_mutex_);
+        auto iter = map_to_row_cache_.find(partition);
+        if (PAIMON_LIKELY(iter != map_to_row_cache_.end())) {
+            return iter->second;
+        }
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(BinaryRow row, partition_computer_->ToBinaryRow(partition));
+
+    std::unique_lock<std::shared_mutex> write_lock(cache_mutex_);
     auto iter = map_to_row_cache_.find(partition);
     if (PAIMON_LIKELY(iter != map_to_row_cache_.end())) {
         return iter->second;
     }
-    PAIMON_ASSIGN_OR_RAISE(BinaryRow row, partition_computer_->ToBinaryRow(partition));
     return map_to_row_cache_.insert({partition, row}).first->second;
 }
 

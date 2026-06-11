@@ -17,3 +17,10 @@
 
 # False positive from atexit() registration in libc
 leak:*__new_exitfn*
+
+# Lance's Rust/Tokio runtime can leave worker/TLS allocations alive at process
+# exit. Suppress these third-party runtime shutdown leftovers without hiding
+# all leaks from liblance_lib_rc.so.
+leak:tokio::runtime::blocking::pool::spawn_blocking
+leak:tokio::runtime::scheduler::multi_thread::worker::create
+leak:std::thread::Builder::spawn_unchecked
