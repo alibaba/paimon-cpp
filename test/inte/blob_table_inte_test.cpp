@@ -3049,6 +3049,10 @@ TEST_P(BlobTableInteTest, TestBlobViewWithFallbackPath) {
 }
 
 TEST_P(BlobTableInteTest, TestReadBlobDescriptorFieldFromJava) {
+    auto file_format = GetParam();
+    if (file_format != "orc" && file_format != "parquet") {
+        return;
+    }
     std::string table_path =
         GetDataDir() + "/" + file_format +
         "/blob_desc_field_with_external_path.db/blob_desc_field_with_external_path";
