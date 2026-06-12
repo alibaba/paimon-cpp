@@ -69,7 +69,7 @@ struct MapSharedShreddingDefine {
 };
 
 /// Parsed file-level meta for one shared-shredding MAP column.
-struct MapSharedShreddingFileMeta {
+struct MapSharedShreddingFieldMeta {
     /// field_name -> field_id
     std::map<std::string, int32_t> name_to_id;
     /// field_id -> set of physical column indices S
@@ -81,7 +81,7 @@ struct MapSharedShreddingFileMeta {
     /// Maximum row width observed in this file
     int32_t max_row_width = 0;
 
-    bool operator==(const MapSharedShreddingFileMeta& other) const {
+    bool operator==(const MapSharedShreddingFieldMeta& other) const {
         if (this == &other) {
             return true;
         }

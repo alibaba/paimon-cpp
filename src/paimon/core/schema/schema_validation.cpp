@@ -557,7 +557,7 @@ Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
             continue;
         }
         // Column configured with shared-shredding must be MAP<STRING, T>
-        if (!MapSharedShreddingUtils::IsStringKeyMap(field_type)) {
+        if (!MapSharedShreddingUtils::IsShreddingKeyMap(field_type)) {
             return Status::Invalid(
                 fmt::format("Column '{}' is configured with map.storage-layout=shared-shredding "
                             "but its type is not MAP<STRING, T>.",

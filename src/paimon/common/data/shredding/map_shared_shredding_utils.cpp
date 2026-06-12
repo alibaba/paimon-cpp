@@ -35,7 +35,8 @@
 namespace paimon {
 // ---- Column detection ----
 
-bool MapSharedShreddingUtils::IsStringKeyMap(const std::shared_ptr<arrow::DataType>& arrow_type) {
+bool MapSharedShreddingUtils::IsShreddingKeyMap(
+    const std::shared_ptr<arrow::DataType>& arrow_type) {
     if (arrow_type->id() != arrow::Type::MAP) {
         return false;
     }
@@ -48,7 +49,7 @@ Result<std::vector<int32_t>> MapSharedShreddingUtils::DetectShreddingColumns(
     std::vector<int32_t> indices;
     for (int32_t i = 0; i < schema->num_fields(); ++i) {
         const auto& field = schema->field(i);
-        if (!IsStringKeyMap(field->type())) {
+        if (!IsShreddingKeyMap(field->type())) {
             continue;
         }
         PAIMON_ASSIGN_OR_RAISE(MapStorageLayout layout, options.GetMapStorageLayout(field->name()));
@@ -202,7 +203,7 @@ Result<int32_t> GetRequiredInt32(const std::shared_ptr<arrow::KeyValueMetadata>&
     return parsed.value();
 }
 
-std::string SerializeFieldDict(const MapSharedShreddingFileMeta& file_meta) {
+std::string SerializeFieldDict(const MapSharedShreddingFieldMeta& file_meta) {
     return JsonEncodeObject([&](rapidjson::Document* doc,
                                 rapidjson::Document::AllocatorType* alloc) {
         for (const auto& [name, id] : file_meta.name_to_id) {
@@ -211,7 +212,7 @@ std::string SerializeFieldDict(const MapSharedShreddingFileMeta& file_meta) {
     });
 }
 
-std::string SerializeFieldColumns(const MapSharedShreddingFileMeta& file_meta) {
+std::string SerializeFieldColumns(const MapSharedShreddingFieldMeta& file_meta) {
     return JsonEncodeObject(
         [&](rapidjson::Document* doc, rapidjson::Document::AllocatorType* alloc) {
             for (const auto& [field_id, col_vec] : file_meta.field_to_columns) {
@@ -227,7 +228,7 @@ std::string SerializeFieldColumns(const MapSharedShreddingFileMeta& file_meta) {
         });
 }
 
-std::string SerializeOverflowSet(const MapSharedShreddingFileMeta& file_meta) {
+std::string SerializeOverflowSet(const MapSharedShreddingFieldMeta& file_meta) {
     return JsonEncodeArray(
         [&](rapidjson::Document* doc, rapidjson::Document::AllocatorType* alloc) {
             std::vector<int32_t> sorted(file_meta.overflow_field_set.begin(),
@@ -307,7 +308,7 @@ Result<std::set<int32_t>> DeserializeOverflowSet(const std::string& json_str) {
 
 }  // namespace
 
-Status MapSharedShreddingUtils::SerializeMetadata(const MapSharedShreddingFileMeta& file_meta,
+Status MapSharedShreddingUtils::SerializeMetadata(const MapSharedShreddingFieldMeta& file_meta,
                                                   const std::string& compression,
                                                   arrow::KeyValueMetadata* metadata) {
     metadata->Append(MapShreddingDefine::kStorageLayout,
@@ -331,7 +332,7 @@ Status MapSharedShreddingUtils::SerializeMetadata(const MapSharedShreddingFileMe
     return Status::OK();
 }
 
-Result<MapSharedShreddingFileMeta> MapSharedShreddingUtils::DeserializeMetadata(
+Result<MapSharedShreddingFieldMeta> MapSharedShreddingUtils::DeserializeMetadata(
     const std::shared_ptr<arrow::KeyValueMetadata>& metadata, const std::string& compression) {
     if (!HasShreddingMetadata(metadata)) {
         return Status::Invalid("metadata is null or storage layout is not shared-shredding");
@@ -344,7 +345,7 @@ Result<MapSharedShreddingFileMeta> MapSharedShreddingUtils::DeserializeMetadata(
                         MapSharedShreddingDefine::kCurrentVersion));
     }
 
-    MapSharedShreddingFileMeta result;
+    MapSharedShreddingFieldMeta result;
 
     // field_dict (compressed)
     PAIMON_ASSIGN_OR_RAISE(

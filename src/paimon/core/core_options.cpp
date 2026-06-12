@@ -1194,12 +1194,12 @@ Result<MapStorageLayout> CoreOptions::GetMapStorageLayout(const std::string& fie
 
 Result<int32_t> CoreOptions::GetMapSharedShreddingMaxColumns(const std::string& field_name) const {
     std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
-                      std::string(Options::MAP_SHREDDING_MAX_COLUMNS);
+                      std::string(Options::MAP_SHARED_SHREDDING_MAX_COLUMNS);
     PAIMON_ASSIGN_OR_RAISE(int32_t max_columns,
                            OptionsUtils::GetValueFromMap<int32_t>(impl_->raw_options, key, 256));
     if (max_columns <= 0) {
-        return Status::Invalid(
-            fmt::format("options {} must > 0", std::string(Options::MAP_SHREDDING_MAX_COLUMNS)));
+        return Status::Invalid(fmt::format("options {} must > 0",
+                                           std::string(Options::MAP_SHARED_SHREDDING_MAX_COLUMNS)));
     }
     return max_columns;
 }

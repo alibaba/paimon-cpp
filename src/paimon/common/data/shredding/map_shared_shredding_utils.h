@@ -47,7 +47,7 @@ class MapSharedShreddingUtils {
     /// Checks whether a given arrow field is MAP<STRING, T> (the type prerequisite for shredding).
     /// @param arrow_type The Arrow data type of the column.
     /// @return true if the type is MAP<STRING, T>.
-    static bool IsStringKeyMap(const std::shared_ptr<arrow::DataType>& arrow_type);
+    static bool IsShreddingKeyMap(const std::shared_ptr<arrow::DataType>& arrow_type);
 
     /// Finds all shredding MAP column indices in a schema by checking per-column config
     /// via CoreOptions.
@@ -82,18 +82,18 @@ class MapSharedShreddingUtils {
     // ---- Metadata serialization ----
 
     /// Serializes shredding metadata and appends entries to an existing KeyValueMetadata.
-    /// @param file_meta The file-level shredding metadata to serialize.
+    /// @param field_meta The field-level shredding metadata to serialize.
     /// @param compression Compression codec name for field_dict compression.
     /// @param[out] metadata The KeyValueMetadata to append entries to.
-    static Status SerializeMetadata(const MapSharedShreddingFileMeta& file_meta,
+    static Status SerializeMetadata(const MapSharedShreddingFieldMeta& file_meta,
                                     const std::string& compression,
                                     arrow::KeyValueMetadata* metadata);
 
-    /// Deserializes shredding metadata from file footer KeyValueMetadata.
+    /// Deserializes shredding metadata from file footer KeyValueMetadata (per field).
     /// @param metadata The KeyValueMetadata from file footer.
     /// @param compression Compression codec name.
-    /// @return Parsed MapSharedShreddingFileMeta, or error if metadata is missing/malformed.
-    static Result<MapSharedShreddingFileMeta> DeserializeMetadata(
+    /// @return Parsed MapSharedShreddingFieldMeta, or error if metadata is missing/malformed.
+    static Result<MapSharedShreddingFieldMeta> DeserializeMetadata(
         const std::shared_ptr<arrow::KeyValueMetadata>& metadata, const std::string& compression);
 
     /// Checks whether a KeyValueMetadata contains shredding MAP metadata.

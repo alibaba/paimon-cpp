@@ -24,20 +24,22 @@
 
 namespace paimon::test {
 
-// ---- IsStringKeyMap ----
+// ---- IsShreddingKeyMap ----
 
-TEST(MapSharedShreddingUtilsTest, IsStringKeyMap) {
-    ASSERT_TRUE(MapSharedShreddingUtils::IsStringKeyMap(arrow::map(arrow::utf8(), arrow::int32())));
+TEST(MapSharedShreddingUtilsTest, IsShreddingKeyMap) {
     ASSERT_TRUE(
-        MapSharedShreddingUtils::IsStringKeyMap(arrow::map(arrow::utf8(), arrow::float64())));
+        MapSharedShreddingUtils::IsShreddingKeyMap(arrow::map(arrow::utf8(), arrow::int32())));
+    ASSERT_TRUE(
+        MapSharedShreddingUtils::IsShreddingKeyMap(arrow::map(arrow::utf8(), arrow::float64())));
     // Nested value type (struct)
     auto nested_value =
         arrow::struct_({arrow::field("x", arrow::int32()), arrow::field("y", arrow::utf8())});
-    ASSERT_TRUE(MapSharedShreddingUtils::IsStringKeyMap(arrow::map(arrow::utf8(), nested_value)));
+    ASSERT_TRUE(
+        MapSharedShreddingUtils::IsShreddingKeyMap(arrow::map(arrow::utf8(), nested_value)));
     ASSERT_FALSE(
-        MapSharedShreddingUtils::IsStringKeyMap(arrow::map(arrow::int32(), arrow::utf8())));
-    ASSERT_FALSE(MapSharedShreddingUtils::IsStringKeyMap(arrow::int32()));
-    ASSERT_FALSE(MapSharedShreddingUtils::IsStringKeyMap(arrow::list(arrow::utf8())));
+        MapSharedShreddingUtils::IsShreddingKeyMap(arrow::map(arrow::int32(), arrow::utf8())));
+    ASSERT_FALSE(MapSharedShreddingUtils::IsShreddingKeyMap(arrow::int32()));
+    ASSERT_FALSE(MapSharedShreddingUtils::IsShreddingKeyMap(arrow::list(arrow::utf8())));
 }
 
 // ---- DetectShreddingColumns ----
@@ -199,7 +201,7 @@ TEST(MapSharedShreddingUtilsTest, BuildColumnToNumColumnsDefault) {
 // ---- SerializeMetadata / DeserializeMetadata roundtrip ----
 
 TEST(MapSharedShreddingUtilsTest, MetadataRoundtripNoneCompression) {
-    MapSharedShreddingFileMeta original;
+    MapSharedShreddingFieldMeta original;
     original.name_to_id = {{"age", 0}, {"name", 1}};
     original.field_to_columns = {{0, {0}}, {1, {1, 2}}};
     original.overflow_field_set = {1, 5};
@@ -240,7 +242,7 @@ TEST(MapSharedShreddingUtilsTest, MetadataRoundtripNoneCompression) {
 }
 
 TEST(MapSharedShreddingUtilsTest, MetadataRoundtripCompression) {
-    MapSharedShreddingFileMeta original;
+    MapSharedShreddingFieldMeta original;
     original.name_to_id = {{"alpha", 0}, {"beta", 1}, {"gamma", 2}};
     original.field_to_columns = {{0, {0, 1, 2}}, {1, {3}}, {2, {4, 5}}};
     original.overflow_field_set = {2};
@@ -262,7 +264,7 @@ TEST(MapSharedShreddingUtilsTest, MetadataRoundtripCompression) {
 }
 
 TEST(MapSharedShreddingUtilsTest, MetadataRoundtripEmptyData) {
-    MapSharedShreddingFileMeta original;
+    MapSharedShreddingFieldMeta original;
 
     auto verify_roundtrip = [&](const std::string& compression) {
         auto metadata = std::make_shared<arrow::KeyValueMetadata>();

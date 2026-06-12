@@ -368,8 +368,9 @@ struct PAIMON_EXPORT Options {
     /// "map.storage-layout" - Suffix for per-column MAP storage layout configuration.
     /// Used as `fields.<column>.map.storage-layout`. Values: "default" (standard KV arrays)
     /// or "shared-shredding" (columnar shredding with column reuse). Default is "default".
-    /// The column must be of type MAP<STRING, T>. Each column must be configured individually.
-    /// For example, to enable shared-shredding layout for two columns "metrics" and "tags":
+    /// If set "shared-shredding", the column must be of type MAP<STRING, T>. Each column must be
+    /// configured individually. For example, to enable shared-shredding layout for two columns
+    /// "metrics" and "tags":
     ///   fields.metrics.map.storage-layout = shared-shredding
     ///   fields.tags.map.storage-layout = shared-shredding
     static const char MAP_STORAGE_LAYOUT[];
@@ -377,7 +378,7 @@ struct PAIMON_EXPORT Options {
     /// Used as `fields.<column>.map.shared-shredding.max-columns`. Only effective when
     /// map.storage-layout = shared-shredding. Rows with more fields than K_max spill to
     /// __overflow. Default value is 256. Each column can have its own max-columns setting.
-    static const char MAP_SHREDDING_MAX_COLUMNS[];
+    static const char MAP_SHARED_SHREDDING_MAX_COLUMNS[];
 
     /// "blob-as-descriptor" - Read blob field using blob descriptor rather than blob
     /// bytes. Default value is "false".
