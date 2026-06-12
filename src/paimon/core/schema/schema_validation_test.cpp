@@ -820,4 +820,122 @@ TEST(SchemaValidationTest, ValidateInvalidConfiguration) {
                             "Data evolution config must disabled with deletion-vectors.enabled");
     }
 }
+TEST(SchemaValidationTest, TestMapStorageLayout) {
+    auto f0 = arrow::field("f0", arrow::utf8());
+    auto f1 = arrow::field("f1", arrow::int32());
+    auto f2 = arrow::field("f2", arrow::map(arrow::utf8(), arrow::int64()));
+    auto f3 = arrow::field("f3", arrow::map(arrow::int32(), arrow::utf8()));
+
+    // Valid: extend on MAP<STRING, T> column
+    {
+        arrow::FieldVector fields = {f0, f1, f2};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {
+            {Options::BUCKET, "2"},
+            {Options::BUCKET_KEY, "f0"},
+            {"fields.f2.map.storage-layout", "shared-shredding"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_OK(SchemaValidation::ValidateTableSchema(*table_schema));
+    }
+    // Invalid: field not in schema failed in ValidateFieldsPrefix
+    {
+        arrow::FieldVector fields = {f0, f1};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {
+            {Options::BUCKET, "2"},
+            {Options::BUCKET_KEY, "f0"},
+            {"fields.nonexist.map.storage-layout", "shared-shredding"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "Field nonexist can not be found in table schema");
+    }
+    // Invalid: field not in schema failed in ValidateMapStorageLayout
+    {
+        arrow::FieldVector fields = {f0, f1};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {
+            {Options::BUCKET, "2"},
+            {Options::BUCKET_KEY, "f0"},
+            {"fields.nonexist.map.storage-layout", "shared-shredding"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateMapStorageLayout(*table_schema, core_options),
+                            "Column 'nonexist' is configured with map.storage-layout but does not "
+                            "exist in table schema.");
+    }
+
+    // Invalid: non-MAP column configured with map.storage-layout (any value)
+    {
+        arrow::FieldVector fields = {f0, f1};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {{Options::BUCKET, "2"},
+                                                      {Options::BUCKET_KEY, "f0"},
+                                                      {"fields.f1.map.storage-layout", "default"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema), "not MAP");
+    }
+    // Invalid: shared-shredding on non-MAP column
+    {
+        arrow::FieldVector fields = {f0, f1};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {
+            {Options::BUCKET, "2"},
+            {Options::BUCKET_KEY, "f0"},
+            {"fields.f1.map.storage-layout", "shared-shredding"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema), "not MAP");
+    }
+    // Invalid: shared-shredding on MAP with non-STRING key
+    {
+        arrow::FieldVector fields = {f0, f1, f3};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {
+            {Options::BUCKET, "2"},
+            {Options::BUCKET_KEY, "f0"},
+            {"fields.f3.map.storage-layout", "shared-shredding"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "not MAP<STRING, T>");
+    }
+    // Valid: default layout on a MAP column
+    {
+        arrow::FieldVector fields = {f0, f1, f2};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {{Options::BUCKET, "2"},
+                                                      {Options::BUCKET_KEY, "f0"},
+                                                      {"fields.f2.map.storage-layout", "default"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_OK(SchemaValidation::ValidateTableSchema(*table_schema));
+    }
+    // Invalid: shared-shredding with invalid max-columns
+    {
+        arrow::FieldVector fields = {f0, f1, f2};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {
+            {Options::BUCKET, "2"},
+            {Options::BUCKET_KEY, "f0"},
+            {"fields.f2.map.storage-layout", "shared-shredding"},
+            {"fields.f2.map.shared-shredding.max-columns", "0"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "options map.shared-shredding.max-columns must > 0");
+    }
+}
+
 }  // namespace paimon::test

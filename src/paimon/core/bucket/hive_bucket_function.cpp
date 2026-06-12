@@ -86,8 +86,11 @@ uint32_t HiveBucketFunction::ComputeHash(const BinaryRow& row, int32_t field_ind
     switch (info.type) {
         case FieldType::BOOLEAN:
             return HiveHasher::HashInt(row.GetBoolean(field_index) ? 1 : 0);
-        case FieldType::TINYINT:
-            return HiveHasher::HashInt(static_cast<uint32_t>(row.GetByte(field_index)));
+        case FieldType::TINYINT: {
+            auto byte = static_cast<uint8_t>(row.GetByte(field_index));
+            int32_t signed_byte = byte < 128 ? byte : static_cast<int32_t>(byte) - 256;
+            return HiveHasher::HashInt(static_cast<uint32_t>(signed_byte));
+        }
         case FieldType::SMALLINT:
             return HiveHasher::HashInt(static_cast<uint32_t>(row.GetShort(field_index)));
         case FieldType::INT:
