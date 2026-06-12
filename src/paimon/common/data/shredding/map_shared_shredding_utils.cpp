@@ -203,19 +203,19 @@ Result<int32_t> GetRequiredInt32(const std::shared_ptr<arrow::KeyValueMetadata>&
     return parsed.value();
 }
 
-std::string SerializeFieldDict(const MapSharedShreddingFieldMeta& file_meta) {
+std::string SerializeFieldDict(const MapSharedShreddingFieldMeta& field_meta) {
     return JsonEncodeObject([&](rapidjson::Document* doc,
                                 rapidjson::Document::AllocatorType* alloc) {
-        for (const auto& [name, id] : file_meta.name_to_id) {
+        for (const auto& [name, id] : field_meta.name_to_id) {
             doc->AddMember(rapidjson::Value(name.c_str(), *alloc), rapidjson::Value(id), *alloc);
         }
     });
 }
 
-std::string SerializeFieldColumns(const MapSharedShreddingFieldMeta& file_meta) {
+std::string SerializeFieldColumns(const MapSharedShreddingFieldMeta& field_meta) {
     return JsonEncodeObject(
         [&](rapidjson::Document* doc, rapidjson::Document::AllocatorType* alloc) {
-            for (const auto& [field_id, col_vec] : file_meta.field_to_columns) {
+            for (const auto& [field_id, col_vec] : field_meta.field_to_columns) {
                 rapidjson::Value array(rapidjson::kArrayType);
                 std::vector<int32_t> sorted_cols(col_vec.begin(), col_vec.end());
                 std::sort(sorted_cols.begin(), sorted_cols.end());
@@ -228,11 +228,11 @@ std::string SerializeFieldColumns(const MapSharedShreddingFieldMeta& file_meta) 
         });
 }
 
-std::string SerializeOverflowSet(const MapSharedShreddingFieldMeta& file_meta) {
+std::string SerializeOverflowSet(const MapSharedShreddingFieldMeta& field_meta) {
     return JsonEncodeArray(
         [&](rapidjson::Document* doc, rapidjson::Document::AllocatorType* alloc) {
-            std::vector<int32_t> sorted(file_meta.overflow_field_set.begin(),
-                                        file_meta.overflow_field_set.end());
+            std::vector<int32_t> sorted(field_meta.overflow_field_set.begin(),
+                                        field_meta.overflow_field_set.end());
             std::sort(sorted.begin(), sorted.end());
             for (int32_t field_id : sorted) {
                 doc->PushBack(field_id, *alloc);
@@ -308,7 +308,7 @@ Result<std::set<int32_t>> DeserializeOverflowSet(const std::string& json_str) {
 
 }  // namespace
 
-Status MapSharedShreddingUtils::SerializeMetadata(const MapSharedShreddingFieldMeta& file_meta,
+Status MapSharedShreddingUtils::SerializeMetadata(const MapSharedShreddingFieldMeta& field_meta,
                                                   const std::string& compression,
                                                   arrow::KeyValueMetadata* metadata) {
     metadata->Append(MapShreddingDefine::kStorageLayout,
@@ -316,18 +316,18 @@ Status MapSharedShreddingUtils::SerializeMetadata(const MapSharedShreddingFieldM
     metadata->Append(MapSharedShreddingDefine::kVersion,
                      std::to_string(MapSharedShreddingDefine::kCurrentVersion));
 
-    std::string field_dict_json = SerializeFieldDict(file_meta);
+    std::string field_dict_json = SerializeFieldDict(field_meta);
     metadata->Append(MapSharedShreddingDefine::kFieldDictOriginalSize,
                      std::to_string(field_dict_json.size()));
     PAIMON_ASSIGN_OR_RAISE(std::string compressed_dict,
                            CompressString(field_dict_json, compression));
     metadata->Append(MapSharedShreddingDefine::kFieldDict, std::move(compressed_dict));
 
-    metadata->Append(MapSharedShreddingDefine::kFieldColumns, SerializeFieldColumns(file_meta));
-    metadata->Append(MapSharedShreddingDefine::kOverflowSet, SerializeOverflowSet(file_meta));
-    metadata->Append(MapSharedShreddingDefine::kNumColumns, std::to_string(file_meta.num_columns));
+    metadata->Append(MapSharedShreddingDefine::kFieldColumns, SerializeFieldColumns(field_meta));
+    metadata->Append(MapSharedShreddingDefine::kOverflowSet, SerializeOverflowSet(field_meta));
+    metadata->Append(MapSharedShreddingDefine::kNumColumns, std::to_string(field_meta.num_columns));
     metadata->Append(MapSharedShreddingDefine::kMaxRowWidth,
-                     std::to_string(file_meta.max_row_width));
+                     std::to_string(field_meta.max_row_width));
 
     return Status::OK();
 }

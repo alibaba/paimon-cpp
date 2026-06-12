@@ -85,7 +85,7 @@ class MapSharedShreddingUtils {
     /// @param field_meta The field-level shredding metadata to serialize.
     /// @param compression Compression codec name for field_dict compression.
     /// @param[out] metadata The KeyValueMetadata to append entries to.
-    static Status SerializeMetadata(const MapSharedShreddingFieldMeta& file_meta,
+    static Status SerializeMetadata(const MapSharedShreddingFieldMeta& field_meta,
                                     const std::string& compression,
                                     arrow::KeyValueMetadata* metadata);
 
