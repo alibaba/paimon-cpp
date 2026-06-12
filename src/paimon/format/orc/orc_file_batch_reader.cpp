@@ -234,13 +234,14 @@ Status OrcFileBatchReader::CollectTargetColumnIds(const ::orc::Type* src_type,
                 src_type->getSubtype(1), target_type->getSubtype(1), target_column_ids));
             break;
         }
-        default:
+        default: {
             if (src_type->toString() != target_type->toString()) {
                 return Status::Invalid(fmt::format("type mismatch: src {} vs target {}",
                                                    src_type->toString(), target_type->toString()));
             }
             target_column_ids->push_back(src_type->getColumnId());
             break;
+        }
     }
     return Status::OK();
 }
