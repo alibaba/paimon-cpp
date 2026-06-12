@@ -91,15 +91,15 @@ int64_t RandomNumber(int64_t min, int64_t max);
 #define ASSIGN_OR_HANDLE_ERROR_IMPL(handle_error, status_name, lhs, rexpr) \
     auto&& status_name = (rexpr);                                          \
     handle_error(status_name.status());                                    \
-    lhs = std::move(status_name).value();
+    lhs = std::move(status_name).value()
 
 #define ASSERT_OK_AND_ASSIGN(lhs, rexpr) \
     ASSIGN_OR_HANDLE_ERROR_IMPL(         \
-        ASSERT_OK, PAIMON_ASSIGN_OR_RAISE_NAME(_error_or_value, __COUNTER__), lhs, rexpr);
+        ASSERT_OK, PAIMON_ASSIGN_OR_RAISE_NAME(_error_or_value, __COUNTER__), lhs, rexpr)
 
 #define EXPECT_OK_AND_ASSIGN(lhs, rexpr) \
     ASSIGN_OR_HANDLE_ERROR_IMPL(         \
-        EXPECT_OK, PAIMON_ASSIGN_OR_RAISE_NAME(_error_or_value, __COUNTER__), lhs, rexpr);
+        EXPECT_OK, PAIMON_ASSIGN_OR_RAISE_NAME(_error_or_value, __COUNTER__), lhs, rexpr)
 
 #define EXPECT_OK(s) EXPECT_PRED_FORMAT1(paimon::test::AssertStatus, s)
 #define EXPECT_NOK(s) EXPECT_FALSE((s).ok())

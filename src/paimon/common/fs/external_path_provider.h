@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <memory>
 #include <random>
@@ -45,12 +46,9 @@ class ExternalPathProvider {
     ///
     /// @return the next external data path
     std::string GetNextExternalDataPath(const std::string& file_name) {
-        position_++;
-        if (position_ == external_table_paths_.size()) {
-            position_ = 0;
-        }
+        size_t position = (++position_) % external_table_paths_.size();
         return PathUtil::JoinPath(
-            PathUtil::JoinPath(external_table_paths_[position_], relative_bucket_path_), file_name);
+            PathUtil::JoinPath(external_table_paths_[position], relative_bucket_path_), file_name);
     }
 
  private:
@@ -66,6 +64,6 @@ class ExternalPathProvider {
  private:
     std::vector<std::string> external_table_paths_;
     std::string relative_bucket_path_;
-    size_t position_;
+    std::atomic<size_t> position_;
 };
 }  // namespace paimon

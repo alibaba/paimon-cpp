@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "paimon/utils/range.h"
@@ -42,6 +43,9 @@ class RowRanges {
 
     /// Creates a RowRanges from a list of ranges.
     explicit RowRanges(const std::vector<Range>& ranges) : ranges_(ranges) {}
+
+    /// Creates a RowRanges from a list of ranges, taking ownership of the vector.
+    explicit RowRanges(std::vector<Range>&& ranges) : ranges_(std::move(ranges)) {}
 
     /// Creates a RowRanges with a single range [0, row_count - 1].
     static RowRanges CreateSingle(int64_t row_count) {
@@ -102,4 +106,20 @@ class RowRanges {
     std::vector<Range> ranges_;
 };
 
+struct TargetRowGroup {
+    int32_t row_group_index{-1};
+    bool is_partially_matched{false};
+    // page-filtered row ranges, only valid if is_partially_matched is true.
+    RowRanges row_ranges;
+    // Whether this row group has been excluded by ApplyReadRanges.
+    // When true, this row group is logically skipped during iteration
+    // but retained so that a subsequent wider ApplyReadRanges can restore it.
+    bool excluded_by_read_range{false};
+
+    TargetRowGroup() = default;
+    TargetRowGroup(int32_t rg_index, bool is_partially_matched, RowRanges ranges)
+        : row_group_index(rg_index),
+          is_partially_matched(is_partially_matched),
+          row_ranges(std::move(ranges)) {}
+};
 }  // namespace paimon::parquet

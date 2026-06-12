@@ -117,12 +117,12 @@ TEST_F(HiveBucketFunctionTest, TestHiveBucketFunction) {
 
     // Verify individual hash components:
     // HiveHasher.hashBytes("hello") = 99162322
-    ASSERT_EQ(99162322, HiveHasher::HashBytes("hello", 5));
+    ASSERT_EQ(99162322U, HiveHasher::HashBytes("hello", 5));
     // HiveHasher.hashBytes({1,2,3}) = 1026
-    ASSERT_EQ(1026, HiveHasher::HashBytes("\x01\x02\x03", 3));
+    ASSERT_EQ(1026U, HiveHasher::HashBytes("\x01\x02\x03", 3));
     // BigDecimal("12.34").hashCode() = 1234 * 31 + 2 = 38256
     // (After normalizing "12.3400" -> "12.34", unscaled=1234, scale=2)
-    ASSERT_EQ(38256, HiveHasher::HashDecimal(Decimal::FromUnscaledLong(123400, 10, 4)));
+    ASSERT_EQ(38256U, HiveHasher::HashDecimal(Decimal::FromUnscaledLong(123400, 10, 4)));
 
     // expectedHash = 31*(31*(31*7 + 99162322) + 1026) + 38256 = 805989529 (with int32 overflow)
     // bucket = (805989529 & INT32_MAX) % 8 = 1

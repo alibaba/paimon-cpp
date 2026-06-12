@@ -97,7 +97,7 @@ TEST(DecimalTest, TestCompatibleWithJava) {
     auto pool = GetDefaultPool();
     auto file_system = std::make_unique<LocalFileSystem>();
     auto file_name = paimon::test::GetDataDir() + "/decimal_bytes.data";
-    uint64_t file_length = file_system->GetFileStatus(file_name).value()->GetLen();
+    int64_t file_length = file_system->GetFileStatus(file_name).value()->GetLen();
     ASSERT_GT(file_length, 0);
     ASSERT_OK_AND_ASSIGN(auto input_stream, file_system->Open(file_name));
     auto data_bytes = Bytes::AllocateBytes(file_length, pool.get());
@@ -130,7 +130,12 @@ TEST(DecimalTest, TestCompatibleWithJava) {
 }
 
 TEST(DecimalTest, TestCompareTo) {
-    auto CheckResult = [](const Decimal& decimal1, const Decimal& decimal2) {
+    auto min_int128 = DecimalUtils::StrToInt128("-170141183460469231731687303715884105728").value();
+    auto can_negate = [min_int128](const Decimal& decimal) {
+        return decimal.Value() != min_int128;
+    };
+
+    auto CheckResult = [can_negate](const Decimal& decimal1, const Decimal& decimal2) {
         ASSERT_FALSE(decimal1 < decimal1);
         ASSERT_FALSE(decimal1 > decimal1);
         ASSERT_EQ(decimal1, decimal1);
@@ -143,6 +148,9 @@ TEST(DecimalTest, TestCompareTo) {
         ASSERT_EQ(decimal3.CompareTo(decimal1), 0);
         ASSERT_EQ(decimal3, decimal1);
 
+        if (!can_negate(decimal1) || !can_negate(decimal2)) {
+            return;
+        }
         Decimal negative_decimal1(decimal1.Precision(), decimal1.Scale(), -decimal1.Value());
         Decimal negative_decimal2(decimal2.Precision(), decimal2.Scale(), -decimal2.Value());
         ASSERT_EQ(negative_decimal1.CompareTo(negative_decimal2), 1);
@@ -154,10 +162,13 @@ TEST(DecimalTest, TestCompareTo) {
         ASSERT_EQ(negative_decimal3, negative_decimal1);
     };
 
-    auto CheckEqual = [](const Decimal& decimal1, const Decimal& decimal2) {
+    auto CheckEqual = [can_negate](const Decimal& decimal1, const Decimal& decimal2) {
         ASSERT_EQ(decimal1.CompareTo(decimal2), 0);
         ASSERT_EQ(decimal2.CompareTo(decimal1), 0);
 
+        if (!can_negate(decimal1) || !can_negate(decimal2)) {
+            return;
+        }
         Decimal negative_decimal1(decimal1.Precision(), decimal1.Scale(), -decimal1.Value());
         Decimal negative_decimal2(decimal2.Precision(), decimal2.Scale(), -decimal2.Value());
         ASSERT_EQ(negative_decimal1.CompareTo(negative_decimal2), 0);

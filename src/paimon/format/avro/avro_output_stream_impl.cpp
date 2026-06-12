@@ -20,6 +20,7 @@
 #include <string>
 
 #include "fmt/format.h"
+#include "paimon/common/utils/math.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
@@ -62,11 +63,16 @@ void AvroOutputStreamImpl::backup(size_t len) {
 
 void AvroOutputStreamImpl::FlushBuffer() {
     size_t length = buffer_size_ - available_;
-    Result<int32_t> write_len = out_->Write(reinterpret_cast<const char*>(buffer_), length);
+    Status validate_status = ValidateValueInRange<int64_t>(length, "write length");
+    if (!validate_status.ok()) {
+        throw std::runtime_error("write failed, status: " + validate_status.ToString());
+    }
+    Result<int64_t> write_len =
+        out_->Write(reinterpret_cast<const char*>(buffer_), static_cast<int64_t>(length));
     if (!write_len.ok()) {
         throw std::runtime_error("write failed, status: " + write_len.status().ToString());
     }
-    if (static_cast<size_t>(write_len.value()) != length) {
+    if (write_len.value() != static_cast<int64_t>(length)) {
         throw std::runtime_error(
             fmt::format("write failed, expected length: {}, actual write length: {}", length,
                         write_len.value()));

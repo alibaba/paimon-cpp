@@ -27,8 +27,8 @@ DataOutputStream::DataOutputStream(const std::shared_ptr<OutputStream>& output_s
 }
 
 Status DataOutputStream::WriteBytes(const std::shared_ptr<Bytes>& bytes) {
-    int32_t write_length = bytes->size();
-    PAIMON_ASSIGN_OR_RAISE(int32_t actual_write_length,
+    int64_t write_length = bytes->size();
+    PAIMON_ASSIGN_OR_RAISE(int64_t actual_write_length,
                            output_stream_->Write(bytes->data(), write_length));
     PAIMON_RETURN_NOT_OK(AssertWriteLength(write_length, actual_write_length));
     return Status::OK();
@@ -37,14 +37,14 @@ Status DataOutputStream::WriteBytes(const std::shared_ptr<Bytes>& bytes) {
 Status DataOutputStream::WriteString(const std::string& value) {
     uint16_t write_length = value.size();
     PAIMON_RETURN_NOT_OK(WriteValue<uint16_t>(write_length));
-    PAIMON_ASSIGN_OR_RAISE(int32_t actual_write_length,
+    PAIMON_ASSIGN_OR_RAISE(int64_t actual_write_length,
                            output_stream_->Write(value.data(), write_length));
     PAIMON_RETURN_NOT_OK(AssertWriteLength(write_length, actual_write_length));
     return Status::OK();
 }
 
-Status DataOutputStream::AssertWriteLength(int32_t write_length,
-                                           int32_t actual_write_length) const {
+Status DataOutputStream::AssertWriteLength(int64_t write_length,
+                                           int64_t actual_write_length) const {
     if (write_length != actual_write_length) {
         return Status::Invalid(fmt::format(
             "assert write length failed: write length not match, write length {}, actual "

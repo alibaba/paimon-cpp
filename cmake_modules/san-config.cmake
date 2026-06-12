@@ -25,8 +25,9 @@ endif()
 
 if(PAIMON_USE_UBSAN)
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        target_compile_options(paimon_sanitizer_flags INTERFACE -fsanitize=undefined
-                                                                -fno-omit-frame-pointer)
+        target_compile_options(paimon_sanitizer_flags
+                               INTERFACE -fsanitize=undefined -fno-sanitize=vptr
+                                         -fno-omit-frame-pointer)
         target_link_options(paimon_sanitizer_flags INTERFACE -fsanitize=undefined)
         message(STATUS "Undefined Behavior Sanitizer enabled")
     else()

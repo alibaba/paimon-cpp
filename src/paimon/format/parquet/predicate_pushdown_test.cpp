@@ -104,7 +104,7 @@ class PredicatePushdownTest : public ::testing::Test {
                      uint32_t predicate_node_count_limit =
                          paimon::parquet::DEFAULT_PARQUET_READ_PREDICATE_NODE_COUNT_LIMIT) {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name_));
-        ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
+        ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
         auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
 
         std::map<std::string, std::string> options;
@@ -343,7 +343,7 @@ TEST_F(PredicatePushdownTest, TestStringData) {
         CheckResult(read_schema, predicate, /*expected_array=*/expected_array);
     }
     {
-        // f0 like 'me', no data
+        // f0 like 'me', has data
         ASSERT_OK_AND_ASSIGN(const auto predicate,
                              PredicateBuilder::Like(
                                  /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,

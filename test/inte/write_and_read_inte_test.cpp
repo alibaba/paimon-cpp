@@ -862,9 +862,9 @@ TEST_P(WriteAndReadInteTest, TestWriteSamePartitionTwiceWithAllBasicTypesForPk) 
 
 std::vector<std::pair<std::string, std::string>> GetTestValuesForWriteAndReadInteTest() {
     std::vector<std::pair<std::string, std::string>> values = {{"parquet", "local"}};
+    // values.emplace_back("parquet", "jindo");
 #ifdef PAIMON_ENABLE_ORC
     values.emplace_back("orc", "local");
-    // values.emplace_back("parquet", "jindo");
 #endif
 #ifdef PAIMON_ENABLE_LANCE
     values.emplace_back("lance", "local");

@@ -54,7 +54,7 @@ class ApplyBitmapIndexBatchReaderTest : public ::testing::Test,
 
         pool_ = GetDefaultPool();
         fs_ = std::make_shared<MockFileSystem>();
-        executor_ = CreateDefaultExecutor(/*thread_count=*/2);
+        ASSERT_OK_AND_ASSIGN(executor_, CreateDefaultExecutor(/*thread_count=*/2));
     }
     void TearDown() override {}
 

@@ -27,7 +27,7 @@
     "type" : "DECIMAL(6, 3)"
   }, {
     "id" : 8,
-    "name" : "f5",
+    "name" : "blob",
     "type" : "BLOB NOT NULL"
   }, {
     "id" : 5,
@@ -42,11 +42,12 @@
   "partitionKeys" : [ "key0", "key1" ],
   "primaryKeys" : [ ],
   "options" : {
-    "data-evolution.enabled" : "true",
-    "manifest.format" : "avro",
+    "bucket" : "-1",
     "blob.target-file-size" : "50",
-    "file.format" : "orc",
-    "row-tracking.enabled" : "true"
+    "row-tracking.enabled" : "true",
+    "data-evolution.enabled" : "true",
+    "manifest.format" : "orc",
+    "file.format" : "orc"
   },
-  "timeMillis" : 1762240063751
+  "timeMillis" : 1780565153189
 }

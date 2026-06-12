@@ -91,7 +91,7 @@ class FileSystemTest : public ::testing::Test, public ::testing::WithParamInterf
                              fs_->Create(file, /*overwrite=*/true));
         std::string input = "paimon";
         char chars[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-        ASSERT_OK_AND_ASSIGN(int32_t size, out->Write(chars, input.size()));
+        ASSERT_OK_AND_ASSIGN(int64_t size, out->Write(chars, input.size()));
         ASSERT_EQ(size, input.size());
         ASSERT_OK(out->Flush());
         ASSERT_OK(out->Close());
@@ -159,7 +159,12 @@ class FileSystemTest : public ::testing::Test, public ::testing::WithParamInterf
     std::string GetTestDir() const {
         std::string file_system = GetParam();
         if (file_system == "local") {
-            return paimon::test::GetDataDir();
+            std::string data_dir = paimon::test::GetDataDir();
+            if (data_dir.empty() || data_dir[0] != '/') {
+                EXPECT_OK_AND_ASSIGN(std::string current_path, PathUtil::GetWorkingDirectory());
+                data_dir = PathUtil::JoinPath(current_path, data_dir);
+            }
+            return data_dir;
         } else if (file_system == "jindo") {
             return "oss://paimon-unittest/test_data/";
         }
@@ -202,11 +207,33 @@ TEST_P(FileSystemTest, TestCreate) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<OutputStream> out, fs_->Create(path, /*overwrite=*/true));
     ASSERT_TRUE(out);
     std::string input = "paimon";
-    ASSERT_OK_AND_ASSIGN(int32_t size, out->Write(input.data(), input.size()));
+    ASSERT_OK_AND_ASSIGN(int64_t size, out->Write(input.data(), input.size()));
     ASSERT_EQ(size, input.size());
     ASSERT_OK(out->Close());
 
     ASSERT_NOK_WITH_MSG(fs_->Create(path, /*overwrite=*/false), "already exists");
+}
+
+TEST_P(FileSystemTest, TestCreateRelativeFileInCurrentDirectory) {
+    if (GetParam() != "local") {
+        GTEST_SKIP() << "this test is only tested for the local file system";
+    }
+
+    std::string path = "relative_file_" + RandomName();
+    ASSERT_OK_AND_ASSIGN(auto out, fs_->Create(path, /*overwrite=*/true));
+    std::string content = "content";
+    ASSERT_OK_AND_ASSIGN(int64_t write_len, out->Write(content.data(), content.size()));
+    ASSERT_EQ(write_len, content.size());
+    ASSERT_OK_AND_ASSIGN(std::string uri, out->GetUri());
+    ASSERT_FALSE(uri.empty());
+    ASSERT_EQ(uri[0], '/');
+    ASSERT_EQ(PathUtil::GetName(uri), path);
+    ASSERT_OK(out->Close());
+
+    std::string read_content;
+    ASSERT_OK(fs_->ReadFile(path, &read_content));
+    ASSERT_EQ(read_content, content);
+    ASSERT_OK(fs_->Delete(path));
 }
 
 // --- write&read
@@ -215,7 +242,7 @@ TEST_P(FileSystemTest, TestSimpleWriteAndRead) {
     std::string file_path = test_root_ + "/file.data";
     // write process
     ASSERT_OK_AND_ASSIGN(auto out_stream, fs_->Create(file_path, /*overwrite=*/true));
-    ASSERT_OK_AND_ASSIGN(int32_t write_len, out_stream->Write(content.data(), content.size()));
+    ASSERT_OK_AND_ASSIGN(int64_t write_len, out_stream->Write(content.data(), content.size()));
     ASSERT_EQ(write_len, content.size());
 
     ASSERT_OK(out_stream->Flush());
@@ -233,7 +260,7 @@ TEST_P(FileSystemTest, TestSimpleWriteAndRead) {
 
     // read from cur pos
     std::string read_content(content.size(), '\0');
-    ASSERT_OK_AND_ASSIGN(int32_t read_len,
+    ASSERT_OK_AND_ASSIGN(int64_t read_len,
                          in_stream->Read(read_content.data(), read_content.size()));
     ASSERT_EQ(read_len, read_content.size());
     ASSERT_EQ(content, read_content);
@@ -245,7 +272,7 @@ TEST_P(FileSystemTest, TestSimpleWriteAndRead) {
 
     ASSERT_OK_AND_ASSIGN(uri, in_stream->GetUri());
     ASSERT_EQ(uri, file_path);
-    ASSERT_OK_AND_ASSIGN(uint64_t file_len, in_stream->Length());
+    ASSERT_OK_AND_ASSIGN(int64_t file_len, in_stream->Length());
     ASSERT_EQ(file_len, content.size());
 
     ASSERT_OK_AND_ASSIGN(pos, in_stream->GetPos());
@@ -260,7 +287,7 @@ TEST_P(FileSystemTest, TestWriteMultipleTimes) {
     // write process
     ASSERT_OK_AND_ASSIGN(auto out_stream, fs_->Create(file_path, /*overwrite=*/true));
     for (const auto& str : content_vec) {
-        ASSERT_OK_AND_ASSIGN(int32_t write_len, out_stream->Write(str.data(), str.size()));
+        ASSERT_OK_AND_ASSIGN(int64_t write_len, out_stream->Write(str.data(), str.size()));
         ASSERT_EQ(write_len, str.size());
     }
     ASSERT_OK(out_stream->Flush());
@@ -271,7 +298,7 @@ TEST_P(FileSystemTest, TestWriteMultipleTimes) {
     // read process
     ASSERT_OK_AND_ASSIGN(auto in_stream, fs_->Open(file_path));
     std::string read_content(content.size(), '\0');
-    ASSERT_OK_AND_ASSIGN(int32_t read_len,
+    ASSERT_OK_AND_ASSIGN(int64_t read_len,
                          in_stream->Read(read_content.data(), read_content.size()));
     ASSERT_EQ(read_len, read_content.size());
     ASSERT_EQ(content, read_content);
@@ -282,7 +309,7 @@ TEST_P(FileSystemTest, TestWriteInNotExistDir) {
     // write process
     std::string content = "abcdefghijk";
     ASSERT_OK_AND_ASSIGN(auto out_stream, fs_->Create(file_path, /*overwrite=*/true));
-    ASSERT_OK_AND_ASSIGN([[maybe_unused]] int32_t write_len,
+    ASSERT_OK_AND_ASSIGN([[maybe_unused]] int64_t write_len,
                          out_stream->Write(content.data(), content.size()));
     ASSERT_OK(out_stream->Flush());
     ASSERT_OK(out_stream->Close());
@@ -290,7 +317,7 @@ TEST_P(FileSystemTest, TestWriteInNotExistDir) {
     // read process
     ASSERT_OK_AND_ASSIGN(auto in_stream, fs_->Open(file_path));
     std::string read_content(content.size(), '\0');
-    ASSERT_OK_AND_ASSIGN(int32_t read_len,
+    ASSERT_OK_AND_ASSIGN(int64_t read_len,
                          in_stream->Read(read_content.data(), read_content.size()));
     ASSERT_EQ(read_len, read_content.size());
     ASSERT_EQ(content, read_content);
@@ -304,7 +331,7 @@ TEST_P(FileSystemTest, TestWriteEmptyFile) {
     // write process
     std::string content = "";
     ASSERT_OK_AND_ASSIGN(auto out_stream, fs_->Create(file_path, /*overwrite=*/true));
-    ASSERT_OK_AND_ASSIGN(int32_t write_len, out_stream->Write(content.data(), content.size()));
+    ASSERT_OK_AND_ASSIGN(int64_t write_len, out_stream->Write(content.data(), content.size()));
     ASSERT_EQ(write_len, 0);
     ASSERT_OK(out_stream->Flush());
     ASSERT_OK(out_stream->Close());
@@ -321,7 +348,7 @@ TEST_P(FileSystemTest, TestWriteEmptyFile) {
     // read process
     ASSERT_OK_AND_ASSIGN(auto in_stream, fs_->Open(file_path));
     std::string read_content(content.size(), '\0');
-    ASSERT_OK_AND_ASSIGN(int32_t read_len,
+    ASSERT_OK_AND_ASSIGN(int64_t read_len,
                          in_stream->Read(read_content.data(), read_content.size()));
     ASSERT_EQ(read_len, read_content.size());
     ASSERT_EQ(content, read_content);
@@ -332,7 +359,7 @@ TEST_P(FileSystemTest, TestWriteWithOverwrite) {
     std::string file_path = test_root_ + "/file.data";
     // write process
     ASSERT_OK_AND_ASSIGN(auto out_stream, fs_->Create(file_path, /*overwrite=*/true));
-    ASSERT_OK_AND_ASSIGN(int32_t write_len, out_stream->Write(content.data(), content.size()));
+    ASSERT_OK_AND_ASSIGN(int64_t write_len, out_stream->Write(content.data(), content.size()));
     ASSERT_EQ(write_len, content.size());
     ASSERT_OK(out_stream->Flush());
     ASSERT_OK(out_stream->Close());
@@ -349,7 +376,7 @@ TEST_P(FileSystemTest, TestWriteWithOverwrite) {
         // read process
         ASSERT_OK_AND_ASSIGN(auto in_stream, fs_->Open(file_path));
         std::string read_content(new_content.size(), '\0');
-        ASSERT_OK_AND_ASSIGN(int32_t read_len,
+        ASSERT_OK_AND_ASSIGN(int64_t read_len,
                              in_stream->Read(read_content.data(), read_content.size()));
         ASSERT_EQ(read_len, read_content.size());
         ASSERT_EQ(new_content, read_content);
@@ -365,7 +392,7 @@ TEST_P(FileSystemTest, TestAsyncRead) {
     std::string file_path = test_root_ + "/file.data";
     // write process
     ASSERT_OK_AND_ASSIGN(auto out_stream, fs_->Create(file_path, /*overwrite=*/true));
-    ASSERT_OK_AND_ASSIGN([[maybe_unused]] int32_t write_len,
+    ASSERT_OK_AND_ASSIGN([[maybe_unused]] int64_t write_len,
                          out_stream->Write(content.data(), content.size()));
     ASSERT_OK(out_stream->Flush());
     ASSERT_OK(out_stream->Close());
@@ -398,7 +425,7 @@ TEST_P(FileSystemTest, TestInvalidRead) {
     std::string file_path = test_root_ + "/file.data";
     // write process
     ASSERT_OK_AND_ASSIGN(auto out_stream, fs_->Create(file_path, /*overwrite=*/true));
-    ASSERT_OK_AND_ASSIGN([[maybe_unused]] int32_t write_len,
+    ASSERT_OK_AND_ASSIGN([[maybe_unused]] int64_t write_len,
                          out_stream->Write(content.data(), content.size()));
     ASSERT_OK(out_stream->Flush());
     ASSERT_OK(out_stream->Close());
@@ -411,7 +438,7 @@ TEST_P(FileSystemTest, TestInvalidRead) {
         // read from cur pos
         std::string read_content(3, '\0');
         ASSERT_NOK(in_stream->Read(read_content.data(), read_content.size()));
-        ASSERT_OK_AND_ASSIGN(size_t actual_read, in_stream->Read(read_content.data(), 0));
+        ASSERT_OK_AND_ASSIGN(int64_t actual_read, in_stream->Read(read_content.data(), 0));
         ASSERT_EQ(actual_read, 0);
     }
     {
@@ -435,7 +462,7 @@ TEST_P(FileSystemTest, TestInvalidAsyncRead) {
     std::string file_path = test_root_ + "/file.data";
     // write process
     ASSERT_OK_AND_ASSIGN(auto out_stream, fs_->Create(file_path, /*overwrite=*/true));
-    ASSERT_OK_AND_ASSIGN([[maybe_unused]] int32_t write_len,
+    ASSERT_OK_AND_ASSIGN([[maybe_unused]] int64_t write_len,
                          out_stream->Write(content.data(), content.size()));
     ASSERT_OK(out_stream->Flush());
     ASSERT_OK(out_stream->Close());
@@ -537,7 +564,7 @@ TEST_P(FileSystemTest, TestSeek) {
     std::string path = PathUtil::JoinPath(test_root_, "/test_file");
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<OutputStream> out, fs_->Create(path, /*overwrite=*/true));
     std::string input = "paimon";
-    ASSERT_OK_AND_ASSIGN(int32_t size, out->Write(input.data(), input.size()));
+    ASSERT_OK_AND_ASSIGN(int64_t size, out->Write(input.data(), input.size()));
     ASSERT_EQ(size, input.size());
     ASSERT_OK(out->Close());
 
@@ -555,7 +582,7 @@ TEST_P(FileSystemTest, TestSeek) {
     ASSERT_EQ(pos3, 1);
 
     std::string read_content(3, '\0');
-    ASSERT_OK_AND_ASSIGN(int32_t read_len, in->Read(read_content.data(), read_content.size()));
+    ASSERT_OK_AND_ASSIGN(int64_t read_len, in->Read(read_content.data(), read_content.size()));
     ASSERT_EQ(read_len, read_content.size());
     ASSERT_EQ("aim", read_content);
 
@@ -574,7 +601,7 @@ TEST_P(FileSystemTest, TestSeek2) {
     std::string file_path = test_root_ + "/file.data";
     // write process
     ASSERT_OK_AND_ASSIGN(auto out_stream, fs_->Create(file_path, /*overwrite=*/true));
-    ASSERT_OK_AND_ASSIGN(int32_t write_len, out_stream->Write(content.data(), content.size()));
+    ASSERT_OK_AND_ASSIGN(int64_t write_len, out_stream->Write(content.data(), content.size()));
     ASSERT_EQ(write_len, content.size());
     ASSERT_OK(out_stream->Flush());
     ASSERT_OK(out_stream->Close());
@@ -599,7 +626,7 @@ TEST_P(FileSystemTest, TestSeek2) {
 
     // read from cur pos
     std::string read_content(3, '\0');
-    ASSERT_OK_AND_ASSIGN(int32_t read_len,
+    ASSERT_OK_AND_ASSIGN(int64_t read_len,
                          in_stream->Read(read_content.data(), read_content.size()));
     ASSERT_EQ(read_len, read_content.size());
     ASSERT_EQ("ijk", read_content);
@@ -621,14 +648,14 @@ TEST_P(FileSystemTest, TestRename) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<OutputStream> out, fs_->Create(path, /*overwrite=*/true));
     ASSERT_TRUE(out);
     std::string input = "paimon";
-    ASSERT_OK_AND_ASSIGN(int32_t size, out->Write(input.data(), input.size()));
+    ASSERT_OK_AND_ASSIGN(int64_t size, out->Write(input.data(), input.size()));
     ASSERT_EQ(size, input.size());
     ASSERT_OK(out->Flush());
     ASSERT_OK(out->Close());
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<InputStream> in, fs_->Open(path));
     ASSERT_TRUE(in);
     char* data = new char[input.size() * 2];
-    ASSERT_OK_AND_ASSIGN(int32_t size_read, in->Read(data, input.size(), /*offset=*/0));
+    ASSERT_OK_AND_ASSIGN(int64_t size_read, in->Read(data, input.size(), /*offset=*/0));
     ASSERT_EQ(size_read, input.size());
     std::string read_data(data, input.size());
     ASSERT_EQ(read_data, input);
@@ -646,6 +673,27 @@ TEST_P(FileSystemTest, TestRename) {
     ASSERT_NOK_WITH_MSG(
         fs_->Rename(path2, PathUtil::JoinPath(test_root_, "/wrong_path_file_renamed/")),
         "src file is not a dir");
+}
+
+TEST_P(FileSystemTest, TestRenameWithFileSchemeUsesNormalizedPath) {
+    if (GetParam() != "local") {
+        GTEST_SKIP() << "this test is only tested for the local file system";
+    }
+
+    const std::string src = "file:" + test_root_ + "/scheme_src.txt";
+    const std::string dst = "file:" + test_root_ + "/scheme_dst.txt";
+
+    ASSERT_OK(fs_->WriteFile(src, "content", /*overwrite=*/false));
+    ASSERT_OK(fs_->Rename(src, dst));
+
+    ASSERT_OK_AND_ASSIGN(bool src_exists, fs_->Exists(src));
+    ASSERT_FALSE(src_exists);
+    ASSERT_OK_AND_ASSIGN(bool dst_exists, fs_->Exists(dst));
+    ASSERT_TRUE(dst_exists);
+
+    std::string content;
+    ASSERT_OK(fs_->ReadFile(dst, &content));
+    ASSERT_EQ(content, "content");
 }
 
 TEST_P(FileSystemTest, TestRename2) {
@@ -778,6 +826,19 @@ TEST_P(FileSystemTest, TestExists) {
 
     ASSERT_OK(fs_->WriteFile(dir_path + "/file.data", "content", /*overwrite=*/false));
     ASSERT_OK_AND_ASSIGN(is_exist, fs_->Exists(dir_path));
+    ASSERT_TRUE(is_exist);
+}
+
+TEST_P(FileSystemTest, TestExistsInLocalFileSystem) {
+    if (GetParam() != "local") {
+        GTEST_SKIP() << "this test is only tested for the local file system";
+    }
+
+    ASSERT_OK_AND_ASSIGN(bool is_exist, fs_->Exists("/"));
+    ASSERT_TRUE(is_exist);
+    ASSERT_OK_AND_ASSIGN(is_exist, fs_->Exists(""));
+    ASSERT_TRUE(is_exist);
+    ASSERT_OK_AND_ASSIGN(is_exist, fs_->Exists("."));
     ASSERT_TRUE(is_exist);
 }
 
@@ -985,8 +1046,16 @@ TEST_P(FileSystemTest, TestMkdir) {
     ASSERT_OK(fs_->Mkdirs(test_root_ + "/tmp/local/f/1"));
     ASSERT_OK(fs_->Mkdirs(test_root_ + "/tmp1"));
     ASSERT_OK(fs_->Mkdirs(test_root_ + "/tmp1/f2/"));
+}
+
+TEST_P(FileSystemTest, TestMkdirInLocalFileSystem) {
+    if (GetParam() != "local") {
+        GTEST_SKIP() << "this test is only tested for the local file system";
+    }
+
     ASSERT_OK(fs_->Mkdirs("/"));
-    ASSERT_NOK_WITH_MSG(fs_->Mkdirs(""), "path is an empty string.");
+    ASSERT_OK(fs_->Mkdirs(""));
+    ASSERT_OK(fs_->Mkdirs("."));
 }
 
 TEST_P(FileSystemTest, TestMkdir2) {
@@ -1017,7 +1086,7 @@ TEST_P(FileSystemTest, TestMkdir2) {
 TEST_P(FileSystemTest, TestMkdirMultiThreadWithSameNonExistParentDir) {
     uint32_t runs_count = 10;
     uint32_t thread_count = 10;
-    auto executor = CreateDefaultExecutor(thread_count);
+    ASSERT_OK_AND_ASSIGN(auto executor, CreateDefaultExecutor(thread_count));
 
     for (uint32_t i = 0; i < runs_count; i++) {
         std::string uuid;
@@ -1042,7 +1111,7 @@ TEST_P(FileSystemTest, TestMkdirMultiThreadWithSameNonExistParentDir) {
 TEST_P(FileSystemTest, TestMkdirMultiThreadWithSameName) {
     uint32_t runs_count = 10;
     uint32_t thread_count = 10;
-    auto executor = CreateDefaultExecutor(thread_count);
+    ASSERT_OK_AND_ASSIGN(auto executor, CreateDefaultExecutor(thread_count));
 
     for (uint32_t i = 0; i < runs_count; i++) {
         std::string uuid;
@@ -1062,9 +1131,12 @@ TEST_P(FileSystemTest, TestMkdirMultiThreadWithSameName) {
 
 // test for create multi dir such as "partition1" and "partition1" (relative path)
 TEST_P(FileSystemTest, TestMkdirMultiThreadWithSameNameWithRelativePath) {
+    if (GetParam() == "jindo") {
+        GTEST_SKIP() << "skip jindo for relative path test";
+    }
     uint32_t runs_count = 10;
     uint32_t thread_count = 10;
-    auto executor = CreateDefaultExecutor(thread_count);
+    ASSERT_OK_AND_ASSIGN(auto executor, CreateDefaultExecutor(thread_count));
 
     for (uint32_t i = 0; i < runs_count; i++) {
         std::string uuid;
@@ -1399,6 +1471,14 @@ TEST_P(FileSystemTest, TestAtomicStoreAlreadyExist) {
     ASSERT_TRUE(is_exist);
 }
 
-INSTANTIATE_TEST_SUITE_P(UseLocal, FileSystemTest, ::testing::Values("local" /*, "jindo"*/));
+std::vector<std::string> GetTestValuesForFileSystemTest() {
+    std::vector<std::string> values;
+    values.emplace_back("local");
+    // values.emplace_back("jindo");
+    return values;
+}
+
+INSTANTIATE_TEST_SUITE_P(FsType, FileSystemTest,
+                         ::testing::ValuesIn(GetTestValuesForFileSystemTest()));
 
 }  // namespace paimon::test

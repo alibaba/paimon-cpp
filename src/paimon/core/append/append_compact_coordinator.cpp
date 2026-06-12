@@ -209,7 +209,7 @@ Status ValidateTable(const std::shared_ptr<TableSchema>& table_schema,
 }
 
 /// Build FileStorePathFactory from core options and table schema.
-Result<std::unique_ptr<FileStorePathFactory>> BuildPathFactory(
+Result<std::shared_ptr<FileStorePathFactory>> BuildPathFactory(
     const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
     const std::shared_ptr<arrow::Schema>& arrow_schema, const CoreOptions& core_options,
     const std::shared_ptr<MemoryPool>& pool) {

@@ -23,9 +23,10 @@
 #include "fmt/format.h"
 
 namespace paimon {
-ByteArrayInputStream::ByteArrayInputStream(const char* buffer, uint64_t length)
+ByteArrayInputStream::ByteArrayInputStream(const char* buffer, int64_t length)
     : buffer_(buffer), length_(length), position_(0) {
     assert(buffer_);
+    assert(length >= 0);
 }
 
 const char* ByteArrayInputStream::GetRawData() const {
@@ -33,59 +34,60 @@ const char* ByteArrayInputStream::GetRawData() const {
 }
 
 Status ByteArrayInputStream::Seek(int64_t offset, SeekOrigin origin) {
+    int64_t new_position = 0;
     switch (origin) {
         case SeekOrigin::FS_SEEK_SET: {
-            position_ = offset;
+            new_position = offset;
             break;
         }
         case SeekOrigin::FS_SEEK_CUR: {
-            position_ += offset;
+            new_position = position_ + offset;
             break;
         }
         case SeekOrigin::FS_SEEK_END: {
-            PAIMON_ASSIGN_OR_RAISE(uint64_t length, Length());
-            position_ = static_cast<int64_t>(length) + offset;
+            new_position = length_ + offset;
             break;
         }
         default:
             return Status::Invalid(
                 "invalid SeekOrigin, only support FS_SEEK_SET, FS_SEEK_CUR, and FS_SEEK_END");
     }
-    if (position_ < 0 || position_ > static_cast<int64_t>(length_)) {
-        return Status::Invalid(
-            fmt::format("invalid seek, after seek, current pos {}, length {}", position_, length_));
+    if (new_position < 0 || new_position > length_) {
+        return Status::Invalid(fmt::format("invalid seek, after seek, current pos {}, length {}",
+                                           new_position, length_));
     }
+    position_ = new_position;
     return Status::OK();
 }
 
-Result<int32_t> ByteArrayInputStream::Read(char* buffer, uint32_t size) {
-    if (position_ + static_cast<int64_t>(size) > static_cast<int64_t>(length_)) {
+Result<int64_t> ByteArrayInputStream::Read(char* buffer, int64_t size) {
+    if (size < 0 || size > length_ - position_) {
         return Status::Invalid(
             fmt::format("ByteArrayInputStream assert boundary failed: need length {}, current "
                         "position {}, exceed length {}",
                         size, position_, length_));
     }
-    memcpy(buffer, buffer_ + position_, size);
+    memcpy(buffer, buffer_ + position_, static_cast<size_t>(size));
     position_ += size;
     return size;
 }
 
-Result<int32_t> ByteArrayInputStream::Read(char* buffer, uint32_t size, uint64_t offset) {
-    if (offset + static_cast<uint64_t>(size) > length_) {
+Result<int64_t> ByteArrayInputStream::Read(char* buffer, int64_t size, int64_t offset) {
+    if (size < 0 || offset < 0 || offset > length_ || size > length_ - offset) {
         return Status::Invalid(
-            fmt::format("ByteArrayInputStream assert boundary failed: need length {}, read offset "
-                        "{}, exceed length {}",
+            fmt::format("ByteArrayInputStream boundary check failed: read size {}, offset {}, "
+                        "stream length {}",
                         size, offset, length_));
     }
-    memcpy(buffer, buffer_ + offset, size);
+    memcpy(buffer, buffer_ + offset, static_cast<size_t>(size));
     return size;
 }
 
-void ByteArrayInputStream::ReadAsync(char* buffer, uint32_t size, uint64_t offset,
+void ByteArrayInputStream::ReadAsync(char* buffer, int64_t size, int64_t offset,
                                      std::function<void(Status)>&& callback) {
-    Result<int32_t> read_size = Read(buffer, size, offset);
+    Result<int64_t> read_size = Read(buffer, size, offset);
     Status status = Status::OK();
-    if (read_size.ok() && static_cast<uint32_t>(read_size.value()) != size) {
+    if (read_size.ok() && read_size.value() != size) {
         status = Status::Invalid(fmt::format(
             "ByteArrayInputStream async read size {} != expected {}", read_size.value(), size));
     } else if (!read_size.ok()) {

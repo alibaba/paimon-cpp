@@ -26,7 +26,9 @@
 
 #include "fmt/format.h"
 #include "paimon/common/factories/io_hook.h"
+#include "paimon/common/utils/math.h"
 #include "paimon/common/utils/path_util.h"
+#include "paimon/common/utils/string_utils.h"
 #include "paimon/fs/local/local_file_status.h"
 
 namespace paimon {
@@ -37,7 +39,33 @@ namespace paimon {
         PAIMON_RETURN_NOT_OK(hook_->Try(path_)); \
     }
 
+Result<std::unique_ptr<LocalFile>> LocalFile::Create(const std::string& path_string) {
+    if (path_string.empty()) {
+        PAIMON_ASSIGN_OR_RAISE(std::string current_path, PathUtil::GetWorkingDirectory());
+        return std::unique_ptr<LocalFile>(new LocalFile(current_path));
+    }
+
+    // local file system does not support path_string with scheme, e.g., "file:/tmp" will be
+    // rewritten to "/tmp"
+    PAIMON_ASSIGN_OR_RAISE(Path path, PathUtil::ToPath(path_string));
+    if (!path.scheme.empty() && StringUtils::ToLowerCase(path.scheme) != "file") {
+        return Status::Invalid(fmt::format("invalid scheme {} for local file system", path.scheme));
+    }
+    if (path.path.empty() || path.path[0] != '/') {
+        PAIMON_ASSIGN_OR_RAISE(std::string current_path, PathUtil::GetWorkingDirectory());
+        return std::unique_ptr<LocalFile>(
+            new LocalFile(PathUtil::JoinPath(current_path, path.path)));
+    }
+    return std::unique_ptr<LocalFile>(new LocalFile(path.path));
+}
+
 LocalFile::LocalFile(const std::string& path) : path_(path), hook_(IOHook::GetInstance()) {}
+
+LocalFile::~LocalFile() {
+    if (file_) {
+        std::fclose(file_);
+    }
+}
 
 Result<bool> LocalFile::Exists() const {
     CHECK_HOOK();
@@ -98,13 +126,15 @@ Status LocalFile::List(std::vector<std::string>* file_list) const {
     return Status::OK();
 }
 
-Status LocalFile::ListFiles(std::vector<LocalFile>* file_list) const {
+Status LocalFile::ListFiles(std::vector<std::unique_ptr<LocalFile>>* file_list) const {
     CHECK_HOOK();
     file_list->clear();
     std::vector<std::string> file_names;
     PAIMON_RETURN_NOT_OK(List(&file_names));
     for (const auto& file_name : file_names) {
-        file_list->emplace_back(PathUtil::JoinPath(path_, file_name));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFile> file,
+                               LocalFile::Create(PathUtil::JoinPath(path_, file_name)));
+        file_list->push_back(std::move(file));
     }
     return Status::OK();
 }
@@ -140,7 +170,7 @@ Result<std::unique_ptr<LocalFileStatus>> LocalFile::GetFileStatus() const {
                                              S_ISDIR(buf.st_mode));
 }
 
-Result<uint64_t> LocalFile::Length() const {
+Result<int64_t> LocalFile::Length() const {
     CHECK_HOOK();
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFileStatus> file_status, GetFileStatus());
     return file_status->GetLen();
@@ -152,38 +182,35 @@ Result<int64_t> LocalFile::LastModifiedTimeMs() const {
     return file_status->GetModificationTime();
 }
 
-LocalFile LocalFile::GetParentFile() const {
+std::unique_ptr<LocalFile> LocalFile::GetParentFile() const {
     size_t pos = path_.rfind('/');
     if (pos == std::string::npos) {
-        return LocalFile("");
+        return std::unique_ptr<LocalFile>(new LocalFile(""));
     } else {
         std::string parent_dir = path_.substr(0, pos);
-        return LocalFile(parent_dir);
+        return std::unique_ptr<LocalFile>(new LocalFile(parent_dir));
     }
 }
 
-const std::string& LocalFile::GetAbsolutePath() const {
+const std::string& LocalFile::GetPath() const {
     return path_;
 }
 
-Result<int32_t> LocalFile::Read(char* buffer, uint32_t length, uint64_t offset) {
+Result<int64_t> LocalFile::Read(char* buffer, int64_t length, int64_t offset) {
     if (file_) {
         CHECK_HOOK();
+        PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(length, "read length"));
+        PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(offset, "read offset"));
         int32_t fd = fileno(file_);
-        auto more = static_cast<int32_t>(length);
-        if (more < 0) {
-            return Status::IOError(fmt::format(
-                "pread file '{}' fail, length overflow int32_t, ec: EC_BADARGS", path_));
-        }
 
-        uint64_t off = 0;
-        int32_t ret = 0;
+        int64_t more = length;
+        int64_t off = 0;
+        int64_t ret = 0;
         while (more > 0) {
             ret = ::pread(fd, buffer + off, more, offset + off);
             if (ret == -1) {
-                return Status::IOError(
-                    fmt::format("pread file '{}' fail at off {}, with error {}, ec: {}", path_, off,
-                                strerror(errno), std::strerror(errno)));
+                return Status::IOError(fmt::format("pread file '{}' fail at off {}, ec: {}", path_,
+                                                   off, std::strerror(errno)));
             }
             if (ret == 0) {
                 break;
@@ -197,23 +224,19 @@ Result<int32_t> LocalFile::Read(char* buffer, uint32_t length, uint64_t offset) 
         "read file '{}' fail, can not read file which is opened fail, ec: EBADF", path_));
 }
 
-Result<int32_t> LocalFile::Read(char* buffer, uint32_t length) {
+Result<int64_t> LocalFile::Read(char* buffer, int64_t length) {
     if (file_) {
         CHECK_HOOK();
-        auto more = static_cast<int32_t>(length);
-        if (more < 0) {
-            return Status::IOError(
-                fmt::format("fileName '{}', length '{}', ec: EC_BADARGS", path_, length));
-        }
+        PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(length, "read length"));
 
-        int32_t ret = 0;
-        uint64_t off = 0;
+        int64_t more = length;
+        int64_t ret = 0;
+        int64_t off = 0;
         while (more > 0) {
             ret = fread(buffer + off, 1, more, file_);
             if (ferror(file_) != 0) {
-                return Status::IOError(
-                    fmt::format("read file '{}' fail at off {}, with error {}, ec: {}", path_, off,
-                                strerror(errno), std::strerror(errno)));
+                return Status::IOError(fmt::format("read file '{}' fail at off {}, ec: {}", path_,
+                                                   off, std::strerror(errno)));
             }
             more -= ret;
             off += ret;
@@ -228,23 +251,24 @@ Result<int32_t> LocalFile::Read(char* buffer, uint32_t length) {
         "read file '{}' fail, can not read file which is opened fail, ec: EBADF", path_));
 }
 
-Result<int32_t> LocalFile::Write(const char* buffer, uint32_t length) {
+Result<int64_t> LocalFile::Write(const char* buffer, int64_t length) {
     if (file_) {
         CHECK_HOOK();
-        auto more = static_cast<int32_t>(length);
-        if (more < 0) {
-            return Status::IOError(fmt::format(
-                "write file '{}' fail, length overflow int32_t, ec: EC_BADARGS", path_));
-        }
+        PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(length, "write length"));
 
-        int32_t ret = 0;
-        uint64_t off = 0;
+        int64_t more = length;
+        int64_t ret = 0;
+        int64_t off = 0;
         while (more > 0) {
             ret = fwrite(buffer + off, 1, more, file_);
             if (ferror(file_) != 0) {
-                return Status::IOError(fmt::format("write file '{}' fail, with error {}, ec: {}",
-                                                   path_, off, strerror(errno),
-                                                   std::strerror(errno)));
+                return Status::IOError(fmt::format("write file '{}' fail at off {}, ec: {}", path_,
+                                                   off, std::strerror(errno)));
+            }
+            if (ret == 0) {
+                return Status::IOError(
+                    fmt::format("write file '{}' fail at off {}, wrote zero bytes, ec: {}", path_,
+                                off, std::strerror(errno)));
             }
             more -= ret;
             off += ret;

@@ -19,7 +19,21 @@
 #include <cstdint>
 #include <limits>
 
+#include "fmt/format.h"
+#include "paimon/status.h"
+
 namespace paimon::parquet {
+
+// Convert any std::exception thrown by underlying Parquet/Arrow APIs into a
+// Status. Used as the trailing catch clauses of a try block in every public
+// method that calls into the parquet C++ API, so the read layer never throws.
+#define PAIMON_PARQUET_CATCH_AND_RETURN_STATUS(context)                           \
+    catch (const std::exception& e) {                                             \
+        return Status::Invalid(fmt::format("{}: {}", (context), e.what()));       \
+    }                                                                             \
+    catch (...) {                                                                 \
+        return Status::UnknownError(fmt::format("{}: unknown error", (context))); \
+    }
 
 // write
 static inline const char PARQUET_BLOCK_SIZE[] = "parquet.block.size";

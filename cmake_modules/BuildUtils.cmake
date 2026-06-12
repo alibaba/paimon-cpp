@@ -89,6 +89,8 @@ function(add_paimon_lib LIB_NAME)
     # Generate a single "objlib" from all C++ modules and link
     # that "objlib" into each library kind, to avoid compiling twice
     add_library(${LIB_NAME}_objlib OBJECT ${ARG_SOURCES})
+    target_link_libraries(${LIB_NAME}_objlib
+                          PRIVATE "$<BUILD_INTERFACE:paimon_sanitizer_flags>")
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         target_compile_options(${LIB_NAME}_objlib PRIVATE -Wno-global-constructors)
     endif()
@@ -177,16 +179,16 @@ function(add_paimon_lib LIB_NAME)
                               PUBLIC "$<BUILD_INTERFACE:paimon_sanitizer_flags>")
 
         if(NOT APPLE)
-            target_link_options(${LIB_NAME}_shared
-                                PRIVATE
-                                -Wl,--exclude-libs,ALL
-                                -Wl,-Bsymbolic
-                                -Wl,-z,defs
-                                -Wl,--gc-sections)
+            set(SHARED_LINK_OPTIONS -Wl,--exclude-libs,ALL -Wl,-Bsymbolic
+                                    -Wl,--gc-sections)
+            if(NOT PAIMON_USE_ASAN AND NOT PAIMON_USE_UBSAN)
+                list(APPEND SHARED_LINK_OPTIONS -Wl,-z,defs)
+            endif()
+            target_link_options(${LIB_NAME}_shared PRIVATE ${SHARED_LINK_OPTIONS})
         endif()
 
         install(TARGETS ${LIB_NAME}_shared ${INSTALL_IS_OPTIONAL}
-                EXPORT ${LIB_NAME}_targets
+                EXPORT PaimonTargets
                 RUNTIME DESTINATION ${RUNTIME_INSTALL_DIR}
                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -233,7 +235,7 @@ function(add_paimon_lib LIB_NAME)
                               PUBLIC "$<BUILD_INTERFACE:paimon_sanitizer_flags>")
 
         install(TARGETS ${LIB_NAME}_static ${INSTALL_IS_OPTIONAL}
-                EXPORT ${LIB_NAME}_targets
+                EXPORT PaimonTargets
                 RUNTIME DESTINATION ${RUNTIME_INSTALL_DIR}
                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -403,4 +405,122 @@ function(add_paimon_test REL_TEST_NAME)
                   ${LABELS}
                   ${PCH_ARGS}
                   ${ARG_UNPARSED_ARGUMENTS})
+endfunction()
+
+function(add_benchmark_case REL_BENCHMARK_NAME)
+    set(options ENABLED)
+    set(one_value_args)
+    set(multi_value_args
+        SOURCES
+        STATIC_LINK_LIBS
+        EXTRA_LINK_LIBS
+        EXTRA_INCLUDES
+        LABELS
+        PREFIX)
+    cmake_parse_arguments(ARG
+                          "${options}"
+                          "${one_value_args}"
+                          "${multi_value_args}"
+                          ${ARGN})
+    if(ARG_UNPARSED_ARGUMENTS)
+        message(SEND_ERROR "Error: unrecognized arguments: ${ARG_UNPARSED_ARGUMENTS}")
+    endif()
+
+    if(NOT PAIMON_BUILD_BENCHMARKS AND NOT ARG_ENABLED)
+        return()
+    endif()
+
+    get_filename_component(BENCHMARK_NAME ${REL_BENCHMARK_NAME} NAME_WE)
+
+    if(ARG_PREFIX)
+        set(BENCHMARK_NAME "${ARG_PREFIX}-${BENCHMARK_NAME}")
+    endif()
+
+    if(ARG_SOURCES)
+        set(SOURCES ${ARG_SOURCES})
+    else()
+        set(SOURCES "${REL_BENCHMARK_NAME}.cpp")
+    endif()
+
+    string(REPLACE "_" "-" BENCHMARK_NAME ${BENCHMARK_NAME})
+    set(BENCHMARK_PATH "${EXECUTABLE_OUTPUT_PATH}/${BENCHMARK_NAME}")
+    message(STATUS ${BENCHMARK_NAME})
+    add_executable(${BENCHMARK_NAME} ${SOURCES})
+
+    if(ARG_STATIC_LINK_LIBS)
+        target_link_libraries(${BENCHMARK_NAME} PRIVATE ${ARG_STATIC_LINK_LIBS})
+    endif()
+
+    if(ARG_EXTRA_LINK_LIBS)
+        target_link_libraries(${BENCHMARK_NAME} PRIVATE ${ARG_EXTRA_LINK_LIBS})
+    endif()
+
+    if(ARG_EXTRA_INCLUDES)
+        target_include_directories(${BENCHMARK_NAME} SYSTEM PUBLIC ${ARG_EXTRA_INCLUDES})
+    endif()
+
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        target_compile_options(${BENCHMARK_NAME} PRIVATE -Wno-global-constructors)
+    endif()
+    target_compile_options(${BENCHMARK_NAME} PRIVATE -fno-access-control)
+
+    add_test(${BENCHMARK_NAME}
+             ${BUILD_SUPPORT_DIR}/run-test.sh
+             ${CMAKE_BINARY_DIR}
+             benchmark
+             ${BENCHMARK_PATH})
+
+    foreach(TARGET ${ARG_LABELS})
+        add_dependencies(${TARGET} ${BENCHMARK_NAME})
+    endforeach()
+
+    set(LABELS)
+    list(APPEND LABELS "benchmark")
+    if(ARG_LABELS)
+        list(APPEND LABELS ${ARG_LABELS})
+    endif()
+
+    foreach(LABEL ${ARG_LABELS})
+        set(LABEL_BENCHMARK_NAME "benchmark-${LABEL}")
+        if(NOT TARGET ${LABEL_BENCHMARK_NAME})
+            add_custom_target(${LABEL_BENCHMARK_NAME}
+                              ctest -L "${LABEL}" --output-on-failure
+                              USES_TERMINAL)
+        endif()
+        add_dependencies(${LABEL_BENCHMARK_NAME} ${BENCHMARK_NAME})
+    endforeach()
+
+    set_property(TEST ${BENCHMARK_NAME}
+                 APPEND
+                 PROPERTY LABELS ${LABELS})
+endfunction()
+
+function(add_paimon_benchmark REL_BENCHMARK_NAME)
+    set(options)
+    set(one_value_args PREFIX)
+    set(multi_value_args LABELS)
+    cmake_parse_arguments(ARG
+                          "${options}"
+                          "${one_value_args}"
+                          "${multi_value_args}"
+                          ${ARGN})
+
+    if(ARG_PREFIX)
+        set(PREFIX ${ARG_PREFIX})
+    else()
+        set(PREFIX "paimon")
+    endif()
+
+    if(ARG_LABELS)
+        set(LABELS ${ARG_LABELS})
+    else()
+        set(LABELS "paimon-benchmarks")
+    endif()
+
+    add_benchmark_case(${REL_BENCHMARK_NAME}
+                       PREFIX
+                       ${PREFIX}
+                       LABELS
+                       ${LABELS}
+                       ${ARG_UNPARSED_ARGUMENTS})
 endfunction()

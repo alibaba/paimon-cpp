@@ -17,6 +17,7 @@
 #include "paimon/core/deletionvectors/deletion_file_writer.h"
 
 #include "paimon/common/io/data_output_stream.h"
+#include "paimon/common/utils/path_util.h"
 #include "paimon/core/deletionvectors/deletion_vectors_index_file.h"
 
 namespace paimon {
@@ -47,10 +48,9 @@ Status DeletionFileWriter::Write(const std::string& key,
 }
 
 Result<std::unique_ptr<IndexFileMeta>> DeletionFileWriter::GetResult() const {
-    int64_t length = output_bytes_;
-    if (length < 0 || length > std::numeric_limits<int32_t>::max()) {
+    if (output_bytes_ < 0 || output_bytes_ > std::numeric_limits<int32_t>::max()) {
         return Status::Invalid(
-            fmt::format("Deletion file result length {} out of int32 range.", length));
+            fmt::format("Deletion file result length {} out of int32 range.", output_bytes_));
     }
     std::optional<std::string> final_path;
     if (is_external_path_) {
@@ -58,8 +58,8 @@ Result<std::unique_ptr<IndexFileMeta>> DeletionFileWriter::GetResult() const {
         final_path = external_path.ToString();
     }
     return std::make_unique<IndexFileMeta>(DeletionVectorsIndexFile::DELETION_VECTORS_INDEX,
-                                           PathUtil::GetName(path_), length, dv_metas_.size(),
-                                           dv_metas_, final_path);
+                                           PathUtil::GetName(path_), output_bytes_,
+                                           dv_metas_.size(), dv_metas_, final_path);
 }
 
 }  // namespace paimon

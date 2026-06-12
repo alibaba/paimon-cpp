@@ -321,7 +321,7 @@ Result<std::vector<GlobalIndexIOMeta>> LuminaIndexWriter::Finish() {
     PAIMON_ASSIGN_OR_RAISE(std::string index_file_name,
                            file_manager_->NewFileName(LuminaDefines::kIdentifier));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<OutputStream> out,
-                           file_manager_->NewOutputStream(index_file_name))
+                           file_manager_->NewOutputStream(index_file_name));
     auto file_writer = std::make_unique<LuminaFileWriter>(out);
     PAIMON_RETURN_NOT_OK_FROM_LUMINA(builder.Dump(std::move(file_writer), io_options_));
     // prepare GlobalIndexIOMeta

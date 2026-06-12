@@ -21,9 +21,6 @@
 #include "paimon/common/utils/murmurhash_utils.h"
 
 namespace paimon {
-std::shared_ptr<Bytes> MemorySegmentUtils::AllocateBytes(int32_t length, MemoryPool* pool) {
-    return Bytes::AllocateBytes(length, pool);
-}
 
 void MemorySegmentUtils::CopyFromBytes(std::vector<MemorySegment>* segments, int32_t offset,
                                        const Bytes& bytes, int32_t bytes_offset,
@@ -313,7 +310,7 @@ int32_t MemorySegmentUtils::HashByWords(const std::vector<MemorySegment>& segmen
 int32_t MemorySegmentUtils::HashMultiSegByWords(const std::vector<MemorySegment>& segments,
                                                 int32_t offset, int32_t num_bytes,
                                                 MemoryPool* pool) {
-    std::shared_ptr<Bytes> bytes = AllocateBytes(num_bytes, pool);
+    std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes(num_bytes, pool);
     CopyMultiSegmentsToBytes(segments, offset, bytes.get(), 0, num_bytes);
     return MurmurHashUtils::HashUnsafeBytesByWords(reinterpret_cast<void*>(bytes->data()), 0,
                                                    num_bytes);
@@ -321,7 +318,7 @@ int32_t MemorySegmentUtils::HashMultiSegByWords(const std::vector<MemorySegment>
 
 int32_t MemorySegmentUtils::HashMultiSeg(const std::vector<MemorySegment>& segments, int32_t offset,
                                          int32_t num_bytes, MemoryPool* pool) {
-    std::shared_ptr<Bytes> bytes = AllocateBytes(num_bytes, pool);
+    std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes(num_bytes, pool);
     CopyMultiSegmentsToBytes(segments, offset, bytes.get(), 0, num_bytes);
 
     return MurmurHashUtils::HashUnsafeBytes(reinterpret_cast<void*>(bytes->data()), 0, num_bytes);

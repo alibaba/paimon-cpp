@@ -31,7 +31,9 @@ class GlobalIndexUtilsTest : public ::testing::Test {
     /// Helper to create a valid ArrowArray with the given number of int32 elements.
     static ArrowArray CreateInt32Array(const std::vector<int32_t>& values) {
         arrow::Int32Builder builder;
-        EXPECT_TRUE(builder.AppendValues(values).ok());
+        if (!values.empty()) {
+            EXPECT_TRUE(builder.AppendValues(values).ok());
+        }
         std::shared_ptr<arrow::Array> array;
         EXPECT_TRUE(builder.Finish(&array).ok());
         ArrowArray c_array;

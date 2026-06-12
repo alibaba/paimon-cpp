@@ -129,7 +129,7 @@ Status RowToArrowArrayConverter<T, R>::Reserve(arrow::ArrayBuilder* array_builde
         case arrow::Type::type::FLOAT:
         case arrow::Type::type::DOUBLE:
         case arrow::Type::type::TIMESTAMP:
-        case arrow::Type::type::DECIMAL:
+        case arrow::Type::type::DECIMAL128:
             break;
         case arrow::Type::type::STRING: {
             // reserve string data buffer
@@ -201,7 +201,7 @@ Status RowToArrowArrayConverter<T, R>::Accumulate(const arrow::Array* array, int
         case arrow::Type::type::FLOAT:
         case arrow::Type::type::DOUBLE:
         case arrow::Type::type::TIMESTAMP:
-        case arrow::Type::type::DECIMAL:
+        case arrow::Type::type::DECIMAL128:
             break;
         case arrow::Type::type::STRING: {
             auto string_array = arrow::internal::checked_cast<const arrow::StringArray*>(array);
@@ -403,7 +403,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
                         DateTimeUtils::TimestampToInteger(timestamp, time_type));
                 });
         }
-        case arrow::Type::type::DECIMAL: {
+        case arrow::Type::type::DECIMAL128: {
             PAIMON_ASSIGN_OR_RAISE(auto* field_builder,
                                    CastToTypedBuilder<arrow::Decimal128Builder>(array_builder));
             auto decimal_type =

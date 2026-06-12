@@ -29,7 +29,7 @@ namespace paimon {
 /// Input stream for memory buffer, inherits from `InputStream`.
 class PAIMON_EXPORT ByteArrayInputStream : public InputStream {
  public:
-    ByteArrayInputStream(const char* buffer, uint64_t length);
+    ByteArrayInputStream(const char* buffer, int64_t length);
     ~ByteArrayInputStream() override = default;
 
     /// @return The raw data pointer of current pos.
@@ -41,14 +41,14 @@ class PAIMON_EXPORT ByteArrayInputStream : public InputStream {
         return position_;
     }
 
-    Result<int32_t> Read(char* buffer, uint32_t size) override;
+    Result<int64_t> Read(char* buffer, int64_t size) override;
 
-    Result<int32_t> Read(char* buffer, uint32_t size, uint64_t offset) override;
+    Result<int64_t> Read(char* buffer, int64_t size, int64_t offset) override;
 
-    void ReadAsync(char* buffer, uint32_t size, uint64_t offset,
+    void ReadAsync(char* buffer, int64_t size, int64_t offset,
                    std::function<void(Status)>&& callback) override;
 
-    Result<uint64_t> Length() const override {
+    Result<int64_t> Length() const override {
         return length_;
     }
 
@@ -58,7 +58,7 @@ class PAIMON_EXPORT ByteArrayInputStream : public InputStream {
 
  private:
     const char* buffer_;
-    const uint64_t length_;
+    const int64_t length_;
     int64_t position_;
 };
 }  // namespace paimon
