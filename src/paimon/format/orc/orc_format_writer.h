@@ -64,7 +64,7 @@ class OrcFormatWriter : public FormatWriter {
 
     std::shared_ptr<Metrics> GetWriterMetrics() const override;
 
-    Status UpdateSchema(const std::shared_ptr<arrow::Schema>& schema) override;
+    Status UpdateSchema(::ArrowSchema* schema) override;
 
  private:
     OrcFormatWriter(const std::shared_ptr<OrcMemoryPool>& orc_memory_pool,

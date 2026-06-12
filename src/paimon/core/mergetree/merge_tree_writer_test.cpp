@@ -464,13 +464,12 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMapDataFileMetaInfo) {
 
     auto expected_data_file_meta = std::make_shared<DataFileMeta>(
         expected_data_file_name, /*file_size=*/data_file_status->GetLen(), /*row_count=*/2,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({int32_t(1)}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({int32_t(2)}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({1}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({2}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({int32_t(1)}, {int32_t(2)}, {0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({1}, {2}, {0}, pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({int32_t(1), NullType()}, {int32_t(2), NullType()},
-                                          {0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({1, NullType()}, {2, NullType()}, {0, 0}, pool_.get()),
         /*min_sequence_number=*/14, /*max_sequence_number=*/15, /*schema_id=*/5,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/actual_meta->creation_time, /*delete_row_count=*/0,

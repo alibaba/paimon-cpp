@@ -727,7 +727,10 @@ TEST_F(ParquetFileBatchReaderTest, TestUpdateSchemaPerFieldMetadata) {
     });
 
     // UpdateSchema must be called before Finish.
-    ASSERT_OK(format_writer->UpdateSchema(updated_schema));
+    ArrowSchema c_updated_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*updated_schema, &c_updated_schema).ok());
+    ASSERT_OK(format_writer->UpdateSchema(&c_updated_schema));
+    ArrowSchemaRelease(&c_updated_schema);
     ASSERT_OK(format_writer->Finish());
     ASSERT_OK(out->Flush());
     ASSERT_OK(out->Close());

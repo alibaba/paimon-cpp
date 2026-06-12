@@ -17,6 +17,7 @@
 #include "paimon/core/append/append_only_writer.h"
 
 #include <functional>
+#include <map>
 #include <string>
 #include <utility>
 
@@ -73,7 +74,7 @@ Result<std::unique_ptr<AppendOnlyWriter>> AppendOnlyWriter::Create(
         std::map<int32_t, int32_t> column_to_k_max;
         PAIMON_ASSIGN_OR_RAISE(column_to_k_max, MapSharedShreddingUtils::BuildColumnToNumColumns(
                                                     shredding_indices, write_schema, options));
-        shredding_context = std::make_shared<MapSharedShreddingContext>(std::move(column_to_k_max));
+        shredding_context = std::make_shared<MapSharedShreddingContext>(column_to_k_max);
     }
 
     return std::unique_ptr<AppendOnlyWriter>(new AppendOnlyWriter(
@@ -249,9 +250,6 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingRowWrit
         return CreateRollingBlobWriter(schemas, blob_context->GetInlineFields());
     }
 
-    // When shared-shredding map is active, use logical schema — DataFileWriter handles the
-    // conversion. The physical schema is created per-file inside GetDataFileWriterCreator.
-
     if (!blob_context) {
         // No BLOB fields at all -> plain rolling writer
         return std::make_unique<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
@@ -304,7 +302,8 @@ AppendOnlyWriter::SingleFileWriterCreator AppendOnlyWriter::GetDataFileWriterCre
             std::function<Status(ArrowArray*, ArrowArray*)> batch_converter;
             if (converter) {
                 batch_converter = [converter](ArrowArray* input, ArrowArray* output) -> Status {
-                    PAIMON_ASSIGN_OR_RAISE(auto physical, converter->Convert(input));
+                    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ArrowArray> physical,
+                                           converter->Convert(input));
                     ArrowArrayMove(physical.get(), output);
                     return Status::OK();
                 };

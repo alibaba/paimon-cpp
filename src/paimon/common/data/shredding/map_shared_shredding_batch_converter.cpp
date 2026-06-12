@@ -32,11 +32,12 @@
 namespace paimon {
 
 MapSharedShreddingBatchConverter::MapSharedShreddingBatchConverter(
-    std::shared_ptr<arrow::Schema> logical_schema, std::shared_ptr<arrow::Schema> physical_schema,
+    const std::shared_ptr<arrow::Schema>& logical_schema,
+    const std::shared_ptr<arrow::Schema>& physical_schema,
     const std::map<int32_t, int32_t>& column_to_num_columns,
     const std::shared_ptr<MemoryPool>& pool)
-    : logical_schema_(std::move(logical_schema)),
-      physical_schema_(std::move(physical_schema)),
+    : logical_schema_(logical_schema),
+      physical_schema_(physical_schema),
       pool_(GetArrowPool(pool)) {
     for (const auto& [col_index, num_columns] : column_to_num_columns) {
         contexts_.emplace_back(col_index, num_columns);
@@ -106,18 +107,17 @@ Result<std::shared_ptr<arrow::Array>> MapSharedShreddingBatchConverter::ConvertO
     // Create StructBuilder from physical struct type — it owns all child builders.
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::unique_ptr<arrow::ArrayBuilder> struct_builder_base,
                                       arrow::MakeBuilder(physical_struct_type, pool_.get()));
-    arrow::StructBuilder* struct_builder =
-        dynamic_cast<arrow::StructBuilder*>(struct_builder_base.get());
+    auto* struct_builder = dynamic_cast<arrow::StructBuilder*>(struct_builder_base.get());
     PAIMON_CHECK_NOT_NULL(struct_builder,
                           "MapSharedShreddingBatchConverter: failed to create StructBuilder");
     PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder->Reserve(num_rows));
 
     // Extract child builders: [field_mapping, col_0..K-1, overflow]
-    arrow::ListBuilder* field_mapping_builder =
+    auto* field_mapping_builder =
         dynamic_cast<arrow::ListBuilder*>(struct_builder->field_builder(0));
     PAIMON_CHECK_NOT_NULL(field_mapping_builder,
                           "MapSharedShreddingBatchConverter: field_mapping is not a ListBuilder");
-    arrow::Int32Builder* field_mapping_value_builder =
+    auto* field_mapping_value_builder =
         dynamic_cast<arrow::Int32Builder*>(field_mapping_builder->value_builder());
     PAIMON_CHECK_NOT_NULL(
         field_mapping_value_builder,
@@ -135,11 +135,11 @@ Result<std::shared_ptr<arrow::Array>> MapSharedShreddingBatchConverter::ConvertO
     }
 
     int32_t overflow_field_idx = 1 + num_cols;
-    arrow::MapBuilder* overflow_builder =
+    auto* overflow_builder =
         dynamic_cast<arrow::MapBuilder*>(struct_builder->field_builder(overflow_field_idx));
     PAIMON_CHECK_NOT_NULL(overflow_builder,
                           "MapSharedShreddingBatchConverter: overflow is not a MapBuilder");
-    arrow::Int32Builder* overflow_key_builder =
+    auto* overflow_key_builder =
         dynamic_cast<arrow::Int32Builder*>(overflow_builder->key_builder());
     PAIMON_CHECK_NOT_NULL(overflow_key_builder,
                           "MapSharedShreddingBatchConverter: overflow key is not Int32Builder");
@@ -255,13 +255,6 @@ Status MapSharedShreddingBatchConverter::AppendOverflow(
             overflow_value_builder->AppendArraySlice(*values_array->data(), it->second, 1));
     }
     return Status::OK();
-}
-
-void MapSharedShreddingBatchConverter::Reset() {
-    for (auto& context : contexts_) {
-        context.dict.Reset();
-        context.allocator.Reset();
-    }
 }
 
 MapSharedShreddingFieldMeta MapSharedShreddingBatchConverter::BuildFieldMeta(

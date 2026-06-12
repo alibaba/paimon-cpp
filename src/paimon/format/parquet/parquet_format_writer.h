@@ -62,7 +62,7 @@ class ParquetFormatWriter : public FormatWriter {
         return metrics_;
     }
 
-    Status UpdateSchema(const std::shared_ptr<arrow::Schema>& schema) override;
+    Status UpdateSchema(::ArrowSchema* schema) override;
 
  private:
     ParquetFormatWriter(std::unique_ptr<::parquet::arrow::FileWriter> writer,

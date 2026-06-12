@@ -33,7 +33,7 @@ namespace paimon {
 class MapSharedShreddingContext {
  public:
     /// @param column_to_k_max Map from logical column index to its K_max (from options).
-    explicit MapSharedShreddingContext(std::map<int32_t, int32_t> column_to_k_max);
+    explicit MapSharedShreddingContext(const std::map<int32_t, int32_t>& column_to_k_max);
 
     /// Returns the K to use for each extend column in the next file.
     /// First file returns K_max for all columns; subsequent files adapt

@@ -59,8 +59,8 @@ class MapSharedShreddingBatchConverter {
     /// @param physical_schema The physical schema (MAP columns replaced with STRUCT).
     /// @param column_to_num_columns Map from logical column index to K.
     /// @param pool Paimon memory pool for Arrow allocations.
-    MapSharedShreddingBatchConverter(std::shared_ptr<arrow::Schema> logical_schema,
-                                     std::shared_ptr<arrow::Schema> physical_schema,
+    MapSharedShreddingBatchConverter(const std::shared_ptr<arrow::Schema>& logical_schema,
+                                     const std::shared_ptr<arrow::Schema>& physical_schema,
                                      const std::map<int32_t, int32_t>& column_to_num_columns,
                                      const std::shared_ptr<MemoryPool>& pool);
 
@@ -68,10 +68,6 @@ class MapSharedShreddingBatchConverter {
     /// @param logical_batch Input ArrowArray (C ABI) with logical schema. Consumed on success.
     /// @return Owned physical ArrowArray (C ABI) with physical schema.
     Result<std::unique_ptr<ArrowArray>> Convert(ArrowArray* logical_batch);
-
-    /// Resets dict and allocator state for all shredding columns.
-    /// Called when rolling to a new file.
-    void Reset();
 
     /// Builds MapSharedShreddingFieldMeta for one shredding column (by logical index).
     /// Called at file close to serialize metadata.

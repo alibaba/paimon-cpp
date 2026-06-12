@@ -52,12 +52,6 @@ class MapSharedShreddingFieldDict {
         return next_id_;
     }
 
-    /// Resets all state. Called when rolling to a new file.
-    void Reset() {
-        name_to_id_.clear();
-        next_id_ = 0;
-    }
-
  private:
     std::map<std::string, int32_t> name_to_id_;
     int32_t next_id_ = 0;

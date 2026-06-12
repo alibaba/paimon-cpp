@@ -116,7 +116,7 @@ Result<std::unique_ptr<::ArrowSchema>> OrcFileBatchReader::GetFileSchema() const
         std::string decoded = arrow::util::base64_decode(encoded);
         auto buffer = arrow::Buffer::FromString(std::move(decoded));
         arrow::io::BufferReader buf_reader(buffer);
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto schema,
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> schema,
                                           arrow::ipc::ReadSchema(&buf_reader, nullptr));
         auto c_schema = std::make_unique<::ArrowSchema>();
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schema, c_schema.get()));

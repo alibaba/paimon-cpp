@@ -108,26 +108,6 @@ TEST(MapSharedShreddingColumnAllocatorTest, OverflowFieldSetAccumulated) {
     ASSERT_EQ(std::set<int32_t>({3, 6, 7}), overflow_set);
 }
 
-TEST(MapSharedShreddingColumnAllocatorTest, ResetClearsAll) {
-    MapSharedShreddingColumnAllocator allocator(2);
-
-    allocator.AllocateRow({1, 2, 3});
-    ASSERT_EQ(3, allocator.GetMaxRowWidth());
-    ASSERT_FALSE(allocator.GetFieldToColumns().empty());
-    ASSERT_FALSE(allocator.GetOverflowFieldSet().empty());
-
-    allocator.Reset();
-    ASSERT_EQ(0, allocator.GetMaxRowWidth());
-    ASSERT_TRUE(allocator.GetFieldToColumns().empty());
-    ASSERT_TRUE(allocator.GetOverflowFieldSet().empty());
-
-    // Works correctly after reset
-    auto result = allocator.AllocateRow({10});
-    ASSERT_EQ(2u, result.col_to_field.size());
-    ASSERT_EQ(10, result.col_to_field[0]);
-    ASSERT_EQ(-1, result.col_to_field[1]);
-}
-
 TEST(MapSharedShreddingColumnAllocatorTest, GetNumColumns) {
     MapSharedShreddingColumnAllocator allocator(5);
     ASSERT_EQ(5, allocator.GetNumColumns());

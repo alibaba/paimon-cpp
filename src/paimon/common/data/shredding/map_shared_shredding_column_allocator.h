@@ -38,8 +38,9 @@ struct RowAllocation {
 /// Allocates MAP field ids to K physical columns on a per-row basis,
 /// and accumulates file-level metadata (field_to_columns, overflow_field_set, max_row_width).
 ///
-/// This is a fake (trivial) implementation: each row simply assigns columns 0..min(N,K)-1
+/// This is a trivial implementation: each row simply assigns columns 0..min(N,K)-1
 /// in order, with no LRU eviction. The real strategy will be implemented separately.
+/// TODO(jinli.zjw): support LRU
 class MapSharedShreddingColumnAllocator {
  public:
     /// @param num_columns Number of physical columns K for this shared-shredding MAP column.
@@ -49,9 +50,6 @@ class MapSharedShreddingColumnAllocator {
     /// @param field_ids The field ids present in this row (order matters for fake impl).
     /// @return Allocation result with column assignments and overflow list.
     RowAllocation AllocateRow(const std::vector<int32_t>& field_ids);
-
-    /// Resets all state. Called when rolling to a new file.
-    void Reset();
 
     /// Returns accumulated field_id -> set of column indices (for MapSharedShreddingFileMeta).
     const std::map<int32_t, std::set<int32_t>>& GetFieldToColumns() const;

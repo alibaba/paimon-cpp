@@ -46,12 +46,6 @@ RowAllocation MapSharedShreddingColumnAllocator::AllocateRow(
     return result;
 }
 
-void MapSharedShreddingColumnAllocator::Reset() {
-    field_to_columns_.clear();
-    overflow_field_set_.clear();
-    max_row_width_ = 0;
-}
-
 const std::map<int32_t, std::set<int32_t>>& MapSharedShreddingColumnAllocator::GetFieldToColumns()
     const {
     return field_to_columns_;

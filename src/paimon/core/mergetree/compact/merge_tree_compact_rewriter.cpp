@@ -16,6 +16,7 @@
 #include "paimon/core/mergetree/compact/merge_tree_compact_rewriter.h"
 
 #include <cassert>
+#include <map>
 
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
@@ -109,10 +110,10 @@ Result<std::unique_ptr<MergeTreeCompactRewriter>> MergeTreeCompactRewriter::Crea
     PAIMON_ASSIGN_OR_RAISE(std::vector<int32_t> shredding_indices,
                            MapSharedShreddingUtils::DetectShreddingColumns(write_schema, options));
     if (!shredding_indices.empty()) {
-        PAIMON_ASSIGN_OR_RAISE(auto column_to_k_max,
-                               MapSharedShreddingUtils::BuildColumnToNumColumns(
-                                   shredding_indices, write_schema, options));
-        shredding_context = std::make_shared<MapSharedShreddingContext>(std::move(column_to_k_max));
+        std::map<int32_t, int32_t> column_to_k_max;
+        PAIMON_ASSIGN_OR_RAISE(column_to_k_max, MapSharedShreddingUtils::BuildColumnToNumColumns(
+                                                    shredding_indices, write_schema, options));
+        shredding_context = std::make_shared<MapSharedShreddingContext>(column_to_k_max);
     }
 
     return std::unique_ptr<MergeTreeCompactRewriter>(new MergeTreeCompactRewriter(
@@ -180,7 +181,7 @@ MergeTreeCompactRewriter::CreateRollingRowWriter(int32_t level) {
         if (shredding_converter) {
             kv_converter = [shredding_converter](KeyValueBatch key_value_batch,
                                                  ArrowArray* array) -> Status {
-                PAIMON_ASSIGN_OR_RAISE(auto physical,
+                PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ArrowArray> physical,
                                        shredding_converter->Convert(key_value_batch.batch.get()));
                 ArrowArrayMove(physical.get(), array);
                 return Status::OK();

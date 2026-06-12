@@ -22,10 +22,7 @@
 #include "paimon/type_fwd.h"
 
 struct ArrowArray;
-
-namespace arrow {
-class Schema;
-}  // namespace arrow
+struct ArrowSchema;
 
 namespace paimon {
 /// File format writer, each writer corresponds to a data file.
@@ -74,9 +71,9 @@ class PAIMON_EXPORT FormatWriter {
 
     /// Updates the schema used for serialization in the file footer.
     /// Must be called before Finish(). This allows per-field metadata
-    /// (e.g., extend MAP metadata) to be written into the file.
+    /// (e.g., shared-shredding MAP metadata) to be written into the file.
     /// The default implementation returns NotImplemented.
-    virtual Status UpdateSchema(const std::shared_ptr<arrow::Schema>& /*schema*/) {
+    virtual Status UpdateSchema(::ArrowSchema* /*schema*/) {
         return Status::NotImplemented("UpdateSchema is not supported by this format writer.");
     }
 };

@@ -24,6 +24,7 @@
 #include <utility>
 
 #include "arrow/c/abi.h"
+#include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
 #include "fmt/format.h"
 #include "paimon/common/utils/arrow/arrow_utils.h"
@@ -121,7 +122,7 @@ class SingleFileWriter : public FileWriter<T, R> {
         return Status::OK();
     }
 
-    /// Forwards UpdateSchema to the underlying FormatWriter.
+    /// Exports schema to Arrow C Data Interface and forwards UpdateSchema to FormatWriter.
     Status UpdateSchema(const std::shared_ptr<arrow::Schema>& schema);
 
     int64_t output_bytes_ = -1;
@@ -237,7 +238,11 @@ Status SingleFileWriter<T, R>::UpdateSchema(const std::shared_ptr<arrow::Schema>
     if (!writer_) {
         return Status::Invalid("Cannot update schema: format writer is not initialized.");
     }
-    return writer_->UpdateSchema(schema);
+    ::ArrowSchema c_schema;
+    ArrowSchemaMarkReleased(&c_schema);
+    ScopeGuard guard([&c_schema]() { ArrowSchemaRelease(&c_schema); });
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schema, &c_schema));
+    return writer_->UpdateSchema(&c_schema);
 }
 
 template <typename T, typename R>

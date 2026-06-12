@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <map>
 #include <unordered_set>
 #include <utility>
 
@@ -68,10 +69,10 @@ Result<std::shared_ptr<MergeTreeWriter>> MergeTreeWriter::Create(
     PAIMON_ASSIGN_OR_RAISE(std::vector<int32_t> shredding_indices,
                            MapSharedShreddingUtils::DetectShreddingColumns(write_schema, options));
     if (!shredding_indices.empty()) {
-        PAIMON_ASSIGN_OR_RAISE(auto column_to_k_max,
-                               MapSharedShreddingUtils::BuildColumnToNumColumns(
-                                   shredding_indices, write_schema, options));
-        shredding_context = std::make_shared<MapSharedShreddingContext>(std::move(column_to_k_max));
+        std::map<int32_t, int32_t> column_to_k_max;
+        PAIMON_ASSIGN_OR_RAISE(column_to_k_max, MapSharedShreddingUtils::BuildColumnToNumColumns(
+                                                    shredding_indices, write_schema, options));
+        shredding_context = std::make_shared<MapSharedShreddingContext>(column_to_k_max);
     }
 
     PAIMON_ASSIGN_OR_RAISE(
@@ -366,7 +367,7 @@ MergeTreeWriter::CreateRollingRowWriter() const {
         std::function<Status(KeyValueBatch&&, ArrowArray*)> kv_converter;
         if (converter) {
             kv_converter = [converter](KeyValueBatch key_value_batch, ArrowArray* array) -> Status {
-                PAIMON_ASSIGN_OR_RAISE(auto physical,
+                PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ArrowArray> physical,
                                        converter->Convert(key_value_batch.batch.get()));
                 ArrowArrayMove(physical.get(), array);
                 return Status::OK();

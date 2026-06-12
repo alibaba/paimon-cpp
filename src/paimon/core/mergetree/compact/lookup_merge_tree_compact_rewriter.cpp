@@ -16,6 +16,8 @@
 
 #include "paimon/core/mergetree/compact/lookup_merge_tree_compact_rewriter.h"
 
+#include <map>
+
 #include "paimon/common/data/shredding/map_shared_shredding_context.h"
 #include "paimon/common/data/shredding/map_shared_shredding_utils.h"
 #include "paimon/common/table/special_fields.h"
@@ -97,10 +99,10 @@ LookupMergeTreeCompactRewriter<T>::Create(
     PAIMON_ASSIGN_OR_RAISE(std::vector<int32_t> shredding_indices,
                            MapSharedShreddingUtils::DetectShreddingColumns(write_schema, options));
     if (!shredding_indices.empty()) {
-        PAIMON_ASSIGN_OR_RAISE(auto column_to_k_max,
-                               MapSharedShreddingUtils::BuildColumnToNumColumns(
-                                   shredding_indices, write_schema, options));
-        shredding_context = std::make_shared<MapSharedShreddingContext>(std::move(column_to_k_max));
+        std::map<int32_t, int32_t> column_to_k_max;
+        PAIMON_ASSIGN_OR_RAISE(column_to_k_max, MapSharedShreddingUtils::BuildColumnToNumColumns(
+                                                    shredding_indices, write_schema, options));
+        shredding_context = std::make_shared<MapSharedShreddingContext>(column_to_k_max);
     }
 
     return std::unique_ptr<LookupMergeTreeCompactRewriter>(new LookupMergeTreeCompactRewriter(

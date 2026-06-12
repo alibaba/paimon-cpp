@@ -46,21 +46,6 @@ TEST(MapSharedShreddingFieldDictTest, GetNameToId) {
     ASSERT_EQ(0, name_to_id.at("b_field"));
 }
 
-TEST(MapSharedShreddingFieldDictTest, ResetClearsState) {
-    MapSharedShreddingFieldDict dict;
-    dict.GetOrAssign("foo");
-    dict.GetOrAssign("bar");
-    ASSERT_EQ(2, dict.Size());
-
-    dict.Reset();
-    ASSERT_EQ(0, dict.Size());
-    ASSERT_TRUE(dict.GetNameToId().empty());
-
-    // Ids restart from 0 after reset
-    ASSERT_EQ(0, dict.GetOrAssign("baz"));
-    ASSERT_EQ(1, dict.GetOrAssign("foo"));
-}
-
 TEST(MapSharedShreddingFieldDictTest, EmptyDict) {
     MapSharedShreddingFieldDict dict;
     ASSERT_EQ(0, dict.Size());

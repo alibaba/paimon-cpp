@@ -17,12 +17,12 @@
 #include "paimon/common/data/shredding/map_shared_shredding_context.h"
 
 #include <algorithm>
-#include <utility>
 
 namespace paimon {
 
-MapSharedShreddingContext::MapSharedShreddingContext(std::map<int32_t, int32_t> column_to_k_max)
-    : column_to_k_max_(std::move(column_to_k_max)) {}
+MapSharedShreddingContext::MapSharedShreddingContext(
+    const std::map<int32_t, int32_t>& column_to_k_max)
+    : column_to_k_max_(column_to_k_max) {}
 
 std::map<int32_t, int32_t> MapSharedShreddingContext::ComputeNextK() const {
     std::map<int32_t, int32_t> result;

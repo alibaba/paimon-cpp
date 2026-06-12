@@ -208,12 +208,14 @@ std::shared_ptr<Metrics> OrcFormatWriter::GetWriterMetrics() const {
     return metrics_;
 }
 
-Status OrcFormatWriter::UpdateSchema(const std::shared_ptr<arrow::Schema>& schema) {
+Status OrcFormatWriter::UpdateSchema(::ArrowSchema* schema) {
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> arrow_schema,
+                                      arrow::ImportSchema(schema));
     // Serialize the Arrow Schema (with per-field metadata) into the ORC footer
     // as user metadata under the "ARROW:schema" key, matching the Parquet convention.
     // The ORC reader can then recover the full Arrow schema including per-field metadata.
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Buffer> serialized,
-                                      arrow::ipc::SerializeSchema(*schema));
+                                      arrow::ipc::SerializeSchema(*arrow_schema));
     std::string schema_base64 = arrow::util::base64_encode(
         std::string_view(reinterpret_cast<const char*>(serialized->data()),
                          static_cast<size_t>(serialized->size())));
