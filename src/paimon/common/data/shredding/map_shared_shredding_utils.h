@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -35,6 +36,8 @@ class Schema;
 namespace paimon {
 
 class CoreOptions;
+class MapSharedShreddingBatchConverter;
+class MapSharedShreddingContext;
 
 /// Utility functions for shared-shredding MAP storage layout.
 class MapSharedShreddingUtils {
@@ -98,6 +101,22 @@ class MapSharedShreddingUtils {
 
     /// Checks whether a KeyValueMetadata contains shredding MAP metadata.
     static bool HasShreddingMetadata(const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
+
+    // ---- Writer helpers ----
+
+    /// Builds a MetadataFinalizer that serializes shredding metadata into per-field
+    /// KeyValueMetadata and reports file stats back to context for K adaptation.
+    /// Shared by DataFileWriter (append-only) and KeyValueDataFileWriter (PK table).
+    /// @param converter The batch converter that holds field-dict state for BuildFieldMeta.
+    /// @param compression Compression codec name for field_dict serialization (e.g. "zstd").
+    /// @param context The cross-file shared context for K adaptation.
+    /// @param physical_schema The physical schema used for writing.
+    /// @return A callable that produces the updated schema with shredding metadata
+    ///         and reports file stats to context.
+    static std::function<Result<std::shared_ptr<arrow::Schema>>()> BuildMetadataFinalizer(
+        const std::shared_ptr<MapSharedShreddingBatchConverter>& converter,
+        const std::string& compression, const std::shared_ptr<MapSharedShreddingContext>& context,
+        const std::shared_ptr<arrow::Schema>& physical_schema);
 
  private:
     /// Builds the physical Arrow type for one shredding MAP column.

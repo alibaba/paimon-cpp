@@ -683,4 +683,87 @@ TEST_P(ParquetFileBatchReaderTest, TestTimestampType) {
 
 INSTANTIATE_TEST_SUITE_P(TestParam, ParquetFileBatchReaderTest, ::testing::Values(false, true));
 
+TEST_F(ParquetFileBatchReaderTest, TestUpdateSchemaPerFieldMetadata) {
+    // Write a simple parquet file, call UpdateSchema to inject per-field metadata
+    // before Finish, then read back and verify the file schema carries the metadata.
+    auto write_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        arrow::field("name", arrow::utf8()),
+        arrow::field("score", arrow::float64()),
+    });
+
+    std::string file_path = PathUtil::JoinPath(dir_->Str(), "update_schema_test.parquet");
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
+                         fs_->Create(file_path, /*overwrite=*/true));
+
+    ::parquet::WriterProperties::Builder builder;
+    builder.write_batch_size(10);
+    auto writer_properties = builder.build();
+    ASSERT_OK_AND_ASSIGN(auto format_writer,
+                         ParquetFormatWriter::Create(out, write_schema, writer_properties,
+                                                     DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE, pool_));
+
+    // Write one batch of data.
+    auto data = arrow::ipc::internal::json::ArrayFromJSON(
+                    arrow::struct_(write_schema->fields()),
+                    R"([[1, "alice", 95.5], [2, "bob", 88.0], [3, "charlie", 72.3]])")
+                    .ValueOrDie();
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*data, &c_array).ok());
+    ASSERT_OK(format_writer->AddBatch(&c_array));
+    ASSERT_OK(format_writer->Flush());
+
+    // Build an updated schema with per-field metadata on "name" and "score".
+    auto name_meta = std::make_shared<arrow::KeyValueMetadata>();
+    name_meta->Append("shredding.field_mapping", "0:alice,1:bob,2:charlie");
+    name_meta->Append("shredding.num_columns", "3");
+    auto score_meta = std::make_shared<arrow::KeyValueMetadata>();
+    score_meta->Append("custom.unit", "percent");
+
+    auto updated_schema = arrow::schema({
+        write_schema->field(0),                            // id — no metadata
+        write_schema->field(1)->WithMetadata(name_meta),   // name — shredding metadata
+        write_schema->field(2)->WithMetadata(score_meta),  // score — custom metadata
+    });
+
+    // UpdateSchema must be called before Finish.
+    ASSERT_OK(format_writer->UpdateSchema(updated_schema));
+    ASSERT_OK(format_writer->Finish());
+    ASSERT_OK(out->Flush());
+    ASSERT_OK(out->Close());
+
+    // Read back: GetFileSchema should reflect the updated per-field metadata.
+    auto parquet_batch_reader =
+        PrepareParquetFileBatchReader(file_path, write_schema, /*predicate=*/nullptr,
+                                      /*selection_bitmap=*/std::nullopt, batch_size_);
+
+    ASSERT_OK_AND_ASSIGN(auto c_file_schema, parquet_batch_reader->GetFileSchema());
+    auto file_schema = arrow::ImportSchema(c_file_schema.get()).ValueOrDie();
+
+    // Field 0 "id": no metadata.
+    ASSERT_EQ("id", file_schema->field(0)->name());
+
+    // Field 1 "name": should have the shredding metadata we set.
+    ASSERT_EQ("name", file_schema->field(1)->name());
+    auto read_name_meta = file_schema->field(1)->metadata();
+    ASSERT_NE(nullptr, read_name_meta);
+    auto field_mapping_val = read_name_meta->Get("shredding.field_mapping").ValueOrDie();
+    ASSERT_EQ("0:alice,1:bob,2:charlie", field_mapping_val);
+    auto num_columns_val = read_name_meta->Get("shredding.num_columns").ValueOrDie();
+    ASSERT_EQ("3", num_columns_val);
+
+    // Field 2 "score": should have the custom metadata.
+    ASSERT_EQ("score", file_schema->field(2)->name());
+    auto read_score_meta = file_schema->field(2)->metadata();
+    ASSERT_NE(nullptr, read_score_meta);
+    auto unit_val = read_score_meta->Get("custom.unit").ValueOrDie();
+    ASSERT_EQ("percent", unit_val);
+
+    // Also verify data integrity — read it back.
+    ASSERT_OK_AND_ASSIGN(auto result_array, paimon::test::ReadResultCollector::CollectResult(
+                                                parquet_batch_reader.get()));
+    ASSERT_EQ(3, result_array->length());
+    std::cout << "aaa" << std::endl;
+}
+
 }  // namespace paimon::parquet::test

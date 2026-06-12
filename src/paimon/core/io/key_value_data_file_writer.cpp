@@ -62,6 +62,10 @@ KeyValueDataFileWriter::KeyValueDataFileWriter(
       is_external_path_(is_external_path),
       disable_stats_(stats_extractor == nullptr) {}
 
+void KeyValueDataFileWriter::SetMetadataFinalizer(MetadataFinalizer finalizer) {
+    metadata_finalizer_ = std::move(finalizer);
+}
+
 Status KeyValueDataFileWriter::Write(KeyValueBatch batch) {
     // update min and max key
     if (!min_key_) {
@@ -73,7 +77,19 @@ Status KeyValueDataFileWriter::Write(KeyValueBatch batch) {
     max_sequence_number_ = std::max(max_sequence_number_, batch.max_sequence_number);
     // update delete row count
     delete_row_count_ += batch.delete_row_count;
+
     PAIMON_RETURN_NOT_OK(SingleFileWriter::Write(std::move(batch)));
+    return Status::OK();
+}
+
+Status KeyValueDataFileWriter::BeforeFinish() {
+    if (metadata_finalizer_) {
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> updated_schema,
+                               metadata_finalizer_());
+        if (updated_schema) {
+            PAIMON_RETURN_NOT_OK(UpdateSchema(updated_schema));
+        }
+    }
     return Status::OK();
 }
 

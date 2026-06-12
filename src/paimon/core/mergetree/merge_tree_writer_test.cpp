@@ -29,6 +29,7 @@
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
+#include "paimon/common/data/shredding/map_shared_shredding_utils.h"
 #include "paimon/common/factories/io_hook.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
@@ -152,6 +153,32 @@ class MergeTreeWriterTest : public ::testing::TestWithParam<bool> {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> result_array,
                              ReadResultCollector::CollectResult(orc_batch_reader.get()));
         ASSERT_TRUE(expected_array->Equals(result_array)) << result_array->ToString();
+    }
+
+    void CheckShreddingFileSchema(const std::string& data_file_name,
+                                  const std::shared_ptr<arrow::Schema>& expected_physical_schema,
+                                  int32_t field_index,
+                                  const MapSharedShreddingFieldMeta& expected_meta) const {
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream,
+                             file_system_->Open(data_file_name));
+        ASSERT_TRUE(input_stream);
+        ASSERT_OK_AND_ASSIGN(auto file_format, FileFormatFactory::Get("orc", /*options=*/{}));
+        ASSERT_OK_AND_ASSIGN(auto reader_builder,
+                             file_format->CreateReaderBuilder(/*batch_size=*/10));
+        ASSERT_OK_AND_ASSIGN(auto orc_batch_reader, reader_builder->Build(input_stream));
+        ASSERT_OK_AND_ASSIGN(auto c_file_schema, orc_batch_reader->GetFileSchema());
+        auto file_schema = arrow::ImportSchema(c_file_schema.get()).ValueOrDie();
+
+        ASSERT_TRUE(file_schema->Equals(*expected_physical_schema, /*check_metadata=*/false))
+            << "Expected schema:\n"
+            << expected_physical_schema->ToString() << "\nActual schema:\n"
+            << file_schema->ToString();
+
+        auto metadata = file_schema->field(field_index)->metadata();
+        ASSERT_NE(nullptr, metadata);
+        ASSERT_OK_AND_ASSIGN(auto deserialized_meta, MapSharedShreddingUtils::DeserializeMetadata(
+                                                         metadata->Copy(), /*compression=*/"zstd"));
+        ASSERT_EQ(expected_meta, deserialized_meta);
     }
 
     std::shared_ptr<DataFileMeta> CreateMeta(const std::string& name, int32_t level) const {
@@ -345,6 +372,241 @@ TEST_P(MergeTreeWriterTest, TestWriteMultiBatch) {
     DataIncrement expected_data_increment({expected_data_file_meta}, /*deleted_files=*/{},
                                           /*changelog_files=*/{});
     ASSERT_EQ(expected_data_increment, commit_increment.GetNewFilesIncrement());
+}
+
+TEST_P(MergeTreeWriterTest, TestSharedShreddingMapDataFileMetaInfo) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({
+                             {Options::FILE_FORMAT, "orc"},
+                             {"fields.tags.map.storage-layout", "shared-shredding"},
+                             {"fields.tags.map.shared-shredding.max-columns", "3"},
+                         }));
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = std::make_shared<DataFilePathFactory>();
+    ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
+    std::string uuid = path_factory->uuid_;
+
+    std::vector<DataField> value_fields = {
+        DataField(0, arrow::field("id", arrow::int32())),
+        DataField(1, arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64()))),
+    };
+    auto value_schema = DataField::ConvertDataFieldsToArrowSchema(value_fields);
+    auto value_type = DataField::ConvertDataFieldsToArrowStructType(value_fields);
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> key_comparator,
+                         FieldsComparator::Create({value_fields[0]},
+                                                  /*is_ascending_order=*/true));
+
+    ASSERT_OK_AND_ASSIGN(
+        auto merge_writer,
+        MergeTreeWriter::Create(
+            /*last_sequence_number=*/9, /*trimmed_primary_keys=*/{"id"}, path_factory,
+            key_comparator,
+            /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/5,
+            value_schema, options, noop_compact_manager_,
+            GetParam() ? std::make_shared<IOManager>(dir->Str() + "/tmp", file_system_) : nullptr,
+            /*enable_multi_thread_spill=*/false, pool_));
+
+    // Each batch contains duplicated primary keys. DeduplicateMergeFunction should keep the
+    // latest sequence number for each key across and within batches.
+    auto array1 = arrow::ipc::internal::json::ArrayFromJSON(value_type, R"([
+      [1, [["a", 10], ["b", 20]]],
+      [2, [["c", 30]]],
+      [1, [["a", 11], ["c", 31]]]
+    ])")
+                      .ValueOrDie();
+    WriteBatch(array1, /*row_kinds=*/{}, merge_writer.get());
+
+    auto array2 = arrow::ipc::internal::json::ArrayFromJSON(value_type, R"([
+      [2, [["b", 40]]],
+      [1, [["c", 50], ["d", 60]]],
+      [2, [["a", 70], ["b", 80], ["c", 90]]]
+    ])")
+                      .ValueOrDie();
+    WriteBatch(array2, /*row_kinds=*/{}, merge_writer.get());
+
+    ASSERT_OK_AND_ASSIGN(CommitIncrement commit_increment,
+                         merge_writer->PrepareCommit(/*wait_compaction=*/false));
+    ASSERT_OK(merge_writer->Close());
+
+    ASSERT_TRUE(commit_increment.GetCompactIncrement().IsEmpty());
+    ASSERT_EQ(1, commit_increment.GetNewFilesIncrement().NewFiles().size());
+    auto actual_meta = commit_increment.GetNewFilesIncrement().NewFiles()[0];
+
+    std::string expected_data_file_name = "data-" + uuid + "-0.orc";
+    std::string expected_data_file_path = dir->Str() + "/" + expected_data_file_name;
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FileStatus> data_file_status,
+                         options.GetFileSystem()->GetFileStatus(expected_data_file_path));
+
+    auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
+    std::map<int32_t, int32_t> column_to_k = {{3, 3}};
+    ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                   write_schema, column_to_k));
+    auto physical_type = arrow::struct_(physical_schema->fields());
+
+    std::shared_ptr<arrow::ChunkedArray> expected_array;
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(physical_type, {R"([
+      [14, 0, 1, [[0, 1, -1], 50, 60, null, []]],
+      [15, 0, 2, [[2, 3, 0], 70, 80, 90, []]]
+    ])"},
+                                                                 &expected_array)
+                    .ok());
+    CheckFileContent(expected_data_file_path, expected_array);
+
+    MapSharedShreddingFieldMeta expected_shredding_meta;
+    expected_shredding_meta.name_to_id = {{"a", 2}, {"b", 3}, {"c", 0}, {"d", 1}};
+    expected_shredding_meta.field_to_columns = {{0, {0, 2}}, {1, {1}}, {2, {0}}, {3, {1}}};
+    expected_shredding_meta.num_columns = 3;
+    expected_shredding_meta.max_row_width = 3;
+    CheckShreddingFileSchema(expected_data_file_path, physical_schema, /*field_index=*/3,
+                             expected_shredding_meta);
+
+    auto expected_data_file_meta = std::make_shared<DataFileMeta>(
+        expected_data_file_name, /*file_size=*/data_file_status->GetLen(), /*row_count=*/2,
+        /*min_key=*/BinaryRowGenerator::GenerateRow({int32_t(1)}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({int32_t(2)}, pool_.get()),
+        /*key_stats=*/
+        BinaryRowGenerator::GenerateStats({int32_t(1)}, {int32_t(2)}, {0}, pool_.get()),
+        /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({int32_t(1), NullType()}, {int32_t(2), NullType()},
+                                          {0, 0}, pool_.get()),
+        /*min_sequence_number=*/14, /*max_sequence_number=*/15, /*schema_id=*/5,
+        /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
+        /*creation_time=*/actual_meta->creation_time, /*delete_row_count=*/0,
+        /*embedded_index=*/nullptr, FileSource::Append(),
+        /*value_stats_cols=*/std::nullopt, /*external_path=*/std::nullopt,
+        /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
+    DataIncrement expected_data_increment({expected_data_file_meta}, /*deleted_files=*/{},
+                                          /*changelog_files=*/{});
+    ASSERT_EQ(expected_data_increment, commit_increment.GetNewFilesIncrement());
+}
+
+TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({
+                             {Options::FILE_FORMAT, "orc"},
+                             {"fields.tags.map.storage-layout", "shared-shredding"},
+                             {"fields.tags.map.shared-shredding.max-columns", "8"},
+                             {"fields.attrs.map.storage-layout", "shared-shredding"},
+                             {"fields.attrs.map.shared-shredding.max-columns", "4"},
+                         }));
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = std::make_shared<DataFilePathFactory>();
+    ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
+
+    std::vector<DataField> value_fields = {
+        DataField(0, arrow::field("id", arrow::int32())),
+        DataField(1, arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64()))),
+        DataField(2, arrow::field("attrs", arrow::map(arrow::utf8(), arrow::utf8()))),
+    };
+    auto value_schema = DataField::ConvertDataFieldsToArrowSchema(value_fields);
+    auto value_type = DataField::ConvertDataFieldsToArrowStructType(value_fields);
+    auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> key_comparator,
+                         FieldsComparator::Create({value_fields[0]},
+                                                  /*is_ascending_order=*/true));
+
+    ASSERT_OK_AND_ASSIGN(
+        auto merge_writer,
+        MergeTreeWriter::Create(
+            /*last_sequence_number=*/-1, /*trimmed_primary_keys=*/{"id"}, path_factory,
+            key_comparator,
+            /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
+            value_schema, options, noop_compact_manager_,
+            GetParam() ? std::make_shared<IOManager>(dir->Str() + "/tmp", file_system_) : nullptr,
+            /*enable_multi_thread_spill=*/false, pool_));
+
+    auto array1 = arrow::ipc::internal::json::ArrayFromJSON(value_type, R"([
+      [1, [["a", 10], ["b", 20]], [["x", "v1"]]],
+      [2, [["a", 30]],           [["x", "v2"]]]
+    ])")
+                      .ValueOrDie();
+    WriteBatch(array1, /*row_kinds=*/{}, merge_writer.get());
+    ASSERT_OK_AND_ASSIGN(CommitIncrement commit_increment1,
+                         merge_writer->PrepareCommit(/*wait_compaction=*/false));
+    ASSERT_EQ(1, commit_increment1.GetNewFilesIncrement().NewFiles().size());
+    std::string file1_path =
+        path_factory->ToPath(commit_increment1.GetNewFilesIncrement().NewFiles()[0]->file_name);
+
+    std::map<int32_t, int32_t> column_to_k_file1 = {{3, 8}, {4, 4}};
+    ASSERT_OK_AND_ASSIGN(auto physical_schema1, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                    write_schema, column_to_k_file1));
+    MapSharedShreddingFieldMeta tags_meta1;
+    tags_meta1.name_to_id = {{"a", 0}, {"b", 1}};
+    tags_meta1.field_to_columns = {{0, {0}}, {1, {1}}};
+    tags_meta1.num_columns = 8;
+    tags_meta1.max_row_width = 2;
+    CheckShreddingFileSchema(file1_path, physical_schema1, /*field_index=*/3, tags_meta1);
+
+    MapSharedShreddingFieldMeta attrs_meta1;
+    attrs_meta1.name_to_id = {{"x", 0}};
+    attrs_meta1.field_to_columns = {{0, {0}}};
+    attrs_meta1.num_columns = 4;
+    attrs_meta1.max_row_width = 1;
+    CheckShreddingFileSchema(file1_path, physical_schema1, /*field_index=*/4, attrs_meta1);
+
+    auto array2 = arrow::ipc::internal::json::ArrayFromJSON(value_type, R"([
+      [3, [["c", 100], ["d", 200], ["e", 300]], [["p", "a1"], ["q", "a2"], ["r", "a3"]]]
+    ])")
+                      .ValueOrDie();
+    WriteBatch(array2, /*row_kinds=*/{}, merge_writer.get());
+    ASSERT_OK_AND_ASSIGN(CommitIncrement commit_increment2,
+                         merge_writer->PrepareCommit(/*wait_compaction=*/false));
+    ASSERT_EQ(1, commit_increment2.GetNewFilesIncrement().NewFiles().size());
+    std::string file2_path =
+        path_factory->ToPath(commit_increment2.GetNewFilesIncrement().NewFiles()[0]->file_name);
+
+    std::map<int32_t, int32_t> column_to_k_file2 = {{3, 2}, {4, 1}};
+    ASSERT_OK_AND_ASSIGN(auto physical_schema2, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                    write_schema, column_to_k_file2));
+    MapSharedShreddingFieldMeta tags_meta2;
+    tags_meta2.name_to_id = {{"c", 0}, {"d", 1}, {"e", 2}};
+    tags_meta2.field_to_columns = {{0, {0}}, {1, {1}}};
+    tags_meta2.overflow_field_set = {2};
+    tags_meta2.num_columns = 2;
+    tags_meta2.max_row_width = 3;
+    CheckShreddingFileSchema(file2_path, physical_schema2, /*field_index=*/3, tags_meta2);
+
+    MapSharedShreddingFieldMeta attrs_meta2;
+    attrs_meta2.name_to_id = {{"p", 0}, {"q", 1}, {"r", 2}};
+    attrs_meta2.field_to_columns = {{0, {0}}};
+    attrs_meta2.overflow_field_set = {1, 2};
+    attrs_meta2.num_columns = 1;
+    attrs_meta2.max_row_width = 3;
+    CheckShreddingFileSchema(file2_path, physical_schema2, /*field_index=*/4, attrs_meta2);
+
+    auto array3 = arrow::ipc::internal::json::ArrayFromJSON(value_type, R"([
+      [4, [["f", 400], ["g", 500]], [["s", "b1"], ["t", "b2"]]]
+    ])")
+                      .ValueOrDie();
+    WriteBatch(array3, /*row_kinds=*/{}, merge_writer.get());
+    ASSERT_OK_AND_ASSIGN(CommitIncrement commit_increment3,
+                         merge_writer->PrepareCommit(/*wait_compaction=*/false));
+    ASSERT_EQ(1, commit_increment3.GetNewFilesIncrement().NewFiles().size());
+    std::string file3_path =
+        path_factory->ToPath(commit_increment3.GetNewFilesIncrement().NewFiles()[0]->file_name);
+
+    std::map<int32_t, int32_t> column_to_k_file3 = {{3, 3}, {4, 3}};
+    ASSERT_OK_AND_ASSIGN(auto physical_schema3, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                    write_schema, column_to_k_file3));
+    MapSharedShreddingFieldMeta tags_meta3;
+    tags_meta3.name_to_id = {{"f", 0}, {"g", 1}};
+    tags_meta3.field_to_columns = {{0, {0}}, {1, {1}}};
+    tags_meta3.num_columns = 3;
+    tags_meta3.max_row_width = 2;
+    CheckShreddingFileSchema(file3_path, physical_schema3, /*field_index=*/3, tags_meta3);
+
+    MapSharedShreddingFieldMeta attrs_meta3;
+    attrs_meta3.name_to_id = {{"s", 0}, {"t", 1}};
+    attrs_meta3.field_to_columns = {{0, {0}}, {1, {1}}};
+    attrs_meta3.num_columns = 3;
+    attrs_meta3.max_row_width = 2;
+    CheckShreddingFileSchema(file3_path, physical_schema3, /*field_index=*/4, attrs_meta3);
+
+    ASSERT_OK(merge_writer->Close());
 }
 
 TEST_P(MergeTreeWriterTest, TestWriteWithDeleteRow) {

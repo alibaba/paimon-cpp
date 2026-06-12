@@ -16,6 +16,8 @@
 
 #include "paimon/core/mergetree/compact/lookup_merge_tree_compact_rewriter.h"
 
+#include "paimon/common/data/shredding/map_shared_shredding_context.h"
+#include "paimon/common/data/shredding/map_shared_shredding_utils.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/core/mergetree/compact/first_row_merge_function_wrapper.h"
 #include "paimon/core/mergetree/compact/lookup_changelog_merge_function_wrapper.h"
@@ -36,13 +38,14 @@ LookupMergeTreeCompactRewriter<T>::LookupMergeTreeCompactRewriter(
     MergeFunctionWrapperFactory merge_function_wrapper_factory,
     const std::shared_ptr<CancellationController>& cancellation_controller,
     const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
+    std::shared_ptr<MapSharedShreddingContext> shredding_context,
     const std::shared_ptr<MemoryPool>& pool)
     : ChangelogMergeTreeRewriter(
           max_level, /*force_drop_delete=*/dv_maintainer != nullptr, partition, bucket, schema_id,
           trimmed_primary_keys, options, data_schema, write_schema,
           DeletionVector::CreateFactory(dv_maintainer), path_factory_cache,
           std::move(merge_file_split_read), std::move(merge_function_wrapper_factory),
-          cancellation_controller, pool),
+          cancellation_controller, std::move(shredding_context), pool),
       lookup_levels_(std::move(lookup_levels)),
       dv_maintainer_(dv_maintainer),
       remote_lookup_file_manager_(remote_lookup_file_manager) {}
@@ -88,11 +91,23 @@ LookupMergeTreeCompactRewriter<T>::Create(
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<MergeFileSplitRead> merge_file_split_read,
         MergeFileSplitRead::Create(path_factory, internal_context, pool, CreateDefaultExecutor()));
+
+    // Detect shared-shredding MAP columns and build cross-file context.
+    std::shared_ptr<MapSharedShreddingContext> shredding_context;
+    PAIMON_ASSIGN_OR_RAISE(std::vector<int32_t> shredding_indices,
+                           MapSharedShreddingUtils::DetectShreddingColumns(write_schema, options));
+    if (!shredding_indices.empty()) {
+        PAIMON_ASSIGN_OR_RAISE(auto column_to_k_max,
+                               MapSharedShreddingUtils::BuildColumnToNumColumns(
+                                   shredding_indices, write_schema, options));
+        shredding_context = std::make_shared<MapSharedShreddingContext>(std::move(column_to_k_max));
+    }
+
     return std::unique_ptr<LookupMergeTreeCompactRewriter>(new LookupMergeTreeCompactRewriter(
         std::move(lookup_levels), dv_maintainer, max_level, partition, bucket, table_schema->Id(),
         trimmed_primary_keys, options, data_schema, write_schema, path_factory_cache,
         std::move(merge_file_split_read), std::move(merge_function_wrapper_factory),
-        cancellation_controller, remote_lookup_file_manager, pool));
+        cancellation_controller, remote_lookup_file_manager, std::move(shredding_context), pool));
 }
 
 template <typename T>

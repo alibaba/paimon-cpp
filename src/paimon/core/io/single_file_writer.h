@@ -39,6 +39,10 @@
 #include "paimon/result.h"
 #include "paimon/status.h"
 
+namespace arrow {
+class Schema;
+}  // namespace arrow
+
 namespace paimon {
 
 class RecordBatch;
@@ -111,6 +115,15 @@ class SingleFileWriter : public FileWriter<T, R> {
     }
 
  protected:
+    /// Hook called after Flush() and before Finish() during Close().
+    /// Subclasses can override to update per-field metadata before the file is finalized.
+    virtual Status BeforeFinish() {
+        return Status::OK();
+    }
+
+    /// Forwards UpdateSchema to the underlying FormatWriter.
+    Status UpdateSchema(const std::shared_ptr<arrow::Schema>& schema);
+
     int64_t output_bytes_ = -1;
     std::string compression_;
     std::function<Status(T, ArrowArray*)> converter_;
@@ -199,6 +212,7 @@ Status SingleFileWriter<T, R>::Close() {
                         path_.c_str());
     });
     PAIMON_RETURN_NOT_OK(writer_->Flush());
+    PAIMON_RETURN_NOT_OK(BeforeFinish());
     PAIMON_RETURN_NOT_OK(writer_->Finish());
     if (out_) {
         PAIMON_RETURN_NOT_OK(out_->Flush());
@@ -216,6 +230,14 @@ Status SingleFileWriter<T, R>::Close() {
 template <typename T, typename R>
 Result<bool> SingleFileWriter<T, R>::ReachTargetSize(bool suggested_check, int64_t target_size) {
     return writer_->ReachTargetSize(suggested_check, target_size);
+}
+
+template <typename T, typename R>
+Status SingleFileWriter<T, R>::UpdateSchema(const std::shared_ptr<arrow::Schema>& schema) {
+    if (!writer_) {
+        return Status::Invalid("Cannot update schema: format writer is not initialized.");
+    }
+    return writer_->UpdateSchema(schema);
 }
 
 template <typename T, typename R>

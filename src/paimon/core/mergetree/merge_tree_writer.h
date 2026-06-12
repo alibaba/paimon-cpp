@@ -47,6 +47,7 @@ namespace paimon {
 class DataFilePathFactory;
 class IOManager;
 class FieldsComparator;
+class MapSharedShreddingContext;
 class MemoryPool;
 class Metrics;
 template <typename T>
@@ -103,8 +104,7 @@ class MergeTreeWriter : public BatchWriter {
     Status UpdateCompactDeletionFile(const std::shared_ptr<CompactDeletionFile>& new_deletion_file);
 
  private:
-    MergeTreeWriter(const std::shared_ptr<MemoryPool>& pool,
-                    const std::vector<std::string>& trimmed_primary_keys,
+    MergeTreeWriter(const std::vector<std::string>& trimmed_primary_keys,
                     const CoreOptions& options,
                     const std::shared_ptr<DataFilePathFactory>& path_factory,
                     const std::shared_ptr<FieldsComparator>& key_comparator,
@@ -112,7 +112,9 @@ class MergeTreeWriter : public BatchWriter {
                     const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
                     int64_t schema_id, const std::shared_ptr<arrow::Schema>& write_schema,
                     const std::shared_ptr<CompactManager>& compact_manager,
-                    std::unique_ptr<WriteBuffer>&& write_buffer);
+                    std::unique_ptr<WriteBuffer>&& write_buffer,
+                    std::shared_ptr<MapSharedShreddingContext> shredding_context,
+                    const std::shared_ptr<MemoryPool>& pool);
 
     std::shared_ptr<MemoryPool> pool_;
     std::vector<std::string> trimmed_primary_keys_;
@@ -137,5 +139,8 @@ class MergeTreeWriter : public BatchWriter {
     std::vector<std::shared_ptr<DataFileMeta>> compact_after_;
 
     std::shared_ptr<CompactDeletionFile> compact_deletion_file_;
+
+    /// Cross-file shared context for shared-shredding MAP columns (nullable).
+    std::shared_ptr<MapSharedShreddingContext> shredding_context_;
 };
 }  // namespace paimon

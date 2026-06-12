@@ -25,6 +25,8 @@
 #include "paimon/common/compression/block_compression_factory.h"
 #include "paimon/common/compression/block_compressor.h"
 #include "paimon/common/compression/block_decompressor.h"
+#include "paimon/common/data/shredding/map_shared_shredding_batch_converter.h"
+#include "paimon/common/data/shredding/map_shared_shredding_context.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/options/map_storage_layout.h"
@@ -68,7 +70,7 @@ std::shared_ptr<arrow::DataType> MapSharedShreddingUtils::BuildPhysicalStructTyp
     struct_fields.reserve(num_columns + 2);
 
     struct_fields.push_back(
-        arrow::field(MapSharedShreddingDefine::kFieldMapping, arrow::list(arrow::int32()), false));
+        arrow::field(MapSharedShreddingDefine::kFieldMapping, arrow::list(arrow::int32()), true));
 
     for (int32_t i = 0; i < num_columns; ++i) {
         struct_fields.push_back(arrow::field(MapSharedShreddingDefine::PhysicalColumnName(i),
@@ -96,8 +98,8 @@ Result<std::shared_ptr<arrow::Schema>> MapSharedShreddingUtils::LogicalToPhysica
             auto value_type = map_type->item_type();
             bool value_nullable = map_type->item_field()->nullable();
             auto physical_type = BuildPhysicalStructType(value_type, it->second, value_nullable);
-            physical_fields.push_back(
-                arrow::field(field->name(), physical_type, field->nullable()));
+            auto physical_field = arrow::field(field->name(), physical_type, field->nullable());
+            physical_fields.push_back(physical_field);
         } else {
             physical_fields.push_back(field);
         }
@@ -185,7 +187,7 @@ Result<std::string> DecompressString(const std::string& input, int32_t original_
 }
 
 Result<std::string> GetRequiredValue(const std::shared_ptr<arrow::KeyValueMetadata>& metadata,
-                                     const char* key) {
+                                     const std::string& key) {
     int32_t index = metadata->FindKey(key);
     if (index < 0) {
         return Status::Invalid(fmt::format("missing shredding metadata key: {}", key));
@@ -194,7 +196,7 @@ Result<std::string> GetRequiredValue(const std::shared_ptr<arrow::KeyValueMetada
 }
 
 Result<int32_t> GetRequiredInt32(const std::shared_ptr<arrow::KeyValueMetadata>& metadata,
-                                 const char* key) {
+                                 const std::string& key) {
     PAIMON_ASSIGN_OR_RAISE(std::string value, GetRequiredValue(metadata, key));
     std::optional<int32_t> parsed = StringUtils::StringToValue<int32_t>(value);
     if (!parsed.has_value()) {
@@ -386,6 +388,33 @@ bool MapSharedShreddingUtils::HasShreddingMetadata(
         return false;
     }
     return metadata->value(index) == MapShreddingDefine::kStorageLayoutSharedShredding;
+}
+
+std::function<Result<std::shared_ptr<arrow::Schema>>()>
+MapSharedShreddingUtils::BuildMetadataFinalizer(
+    const std::shared_ptr<MapSharedShreddingBatchConverter>& converter,
+    const std::string& compression, const std::shared_ptr<MapSharedShreddingContext>& context,
+    const std::shared_ptr<arrow::Schema>& physical_schema) {
+    return [converter, compression, context,
+            physical_schema]() -> Result<std::shared_ptr<arrow::Schema>> {
+        const std::vector<int32_t>& shredding_indices = converter->GetShreddingColumnIndices();
+        arrow::FieldVector updated_fields;
+        updated_fields.reserve(physical_schema->num_fields());
+        for (int32_t i = 0; i < physical_schema->num_fields(); ++i) {
+            updated_fields.push_back(physical_schema->field(i));
+        }
+        for (int32_t logical_col_index : shredding_indices) {
+            const auto& field = physical_schema->field(logical_col_index);
+            auto metadata = field->metadata() ? field->metadata()->Copy()
+                                              : std::make_shared<arrow::KeyValueMetadata>();
+            MapSharedShreddingFieldMeta file_meta = converter->BuildFieldMeta(logical_col_index);
+            PAIMON_RETURN_NOT_OK(
+                MapSharedShreddingUtils::SerializeMetadata(file_meta, compression, metadata.get()));
+            updated_fields[logical_col_index] = field->WithMetadata(metadata);
+            context->ReportFileStats(logical_col_index, file_meta.max_row_width);
+        }
+        return arrow::schema(std::move(updated_fields));
+    };
 }
 
 }  // namespace paimon

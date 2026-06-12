@@ -91,7 +91,7 @@ TEST(MapSharedShreddingUtilsTest, LogicalToPhysicalSchemaBasic) {
 
     // Build expected schema for comparison
     auto expected_struct = arrow::struct_({
-        arrow::field("__field_mapping", arrow::list(arrow::int32()), false),
+        arrow::field("__field_mapping", arrow::list(arrow::int32()), true),
         arrow::field("__col_0", arrow::utf8(), true),
         arrow::field("__col_1", arrow::utf8(), true),
         arrow::field("__col_2", arrow::utf8(), true),
@@ -118,7 +118,7 @@ TEST(MapSharedShreddingUtilsTest, LogicalToPhysicalSchemaNestedValue) {
                                                    schema, column_to_num_columns));
 
     auto expected_struct = arrow::struct_({
-        arrow::field("__field_mapping", arrow::list(arrow::int32()), false),
+        arrow::field("__field_mapping", arrow::list(arrow::int32()), true),
         arrow::field("__col_0", nested_value, true),
         arrow::field("__col_1", nested_value, true),
         arrow::field("__overflow", arrow::map(arrow::int32(), nested_value), true),
@@ -211,7 +211,7 @@ TEST(MapSharedShreddingUtilsTest, MetadataRoundtripNoneCompression) {
     auto metadata = std::make_shared<arrow::KeyValueMetadata>();
     ASSERT_OK(MapSharedShreddingUtils::SerializeMetadata(original, "none", metadata.get()));
 
-    // Verify raw KV strings to get intuition of what's stored
+    // Verify raw KV strings
     auto find_value = [&](const char* key) -> std::string {
         int32_t idx = metadata->FindKey(key);
         EXPECT_GE(idx, 0);

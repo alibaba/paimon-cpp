@@ -20,8 +20,11 @@
 #include <utility>
 
 #include "arrow/c/bridge.h"
+#include "arrow/ipc/writer.h"
 #include "arrow/memory_pool.h"
 #include "arrow/record_batch.h"
+#include "arrow/util/base64.h"
+#include "arrow/util/key_value_metadata.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/arrow/arrow_output_stream_adapter.h"
 #include "paimon/common/utils/arrow/status_utils.h"
@@ -76,6 +79,22 @@ Status ParquetFormatWriter::Flush() {
 Status ParquetFormatWriter::Finish() {
     PAIMON_RETURN_NOT_OK(Flush());
     PAIMON_RETURN_NOT_OK_FROM_ARROW(writer_->Close());
+    return Status::OK();
+}
+
+Status ParquetFormatWriter::UpdateSchema(const std::shared_ptr<arrow::Schema>& schema) {
+    // Re-serialize the Arrow Schema (with updated per-field metadata) into
+    // the ARROW:schema key. AddKeyValueMetadata uses Merge (other-first),
+    // so the new ARROW:schema value overwrites the one written at Open time.
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Buffer> serialized,
+                                      arrow::ipc::SerializeSchema(*schema, pool_.get()));
+    std::string schema_base64 = arrow::util::base64_encode(
+        std::string_view(reinterpret_cast<const char*>(serialized->data()),
+                         static_cast<size_t>(serialized->size())));
+    auto metadata = std::make_shared<arrow::KeyValueMetadata>();
+    metadata->Append("ARROW:schema", std::move(schema_base64));
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(writer_->AddKeyValueMetadata(metadata));
+    schema_ = schema;
     return Status::OK();
 }
 

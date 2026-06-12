@@ -198,10 +198,12 @@ Result<std::shared_ptr<BatchWriter>> AppendOnlyFileStoreWrite::CreateWriter(
             compaction_metrics_->CreateReporter(partition, bucket), cancellation_controller);
     }
 
-    auto writer = std::make_shared<AppendOnlyWriter>(
-        options_, table_schema_->Id(), write_schema_, write_cols_, restore_max_seq_number,
-        data_file_path_factory, compact_manager, pool_);
-    return std::shared_ptr<BatchWriter>(writer);
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<AppendOnlyWriter> writer,
+        AppendOnlyWriter::Create(options_, table_schema_->Id(), write_schema_, write_cols_,
+                                 restore_max_seq_number, data_file_path_factory, compact_manager,
+                                 pool_));
+    return std::shared_ptr<BatchWriter>(std::move(writer));
 }
 
 AppendOnlyFileStoreWrite::SingleFileWriterCreator

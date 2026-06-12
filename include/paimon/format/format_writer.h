@@ -18,9 +18,14 @@
 
 #include <memory>
 
+#include "paimon/status.h"
 #include "paimon/type_fwd.h"
 
 struct ArrowArray;
+
+namespace arrow {
+class Schema;
+}  // namespace arrow
 
 namespace paimon {
 /// File format writer, each writer corresponds to a data file.
@@ -66,6 +71,14 @@ class PAIMON_EXPORT FormatWriter {
     /// Get metrics of the writer
     /// @return The accumulated writer metrics to current state.
     virtual std::shared_ptr<Metrics> GetWriterMetrics() const = 0;
+
+    /// Updates the schema used for serialization in the file footer.
+    /// Must be called before Finish(). This allows per-field metadata
+    /// (e.g., extend MAP metadata) to be written into the file.
+    /// The default implementation returns NotImplemented.
+    virtual Status UpdateSchema(const std::shared_ptr<arrow::Schema>& /*schema*/) {
+        return Status::NotImplemented("UpdateSchema is not supported by this format writer.");
+    }
 };
 
 }  // namespace paimon
