@@ -200,40 +200,7 @@ Status OrcFileBatchReader::CollectTargetColumnIds(const ::orc::Type* src_type,
             }
             break;
         }
-        case ::orc::TypeKind::LIST: {
-            if (target_type->getSubtypeCount() != 1 || src_type->getSubtypeCount() != 1) {
-                return Status::Invalid(fmt::format("invalid list type: src {} vs target {}",
-                                                   src_type->toString(), target_type->toString()));
-            }
-            // list element type must match exactly.
-            if (src_type->getSubtype(0)->toString() != target_type->getSubtype(0)->toString()) {
-                return Status::Invalid(
-                    fmt::format("list element type mismatch: src {} vs target {}",
-                                src_type->toString(), target_type->toString()));
-            }
-            target_column_ids->push_back(src_type->getColumnId());
-            PAIMON_RETURN_NOT_OK(CollectTargetColumnIds(
-                src_type->getSubtype(0), target_type->getSubtype(0), target_column_ids));
-            break;
-        }
-        case ::orc::TypeKind::MAP: {
-            if (target_type->getSubtypeCount() != 2 || src_type->getSubtypeCount() != 2) {
-                return Status::Invalid(fmt::format("invalid map type: src {} vs target {}",
-                                                   src_type->toString(), target_type->toString()));
-            }
-            // map element type must match exactly.
-            if (src_type->getSubtype(0)->toString() != target_type->getSubtype(0)->toString() ||
-                src_type->getSubtype(1)->toString() != target_type->getSubtype(1)->toString()) {
-                return Status::Invalid(fmt::format("map type mismatch: src {} vs target {}",
-                                                   src_type->toString(), target_type->toString()));
-            }
-            target_column_ids->push_back(src_type->getColumnId());
-            PAIMON_RETURN_NOT_OK(CollectTargetColumnIds(
-                src_type->getSubtype(0), target_type->getSubtype(0), target_column_ids));
-            PAIMON_RETURN_NOT_OK(CollectTargetColumnIds(
-                src_type->getSubtype(1), target_type->getSubtype(1), target_column_ids));
-            break;
-        }
+        // Do not support partial field recall inside list/map types.
         default: {
             if (src_type->toString() != target_type->toString()) {
                 return Status::Invalid(fmt::format("type mismatch: src {} vs target {}",

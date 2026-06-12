@@ -357,9 +357,8 @@ TEST_F(OrcFileBatchReaderTest, TestCreateRowReaderOptions) {
                              OrcFileBatchReader::CreateRowReaderOptions(
                                  src_type.get(), target_type.get(),
                                  /*search_arg=*/nullptr, options, &target_column_ids));
-        // Struct IDs (0, 1) not included. Selected: sub1(2), sub2-list(3), list(4), double(5),
-        // sub3(6), col3-map(8), key(9), value(10)
-        ASSERT_EQ(target_column_ids, (std::vector<uint64_t>{2, 3, 4, 5, 6, 8, 9, 10}));
+        // Struct IDs (0, 1) not included. Selected: sub1(2), sub2-list(3), sub3(6), col3-map(8).
+        ASSERT_EQ(target_column_ids, (std::vector<uint64_t>{2, 3, 6, 8}));
     }
     {
         // read with type mismatch in nested field
@@ -453,10 +452,11 @@ TEST_F(OrcFileBatchReaderTest, TestCreateRowReaderOptions) {
         std::unique_ptr<::orc::Type> target_type =
             ::orc::Type::buildTypeFromString(target_orc_schema);
         target_column_ids.clear();
+        // list/map sub-field partial projection is not supported; toString() mismatch is reported
         ASSERT_NOK_WITH_MSG(OrcFileBatchReader::CreateRowReaderOptions(
                                 src_type.get(), target_type.get(),
                                 /*search_arg=*/nullptr, options, &target_column_ids),
-                            "list element type mismatch");
+                            "type mismatch");
     }
     {
         std::map<std::string, std::string> options;
@@ -466,10 +466,11 @@ TEST_F(OrcFileBatchReaderTest, TestCreateRowReaderOptions) {
         std::unique_ptr<::orc::Type> target_type =
             ::orc::Type::buildTypeFromString(target_orc_schema);
         target_column_ids.clear();
+        // list/map sub-field partial projection is not supported; toString() mismatch is reported
         ASSERT_NOK_WITH_MSG(OrcFileBatchReader::CreateRowReaderOptions(
                                 src_type.get(), target_type.get(),
                                 /*search_arg=*/nullptr, options, &target_column_ids),
-                            "map type mismatch");
+                            "type mismatch");
     }
 }
 
@@ -1092,9 +1093,8 @@ TEST_F(OrcFileBatchReaderTest, TestNestedFieldProjectionWithListAndMap) {
 
 TEST_F(OrcFileBatchReaderTest, TestListStructPartialProjection) {
     // Verify that array<struct<a:int, b:double>> read as array<struct<a:int>> is rejected.
-    // Without the list element toString() check, ORC includes all sub-columns of the list
-    // element struct (a and b), but MakeOrcBackedStructBuilder iterates typed_batch->fields
-    // by position against the target struct (only 1 field), causing heap-buffer-overflow.
+    // Partial projection inside list/map elements is not supported; the list type toString()
+    // comparison catches the mismatch and returns an error before any ORC batch is read.
     auto field_a = arrow::field("a", arrow::int32());
     auto field_b = arrow::field("b", arrow::float64());
     auto col1 = arrow::field("col1", arrow::list(arrow::struct_({field_a, field_b})));
@@ -1128,7 +1128,7 @@ TEST_F(OrcFileBatchReaderTest, TestListStructPartialProjection) {
     ASSERT_TRUE(arrow::ExportSchema(read_schema, c_schema.get()).ok());
     ASSERT_NOK_WITH_MSG(orc_batch_reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr,
                                                         /*selection_bitmap=*/std::nullopt),
-                        "list element type mismatch");
+                        "type mismatch");
 }
 
 }  // namespace paimon::orc::test
