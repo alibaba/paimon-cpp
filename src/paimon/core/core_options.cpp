@@ -26,6 +26,7 @@
 #include "paimon/common/fs/resolving_file_system.h"
 #include "paimon/common/options/memory_size.h"
 #include "paimon/common/options/time_duration.h"
+#include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/options/expire_config.h"
@@ -1175,6 +1176,32 @@ Result<bool> CoreOptions::FieldCollectAggDistinct(const std::string& field_name)
                       std::string(Options::DISTINCT);
     PAIMON_RETURN_NOT_OK(parser.Parse<bool>(key, &distinct));
     return distinct;
+}
+
+Result<MapStorageLayout> CoreOptions::GetMapStorageLayout(const std::string& field_name) const {
+    std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
+                      std::string(Options::MAP_STORAGE_LAYOUT);
+    PAIMON_ASSIGN_OR_RAISE(std::string layout_str, OptionsUtils::GetValueFromMap<std::string>(
+                                                       impl_->raw_options, key, "default"));
+    std::string lower = StringUtils::ToLowerCase(layout_str);
+    if (lower == "shared-shredding") {
+        return MapStorageLayout::SHARED_SHREDDING;
+    } else if (lower == "default") {
+        return MapStorageLayout::DEFAULT;
+    }
+    return Status::Invalid(fmt::format("invalid map.storage-layout: {}", layout_str));
+}
+
+Result<int32_t> CoreOptions::GetMapSharedShreddingMaxColumns(const std::string& field_name) const {
+    std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
+                      std::string(Options::MAP_SHARED_SHREDDING_MAX_COLUMNS);
+    PAIMON_ASSIGN_OR_RAISE(int32_t max_columns,
+                           OptionsUtils::GetValueFromMap<int32_t>(impl_->raw_options, key, 256));
+    if (max_columns <= 0) {
+        return Status::Invalid(fmt::format("options {} must > 0",
+                                           std::string(Options::MAP_SHARED_SHREDDING_MAX_COLUMNS)));
+    }
+    return max_columns;
 }
 
 bool CoreOptions::DeletionVectorsEnabled() const {

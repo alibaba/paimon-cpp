@@ -29,6 +29,7 @@
 #include "paimon/core/options/external_path_strategy.h"
 #include "paimon/core/options/lookup_compact_mode.h"
 #include "paimon/core/options/lookup_strategy.h"
+#include "paimon/core/options/map_storage_layout.h"
 #include "paimon/core/options/merge_engine.h"
 #include "paimon/core/options/sort_engine.h"
 #include "paimon/format/file_format.h"
@@ -115,6 +116,10 @@ class PAIMON_EXPORT CoreOptions {
     Result<bool> FieldAggIgnoreRetract(const std::string& field_name) const;
     Result<std::string> FieldListAggDelimiter(const std::string& field_name) const;
     Result<bool> FieldCollectAggDistinct(const std::string& field_name) const;
+
+    Result<MapStorageLayout> GetMapStorageLayout(const std::string& field_name) const;
+    Result<int32_t> GetMapSharedShreddingMaxColumns(const std::string& field_name) const;
+
     bool DeletionVectorsEnabled() const;
     bool DeletionVectorsBitmap64() const;
     int64_t DeletionVectorTargetFileSize() const;
