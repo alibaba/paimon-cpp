@@ -169,8 +169,9 @@ Result<std::shared_ptr<FileStoreScan::RawPlan>> FileStoreScan::CreatePlan() cons
     metrics_->SetCounter(ScanMetrics::LAST_SCANNED_SNAPSHOT_ID,
                          snapshot.has_value() ? snapshot.value().Id() : int64_t{0});
     metrics_->SetCounter(ScanMetrics::LAST_SCANNED_MANIFESTS, filtered_manifest_file_metas.size());
-    metrics_->SetCounter(ScanMetrics::LAST_SCAN_SKIPPED_TABLE_FILES,
-                         all_data_files - manifest_entries.size());
+    metrics_->SetCounter(
+        ScanMetrics::LAST_SCAN_SKIPPED_TABLE_FILES,
+        std::max(int64_t{0}, all_data_files - static_cast<int64_t>(manifest_entries.size())));
     metrics_->SetCounter(ScanMetrics::LAST_SCAN_RESULTED_TABLE_FILES, manifest_entries.size());
     return std::make_shared<FileStoreScan::RawPlan>(scan_mode_, snapshot,
                                                     std::move(manifest_entries));
@@ -219,7 +220,7 @@ Status FileStoreScan::ReadFileEntries(const std::vector<ManifestFileMeta>& manif
                                       std::vector<ManifestEntry>* manifest_entries) const {
     std::vector<std::future<Result<std::vector<ManifestEntry>>>> futures;
     for (const auto& meta : manifest_metas) {
-        auto read_meta_task = [this, &meta]() -> Result<std::vector<ManifestEntry>> {
+        auto read_meta_task = [this, meta]() -> Result<std::vector<ManifestEntry>> {
             std::vector<ManifestEntry> tmp_entries;
             PAIMON_RETURN_NOT_OK(ReadManifestFileMeta(meta, &tmp_entries));
             return tmp_entries;
