@@ -105,7 +105,7 @@ Result<std::unique_ptr<FileReaderWrapper>> FileReaderWrapper::Create(
             std::move(file_reader), all_row_group_ranges, num_rows, batch_size, pool));
         std::vector<TargetRowGroup> all_target_row_groups;
         for (int32_t i = 0; i < file_reader_wrapper->GetNumberOfRowGroups(); i++) {
-            all_target_row_groups.emplace_back(/*rg_index=*/i, /*page_filtered=*/false,
+            all_target_row_groups.emplace_back(/*rg_index=*/i, /*is_partially_matched=*/false,
                                                /*ranges=*/RowRanges());
         }
         PAIMON_RETURN_NOT_OK(
@@ -297,12 +297,12 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::Next() {
         }
 
         while (current_row_group_idx_ < target_row_groups_.size()) {
-            bool is_page_filtered = target_row_groups_[current_row_group_idx_].is_partially_matched;
+            bool is_partially_matched = target_row_groups_[current_row_group_idx_].is_partially_matched;
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::RecordBatch> batch,
-                                   is_page_filtered ? NextPageFiltered() : NextFullyMatched());
+                                   is_partially_matched ? NextPageFiltered() : NextFullyMatched());
             if (batch) {
                 return batch;
-            } else if (!is_page_filtered) {
+            } else if (!is_partially_matched) {
                 // Null from fully-matched path means batch_reader_ is globally exhausted.
                 break;
             }
@@ -424,8 +424,8 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
             }
         }
 
-        bool has_page_filtered = fully_matched_row_groups.size() != active_count;
-        if (has_page_filtered) {
+        bool has_partially_matched = fully_matched_row_groups.size() != active_count;
+        if (has_partially_matched) {
             PAIMON_RETURN_NOT_OK(BuildPageFilteredSchema(column_indices));
         }
 
@@ -446,7 +446,7 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
 
         // When page-filtered RGs exist, issue a single PreBuffer covering both kinds.
         // Otherwise GetRecordBatchReader already issued PreBuffer internally.
-        if (has_page_filtered) {
+        if (has_partially_matched) {
             auto all_ranges = CollectPreBufferRanges(column_indices);
             DispatchPreBuffer(std::move(all_ranges));
         }
