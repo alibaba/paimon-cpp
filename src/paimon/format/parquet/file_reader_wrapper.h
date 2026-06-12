@@ -173,7 +173,6 @@ class FileReaderWrapper {
     int64_t batch_size_;  // 0 means no limit
 
     const uint64_t num_rows_;
-    const uint32_t num_cols_;
     uint64_t next_row_to_read_ = std::numeric_limits<uint64_t>::max();
     uint64_t previous_first_row_ = std::numeric_limits<uint64_t>::max();
     uint64_t current_row_group_idx_ = 0;

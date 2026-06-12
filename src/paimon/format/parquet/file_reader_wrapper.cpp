@@ -150,7 +150,6 @@ FileReaderWrapper::FileReaderWrapper(
       pool_(pool),
       batch_size_(batch_size),
       num_rows_(num_rows),
-      num_cols_(num_cols),
       leaf_to_field_idx_(num_cols, -1) {}
 
 void FileReaderWrapper::WaitForPendingPreBuffer() {

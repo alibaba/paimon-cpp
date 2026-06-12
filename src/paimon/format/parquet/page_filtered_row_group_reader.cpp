@@ -403,7 +403,6 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
     // Step 2: Prepare row group metadata.
     auto row_group_reader = parquet_reader->RowGroup(row_group_index);
     auto rg_metadata = parquet_reader->metadata()->RowGroup(row_group_index);
-    int64_t row_group_row_count = rg_metadata->num_rows();
 
     std::shared_ptr<::parquet::RowGroupPageIndexReader> rg_page_index_reader;
     auto page_index_reader = parquet_reader->GetPageIndexReader();
