@@ -65,7 +65,6 @@ ParquetFileBatchReader::ParquetFileBatchReader(
       arrow_pool_(arrow_pool),
       input_stream_(std::move(input_stream)),
       reader_(std::move(reader)),
-      read_ranges_(reader_->GetAllRowGroupRanges()),
       metrics_(std::make_shared<MetricsImpl>()),
       logger_(Logger::GetLogger("ParquetFileBatchReader")) {}
 
@@ -89,8 +88,8 @@ Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
                                             ->properties(arrow_reader_properties)
                                             ->Build(&file_reader));
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileReaderWrapper> reader,
-                               FileReaderWrapper::Create(std::move(file_reader), pool.get(),
-                                                         static_cast<int64_t>(batch_size)));
+                               FileReaderWrapper::Create(std::move(file_reader),
+                                                         static_cast<int64_t>(batch_size), pool));
         auto parquet_file_batch_reader = std::unique_ptr<ParquetFileBatchReader>(
             new ParquetFileBatchReader(std::move(input_stream), std::move(reader), options, pool));
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::ArrowSchema> file_schema,
@@ -159,6 +158,9 @@ Status ParquetFileBatchReader::SetReadSchema(
         }
         // Apply page-level filtering after bitmap pruning so we don't read page index
         // pages for row groups that the bitmap already excluded.
+        // If no predicate is provided, skip page-level filtering, row_group_row_ranges will be
+        // empty
+        std::map<int32_t, RowRanges> row_group_row_ranges;
         if (predicate && !row_groups.empty()) {
             PAIMON_ASSIGN_OR_RAISE(
                 bool enable_page_index_filter,
@@ -177,38 +179,38 @@ Status ParquetFileBatchReader::SetReadSchema(
                     }
                 }
 
+                std::pair<std::vector<int32_t>, std::map<int32_t, RowRanges>> page_filter_result;
                 PAIMON_ASSIGN_OR_RAISE(
-                    auto page_filter_result,
+                    page_filter_result,
                     FilterRowGroupsByPageIndex(predicate, column_name_to_index, row_groups));
                 row_groups = std::move(page_filter_result.first);
-                reader_->SetRowGroupRowRanges(page_filter_result.second);
+                row_group_row_ranges = std::move(page_filter_result.second);
             }
         }
 
         read_data_type_ = arrow::struct_(read_schema->fields());
-        read_row_groups_ = row_groups;
-        read_column_indices_ = column_indices;
 
         metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_TOTAL,
                              reader_->GetNumberOfRowGroups());
         metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_AFTER_FILTER, row_groups.size());
 
-        PAIMON_ASSIGN_OR_RAISE(
-            std::set<int32_t> ordered_row_groups,
-            reader_->FilterRowGroupsByReadRanges(read_ranges_, read_row_groups_));
-
-        // When predicate or selection is applied, prepare eagerly so PreBuffer I/O
-        // starts immediately. All file readers are created before consumption begins,
-        // so eager preparation allows I/O for multiple files to overlap.
-        Status ret;
-        if (predicate || selection_bitmap) {
-            ret = reader_->PrepareForReading(ordered_row_groups, read_column_indices_);
-        } else {
-            ret = reader_->PrepareForReadingLazy(ordered_row_groups, read_column_indices_);
+        // Build TargetRowGroup list with page-filter info in one shot.
+        std::vector<TargetRowGroup> target_row_groups;
+        for (int32_t rg_id : row_groups) {
+            auto it = row_group_row_ranges.find(rg_id);
+            if (it != row_group_row_ranges.end()) {
+                target_row_groups.emplace_back(/*rg_index=*/rg_id, /*page_filtered=*/true,
+                                               /*ranges=*/it->second);
+            } else {
+                target_row_groups.emplace_back(/*rg_index=*/rg_id,
+                                               /*page_filtered=*/false,
+                                               /*ranges=*/RowRanges());
+            }
         }
-        return ret;
+        PAIMON_RETURN_NOT_OK(reader_->PrepareForReadingLazy(target_row_groups, column_indices));
     }
     PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetFileBatchReader::SetReadSchema")
+    return Status::OK();
 }
 
 Result<std::vector<int32_t>> ParquetFileBatchReader::FilterRowGroupsByPredicate(
