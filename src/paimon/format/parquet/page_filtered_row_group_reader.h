@@ -50,19 +50,18 @@ class PageFilteredRowGroupReader {
     ~PageFilteredRowGroupReader() = delete;
 
     /// Read a row group with page-level filtering.
-    /// @param parquet_reader The underlying ParquetFileReader
     /// @param arrow_file_reader The Arrow FileReader for fallback nested-column reads
     /// @param target_row_group Target row group with index and row ranges
     /// @param column_indices Leaf column indices to read
     /// @param leaf_to_field_idx Global mapping from parquet leaf column index to arrow field index.
     ///        -1 for non-nested, >=0 for nested (owning field index in file schema).
     /// @param arrow_schema The target Arrow schema for output columns
-    /// @param pool Memory pool
     /// @param cache_options Cache options for PreBuffer
     /// @param pre_buffered If true, assumes PreBuffer was already called externally
     ///        and only waits via WhenBuffered (no redundant PreBuffer).
     /// @param page_ranges If non-empty, wait via WhenBufferedRanges instead of WhenBuffered
     /// @param max_chunksize Per-batch row cap for the returned reader.
+    /// @param pool Memory pool
     /// @return A RecordBatchReader streaming the filtered rows.
     static Result<std::unique_ptr<arrow::RecordBatchReader>> ReadFilteredRowGroup(
         ::parquet::arrow::FileReader* arrow_file_reader, const TargetRowGroup& target_row_group,
@@ -128,20 +127,17 @@ class PageFilteredRowGroupReader {
     /// then filter them using Take with the given row_ranges.
     /// Returns a map from file-schema field index to filtered ChunkedArray.
     static Result<std::unordered_map<int32_t, std::shared_ptr<arrow::ChunkedArray>>>
-    ReadNestedColumns(::parquet::arrow::FileReader* arrow_file_reader, int32_t row_group_index,
+    ReadNestedColumns(::parquet::arrow::FileReader* arrow_file_reader,
+                      const TargetRowGroup& target_row_group,
                       const std::vector<int32_t>& column_indices,
-                      const std::vector<int32_t>& leaf_to_field_idx, const RowRanges& row_ranges,
-                      int64_t expected_rows, std::shared_ptr<::arrow::MemoryPool> pool);
+                      const std::vector<int32_t>& leaf_to_field_idx,
+                      std::shared_ptr<::arrow::MemoryPool> pool);
 
     /// Assemble output columns by dispatching each arrow field to either
     /// ReadFilteredColumn (non-nested) or the pre-computed nested columns map.
     static Result<std::vector<std::shared_ptr<arrow::ChunkedArray>>> AssembleFilteredColumns(
-        const std::shared_ptr<::parquet::RowGroupReader>& row_group_reader,
-        ::parquet::ParquetFileReader* parquet_reader,
-        const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
-        int32_t row_group_index, const std::vector<int32_t>& column_indices,
-        const std::vector<int32_t>& leaf_to_field_idx, const RowRanges& row_ranges,
-        int64_t row_group_row_count, int64_t expected_rows,
+        ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
+        const std::vector<int32_t>& column_indices, const std::vector<int32_t>& leaf_to_field_idx,
         const std::shared_ptr<arrow::Schema>& arrow_schema,
         const std::unordered_map<int32_t, std::shared_ptr<arrow::ChunkedArray>>& nested_columns,
         std::shared_ptr<::arrow::MemoryPool> pool);
