@@ -353,7 +353,6 @@ Status FileReaderWrapper::BuildPageFilteredSchema(const std::vector<int32_t>& co
 
     std::set<int32_t> requested_leaves(column_indices.begin(), column_indices.end());
     std::vector<std::shared_ptr<arrow::Field>> fields;
-    std::set<std::string> seen_field_names;
 
     int32_t leaf_idx = 0;
     for (int field_idx = 0; field_idx < schema->num_fields(); ++field_idx) {
@@ -371,9 +370,9 @@ Status FileReaderWrapper::BuildPageFilteredSchema(const std::vector<int32_t>& co
             }
         }
 
-        // If any leaf of this field is requested, add to output schema (deduplicated).
+        // If any leaf of this field is requested, add the owning field exactly once.
         for (int32_t idx : leaf_indices) {
-            if (requested_leaves.count(idx) && seen_field_names.insert(field->name()).second) {
+            if (requested_leaves.count(idx)) {
                 fields.push_back(field);
                 break;
             }

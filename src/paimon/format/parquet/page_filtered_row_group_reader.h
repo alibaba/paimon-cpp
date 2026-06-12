@@ -126,8 +126,8 @@ class PageFilteredRowGroupReader {
 
     /// Read all nested columns for a row group via arrow FileReader fallback,
     /// then filter them using Take with the given row_ranges.
-    /// Returns a map from field name to filtered ChunkedArray.
-    static Result<std::unordered_map<std::string, std::shared_ptr<arrow::ChunkedArray>>>
+    /// Returns a map from file-schema field index to filtered ChunkedArray.
+    static Result<std::unordered_map<int32_t, std::shared_ptr<arrow::ChunkedArray>>>
     ReadNestedColumns(::parquet::arrow::FileReader* arrow_file_reader, int32_t row_group_index,
                       const std::vector<int32_t>& column_indices,
                       const std::vector<int32_t>& leaf_to_field_idx, const RowRanges& row_ranges,
@@ -143,7 +143,7 @@ class PageFilteredRowGroupReader {
         const std::vector<int32_t>& leaf_to_field_idx, const RowRanges& row_ranges,
         int64_t row_group_row_count, int64_t expected_rows,
         const std::shared_ptr<arrow::Schema>& arrow_schema,
-        const std::unordered_map<std::string, std::shared_ptr<arrow::ChunkedArray>>& nested_columns,
+        const std::unordered_map<int32_t, std::shared_ptr<arrow::ChunkedArray>>& nested_columns,
         std::shared_ptr<::arrow::MemoryPool> pool);
 };
 

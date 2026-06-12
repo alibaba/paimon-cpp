@@ -244,16 +244,16 @@ Result<std::shared_ptr<arrow::Array>> PageFilteredRowGroupReader::BuildTakeIndic
     return indices;
 }
 
-Result<std::unordered_map<std::string, std::shared_ptr<arrow::ChunkedArray>>>
+Result<std::unordered_map<int32_t, std::shared_ptr<arrow::ChunkedArray>>>
 PageFilteredRowGroupReader::ReadNestedColumns(::parquet::arrow::FileReader* arrow_file_reader,
                                               int32_t row_group_index,
                                               const std::vector<int32_t>& column_indices,
                                               const std::vector<int32_t>& leaf_to_field_idx,
                                               const RowRanges& row_ranges, int64_t expected_rows,
                                               std::shared_ptr<::arrow::MemoryPool> pool) {
-    std::unordered_map<std::string, std::shared_ptr<arrow::ChunkedArray>> result;
+    std::unordered_map<int32_t, std::shared_ptr<arrow::ChunkedArray>> result;
 
-    // Collect all nested leaf column indices.
+    // Collect all nested leaf column indices and the owning fields in output order.
     std::vector<int> nested_leaf_indices;
     for (int32_t col_idx : column_indices) {
         if (col_idx < static_cast<int32_t>(leaf_to_field_idx.size()) &&
@@ -273,22 +273,22 @@ PageFilteredRowGroupReader::ReadNestedColumns(::parquet::arrow::FileReader* arro
     // Build take indices for filtering.
     PAIMON_ASSIGN_OR_RAISE(auto take_indices, BuildTakeIndices(row_ranges, expected_rows, pool));
 
-    // Filter each nested column from the table and store in the result map keyed by name.
+    // Filter each nested column from the table and store it by stable file-schema field index.
     for (int i = 0; i < nested_rg_table->num_columns(); ++i) {
-        auto col_name = nested_rg_table->schema()->field(i)->name();
         auto nested_col = nested_rg_table->column(i);
+        int32_t owning_field_idx = leaf_to_field_idx[nested_leaf_indices[i]];
 
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(arrow::Datum filtered_datum,
                                           arrow::compute::Take(nested_col, take_indices));
         auto filtered_chunked = filtered_datum.chunked_array();
 
         if (filtered_chunked->length() != expected_rows) {
-            return Status::Invalid(
-                fmt::format("PageFilteredRowGroupReader: nested column '{}' produced {} rows but "
-                            "expected {} (row_group={})",
-                            col_name, filtered_chunked->length(), expected_rows, row_group_index));
+            return Status::Invalid(fmt::format(
+                "PageFilteredRowGroupReader: nested field index {} produced {} rows but "
+                "expected {} (row_group={})",
+                owning_field_idx, filtered_chunked->length(), expected_rows, row_group_index));
         }
-        result[col_name] = std::move(filtered_chunked);
+        result.emplace(owning_field_idx, std::move(filtered_chunked));
     }
 
     return result;
@@ -303,7 +303,7 @@ PageFilteredRowGroupReader::AssembleFilteredColumns(
     const std::vector<int32_t>& leaf_to_field_idx, const RowRanges& row_ranges,
     int64_t row_group_row_count, int64_t expected_rows,
     const std::shared_ptr<arrow::Schema>& arrow_schema,
-    const std::unordered_map<std::string, std::shared_ptr<arrow::ChunkedArray>>& nested_columns,
+    const std::unordered_map<int32_t, std::shared_ptr<arrow::ChunkedArray>>& nested_columns,
     std::shared_ptr<::arrow::MemoryPool> pool) {
     std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
     columns.reserve(arrow_schema->num_fields());
@@ -337,12 +337,12 @@ PageFilteredRowGroupReader::AssembleFilteredColumns(
                 leaf_pos++;
             }
 
-            auto it = nested_columns.find(field->name());
+            auto it = nested_columns.find(owning_field_idx);
             if (it == nested_columns.end()) {
                 return Status::Invalid(fmt::format(
-                    "PageFilteredRowGroupReader: nested field '{}' not found in pre-read "
+                    "PageFilteredRowGroupReader: nested field index {} not found in pre-read "
                     "columns (row_group={})",
-                    field->name(), row_group_index));
+                    owning_field_idx, row_group_index));
             }
             columns.push_back(it->second);
         }
