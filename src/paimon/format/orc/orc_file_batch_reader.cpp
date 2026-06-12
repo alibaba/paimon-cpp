@@ -205,7 +205,12 @@ Status OrcFileBatchReader::CollectTargetColumnIds(const ::orc::Type* src_type,
                 return Status::Invalid(fmt::format("invalid list type: src {} vs target {}",
                                                    src_type->toString(), target_type->toString()));
             }
-            // list cannot be partially projected
+            // list element type must match exactly.
+            if (src_type->getSubtype(0)->toString() != target_type->getSubtype(0)->toString()) {
+                return Status::Invalid(
+                    fmt::format("list element type mismatch: src {} vs target {}",
+                                src_type->toString(), target_type->toString()));
+            }
             target_column_ids->push_back(src_type->getColumnId());
             PAIMON_RETURN_NOT_OK(CollectTargetColumnIds(
                 src_type->getSubtype(0), target_type->getSubtype(0), target_column_ids));
@@ -216,7 +221,12 @@ Status OrcFileBatchReader::CollectTargetColumnIds(const ::orc::Type* src_type,
                 return Status::Invalid(fmt::format("invalid map type: src {} vs target {}",
                                                    src_type->toString(), target_type->toString()));
             }
-            // map cannot be partially projected
+            // map element type must match exactly.
+            if (src_type->getSubtype(0)->toString() != target_type->getSubtype(0)->toString() ||
+                src_type->getSubtype(1)->toString() != target_type->getSubtype(1)->toString()) {
+                return Status::Invalid(fmt::format("map type mismatch: src {} vs target {}",
+                                                   src_type->toString(), target_type->toString()));
+            }
             target_column_ids->push_back(src_type->getColumnId());
             PAIMON_RETURN_NOT_OK(CollectTargetColumnIds(
                 src_type->getSubtype(0), target_type->getSubtype(0), target_column_ids));
@@ -225,6 +235,10 @@ Status OrcFileBatchReader::CollectTargetColumnIds(const ::orc::Type* src_type,
             break;
         }
         default:
+            if (src_type->toString() != target_type->toString()) {
+                return Status::Invalid(fmt::format("type mismatch: src {} vs target {}",
+                                                   src_type->toString(), target_type->toString()));
+            }
             target_column_ids->push_back(src_type->getColumnId());
             break;
     }

@@ -431,6 +431,46 @@ TEST_F(OrcFileBatchReaderTest, TestCreateRowReaderOptions) {
             "The column id of the target field should be monotonically increasing in format "
             "reader");
     }
+    {
+        // decimal precision mismatch
+        std::map<std::string, std::string> options;
+        std::string src_orc_schema = "struct<col1:decimal(18,2),col2:int>";
+        std::unique_ptr<::orc::Type> src_type = ::orc::Type::buildTypeFromString(src_orc_schema);
+        std::string target_orc_schema = "struct<col1:decimal(20,2),col2:int>";
+        std::unique_ptr<::orc::Type> target_type =
+            ::orc::Type::buildTypeFromString(target_orc_schema);
+        target_column_ids.clear();
+        ASSERT_NOK_WITH_MSG(OrcFileBatchReader::CreateRowReaderOptions(
+                                src_type.get(), target_type.get(),
+                                /*search_arg=*/nullptr, options, &target_column_ids),
+                            "type mismatch");
+    }
+    {
+        std::map<std::string, std::string> options;
+        std::string src_orc_schema = "struct<col1:array<struct<a:int,b:double>>>";
+        std::unique_ptr<::orc::Type> src_type = ::orc::Type::buildTypeFromString(src_orc_schema);
+        std::string target_orc_schema = "struct<col1:array<struct<a:int>>>";
+        std::unique_ptr<::orc::Type> target_type =
+            ::orc::Type::buildTypeFromString(target_orc_schema);
+        target_column_ids.clear();
+        ASSERT_NOK_WITH_MSG(OrcFileBatchReader::CreateRowReaderOptions(
+                                src_type.get(), target_type.get(),
+                                /*search_arg=*/nullptr, options, &target_column_ids),
+                            "list element type mismatch");
+    }
+    {
+        std::map<std::string, std::string> options;
+        std::string src_orc_schema = "struct<col1:map<string,struct<a:int,b:double>>>";
+        std::unique_ptr<::orc::Type> src_type = ::orc::Type::buildTypeFromString(src_orc_schema);
+        std::string target_orc_schema = "struct<col1:map<string,struct<a:int>>>";
+        std::unique_ptr<::orc::Type> target_type =
+            ::orc::Type::buildTypeFromString(target_orc_schema);
+        target_column_ids.clear();
+        ASSERT_NOK_WITH_MSG(OrcFileBatchReader::CreateRowReaderOptions(
+                                src_type.get(), target_type.get(),
+                                /*search_arg=*/nullptr, options, &target_column_ids),
+                            "map type mismatch");
+    }
 }
 
 TEST_P(OrcFileBatchReaderTest, TestNextBatchSimple) {
@@ -1048,6 +1088,47 @@ TEST_F(OrcFileBatchReaderTest, TestNestedFieldProjectionWithListAndMap) {
             << "actual: " << result_array->ToString()
             << "\nexpected: " << expected_chunked->ToString();
     }
+}
+
+TEST_F(OrcFileBatchReaderTest, TestListStructPartialProjection) {
+    // Verify that array<struct<a:int, b:double>> read as array<struct<a:int>> is rejected.
+    // Without the list element toString() check, ORC includes all sub-columns of the list
+    // element struct (a and b), but MakeOrcBackedStructBuilder iterates typed_batch->fields
+    // by position against the target struct (only 1 field), causing heap-buffer-overflow.
+    auto field_a = arrow::field("a", arrow::int32());
+    auto field_b = arrow::field("b", arrow::float64());
+    auto col1 = arrow::field("col1", arrow::list(arrow::struct_({field_a, field_b})));
+
+    arrow::FieldVector write_fields = {col1};
+    auto write_schema = arrow::schema(write_fields);
+    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(write_fields), R"([
+        [[[1, 1.1], [2, 2.2]]],
+        [[[3, 3.3]]],
+        [[null]],
+        [null]
+    ])")
+            .ValueOrDie());
+
+    auto dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    std::string data_path = dir->Str() + "/list_struct_projection_test.orc";
+    WriteArray(dir->GetFileSystem(), data_path, src_array, write_schema, /*options=*/{});
+
+    auto read_col1 = arrow::field("col1", arrow::list(arrow::struct_({field_a})));
+    arrow::Schema read_schema({read_col1});
+    std::shared_ptr<FileSystem> file_system = std::make_shared<LocalFileSystem>();
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream, file_system->Open(data_path));
+    ASSERT_OK_AND_ASSIGN(auto in_stream,
+                         OrcInputStreamImpl::Create(input_stream, DEFAULT_NATURAL_READ_SIZE));
+    ASSERT_OK_AND_ASSIGN(
+        auto orc_batch_reader,
+        OrcFileBatchReader::Create(std::move(in_stream), pool_, /*options=*/{}, /*batch_size=*/10));
+    std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(read_schema, c_schema.get()).ok());
+    ASSERT_NOK_WITH_MSG(orc_batch_reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr,
+                                                        /*selection_bitmap=*/std::nullopt),
+                        "list element type mismatch");
 }
 
 }  // namespace paimon::orc::test
