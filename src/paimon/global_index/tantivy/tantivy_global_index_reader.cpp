@@ -20,7 +20,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
-#include <mutex>  // [BUG_QPLEAK_RUST]
+#include <mutex>
 #include <vector>
 
 #include "fmt/format.h"
@@ -28,7 +28,7 @@
 #include "paimon/common/utils/rapidjson_util.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/global_index/tantivy/tantivy_archive_layout.h"
-#include "paimon/global_index/tantivy/tantivy_ffi_log.h"  // [BUG_QPLEAK_RUST]
+#include "paimon/global_index/tantivy/tantivy_ffi_log.h"
 #include "paimon/global_index/tantivy/tantivy_ffi_status.h"
 #include "paimon/global_index/tantivy/tantivy_stream_ctx.h"
 
@@ -36,8 +36,7 @@ namespace paimon::tantivy {
 
 namespace {
 
-// [BUG_QPLEAK_RUST] one-shot install of Rust log bridge so log::warn! in Rust
-// surfaces in BE's cn.WARNING via glog.
+// One-shot install of the Rust log bridge so log::warn! in Rust surfaces via glog.
 void EnsureTantivyLogBridge() {
     static std::once_flag flag;
     std::call_once(flag, [] { InstallTantivyLogBridge(); });
@@ -49,8 +48,8 @@ Result<std::shared_ptr<TantivyGlobalIndexReader>> TantivyGlobalIndexReader::Crea
     const std::string& field_name, const GlobalIndexIOMeta& io_meta,
     const std::shared_ptr<GlobalIndexFileReader>& file_reader,
     const std::map<std::string, std::string>& options, const std::shared_ptr<MemoryPool>& pool) {
-    (void)field_name;          // Rust-side knows the field via the schema embedded in meta.json
-    EnsureTantivyLogBridge();  // [BUG_QPLEAK_RUST]
+    (void)field_name;  // Rust-side knows the field via the schema embedded in meta.json
+    EnsureTantivyLogBridge();
 
     std::map<std::string, std::string> write_options;
     if (io_meta.metadata) {
@@ -86,16 +85,16 @@ Result<std::shared_ptr<TantivyGlobalIndexReader>> TantivyGlobalIndexReader::Crea
     // load the dictionary from an empty path, so the error stays actionable.
     std::string dict_dir = GetJiebaDictionaryDirFromEnv().value_or(std::string());
 
-    // V3 streaming read path:
+    // Streaming read path:
     //   1) open stream
-    //   2) ParseArchiveHeader — reads only header bytes, seeks past payloads
+    //   2) ArchiveLayout::Parse — reads only header bytes, seeks past payloads
     //   3) wrap stream in StreamCtx (owned by Rust via release callback)
     //   4) build PaimonStreamCallbacks → paimon_tantivy_reader_new_streaming
     // Archive payloads are read lazily through read_at callbacks as tantivy
     // accesses posting lists, meta.json, etc.
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> stream,
                            file_reader->GetInputStream(io_meta.file_path));
-    PAIMON_ASSIGN_OR_RAISE(ArchiveLayout layout, ParseArchiveHeader(stream.get()));
+    PAIMON_ASSIGN_OR_RAISE(ArchiveLayout layout, ArchiveLayout::Parse(stream.get()));
 
     // Transfer stream ownership to a heap-allocated StreamCtx; Rust will
     // `paimon_cpp_stream_release(ctx)` on reader drop, which `delete`s it.
@@ -137,9 +136,9 @@ Result<std::shared_ptr<GlobalIndexResult>> TantivyGlobalIndexReader::VisitFullTe
     // Serialize pre_filter (if any) to croaring portable bytes for FFI.
     // NB: Serialize() returns a pooled_unique_ptr with MemoryPool::AllocatorDelete;
     // converting via raw.release() + shared_ptr<Bytes>(raw_ptr) would substitute
-    // std::default_delete, causing alloc/dealloc mismatch (malloc vs operator
-    // delete) — detected by ASAN on 2026-04-21. Move directly into shared_ptr
-    // so the pooled deleter is preserved in the control block.
+    // std::default_delete, causing an alloc/dealloc mismatch (malloc vs operator
+    // delete). Move directly into shared_ptr so the pooled deleter is preserved
+    // in the control block.
     PAIMON_UNIQUE_PTR<Bytes> pre_filter_bytes_owned;
     const char* pre_filter_ptr = nullptr;
     std::size_t pre_filter_len = 0;
@@ -165,7 +164,7 @@ Result<std::shared_ptr<GlobalIndexResult>> TantivyGlobalIndexReader::VisitFullTe
     PAIMON_TANTIVY_RETURN_NOT_OK(st);
 
     // Decode `[u8 has_scores | u64 count | u64 row_ids[] | optional f32 scores[]]`.
-    // (B1 schema: row_id is the explicit u64 column read from the fast field.)
+    // row_id is the explicit u64 column read from the fast field.
     if (out.size() < 9) {
         return Status::Invalid(
             fmt::format("tantivy reader output too small ({} bytes)", out.size()));
@@ -190,12 +189,14 @@ Result<std::shared_ptr<GlobalIndexResult>> TantivyGlobalIndexReader::VisitFullTe
 
     const uint8_t* row_id_p = p + 9;
     if (!has_scores) {
-        RoaringBitmap64 bitmap;
-        for (uint64_t i = 0; i < count; i++) {
-            uint64_t row_id;
-            std::memcpy(&row_id, row_id_p + i * 8, sizeof(uint64_t));
-            bitmap.Add(static_cast<int64_t>(row_id));
+        // Copy the contiguous u64 block (unaligned at offset 9) into an aligned
+        // buffer, then bulk-insert via AddMany instead of a per-row Add loop.
+        std::vector<int64_t> row_ids(count);
+        if (count > 0) {
+            std::memcpy(row_ids.data(), row_id_p, count * sizeof(uint64_t));
         }
+        RoaringBitmap64 bitmap;
+        bitmap.AddMany(row_ids.size(), row_ids.data());
         return std::make_shared<BitmapGlobalIndexResult>(
             [b = std::move(bitmap)]() -> Result<RoaringBitmap64> { return b; });
     }

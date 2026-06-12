@@ -193,9 +193,10 @@ impl PaimonTantivyWriter {
         Ok(())
     }
 
-    /// Streaming finish (W1 production path): commit + force-merge + push
-    /// archive bytes through the FFI callback in 64KB chunks. Peak RAM
-    /// independent of archive size — one stack buffer + a few KB metadata.
+    /// Streaming finish (production path): commit + force-merge + push archive
+    /// bytes through the FFI callback in fixed-size chunks (see
+    /// WRITER_STREAM_BUFFER_SIZE). Peak RAM independent of archive size — one
+    /// heap buffer + a few KB metadata.
     pub fn finish_streaming(
         &mut self,
         cb: &PaimonWriteCallbacks,
@@ -238,9 +239,11 @@ impl PaimonTantivyWriter {
 // Streaming pack (W1)
 // =========================================================================
 
-/// Streaming pack buffer size. Bigger than Java packIndex's 8KB for throughput,
-/// still far below any archive size we care about.
-const WRITER_STREAM_BUFFER_SIZE: usize = 64 * 1024;
+/// Streaming pack buffer size. 1MB matches the buffer size data-lake storage
+/// backends (e.g. Pangu) use for good throughput, still far below any archive
+/// size we care about. Heap-allocated (see pack_index_dir_stream), so the size
+/// does not affect stack usage.
+const WRITER_STREAM_BUFFER_SIZE: usize = 1024 * 1024;
 
 /// Callback table passed from C++ for streaming writer output (W1).
 ///
@@ -254,9 +257,9 @@ pub struct PaimonWriteCallbacks {
 }
 
 /// Walk tempdir + pack into the Java-compatible archive format, pushing each
-/// chunk through `write_fn`. Peak RAM = one 64KB stack buffer + a few KB of
-/// entry metadata (name + PathBuf + u64 length). Mirrors Java
-/// `TantivyFullTextGlobalIndexWriter.packIndex` but with a bigger buffer.
+/// chunk through `write_fn`. Peak RAM = one WRITER_STREAM_BUFFER_SIZE heap
+/// buffer + a few KB of entry metadata (name + PathBuf + u64 length). Mirrors
+/// Java `TantivyFullTextGlobalIndexWriter.packIndex` but with a bigger buffer.
 ///
 /// Archive format (BE, no version): `[i32 file_count | (i32 name_len, name,
 /// i64 file_len, file_bytes)*]`. Files sorted alphabetically for deterministic
@@ -270,14 +273,14 @@ where
     // Header: BE i32 file_count
     write_fn(&(entries.len() as i32).to_be_bytes())?;
 
-    let mut buf = [0u8; WRITER_STREAM_BUFFER_SIZE];
+    let mut buf = vec![0u8; WRITER_STREAM_BUFFER_SIZE];
     for (name, path, file_len) in &entries {
         // Per-entry header: name_len, name, data_len
         write_fn(&(name.len() as i32).to_be_bytes())?;
         write_fn(name.as_bytes())?;
         write_fn(&(*file_len as i64).to_be_bytes())?;
 
-        // Payload: 64KB buffer loop
+        // Payload: fixed-size buffer loop
         let mut f = File::open(path)
             .map_err(|e| format!("open {}: {e}", path.display()))?;
         let mut pushed: u64 = 0;
@@ -458,9 +461,10 @@ pub unsafe extern "C" fn paimon_tantivy_writer_add(
 }
 
 /// Commit + force-merge + stream archive bytes through `callbacks.write` in
-/// 64KB chunks (W1). May only be called once per writer; subsequent calls
-/// return InvalidArgument with last_error="writer already finished".
-/// Peak Rust RAM ≈ 64KB + entry metadata (independent of archive size).
+/// fixed-size chunks (see WRITER_STREAM_BUFFER_SIZE). May only be called once
+/// per writer; subsequent calls return InvalidArgument with
+/// last_error="writer already finished". Peak Rust RAM ≈ one buffer + entry
+/// metadata (independent of archive size).
 ///
 /// The callback is invoked **serially** (not concurrently) within this call;
 /// C++ side can write directly to paimon OutputStream without locking.
@@ -648,7 +652,7 @@ mod tests {
     }
 
     /// Mock that counts the largest single `write` call — sanity check that
-    /// Rust streams with small chunks (≤ 64KB buffer + header fields).
+    /// Rust streams in chunks bounded by the buffer (+ small header fields).
     extern "C" fn mock_write_max_chunk(
         ctx: *mut c_void,
         _data: *const u8,
@@ -715,8 +719,8 @@ mod tests {
 
     #[test]
     fn streaming_chunk_size_bounded_by_buffer() {
-        // After force-merge, a 200-doc index still streams in chunks ≤ 64KB
-        // (payload) / or small header-field chunks. Peak chunk ≤ 64KB.
+        // After force-merge, a 200-doc index still streams in chunks bounded by
+        // WRITER_STREAM_BUFFER_SIZE (payload) or small header-field chunks.
         let mut w =
             PaimonTantivyWriter::new("f0", TokenizeMode::Mix, true, &dict_dir_from_env(), "paimon_jieba").unwrap();
         for i in 0..200u64 {

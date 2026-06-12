@@ -358,13 +358,13 @@ TEST_F(OffsetGlobalIndexReaderTest, TestVisitFullTextSearchPreservesScoreFlags) 
     CheckResult(result, {10, 13, 15});
 
     ASSERT_TRUE(fake_reader->captured_fts);
-    EXPECT_TRUE(fake_reader->captured_fts->with_score)
+    ASSERT_TRUE(fake_reader->captured_fts->with_score)
         << "with_score must survive the pre_filter rewrite";
     ASSERT_TRUE(fake_reader->captured_fts->min_score.has_value())
         << "min_score must survive the pre_filter rewrite";
-    EXPECT_FLOAT_EQ(fake_reader->captured_fts->min_score.value(), 1.5f);
+    ASSERT_FLOAT_EQ(fake_reader->captured_fts->min_score.value(), 1.5f);
     // limit and the offset-rewritten local pre_filter should still be present.
-    EXPECT_EQ(fake_reader->captured_fts->limit, std::optional<int32_t>(7));
+    ASSERT_EQ(fake_reader->captured_fts->limit, std::optional<int32_t>(7));
     ASSERT_TRUE(fake_reader->captured_fts->pre_filter.has_value());
 }
 

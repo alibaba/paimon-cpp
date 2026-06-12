@@ -43,16 +43,16 @@ struct ArchiveLayout {
     std::vector<uint64_t> offsets;
     std::vector<uint64_t> lengths;
     std::size_t count = 0;
-};
 
-/// Read the archive header from `in` (seeking past payloads) and return the
-/// layout. Does NOT read file payloads — only header bytes (a few KB).
-///
-/// `in` must support `Seek` (all production `paimon::InputStream` subclasses
-/// do; we call `Seek(cur + data_len)` to skip over each file's payload).
-///
-/// On return, `in`'s internal position is at the end of the archive; callers
-/// typically don't care (the stream is subsequently read via pread callbacks).
-Result<ArchiveLayout> ParseArchiveHeader(InputStream* in);
+    /// Read the archive header from `in` (seeking past payloads) and return the
+    /// layout. Does NOT read file payloads — only header bytes (a few KB).
+    ///
+    /// `in` must support `Seek` (all production `paimon::InputStream` subclasses
+    /// do; we call `Seek(cur + data_len)` to skip over each file's payload).
+    ///
+    /// On return, `in`'s internal position is at the end of the archive; callers
+    /// typically don't care (the stream is subsequently read via pread callbacks).
+    static Result<ArchiveLayout> Parse(InputStream* in);
+};
 
 }  // namespace paimon::tantivy

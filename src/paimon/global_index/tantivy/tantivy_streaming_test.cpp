@@ -175,7 +175,7 @@ TEST(ParseArchiveHeaderFuzz, TruncatedHeader) {
     // Fewer than 4 bytes → DataInputStream::ReadValue<int32_t> fails
     std::string bytes = "\x00\x00";
     ByteArrayInputStream in(bytes.data(), bytes.size());
-    auto r = ParseArchiveHeader(&in);
+    auto r = ArchiveLayout::Parse(&in);
     EXPECT_FALSE(r.ok()) << "expected failure on truncated header";
 }
 
@@ -184,9 +184,9 @@ TEST(ParseArchiveHeaderFuzz, NegativeFileCount) {
     char bytes[4] = {static_cast<char>(0xFF), static_cast<char>(0xFF), static_cast<char>(0xFF),
                      static_cast<char>(0xFF)};
     ByteArrayInputStream in(bytes, 4);
-    auto r = ParseArchiveHeader(&in);
+    auto r = ArchiveLayout::Parse(&in);
     ASSERT_FALSE(r.ok());
-    EXPECT_NE(r.status().message().find("negative file_count"), std::string::npos)
+    EXPECT_NE(r.status().message().find("bad file_count"), std::string::npos)
         << r.status().ToString();
 }
 
@@ -201,7 +201,7 @@ TEST(ParseArchiveHeaderFuzz, NameLenOutOfRange) {
                      static_cast<char>(0xFF),
                      static_cast<char>(0xFF)};
     ByteArrayInputStream in(bytes, 8);
-    auto r = ParseArchiveHeader(&in);
+    auto r = ArchiveLayout::Parse(&in);
     ASSERT_FALSE(r.ok());
     EXPECT_NE(r.status().message().find("bad name_len"), std::string::npos)
         << r.status().ToString();
@@ -212,7 +212,7 @@ TEST(ParseArchiveHeaderFuzz, ZeroFileCountSucceeds) {
     // tantivy::Index::open finds no meta.json, but parse itself OK.
     char bytes[4] = {0, 0, 0, 0};
     ByteArrayInputStream in(bytes, 4);
-    auto r = ParseArchiveHeader(&in);
+    auto r = ArchiveLayout::Parse(&in);
     ASSERT_TRUE(r.ok()) << r.status().ToString();
     EXPECT_EQ(r.value().count, 0u);
 }
@@ -243,9 +243,9 @@ TEST(ParseArchiveHeaderFuzz, PayloadLenNegative) {
         static_cast<char>(0xFF),
     };
     ByteArrayInputStream in(bytes, sizeof(bytes));
-    auto r = ParseArchiveHeader(&in);
+    auto r = ArchiveLayout::Parse(&in);
     ASSERT_FALSE(r.ok());
-    EXPECT_NE(r.status().message().find("negative data_len"), std::string::npos)
+    EXPECT_NE(r.status().message().find("bad data_len"), std::string::npos)
         << r.status().ToString();
 }
 

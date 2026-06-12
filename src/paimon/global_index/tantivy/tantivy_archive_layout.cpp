@@ -20,6 +20,7 @@
 #include <memory>
 
 #include "fmt/format.h"
+#include "paimon/common/utils/math.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/io/data_input_stream.h"
 
@@ -36,9 +37,9 @@ struct NoopDeleter {
 
 }  // namespace
 
-Result<ArchiveLayout> ParseArchiveHeader(InputStream* in) {
+Result<ArchiveLayout> ArchiveLayout::Parse(InputStream* in) {
     if (in == nullptr) {
-        return Status::Invalid("ParseArchiveHeader: null input stream");
+        return Status::Invalid("ArchiveLayout::Parse: null input stream");
     }
 
     // DataInputStream defaults to BE — matches paimon-java archive format.
@@ -48,9 +49,8 @@ Result<ArchiveLayout> ParseArchiveHeader(InputStream* in) {
     PAIMON_RETURN_NOT_OK(dis.Seek(0));
 
     PAIMON_ASSIGN_OR_RAISE(int32_t file_count, dis.ReadValue<int32_t>());
-    if (file_count < 0) {
-        return Status::Invalid(
-            fmt::format("ParseArchiveHeader: negative file_count {}", file_count));
+    if (!InRange<std::size_t>(file_count)) {
+        return Status::Invalid(fmt::format("ArchiveLayout::Parse: bad file_count {}", file_count));
     }
 
     ArchiveLayout layout;
@@ -63,15 +63,15 @@ Result<ArchiveLayout> ParseArchiveHeader(InputStream* in) {
         PAIMON_ASSIGN_OR_RAISE(int32_t name_len, dis.ReadValue<int32_t>());
         if (name_len <= 0 || name_len > 1 << 20) {
             return Status::Invalid(
-                fmt::format("ParseArchiveHeader: bad name_len {} at entry {}", name_len, i));
+                fmt::format("ArchiveLayout::Parse: bad name_len {} at entry {}", name_len, i));
         }
         std::string name(static_cast<std::size_t>(name_len), '\0');
         PAIMON_RETURN_NOT_OK(dis.Read(name.data(), static_cast<uint32_t>(name_len)));
 
         PAIMON_ASSIGN_OR_RAISE(int64_t data_len, dis.ReadValue<int64_t>());
-        if (data_len < 0) {
+        if (!InRange<uint64_t>(data_len)) {
             return Status::Invalid(
-                fmt::format("ParseArchiveHeader: negative data_len {} for '{}'", data_len, name));
+                fmt::format("ArchiveLayout::Parse: bad data_len {} for '{}'", data_len, name));
         }
 
         PAIMON_ASSIGN_OR_RAISE(int64_t data_offset, dis.GetPos());

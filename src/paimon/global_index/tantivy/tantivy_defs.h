@@ -29,22 +29,22 @@ namespace paimon::tantivy {
 /// reader can dispatch the right implementation by filename pattern.
 static inline const char kIdentifier[] = "tantivy-fulltext";
 
-/// Schema field names — fixed to match paimon-java (decision B1). Callers
+/// Schema field names — fixed to match paimon-java. Callers
 /// MUST NOT rename these even though `TantivyGlobalIndexWriter::Create` accepts
 /// a `field_name` argument (that argument is used only to extract the correct
 /// arrow column; the tantivy schema field name is always `"text"`).
 static inline const char kTantivyTextFieldName[] = "text";
 static inline const char kTantivyRowIdFieldName[] = "row_id";
 
-/// Option-key prefix consumed by TantivyGlobalIndex (Stage 8). Matches the
-/// lucene-fts convention so users can configure both implementations with a
-/// uniform "<impl>.<knob>" key style.
+/// Option-key prefix consumed by TantivyGlobalIndex. Matches the lucene-fts
+/// convention so users can configure both implementations with a uniform
+/// "<impl>.<knob>" key style.
 static inline const char kOptionKeyPrefix[] = "tantivy-fulltext.";
 
 /// Buffer size for streaming raw packed bytes from FFI to OutputStream
-/// (Writer) and from InputStream into Rust (Reader, Stage 5+).
+/// (Writer) and from InputStream into Rust (Reader).
 static inline const int32_t kDefaultReadBufferSize = 1024 * 1024;
-/// Read buffer size knob for Stage 6 reader.
+/// Read buffer size knob for the reader.
 static inline const char kTantivyReadBufferSize[] = "read.buffer-size";
 
 /// If true, omit term frequencies/positions when indexing (smaller index, but
@@ -66,9 +66,9 @@ static inline const char kJiebaTokenizeMode[] = "jieba.tokenize-mode";
 ///   "default" (default) — tantivy built-in SimpleTokenizer;
 ///   "paimon_jieba" — jieba-rs CJK tokenizer; opt-in for Chinese workloads
 ///   "whitespace" / "raw" / "en_stem" — other tantivy built-ins
-/// The reader side is schema-driven (P-TK) and auto-dispatches to whatever
-/// tokenizer name is baked into the archive, so the default here also
-/// determines what paimon-java sees when it cross-reads the archive.
+/// The reader side is schema-driven and auto-dispatches to whatever tokenizer
+/// name is baked into the archive, so the default here also determines what
+/// paimon-java sees when it cross-reads the archive.
 static inline const char kTantivyWriteTokenizer[] = "tantivy.write.tokenizer";
 /// Default tokenizer for writer: tantivy built-in "default" (SimpleTokenizer),
 /// chosen so paimon-cpp ↔ paimon-java cross-read works out of the box.

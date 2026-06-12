@@ -34,9 +34,9 @@ namespace paimon::tantivy {
 /// Tantivy-backed implementation of `GlobalIndexReader`.
 ///
 /// Mirrors LuceneGlobalIndexReader's surface but delegates query construction
-/// + execution into Rust over FFI. Stage 6 supports the 5 FullTextSearch
-/// SearchTypes (MATCH_ALL, MATCH_ANY, PHRASE, PREFIX, WILDCARD) without limit
-/// or pre_filter — both of which Stage 7 layers on.
+/// + execution into Rust over FFI. Supports the 5 FullTextSearch SearchTypes
+/// (MATCH_ALL, MATCH_ANY, PHRASE, PREFIX, WILDCARD), optionally with limit and
+/// pre_filter.
 ///
 /// All non-FullTextSearch visit methods return nullptr (matches
 /// LuceneGlobalIndexReader): the FTS index has no contribution for non-FTS

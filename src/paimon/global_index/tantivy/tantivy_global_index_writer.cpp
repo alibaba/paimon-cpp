@@ -114,7 +114,7 @@ Status TantivyGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array,
             text_ptr = view.data();
             text_len = view.size();
         }
-        // B1 schema: pass the caller-tracked row_id as an explicit u64 field.
+        // Pass the caller-tracked row_id as an explicit u64 field.
         PaimonTantivyStatus st = paimon_tantivy_writer_add(
             writer_.get(), static_cast<uint64_t>(row_id_), text_ptr, text_len);
         PAIMON_TANTIVY_RETURN_NOT_OK(st);
@@ -124,9 +124,9 @@ Status TantivyGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array,
 }
 
 Result<std::vector<GlobalIndexIOMeta>> TantivyGlobalIndexWriter::Finish() {
-    // W1 streaming finish: open the output file, pipe archive bytes from Rust
+    // Streaming finish: open the output file, pipe archive bytes from Rust
     // through `paimon_cpp_writer_push` directly into the OutputStream. Peak
-    // RAM (Rust side) = 64KB buffer, independent of archive size.
+    // RAM (Rust side) = one fixed streaming buffer, independent of archive size.
     PAIMON_ASSIGN_OR_RAISE(std::string index_file_name, file_writer_->NewFileName(kIdentifier));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<OutputStream> out,
                            file_writer_->NewOutputStream(index_file_name));

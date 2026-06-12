@@ -60,7 +60,7 @@ option(PAIMON_ENABLE_JINDO "Whether to enable jindo file system" OFF)
 option(PAIMON_ENABLE_LUMINA "Whether to enable lumina vector index" OFF)
 option(PAIMON_ENABLE_LUCENE "Whether to enable lucene index" OFF)
 option(PAIMON_ENABLE_TANTIVY
-       "Whether to enable tantivy-fulltext global index (Rust FFI, experimental)" ON)
+       "Whether to enable tantivy-fulltext global index (Rust FFI, experimental)" OFF)
 if(PAIMON_ENABLE_ORC)
     add_definitions(-DPAIMON_ENABLE_ORC)
 endif()

@@ -31,7 +31,7 @@ class OutputStream;
 namespace paimon::tantivy {
 
 /// C++ side wrapper around a seekable InputStream, used as the `ctx` of
-/// `PaimonStreamCallbacks` (V3). Lifetime is transferred to Rust via
+/// `PaimonStreamCallbacks`. Lifetime is transferred to Rust via
 /// `paimon_tantivy_reader_new_streaming`; Rust invokes `paimon_cpp_stream_release`
 /// when the reader handle is freed, which `delete`s this struct.
 ///
@@ -45,7 +45,7 @@ struct StreamCtx {
     std::mutex pread_mu;
 };
 
-/// `ctx` of `PaimonWriteCallbacks` (W1). Holds a raw (non-owning) pointer to
+/// `ctx` of `PaimonWriteCallbacks`. Holds a raw (non-owning) pointer to
 /// a paimon `OutputStream` plus a sticky error for conveying write failures
 /// back to the C++ caller of `TantivyGlobalIndexWriter::Finish`.
 struct WriteCtx {

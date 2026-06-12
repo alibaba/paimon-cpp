@@ -36,10 +36,9 @@ namespace paimon::tantivy {
 /// Each shard produces exactly one .index file via the GlobalIndexFileWriter,
 /// containing the full packed tantivy on-disk index in a single contiguous blob.
 ///
-/// Indexes written by this class are NOT cross-readable with lucene-fts — see
-/// migration plan §0 decision 1. The C++ side of this writer is intentionally
-/// thin: index construction, segment merging, and packing all happen in Rust
-/// behind the FFI boundary.
+/// Indexes written by this class are NOT cross-readable with lucene-fts. The
+/// C++ side of this writer is intentionally thin: index construction, segment
+/// merging, and packing all happen in Rust behind the FFI boundary.
 class TantivyGlobalIndexWriter : public GlobalIndexWriter {
  public:
     static Result<std::shared_ptr<TantivyGlobalIndexWriter>> Create(

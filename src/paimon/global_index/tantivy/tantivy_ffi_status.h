@@ -14,7 +14,6 @@
  * limitations under the License.
  *
  * Translation layer: paimon_tantivy_status_t -> paimon::Status.
- * See docs/dev/tantivy_ffi_design.md §2.
  */
 #pragma once
 

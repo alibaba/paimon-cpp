@@ -14,7 +14,6 @@
  * limitations under the License.
  *
  * RAII wrappers for opaque FFI handles returned by paimon_tantivy_ffi.
- * See docs/dev/tantivy_ffi_design.md §3 Category A.
  */
 #pragma once
 
@@ -48,7 +47,7 @@ struct FfiDeleter {
 template <typename Handle>
 using FfiUniquePtr = std::unique_ptr<Handle, FfiDeleter<Handle>>;
 
-/// Tokenizer handle (Stage 3).
+/// Tokenizer handle.
 template <>
 struct FfiDeleter<PaimonJiebaTokenizer> {
     void operator()(PaimonJiebaTokenizer* p) const noexcept {
@@ -57,7 +56,7 @@ struct FfiDeleter<PaimonJiebaTokenizer> {
 };
 using JiebaTokenizerPtr = FfiUniquePtr<PaimonJiebaTokenizer>;
 
-/// Writer handle (Stage 4).
+/// Writer handle.
 template <>
 struct FfiDeleter<PaimonTantivyWriter> {
     void operator()(PaimonTantivyWriter* p) const noexcept {
@@ -66,7 +65,7 @@ struct FfiDeleter<PaimonTantivyWriter> {
 };
 using WriterPtr = FfiUniquePtr<PaimonTantivyWriter>;
 
-/// Reader handle (Stage 6).
+/// Reader handle.
 template <>
 struct FfiDeleter<PaimonTantivyReader> {
     void operator()(PaimonTantivyReader* p) const noexcept {

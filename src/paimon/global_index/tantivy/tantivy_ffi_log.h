@@ -14,7 +14,6 @@
  * limitations under the License.
  *
  * Bridge tantivy (Rust) logs into paimon's logger.
- * See docs/dev/tantivy_ffi_design.md §7.
  *
  * Registered once at TantivyGlobalIndexFactory static-init time.
  */

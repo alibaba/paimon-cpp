@@ -28,9 +28,8 @@
 namespace paimon::tantivy {
 
 /// `GlobalIndexer` implementation backed by tantivy-fulltext. Counterpart to
-/// `LuceneGlobalIndex`; the two coexist (and are NOT cross-readable) per
-/// migration plan §0 decision 1. Selection between them happens at the
-/// factory layer via the `index_type` identifier.
+/// `LuceneGlobalIndex`; the two coexist and are NOT cross-readable. Selection
+/// between them happens at the factory layer via the `index_type` identifier.
 class TantivyGlobalIndex : public GlobalIndexer {
  public:
     explicit TantivyGlobalIndex(const std::map<std::string, std::string>& options);

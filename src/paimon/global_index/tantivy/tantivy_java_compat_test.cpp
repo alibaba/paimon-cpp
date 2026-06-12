@@ -144,18 +144,22 @@ class JavaCompatTest : public ::testing::Test {
                                          const std::string& query) {
         auto fts = BuildFts(type, query);
         auto result = reader->VisitFullTextSearch(fts);
-        EXPECT_TRUE(result.ok()) << result.status().ToString();
+        EXPECT_OK(result.status()) << result.status().ToString();
+        // This helper returns a value, so gtest ASSERT_* (which `return;`) cannot
+        // be used; guard each deref explicitly so a failure does not cascade into
+        // calling .value() on a failed Result.
+        if (!result.ok()) return {};
         std::shared_ptr<GlobalIndexResult> r = result.value();
 
         const RoaringBitmap64* bitmap = nullptr;
         if (auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(r)) {
             auto b = plain->GetBitmap();
-            EXPECT_TRUE(b.ok()) << b.status().ToString();
-            bitmap = b.value();
+            EXPECT_OK(b.status()) << b.status().ToString();
+            if (b.ok()) bitmap = b.value();
         } else if (auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(r)) {
             auto b = scored->GetBitmap();
-            EXPECT_TRUE(b.ok()) << b.status().ToString();
-            bitmap = b.value();
+            EXPECT_OK(b.status()) << b.status().ToString();
+            if (b.ok()) bitmap = b.value();
         }
         EXPECT_TRUE(bitmap != nullptr);
         if (bitmap == nullptr) return {};
@@ -285,7 +289,7 @@ TEST_F(JavaCompatTest, ProductionSampleProbe) {
     auto stream_res = fs_->Open(archive_path);
     ASSERT_TRUE(stream_res.ok()) << stream_res.status().ToString();
     std::shared_ptr<InputStream> stream = std::move(stream_res).value();
-    auto layout_res = ParseArchiveHeader(stream.get());
+    auto layout_res = ArchiveLayout::Parse(stream.get());
     ASSERT_TRUE(layout_res.ok()) << layout_res.status().ToString();
     const auto& layout = layout_res.value();
     std::cerr << "[PROBE] archive=" << fixture_name << " file_count=" << layout.count << "\n";
@@ -477,7 +481,7 @@ TEST_F(JavaCompatTest, CppWriteDefaultTokenizerForJavaCrossRead) {
     auto stream_res = fs_->Open(archive_path);
     ASSERT_TRUE(stream_res.ok()) << stream_res.status().ToString();
     std::shared_ptr<InputStream> stream = std::move(stream_res).value();
-    auto layout_res = ParseArchiveHeader(stream.get());
+    auto layout_res = ArchiveLayout::Parse(stream.get());
     ASSERT_TRUE(layout_res.ok()) << layout_res.status().ToString();
     const auto& layout = layout_res.value();
     std::cerr << "[CPP-WRITE] file_count=" << layout.count << "\n";
