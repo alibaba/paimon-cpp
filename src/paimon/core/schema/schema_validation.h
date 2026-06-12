@@ -70,6 +70,8 @@ class SchemaValidation {
 
     static Status ValidateBlobFields(const TableSchema& schema, const CoreOptions& options);
 
+    static Status ValidateMapStorageLayout(const TableSchema& schema, const CoreOptions& options);
+
     static bool IsComplexType(const std::shared_ptr<arrow::Field>& field);
 };
 
