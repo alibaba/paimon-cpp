@@ -297,7 +297,8 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::Next() {
         }
 
         while (current_row_group_idx_ < target_row_groups_.size()) {
-            bool is_partially_matched = target_row_groups_[current_row_group_idx_].is_partially_matched;
+            bool is_partially_matched =
+                target_row_groups_[current_row_group_idx_].is_partially_matched;
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::RecordBatch> batch,
                                    is_partially_matched ? NextPageFiltered() : NextFullyMatched());
             if (batch) {
