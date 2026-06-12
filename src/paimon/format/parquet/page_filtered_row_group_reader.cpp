@@ -254,7 +254,7 @@ PageFilteredRowGroupReader::ReadNestedColumns(::parquet::arrow::FileReader* arro
     const int32_t rg_id = target_row_group.row_group_index;
     const RowRanges& row_ranges = target_row_group.row_ranges;
     // Collect all nested leaf column indices and the owning fields in output order.
-    std::vector<int> nested_leaf_indices;
+    std::vector<int32_t> nested_leaf_indices;
     // All top-level fields that own nested columns.
     std::vector<int32_t> nested_field_indices;
     // To deduplicate fields.
@@ -312,11 +312,12 @@ PageFilteredRowGroupReader::ReadNestedColumns(::parquet::arrow::FileReader* arro
 
 Result<std::vector<std::shared_ptr<arrow::ChunkedArray>>>
 PageFilteredRowGroupReader::AssembleFilteredColumns(
-    ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
+    ::parquet::arrow::FileReader* file_reader, const TargetRowGroup& target_row_group,
     const std::vector<int32_t>& column_indices, const std::vector<int32_t>& leaf_to_field_idx,
     const std::shared_ptr<arrow::Schema>& arrow_schema,
     const std::unordered_map<int32_t, std::shared_ptr<arrow::ChunkedArray>>& nested_columns,
     std::shared_ptr<::arrow::MemoryPool> pool) {
+    auto parquet_reader = file_reader->parquet_reader();
     const int32_t rg_id = target_row_group.row_group_index;
     const RowRanges& row_ranges = target_row_group.row_ranges;
     int64_t expected_rows = row_ranges.RowCount();
@@ -336,8 +337,11 @@ PageFilteredRowGroupReader::AssembleFilteredColumns(
     for (int field_idx = 0; field_idx < arrow_schema->num_fields(); ++field_idx) {
         auto field = arrow_schema->field(field_idx);
         int32_t col_idx = column_indices[leaf_pos];
-
-        if (leaf_to_field_idx[col_idx] == -1) {
+        // Use the file-schema field index (from leaf_to_field_idx), NOT the read-schema
+        // field_idx, because IsNestedType() indexes into the file schema.
+        int32_t file_field_idx = leaf_to_field_idx[col_idx];
+        PAIMON_ASSIGN_OR_RAISE(bool is_nested, IsNestedType(file_reader, file_field_idx));
+        if (!is_nested) {
             // Non-nested column: page-level skip/read.
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<arrow::ChunkedArray> chunked_array,
@@ -416,7 +420,7 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
     // Step 4: Assemble all columns (non-nested via page filtering, nested from pre-read map).
     PAIMON_ASSIGN_OR_RAISE(
         auto columns,
-        AssembleFilteredColumns(parquet_reader, target_row_group, column_indices, leaf_to_field_idx,
+        AssembleFilteredColumns(arrow_file_reader, target_row_group, column_indices, leaf_to_field_idx,
                                 arrow_schema, nested_columns, pool));
 
     auto table = arrow::Table::Make(arrow_schema, std::move(columns), expected_rows);

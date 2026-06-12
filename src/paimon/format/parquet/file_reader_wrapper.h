@@ -157,7 +157,7 @@ class FileReaderWrapper {
     Status BuildPageFilteredSchema(const std::vector<int32_t>& column_indices);
 
     /// Collect all byte ranges that need pre-buffering (page-filtered + fully-matched).
-    std::vector<::arrow::io::ReadRange> CollectPreBufferRanges(
+    Result<std::vector<::arrow::io::ReadRange>> CollectPreBufferRanges(
         const std::vector<int32_t>& column_indices);
 
     /// Dispatch a single PreBufferRanges call with merged ranges.
@@ -195,8 +195,9 @@ class FileReaderWrapper {
     // all page-filtered RGs in a session.
     std::shared_ptr<arrow::Schema> page_filtered_read_schema_;
 
-    // Mapping from leaf column index to arrow field index in the file schema, -1 if the column is
-    // non-nested
+    // Mapping from every leaf column index to its owning top-level Arrow field index
+    // in the file schema.  All leaves are mapped (including flat/primitive columns).
+    // Use IsNestedType() on the owning field's type to distinguish nested from flat.
     std::vector<int32_t> leaf_to_field_idx_;
 
     // Track pre-buffered ranges so we can wait on destruction

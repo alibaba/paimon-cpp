@@ -29,6 +29,7 @@
 #include "arrow/record_batch.h"
 #include "arrow/type.h"
 #include "paimon/format/parquet/row_ranges.h"
+#include "paimon/format/parquet/parquet_schema_util.h"
 #include "paimon/result.h"
 #include "parquet/column_reader.h"
 #include "parquet/file_reader.h"
@@ -136,7 +137,7 @@ class PageFilteredRowGroupReader {
     /// Assemble output columns by dispatching each arrow field to either
     /// ReadFilteredColumn (non-nested) or the pre-computed nested columns map.
     static Result<std::vector<std::shared_ptr<arrow::ChunkedArray>>> AssembleFilteredColumns(
-        ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
+        ::parquet::arrow::FileReader* file_reader, const TargetRowGroup& target_row_group,
         const std::vector<int32_t>& column_indices, const std::vector<int32_t>& leaf_to_field_idx,
         const std::shared_ptr<arrow::Schema>& arrow_schema,
         const std::unordered_map<int32_t, std::shared_ptr<arrow::ChunkedArray>>& nested_columns,

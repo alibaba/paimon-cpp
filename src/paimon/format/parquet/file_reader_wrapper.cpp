@@ -349,33 +349,28 @@ Status FileReaderWrapper::BuildPageFilteredSchema(const std::vector<int32_t>& co
     }
     std::shared_ptr<arrow::Schema> schema;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetSchema(&schema));
-    leaf_to_field_idx_.assign(num_cols_, -1);
-
-    std::set<int32_t> requested_leaves(column_indices.begin(), column_indices.end());
     std::vector<std::shared_ptr<arrow::Field>> fields;
 
+    // Build a complete leaf → top-level field index mapping for ALL fields (nested and flat alike).
+    // leaf_to_field_idx_ maps every leaf to its owning field_idx; callers use IsNestedType() on
+    // the owning field's type to distinguish nested from flat columns.
     int32_t leaf_idx = 0;
     for (int field_idx = 0; field_idx < schema->num_fields(); ++field_idx) {
         const auto& field = schema->field(field_idx);
         std::vector<int32_t> leaf_indices;
         FlattenSchema(field->type(), &leaf_idx, &leaf_indices);
-        bool is_nested =
-            (field->type()->id() == arrow::Type::STRUCT ||
-             field->type()->id() == arrow::Type::LIST || field->type()->id() == arrow::Type::MAP);
-
-        // Mark nested leaves in the global mapping.
-        if (is_nested) {
-            for (int32_t idx : leaf_indices) {
-                leaf_to_field_idx_[idx] = field_idx;
-            }
-        }
-
-        // If any leaf of this field is requested, add the owning field exactly once.
         for (int32_t idx : leaf_indices) {
-            if (requested_leaves.count(idx)) {
-                fields.push_back(field);
-                break;
-            }
+            leaf_to_field_idx_[idx] = field_idx;
+        }
+    }
+
+    // Iterate column_indices in request order so the projected schema preserves caller ordering.
+    // Each owning top-level field is inserted at most once (first-seen).
+    std::set<int32_t> seen_field_indices;
+    for (int32_t requested_leaf : column_indices) {
+        int32_t field_idx = leaf_to_field_idx_[requested_leaf];
+        if (seen_field_indices.insert(field_idx).second) {
+            fields.push_back(schema->field(field_idx));
         }
     }
 
@@ -383,17 +378,18 @@ Status FileReaderWrapper::BuildPageFilteredSchema(const std::vector<int32_t>& co
     return Status::OK();
 }
 
-std::vector<::arrow::io::ReadRange> FileReaderWrapper::CollectPreBufferRanges(
+Result<std::vector<::arrow::io::ReadRange>> FileReaderWrapper::CollectPreBufferRanges(
     const std::vector<int32_t>& column_indices) {
     std::vector<::arrow::io::ReadRange> ranges;
     auto file_metadata = file_reader_->parquet_reader()->metadata();
 
-    // Separate non-nested and nested columns using leaf_to_field_idx_ (globally indexed).
+    // Separate non-nested and nested columns using leaf_to_field_idx_ and IsNestedType().
     std::vector<int32_t> non_nested_column_indices;
     std::vector<int32_t> nested_column_indices;
     for (int32_t col_idx : column_indices) {
-        if (col_idx < static_cast<int32_t>(leaf_to_field_idx_.size()) &&
-            leaf_to_field_idx_[col_idx] >= 0) {
+        int32_t field_idx = leaf_to_field_idx_[col_idx];
+        PAIMON_ASSIGN_OR_RAISE(bool is_nested, IsNestedType(file_reader_.get(), field_idx));
+        if (is_nested) {
             nested_column_indices.push_back(col_idx);
         } else {
             non_nested_column_indices.push_back(col_idx);
@@ -489,7 +485,7 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
         // When page-filtered RGs exist, issue a single PreBuffer covering both kinds.
         // Otherwise GetRecordBatchReader already issued PreBuffer internally.
         if (has_page_filtered) {
-            auto all_ranges = CollectPreBufferRanges(column_indices);
+            PAIMON_ASSIGN_OR_RAISE(std::vector<::arrow::io::ReadRange> all_ranges, CollectPreBufferRanges(column_indices));
             DispatchPreBuffer(std::move(all_ranges));
         }
 

@@ -27,6 +27,7 @@
 #include "arrow/type.h"
 #include "arrow/util/checked_cast.h"
 #include "paimon/common/utils/date_time_utils.h"
+#include "parquet/arrow/reader.h"
 #include "parquet/schema.h"
 #include "parquet/types.h"
 
@@ -238,6 +239,14 @@ void FlattenSchema(const std::shared_ptr<arrow::DataType>& type, int32_t* index,
     } else {
         index_vector->push_back((*index)++);
     }
+}
+
+paimon::Result<bool> IsNestedType(::parquet::arrow::FileReader* arrow_file_reader, int32_t field_index) {
+    std::shared_ptr<arrow::Schema> schema;
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow_file_reader->GetSchema(&schema));
+
+    auto id = schema->field(field_index)->type()->id();
+    return id == arrow::Type::STRUCT || id == arrow::Type::LIST || id == arrow::Type::MAP;
 }
 
 }  // namespace paimon::parquet
