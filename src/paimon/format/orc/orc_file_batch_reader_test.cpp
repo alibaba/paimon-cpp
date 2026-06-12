@@ -1130,6 +1130,7 @@ TEST_F(OrcFileBatchReaderTest, TestListStructPartialProjection) {
     ASSERT_NOK_WITH_MSG(orc_batch_reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr,
                                                         /*selection_bitmap=*/std::nullopt),
                         "type mismatch");
+}
 
 TEST_F(OrcFileBatchReaderTest, TestUpdateSchemaPerFieldMetadata) {
     // Write a simple ORC file, call UpdateSchema to inject per-field metadata
@@ -1148,10 +1149,10 @@ TEST_F(OrcFileBatchReaderTest, TestUpdateSchemaPerFieldMetadata) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
                          fs->Create(file_path, /*overwrite=*/true));
     ASSERT_OK_AND_ASSIGN(auto orc_output_stream, OrcOutputStreamImpl::Create(out));
-    ASSERT_OK_AND_ASSIGN(
-        auto format_writer,
-        OrcFormatWriter::Create(std::move(orc_output_stream), *write_schema, /*options=*/{}, "zstd",
-                                /*batch_size=*/10, pool_));
+    ASSERT_OK_AND_ASSIGN(auto format_writer,
+                         OrcFormatWriter::Create(std::move(orc_output_stream), *write_schema,
+                                                 /*options=*/{}, "zstd",
+                                                 /*batch_size=*/10, pool_));
 
     // Write one batch of data.
     auto data = arrow::ipc::internal::json::ArrayFromJSON(
