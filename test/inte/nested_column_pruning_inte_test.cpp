@@ -469,6 +469,6 @@ TEST_P(NestedColumnPruningInteTest, MapSelectedKeys) {
 }
 
 INSTANTIATE_TEST_SUITE_P(FileFormats, NestedColumnPruningInteTest,
-                         ::testing::Values("parquet"));
+                         ::testing::Values("parquet", "orc"));
 
 }  // namespace paimon::test
