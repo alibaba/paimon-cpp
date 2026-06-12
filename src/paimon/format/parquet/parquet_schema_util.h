@@ -23,12 +23,12 @@
 #include <cstdint>
 #include <memory>
 
-#include "arrow/type.h"
 #include "arrow/result.h"
+#include "arrow/type.h"
 #include "arrow/type_fwd.h"
+#include "paimon/result.h"
 #include "parquet/schema.h"
 #include "parquet/types.h"
-#include "paimon/result.h"
 
 namespace parquet::schema {
 class PrimitiveNode;

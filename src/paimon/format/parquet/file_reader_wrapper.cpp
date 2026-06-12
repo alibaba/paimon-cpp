@@ -485,7 +485,8 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
         // When page-filtered RGs exist, issue a single PreBuffer covering both kinds.
         // Otherwise GetRecordBatchReader already issued PreBuffer internally.
         if (has_page_filtered) {
-            PAIMON_ASSIGN_OR_RAISE(std::vector<::arrow::io::ReadRange> all_ranges, CollectPreBufferRanges(column_indices));
+            PAIMON_ASSIGN_OR_RAISE(std::vector<::arrow::io::ReadRange> all_ranges,
+                                   CollectPreBufferRanges(column_indices));
             DispatchPreBuffer(std::move(all_ranges));
         }
 
