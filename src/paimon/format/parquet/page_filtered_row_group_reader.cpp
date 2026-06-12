@@ -123,8 +123,9 @@ std::pair<RowRanges, int64_t> PageFilteredRowGroupReader::ComputeCompressedRowRa
 }
 
 Status PageFilteredRowGroupReader::ExecuteSkipReadPattern(
-    std::shared_ptr<::parquet::internal::RecordReader> record_reader, const RowRanges& ranges,
-    int64_t total_row_count, int32_t row_group_index, int32_t column_index) {
+    const std::shared_ptr<::parquet::internal::RecordReader>& record_reader,
+    const RowRanges& ranges, int64_t total_row_count, int32_t row_group_index,
+    int32_t column_index) {
     int64_t current_row = 0;
     for (const auto& range : ranges.GetRanges()) {
         if (range.from > current_row) {

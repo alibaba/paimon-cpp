@@ -199,11 +199,11 @@ Status ParquetFileBatchReader::SetReadSchema(
         for (int32_t rg_id : row_groups) {
             auto it = row_group_row_ranges.find(rg_id);
             if (it != row_group_row_ranges.end()) {
-                target_row_groups.emplace_back(/*rg_index=*/rg_id, /*page_filtered=*/true,
+                target_row_groups.emplace_back(/*rg_index=*/rg_id, /*is_partially_matched=*/true,
                                                /*ranges=*/it->second);
             } else {
                 target_row_groups.emplace_back(/*rg_index=*/rg_id,
-                                               /*page_filtered=*/false,
+                                               /*is_partially_matched=*/false,
                                                /*ranges=*/RowRanges());
             }
         }

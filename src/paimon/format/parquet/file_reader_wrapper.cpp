@@ -144,7 +144,7 @@ FileReaderWrapper::FileReaderWrapper(
     int64_t batch_size, std::shared_ptr<::arrow::MemoryPool> pool)
     : file_reader_(std::move(file_reader)),
       all_row_group_ranges_(all_row_group_ranges),
-      pool_(pool),
+      pool_(std::move(pool)),
       batch_size_(batch_size),
       num_rows_(num_rows) {}
 
@@ -184,7 +184,7 @@ Status FileReaderWrapper::SeekToRow(uint64_t row_number) {
             if (target_row_groups_[i].excluded_by_read_range) {
                 continue;
             }
-            uint32_t rg_id = target_row_groups_[i].row_group_index;
+            int32_t rg_id = target_row_groups_[i].row_group_index;
             uint64_t rg_start = all_row_group_ranges_[rg_id].first;
             uint64_t rg_end = all_row_group_ranges_[rg_id].second;
             if (row_number > rg_start && row_number < rg_end) {
@@ -430,6 +430,11 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
         }
 
         WaitForPendingPreBuffer();
+
+        // TODO(Yonghao Fang): Neither Paimon nor Arrow manage the size and lifecycle of prebuffered
+        // caches. So when a lot of row is needed, there is possibility of OOM due to too much
+        // prebuffering. Also, DispatchPreBuffer will drop previous prebuffered ranges by
+        // GetRecordBatchReader, which cause IO wastes.
 
         // Create standard reader for fully-matched row groups.
         if (!fully_matched_row_groups.empty()) {
