@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,9 +108,7 @@ Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::P
     }
 }
 
-// ---------------------------------------------------------------------------
 // PruneArray — fallback for format readers that return extra nested columns
-// ---------------------------------------------------------------------------
 
 Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::PruneArray(
     const std::shared_ptr<arrow::Array>& array,
@@ -178,9 +176,7 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::PruneArray(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Map selected-keys support
-// ---------------------------------------------------------------------------
 
 std::set<std::string> NestedProjectionUtils::GetMapSelectedKeys(
     const std::shared_ptr<arrow::Field>& field) {

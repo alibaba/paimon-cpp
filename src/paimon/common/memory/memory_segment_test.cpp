@@ -555,9 +555,7 @@ TEST(MemorySegmentTest, TestDoubleAccess) {
     delete[] occupied;
 }
 
-// ------------------------------------------------------------------------
-//  Bulk Byte Movements
-// ------------------------------------------------------------------------
+// Bulk Byte Movements
 
 TEST(MemorySegmentTest, TestBulkByteAccess) {
     auto pool = paimon::GetDefaultPool();

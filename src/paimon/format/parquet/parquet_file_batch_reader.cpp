@@ -465,9 +465,7 @@ Result<::parquet::ArrowReaderProperties> ParquetFileBatchReader::CreateArrowRead
     return arrow_reader_props;
 }
 
-// ---------------------------------------------------------------------------
 // Nested column index computation
-// ---------------------------------------------------------------------------
 
 void ParquetFileBatchReader::CollectLeafIndices(const std::shared_ptr<arrow::DataType>& read_type,
                                                 const std::shared_ptr<arrow::DataType>& file_type,

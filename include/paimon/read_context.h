@@ -45,7 +45,7 @@ class FileSystem;
 class PAIMON_EXPORT ReadContext {
  public:
     ReadContext(const std::string& path, const std::string& branch,
-                const std::vector<std::string>& read_schema,
+                const std::vector<std::string>& read_field_names,
                 const std::vector<int32_t>& read_field_ids,
                 const std::shared_ptr<Predicate>& predicate, bool enable_predicate_filter,
                 bool enable_prefetch, uint32_t prefetch_batch_count,
@@ -77,7 +77,7 @@ class PAIMON_EXPORT ReadContext {
     }
 
     const std::vector<std::string>& GetReadFieldNames() const {
-        return read_schema_;
+        return read_field_names_;
     }
 
     const std::vector<int32_t>& GetReadFieldIds() const {
@@ -133,24 +133,23 @@ class PAIMON_EXPORT ReadContext {
 
     /// Whether a read schema (C ArrowSchema) for nested column pruning was provided.
     bool HasReadSchema() const {
-        return has_read_schema_;
+        return read_schema_ != nullptr;
     }
 
     /// Get the read schema as a mutable C ArrowSchema pointer.
     /// ImportSchema will consume (release) the schema content.
     ArrowSchema* GetReadSchema() {
-        return &read_schema_c_;
+        return read_schema_;
     }
 
-    /// Set the read schema from a C ArrowSchema. Moves the content into this object.
-    /// The input schema's release will be set to nullptr after the move.
+    /// Set the read schema from a C ArrowSchema pointer. Does NOT take ownership.
     /// Called internally by ReadContextBuilder.
     void SetReadSchema(ArrowSchema* schema);
 
  private:
     std::string path_;
     std::string branch_;
-    std::vector<std::string> read_schema_;
+    std::vector<std::string> read_field_names_;
     std::vector<int32_t> read_field_ids_;
     std::shared_ptr<Predicate> predicate_;
     bool enable_predicate_filter_;
@@ -168,8 +167,7 @@ class PAIMON_EXPORT ReadContext {
     PrefetchCacheMode prefetch_cache_mode_;
     CacheConfig cache_config_;
     std::shared_ptr<Cache> cache_;
-    ArrowSchema read_schema_c_{};   // C ABI schema for nested column pruning
-    bool has_read_schema_ = false;  // whether read_schema_c_ holds valid content
+    ArrowSchema* read_schema_ = nullptr;  // C ABI schema for nested column pruning, not owned
 };
 
 /// `ReadContextBuilder` used to build a `ReadContext`, has input validation.
@@ -209,18 +207,18 @@ class PAIMON_EXPORT ReadContextBuilder {
     ///       Calling both will ignore the read schema set by SetReadFieldNames().
     ReadContextBuilder& SetReadFieldIds(const std::vector<int32_t>& read_field_ids);
 
-    /// Set the projected Arrow Schema for nested column pruning.
+    /// Set the read Arrow Schema for nested column pruning.
     ///
-    /// The projected schema is an Arrow C Data Interface schema where STRUCT types
+    /// The read schema is an Arrow C Data Interface schema where STRUCT types
     /// may contain only a subset of the original sub-fields, enabling nested column
     /// pruning to reduce I/O. Each Arrow field must carry a "paimon.id" metadata
     /// entry for field matching.
     ///
-    /// @param projected_schema Arrow C Schema (consumed/released by this call).
+    /// @param read_schema Arrow C Schema. The caller retains ownership.
     /// @return Reference to this builder for method chaining.
-    /// @note Priority: projected_arrow_schema > read_field_ids > read_field_names.
+    /// @note Priority: read_schema > read_field_ids > read_field_names.
     ///       When set, read_field_ids and read_field_names are ignored.
-    ReadContextBuilder& SetReadSchema(ArrowSchema* projected_schema);
+    ReadContextBuilder& SetReadSchema(ArrowSchema* read_schema);
 
     /// Set a configuration options map to set some option entries which are not defined in the
     /// table schema or whose values you want to overwrite.
