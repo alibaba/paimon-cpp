@@ -36,10 +36,10 @@ struct RowAllocation {
 };
 
 /// Allocates MAP field ids to K physical columns on a per-row basis,
-/// and accumulates file-level metadata (field_to_columns, overflow_field_set, max_row_width).
+/// and accumulates field-level metadata (field_to_columns, overflow_field_set, max_row_width).
 ///
 /// This is a trivial implementation: each row simply assigns columns 0..min(N,K)-1
-/// in order, with no LRU eviction. The real strategy will be implemented separately.
+/// in order, with no LRU eviction.
 /// TODO(jinli.zjw): support LRU
 class MapSharedShreddingColumnAllocator {
  public:

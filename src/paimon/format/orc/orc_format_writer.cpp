@@ -211,6 +211,15 @@ std::shared_ptr<Metrics> OrcFormatWriter::GetWriterMetrics() const {
 Status OrcFormatWriter::UpdateSchema(::ArrowSchema* schema) {
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> arrow_schema,
                                       arrow::ImportSchema(schema));
+    auto origin_schema = arrow::schema(data_type_->fields());
+    // Validate: the new schema must differ from the original only in per-field metadata.
+    if (!origin_schema->Equals(*arrow_schema, /*check_metadata=*/false)) {
+        return Status::Invalid(
+            fmt::format("OrcFormatWriter::UpdateSchema: new schema {} differs from original {} "
+                        "in more than just metadata",
+                        arrow_schema->ToString(), origin_schema->ToString()));
+    }
+
     // Serialize the Arrow Schema (with per-field metadata) into the ORC footer
     // as user metadata under the "ARROW:schema" key, matching the Parquet convention.
     // The ORC reader can then recover the full Arrow schema including per-field metadata.

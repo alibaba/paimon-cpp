@@ -176,8 +176,10 @@ class MergeTreeWriterTest : public ::testing::TestWithParam<bool> {
 
         auto metadata = file_schema->field(field_index)->metadata();
         ASSERT_NE(nullptr, metadata);
-        ASSERT_OK_AND_ASSIGN(auto deserialized_meta, MapSharedShreddingUtils::DeserializeMetadata(
-                                                         metadata->Copy(), /*compression=*/"zstd"));
+        ASSERT_OK_AND_ASSIGN(
+            auto deserialized_meta,
+            MapSharedShreddingUtils::DeserializeMetadata(
+                metadata->Copy(), MapSharedShreddingDefine::kDefaultDictCompression));
         ASSERT_EQ(expected_meta, deserialized_meta);
     }
 
@@ -380,6 +382,7 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMapDataFileMetaInfo) {
                              {Options::FILE_FORMAT, "orc"},
                              {"fields.tags.map.storage-layout", "shared-shredding"},
                              {"fields.tags.map.shared-shredding.max-columns", "3"},
+                             {Options::WRITE_ONLY, "true"},
                          }));
 
     auto dir = UniqueTestDirectory::Create();
@@ -476,9 +479,7 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMapDataFileMetaInfo) {
         /*embedded_index=*/nullptr, FileSource::Append(),
         /*value_stats_cols=*/std::nullopt, /*external_path=*/std::nullopt,
         /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
-    DataIncrement expected_data_increment({expected_data_file_meta}, /*deleted_files=*/{},
-                                          /*changelog_files=*/{});
-    ASSERT_EQ(expected_data_increment, commit_increment.GetNewFilesIncrement());
+    ASSERT_TRUE(expected_data_file_meta->TEST_Equal(*actual_meta));
 }
 
 TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation) {
@@ -489,6 +490,7 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation)
                              {"fields.tags.map.shared-shredding.max-columns", "8"},
                              {"fields.attrs.map.storage-layout", "shared-shredding"},
                              {"fields.attrs.map.shared-shredding.max-columns", "4"},
+                             {Options::WRITE_ONLY, "true"},
                          }));
 
     auto dir = UniqueTestDirectory::Create();

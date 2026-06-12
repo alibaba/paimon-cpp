@@ -28,6 +28,7 @@
 #include "paimon/common/data/shredding/map_shared_shredding_batch_converter.h"
 #include "paimon/common/data/shredding/map_shared_shredding_context.h"
 #include "paimon/common/data/shredding/map_shared_shredding_utils.h"
+#include "paimon/common/data/shredding/map_shredding_defs.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/arrow/status_utils.h"
@@ -64,16 +65,8 @@ Result<std::shared_ptr<MergeTreeWriter>> MergeTreeWriter::Create(
     const std::shared_ptr<MemoryPool>& pool) {
     auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
 
-    // Detect shared-shredding MAP columns and build cross-file context.
-    std::shared_ptr<MapSharedShreddingContext> shredding_context;
-    PAIMON_ASSIGN_OR_RAISE(std::vector<int32_t> shredding_indices,
-                           MapSharedShreddingUtils::DetectShreddingColumns(write_schema, options));
-    if (!shredding_indices.empty()) {
-        std::map<int32_t, int32_t> column_to_k_max;
-        PAIMON_ASSIGN_OR_RAISE(column_to_k_max, MapSharedShreddingUtils::BuildColumnToNumColumns(
-                                                    shredding_indices, write_schema, options));
-        shredding_context = std::make_shared<MapSharedShreddingContext>(column_to_k_max);
-    }
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<MapSharedShreddingContext> shredding_context,
+                           MapSharedShreddingUtils::CreateShreddingContext(write_schema, options));
 
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<WriteBuffer> write_buffer,
@@ -84,7 +77,7 @@ Result<std::shared_ptr<MergeTreeWriter>> MergeTreeWriter::Create(
     return std::shared_ptr<MergeTreeWriter>(new MergeTreeWriter(
         trimmed_primary_keys, options, path_factory, key_comparator, user_defined_seq_comparator,
         merge_function_wrapper, schema_id, write_schema, compact_manager, std::move(write_buffer),
-        std::move(shredding_context), pool));
+        shredding_context, pool));
 }
 
 MergeTreeWriter::MergeTreeWriter(
@@ -96,7 +89,7 @@ MergeTreeWriter::MergeTreeWriter(
     int64_t schema_id, const std::shared_ptr<arrow::Schema>& write_schema,
     const std::shared_ptr<CompactManager>& compact_manager,
     std::unique_ptr<WriteBuffer>&& write_buffer,
-    std::shared_ptr<MapSharedShreddingContext> shredding_context,
+    const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
     const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
       trimmed_primary_keys_(trimmed_primary_keys),
@@ -110,7 +103,7 @@ MergeTreeWriter::MergeTreeWriter(
       compact_manager_(compact_manager),
       write_buffer_(std::move(write_buffer)),
       metrics_(std::make_shared<MetricsImpl>()),
-      shredding_context_(std::move(shredding_context)) {}
+      shredding_context_(shredding_context) {}
 
 Status MergeTreeWriter::DoClose() {
     // Request cancellation and wait for running compaction to exit.
@@ -340,16 +333,11 @@ MergeTreeWriter::CreateRollingRowWriter() const {
         -> Result<std::unique_ptr<SingleFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>> {
         // Determine file-level schema. When shredding is active, compute per-file K
         // and build a physical schema with MAP columns replaced by STRUCT.
-        std::shared_ptr<arrow::Schema> file_schema = write_schema_;
-        std::shared_ptr<MapSharedShreddingBatchConverter> converter;
-
-        if (shredding_context_) {
-            std::map<int32_t, int32_t> column_to_k = shredding_context_->ComputeNextK();
-            PAIMON_ASSIGN_OR_RAISE(file_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                    write_schema_, column_to_k));
-            converter = std::make_shared<MapSharedShreddingBatchConverter>(
-                write_schema_, file_schema, column_to_k, pool_);
-        }
+        PAIMON_ASSIGN_OR_RAISE(MapSharedShreddingBatchConverter::ConverterBundle bundle,
+                               MapSharedShreddingBatchConverter::CreateConverter(
+                                   write_schema_, shredding_context_, pool_));
+        std::shared_ptr<arrow::Schema> file_schema =
+            bundle.physical_schema ? bundle.physical_schema : write_schema_;
 
         ::ArrowSchema arrow_schema;
         ScopeGuard guard([&arrow_schema]() { ArrowSchemaRelease(&arrow_schema); });
@@ -365,7 +353,8 @@ MergeTreeWriter::CreateRollingRowWriter() const {
         // Build the converter that transforms KeyValueBatch to ArrowArray.
         // When shredding is active, it performs MAP→STRUCT conversion on the batch data.
         std::function<Status(KeyValueBatch&&, ArrowArray*)> kv_converter;
-        if (converter) {
+        if (bundle.converter) {
+            auto converter = bundle.converter;
             kv_converter = [converter](KeyValueBatch key_value_batch, ArrowArray* array) -> Status {
                 PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ArrowArray> physical,
                                        converter->Convert(key_value_batch.batch.get()));
@@ -385,9 +374,10 @@ MergeTreeWriter::CreateRollingRowWriter() const {
         PAIMON_RETURN_NOT_OK(
             writer->Init(options_.GetFileSystem(), path_factory_->NewPath(), writer_builder));
 
-        if (converter) {
+        if (bundle.converter) {
             writer->SetMetadataFinalizer(MapSharedShreddingUtils::BuildMetadataFinalizer(
-                converter, /*compression=*/"zstd", shredding_context_, file_schema));
+                bundle.converter, MapSharedShreddingDefine::kDefaultDictCompression,
+                shredding_context_, file_schema));
         }
 
         return writer;

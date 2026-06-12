@@ -113,7 +113,7 @@ class MergeTreeWriter : public BatchWriter {
                     int64_t schema_id, const std::shared_ptr<arrow::Schema>& write_schema,
                     const std::shared_ptr<CompactManager>& compact_manager,
                     std::unique_ptr<WriteBuffer>&& write_buffer,
-                    std::shared_ptr<MapSharedShreddingContext> shredding_context,
+                    const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
                     const std::shared_ptr<MemoryPool>& pool);
 
     std::shared_ptr<MemoryPool> pool_;

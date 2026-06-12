@@ -40,14 +40,14 @@ LookupMergeTreeCompactRewriter<T>::LookupMergeTreeCompactRewriter(
     MergeFunctionWrapperFactory merge_function_wrapper_factory,
     const std::shared_ptr<CancellationController>& cancellation_controller,
     const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
-    std::shared_ptr<MapSharedShreddingContext> shredding_context,
+    const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
     const std::shared_ptr<MemoryPool>& pool)
     : ChangelogMergeTreeRewriter(
           max_level, /*force_drop_delete=*/dv_maintainer != nullptr, partition, bucket, schema_id,
           trimmed_primary_keys, options, data_schema, write_schema,
           DeletionVector::CreateFactory(dv_maintainer), path_factory_cache,
           std::move(merge_file_split_read), std::move(merge_function_wrapper_factory),
-          cancellation_controller, std::move(shredding_context), pool),
+          cancellation_controller, shredding_context, pool),
       lookup_levels_(std::move(lookup_levels)),
       dv_maintainer_(dv_maintainer),
       remote_lookup_file_manager_(remote_lookup_file_manager) {}
@@ -94,22 +94,14 @@ LookupMergeTreeCompactRewriter<T>::Create(
         std::unique_ptr<MergeFileSplitRead> merge_file_split_read,
         MergeFileSplitRead::Create(path_factory, internal_context, pool, CreateDefaultExecutor()));
 
-    // Detect shared-shredding MAP columns and build cross-file context.
-    std::shared_ptr<MapSharedShreddingContext> shredding_context;
-    PAIMON_ASSIGN_OR_RAISE(std::vector<int32_t> shredding_indices,
-                           MapSharedShreddingUtils::DetectShreddingColumns(write_schema, options));
-    if (!shredding_indices.empty()) {
-        std::map<int32_t, int32_t> column_to_k_max;
-        PAIMON_ASSIGN_OR_RAISE(column_to_k_max, MapSharedShreddingUtils::BuildColumnToNumColumns(
-                                                    shredding_indices, write_schema, options));
-        shredding_context = std::make_shared<MapSharedShreddingContext>(column_to_k_max);
-    }
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<MapSharedShreddingContext> shredding_context,
+                           MapSharedShreddingUtils::CreateShreddingContext(write_schema, options));
 
     return std::unique_ptr<LookupMergeTreeCompactRewriter>(new LookupMergeTreeCompactRewriter(
         std::move(lookup_levels), dv_maintainer, max_level, partition, bucket, table_schema->Id(),
         trimmed_primary_keys, options, data_schema, write_schema, path_factory_cache,
         std::move(merge_file_split_read), std::move(merge_function_wrapper_factory),
-        cancellation_controller, remote_lookup_file_manager, std::move(shredding_context), pool));
+        cancellation_controller, remote_lookup_file_manager, shredding_context, pool));
 }
 
 template <typename T>

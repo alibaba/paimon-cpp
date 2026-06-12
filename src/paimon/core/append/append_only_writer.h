@@ -104,8 +104,8 @@ class AppendOnlyWriter : public BatchWriter {
                      int64_t max_sequence_number,
                      const std::shared_ptr<DataFilePathFactory>& path_factory,
                      const std::shared_ptr<CompactManager>& compact_manager,
-                     const std::shared_ptr<MemoryPool>& memory_pool,
-                     std::shared_ptr<MapSharedShreddingContext> shredding_context);
+                     const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
+                     const std::shared_ptr<MemoryPool>& memory_pool);
 
     RollingFileWriterResult CreateRollingRowWriter();
     RollingFileWriterResult CreateRollingBlobWriter(

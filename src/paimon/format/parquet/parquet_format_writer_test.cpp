@@ -29,6 +29,7 @@
 #include "arrow/array/builder_primitive.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
+#include "arrow/c/helpers.h"
 #include "arrow/io/file.h"
 #include "arrow/ipc/api.h"
 #include "arrow/memory_pool.h"
@@ -463,6 +464,41 @@ TEST_F(ParquetFormatWriterTest, TestTimestampType) {
     ASSERT_OK(format_writer->Finish());
     ASSERT_OK(out->Flush());
     ASSERT_OK(out->Close());
+}
+
+TEST_F(ParquetFormatWriterTest, TestUpdateSchemaTypeMismatch) {
+    auto write_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        arrow::field("name", arrow::utf8()),
+    });
+    std::string file_path = PathUtil::JoinPath(dir_->Str(), "update_schema_mismatch.parquet");
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
+                         fs_->Create(file_path, /*overwrite=*/true));
+    ::parquet::WriterProperties::Builder builder;
+    builder.write_batch_size(10);
+    auto writer_properties = builder.build();
+    ASSERT_OK_AND_ASSIGN(
+        auto format_writer,
+        ParquetFormatWriter::Create(out, write_schema, writer_properties,
+                                    DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE, arrow_pool_));
+    // Write one batch so the writer is initialized.
+    auto data = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(write_schema->fields()),
+                                                          R"([[1, "alice"], [2, "bob"]])")
+                    .ValueOrDie();
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*data, &c_array).ok());
+    ASSERT_OK(format_writer->AddBatch(&c_array));
+    ASSERT_OK(format_writer->Flush());
+
+    // Build a schema with a different type (int32 -> utf8) — should be rejected.
+    auto wrong_schema = arrow::schema({
+        arrow::field("id", arrow::utf8()),
+        arrow::field("name", arrow::utf8()),
+    });
+    ArrowSchema c_wrong_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*wrong_schema, &c_wrong_schema).ok());
+    ASSERT_NOK_WITH_MSG(format_writer->UpdateSchema(&c_wrong_schema), "differs from original");
+    ArrowSchemaRelease(&c_wrong_schema);
 }
 
 }  // namespace paimon::parquet::test

@@ -762,11 +762,11 @@ TEST_F(ParquetFileBatchReaderTest, TestUpdateSchemaPerFieldMetadata) {
     auto unit_val = read_score_meta->Get("custom.unit").ValueOrDie();
     ASSERT_EQ("percent", unit_val);
 
-    // Also verify data integrity — read it back.
+    // Also verify data integrity — read it back and compare content.
     ASSERT_OK_AND_ASSIGN(auto result_array, paimon::test::ReadResultCollector::CollectResult(
                                                 parquet_batch_reader.get()));
-    ASSERT_EQ(3, result_array->length());
-    std::cout << "aaa" << std::endl;
+    ASSERT_EQ(result_array->num_chunks(), 1);
+    ASSERT_TRUE(data->Equals(*result_array->chunk(0))) << result_array->ToString();
 }
 
 }  // namespace paimon::parquet::test

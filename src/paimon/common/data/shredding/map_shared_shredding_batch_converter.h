@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <unordered_map>
@@ -34,6 +35,8 @@
 struct ArrowArray;
 
 namespace paimon {
+
+class MapSharedShreddingContext;
 
 /// Converts logical batches containing MAP<STRING, T> columns into physical batches
 /// where each shared-shredding MAP column is replaced by
@@ -54,6 +57,22 @@ class MapSharedShreddingBatchConverter {
             : logical_index(logical_index), num_columns(num_columns), allocator(num_columns) {}
     };
 
+    struct ConverterBundle {
+        std::shared_ptr<MapSharedShreddingBatchConverter> converter;
+        std::shared_ptr<arrow::Schema> physical_schema;
+    };
+
+    /// Creates a converter + physical schema for one file write cycle.
+    /// Computes per-file K from context, builds physical schema, and constructs the converter.
+    /// @param logical_schema The original schema with MAP<STRING, T> columns.
+    /// @param context The cross-file shared context for K adaptation.
+    /// @param pool Paimon memory pool for Arrow allocations.
+    /// @return A struct containing the converter and physical schema.
+    static Result<ConverterBundle> CreateConverter(
+        const std::shared_ptr<arrow::Schema>& logical_schema,
+        const std::shared_ptr<MapSharedShreddingContext>& context,
+        const std::shared_ptr<MemoryPool>& pool);
+
     /// Constructs a converter.
     /// @param logical_schema The original schema with MAP<STRING, T> columns.
     /// @param physical_schema The physical schema (MAP columns replaced with STRUCT).
@@ -71,7 +90,7 @@ class MapSharedShreddingBatchConverter {
 
     /// Builds MapSharedShreddingFieldMeta for one shredding column (by logical index).
     /// Called at file close to serialize metadata.
-    MapSharedShreddingFieldMeta BuildFieldMeta(int32_t logical_col_index) const;
+    Result<MapSharedShreddingFieldMeta> BuildFieldMeta(int32_t logical_col_index) const;
 
     /// Returns all shredding column logical indices.
     const std::vector<int32_t>& GetShreddingColumnIndices() const;

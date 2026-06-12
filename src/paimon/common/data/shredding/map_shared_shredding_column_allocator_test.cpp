@@ -25,10 +25,7 @@ TEST(MapSharedShreddingColumnAllocatorTest, BasicAllocation) {
 
     // 2 fields, K=3 -> all fit, no overflow
     auto result = allocator.AllocateRow({10, 20});
-    ASSERT_EQ(3u, result.col_to_field.size());
-    ASSERT_EQ(10, result.col_to_field[0]);
-    ASSERT_EQ(20, result.col_to_field[1]);
-    ASSERT_EQ(-1, result.col_to_field[2]);
+    ASSERT_EQ(std::vector<int32_t>({10, 20, -1}), result.col_to_field);
     ASSERT_TRUE(result.overflow_fields.empty());
 }
 
@@ -36,10 +33,7 @@ TEST(MapSharedShreddingColumnAllocatorTest, ExactlyKFields) {
     MapSharedShreddingColumnAllocator allocator(3);
 
     auto result = allocator.AllocateRow({0, 1, 2});
-    ASSERT_EQ(3u, result.col_to_field.size());
-    ASSERT_EQ(0, result.col_to_field[0]);
-    ASSERT_EQ(1, result.col_to_field[1]);
-    ASSERT_EQ(2, result.col_to_field[2]);
+    ASSERT_EQ(std::vector<int32_t>({0, 1, 2}), result.col_to_field);
     ASSERT_TRUE(result.overflow_fields.empty());
 }
 
@@ -48,23 +42,15 @@ TEST(MapSharedShreddingColumnAllocatorTest, OverflowWhenExceedK) {
 
     // 4 fields, K=2 -> first 2 assigned, last 2 overflow
     auto result = allocator.AllocateRow({10, 20, 30, 40});
-    ASSERT_EQ(2u, result.col_to_field.size());
-    ASSERT_EQ(10, result.col_to_field[0]);
-    ASSERT_EQ(20, result.col_to_field[1]);
-
-    ASSERT_EQ(2u, result.overflow_fields.size());
-    ASSERT_EQ(30, result.overflow_fields[0]);
-    ASSERT_EQ(40, result.overflow_fields[1]);
+    ASSERT_EQ(std::vector<int32_t>({10, 20}), result.col_to_field);
+    ASSERT_EQ(std::vector<int32_t>({30, 40}), result.overflow_fields);
 }
 
 TEST(MapSharedShreddingColumnAllocatorTest, EmptyRow) {
     MapSharedShreddingColumnAllocator allocator(3);
 
     auto result = allocator.AllocateRow({});
-    ASSERT_EQ(3u, result.col_to_field.size());
-    ASSERT_EQ(-1, result.col_to_field[0]);
-    ASSERT_EQ(-1, result.col_to_field[1]);
-    ASSERT_EQ(-1, result.col_to_field[2]);
+    ASSERT_EQ(std::vector<int32_t>({-1, -1, -1}), result.col_to_field);
     ASSERT_TRUE(result.overflow_fields.empty());
 }
 
@@ -117,12 +103,8 @@ TEST(MapSharedShreddingColumnAllocatorTest, SingleColumnAllocator) {
     MapSharedShreddingColumnAllocator allocator(1);
 
     auto result = allocator.AllocateRow({10, 20, 30});
-    ASSERT_EQ(1u, result.col_to_field.size());
-    ASSERT_EQ(10, result.col_to_field[0]);
-
-    ASSERT_EQ(2u, result.overflow_fields.size());
-    ASSERT_EQ(20, result.overflow_fields[0]);
-    ASSERT_EQ(30, result.overflow_fields[1]);
+    ASSERT_EQ(std::vector<int32_t>({10}), result.col_to_field);
+    ASSERT_EQ(std::vector<int32_t>({20, 30}), result.overflow_fields);
 }
 
 }  // namespace paimon

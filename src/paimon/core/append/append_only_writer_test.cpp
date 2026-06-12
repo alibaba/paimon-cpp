@@ -301,13 +301,12 @@ class AppendOnlyWriterTest : public testing::Test {
 
         // Deserialize and compare the per-field shared-shredding map metadata.
         auto metadata = file_schema->field(field_index)->metadata();
-        EXPECT_NE(nullptr, metadata);
-        if (metadata) {
-            auto mutable_metadata = metadata->Copy();
-            auto deserialized =
-                MapSharedShreddingUtils::DeserializeMetadata(mutable_metadata, compression).value();
-            EXPECT_EQ(expected_meta, deserialized);
-        }
+        ASSERT_NE(nullptr, metadata);
+        ASSERT_OK_AND_ASSIGN(
+            auto deserialized_meta,
+            MapSharedShreddingUtils::DeserializeMetadata(
+                metadata->Copy(), MapSharedShreddingDefine::kDefaultDictCompression));
+        ASSERT_EQ(expected_meta, deserialized_meta);
     }
 
  protected:
@@ -794,6 +793,73 @@ TEST_F(AppendOnlyWriterTest, TestMultiplePrepareCommitSequenceContinuity) {
     ASSERT_OK(writer->Close());
 }
 
+TEST_F(AppendOnlyWriterTest, TestWriteValidBlobViewField) {
+    auto options = CreateOptions({{Options::FILE_FORMAT, "orc"},
+                                  {Options::MANIFEST_FORMAT, "orc"},
+                                  {Options::BLOB_VIEW_FIELD, "view"}});
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = CreatePathFactory(dir->Str(), "orc", options);
+
+    auto schema =
+        arrow::schema({arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("view", true)});
+    ASSERT_OK_AND_ASSIGN(
+        auto writer, AppendOnlyWriter::Create(
+                         options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
+                         /*max_sequence_number=*/-1, path_factory, compact_manager_, memory_pool_));
+
+    // Build f0 column
+    arrow::Int32Builder int_builder;
+    ASSERT_TRUE(int_builder.AppendValues({1, 2}).ok());
+    auto int_array = int_builder.Finish().ValueOrDie();
+
+    // Build view column with valid BlobViewStruct values
+    arrow::LargeBinaryBuilder view_builder;
+    BlobViewStruct view_struct_0(Identifier("db", "tbl"), /*field_id=*/1, /*row_id=*/0);
+    auto view_bytes_0 = view_struct_0.Serialize(memory_pool_);
+    ASSERT_TRUE(view_builder.Append(view_bytes_0->data(), view_bytes_0->size()).ok());
+
+    BlobViewStruct view_struct_1(Identifier("db", "tbl"), /*field_id=*/1, /*row_id=*/1);
+    auto view_bytes_1 = view_struct_1.Serialize(memory_pool_);
+    ASSERT_TRUE(view_builder.Append(view_bytes_1->data(), view_bytes_1->size()).ok());
+
+    auto view_array = view_builder.Finish().ValueOrDie();
+    ASSERT_OK(writer->Write(CreateStructBatch(schema, {int_array, view_array})));
+    ASSERT_OK_AND_ASSIGN(auto inc, writer->PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_FALSE(inc.GetNewFilesIncrement().NewFiles().empty());
+    ASSERT_OK(writer->Close());
+}
+
+TEST_F(AppendOnlyWriterTest, TestWriteInvalidBlobViewFieldRejected) {
+    auto options = CreateOptions({{Options::FILE_FORMAT, "orc"},
+                                  {Options::MANIFEST_FORMAT, "orc"},
+                                  {Options::BLOB_VIEW_FIELD, "view"}});
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = CreatePathFactory(dir->Str(), "orc", options);
+
+    auto schema =
+        arrow::schema({arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("view", true)});
+    ASSERT_OK_AND_ASSIGN(
+        auto writer, AppendOnlyWriter::Create(
+                         options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
+                         /*max_sequence_number=*/-1, path_factory, compact_manager_, memory_pool_));
+
+    // Build f0 column
+    arrow::Int32Builder int_builder;
+    ASSERT_TRUE(int_builder.Append(1).ok());
+    auto int_array = int_builder.Finish().ValueOrDie();
+
+    // Build view column with raw bytes
+    arrow::LargeBinaryBuilder view_builder;
+    ASSERT_TRUE(view_builder.Append("not_a_valid_blob_view_or_descriptor").ok());
+    auto view_array = view_builder.Finish().ValueOrDie();
+
+    ASSERT_NOK_WITH_MSG(writer->Write(CreateStructBatch(schema, {int_array, view_array})),
+                        "BLOB inline field view require values to be set as corresponding type.");
+    ASSERT_OK(writer->Close());
+}
+
 /// Parameterized test class for shared-shredding tests, parameterized by file format.
 class AppendOnlyWriterShreddingTest : public AppendOnlyWriterTest,
                                       public ::testing::WithParamInterface<std::string> {
@@ -1259,9 +1325,8 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapDataFileMetaInfo) {
     // Physical schema has 2 top-level fields: id(INT32), tags(STRUCT).
     // id: min=1, max=3, null_count=0; tags is nested: NullType(), null_count=null.
     int32_t map_null_count = (format == "parquet" ? -1 : 0);
-    auto expected_value_stats =
-        BinaryRowGenerator::GenerateStats({int32_t(1), NullType()}, {int32_t(3), NullType()},
-                                          {0, map_null_count}, memory_pool_.get());
+    auto expected_value_stats = BinaryRowGenerator::GenerateStats(
+        {1, NullType()}, {3, NullType()}, {0, map_null_count}, memory_pool_.get());
 
     // Build expected DataFileMeta with fake file_name/file_size (TEST_Equal ignores them).
     auto expected_meta = DataFileMeta::ForAppend(

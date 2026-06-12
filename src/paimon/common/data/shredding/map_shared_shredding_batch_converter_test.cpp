@@ -39,10 +39,10 @@ class MapSharedShreddingBatchConverterTest : public ::testing::Test {
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
 
     /// Builds a logical struct array from JSON, converts it, and returns the physical result.
-    std::shared_ptr<arrow::Array> RunConvert(MapSharedShreddingBatchConverter* converter,
-                                             const std::shared_ptr<arrow::DataType>& logical_type,
+    std::shared_ptr<arrow::Array> RunConvert(const std::shared_ptr<arrow::DataType>& logical_type,
+                                             const std::string& input_json,
                                              const std::shared_ptr<arrow::DataType>& physical_type,
-                                             const std::string& input_json) {
+                                             MapSharedShreddingBatchConverter* converter) {
         auto input = ArrayFromJSON(logical_type, input_json).ValueOrDie();
         ArrowArray c_input;
         EXPECT_TRUE(arrow::ExportArray(*input, &c_input).ok());
@@ -77,11 +77,11 @@ TEST_F(MapSharedShreddingBatchConverterTest, BasicConversion) {
     // Input: 2 rows — [id, tags]
     //   Row0: id=100, tags={a:1, b:2}
     //   Row1: id=200, tags={b:3, c:4, a:5}
-    auto actual = RunConvert(&converter, logical_type, physical_type, R"([
+    auto actual = RunConvert(logical_type, R"([
         [100, [["a", 1], ["b", 2]]],
         [200, [["b", 3], ["c", 4], ["a", 5]]]
-    ])");
-
+    ])",
+                             physical_type, &converter);
     // Expected physical: [id, [mapping, col0, col1, col2, overflow]]
     //   Row0: a=fid0->col0, b=fid1->col1, col2 unused
     //   Row1: b=fid1->col0, c=fid2->col1, a=fid0->col2
@@ -102,7 +102,7 @@ TEST_F(MapSharedShreddingBatchConverterTest, BasicConversion) {
     expected_meta.field_to_columns = {{0, {0, 2}}, {1, {0, 1}}, {2, {1}}};
     expected_meta.num_columns = 3;
     expected_meta.max_row_width = 3;
-    ASSERT_EQ(expected_meta, converter.BuildFieldMeta(1));
+    ASSERT_EQ(expected_meta, converter.BuildFieldMeta(1).value());
 }
 
 TEST_F(MapSharedShreddingBatchConverterTest, NestedValueStruct) {
@@ -127,12 +127,13 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueStruct) {
     // Row1: props={c:[3,3.5]}                  → c=fid2->col0
     // Row2: props={a:[null,null], c:[5,5.5], b:[6,6.5]} → 3 fields K=2: overflow b; a has all-null
     // struct Row3: props=null                         → null row
-    auto actual = RunConvert(&converter, logical_type, physical_type, R"([
+    auto actual = RunConvert(logical_type, R"([
         [1, [["a", [1, 1.5]], ["b", [null, 2.5]]]],
         [2, [["c", [3, 3.5]]]],
         [3, [["a", [null, null]], ["c", [5, 5.5]], ["b", [6, 6.5]]]],
         [4, null]
-    ])");
+    ])",
+                             physical_type, &converter);
 
     auto expected = ArrayFromJSON(physical_type, R"([
         [1, [[0, 1],  [1, 1.5],     [null, 2.5], []]],
@@ -154,7 +155,7 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueStruct) {
     expected_meta.overflow_field_set = {1};
     expected_meta.num_columns = 2;
     expected_meta.max_row_width = 3;
-    ASSERT_EQ(expected_meta, converter.BuildFieldMeta(1));
+    ASSERT_EQ(expected_meta, converter.BuildFieldMeta(1).value());
 }
 
 TEST_F(MapSharedShreddingBatchConverterTest, NestedValueList) {
@@ -175,12 +176,13 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueList) {
     // Row1: tags={a:[null]}                      → a=fid0->col0; single null element list
     // Row2: tags={c:[5,6,7]}                     → c=fid2->col0
     // Row3: tags={b:[8], a:[9,10], c:[null]}     → 3 fields K=2: overflow c; c has null element
-    auto actual = RunConvert(&converter, logical_type, physical_type, R"([
+    auto actual = RunConvert(logical_type, R"([
         [1, [["a", [1, null, 2]], ["b", [3]]]],
         [2, [["a", [null]]]],
         [3, [["c", [5, 6, 7]]]],
         [4, [["b", [8]], ["a", [9, 10]], ["c", [null]]]]
-    ])");
+    ])",
+                             physical_type, &converter);
 
     auto expected = ArrayFromJSON(physical_type, R"([
         [1, [[0, 1],  [1, null, 2], [3],    []]],
@@ -202,7 +204,7 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueList) {
     expected_meta.overflow_field_set = {2};
     expected_meta.num_columns = 2;
     expected_meta.max_row_width = 3;
-    ASSERT_EQ(expected_meta, converter.BuildFieldMeta(1));
+    ASSERT_EQ(expected_meta, converter.BuildFieldMeta(1).value());
 }
 
 TEST_F(MapSharedShreddingBatchConverterTest, NestedValueMap) {
@@ -224,12 +226,13 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueMap) {
     // Row1: nested={c:{p:null}}                   → c=fid2->col0; inner map value all null
     // Row2: nested=null                           → null row
     // Row3: nested={a:{m:7}, b:{n:8}, c:{o:9}}   → 3 fields K=2: overflow c
-    auto actual = RunConvert(&converter, logical_type, physical_type, R"([
+    auto actual = RunConvert(logical_type, R"([
         [1, [["a", [["x", 1], ["y", null]]], ["b", [["z", 3]]]]],
         [2, [["c", [["p", null]]]]],
         [3, null],
         [4, [["a", [["m", 7]]], ["b", [["n", 8]]], ["c", [["o", 9]]]]]
-    ])");
+    ])",
+                             physical_type, &converter);
 
     auto expected = ArrayFromJSON(physical_type, R"([
         [1, [[0, 1],  [["x", 1], ["y", null]], [["z", 3]],  []]],
@@ -251,7 +254,7 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueMap) {
     expected_meta.overflow_field_set = {2};
     expected_meta.num_columns = 2;
     expected_meta.max_row_width = 3;
-    ASSERT_EQ(expected_meta, converter.BuildFieldMeta(1));
+    ASSERT_EQ(expected_meta, converter.BuildFieldMeta(1).value());
 }
 
 TEST_F(MapSharedShreddingBatchConverterTest, NestedComplex) {
@@ -277,12 +280,13 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedComplex) {
     // Row1: c=[null,null,{p:null}]                               → c=fid2->col0; nulls inside
     // struct Row2: a=[30,[null,"t4"],{}], b=[null,[],{q:5}], c=[40,["t5"],{r:6}] → overflow c Row3:
     // null                                                 → null row
-    auto actual = RunConvert(&converter, logical_type, physical_type, R"([
+    auto actual = RunConvert(logical_type, R"([
         [1, [["a", [10, ["t1", "t2"], [["x", 1]]]], ["b", [20, ["t3"], [["y", 2], ["z", 3]]]]]],
         [2, [["c", [null, null, [["p", null]]]]]],
         [3, [["a", [30, [null, "t4"], []]], ["b", [null, [], [["q", 5]]]], ["c", [40, ["t5"], [["r", 6]]]]]],
         [4, null]
-    ])");
+    ])",
+                             physical_type, &converter);
 
     auto expected = ArrayFromJSON(physical_type, R"([
         [1, [[0, 1],  [10, ["t1", "t2"], [["x", 1]]], [20, ["t3"], [["y", 2], ["z", 3]]], []]],
@@ -304,7 +308,7 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedComplex) {
     expected_meta.overflow_field_set = {2};
     expected_meta.num_columns = 2;
     expected_meta.max_row_width = 3;
-    ASSERT_EQ(expected_meta, converter.BuildFieldMeta(1));
+    ASSERT_EQ(expected_meta, converter.BuildFieldMeta(1).value());
 }
 
 TEST_F(MapSharedShreddingBatchConverterTest, MultipleMapFields) {
@@ -333,11 +337,12 @@ TEST_F(MapSharedShreddingBatchConverterTest, MultipleMapFields) {
     // Row2: id=3, tags=null, attrs={x:4.4, y:5.5, z:6.6, w:7.7}
     //   tags: null
     //   attrs: x=fid0->col0, y=fid1->col1, z=fid2->col2; w overflows (K=3)
-    auto actual = RunConvert(&converter, logical_type, physical_type, R"([
+    auto actual = RunConvert(logical_type, R"([
         [1, [["a", 10], ["b", 20]],         [["x", 1.1], ["y", 2.2]]],
         [2, [["c", 30], ["a", 40], ["b", 50]], [["z", 3.3]]],
         [3, null,                            [["x", 4.4], ["y", 5.5], ["z", 6.6], ["w", 7.7]]]
-    ])");
+    ])",
+                             physical_type, &converter);
 
     auto expected = ArrayFromJSON(physical_type, R"([
         [1, [[0, 1],  10, 20, []],              [[0, 1, -1], 1.1, 2.2, null, []]],
@@ -358,7 +363,7 @@ TEST_F(MapSharedShreddingBatchConverterTest, MultipleMapFields) {
     tags_meta.overflow_field_set = {1};
     tags_meta.num_columns = 2;
     tags_meta.max_row_width = 3;
-    ASSERT_EQ(tags_meta, converter.BuildFieldMeta(1));
+    ASSERT_EQ(tags_meta, converter.BuildFieldMeta(1).value());
 
     // Verify BuildFieldMeta for attrs (col index 2): x=0,y=1,z=2,w=3; K=3, max_row_width=4
     MapSharedShreddingFieldMeta attrs_meta;
@@ -367,7 +372,33 @@ TEST_F(MapSharedShreddingBatchConverterTest, MultipleMapFields) {
     attrs_meta.overflow_field_set = {3};
     attrs_meta.num_columns = 3;
     attrs_meta.max_row_width = 4;
-    ASSERT_EQ(attrs_meta, converter.BuildFieldMeta(2));
+    ASSERT_EQ(attrs_meta, converter.BuildFieldMeta(2).value());
+}
+
+TEST_F(MapSharedShreddingBatchConverterTest, BuildFieldMetaInvalidColumnIndex) {
+    // Schema: id(INT32), tags(MAP<STRING, INT64>), K=3
+    // Only column 1 is a shredding column
+    auto logical_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+    });
+    std::map<int32_t, int32_t> column_to_num_columns = {{1, 3}};
+    ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                   logical_schema, column_to_num_columns));
+    MapSharedShreddingBatchConverter converter(logical_schema, physical_schema,
+                                               column_to_num_columns, pool_);
+
+    // Valid case: column 1 exists
+    ASSERT_OK_AND_ASSIGN([[maybe_unused]] auto meta, converter.BuildFieldMeta(1));
+
+    // Invalid case: column 0 (id) is not a shredding column
+    ASSERT_NOK_WITH_MSG(converter.BuildFieldMeta(0), "cannot find logical_col_index 0");
+
+    // Invalid case: column 2 does not exist in schema
+    ASSERT_NOK_WITH_MSG(converter.BuildFieldMeta(2), "cannot find logical_col_index 2");
+
+    // Invalid case: negative column index
+    ASSERT_NOK_WITH_MSG(converter.BuildFieldMeta(-1), "cannot find logical_col_index -1");
 }
 
 }  // namespace paimon

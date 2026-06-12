@@ -25,11 +25,37 @@
 #include "arrow/c/bridge.h"
 #include "arrow/type.h"
 #include "fmt/format.h"
+#include "paimon/common/data/shredding/map_shared_shredding_context.h"
+#include "paimon/common/data/shredding/map_shared_shredding_utils.h"
 #include "paimon/common/data/shredding/map_shredding_defs.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
-
 namespace paimon {
+/// Checks that a dynamic_cast result is not null, returning Status::Invalid on failure.
+#define PAIMON_CHECK_NOT_NULL(ptr, msg)          \
+    do {                                         \
+        if (PAIMON_UNLIKELY((ptr) == nullptr)) { \
+            return Status::Invalid(msg);         \
+        }                                        \
+    } while (false)
+
+Result<MapSharedShreddingBatchConverter::ConverterBundle>
+MapSharedShreddingBatchConverter::CreateConverter(
+    const std::shared_ptr<arrow::Schema>& logical_schema,
+    const std::shared_ptr<MapSharedShreddingContext>& context,
+    const std::shared_ptr<MemoryPool>& pool) {
+    ConverterBundle bundle;
+    if (!context) {
+        return bundle;
+    }
+
+    std::map<int32_t, int32_t> column_to_k = context->ComputeNextK();
+    PAIMON_ASSIGN_OR_RAISE(bundle.physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                       logical_schema, column_to_k));
+    bundle.converter = std::make_shared<MapSharedShreddingBatchConverter>(
+        logical_schema, bundle.physical_schema, column_to_k, pool);
+    return bundle;
+}
 
 MapSharedShreddingBatchConverter::MapSharedShreddingBatchConverter(
     const std::shared_ptr<arrow::Schema>& logical_schema,
@@ -51,13 +77,12 @@ Result<std::unique_ptr<ArrowArray>> MapSharedShreddingBatchConverter::Convert(
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> logical_array,
                                       arrow::ImportArray(logical_batch, logical_type));
     auto logical_struct = std::dynamic_pointer_cast<arrow::StructArray>(logical_array);
-    if (!logical_struct) {
-        return Status::Invalid("MapSharedShreddingBatchConverter: input is not a StructArray");
-    }
+    PAIMON_CHECK_NOT_NULL(logical_struct,
+                          "MapSharedShreddingBatchConverter: input is not a StructArray");
 
     int32_t num_fields = logical_schema_->num_fields();
-    std::vector<std::shared_ptr<arrow::Array>> physical_columns;
-
+    arrow::ArrayVector physical_columns;
+    physical_columns.reserve(num_fields);
     size_t context_idx = 0;
     for (int32_t col = 0; col < num_fields; ++col) {
         auto column = logical_struct->field(col);
@@ -81,14 +106,6 @@ Result<std::unique_ptr<ArrowArray>> MapSharedShreddingBatchConverter::Convert(
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*physical_struct, result.get()));
     return result;
 }
-
-/// Checks that a dynamic_cast result is not null, returning Status::Invalid on failure.
-#define PAIMON_CHECK_NOT_NULL(ptr, msg)          \
-    do {                                         \
-        if (PAIMON_UNLIKELY((ptr) == nullptr)) { \
-            return Status::Invalid(msg);         \
-        }                                        \
-    } while (false)
 
 Result<std::shared_ptr<arrow::Array>> MapSharedShreddingBatchConverter::ConvertOneColumn(
     const std::shared_ptr<arrow::Array>& map_column,
@@ -226,8 +243,7 @@ Status MapSharedShreddingBatchConverter::AppendColumnValues(
             if (PAIMON_UNLIKELY(it == field_id_to_value_index.end())) {
                 return Status::Invalid(
                     fmt::format("MapSharedShreddingBatchConverter: field_id {} assigned to col {} "
-                                "but not found in "
-                                "current row",
+                                "but not found in current row",
                                 assigned_field_id, c));
             }
             PAIMON_RETURN_NOT_OK_FROM_ARROW(
@@ -257,7 +273,7 @@ Status MapSharedShreddingBatchConverter::AppendOverflow(
     return Status::OK();
 }
 
-MapSharedShreddingFieldMeta MapSharedShreddingBatchConverter::BuildFieldMeta(
+Result<MapSharedShreddingFieldMeta> MapSharedShreddingBatchConverter::BuildFieldMeta(
     int32_t logical_col_index) const {
     for (const auto& context : contexts_) {
         if (context.logical_index == logical_col_index) {
@@ -274,7 +290,9 @@ MapSharedShreddingFieldMeta MapSharedShreddingBatchConverter::BuildFieldMeta(
             return meta;
         }
     }
-    return {};
+    return Status::Invalid(fmt::format(
+        "cannot find logical_col_index {} in MapSharedShreddingBatchConverterinner inner contexts",
+        logical_col_index));
 }
 
 const std::vector<int32_t>& MapSharedShreddingBatchConverter::GetShreddingColumnIndices() const {

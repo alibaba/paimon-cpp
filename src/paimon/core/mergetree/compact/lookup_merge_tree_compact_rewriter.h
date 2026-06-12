@@ -69,7 +69,7 @@ class LookupMergeTreeCompactRewriter : public ChangelogMergeTreeRewriter {
         MergeFunctionWrapperFactory merge_function_wrapper_factory,
         const std::shared_ptr<CancellationController>& cancellation_controller,
         const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
-        std::shared_ptr<MapSharedShreddingContext> shredding_context,
+        const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
         const std::shared_ptr<MemoryPool>& pool);
 
     bool RewriteChangelog(int32_t output_level, bool drop_delete,

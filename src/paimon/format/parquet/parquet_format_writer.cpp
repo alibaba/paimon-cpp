@@ -85,6 +85,13 @@ Status ParquetFormatWriter::Finish() {
 Status ParquetFormatWriter::UpdateSchema(::ArrowSchema* schema) {
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> arrow_schema,
                                       arrow::ImportSchema(schema));
+    // Validate: the new schema must differ from the original only in per-field metadata.
+    if (!schema_->Equals(*arrow_schema, /*check_metadata=*/false)) {
+        return Status::Invalid(
+            fmt::format("ParquetFormatWriter::UpdateSchema: new schema {} differs from original {} "
+                        "in more than just metadata",
+                        arrow_schema->ToString(), schema_->ToString()));
+    }
     // Re-serialize the Arrow Schema (with updated per-field metadata) into
     // the ARROW:schema key. AddKeyValueMetadata uses Merge (other-first),
     // so the new ARROW:schema value overwrites the one written at Open time.
@@ -96,7 +103,6 @@ Status ParquetFormatWriter::UpdateSchema(::ArrowSchema* schema) {
     auto metadata = std::make_shared<arrow::KeyValueMetadata>();
     metadata->Append("ARROW:schema", std::move(schema_base64));
     PAIMON_RETURN_NOT_OK_FROM_ARROW(writer_->AddKeyValueMetadata(metadata));
-    schema_ = arrow_schema;
     return Status::OK();
 }
 

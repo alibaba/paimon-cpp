@@ -66,30 +66,22 @@ Result<std::unique_ptr<AppendOnlyWriter>> AppendOnlyWriter::Create(
     const std::shared_ptr<DataFilePathFactory>& path_factory,
     const std::shared_ptr<CompactManager>& compact_manager,
     const std::shared_ptr<MemoryPool>& memory_pool) {
-    // Detect shared-shredding MAP columns and build cross-file context (fallible).
-    std::shared_ptr<MapSharedShreddingContext> shredding_context;
-    PAIMON_ASSIGN_OR_RAISE(std::vector<int32_t> shredding_indices,
-                           MapSharedShreddingUtils::DetectShreddingColumns(write_schema, options));
-    if (!shredding_indices.empty()) {
-        std::map<int32_t, int32_t> column_to_k_max;
-        PAIMON_ASSIGN_OR_RAISE(column_to_k_max, MapSharedShreddingUtils::BuildColumnToNumColumns(
-                                                    shredding_indices, write_schema, options));
-        shredding_context = std::make_shared<MapSharedShreddingContext>(column_to_k_max);
-    }
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<MapSharedShreddingContext> shredding_context,
+                           MapSharedShreddingUtils::CreateShreddingContext(write_schema, options));
 
-    return std::unique_ptr<AppendOnlyWriter>(new AppendOnlyWriter(
-        options, schema_id, write_schema, write_cols, max_sequence_number, path_factory,
-        compact_manager, memory_pool, std::move(shredding_context)));
+    return std::unique_ptr<AppendOnlyWriter>(
+        new AppendOnlyWriter(options, schema_id, write_schema, write_cols, max_sequence_number,
+                             path_factory, compact_manager, shredding_context, memory_pool));
 }
 
-AppendOnlyWriter::AppendOnlyWriter(const CoreOptions& options, int64_t schema_id,
-                                   const std::shared_ptr<arrow::Schema>& write_schema,
-                                   const std::optional<std::vector<std::string>>& write_cols,
-                                   int64_t max_sequence_number,
-                                   const std::shared_ptr<DataFilePathFactory>& path_factory,
-                                   const std::shared_ptr<CompactManager>& compact_manager,
-                                   const std::shared_ptr<MemoryPool>& memory_pool,
-                                   std::shared_ptr<MapSharedShreddingContext> shredding_context)
+AppendOnlyWriter::AppendOnlyWriter(
+    const CoreOptions& options, int64_t schema_id,
+    const std::shared_ptr<arrow::Schema>& write_schema,
+    const std::optional<std::vector<std::string>>& write_cols, int64_t max_sequence_number,
+    const std::shared_ptr<DataFilePathFactory>& path_factory,
+    const std::shared_ptr<CompactManager>& compact_manager,
+    const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
+    const std::shared_ptr<MemoryPool>& memory_pool)
     : options_(options),
       schema_id_(schema_id),
       write_schema_(write_schema),
@@ -99,7 +91,7 @@ AppendOnlyWriter::AppendOnlyWriter(const CoreOptions& options, int64_t schema_id
       compact_manager_(compact_manager),
       memory_pool_(memory_pool),
       metrics_(std::make_shared<MetricsImpl>()),
-      shredding_context_(std::move(shredding_context)) {}
+      shredding_context_(shredding_context) {}
 
 AppendOnlyWriter::~AppendOnlyWriter() = default;
 
@@ -273,17 +265,11 @@ AppendOnlyWriter::SingleFileWriterCreator AppendOnlyWriter::GetDataFileWriterCre
                 std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>> {
             // Determine the schema to use for file writing.
             // When shared-shredding map is active, compute per-file K and build a physical schema.
-            std::shared_ptr<arrow::Schema> file_schema = schema;
-            std::shared_ptr<MapSharedShreddingBatchConverter> converter;
-
-            if (shredding_context_) {
-                std::map<int32_t, int32_t> column_to_k = shredding_context_->ComputeNextK();
-                PAIMON_ASSIGN_OR_RAISE(
-                    file_schema,
-                    MapSharedShreddingUtils::LogicalToPhysicalSchema(schema, column_to_k));
-                converter = std::make_shared<MapSharedShreddingBatchConverter>(
-                    schema, file_schema, column_to_k, memory_pool_);
-            }
+            PAIMON_ASSIGN_OR_RAISE(MapSharedShreddingBatchConverter::ConverterBundle bundle,
+                                   MapSharedShreddingBatchConverter::CreateConverter(
+                                       schema, shredding_context_, memory_pool_));
+            std::shared_ptr<arrow::Schema> file_schema =
+                bundle.physical_schema ? bundle.physical_schema : schema;
 
             ::ArrowSchema arrow_schema;
             ScopeGuard guard([&arrow_schema]() { ArrowSchemaRelease(&arrow_schema); });
@@ -300,7 +286,8 @@ AppendOnlyWriter::SingleFileWriterCreator AppendOnlyWriter::GetDataFileWriterCre
             // Build the converter that transforms logical batches to physical batches.
             // When shredding is active, it performs MAP→STRUCT conversion first.
             std::function<Status(ArrowArray*, ArrowArray*)> batch_converter;
-            if (converter) {
+            if (bundle.converter) {
+                auto converter = bundle.converter;
                 batch_converter = [converter](ArrowArray* input, ArrowArray* output) -> Status {
                     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ArrowArray> physical,
                                            converter->Convert(input));
@@ -316,9 +303,10 @@ AppendOnlyWriter::SingleFileWriterCreator AppendOnlyWriter::GetDataFileWriterCre
             PAIMON_RETURN_NOT_OK(
                 writer->Init(options_.GetFileSystem(), path_factory_->NewPath(), writer_builder));
 
-            if (converter) {
+            if (bundle.converter) {
                 writer->SetMetadataFinalizer(MapSharedShreddingUtils::BuildMetadataFinalizer(
-                    converter, /*compression=*/"zstd", shredding_context_, file_schema));
+                    bundle.converter, MapSharedShreddingDefine::kDefaultDictCompression,
+                    shredding_context_, file_schema));
             }
             return writer;
         };

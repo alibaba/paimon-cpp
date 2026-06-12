@@ -62,6 +62,19 @@ Result<std::vector<int32_t>> MapSharedShreddingUtils::DetectShreddingColumns(
     return indices;
 }
 
+Result<std::shared_ptr<MapSharedShreddingContext>> MapSharedShreddingUtils::CreateShreddingContext(
+    const std::shared_ptr<arrow::Schema>& schema, const CoreOptions& options) {
+    PAIMON_ASSIGN_OR_RAISE(std::vector<int32_t> shredding_indices,
+                           DetectShreddingColumns(schema, options));
+    if (shredding_indices.empty()) {
+        return std::shared_ptr<MapSharedShreddingContext>();
+    }
+    std::map<int32_t, int32_t> column_to_k_max;
+    PAIMON_ASSIGN_OR_RAISE(column_to_k_max,
+                           BuildColumnToNumColumns(shredding_indices, schema, options));
+    return std::make_shared<MapSharedShreddingContext>(column_to_k_max);
+}
+
 // ---- Schema conversion ----
 
 std::shared_ptr<arrow::DataType> MapSharedShreddingUtils::BuildPhysicalStructType(
@@ -398,16 +411,13 @@ MapSharedShreddingUtils::BuildMetadataFinalizer(
     return [converter, compression, context,
             physical_schema]() -> Result<std::shared_ptr<arrow::Schema>> {
         const std::vector<int32_t>& shredding_indices = converter->GetShreddingColumnIndices();
-        arrow::FieldVector updated_fields;
-        updated_fields.reserve(physical_schema->num_fields());
-        for (int32_t i = 0; i < physical_schema->num_fields(); ++i) {
-            updated_fields.push_back(physical_schema->field(i));
-        }
+        arrow::FieldVector updated_fields = physical_schema->fields();
         for (int32_t logical_col_index : shredding_indices) {
             const auto& field = physical_schema->field(logical_col_index);
             auto metadata = field->metadata() ? field->metadata()->Copy()
                                               : std::make_shared<arrow::KeyValueMetadata>();
-            MapSharedShreddingFieldMeta file_meta = converter->BuildFieldMeta(logical_col_index);
+            PAIMON_ASSIGN_OR_RAISE(MapSharedShreddingFieldMeta file_meta,
+                                   converter->BuildFieldMeta(logical_col_index));
             PAIMON_RETURN_NOT_OK(
                 MapSharedShreddingUtils::SerializeMetadata(file_meta, compression, metadata.get()));
             updated_fields[logical_col_index] = field->WithMetadata(metadata);

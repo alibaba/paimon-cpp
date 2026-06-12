@@ -61,6 +61,13 @@ class MapSharedShreddingUtils {
     static Result<std::vector<int32_t>> DetectShreddingColumns(
         const std::shared_ptr<arrow::Schema>& schema, const CoreOptions& options);
 
+    /// Creates a MapSharedShreddingContext for the given schema and options.
+    /// Returns nullptr if no shredding MAP columns are detected.
+    /// @param schema The logical Arrow schema.
+    /// @param options CoreOptions containing per-column configuration.
+    /// @return Shared context, or nullptr if no shredding columns.
+    static Result<std::shared_ptr<MapSharedShreddingContext>> CreateShreddingContext(
+        const std::shared_ptr<arrow::Schema>& schema, const CoreOptions& options);
     // ---- Schema conversion ----
 
     /// Converts a logical schema to a physical schema by replacing shredding MAP columns
