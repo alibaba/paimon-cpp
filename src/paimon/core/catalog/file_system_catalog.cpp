@@ -31,6 +31,7 @@
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/snapshot.h"
+#include "paimon/core/table/system/global_system_tables.h"
 #include "paimon/core/table/system/system_table.h"
 #include "paimon/core/table/system/system_table_schema.h"
 #include "paimon/core/utils/branch_manager.h"
@@ -47,8 +48,12 @@ struct ArrowSchema;
 
 namespace paimon {
 FileSystemCatalog::FileSystemCatalog(const std::shared_ptr<FileSystem>& fs,
-                                     const std::string& warehouse)
-    : fs_(fs), warehouse_(warehouse), logger_(Logger::GetLogger("FileSystemCatalog")) {}
+                                     const std::string& warehouse,
+                                     const std::map<std::string, std::string>& catalog_options)
+    : fs_(fs),
+      warehouse_(warehouse),
+      catalog_options_(catalog_options),
+      logger_(Logger::GetLogger("FileSystemCatalog")) {}
 
 Status FileSystemCatalog::CreateDatabase(const std::string& db_name,
                                          const std::map<std::string, std::string>& options,
@@ -88,13 +93,16 @@ Status FileSystemCatalog::CreateDatabaseImpl(const std::string& db_name,
 
 Result<bool> FileSystemCatalog::DatabaseExists(const std::string& db_name) const {
     if (IsSystemDatabase(db_name)) {
-        return Status::NotImplemented(
-            "do not support checking DatabaseExists for system database.");
+        return true;
     }
     return fs_->Exists(NewDatabasePath(warehouse_, db_name));
 }
 
 Result<bool> FileSystemCatalog::TableExists(const Identifier& identifier) const {
+    // Handle sys database global tables
+    if (IsSystemDatabase(identifier.GetDatabaseName())) {
+        return GlobalSystemTableLoader::IsSupported(identifier.GetTableName());
+    }
     PAIMON_ASSIGN_OR_RAISE(bool is_system_table, identifier.IsSystemTable());
     if (is_system_table) {
         PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> system_table_name,
@@ -184,6 +192,10 @@ std::shared_ptr<FileSystem> FileSystemCatalog::GetFileSystem() const {
     return fs_;
 }
 
+const std::map<std::string, std::string>& FileSystemCatalog::GetOptions() const {
+    return catalog_options_;
+}
+
 bool FileSystemCatalog::IsSystemDatabase(const std::string& db_name) {
     return db_name == SYSTEM_DATABASE_NAME;
 }
@@ -228,7 +240,7 @@ Result<std::vector<std::string>> FileSystemCatalog::ListDatabases() const {
 
 Result<std::vector<std::string>> FileSystemCatalog::ListTables(const std::string& db_name) const {
     if (IsSystemDatabase(db_name)) {
-        return Status::NotImplemented("do not support listing tables for system database.");
+        return GlobalSystemTableLoader::GetSupportedTableNames();
     }
     std::string database_path = NewDatabasePath(warehouse_, db_name);
     std::vector<std::unique_ptr<BasicFileStatus>> file_status_list;
@@ -261,6 +273,23 @@ Result<bool> FileSystemCatalog::TableExistsInFileSystem(const std::string& table
 
 Result<std::shared_ptr<Schema>> FileSystemCatalog::LoadTableSchema(
     const Identifier& identifier) const {
+    // Handle sys database global tables
+    if (IsSystemDatabase(identifier.GetDatabaseName())) {
+        if (!GlobalSystemTableLoader::IsSupported(identifier.GetTableName())) {
+            return Status::NotExist(fmt::format("{} not exist", identifier.ToString()));
+        }
+        GlobalSystemTableContext context;
+        context.catalog = const_cast<FileSystemCatalog*>(this);
+        context.fs = fs_;
+        context.warehouse = warehouse_;
+        context.catalog_options = catalog_options_;
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<SystemTable> system_table,
+            GlobalSystemTableLoader::Load(identifier.GetTableName(), context));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> arrow_schema,
+                               system_table->ArrowSchema());
+        return std::make_shared<SystemTableSchema>(std::move(arrow_schema));
+    }
     PAIMON_ASSIGN_OR_RAISE(bool is_system_table, identifier.IsSystemTable());
     if (is_system_table) {
         PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> system_table_name,
