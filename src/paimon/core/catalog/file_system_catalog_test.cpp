@@ -16,6 +16,8 @@
 
 #include "paimon/core/catalog/file_system_catalog.h"
 
+#include <algorithm>
+
 #include "arrow/api.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
@@ -606,8 +608,16 @@ TEST(FileSystemCatalogTest, TestInvalidList) {
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
     FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
-    ASSERT_NOK_WITH_MSG(catalog.ListTables("sys"),
-                        "do not support listing tables for system database.");
+    ASSERT_OK_AND_ASSIGN(auto sys_tables, catalog.ListTables("sys"));
+    ASSERT_FALSE(sys_tables.empty());
+    // Verify expected global system table names are present
+    ASSERT_TRUE(std::find(sys_tables.begin(), sys_tables.end(), "catalog_options") !=
+                sys_tables.end());
+    ASSERT_TRUE(std::find(sys_tables.begin(), sys_tables.end(), "all_table_options") !=
+                sys_tables.end());
+    ASSERT_TRUE(std::find(sys_tables.begin(), sys_tables.end(), "tables") != sys_tables.end());
+    ASSERT_TRUE(std::find(sys_tables.begin(), sys_tables.end(), "partitions") !=
+                sys_tables.end());
 }
 
 TEST(FileSystemCatalogTest, TestValidateTableSchema) {
