@@ -20,6 +20,7 @@
 #include <functional>
 #include <memory>
 
+#include "paimon/result.h"
 #include "paimon/visibility.h"
 
 namespace paimon {
@@ -34,7 +35,7 @@ PAIMON_EXPORT std::shared_ptr<Executor> GetGlobalDefaultExecutor();
 PAIMON_EXPORT std::unique_ptr<Executor> CreateDefaultExecutor();
 
 /// Create a default implementation of executor with specified thread_count.
-PAIMON_EXPORT std::unique_ptr<Executor> CreateDefaultExecutor(uint32_t thread_count);
+PAIMON_EXPORT Result<std::unique_ptr<Executor>> CreateDefaultExecutor(uint32_t thread_count);
 
 /// Interface class for defining basic operations of a task executor.
 ///
@@ -54,6 +55,9 @@ class PAIMON_EXPORT Executor {
 
     /// Shutdown the executor immediately, discarding all pending tasks.
     virtual void ShutdownNow() = 0;
+
+    /// Get thread number.
+    virtual uint32_t GetThreadNum() const = 0;
 };
 
 }  // namespace paimon

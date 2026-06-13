@@ -365,6 +365,21 @@ struct PAIMON_EXPORT Options {
     /// "partition.legacy-name" - The legacy partition name is using `ToString` for all types. If
     /// false, using casting to string for all types. Default value is "true".
     static const char PARTITION_GENERATE_LEGACY_NAME[];
+    /// "map.storage-layout" - Suffix for per-column MAP storage layout configuration.
+    /// Used as `fields.<column>.map.storage-layout`. Values: "default" (standard KV arrays)
+    /// or "shared-shredding" (columnar shredding with column reuse). Default is "default".
+    /// If set "shared-shredding", the column must be of type MAP<STRING, T>. Each column must be
+    /// configured individually. For example, to enable shared-shredding layout for two columns
+    /// "metrics" and "tags":
+    ///   fields.metrics.map.storage-layout = shared-shredding
+    ///   fields.tags.map.storage-layout = shared-shredding
+    static const char MAP_STORAGE_LAYOUT[];
+    /// "map.shared-shredding.max-columns" - Suffix for per-column upper bound K_max configuration.
+    /// Used as `fields.<column>.map.shared-shredding.max-columns`. Only effective when
+    /// map.storage-layout = shared-shredding. Rows with more fields than K_max spill to
+    /// __overflow. Default value is 256. Each column can have its own max-columns setting.
+    static const char MAP_SHARED_SHREDDING_MAX_COLUMNS[];
+
     /// "blob-as-descriptor" - Read blob field using blob descriptor rather than blob
     /// bytes. Default value is "false".
     static const char BLOB_AS_DESCRIPTOR[];
@@ -390,7 +405,13 @@ struct PAIMON_EXPORT Options {
     /// "blob-external-storage-path" - The external storage path where raw BLOB data from fields
     /// configured by 'blob-external-storage-field' is written at write time. Orphan file cleanup is
     /// not applied to this path. No default value.
+    /// @note: this option differs from the Java paimon and will be deprecated once
+    /// RestCatalog is supported.
     static const char BLOB_EXTERNAL_STORAGE_PATH[];
+    /// "blob-view-upstream-warehouse" - Since the catalog capabilities are partially missing, when
+    /// Blob View is enabled, cpp paimon cannot automatically obtain the upstream table warehouse
+    /// path and requires manual configuration by the user. No default value.
+    static const char BLOB_VIEW_UPSTREAM_WAREHOUSE[];
     /// "global-index.enabled" - Whether to enable global index for scan. Default value is "true".
     static const char GLOBAL_INDEX_ENABLED[];
     /// "global-index.thread-num" - The maximum number of concurrent scanner for global index. No

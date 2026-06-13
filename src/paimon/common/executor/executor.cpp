@@ -16,6 +16,7 @@
 
 #include "paimon/executor.h"
 
+#include <cassert>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
@@ -32,14 +33,14 @@ class DefaultExecutor : public Executor {
     ~DefaultExecutor() override;
 
     void Add(std::function<void()> func) override;
-
     void ShutdownNow() override;
+    uint32_t GetThreadNum() const override;
 
  private:
     void WorkerThread();
-
     void ShutdownInternal(bool wait_for_pending_tasks);
 
+ private:
     uint32_t thread_count_;
     std::vector<std::thread> workers_;
     std::queue<std::function<void()>> tasks_;
@@ -50,9 +51,14 @@ class DefaultExecutor : public Executor {
 };
 
 DefaultExecutor::DefaultExecutor(uint32_t thread_count) : thread_count_(thread_count) {
+    assert(thread_count > 0);
     for (uint32_t i = 0; i < thread_count_; ++i) {
         workers_.emplace_back(&DefaultExecutor::WorkerThread, this);
     }
+}
+
+uint32_t DefaultExecutor::GetThreadNum() const {
+    return thread_count_;
 }
 
 void DefaultExecutor::ShutdownInternal(bool wait_for_pending_tasks) {
@@ -130,15 +136,18 @@ void DefaultExecutor::WorkerThread() {
 PAIMON_EXPORT std::shared_ptr<Executor> GetGlobalDefaultExecutor() {
     static uint32_t all_cores = std::thread::hardware_concurrency();
     static std::shared_ptr<Executor> internal =
-        std::make_shared<DefaultExecutor>(/*thread_count=*/all_cores);
+        std::make_shared<DefaultExecutor>(/*thread_count=*/all_cores > 0 ? all_cores : 1);
     return internal;
 }
 
 PAIMON_EXPORT std::unique_ptr<Executor> CreateDefaultExecutor() {
-    return CreateDefaultExecutor(DEFAULT_EXECUTOR_THREAD_COUNT);
+    return std::make_unique<DefaultExecutor>(DEFAULT_EXECUTOR_THREAD_COUNT);
 }
 
-PAIMON_EXPORT std::unique_ptr<Executor> CreateDefaultExecutor(uint32_t thread_count) {
+PAIMON_EXPORT Result<std::unique_ptr<Executor>> CreateDefaultExecutor(uint32_t thread_count) {
+    if (thread_count == 0) {
+        return Status::Invalid("default executor thread count should be greater than 0");
+    }
     return std::make_unique<DefaultExecutor>(thread_count);
 }
 

@@ -26,6 +26,7 @@
 #include "paimon/common/fs/resolving_file_system.h"
 #include "paimon/common/options/memory_size.h"
 #include "paimon/common/options/time_duration.h"
+#include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/options/expire_config.h"
@@ -394,6 +395,7 @@ struct CoreOptions::Impl {
     std::optional<std::string> scan_fallback_branch;
     std::optional<std::string> data_file_external_paths;
     std::optional<std::string> blob_external_storage_path;
+    std::optional<std::string> blob_view_upstream_warehouse;
 
     std::map<std::string, std::string> raw_options;
 
@@ -558,6 +560,9 @@ struct CoreOptions::Impl {
         PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(Options::BLOB_VIEW_FIELD,
                                                            Options::FIELDS_SEPARATOR,
                                                            &blob_view_fields, /*need_trim=*/true));
+        // Parse blob-view-upstream-warehouse - warehouse path for configured blob view fields
+        PAIMON_RETURN_NOT_OK(
+            parser.Parse(Options::BLOB_VIEW_UPSTREAM_WAREHOUSE, &blob_view_upstream_warehouse));
         // Parse blob-external-storage-field - descriptor BLOB fields written to external storage
         PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
             Options::BLOB_EXTERNAL_STORAGE_FIELD, Options::FIELDS_SEPARATOR,
@@ -1173,6 +1178,32 @@ Result<bool> CoreOptions::FieldCollectAggDistinct(const std::string& field_name)
     return distinct;
 }
 
+Result<MapStorageLayout> CoreOptions::GetMapStorageLayout(const std::string& field_name) const {
+    std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
+                      std::string(Options::MAP_STORAGE_LAYOUT);
+    PAIMON_ASSIGN_OR_RAISE(std::string layout_str, OptionsUtils::GetValueFromMap<std::string>(
+                                                       impl_->raw_options, key, "default"));
+    std::string lower = StringUtils::ToLowerCase(layout_str);
+    if (lower == "shared-shredding") {
+        return MapStorageLayout::SHARED_SHREDDING;
+    } else if (lower == "default") {
+        return MapStorageLayout::DEFAULT;
+    }
+    return Status::Invalid(fmt::format("invalid map.storage-layout: {}", layout_str));
+}
+
+Result<int32_t> CoreOptions::GetMapSharedShreddingMaxColumns(const std::string& field_name) const {
+    std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
+                      std::string(Options::MAP_SHARED_SHREDDING_MAX_COLUMNS);
+    PAIMON_ASSIGN_OR_RAISE(int32_t max_columns,
+                           OptionsUtils::GetValueFromMap<int32_t>(impl_->raw_options, key, 256));
+    if (max_columns <= 0) {
+        return Status::Invalid(fmt::format("options {} must > 0",
+                                           std::string(Options::MAP_SHARED_SHREDDING_MAX_COLUMNS)));
+    }
+    return max_columns;
+}
+
 bool CoreOptions::DeletionVectorsEnabled() const {
     return impl_->deletion_vectors_enabled;
 }
@@ -1421,6 +1452,10 @@ const std::vector<std::string>& CoreOptions::GetBlobDescriptorFields() const {
 
 const std::vector<std::string>& CoreOptions::GetBlobViewFields() const {
     return impl_->blob_view_fields;
+}
+
+std::optional<std::string> CoreOptions::GetBlobViewUpstreamWarehouse() const {
+    return impl_->blob_view_upstream_warehouse;
 }
 
 std::vector<std::string> CoreOptions::GetBlobInlineFields() const {

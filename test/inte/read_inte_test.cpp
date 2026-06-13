@@ -562,7 +562,7 @@ TEST(SystemTableReadInteTest, TestReadOptionsSystemTable) {
                                    /*ignore_if_exists=*/false));
     ArrowSchemaRelease(&schema);
 
-    std::string system_table_path = catalog->GetTableLocation(Identifier("db1", "tbl1$options"));
+    std::string system_table_path = PathUtil::JoinPath(dir->Str(), "warehouse/db1.db/tbl1$options");
     ScanContextBuilder scan_context_builder(system_table_path);
     scan_context_builder.SetOptions(options);
     ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());

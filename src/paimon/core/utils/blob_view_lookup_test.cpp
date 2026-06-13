@@ -103,10 +103,8 @@ TEST_F(BlobViewLookupTest, TestGetSortedDistinctRangesMergesContiguousAndGaps) {
 
     auto ranges = plan.GetSortedDistinctRanges();
     ASSERT_EQ(ranges.size(), 2U);
-    ASSERT_EQ(ranges[0].from, 5);
-    ASSERT_EQ(ranges[0].to, 7);
-    ASSERT_EQ(ranges[1].from, 10);
-    ASSERT_EQ(ranges[1].to, 11);
+    ASSERT_EQ(ranges[0], Range(5, 7));
+    ASSERT_EQ(ranges[1], Range(10, 11));
 }
 
 TEST_F(BlobViewLookupTest, TestGetSortedDistinctRangesWithNonContiguous) {
@@ -116,12 +114,9 @@ TEST_F(BlobViewLookupTest, TestGetSortedDistinctRangesWithNonContiguous) {
 
     const auto ranges = plan.GetSortedDistinctRanges();
     ASSERT_EQ(ranges.size(), 3U);
-    ASSERT_EQ(ranges[0].from, 1);
-    ASSERT_EQ(ranges[0].to, 1);
-    ASSERT_EQ(ranges[1].from, 50);
-    ASSERT_EQ(ranges[1].to, 50);
-    ASSERT_EQ(ranges[2].from, 100);
-    ASSERT_EQ(ranges[2].to, 100);
+    ASSERT_EQ(ranges[0], Range(1, 1));
+    ASSERT_EQ(ranges[1], Range(50, 50));
+    ASSERT_EQ(ranges[2], Range(100, 100));
 }
 
 TEST_F(BlobViewLookupTest, TestEmptyInputProducesEmptyOutput) {
@@ -186,6 +181,72 @@ TEST_F(BlobViewLookupTest, TestViewStructsOfDifferentTablesAreSplitIntoDistinctP
     const auto& plan_db2_t1 = grouped.at(MakeIdentifier("db2", "t1"));
     ASSERT_EQ(plan_db2_t1.GetFieldIds(), std::vector<int32_t>{3});
     ASSERT_EQ(plan_db2_t1.row_ranges_.size(), 1U);
+}
+
+TEST_F(BlobViewLookupTest, TestGetIdentifier) {
+    BlobViewLookup::TableReadPlan plan(MakeView("db", "t", /*field_id=*/1, /*row_id=*/0));
+    ASSERT_EQ(plan.GetIdentifier(), MakeIdentifier("db", "t"));
+}
+
+TEST_F(BlobViewLookupTest, TestTargetRowsPerTaskEmptyReturnsMin) {
+    std::unordered_map<Identifier, BlobViewLookup::TableReadPlan> empty;
+    ASSERT_EQ(BlobViewLookup::TargetRowsPerTask(empty, /*thread_num=*/100),
+              BlobViewLookup::MIN_ROW_PER_TASK);
+}
+
+TEST_F(BlobViewLookupTest, TestTargetRowsPerTaskSmallTotalReturnsMin) {
+    std::unordered_set<BlobViewStruct> views;
+    for (int64_t row_id = 0; row_id < 10; ++row_id) {
+        views.emplace(MakeView("db", "t", /*field_id=*/1, row_id));
+    }
+    auto grouped = BlobViewLookup::GroupByIdentifier(views);
+    // total_rows (10) is far below thread_num, so the balanced budget is clamped to
+    // MIN_ROW_PER_TASK.
+    ASSERT_EQ(BlobViewLookup::TargetRowsPerTask(grouped, /*thread_num=*/100),
+              BlobViewLookup::MIN_ROW_PER_TASK);
+}
+
+TEST_F(BlobViewLookupTest, TestTargetRowsPerTaskLargeTotalBalancesAcrossThreads) {
+    std::unordered_set<BlobViewStruct> views;
+    const int64_t total_rows = 100001;
+    for (int64_t row_id = 0; row_id < total_rows; ++row_id) {
+        views.emplace(MakeView("db", "t", /*field_id=*/1, row_id));
+    }
+    auto grouped = BlobViewLookup::GroupByIdentifier(views);
+    // ceil(100001 / 100) = 1001
+    ASSERT_EQ(BlobViewLookup::TargetRowsPerTask(grouped, /*thread_num=*/100), 1001);
+}
+
+TEST_F(BlobViewLookupTest, TestSplitRowRangesEmptyInput) {
+    auto chunks = BlobViewLookup::SplitRowRanges({}, /*target_rows_per_task=*/10);
+    ASSERT_TRUE(chunks.empty());
+}
+
+TEST_F(BlobViewLookupTest, TestSplitRowRangesSingleRangeFitsInOneChunk) {
+    auto chunks = BlobViewLookup::SplitRowRanges({Range(0, 4)}, /*target_rows_per_task=*/10);
+    ASSERT_EQ(chunks.size(), 1U);
+    ASSERT_EQ(chunks[0].size(), 1U);
+    ASSERT_EQ(chunks[0][0], Range(0, 4));
+}
+
+TEST_F(BlobViewLookupTest, TestSplitRowRangesSplitsLargeRange) {
+    // [0, 9] with target 4 => [0,3], [4,7], [8,9]
+    auto chunks = BlobViewLookup::SplitRowRanges({Range(0, 9)}, /*target_rows_per_task=*/4);
+    ASSERT_EQ(chunks.size(), 3U);
+    ASSERT_EQ(chunks[0], (std::vector<Range>{Range(0, 3)}));
+    ASSERT_EQ(chunks[1], (std::vector<Range>{Range(4, 7)}));
+    ASSERT_EQ(chunks[2], (std::vector<Range>{Range(8, 9)}));
+}
+
+TEST_F(BlobViewLookupTest, TestSplitRowRangesPacksAcrossRanges) {
+    // Ranges [0,2] (3 rows) and [10,12] (3 rows) with target 4.
+    // chunk0 = [0,2] + part of second range [10,10] (total 4 rows)
+    // chunk1 = [11,12] (2 rows)
+    auto chunks =
+        BlobViewLookup::SplitRowRanges({Range(0, 2), Range(10, 12)}, /*target_rows_per_task=*/4);
+    ASSERT_EQ(chunks.size(), 2U);
+    ASSERT_EQ(chunks[0], (std::vector<Range>{Range(0, 2), Range(10, 10)}));
+    ASSERT_EQ(chunks[1], (std::vector<Range>{Range(11, 12)}));
 }
 
 }  // namespace paimon::test

@@ -172,56 +172,62 @@ std::shared_ptr<Metrics> OrcFileBatchReader::GetReaderMetrics() const {
     return metrics_;
 }
 
-Result<std::list<std::string>> OrcFileBatchReader::GetAndCheckIncludedFields(
-    const ::orc::Type* src_type, const ::orc::Type* target_type,
-    std::vector<uint64_t>* target_column_ids) {
-    std::list<std::string> include_fields;
-    std::unordered_map<std::string, const ::orc::Type*> src_type_map;
-    for (uint64_t i = 0; i < src_type->getSubtypeCount(); i++) {
-        src_type_map[src_type->getFieldName(i)] = src_type->getSubtype(i);
+Status OrcFileBatchReader::CollectTargetColumnIds(const ::orc::Type* src_type,
+                                                  const ::orc::Type* target_type,
+                                                  std::vector<uint64_t>* target_column_ids) {
+    auto src_kind = src_type->getKind();
+    auto target_kind = target_type->getKind();
+    if (src_kind != target_kind) {
+        return Status::Invalid(fmt::format("type kind mismatch: src {} vs target {}",
+                                           src_type->toString(), target_type->toString()));
     }
-    int64_t prev_target_field_col_id = -1;
-    for (uint64_t i = 0; i < target_type->getSubtypeCount(); i++) {
-        auto& field_name = target_type->getFieldName(i);
-        auto iter = src_type_map.find(field_name);
-        if (iter == src_type_map.end()) {
-            return Status::Invalid(
-                fmt::format("field {} not in file schema {}", field_name, src_type->toString()));
-        }
-        // Noted that: do not support recall partial fields in nested type
-        if (iter->second->toString() != target_type->getSubtype(i)->toString()) {
-            return Status::Invalid(
-                fmt::format("target_type {} not match src_type {}, mismatch field name {}",
-                            target_type->toString(), src_type->toString(), field_name));
-        }
-        int64_t target_field_col_id = iter->second->getColumnId();
-        GetSubColumnIds(iter->second, target_column_ids);
-        if (prev_target_field_col_id >= target_field_col_id) {
-            return Status::Invalid(
-                "The column id of the target field should be monotonically increasing in "
-                "format reader");
-        }
-        prev_target_field_col_id = target_field_col_id;
-        include_fields.push_back(field_name);
-    }
-    return include_fields;
-}
 
-void OrcFileBatchReader::GetSubColumnIds(const ::orc::Type* type, std::vector<uint64_t>* col_ids) {
-    col_ids->push_back(type->getColumnId());
-    for (uint64_t i = 0; i < type->getSubtypeCount(); i++) {
-        GetSubColumnIds(type->getSubtype(i), col_ids);
+    switch (src_kind) {
+        case ::orc::TypeKind::STRUCT: {
+            std::unordered_map<std::string, const ::orc::Type*> src_field_map;
+            for (uint64_t i = 0; i < src_type->getSubtypeCount(); i++) {
+                src_field_map[src_type->getFieldName(i)] = src_type->getSubtype(i);
+            }
+            for (uint64_t i = 0; i < target_type->getSubtypeCount(); i++) {
+                auto& field_name = target_type->getFieldName(i);
+                auto iter = src_field_map.find(field_name);
+                if (iter == src_field_map.end()) {
+                    return Status::Invalid(fmt::format("field {} not in file schema {}", field_name,
+                                                       src_type->toString()));
+                }
+                PAIMON_RETURN_NOT_OK(CollectTargetColumnIds(
+                    iter->second, target_type->getSubtype(i), target_column_ids));
+            }
+            break;
+        }
+        // Do not support partial field recall inside list/map types.
+        default: {
+            if (src_type->toString() != target_type->toString()) {
+                return Status::Invalid(fmt::format("type mismatch: src {} vs target {}",
+                                                   src_type->toString(), target_type->toString()));
+            }
+            target_column_ids->push_back(src_type->getColumnId());
+            break;
+        }
     }
+    return Status::OK();
 }
 
 Result<::orc::RowReaderOptions> OrcFileBatchReader::CreateRowReaderOptions(
     const ::orc::Type* src_type, const ::orc::Type* target_type,
     std::unique_ptr<::orc::SearchArgument>&& search_arg,
     const std::map<std::string, std::string>& options, std::vector<uint64_t>* target_column_ids) {
-    PAIMON_ASSIGN_OR_RAISE(std::list<std::string> include_fields,
-                           GetAndCheckIncludedFields(src_type, target_type, target_column_ids));
+    PAIMON_RETURN_NOT_OK(CollectTargetColumnIds(src_type, target_type, target_column_ids));
+    for (size_t i = 1; i < target_column_ids->size(); i++) {
+        if ((*target_column_ids)[i - 1] >= (*target_column_ids)[i]) {
+            return Status::Invalid(
+                "The column id of the target field should be monotonically increasing in "
+                "format reader");
+        }
+    }
     ::orc::RowReaderOptions row_reader_options;
-    row_reader_options.include(include_fields);
+    std::list<uint64_t> include_type_ids(target_column_ids->begin(), target_column_ids->end());
+    row_reader_options.includeTypes(include_type_ids);
     // In order to avoid issue like https://github.com/alibaba/paimon-cpp/issues/42, we explicitly
     // set GMT timezone.
     row_reader_options.setTimezoneName("GMT");
