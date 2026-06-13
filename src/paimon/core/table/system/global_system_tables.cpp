@@ -86,20 +86,6 @@ VariantType StringValue(const std::string& value) {
     return BinaryString::FromString(value, GetDefaultPool().get());
 }
 
-VariantType OptionalStringValue(const std::optional<std::string>& value) {
-    if (!value) {
-        return NullType();
-    }
-    return StringValue(value.value());
-}
-
-VariantType OptionalInt64Value(const std::optional<int64_t>& value) {
-    if (!value) {
-        return NullType();
-    }
-    return value.value();
-}
-
 }  // namespace
 
 // =============================================================================
@@ -298,7 +284,9 @@ Result<std::vector<GenericRow>> TablesSystemTable::BuildRows() const {
             auto snapshot_result = snapshot_manager.LatestSnapshot();
             if (snapshot_result.ok() && snapshot_result.ValueUnsafe()) {
                 const auto& snapshot = *snapshot_result.ValueUnsafe();
-                row.SetField(5, OptionalInt64Value(snapshot.TotalRecordCount()));
+                auto total_count = snapshot.TotalRecordCount();
+                row.SetField(5, total_count ? VariantType(total_count.value())
+                                            : VariantType(NullType()));
                 // file_size and file_count not available from Snapshot alone;
                 // leave as null for now
                 row.SetField(6, NullType());
