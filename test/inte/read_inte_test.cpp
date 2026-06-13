@@ -853,7 +853,7 @@ TEST(SystemTableReadInteTest, TestReadFilesSystemTableForDatePartition) {
     ASSERT_OK_AND_ASSIGN(auto helper,
                          TestHelper::Create(dir->Str(), schema, /*partition_keys=*/{"dt"},
                                             /*primary_keys=*/{}, options,
-                                            /*is_streaming_mode=*/true));
+                                            /*is_streaming_mode=*/false));
 
     ASSERT_OK_AND_ASSIGN(
         std::unique_ptr<RecordBatch> batch,
