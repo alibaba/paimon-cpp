@@ -962,7 +962,8 @@ TEST(SystemTableReadInteTest, TestReadManifestAndFilesSystemTablesForEmptyTable)
                                    /*ignore_if_exists=*/false));
     ArrowSchemaRelease(&schema);
 
-    std::string table_path = catalog->GetTableLocation(Identifier("db1", "tbl1"));
+    ASSERT_OK_AND_ASSIGN(std::string table_path,
+                         catalog->GetTableLocation(Identifier("db1", "tbl1")));
     ASSERT_OK_AND_ASSIGN(auto manifests_result,
                          ReadSystemTable(table_path + "$manifests", options));
     ASSERT_EQ(manifests_result.array, nullptr);
