@@ -361,7 +361,7 @@ class MergeFileSplitReadTest : public ::testing::Test,
  private:
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
     std::shared_ptr<FileSystem> fs_ = std::make_shared<LocalFileSystem>();
-    std::shared_ptr<Executor> executor_ = CreateDefaultExecutor(/*thread_count=*/4);
+    std::shared_ptr<Executor> executor_ = CreateDefaultExecutor();
 };
 
 // test GenerateKeyValueReadSchema with user define fields
