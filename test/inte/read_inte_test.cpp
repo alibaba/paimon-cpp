@@ -847,13 +847,14 @@ TEST(SystemTableReadInteTest, TestReadFilesSystemTableForDatePartition) {
     std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
                                                   {Options::FILE_FORMAT, "orc"},
                                                   {Options::MANIFEST_FORMAT, "orc"},
-                                                  {Options::BUCKET, "1"}};
+                                                  {Options::BUCKET, "1"},
+                                                  {Options::BUCKET_KEY, "dt"}};
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
     ASSERT_OK_AND_ASSIGN(auto helper,
                          TestHelper::Create(dir->Str(), schema, /*partition_keys=*/{"dt"},
                                             /*primary_keys=*/{}, options,
-                                            /*is_streaming_mode=*/false));
+                                            /*is_streaming_mode=*/true));
 
     ASSERT_OK_AND_ASSIGN(
         std::unique_ptr<RecordBatch> batch,
