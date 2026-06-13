@@ -33,6 +33,7 @@
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/core_options.h"
+#include "paimon/defs.h"
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/snapshot.h"
@@ -253,11 +254,12 @@ Result<std::vector<GenericRow>> TablesSystemTable::BuildRows() const {
                 continue;
             }
 
-            // Determine table type
+            // Determine table type: EXTERNAL if data-file.external-paths is set
             std::string table_type_str = "MANAGED";
-            // Check if table has external path in options
-            const auto& options = data_schema->Options();
-            // (simplified: could check for external path options)
+            const auto& opts = data_schema->Options();
+            if (opts.find(Options::DATA_FILE_EXTERNAL_PATHS) != opts.end()) {
+                table_type_str = "EXTERNAL";
+            }
 
             bool partitioned = !data_schema->PartitionKeys().empty();
             std::string primary_keys_str;
@@ -287,8 +289,10 @@ Result<std::vector<GenericRow>> TablesSystemTable::BuildRows() const {
                 auto total_count = snapshot.TotalRecordCount();
                 row.SetField(5, total_count ? VariantType(total_count.value())
                                             : VariantType(NullType()));
-                // file_size and file_count not available from Snapshot alone;
-                // leave as null for now
+                // TODO(suxiaogang223): Populate file_size_in_bytes, file_count, and
+                // last_file_creation_time by reading manifest entries. This requires
+                // the manifest reading infrastructure from the files/manifests system
+                // tables PR (codex/system-table-files-manifests-pr4).
                 row.SetField(6, NullType());
                 row.SetField(7, NullType());
                 row.SetField(8, NullType());
