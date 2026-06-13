@@ -848,7 +848,7 @@ TEST(SystemTableReadInteTest, TestReadFilesSystemTableForDatePartition) {
                                                   {Options::FILE_FORMAT, "orc"},
                                                   {Options::MANIFEST_FORMAT, "orc"},
                                                   {Options::BUCKET, "1"},
-                                                  {Options::BUCKET_KEY, "dt"}};
+                                                  {Options::BUCKET_KEY, "v"}};
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
     ASSERT_OK_AND_ASSIGN(auto helper,
