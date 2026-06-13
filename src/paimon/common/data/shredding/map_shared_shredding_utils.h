@@ -52,13 +52,13 @@ class MapSharedShreddingUtils {
     /// @return true if the type is MAP<STRING, T>.
     static bool IsShreddingKeyMap(const std::shared_ptr<arrow::DataType>& arrow_type);
 
-    /// Finds all shredding MAP column indices in a schema by checking per-column config
+    /// Finds all shredding MAP field names in a schema by checking per-column config
     /// via CoreOptions.
     /// @param schema The logical Arrow schema.
     /// @param options CoreOptions containing per-column configuration.
-    /// @return Vector of column indices whose map.storage-layout is "shared-shredding", or error
+    /// @return Vector of field names whose map.storage-layout is "shared-shredding", or error
     ///         if validation fails.
-    static Result<std::vector<int32_t>> DetectShreddingColumns(
+    static Result<std::vector<std::string>> DetectShreddingColumns(
         const std::shared_ptr<arrow::Schema>& schema, const CoreOptions& options);
 
     /// Creates a MapSharedShreddingContext for the given schema and options.
@@ -73,21 +73,19 @@ class MapSharedShreddingUtils {
     /// Converts a logical schema to a physical schema by replacing shredding MAP columns
     /// with their physical Struct representation.
     /// @param logical_schema The original schema with MAP<STRING, T> columns.
-    /// @param column_to_num_columns Map from column index to its physical column count K.
+    /// @param field_to_num_columns Map from field name to its physical column count K.
     ///        Each shredding column can have its own width.
     /// @return The physical schema for file writing.
     static Result<std::shared_ptr<arrow::Schema>> LogicalToPhysicalSchema(
         const std::shared_ptr<arrow::Schema>& logical_schema,
-        const std::map<int32_t, int32_t>& column_to_num_columns);
+        const std::map<std::string, int32_t>& field_to_num_columns);
 
-    /// Builds column_to_num_columns map from DetectShreddingColumns result and CoreOptions.
-    /// @param shredding_column_indices Indices returned by DetectShreddingColumns.
-    /// @param schema The logical Arrow schema (used to get field names).
+    /// Builds field_to_num_columns map from DetectShreddingColumns result and CoreOptions.
+    /// @param shredding_field_names Field names returned by DetectShreddingColumns.
     /// @param options CoreOptions containing per-column max-columns config.
-    /// @return Map from column index to K (max physical columns for that column).
-    static Result<std::map<int32_t, int32_t>> BuildColumnToNumColumns(
-        const std::vector<int32_t>& shredding_column_indices,
-        const std::shared_ptr<arrow::Schema>& schema, const CoreOptions& options);
+    /// @return Map from field name to K (max physical columns for that field).
+    static Result<std::map<std::string, int32_t>> BuildColumnToNumColumns(
+        const std::vector<std::string>& shredding_field_names, const CoreOptions& options);
 
     // ---- Metadata serialization ----
 

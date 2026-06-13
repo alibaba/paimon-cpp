@@ -49,25 +49,32 @@ MapSharedShreddingBatchConverter::CreateConverter(
         return bundle;
     }
 
-    std::map<int32_t, int32_t> column_to_k = context->ComputeNextK();
+    std::map<std::string, int32_t> field_to_k = context->ComputeNextK();
     PAIMON_ASSIGN_OR_RAISE(bundle.physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                       logical_schema, column_to_k));
+                                                       logical_schema, field_to_k));
     bundle.converter = std::make_shared<MapSharedShreddingBatchConverter>(
-        logical_schema, bundle.physical_schema, column_to_k, pool);
+        logical_schema, bundle.physical_schema, field_to_k, pool);
     return bundle;
 }
 
 MapSharedShreddingBatchConverter::MapSharedShreddingBatchConverter(
     const std::shared_ptr<arrow::Schema>& logical_schema,
     const std::shared_ptr<arrow::Schema>& physical_schema,
-    const std::map<int32_t, int32_t>& column_to_num_columns,
+    const std::map<std::string, int32_t>& field_to_num_columns,
     const std::shared_ptr<MemoryPool>& pool)
     : logical_schema_(logical_schema),
       physical_schema_(physical_schema),
       pool_(GetArrowPool(pool)) {
-    for (const auto& [col_index, num_columns] : column_to_num_columns) {
-        contexts_.emplace_back(col_index, num_columns);
-        shredding_indices_.push_back(col_index);
+    // Iterate in schema field order (not map order) so that shredding_field_names_
+    // matches the order in which shredding columns appear in the schema.
+    // This is critical for the sequential matching logic in Convert().
+    for (int32_t i = 0; i < logical_schema->num_fields(); ++i) {
+        const std::string& name = logical_schema->field(i)->name();
+        auto it = field_to_num_columns.find(name);
+        if (it != field_to_num_columns.end()) {
+            contexts_.emplace_back(name, it->second);
+            shredding_field_names_.push_back(name);
+        }
     }
 }
 
@@ -86,7 +93,9 @@ Result<std::unique_ptr<ArrowArray>> MapSharedShreddingBatchConverter::Convert(
     size_t context_idx = 0;
     for (int32_t col = 0; col < num_fields; ++col) {
         auto column = logical_struct->field(col);
-        if (context_idx < shredding_indices_.size() && shredding_indices_[context_idx] == col) {
+        const std::string& field_name = logical_schema_->field(col)->name();
+        if (context_idx < shredding_field_names_.size() &&
+            shredding_field_names_[context_idx] == field_name) {
             auto physical_struct_type = physical_schema_->field(col)->type();
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<arrow::Array> physical_column,
@@ -274,9 +283,9 @@ Status MapSharedShreddingBatchConverter::AppendOverflow(
 }
 
 Result<MapSharedShreddingFieldMeta> MapSharedShreddingBatchConverter::BuildFieldMeta(
-    int32_t logical_col_index) const {
+    const std::string& field_name) const {
     for (const auto& context : contexts_) {
-        if (context.logical_index == logical_col_index) {
+        if (context.field_name == field_name) {
             MapSharedShreddingFieldMeta meta;
             meta.name_to_id = context.dict.GetNameToId();
             // Convert set<int32_t> -> vector<int32_t> for field_to_columns
@@ -291,12 +300,12 @@ Result<MapSharedShreddingFieldMeta> MapSharedShreddingBatchConverter::BuildField
         }
     }
     return Status::Invalid(fmt::format(
-        "cannot find logical_col_index {} in MapSharedShreddingBatchConverterinner inner contexts",
-        logical_col_index));
+        "cannot find field_name '{}' in MapSharedShreddingBatchConverter contexts", field_name));
 }
 
-const std::vector<int32_t>& MapSharedShreddingBatchConverter::GetShreddingColumnIndices() const {
-    return shredding_indices_;
+const std::vector<std::string>& MapSharedShreddingBatchConverter::GetShreddingColumnIndices()
+    const {
+    return shredding_field_names_;
 }
 
 }  // namespace paimon

@@ -138,8 +138,6 @@ Status AppendOnlyWriter::Write(std::unique_ptr<RecordBatch>&& batch) {
         return writer_->Write(&c_array);
     }
 
-    // Shared-shredding MAP conversion is handled inside DataFileWriter::Write(),
-    // so we always pass the logical batch here.
     return writer_->Write(batch->GetData());
 }
 

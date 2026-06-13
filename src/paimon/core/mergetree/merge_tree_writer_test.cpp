@@ -443,7 +443,7 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMapDataFileMetaInfo) {
                          options.GetFileSystem()->GetFileStatus(expected_data_file_path));
 
     auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
-    std::map<int32_t, int32_t> column_to_k = {{3, 3}};
+    std::map<std::string, int32_t> column_to_k = {{"tags", 3}};
     ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                    write_schema, column_to_k));
     auto physical_type = arrow::struct_(physical_schema->fields());
@@ -532,7 +532,7 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation)
     std::string file1_path =
         path_factory->ToPath(commit_increment1.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
-    std::map<int32_t, int32_t> column_to_k_file1 = {{3, 8}, {4, 4}};
+    std::map<std::string, int32_t> column_to_k_file1 = {{"tags", 8}, {"attrs", 4}};
     ASSERT_OK_AND_ASSIGN(auto physical_schema1, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                     write_schema, column_to_k_file1));
     MapSharedShreddingFieldMeta tags_meta1;
@@ -560,7 +560,7 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation)
     std::string file2_path =
         path_factory->ToPath(commit_increment2.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
-    std::map<int32_t, int32_t> column_to_k_file2 = {{3, 2}, {4, 1}};
+    std::map<std::string, int32_t> column_to_k_file2 = {{"tags", 2}, {"attrs", 1}};
     ASSERT_OK_AND_ASSIGN(auto physical_schema2, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                     write_schema, column_to_k_file2));
     MapSharedShreddingFieldMeta tags_meta2;
@@ -590,7 +590,7 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation)
     std::string file3_path =
         path_factory->ToPath(commit_increment3.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
-    std::map<int32_t, int32_t> column_to_k_file3 = {{3, 3}, {4, 3}};
+    std::map<std::string, int32_t> column_to_k_file3 = {{"tags", 3}, {"attrs", 3}};
     ASSERT_OK_AND_ASSIGN(auto physical_schema3, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                     write_schema, column_to_k_file3));
     MapSharedShreddingFieldMeta tags_meta3;

@@ -65,11 +65,11 @@ TEST_F(MapSharedShreddingBatchConverterTest, BasicConversion) {
         arrow::field("id", arrow::int32()),
         arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
     });
-    std::map<int32_t, int32_t> column_to_num_columns = {{1, 3}};
+    std::map<std::string, int32_t> field_to_num_columns = {{"tags", 3}};
     ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                   logical_schema, column_to_num_columns));
+                                                   logical_schema, field_to_num_columns));
     MapSharedShreddingBatchConverter converter(logical_schema, physical_schema,
-                                               column_to_num_columns, pool_);
+                                               field_to_num_columns, pool_);
 
     auto logical_type = arrow::struct_(logical_schema->fields());
     auto physical_type = arrow::struct_(physical_schema->fields());
@@ -94,7 +94,7 @@ TEST_F(MapSharedShreddingBatchConverterTest, BasicConversion) {
     AssertArrayEquals(expected, actual);
 
     // Verify GetShreddingColumnIndices
-    ASSERT_EQ(std::vector<int32_t>({1}), converter.GetShreddingColumnIndices());
+    ASSERT_EQ(std::vector<std::string>({"tags"}), converter.GetShreddingColumnIndices());
 
     // Verify BuildFieldMeta: a=0,b=1,c=2, K=3, max_row_width=3, no overflow
     MapSharedShreddingFieldMeta expected_meta;
@@ -102,7 +102,7 @@ TEST_F(MapSharedShreddingBatchConverterTest, BasicConversion) {
     expected_meta.field_to_columns = {{0, {0, 2}}, {1, {0, 1}}, {2, {1}}};
     expected_meta.num_columns = 3;
     expected_meta.max_row_width = 3;
-    ASSERT_EQ(expected_meta, converter.BuildFieldMeta(1).value());
+    ASSERT_EQ(expected_meta, converter.BuildFieldMeta("tags").value());
 }
 
 TEST_F(MapSharedShreddingBatchConverterTest, NestedValueStruct) {
@@ -115,11 +115,11 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueStruct) {
         arrow::field("id", arrow::int32()),
         arrow::field("props", arrow::map(arrow::utf8(), value_type)),
     });
-    std::map<int32_t, int32_t> column_to_num_columns = {{1, 2}};
+    std::map<std::string, int32_t> field_to_num_columns = {{"props", 2}};
     ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                   logical_schema, column_to_num_columns));
+                                                   logical_schema, field_to_num_columns));
     MapSharedShreddingBatchConverter converter(logical_schema, physical_schema,
-                                               column_to_num_columns, pool_);
+                                               field_to_num_columns, pool_);
     auto logical_type = arrow::struct_(logical_schema->fields());
     auto physical_type = arrow::struct_(physical_schema->fields());
 
@@ -146,7 +146,7 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueStruct) {
     AssertArrayEquals(expected, actual);
 
     // Verify GetShreddingColumnIndices
-    ASSERT_EQ(std::vector<int32_t>({1}), converter.GetShreddingColumnIndices());
+    ASSERT_EQ(std::vector<std::string>({"props"}), converter.GetShreddingColumnIndices());
 
     // Verify BuildFieldMeta: a=0,b=1,c=2; K=2, max_row_width=3, b overflowed in row2
     MapSharedShreddingFieldMeta expected_meta;
@@ -155,7 +155,7 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueStruct) {
     expected_meta.overflow_field_set = {1};
     expected_meta.num_columns = 2;
     expected_meta.max_row_width = 3;
-    ASSERT_EQ(expected_meta, converter.BuildFieldMeta(1).value());
+    ASSERT_EQ(expected_meta, converter.BuildFieldMeta("props").value());
 }
 
 TEST_F(MapSharedShreddingBatchConverterTest, NestedValueList) {
@@ -164,11 +164,11 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueList) {
         arrow::field("id", arrow::int32()),
         arrow::field("tags", arrow::map(arrow::utf8(), arrow::list(arrow::int32()))),
     });
-    std::map<int32_t, int32_t> column_to_num_columns = {{1, 2}};
+    std::map<std::string, int32_t> field_to_num_columns = {{"tags", 2}};
     ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                   logical_schema, column_to_num_columns));
+                                                   logical_schema, field_to_num_columns));
     MapSharedShreddingBatchConverter converter(logical_schema, physical_schema,
-                                               column_to_num_columns, pool_);
+                                               field_to_num_columns, pool_);
     auto logical_type = arrow::struct_(logical_schema->fields());
     auto physical_type = arrow::struct_(physical_schema->fields());
 
@@ -195,7 +195,7 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueList) {
     AssertArrayEquals(expected, actual);
 
     // Verify GetShreddingColumnIndices
-    ASSERT_EQ(std::vector<int32_t>({1}), converter.GetShreddingColumnIndices());
+    ASSERT_EQ(std::vector<std::string>({"tags"}), converter.GetShreddingColumnIndices());
 
     // Verify BuildFieldMeta: a=0,b=1,c=2; K=2, max_row_width=3, c overflowed in row3
     MapSharedShreddingFieldMeta expected_meta;
@@ -204,7 +204,7 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueList) {
     expected_meta.overflow_field_set = {2};
     expected_meta.num_columns = 2;
     expected_meta.max_row_width = 3;
-    ASSERT_EQ(expected_meta, converter.BuildFieldMeta(1).value());
+    ASSERT_EQ(expected_meta, converter.BuildFieldMeta("tags").value());
 }
 
 TEST_F(MapSharedShreddingBatchConverterTest, NestedValueMap) {
@@ -214,11 +214,11 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueMap) {
         arrow::field("id", arrow::int32()),
         arrow::field("nested", arrow::map(arrow::utf8(), inner_map_type)),
     });
-    std::map<int32_t, int32_t> column_to_num_columns = {{1, 2}};
+    std::map<std::string, int32_t> field_to_num_columns = {{"nested", 2}};
     ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                   logical_schema, column_to_num_columns));
+                                                   logical_schema, field_to_num_columns));
     MapSharedShreddingBatchConverter converter(logical_schema, physical_schema,
-                                               column_to_num_columns, pool_);
+                                               field_to_num_columns, pool_);
     auto logical_type = arrow::struct_(logical_schema->fields());
     auto physical_type = arrow::struct_(physical_schema->fields());
 
@@ -245,7 +245,7 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueMap) {
     AssertArrayEquals(expected, actual);
 
     // Verify GetShreddingColumnIndices
-    ASSERT_EQ(std::vector<int32_t>({1}), converter.GetShreddingColumnIndices());
+    ASSERT_EQ(std::vector<std::string>({"nested"}), converter.GetShreddingColumnIndices());
 
     // Verify BuildFieldMeta: a=0,b=1,c=2; K=2, max_row_width=3, c overflowed in row3
     MapSharedShreddingFieldMeta expected_meta;
@@ -254,7 +254,7 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueMap) {
     expected_meta.overflow_field_set = {2};
     expected_meta.num_columns = 2;
     expected_meta.max_row_width = 3;
-    ASSERT_EQ(expected_meta, converter.BuildFieldMeta(1).value());
+    ASSERT_EQ(expected_meta, converter.BuildFieldMeta("nested").value());
 }
 
 TEST_F(MapSharedShreddingBatchConverterTest, NestedComplex) {
@@ -268,11 +268,11 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedComplex) {
         arrow::field("id", arrow::int32()),
         arrow::field("data", arrow::map(arrow::utf8(), value_type)),
     });
-    std::map<int32_t, int32_t> column_to_num_columns = {{1, 2}};
+    std::map<std::string, int32_t> field_to_num_columns = {{"data", 2}};
     ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                   logical_schema, column_to_num_columns));
+                                                   logical_schema, field_to_num_columns));
     MapSharedShreddingBatchConverter converter(logical_schema, physical_schema,
-                                               column_to_num_columns, pool_);
+                                               field_to_num_columns, pool_);
     auto logical_type = arrow::struct_(logical_schema->fields());
     auto physical_type = arrow::struct_(physical_schema->fields());
 
@@ -299,7 +299,7 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedComplex) {
     AssertArrayEquals(expected, actual);
 
     // Verify GetShreddingColumnIndices
-    ASSERT_EQ(std::vector<int32_t>({1}), converter.GetShreddingColumnIndices());
+    ASSERT_EQ(std::vector<std::string>({"data"}), converter.GetShreddingColumnIndices());
 
     // Verify BuildFieldMeta: a=0,b=1,c=2; K=2, max_row_width=3, c overflowed in row2
     MapSharedShreddingFieldMeta expected_meta;
@@ -308,7 +308,7 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedComplex) {
     expected_meta.overflow_field_set = {2};
     expected_meta.num_columns = 2;
     expected_meta.max_row_width = 3;
-    ASSERT_EQ(expected_meta, converter.BuildFieldMeta(1).value());
+    ASSERT_EQ(expected_meta, converter.BuildFieldMeta("data").value());
 }
 
 TEST_F(MapSharedShreddingBatchConverterTest, MultipleMapFields) {
@@ -319,12 +319,12 @@ TEST_F(MapSharedShreddingBatchConverterTest, MultipleMapFields) {
         arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
         arrow::field("attrs", arrow::map(arrow::utf8(), arrow::float64())),
     });
-    std::map<int32_t, int32_t> column_to_num_columns = {{1, 2}, {2, 3}};
+    std::map<std::string, int32_t> field_to_num_columns = {{"tags", 2}, {"attrs", 3}};
     ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                   logical_schema, column_to_num_columns));
+                                                   logical_schema, field_to_num_columns));
 
     MapSharedShreddingBatchConverter converter(logical_schema, physical_schema,
-                                               column_to_num_columns, pool_);
+                                               field_to_num_columns, pool_);
     auto logical_type = arrow::struct_(logical_schema->fields());
     auto physical_type = arrow::struct_(physical_schema->fields());
 
@@ -354,51 +354,48 @@ TEST_F(MapSharedShreddingBatchConverterTest, MultipleMapFields) {
     AssertArrayEquals(expected, actual);
 
     // Verify GetShreddingColumnIndices returns both columns in order
-    ASSERT_EQ(std::vector<int32_t>({1, 2}), converter.GetShreddingColumnIndices());
+    ASSERT_EQ(std::vector<std::string>({"tags", "attrs"}), converter.GetShreddingColumnIndices());
 
-    // Verify BuildFieldMeta for tags (col index 1): a=0,b=1,c=2; K=2, max_row_width=3
+    // Verify BuildFieldMeta for tags: a=0,b=1,c=2; K=2, max_row_width=3
     MapSharedShreddingFieldMeta tags_meta;
     tags_meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}};
     tags_meta.field_to_columns = {{0, {0, 1}}, {1, {1}}, {2, {0}}};
     tags_meta.overflow_field_set = {1};
     tags_meta.num_columns = 2;
     tags_meta.max_row_width = 3;
-    ASSERT_EQ(tags_meta, converter.BuildFieldMeta(1).value());
+    ASSERT_EQ(tags_meta, converter.BuildFieldMeta("tags").value());
 
-    // Verify BuildFieldMeta for attrs (col index 2): x=0,y=1,z=2,w=3; K=3, max_row_width=4
+    // Verify BuildFieldMeta for attrs: x=0,y=1,z=2,w=3; K=3, max_row_width=4
     MapSharedShreddingFieldMeta attrs_meta;
     attrs_meta.name_to_id = {{"x", 0}, {"y", 1}, {"z", 2}, {"w", 3}};
     attrs_meta.field_to_columns = {{0, {0}}, {1, {1}}, {2, {0, 2}}};
     attrs_meta.overflow_field_set = {3};
     attrs_meta.num_columns = 3;
     attrs_meta.max_row_width = 4;
-    ASSERT_EQ(attrs_meta, converter.BuildFieldMeta(2).value());
+    ASSERT_EQ(attrs_meta, converter.BuildFieldMeta("attrs").value());
 }
 
-TEST_F(MapSharedShreddingBatchConverterTest, BuildFieldMetaInvalidColumnIndex) {
+TEST_F(MapSharedShreddingBatchConverterTest, BuildFieldMetaInvalidFieldName) {
     // Schema: id(INT32), tags(MAP<STRING, INT64>), K=3
-    // Only column 1 is a shredding column
+    // Only "tags" is a shredding field
     auto logical_schema = arrow::schema({
         arrow::field("id", arrow::int32()),
         arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
     });
-    std::map<int32_t, int32_t> column_to_num_columns = {{1, 3}};
+    std::map<std::string, int32_t> field_to_num_columns = {{"tags", 3}};
     ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                   logical_schema, column_to_num_columns));
+                                                   logical_schema, field_to_num_columns));
     MapSharedShreddingBatchConverter converter(logical_schema, physical_schema,
-                                               column_to_num_columns, pool_);
+                                               field_to_num_columns, pool_);
 
-    // Valid case: column 1 exists
-    ASSERT_OK_AND_ASSIGN([[maybe_unused]] auto meta, converter.BuildFieldMeta(1));
+    // Valid case: "tags" exists
+    ASSERT_OK_AND_ASSIGN([[maybe_unused]] auto meta, converter.BuildFieldMeta("tags"));
 
-    // Invalid case: column 0 (id) is not a shredding column
-    ASSERT_NOK_WITH_MSG(converter.BuildFieldMeta(0), "cannot find logical_col_index 0");
+    // Invalid case: "id" is not a shredding field
+    ASSERT_NOK_WITH_MSG(converter.BuildFieldMeta("id"), "cannot find field_name 'id'");
 
-    // Invalid case: column 2 does not exist in schema
-    ASSERT_NOK_WITH_MSG(converter.BuildFieldMeta(2), "cannot find logical_col_index 2");
-
-    // Invalid case: negative column index
-    ASSERT_NOK_WITH_MSG(converter.BuildFieldMeta(-1), "cannot find logical_col_index -1");
+    // Invalid case: nonexistent field name
+    ASSERT_NOK_WITH_MSG(converter.BuildFieldMeta("nonexistent"),
+                        "cannot find field_name 'nonexistent'");
 }
-
 }  // namespace paimon

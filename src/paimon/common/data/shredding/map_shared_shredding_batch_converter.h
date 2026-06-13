@@ -48,13 +48,13 @@ class MapSharedShreddingBatchConverter {
  public:
     /// Per-column context for one shared-shredding MAP column.
     struct ColumnContext {
-        int32_t logical_index;
+        std::string field_name;
         int32_t num_columns;  // K
         MapSharedShreddingFieldDict dict;
         MapSharedShreddingColumnAllocator allocator;
 
-        ColumnContext(int32_t logical_index, int32_t num_columns)
-            : logical_index(logical_index), num_columns(num_columns), allocator(num_columns) {}
+        ColumnContext(const std::string& field_name, int32_t num_columns)
+            : field_name(field_name), num_columns(num_columns), allocator(num_columns) {}
     };
 
     struct ConverterBundle {
@@ -76,11 +76,11 @@ class MapSharedShreddingBatchConverter {
     /// Constructs a converter.
     /// @param logical_schema The original schema with MAP<STRING, T> columns.
     /// @param physical_schema The physical schema (MAP columns replaced with STRUCT).
-    /// @param column_to_num_columns Map from logical column index to K.
+    /// @param field_to_num_columns Map from field name to K.
     /// @param pool Paimon memory pool for Arrow allocations.
     MapSharedShreddingBatchConverter(const std::shared_ptr<arrow::Schema>& logical_schema,
                                      const std::shared_ptr<arrow::Schema>& physical_schema,
-                                     const std::map<int32_t, int32_t>& column_to_num_columns,
+                                     const std::map<std::string, int32_t>& field_to_num_columns,
                                      const std::shared_ptr<MemoryPool>& pool);
 
     /// Converts a logical batch to a physical batch.
@@ -88,12 +88,12 @@ class MapSharedShreddingBatchConverter {
     /// @return Owned physical ArrowArray (C ABI) with physical schema.
     Result<std::unique_ptr<ArrowArray>> Convert(ArrowArray* logical_batch);
 
-    /// Builds MapSharedShreddingFieldMeta for one shredding column (by logical index).
+    /// Builds MapSharedShreddingFieldMeta for one shredding column (by field name).
     /// Called at file close to serialize metadata.
-    Result<MapSharedShreddingFieldMeta> BuildFieldMeta(int32_t logical_col_index) const;
+    Result<MapSharedShreddingFieldMeta> BuildFieldMeta(const std::string& field_name) const;
 
-    /// Returns all shredding column logical indices.
-    const std::vector<int32_t>& GetShreddingColumnIndices() const;
+    /// Returns all shredding column field names.
+    const std::vector<std::string>& GetShreddingColumnIndices() const;
 
  private:
     /// Converts one MAP<STRING, T> column to physical STRUCT for all rows.
@@ -130,7 +130,7 @@ class MapSharedShreddingBatchConverter {
     std::shared_ptr<arrow::Schema> logical_schema_;
     std::shared_ptr<arrow::Schema> physical_schema_;
     std::vector<ColumnContext> contexts_;
-    std::vector<int32_t> shredding_indices_;
+    std::vector<std::string> shredding_field_names_;
     std::shared_ptr<arrow::MemoryPool> pool_;
 };
 

@@ -826,7 +826,7 @@ TEST(SchemaValidationTest, TestMapStorageLayout) {
     auto f2 = arrow::field("f2", arrow::map(arrow::utf8(), arrow::int64()));
     auto f3 = arrow::field("f3", arrow::map(arrow::int32(), arrow::utf8()));
 
-    // Valid: extend on MAP<STRING, T> column
+    // Valid: shared-shredding on MAP<STRING, T> column
     {
         arrow::FieldVector fields = {f0, f1, f2};
         auto schema = arrow::schema(fields);

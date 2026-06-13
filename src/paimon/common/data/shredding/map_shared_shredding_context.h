@@ -18,6 +18,7 @@
 
 #include <cstdint>
 #include <map>
+#include <string>
 #include <vector>
 
 namespace paimon {
@@ -32,31 +33,31 @@ namespace paimon {
 /// - Subsequent files: K = min(max(recent_max_row_widths), K_max).
 class MapSharedShreddingContext {
  public:
-    /// @param column_to_k_max Map from logical column index to its K_max (from options).
-    explicit MapSharedShreddingContext(const std::map<int32_t, int32_t>& column_to_k_max);
+    /// @param column_to_k_max Map from field name to its K_max (from options).
+    explicit MapSharedShreddingContext(const std::map<std::string, int32_t>& column_to_k_max);
 
-    /// Returns the K to use for each extend column in the next file.
+    /// Returns the K to use for each shared-shredding column in the next file.
     /// First file returns K_max for all columns; subsequent files adapt
     /// based on recent max_row_width observations.
-    std::map<int32_t, int32_t> ComputeNextK() const;
+    std::map<std::string, int32_t> ComputeNextK() const;
 
     /// Reports the max row width observed in a completed file, for K adaptation.
-    /// @param col_index Logical column index.
+    /// @param field_name Field name of the shared-shredding MAP column.
     /// @param max_row_width The maximum number of MAP keys in any single row of this file.
-    void ReportFileStats(int32_t col_index, int32_t max_row_width);
+    void ReportFileStats(const std::string& field_name, int32_t max_row_width);
 
-    /// Returns the set of extend column indices.
-    std::vector<int32_t> GetShreddingColumnIndices() const;
+    /// Returns the set of shared-shredding field names.
+    std::vector<std::string> GetShreddingColumnIndices() const;
 
  private:
     static constexpr int32_t kWindowSize = 100;
 
     static int32_t ComputeWindowMax(const std::vector<int32_t>& values);
 
-    /// K_max per extend column, from options.
-    std::map<int32_t, int32_t> column_to_k_max_;
-    /// Sliding window of recent max_row_width per column, for K adaptation.
-    std::map<int32_t, std::vector<int32_t>> recent_max_row_widths_;
+    /// K_max per shared-shredding field, from options.
+    std::map<std::string, int32_t> column_to_k_max_;
+    /// Sliding window of recent max_row_width per field, for K adaptation.
+    std::map<std::string, std::vector<int32_t>> recent_max_row_widths_;
 };
 
 }  // namespace paimon

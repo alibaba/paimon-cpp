@@ -21,39 +21,40 @@
 namespace paimon {
 
 MapSharedShreddingContext::MapSharedShreddingContext(
-    const std::map<int32_t, int32_t>& column_to_k_max)
+    const std::map<std::string, int32_t>& column_to_k_max)
     : column_to_k_max_(column_to_k_max) {}
 
-std::map<int32_t, int32_t> MapSharedShreddingContext::ComputeNextK() const {
-    std::map<int32_t, int32_t> result;
-    for (const auto& [col_index, k_max] : column_to_k_max_) {
-        auto it = recent_max_row_widths_.find(col_index);
+std::map<std::string, int32_t> MapSharedShreddingContext::ComputeNextK() const {
+    std::map<std::string, int32_t> result;
+    for (const auto& [field_name, k_max] : column_to_k_max_) {
+        auto it = recent_max_row_widths_.find(field_name);
         if (it == recent_max_row_widths_.end() || it->second.empty()) {
             // First file — no history, use K_max.
-            result[col_index] = k_max;
+            result[field_name] = k_max;
         } else {
             int32_t window_max = ComputeWindowMax(it->second);
-            result[col_index] = std::min(window_max, k_max);
+            result[field_name] = std::min(window_max, k_max);
         }
     }
     return result;
 }
 
-void MapSharedShreddingContext::ReportFileStats(int32_t col_index, int32_t max_row_width) {
-    auto& window = recent_max_row_widths_[col_index];
+void MapSharedShreddingContext::ReportFileStats(const std::string& field_name,
+                                                int32_t max_row_width) {
+    auto& window = recent_max_row_widths_[field_name];
     window.push_back(max_row_width);
     if (static_cast<int32_t>(window.size()) > kWindowSize) {
         window.erase(window.begin());
     }
 }
 
-std::vector<int32_t> MapSharedShreddingContext::GetShreddingColumnIndices() const {
-    std::vector<int32_t> indices;
-    indices.reserve(column_to_k_max_.size());
-    for (const auto& [col_index, _] : column_to_k_max_) {
-        indices.push_back(col_index);
+std::vector<std::string> MapSharedShreddingContext::GetShreddingColumnIndices() const {
+    std::vector<std::string> names;
+    names.reserve(column_to_k_max_.size());
+    for (const auto& [field_name, _] : column_to_k_max_) {
+        names.push_back(field_name);
     }
-    return indices;
+    return names;
 }
 
 int32_t MapSharedShreddingContext::ComputeWindowMax(const std::vector<int32_t>& values) {

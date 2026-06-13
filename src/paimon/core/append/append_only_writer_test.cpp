@@ -919,7 +919,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapFieldContent) {
         path_factory->ToPath(inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
     // Check shared-shredding map metadata: a=0, b=1, c=2; K=3, max_row_width=3, no overflow.
-    std::map<int32_t, int32_t> column_to_k = {{1, 3}};
+    std::map<std::string, int32_t> column_to_k = {{"tags", 3}};
     ASSERT_OK_AND_ASSIGN(
         auto expected_physical_schema,
         MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, column_to_k));
@@ -987,7 +987,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapWithOverflow) {
     std::string data_file_path =
         path_factory->ToPath(inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
-    std::map<int32_t, int32_t> column_to_k = {{1, 2}};
+    std::map<std::string, int32_t> column_to_k = {{"tags", 2}};
     ASSERT_OK_AND_ASSIGN(
         auto expected_physical_schema,
         MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, column_to_k));
@@ -1055,7 +1055,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
         path_factory->ToPath(inc1.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
     // File 1 should have K=10 (first file uses K_max).
-    std::map<int32_t, int32_t> column_to_k_file1 = {{1, 10}};
+    std::map<std::string, int32_t> column_to_k_file1 = {{"tags", 10}};
     ASSERT_OK_AND_ASSIGN(auto phys_schema1, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                 logical_schema, column_to_k_file1));
     // Verify file1 physical schema has 10 columns.
@@ -1084,7 +1084,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
         path_factory->ToPath(inc2.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
     // File 2 should have K=3 (adapted from file1's max_row_width=3).
-    std::map<int32_t, int32_t> column_to_k_file2 = {{1, 3}};
+    std::map<std::string, int32_t> column_to_k_file2 = {{"tags", 3}};
     ASSERT_OK_AND_ASSIGN(auto phys_schema2, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                 logical_schema, column_to_k_file2));
     auto struct_type2 = std::static_pointer_cast<arrow::StructType>(phys_schema2->field(1)->type());
@@ -1123,7 +1123,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
         path_factory->ToPath(inc3.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
     // File 3 should have K=5 (window max grew from file2's max_row_width=5).
-    std::map<int32_t, int32_t> column_to_k_file3 = {{1, 5}};
+    std::map<std::string, int32_t> column_to_k_file3 = {{"tags", 5}};
     ASSERT_OK_AND_ASSIGN(auto phys_schema3, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                 logical_schema, column_to_k_file3));
     auto struct_type3 = std::static_pointer_cast<arrow::StructType>(phys_schema3->field(1)->type());
@@ -1194,7 +1194,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsWithKA
         path_factory->ToPath(inc1.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
     // Verify file1: tags K=8, attrs K=4 (first file uses K_max).
-    std::map<int32_t, int32_t> col_to_k_file1 = {{1, 8}, {2, 4}};
+    std::map<std::string, int32_t> col_to_k_file1 = {{"tags", 8}, {"attrs", 4}};
     ASSERT_OK_AND_ASSIGN(auto phys_schema1, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                 logical_schema, col_to_k_file1));
 
@@ -1226,7 +1226,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsWithKA
     std::string file2_path =
         path_factory->ToPath(inc2.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
-    std::map<int32_t, int32_t> col_to_k_file2 = {{1, 2}, {2, 1}};
+    std::map<std::string, int32_t> col_to_k_file2 = {{"tags", 2}, {"attrs", 1}};
     ASSERT_OK_AND_ASSIGN(auto phys_schema2, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                 logical_schema, col_to_k_file2));
 
@@ -1260,7 +1260,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsWithKA
     std::string file3_path =
         path_factory->ToPath(inc3.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
-    std::map<int32_t, int32_t> col_to_k_file3 = {{1, 3}, {2, 3}};
+    std::map<std::string, int32_t> col_to_k_file3 = {{"tags", 3}, {"attrs", 3}};
     ASSERT_OK_AND_ASSIGN(auto phys_schema3, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                 logical_schema, col_to_k_file3));
 
@@ -1342,7 +1342,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapDataFileMetaInfo) {
 
     // Verify the written file has correct shared-shredding map content.
     std::string file_path = path_factory->ToPath(actual_meta->file_name);
-    std::map<int32_t, int32_t> col_to_k = {{1, 3}};
+    std::map<std::string, int32_t> col_to_k = {{"tags", 3}};
     ASSERT_OK_AND_ASSIGN(auto phys_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                logical_schema, col_to_k));
     auto physical_type = arrow::struct_(phys_schema->fields());
@@ -1358,6 +1358,105 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapDataFileMetaInfo) {
     CheckFileContent(file_path, format, expected_array);
 
     ASSERT_OK(writer->Close());
+}
+
+TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapWithBlobSeparation) {
+    std::string format = GetFormat();
+    // Schema: id(INT32), blob_data(BLOB), tags(MAP<STRING, INT64>)
+    // BLOB field will be separated into a .blob file; MAP field uses shared-shredding.
+    // This tests that blob separation + shredding works correctly together.
+    auto options = CreateOptions({
+        {Options::FILE_FORMAT, format},
+        {Options::MANIFEST_FORMAT, format},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {Options::WRITE_ONLY, "true"},
+    });
+
+    auto logical_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        BlobUtils::ToArrowField("blob_data", false),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+    });
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = CreatePathFactory(dir->Str(), format, options);
+
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         AppendOnlyWriter::Create(options, /*schema_id=*/0, logical_schema,
+                                                  /*write_cols=*/std::nullopt,
+                                                  /*max_sequence_number=*/-1, path_factory,
+                                                  compact_manager_, memory_pool_));
+
+    // Write rows with id, blob_data, and tags.
+    // Row0: id=1, blob="hello", tags={a:10, b:20}
+    // Row1: id=2, blob="world", tags={c:30}
+    auto batch = CreateBatch(logical_schema, R"([
+        [1, "hello", [["a", 10], ["b", 20]]],
+        [2, "world", [["c", 30]]]
+    ])");
+    ASSERT_OK(writer->Write(std::move(batch)));
+
+    ASSERT_OK_AND_ASSIGN(CommitIncrement inc, writer->PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_OK(writer->Close());
+
+    // Verify: should produce 2 files — one main data file and one .blob file.
+    const auto& new_files = inc.GetNewFilesIncrement().NewFiles();
+    ASSERT_EQ(2, new_files.size());
+
+    // Identify main vs blob file.
+    std::string main_file_path, blob_file_path;
+    for (const auto& file_meta : new_files) {
+        std::string file_path = path_factory->ToPath(file_meta->file_name);
+        if (BlobUtils::IsBlobFile(file_meta->file_name)) {
+            blob_file_path = file_path;
+        } else {
+            main_file_path = file_path;
+        }
+    }
+    ASSERT_FALSE(main_file_path.empty()) << "Main data file not found";
+    ASSERT_FALSE(blob_file_path.empty()) << "Blob file not found";
+
+    // Verify both files exist on disk.
+    auto fs = options.GetFileSystem();
+    ASSERT_TRUE(fs->Exists(main_file_path).value());
+    ASSERT_TRUE(fs->Exists(blob_file_path).value());
+
+    // Verify main file schema: should have id(INT32) + tags(shredded STRUCT), no blob_data.
+    // Build expected physical schema for the main schema (id + tags).
+    auto main_logical_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+    });
+    std::map<std::string, int32_t> col_to_k = {{"tags", 3}};
+    ASSERT_OK_AND_ASSIGN(
+        auto expected_physical_schema,
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(main_logical_schema, col_to_k));
+
+    MapSharedShreddingFieldMeta expected_meta;
+    expected_meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}};
+    expected_meta.field_to_columns = {{0, {0}}, {1, {1}}, {2, {0}}};
+    expected_meta.num_columns = 3;
+    expected_meta.max_row_width = 2;
+
+    CheckShreddingFileSchema(main_file_path, format, expected_physical_schema,
+                             /*field_index=*/1, expected_meta, options.GetFileCompression());
+
+    // Verify main file content: id + shredded tags.
+    auto physical_type = arrow::struct_(expected_physical_schema->fields());
+    std::shared_ptr<arrow::ChunkedArray> expected_array;
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(physical_type, {R"([
+        [1, [[0, 1, -1], 10, 20, null, []]],
+        [2, [[2, -1, -1], 30, null, null, []]]
+    ])"},
+                                                                 &expected_array)
+                    .ok());
+    CheckFileContent(main_file_path, format, expected_array);
+
+    // Verify blob file exists and can be read (blob_data column).
+    auto blob_reader = OpenFormatReader(blob_file_path, "blob");
+    ASSERT_NE(blob_reader, nullptr);
 }
 
 }  // namespace paimon::test

@@ -46,9 +46,9 @@ bool MapSharedShreddingUtils::IsShreddingKeyMap(
     return map_type->key_type()->id() == arrow::Type::STRING;
 }
 
-Result<std::vector<int32_t>> MapSharedShreddingUtils::DetectShreddingColumns(
+Result<std::vector<std::string>> MapSharedShreddingUtils::DetectShreddingColumns(
     const std::shared_ptr<arrow::Schema>& schema, const CoreOptions& options) {
-    std::vector<int32_t> indices;
+    std::vector<std::string> field_names;
     for (int32_t i = 0; i < schema->num_fields(); ++i) {
         const auto& field = schema->field(i);
         if (!IsShreddingKeyMap(field->type())) {
@@ -56,23 +56,22 @@ Result<std::vector<int32_t>> MapSharedShreddingUtils::DetectShreddingColumns(
         }
         PAIMON_ASSIGN_OR_RAISE(MapStorageLayout layout, options.GetMapStorageLayout(field->name()));
         if (layout == MapStorageLayout::SHARED_SHREDDING) {
-            indices.push_back(i);
+            field_names.push_back(field->name());
         }
     }
-    return indices;
+    return field_names;
 }
 
 Result<std::shared_ptr<MapSharedShreddingContext>> MapSharedShreddingUtils::CreateShreddingContext(
     const std::shared_ptr<arrow::Schema>& schema, const CoreOptions& options) {
-    PAIMON_ASSIGN_OR_RAISE(std::vector<int32_t> shredding_indices,
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> shredding_field_names,
                            DetectShreddingColumns(schema, options));
-    if (shredding_indices.empty()) {
+    if (shredding_field_names.empty()) {
         return std::shared_ptr<MapSharedShreddingContext>();
     }
-    std::map<int32_t, int32_t> column_to_k_max;
-    PAIMON_ASSIGN_OR_RAISE(column_to_k_max,
-                           BuildColumnToNumColumns(shredding_indices, schema, options));
-    return std::make_shared<MapSharedShreddingContext>(column_to_k_max);
+    std::map<std::string, int32_t> field_to_k_max;
+    PAIMON_ASSIGN_OR_RAISE(field_to_k_max, BuildColumnToNumColumns(shredding_field_names, options));
+    return std::make_shared<MapSharedShreddingContext>(field_to_k_max);
 }
 
 // ---- Schema conversion ----
@@ -99,14 +98,14 @@ std::shared_ptr<arrow::DataType> MapSharedShreddingUtils::BuildPhysicalStructTyp
 
 Result<std::shared_ptr<arrow::Schema>> MapSharedShreddingUtils::LogicalToPhysicalSchema(
     const std::shared_ptr<arrow::Schema>& logical_schema,
-    const std::map<int32_t, int32_t>& column_to_num_columns) {
+    const std::map<std::string, int32_t>& field_to_num_columns) {
     arrow::FieldVector physical_fields;
     physical_fields.reserve(logical_schema->num_fields());
 
     for (int32_t i = 0; i < logical_schema->num_fields(); ++i) {
         const auto& field = logical_schema->field(i);
-        auto it = column_to_num_columns.find(i);
-        if (it != column_to_num_columns.end()) {
+        auto it = field_to_num_columns.find(field->name());
+        if (it != field_to_num_columns.end()) {
             auto map_type = std::static_pointer_cast<arrow::MapType>(field->type());
             auto value_type = map_type->item_type();
             bool value_nullable = map_type->item_field()->nullable();
@@ -121,17 +120,15 @@ Result<std::shared_ptr<arrow::Schema>> MapSharedShreddingUtils::LogicalToPhysica
     return arrow::schema(std::move(physical_fields));
 }
 
-Result<std::map<int32_t, int32_t>> MapSharedShreddingUtils::BuildColumnToNumColumns(
-    const std::vector<int32_t>& shredding_column_indices,
-    const std::shared_ptr<arrow::Schema>& schema, const CoreOptions& options) {
-    std::map<int32_t, int32_t> column_to_num_columns;
-    for (int32_t col_index : shredding_column_indices) {
-        const std::string& field_name = schema->field(col_index)->name();
+Result<std::map<std::string, int32_t>> MapSharedShreddingUtils::BuildColumnToNumColumns(
+    const std::vector<std::string>& shredding_field_names, const CoreOptions& options) {
+    std::map<std::string, int32_t> field_to_num_columns;
+    for (const std::string& field_name : shredding_field_names) {
         PAIMON_ASSIGN_OR_RAISE(int32_t max_columns,
                                options.GetMapSharedShreddingMaxColumns(field_name));
-        column_to_num_columns[col_index] = max_columns;
+        field_to_num_columns[field_name] = max_columns;
     }
-    return column_to_num_columns;
+    return field_to_num_columns;
 }
 
 // ---- Metadata serialization helpers ----
@@ -410,18 +407,20 @@ MapSharedShreddingUtils::BuildMetadataFinalizer(
     const std::shared_ptr<arrow::Schema>& physical_schema) {
     return [converter, compression, context,
             physical_schema]() -> Result<std::shared_ptr<arrow::Schema>> {
-        const std::vector<int32_t>& shredding_indices = converter->GetShreddingColumnIndices();
+        const std::vector<std::string>& shredding_field_names =
+            converter->GetShreddingColumnIndices();
         arrow::FieldVector updated_fields = physical_schema->fields();
-        for (int32_t logical_col_index : shredding_indices) {
-            const auto& field = physical_schema->field(logical_col_index);
+        for (const std::string& field_name : shredding_field_names) {
+            int32_t col_index = physical_schema->GetFieldIndex(field_name);
+            const auto& field = physical_schema->field(col_index);
             auto metadata = field->metadata() ? field->metadata()->Copy()
                                               : std::make_shared<arrow::KeyValueMetadata>();
             PAIMON_ASSIGN_OR_RAISE(MapSharedShreddingFieldMeta file_meta,
-                                   converter->BuildFieldMeta(logical_col_index));
+                                   converter->BuildFieldMeta(field_name));
             PAIMON_RETURN_NOT_OK(
                 MapSharedShreddingUtils::SerializeMetadata(file_meta, compression, metadata.get()));
-            updated_fields[logical_col_index] = field->WithMetadata(metadata);
-            context->ReportFileStats(logical_col_index, file_meta.max_row_width);
+            updated_fields[col_index] = field->WithMetadata(metadata);
+            context->ReportFileStats(field_name, file_meta.max_row_width);
         }
         return arrow::schema(std::move(updated_fields));
     };
