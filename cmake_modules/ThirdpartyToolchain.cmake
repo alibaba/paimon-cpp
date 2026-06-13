@@ -377,7 +377,14 @@ set(EP_COMMON_CMAKE_ARGS
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DCMAKE_CXX_FLAGS=${EP_CXX_FLAGS}
     -DCMAKE_C_FLAGS=${EP_C_FLAGS}
-    -DCMAKE_INSTALL_LIBDIR=lib)
+    -DCMAKE_INSTALL_LIBDIR=lib
+    # Prevent leaking host toolchain library/include paths into external
+    # project builds. Without these, cmake may find incompatible libraries
+    # (e.g. a partial libunwind.so from a toolchain) that cause runtime
+    # symbol lookup errors. All external project dependencies are passed
+    # explicitly via xxx_ROOT/xxx_HOME variables.
+    -DCMAKE_LIBRARY_PATH=
+    -DCMAKE_PREFIX_PATH=)
 
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.30")
     list(APPEND EP_COMMON_CMAKE_ARGS -DCMAKE_POLICY_VERSION_MINIMUM=3.5)
