@@ -157,9 +157,10 @@ class RawFileSplitReadTest : public ::testing::Test {
                 core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
                 external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
                 pool_));
-        auto split_read =
-            std::make_unique<RawFileSplitRead>(path_factory, std::move(internal_context), pool_,
-                                               CreateDefaultExecutor(/*thread_count=*/2));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Executor> executor,
+                             CreateDefaultExecutor(/*thread_count=*/2));
+        auto split_read = std::make_unique<RawFileSplitRead>(
+            path_factory, std::move(internal_context), pool_, executor);
 
         std::vector<std::unique_ptr<BatchReader>> batch_readers;
         batch_readers.reserve(data_splits.size());
@@ -402,9 +403,10 @@ TEST_F(RawFileSplitReadTest, TestEmptyPlan) {
             external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
             pool_));
 
-    auto split_read =
-        std::make_unique<RawFileSplitRead>(path_factory, std::move(internal_context), pool_,
-                                           CreateDefaultExecutor(/*thread_count=*/2));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Executor> executor,
+                         CreateDefaultExecutor(/*thread_count=*/2));
+    auto split_read = std::make_unique<RawFileSplitRead>(path_factory, std::move(internal_context),
+                                                         pool_, executor);
     DataSplitImpl::Builder builder(BinaryRowGenerator::GenerateRow({10, 0}, pool_.get()),
                                    /*bucket=*/0, /*bucket_path=*/
                                    paimon::test::GetDataDir() +
@@ -433,9 +435,10 @@ TEST_F(RawFileSplitReadTest, TestMatch) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InternalReadContext> internal_context,
                          InternalReadContext::Create(std::move(read_context), table_schema,
                                                      table_schema->Options()));
-    auto split_read =
-        std::make_unique<RawFileSplitRead>(/*path_factory=*/nullptr, std::move(internal_context),
-                                           pool_, CreateDefaultExecutor(/*thread_count=*/2));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Executor> executor,
+                         CreateDefaultExecutor(/*thread_count=*/2));
+    auto split_read = std::make_unique<RawFileSplitRead>(
+        /*path_factory=*/nullptr, std::move(internal_context), pool_, executor);
     auto create_data_split = [this](bool is_streaming,
                                     bool raw_convertible) -> std::shared_ptr<DataSplit> {
         auto meta = std::make_shared<DataFileMeta>(

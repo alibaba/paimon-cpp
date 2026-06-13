@@ -127,7 +127,7 @@ class PrefetchFileBatchReaderImplTest : public ::testing::Test,
         data_type_ = arrow::struct_(fields_);
         mock_fs_ = std::make_shared<MockFileSystem>();
         local_fs_ = std::make_shared<LocalFileSystem>();
-        executor_ = CreateDefaultExecutor(/*thread_count=*/2);
+        ASSERT_OK_AND_ASSIGN(executor_, CreateDefaultExecutor(/*thread_count=*/2));
         dir_ = ::paimon::test::UniqueTestDirectory::Create();
         ASSERT_TRUE(dir_);
     }
@@ -198,14 +198,16 @@ class PrefetchFileBatchReaderImplTest : public ::testing::Test,
         EXPECT_OK_AND_ASSIGN(std::unique_ptr<FileFormat> file_format,
                              FileFormatFactory::Get(file_format_str, {}));
         EXPECT_OK_AND_ASSIGN(auto reader_builder, file_format->CreateReaderBuilder(batch_size));
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<Executor> executor,
+                             CreateDefaultExecutor(prefetch_max_parallel_num - 1));
         EXPECT_OK_AND_ASSIGN(
             std::unique_ptr<PrefetchFileBatchReaderImpl> reader,
             PrefetchFileBatchReaderImpl::Create(
                 PathUtil::JoinPath(dir_->Str(), "file." + file_format->Identifier()),
                 reader_builder.get(), local_fs_, prefetch_max_parallel_num, batch_size,
                 prefetch_max_parallel_num * 2, /*enable_adaptive_prefetch_strategy=*/false,
-                CreateDefaultExecutor(prefetch_max_parallel_num - 1),
-                /*initialize_read_ranges=*/false, cache_mode, CacheConfig(), GetDefaultPool()));
+                executor, /*initialize_read_ranges=*/false, cache_mode, CacheConfig(),
+                GetDefaultPool()));
         std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
         auto arrow_status = arrow::ExportSchema(*read_schema, c_schema.get());
         EXPECT_TRUE(arrow_status.ok());

@@ -74,7 +74,7 @@ AbstractFileStoreWrite::AbstractFileStoreWrite(
       dv_maintainer_factory_(dv_maintainer_factory),
       io_manager_(io_manager),
       options_(options),
-      compact_executor_(CreateDefaultExecutor(4)),
+      compact_executor_(CreateDefaultExecutor()),
       compaction_metrics_(std::make_shared<CompactionMetrics>()),
       ignore_previous_files_(ignore_previous_files),
       is_streaming_mode_(is_streaming_mode),
