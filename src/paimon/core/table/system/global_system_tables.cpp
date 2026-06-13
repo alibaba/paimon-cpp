@@ -188,7 +188,7 @@ Result<std::vector<GenericRow>> AllTableOptionsSystemTable::BuildRows() const {
             if (!schema_result.ok()) {
                 continue;  // skip tables with errors (e.g. dropped concurrently)
             }
-            auto schema_ptr = schema_result.ValueUnsafe();
+            auto schema_ptr = schema_result.value();
             auto data_schema = std::dynamic_pointer_cast<DataSchema>(schema_ptr);
             if (!data_schema) {
                 continue;
@@ -247,7 +247,7 @@ Result<std::vector<GenericRow>> TablesSystemTable::BuildRows() const {
             if (!schema_result.ok()) {
                 continue;
             }
-            auto schema_ptr = schema_result.ValueUnsafe();
+            auto schema_ptr = schema_result.value();
             auto data_schema = std::dynamic_pointer_cast<DataSchema>(schema_ptr);
             if (!data_schema) {
                 continue;
@@ -282,8 +282,8 @@ Result<std::vector<GenericRow>> TablesSystemTable::BuildRows() const {
             SnapshotManager snapshot_manager(context_.fs, table_path,
                                              BranchManager::DEFAULT_MAIN_BRANCH);
             auto snapshot_result = snapshot_manager.LatestSnapshot();
-            if (snapshot_result.ok() && snapshot_result.ValueUnsafe()) {
-                const auto& snapshot = *snapshot_result.ValueUnsafe();
+            if (snapshot_result.ok() && snapshot_result.value()) {
+                const auto& snapshot = *snapshot_result.value();
                 auto total_count = snapshot.TotalRecordCount();
                 row.SetField(5, total_count ? VariantType(total_count.value())
                                             : VariantType(NullType()));
