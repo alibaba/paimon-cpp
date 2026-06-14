@@ -349,6 +349,23 @@ pub(crate) mod test_support {
         (dir, backend)
     }
 
+    /// Build mock callbacks (+ a backend clone) without wrapping them in a
+    /// directory, for tests that drive the FFI entry points directly.
+    pub(crate) fn make_mock_callbacks(data: Vec<u8>) -> (PaimonStreamCallbacks, Arc<MockBackend>) {
+        let backend = Arc::new(MockBackend {
+            data,
+            read_count: AtomicUsize::new(0),
+            release_count: AtomicUsize::new(0),
+        });
+        let ctx_ptr = Arc::into_raw(backend.clone()) as *mut c_void;
+        let cb = PaimonStreamCallbacks {
+            ctx: ctx_ptr,
+            read_at: mock_read_at,
+            release: mock_release,
+        };
+        (cb, backend)
+    }
+
     /// Parse a packed archive blob (BE, no version header, matching
     /// `writer::pack_index_dir`) and build a mock-backed directory. Used by
     /// `reader.rs::tests` since writer.finish currently still returns a Vec<u8>.

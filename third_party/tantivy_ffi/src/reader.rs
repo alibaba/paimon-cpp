@@ -656,9 +656,28 @@ impl Collector for AllScoredCollector {
 /// * `dict_dir_cstr` — paimon_jieba dictionary directory
 /// * `out` — receives the reader handle on success
 ///
+/// Releases an FFI stream ctx on drop unless disarmed. Gives
+/// `paimon_tantivy_reader_new_streaming` a single ownership rule: Rust owns ctx
+/// from entry and releases it on any error before the directory takes over.
+struct StreamCtxReleaseGuard {
+    release: extern "C" fn(*mut std::os::raw::c_void),
+    ctx: *mut std::os::raw::c_void,
+    armed: bool,
+}
+
+impl Drop for StreamCtxReleaseGuard {
+    fn drop(&mut self) {
+        if self.armed {
+            (self.release)(self.ctx);
+        }
+    }
+}
+
 /// # Safety
-/// All pointer args must be valid for the duration of the call; ctx lifetime
-/// extends until `callbacks.release` is invoked (when reader handle is freed).
+/// All pointer args must be valid for the duration of the call. Ownership of
+/// `callbacks.ctx` transfers to Rust on entry: on any error this function
+/// releases it, and on success it lives until the reader handle is freed. The
+/// caller must NOT release ctx itself after calling this function.
 #[no_mangle]
 pub unsafe extern "C" fn paimon_tantivy_reader_new_streaming(
     file_names: *const *const c_char,
@@ -671,10 +690,18 @@ pub unsafe extern "C" fn paimon_tantivy_reader_new_streaming(
     dict_dir_cstr: *const c_char,
     out: *mut *mut PaimonTantivyReader,
 ) -> PaimonTantivyStatus {
+    // Single, uniform ownership rule: Rust owns ctx from entry. This guard
+    // releases it on every error path until ownership moves into the directory
+    // (which then releases on its own drop). Prevents the C++ caller and Rust
+    // from both releasing the same ctx on the post-directory failure path.
+    let mut ctx_guard = StreamCtxReleaseGuard {
+        release: callbacks.release,
+        ctx: callbacks.ctx,
+        armed: true,
+    };
+
     if mode_cstr.is_null() || dict_dir_cstr.is_null() || out.is_null() {
         set_last_error("paimon_tantivy_reader_new_streaming: null mandatory argument");
-        // NOTE: we cannot call callbacks.release here because we don't know
-        // if the caller populated it yet. Caller must manage ctx on failure.
         return PaimonTantivyStatus::InvalidArgument;
     }
     if file_count > 0
@@ -729,7 +756,9 @@ pub unsafe extern "C" fn paimon_tantivy_reader_new_streaming(
         entries.push((name, offset, length));
     }
 
-    // Build callback directory (ctx ownership transfers here; release fires on drop).
+    // Ownership of ctx transfers to the directory from here on (it releases on
+    // its own drop, whether it fails below or lives inside the returned reader).
+    ctx_guard.armed = false;
     let directory = PaimonCallbackDirectory::new(entries, callbacks);
 
     match PaimonTantivyReader::new(directory, mode, with_position, Path::new(dict_dir)) {
@@ -883,9 +912,41 @@ pub unsafe extern "C" fn paimon_tantivy_reader_free(reader: *mut PaimonTantivyRe
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::callback_directory::test_support::build_directory_from_archive;
+    use crate::callback_directory::test_support::{build_directory_from_archive, make_mock_callbacks};
     use crate::writer::PaimonTantivyWriter;
     use std::path::PathBuf;
+
+    // When PaimonTantivyReader::new fails *after* the callback directory (and
+    // thus ctx) is constructed, Rust must release ctx exactly once — never zero
+    // (leak) and never twice (the C++ caller no longer releases on failure, so a
+    // second release would be a double-free). file_count=0 yields an index with
+    // no meta.json, which fails to open after the directory is built.
+    #[test]
+    fn reader_new_streaming_releases_ctx_once_on_failure() {
+        let (cb, backend) = make_mock_callbacks(Vec::new());
+        let mode = std::ffi::CString::new("mix").unwrap();
+        let dict = std::ffi::CString::new("").unwrap();
+        let mut out: *mut PaimonTantivyReader = std::ptr::null_mut();
+        let st = unsafe {
+            paimon_tantivy_reader_new_streaming(
+                std::ptr::null(),
+                std::ptr::null(),
+                std::ptr::null(),
+                0,
+                cb,
+                mode.as_ptr(),
+                true,
+                dict.as_ptr(),
+                &mut out,
+            )
+        };
+        assert!(!matches!(st, PaimonTantivyStatus::Ok));
+        assert!(out.is_null());
+        assert_eq!(
+            backend.release_count.load(std::sync::atomic::Ordering::SeqCst),
+            1
+        );
+    }
 
     fn dict_dir() -> PathBuf {
         std::env::var("PAIMON_JIEBA_DICT_DIR")

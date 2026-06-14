@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * tantivy-fulltext Stage 1 smoke test: prove the Rust FFI bridge is callable from C++.
+ * tantivy-fulltext smoke test: prove the Rust FFI bridge is callable from C++.
  * Intentionally minimal — exercises only paimon_tantivy_version().
  * Later stages add real functional tests.
  */
@@ -34,9 +34,9 @@ TEST(TantivySmoke, VersionIsReachable) {
     ASSERT_NE(version, nullptr) << "paimon_tantivy_version returned null";
 
     const std::string v(version);
-    EXPECT_FALSE(v.empty());
+    ASSERT_FALSE(v.empty());
     // build.rs pins version from Cargo.toml (CARGO_PKG_VERSION), semver "x.y.z"
-    EXPECT_NE(v.find('.'), std::string::npos) << "expected semver, got: " << v;
+    ASSERT_NE(v.find('.'), std::string::npos) << "expected semver, got: " << v;
 }
 
 TEST(TantivySmoke, VersionPointerIsStable) {
@@ -46,7 +46,7 @@ TEST(TantivySmoke, VersionPointerIsStable) {
     const char* v2 = paimon_tantivy_version();
     ASSERT_NE(v1, nullptr);
     ASSERT_NE(v2, nullptr);
-    EXPECT_EQ(std::strcmp(v1, v2), 0);
+    ASSERT_EQ(std::strcmp(v1, v2), 0);
 }
 
 }  // namespace paimon::tantivy

@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Stage 6 reader test: write an index via TantivyGlobalIndexWriter, persist
+ * Reader test: write an index via TantivyGlobalIndexWriter, persist
  * it, then run all 5 FullTextSearch SearchTypes through TantivyGlobalIndexReader
  * and assert matching local row ids. Mirrors the no-limit / no-pre_filter
  * subset of paimon-lucene-index-test's TestSimple/TestSimpleChinese cases.
  *
- * limit / pre_filter coverage lands in Stage 7 (paimon-tantivy-filter-limit-test).
+ * limit / pre_filter coverage lives in paimon-tantivy-filter-limit-test.
  */
 
 #include <memory>
@@ -71,10 +71,6 @@ class FakeIndexPathFactory : public IndexPathFactory {
 
 class TantivyReaderTest : public ::testing::Test {
  public:
-    void SetUp() override {
-        setenv(kJiebaDictDirEnv, JIEBA_TEST_DICT_DIR, /*overwrite=*/1);
-    }
-
     /// Write `array` to a fresh test directory and return (file_manager, meta).
     std::pair<std::shared_ptr<GlobalIndexFileManager>, GlobalIndexIOMeta> WriteAndOpen(
         const std::shared_ptr<arrow::Array>& array,
@@ -100,7 +96,9 @@ class TantivyReaderTest : public ::testing::Test {
         ::ArrowArray c_array;
         EXPECT_TRUE(arrow::ExportArray(*array, &c_array).ok());
         std::vector<int64_t> relative_row_ids(array->length());
-        for (int64_t i = 0; i < array->length(); ++i) relative_row_ids[i] = i;
+        for (int64_t i = 0; i < array->length(); ++i) {
+            relative_row_ids[i] = i;
+        }
         EXPECT_TRUE(writer->AddBatch(&c_array, std::move(relative_row_ids)).ok());
         auto metas_res = writer->Finish();
         EXPECT_TRUE(metas_res.ok()) << metas_res.status().ToString();
@@ -152,11 +150,11 @@ TEST_F(TantivyReaderTest, EnglishMatchAllAndAny) {
         return BitmapToVec(res.value());
     };
 
-    EXPECT_EQ(run("document", FullTextSearch::SearchType::MATCH_ALL),
+    ASSERT_EQ(run("document", FullTextSearch::SearchType::MATCH_ALL),
               (std::vector<int64_t>{0, 1, 2}));
-    EXPECT_EQ(run("test document", FullTextSearch::SearchType::MATCH_ALL),
+    ASSERT_EQ(run("test document", FullTextSearch::SearchType::MATCH_ALL),
               (std::vector<int64_t>{0, 2}));
-    EXPECT_EQ(run("test new", FullTextSearch::SearchType::MATCH_ANY),
+    ASSERT_EQ(run("test new", FullTextSearch::SearchType::MATCH_ANY),
               (std::vector<int64_t>{0, 1, 2}));
 }
 
@@ -180,10 +178,10 @@ TEST_F(TantivyReaderTest, EnglishPhrasePrefixWildcard) {
     };
 
     // "test document" is consecutive only in row 0 ("an test document.")
-    EXPECT_EQ(run("test document", FullTextSearch::SearchType::PHRASE), (std::vector<int64_t>{0}));
-    EXPECT_EQ(run("unorder", FullTextSearch::SearchType::PREFIX), (std::vector<int64_t>{3}));
-    EXPECT_EQ(run("*order*", FullTextSearch::SearchType::WILDCARD), (std::vector<int64_t>{3}));
-    EXPECT_EQ(run("*or*er*", FullTextSearch::SearchType::WILDCARD), (std::vector<int64_t>{3}));
+    ASSERT_EQ(run("test document", FullTextSearch::SearchType::PHRASE), (std::vector<int64_t>{0}));
+    ASSERT_EQ(run("unorder", FullTextSearch::SearchType::PREFIX), (std::vector<int64_t>{3}));
+    ASSERT_EQ(run("*order*", FullTextSearch::SearchType::WILDCARD), (std::vector<int64_t>{3}));
+    ASSERT_EQ(run("*or*er*", FullTextSearch::SearchType::WILDCARD), (std::vector<int64_t>{3}));
 }
 
 TEST_F(TantivyReaderTest, ChineseQueryMode) {
@@ -210,11 +208,11 @@ TEST_F(TantivyReaderTest, ChineseQueryMode) {
         return BitmapToVec(res.value());
     };
 
-    EXPECT_EQ(run("模块", FullTextSearch::SearchType::MATCH_ALL), (std::vector<int64_t>{0, 2}));
-    EXPECT_EQ(run("模块技术", FullTextSearch::SearchType::MATCH_ALL), (std::vector<int64_t>{0}));
-    EXPECT_EQ(run("模块技术", FullTextSearch::SearchType::MATCH_ANY),
+    ASSERT_EQ(run("模块", FullTextSearch::SearchType::MATCH_ALL), (std::vector<int64_t>{0, 2}));
+    ASSERT_EQ(run("模块技术", FullTextSearch::SearchType::MATCH_ALL), (std::vector<int64_t>{0}));
+    ASSERT_EQ(run("模块技术", FullTextSearch::SearchType::MATCH_ANY),
               (std::vector<int64_t>{0, 1, 2, 3}));
-    EXPECT_EQ(run("发展方向", FullTextSearch::SearchType::PHRASE), (std::vector<int64_t>{4}));
+    ASSERT_EQ(run("发展方向", FullTextSearch::SearchType::PHRASE), (std::vector<int64_t>{4}));
 }
 
 }  // namespace paimon::tantivy::test

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Stage 7 test: cover the limit + pre_filter + scoring pathway. Uses the same
+ * Cover the limit + pre_filter + scoring pathway. Uses the same
  * write→read flow as paimon-tantivy-reader-test, but verifies that:
  *   - A `limit` produces a `BitmapScoredGlobalIndexResult` with non-empty
  *     scores ordered such that bitmap iteration order aligns with the score
@@ -75,10 +75,6 @@ class FakeIndexPathFactory : public IndexPathFactory {
 
 class TantivyFilterLimitTest : public ::testing::Test {
  public:
-    void SetUp() override {
-        setenv(kJiebaDictDirEnv, JIEBA_TEST_DICT_DIR, /*overwrite=*/1);
-    }
-
     std::pair<std::shared_ptr<GlobalIndexFileManager>, GlobalIndexIOMeta> WriteAndOpen(
         const std::shared_ptr<arrow::Array>& array,
         const std::map<std::string, std::string>& options) {
@@ -96,7 +92,9 @@ class TantivyFilterLimitTest : public ::testing::Test {
         ::ArrowArray c_array;
         EXPECT_TRUE(arrow::ExportArray(*array, &c_array).ok());
         std::vector<int64_t> relative_row_ids(array->length());
-        for (int64_t i = 0; i < array->length(); ++i) relative_row_ids[i] = i;
+        for (int64_t i = 0; i < array->length(); ++i) {
+            relative_row_ids[i] = i;
+        }
         EXPECT_TRUE(writer->AddBatch(&c_array, std::move(relative_row_ids)).ok());
         auto metas_res = writer->Finish();
         EXPECT_TRUE(metas_res.ok()) << metas_res.status().ToString();
@@ -145,11 +143,11 @@ TEST_F(TantivyFilterLimitTest, LimitProducesScoredResultTopN) {
     ASSERT_TRUE(scored) << "expected BitmapScoredGlobalIndexResult";
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, scored->GetBitmap());
     auto ids = BitmapToVec(*bitmap);
-    EXPECT_EQ(ids, (std::vector<int64_t>{1, 2}));
-    EXPECT_EQ(scored->GetScores().size(), 2u);
+    ASSERT_EQ(ids, (std::vector<int64_t>{1, 2}));
+    ASSERT_EQ(scored->GetScores().size(), 2u);
     // Per-doc scores must be > 0 and present in iteration (doc-id) order.
     for (auto s : scored->GetScores()) {
-        EXPECT_GT(s, 0.0f);
+        ASSERT_GT(s, 0.0f);
     }
 }
 
@@ -166,11 +164,11 @@ TEST_F(TantivyFilterLimitTest, NoLimitReturnsBitmapResult) {
         /*pre_filter=*/std::nullopt));
     ASSERT_TRUE(res.ok()) << res.status().ToString();
     // No limit ⇒ NOT a BitmapScoredGlobalIndexResult; just BitmapGlobalIndexResult.
-    EXPECT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value()));
+    ASSERT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value()));
     auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res.value());
     ASSERT_TRUE(plain);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, plain->GetBitmap());
-    EXPECT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{0, 1}));
+    ASSERT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{0, 1}));
 }
 
 TEST_F(TantivyFilterLimitTest, PreFilterIntersectsWithoutLimit) {
@@ -188,7 +186,7 @@ TEST_F(TantivyFilterLimitTest, PreFilterIntersectsWithoutLimit) {
     auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res.value());
     ASSERT_TRUE(plain);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, plain->GetBitmap());
-    EXPECT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{0, 2}));
+    ASSERT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{0, 2}));
 }
 
 TEST_F(TantivyFilterLimitTest, PreFilterAppliedBeforeLimit) {
@@ -212,8 +210,8 @@ TEST_F(TantivyFilterLimitTest, PreFilterAppliedBeforeLimit) {
     auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value());
     ASSERT_TRUE(scored);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, scored->GetBitmap());
-    EXPECT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{1}));
-    EXPECT_EQ(scored->GetScores().size(), 1u);
+    ASSERT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{1}));
+    ASSERT_EQ(scored->GetScores().size(), 1u);
 }
 
 TEST_F(TantivyFilterLimitTest, EmptyPreFilterReturnsEmpty) {
@@ -232,7 +230,7 @@ TEST_F(TantivyFilterLimitTest, EmptyPreFilterReturnsEmpty) {
     auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res.value());
     ASSERT_TRUE(plain);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, plain->GetBitmap());
-    EXPECT_TRUE(bitmap->IsEmpty());
+    ASSERT_TRUE(bitmap->IsEmpty());
 }
 
 TEST_F(TantivyFilterLimitTest, LimitGreaterThanMatchesReturnsAll) {
@@ -252,15 +250,15 @@ TEST_F(TantivyFilterLimitTest, LimitGreaterThanMatchesReturnsAll) {
     auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value());
     ASSERT_TRUE(scored);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, scored->GetBitmap());
-    EXPECT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{0, 1}));
-    EXPECT_EQ(scored->GetScores().size(), 2u);
+    ASSERT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{0, 1}));
+    ASSERT_EQ(scored->GetScores().size(), 2u);
 }
 
 // ===========================================================================
 // v0.2: with_score × limit 4-path matrix guards
 // ===========================================================================
 // Decouple with_score from limit. The four combinations must each map to the
-// correct concrete result type and content. See docs/dev/tantivy_bm25_score_contract.md §4.
+// correct concrete result type and content.
 
 // Path A: with_score=false, limit=None → BitmapGlobalIndexResult, all rows, no score.
 TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitNoneAllRowsNoScore) {
@@ -278,11 +276,11 @@ TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitNoneAllRowsNoScore) {
     auto res = reader->VisitFullTextSearch(fts);
     ASSERT_TRUE(res.ok()) << res.status().ToString();
     // Must NOT be scored.
-    EXPECT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value()));
+    ASSERT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value()));
     auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res.value());
     ASSERT_TRUE(plain);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, plain->GetBitmap());
-    EXPECT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{0, 1, 2}));
+    ASSERT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{0, 1, 2}));
 }
 
 // Path B: with_score=false, limit=N → BitmapGlobalIndexResult, any N matches,
@@ -304,17 +302,17 @@ TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitNAnyNNoScore) {
     auto res = reader->VisitFullTextSearch(fts);
     ASSERT_TRUE(res.ok()) << res.status().ToString();
     // Must NOT be scored.
-    EXPECT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value()));
+    ASSERT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value()));
     auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res.value());
     ASSERT_TRUE(plain);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, plain->GetBitmap());
     // Only cardinality matters — selection order is arbitrary and depends on
     // tantivy's posting iteration; the two returned row_ids must each be one
     // of the three input docs.
-    EXPECT_EQ(bitmap->Cardinality(), 2u);
+    ASSERT_EQ(bitmap->Cardinality(), 2u);
     auto vec = BitmapToVec(*bitmap);
     for (auto id : vec) {
-        EXPECT_TRUE(id == 0 || id == 1 || id == 2);
+        ASSERT_TRUE(id == 0 || id == 1 || id == 2);
     }
 }
 
@@ -337,11 +335,11 @@ TEST_F(TantivyFilterLimitTest, WithScoreTrueLimitNoneAllRowsWithScore) {
     auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value());
     ASSERT_TRUE(scored) << "with_score=true must produce BitmapScoredGlobalIndexResult";
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, scored->GetBitmap());
-    EXPECT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{0, 1, 2}));
+    ASSERT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{0, 1, 2}));
     // All 3 docs have scores; sizes must match.
-    EXPECT_EQ(scored->GetScores().size(), 3u);
+    ASSERT_EQ(scored->GetScores().size(), 3u);
     for (auto s : scored->GetScores()) {
-        EXPECT_GT(s, 0.0f);
+        ASSERT_GT(s, 0.0f);
     }
 }
 
@@ -367,9 +365,9 @@ TEST_F(TantivyFilterLimitTest, WithScoreTrueLimitNTopNWithScore) {
     auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value());
     ASSERT_TRUE(scored);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, scored->GetBitmap());
-    EXPECT_EQ(bitmap->Cardinality(), 2u);
-    EXPECT_TRUE(bitmap->Contains(1));  // highest TF must be included
-    EXPECT_EQ(scored->GetScores().size(), 2u);
+    ASSERT_EQ(bitmap->Cardinality(), 2u);
+    ASSERT_TRUE(bitmap->Contains(1));  // highest TF must be included
+    ASSERT_EQ(scored->GetScores().size(), 2u);
 }
 
 // Migration guard: when caller omits `with_score`, the default is `false` —
@@ -391,7 +389,7 @@ TEST_F(TantivyFilterLimitTest, WithScoreDefaultIsFalse) {
     ASSERT_TRUE(res.ok()) << res.status().ToString();
     // v0.2 contract: with_score defaults to false, so even with limit set the
     // result is BitmapGlobalIndexResult (NOT BitmapScoredGlobalIndexResult).
-    EXPECT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value()))
+    ASSERT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value()))
         << "v0.2: limit alone must NOT imply scoring; with_score=true is required";
     auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res.value());
     ASSERT_TRUE(plain);

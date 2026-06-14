@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Stage 8 integration test: end-to-end via TantivyGlobalIndex (writer + reader),
+ * Integration test: end-to-end via TantivyGlobalIndex (writer + reader),
  * mirroring src/paimon/global_index/lucene/lucene_global_index_test.cpp.
  *
  * Validates parity with lucene-fts on:
@@ -21,7 +21,7 @@
  *   - meta JSON shape: option-prefix-stripped key/value pairs
  *   - 5 SearchTypes against an English corpus
  *   - 5 SearchTypes against a Chinese corpus (jieba "query" mode)
- *   - limit + pre_filter + scoring (Stage 7) interactions
+ *   - limit + pre_filter + scoring interactions
  *   - factory registration: looking up "tantivy-fulltext" produces a tantivy indexer
  */
 
@@ -79,10 +79,6 @@ class FakeIndexPathFactory : public IndexPathFactory {
 
 class TantivyGlobalIndexIntegrationTest : public ::testing::Test {
  public:
-    void SetUp() override {
-        setenv(kJiebaDictDirEnv, JIEBA_TEST_DICT_DIR, /*overwrite=*/1);
-    }
-
     std::unique_ptr<::ArrowSchema> CreateArrowSchema(
         const std::shared_ptr<arrow::DataType>& data_type) const {
         auto c_schema = std::make_unique<::ArrowSchema>();
@@ -104,7 +100,9 @@ class TantivyGlobalIndexIntegrationTest : public ::testing::Test {
         ::ArrowArray c_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &c_array));
         std::vector<int64_t> relative_row_ids(array->length());
-        for (int64_t i = 0; i < array->length(); ++i) relative_row_ids[i] = i;
+        for (int64_t i = 0; i < array->length(); ++i) {
+            relative_row_ids[i] = i;
+        }
         PAIMON_RETURN_NOT_OK(w->AddBatch(&c_array, std::move(relative_row_ids)));
         PAIMON_ASSIGN_OR_RAISE(auto metas, w->Finish());
         EXPECT_EQ(metas.size(), 1u);
@@ -166,13 +164,13 @@ TEST_F(TantivyGlobalIndexIntegrationTest, EnglishCorpus) {
     ])")
                      .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto meta, WriteGlobalIndex(root, data_type_, options, array, 3));
-    EXPECT_EQ(std::string(meta.metadata->data(), meta.metadata->size()),
+    ASSERT_EQ(std::string(meta.metadata->data(), meta.metadata->size()),
               R"({"write.omit-term-freq-and-position":"false"})");
 
     ASSERT_OK_AND_ASSIGN(auto reader, CreateReader(root, data_type_, options, meta));
     auto t_reader = std::dynamic_pointer_cast<TantivyGlobalIndexReader>(reader);
     ASSERT_TRUE(t_reader);
-    EXPECT_EQ(t_reader->GetIndexType(), std::string(kIdentifier));
+    ASSERT_EQ(t_reader->GetIndexType(), std::string(kIdentifier));
 
     auto run = [&](const std::string& q, FullTextSearch::SearchType t,
                    std::optional<int32_t> limit = std::nullopt,
@@ -236,7 +234,7 @@ TEST_F(TantivyGlobalIndexIntegrationTest, ChineseCorpus) {
     ])")
                      .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto meta, WriteGlobalIndex(root, data_type_, options, array, 4));
-    EXPECT_EQ(
+    ASSERT_EQ(
         std::string(meta.metadata->data(), meta.metadata->size()),
         R"({"jieba.tokenize-mode":"query","tantivy.write.tokenizer":"paimon_jieba","write.omit-term-freq-and-position":"false"})");
 

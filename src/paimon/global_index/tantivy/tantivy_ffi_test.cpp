@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Stage 2: FFI common layer tests — error/buffer/log behave as documented.
- * Does NOT build on real index yet (that's Stage 4+).
+ * FFI common layer tests — error/buffer/log behave as documented.
+ * Does NOT build on a real index.
  */
 
 #include <atomic>
@@ -47,14 +47,14 @@ TEST(TantivyFfiError, LastErrorIsNeverNull) {
         child_ok.store(p != nullptr && p[0] == '\0');
     });
     t.join();
-    EXPECT_TRUE(child_ok.load());
+    ASSERT_TRUE(child_ok.load());
 }
 
 // ------------------------- status translation -------------------------
 
 TEST(TantivyFfiStatus, OkTranslates) {
     Status s = FfiStatusToStatus(PaimonTantivyStatus::PAIMON_TANTIVY_STATUS_OK);
-    EXPECT_TRUE(s.ok()) << s.ToString();
+    ASSERT_TRUE(s.ok()) << s.ToString();
 }
 
 TEST(TantivyFfiStatus, ErrorCodeNamesShowUp) {
@@ -72,8 +72,8 @@ TEST(TantivyFfiStatus, ErrorCodeNamesShowUp) {
     };
     for (const auto& c : cases) {
         Status s = FfiStatusToStatus(c.code);
-        EXPECT_FALSE(s.ok());
-        EXPECT_NE(s.ToString().find(c.expected_substr), std::string::npos)
+        ASSERT_FALSE(s.ok());
+        ASSERT_NE(s.ToString().find(c.expected_substr), std::string::npos)
             << "got: " << s.ToString();
     }
 }
@@ -82,8 +82,8 @@ TEST(TantivyFfiStatus, ErrorCodeNamesShowUp) {
 
 TEST(TantivyFfiBuffer, EmptyBufferGuard) {
     BufferGuard g;
-    EXPECT_EQ(g.size(), 0u);
-    EXPECT_EQ(g.data(), nullptr);
+    ASSERT_EQ(g.size(), 0u);
+    ASSERT_EQ(g.data(), nullptr);
     // Destructor must accept empty buffer
 }
 
@@ -96,7 +96,7 @@ TEST(TantivyFfiBuffer, EmptyBufferGuard) {
 TEST(TantivyFfiBuffer, StressAllocFree) {
     for (int i = 0; i < 1000; ++i) {
         BufferGuard g;
-        // We don't have a way to populate the buffer from C++ in Stage 2;
+        // We don't have a way to populate the buffer from C++ here;
         // this just exercises empty construction + destruction path.
         (void)g;
     }
@@ -132,7 +132,7 @@ TEST(TantivyFfiLog, InstallBridgeThenUninstall) {
 TEST(TantivyFfi, VersionReachable) {
     const char* v = paimon_tantivy_version();
     ASSERT_NE(v, nullptr);
-    EXPECT_GT(std::strlen(v), 0u);
+    ASSERT_GT(std::strlen(v), 0u);
 }
 
 }  // namespace paimon::tantivy

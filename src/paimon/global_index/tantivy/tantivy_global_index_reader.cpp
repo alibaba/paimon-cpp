@@ -96,8 +96,10 @@ Result<std::shared_ptr<TantivyGlobalIndexReader>> TantivyGlobalIndexReader::Crea
                            file_reader->GetInputStream(io_meta.file_path));
     PAIMON_ASSIGN_OR_RAISE(ArchiveLayout layout, ArchiveLayout::Parse(stream.get()));
 
-    // Transfer stream ownership to a heap-allocated StreamCtx; Rust will
-    // `paimon_cpp_stream_release(ctx)` on reader drop, which `delete`s it.
+    // Transfer stream ownership to a heap-allocated StreamCtx. Ownership passes
+    // to Rust as soon as paimon_tantivy_reader_new_streaming is called: Rust
+    // `paimon_cpp_stream_release(ctx)`s it on any failure and on reader drop, so
+    // C++ must NOT release it after that call.
     auto* stream_ctx = new StreamCtx{std::move(stream), {}};
     PaimonStreamCallbacks callbacks{
         static_cast<void*>(stream_ctx),
@@ -118,9 +120,8 @@ Result<std::shared_ptr<TantivyGlobalIndexReader>> TantivyGlobalIndexReader::Crea
         tokenize_mode.c_str(),
         /*with_position=*/!omit_term_freq_and_positions, dict_dir.c_str(), &raw);
     if (st != PAIMON_TANTIVY_STATUS_OK) {
-        // On failure, Rust did NOT take ownership of ctx (FFI contract):
-        // release it here so the stream doesn't leak.
-        paimon_cpp_stream_release(stream_ctx);
+        // Rust already released stream_ctx on the failure path; do not release
+        // it again here (that would double-free the StreamCtx).
         PAIMON_TANTIVY_RETURN_NOT_OK(st);
     }
     return std::shared_ptr<TantivyGlobalIndexReader>(

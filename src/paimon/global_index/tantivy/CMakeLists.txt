@@ -20,6 +20,7 @@ if(NOT PAIMON_ENABLE_TANTIVY)
 endif()
 
 set(PAIMON_TANTIVY_SUPPORT_SRCS
+    tantivy_defs.cpp
     tantivy_ffi_log.cpp
     tantivy_archive_layout.cpp
     tantivy_stream_ctx.cpp
@@ -47,6 +48,13 @@ add_paimon_lib(paimon_tantivy_support
 # (cbindgen-generated header path). The objlib in add_paimon_lib doesn't link
 # against deps,so its compile step misses include dirs.Wire them explicitly.
 target_link_libraries(paimon_tantivy_support_objlib PUBLIC paimon_tantivy_ffi)
+
+# In test builds, bake the jieba dict dir into GetJiebaDictionaryDirFromEnv so
+# tests don't have to setenv() process-wide state. Mirrors the lucene module.
+if(PAIMON_BUILD_TESTS)
+    target_compile_definitions(paimon_tantivy_support_objlib
+                               PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
+endif()
 
 if(PAIMON_BUILD_TESTS)
     add_paimon_test(tantivy_smoke_test

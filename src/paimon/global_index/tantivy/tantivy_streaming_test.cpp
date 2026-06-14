@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * K4 streaming test: V3 Callback Directory + W1 streaming writer end-to-end.
+ * Streaming test: Callback Directory + streaming writer end-to-end.
  *
  * Coverage:
  *   1. ParseArchiveHeaderFuzz — malformed header bytes rejected cleanly
@@ -22,7 +22,7 @@
  *   3. ConcurrentCreateAndDropReaders — 10 threads each open/query/close their
  *      own reader on the same archive; no leaks, release exactly-once per reader
  *   4. StreamingBenchmarkLog — builds a medium index, prints RSS/timing to
- *      stderr for baseline comparison (execute.md archival)
+ *      stderr for baseline comparison
  *
  * We don't duplicate tests already covered by the Rust unit tests
  * (callback_directory::tests::* for Directory semantics, writer::tests::
@@ -98,10 +98,6 @@ struct WriteResult {
 
 class StreamingTestFixture : public ::testing::Test {
  public:
-    void SetUp() override {
-        setenv(kJiebaDictDirEnv, JIEBA_TEST_DICT_DIR, /*overwrite=*/1);
-    }
-
     WriteResult BuildArchive(std::size_t n_docs,
                              const std::string& text_template = "apple banana cherry {}") {
         auto root_dir = paimon::test::UniqueTestDirectory::Create();
@@ -131,7 +127,9 @@ class StreamingTestFixture : public ::testing::Test {
         ::ArrowArray c_array;
         EXPECT_TRUE(arrow::ExportArray(*struct_array, &c_array).ok());
         std::vector<int64_t> relative_row_ids(struct_array->length());
-        for (int64_t i = 0; i < struct_array->length(); ++i) relative_row_ids[i] = i;
+        for (int64_t i = 0; i < struct_array->length(); ++i) {
+            relative_row_ids[i] = i;
+        }
         EXPECT_TRUE(w->AddBatch(&c_array, std::move(relative_row_ids)).ok());
         auto metas = w->Finish().value();
         EXPECT_EQ(metas.size(), 1u);
@@ -176,7 +174,7 @@ TEST(ParseArchiveHeaderFuzz, TruncatedHeader) {
     std::string bytes = "\x00\x00";
     ByteArrayInputStream in(bytes.data(), bytes.size());
     auto r = ArchiveLayout::Parse(&in);
-    EXPECT_FALSE(r.ok()) << "expected failure on truncated header";
+    ASSERT_FALSE(r.ok()) << "expected failure on truncated header";
 }
 
 TEST(ParseArchiveHeaderFuzz, NegativeFileCount) {
@@ -186,7 +184,7 @@ TEST(ParseArchiveHeaderFuzz, NegativeFileCount) {
     ByteArrayInputStream in(bytes, 4);
     auto r = ArchiveLayout::Parse(&in);
     ASSERT_FALSE(r.ok());
-    EXPECT_NE(r.status().message().find("bad file_count"), std::string::npos)
+    ASSERT_NE(r.status().message().find("bad file_count"), std::string::npos)
         << r.status().ToString();
 }
 
@@ -203,7 +201,7 @@ TEST(ParseArchiveHeaderFuzz, NameLenOutOfRange) {
     ByteArrayInputStream in(bytes, 8);
     auto r = ArchiveLayout::Parse(&in);
     ASSERT_FALSE(r.ok());
-    EXPECT_NE(r.status().message().find("bad name_len"), std::string::npos)
+    ASSERT_NE(r.status().message().find("bad name_len"), std::string::npos)
         << r.status().ToString();
 }
 
@@ -214,7 +212,7 @@ TEST(ParseArchiveHeaderFuzz, ZeroFileCountSucceeds) {
     ByteArrayInputStream in(bytes, 4);
     auto r = ArchiveLayout::Parse(&in);
     ASSERT_TRUE(r.ok()) << r.status().ToString();
-    EXPECT_EQ(r.value().count, 0u);
+    ASSERT_EQ(r.value().count, 0u);
 }
 
 TEST(ParseArchiveHeaderFuzz, PayloadLenNegative) {
@@ -245,7 +243,7 @@ TEST(ParseArchiveHeaderFuzz, PayloadLenNegative) {
     ByteArrayInputStream in(bytes, sizeof(bytes));
     auto r = ArchiveLayout::Parse(&in);
     ASSERT_FALSE(r.ok());
-    EXPECT_NE(r.status().message().find("bad data_len"), std::string::npos)
+    ASSERT_NE(r.status().message().find("bad data_len"), std::string::npos)
         << r.status().ToString();
 }
 
@@ -287,7 +285,7 @@ TEST_F(StreamingTestFixture, ConcurrentQueryOnSameReader) {
         });
     }
     for (auto& th : threads) th.join();
-    EXPECT_EQ(failures.load(), 0) << "concurrent queries produced inconsistent results";
+    ASSERT_EQ(failures.load(), 0) << "concurrent queries produced inconsistent results";
 }
 
 // =========================================================================
@@ -321,11 +319,11 @@ TEST_F(StreamingTestFixture, ConcurrentCreateAndDropReaders) {
         });
     }
     for (auto& th : threads) th.join();
-    EXPECT_EQ(failures.load(), 0);
+    ASSERT_EQ(failures.load(), 0);
 }
 
 // =========================================================================
-// 4. Benchmark log (non-assertion; archived to execute.md)
+// 4. Benchmark log (non-assertion)
 // =========================================================================
 
 TEST_F(StreamingTestFixture, StreamingBenchmarkLog) {
@@ -355,14 +353,14 @@ TEST_F(StreamingTestFixture, StreamingBenchmarkLog) {
     auto query_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2).count();
 
     std::fprintf(stderr,
-                 "[BENCHMARK] V3 streaming (200 docs): "
+                 "[BENCHMARK] streaming (200 docs): "
                  "write=%" PRId64 "ms open=%" PRId64 "ms query=%" PRId64
                  "ms "
                  "rss_before=%" PRId64 "KB rss_after_write=%" PRId64 "KB rss_after_open=%" PRId64
                  "KB\n",
                  static_cast<int64_t>(write_ms), static_cast<int64_t>(open_ms),
                  static_cast<int64_t>(query_ms), rss_before, rss_after_write, rss_after_open);
-    EXPECT_TRUE(result.ok());
+    ASSERT_TRUE(result.ok());
     SUCCEED();
 }
 

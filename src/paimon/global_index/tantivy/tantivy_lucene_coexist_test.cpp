@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Stage 9 coexistence test: prove lucene-fts and tantivy-fulltext can be linked
+ * Coexistence test: prove lucene-fts and tantivy-fulltext can be linked
  * + instantiated + used in the same process without state collisions, and
  * that GlobalIndexerFactory routes correctly between them via index_type.
  *
- * The two implementations are NOT cross-readable (migration plan §0
- * decision 1) — each reader only opens files written by its own writer.
+ * The two implementations are NOT cross-readable. Each reader only opens
+ * files written by its own writer.
  * This test does NOT attempt a tantivy reader on a lucene file or vice
  * versa; instead it verifies:
  *
@@ -97,11 +97,6 @@ struct ImplSpec {
 
 class TantivyLuceneCoexistTest : public ::testing::Test {
  public:
-    void SetUp() override {
-        setenv(::paimon::lucene::kJiebaDictDirEnv, JIEBA_TEST_DICT_DIR, /*overwrite=*/1);
-        setenv(::paimon::tantivy::kJiebaDictDirEnv, JIEBA_TEST_DICT_DIR, /*overwrite=*/1);
-    }
-
     std::unique_ptr<::ArrowSchema> CreateArrowSchema(
         const std::shared_ptr<arrow::DataType>& data_type) const {
         auto c_schema = std::make_unique<::ArrowSchema>();
@@ -126,7 +121,9 @@ class TantivyLuceneCoexistTest : public ::testing::Test {
         ::ArrowArray c_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &c_array));
         std::vector<int64_t> relative_row_ids(array->length());
-        for (int64_t i = 0; i < array->length(); ++i) relative_row_ids[i] = i;
+        for (int64_t i = 0; i < array->length(); ++i) {
+            relative_row_ids[i] = i;
+        }
         PAIMON_RETURN_NOT_OK(w->AddBatch(&c_array, std::move(relative_row_ids)));
         PAIMON_ASSIGN_OR_RAISE(auto metas, w->Finish());
         EXPECT_EQ(metas.size(), 1u);
@@ -187,7 +184,7 @@ TEST_F(TantivyLuceneCoexistTest, BothFactoriesResolve) {
     // Sanity: factories return distinct types — different vtables → different
     // GetIndexType() once we open a reader (not testable here without an
     // index), so just check shared_ptr identity differs.
-    EXPECT_NE(static_cast<void*>(lucene_indexer.get()), static_cast<void*>(tantivy_indexer.get()));
+    ASSERT_NE(static_cast<void*>(lucene_indexer.get()), static_cast<void*>(tantivy_indexer.get()));
 }
 
 TEST_F(TantivyLuceneCoexistTest, SideBySideEnglishCorpusReturnsSameDocIds) {
@@ -218,8 +215,8 @@ TEST_F(TantivyLuceneCoexistTest, SideBySideEnglishCorpusReturnsSameDocIds) {
                          OpenReader(kLucene, lucene_root->Str(), data_type, {}, lucene_meta));
     ASSERT_OK_AND_ASSIGN(auto tantivy_reader,
                          OpenReader(kTantivy, tantivy_root->Str(), data_type, {}, tantivy_meta));
-    EXPECT_EQ(lucene_reader->GetIndexType(), std::string("lucene-fts"));
-    EXPECT_EQ(tantivy_reader->GetIndexType(), std::string("tantivy-fulltext"));
+    ASSERT_EQ(lucene_reader->GetIndexType(), std::string("lucene-fts"));
+    ASSERT_EQ(tantivy_reader->GetIndexType(), std::string("tantivy-fulltext"));
 
     auto run_pair = [&](const std::string& q, FullTextSearch::SearchType t) {
         auto lr = lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
@@ -236,23 +233,23 @@ TEST_F(TantivyLuceneCoexistTest, SideBySideEnglishCorpusReturnsSameDocIds) {
     // lowercased word tokens.
     {
         auto [l, t] = run_pair("document", FullTextSearch::SearchType::MATCH_ALL);
-        EXPECT_EQ(l, t) << "MATCH_ALL document — lucene vs tantivy doc id set differs";
-        EXPECT_EQ(l, (std::set<int64_t>{0, 1, 3}));
+        ASSERT_EQ(l, t) << "MATCH_ALL document — lucene vs tantivy doc id set differs";
+        ASSERT_EQ(l, (std::set<int64_t>{0, 1, 3}));
     }
     {
         auto [l, t] = run_pair("alpha beta", FullTextSearch::SearchType::MATCH_ALL);
-        EXPECT_EQ(l, t) << "MATCH_ALL 'alpha beta' — sets differ";
-        EXPECT_EQ(l, (std::set<int64_t>{0, 3}));
+        ASSERT_EQ(l, t) << "MATCH_ALL 'alpha beta' — sets differ";
+        ASSERT_EQ(l, (std::set<int64_t>{0, 3}));
     }
     {
         auto [l, t] = run_pair("alpha epsilon", FullTextSearch::SearchType::MATCH_ANY);
-        EXPECT_EQ(l, t) << "MATCH_ANY 'alpha epsilon' — sets differ";
-        EXPECT_EQ(l, (std::set<int64_t>{0, 1, 2, 3}));
+        ASSERT_EQ(l, t) << "MATCH_ANY 'alpha epsilon' — sets differ";
+        ASSERT_EQ(l, (std::set<int64_t>{0, 1, 2, 3}));
     }
     {
         auto [l, t] = run_pair("alpha beta", FullTextSearch::SearchType::PHRASE);
-        EXPECT_EQ(l, t) << "PHRASE 'alpha beta' — sets differ";
-        EXPECT_EQ(l, (std::set<int64_t>{0, 3}));
+        ASSERT_EQ(l, t) << "PHRASE 'alpha beta' — sets differ";
+        ASSERT_EQ(l, (std::set<int64_t>{0, 3}));
     }
 }
 
@@ -285,8 +282,8 @@ TEST_F(TantivyLuceneCoexistTest, IndependentLifecycleNoStateLeakage) {
             "f0", std::nullopt, "payload", FullTextSearch::SearchType::MATCH_ALL, std::nullopt));
         ASSERT_TRUE(lq.ok());
         ASSERT_TRUE(tq.ok());
-        EXPECT_EQ(ExtractDocIds(lq.value()), (std::set<int64_t>{0, 1})) << "lucene round " << round;
-        EXPECT_EQ(ExtractDocIds(tq.value()), (std::set<int64_t>{0, 1}))
+        ASSERT_EQ(ExtractDocIds(lq.value()), (std::set<int64_t>{0, 1})) << "lucene round " << round;
+        ASSERT_EQ(ExtractDocIds(tq.value()), (std::set<int64_t>{0, 1}))
             << "tantivy round " << round;
     }
 }

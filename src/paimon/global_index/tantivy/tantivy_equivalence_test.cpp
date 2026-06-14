@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Stage 10: equivalence + benchmark.
+ * Equivalence + benchmark.
  *
  * EQUIVALENCE: a parametric corpus × query battery that compares lucene-fts
  * and tantivy-fulltext result *sets* (doc_id only — not score order, not score
@@ -24,11 +24,11 @@
  * PREFIX and WILDCARD are NOT compared as required-equal: tantivy's RegexQuery
  * walks byte-level term dictionary, lucene's PrefixQuery/WildcardQuery walks
  * its own; edge cases (empty input, anchors, multi-byte UTF-8) diverge by
- * design. Documented in docs/dev/execute.md Stage 10 decisions.
+ * design.
  *
  * BENCHMARK: build a 200-doc index per backend and time write + 100 queries.
  * Prints to stderr; never fails on perf — guarding against perf regressions
- * is out of scope for this stage. Numbers go in execute.md as a baseline.
+ * is out of scope here. Numbers are a reportable baseline.
  */
 
 #include <chrono>
@@ -100,11 +100,6 @@ struct ReaderPair {
 
 class TantivyEquivalenceTest : public ::testing::Test {
  public:
-    void SetUp() override {
-        setenv(::paimon::lucene::kJiebaDictDirEnv, JIEBA_TEST_DICT_DIR, /*overwrite=*/1);
-        setenv(::paimon::tantivy::kJiebaDictDirEnv, JIEBA_TEST_DICT_DIR, /*overwrite=*/1);
-    }
-
     std::unique_ptr<::ArrowSchema> CreateArrowSchema(
         const std::shared_ptr<arrow::DataType>& data_type) const {
         auto c_schema = std::make_unique<::ArrowSchema>();
@@ -117,24 +112,21 @@ class TantivyEquivalenceTest : public ::testing::Test {
                                const std::map<std::string, std::string>& options,
                                const std::shared_ptr<arrow::Array>& array,
                                const std::string& root) {
-        auto indexer_res = GlobalIndexerFactory::Get(factory_id, options);
-        EXPECT_TRUE(indexer_res.ok()) << indexer_res.status().ToString();
-        // NB: std::move(result).value() picks the rvalue overload (returns T&&);
-        // std::move(result.value()) would call the const T& overload first → no move.
-        auto indexer = std::move(indexer_res).value();
+        EXPECT_OK_AND_ASSIGN(auto indexer, GlobalIndexerFactory::Get(factory_id, options));
         auto path_factory = std::make_shared<FakeIndexPathFactory>(root);
         auto file_writer = std::make_shared<GlobalIndexFileManager>(fs_, path_factory);
-        auto writer_res =
-            indexer->CreateWriter("f0", CreateArrowSchema(data_type).get(), file_writer, pool_);
-        EXPECT_TRUE(writer_res.ok()) << writer_res.status().ToString();
+        EXPECT_OK_AND_ASSIGN(
+            auto writer,
+            indexer->CreateWriter("f0", CreateArrowSchema(data_type).get(), file_writer, pool_));
         ::ArrowArray c_array;
         EXPECT_TRUE(arrow::ExportArray(*array, &c_array).ok());
         std::vector<int64_t> relative_row_ids(array->length());
-        for (int64_t i = 0; i < array->length(); ++i) relative_row_ids[i] = i;
-        EXPECT_TRUE(writer_res.value()->AddBatch(&c_array, std::move(relative_row_ids)).ok());
-        auto metas_res = writer_res.value()->Finish();
-        EXPECT_TRUE(metas_res.ok()) << metas_res.status().ToString();
-        return metas_res.value()[0];
+        for (int64_t i = 0; i < array->length(); ++i) {
+            relative_row_ids[i] = i;
+        }
+        EXPECT_OK(writer->AddBatch(&c_array, std::move(relative_row_ids)));
+        EXPECT_OK_AND_ASSIGN(auto metas, writer->Finish());
+        return metas[0];
     }
 
     std::shared_ptr<GlobalIndexReader> OpenOne(const std::string& factory_id,
@@ -142,11 +134,12 @@ class TantivyEquivalenceTest : public ::testing::Test {
                                                const std::map<std::string, std::string>& options,
                                                const GlobalIndexIOMeta& meta,
                                                const std::string& root) {
-        auto indexer = GlobalIndexerFactory::Get(factory_id, options).value();
+        EXPECT_OK_AND_ASSIGN(auto indexer, GlobalIndexerFactory::Get(factory_id, options));
         auto path_factory = std::make_shared<FakeIndexPathFactory>(root);
         auto file_reader = std::make_shared<GlobalIndexFileManager>(fs_, path_factory);
-        return indexer->CreateReader(CreateArrowSchema(data_type).get(), file_reader, {meta}, pool_)
-            .value();
+        EXPECT_OK_AND_ASSIGN(auto reader, indexer->CreateReader(CreateArrowSchema(data_type).get(),
+                                                                file_reader, {meta}, pool_));
+        return reader;
     }
 
     /// Build BOTH lucene + tantivy indexes for the same corpus + options.
@@ -171,15 +164,13 @@ class TantivyEquivalenceTest : public ::testing::Test {
     }
 
     static std::set<int64_t> Ids(const std::shared_ptr<GlobalIndexResult>& result) {
-        const RoaringBitmap64* bitmap = nullptr;
-        Result<const RoaringBitmap64*> br = Status::Invalid("none");
+        Result<const RoaringBitmap64*> br = Status::Invalid("unrecognized result type");
         if (auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(result)) {
             br = scored->GetBitmap();
         } else if (auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(result)) {
             br = plain->GetBitmap();
         }
-        EXPECT_TRUE(br.ok()) << br.status().ToString();
-        bitmap = br.value();
+        EXPECT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, std::move(br));
         std::set<int64_t> out;
         if (bitmap) {
             for (auto it = bitmap->Begin(); it != bitmap->End(); ++it) {
@@ -199,9 +190,9 @@ class TantivyEquivalenceTest : public ::testing::Test {
             std::make_shared<FullTextSearch>("f0", limit, q, t, filter));
         auto tr = p.tantivy->VisitFullTextSearch(
             std::make_shared<FullTextSearch>("f0", limit, q, t, filter));
-        EXPECT_TRUE(lr.ok()) << "lucene: " << lr.status().ToString();
-        EXPECT_TRUE(tr.ok()) << "tantivy: " << tr.status().ToString();
-        return {Ids(lr.value()), Ids(tr.value())};
+        EXPECT_OK_AND_ASSIGN(auto lresult, std::move(lr));
+        EXPECT_OK_AND_ASSIGN(auto tresult, std::move(tr));
+        return {Ids(lresult), Ids(tresult)};
     }
 
  protected:
@@ -246,7 +237,7 @@ TEST_F(TantivyEquivalenceTest, EnglishBagOfWordsBattery) {
     };
     for (const auto& c : cases) {
         auto [l, t] = RunPair(pair, c.query, c.type);
-        EXPECT_EQ(l, t) << "diverge: query=" << c.query << " type=" << static_cast<int>(c.type);
+        ASSERT_EQ(l, t) << "diverge: query=" << c.query << " type=" << static_cast<int>(c.type);
     }
 }
 
@@ -282,7 +273,7 @@ TEST_F(TantivyEquivalenceTest, ChineseQueryModeBattery) {
     };
     for (const auto& c : cases) {
         auto [l, t] = RunPair(pair, c.query, c.type);
-        EXPECT_EQ(l, t) << "diverge: query=" << c.query << " type=" << static_cast<int>(c.type);
+        ASSERT_EQ(l, t) << "diverge: query=" << c.query << " type=" << static_cast<int>(c.type);
     }
 }
 
@@ -302,20 +293,20 @@ TEST_F(TantivyEquivalenceTest, PreFilterIntersectionEquivalent) {
     {
         auto [l, t] =
             RunPair(pair, "alpha", FullTextSearch::SearchType::MATCH_ALL, std::nullopt, pf);
-        EXPECT_EQ(l, t);
-        EXPECT_EQ(l, (std::set<int64_t>{0, 2}));
+        ASSERT_EQ(l, t);
+        ASSERT_EQ(l, (std::set<int64_t>{0, 2}));
     }
     {
         auto [l, t] =
             RunPair(pair, "beta gamma", FullTextSearch::SearchType::MATCH_ANY, std::nullopt, pf);
-        EXPECT_EQ(l, t);
+        ASSERT_EQ(l, t);
     }
     {
         auto empty = RoaringBitmap64();
         auto [l, t] =
             RunPair(pair, "alpha", FullTextSearch::SearchType::MATCH_ALL, std::nullopt, empty);
-        EXPECT_EQ(l, t);
-        EXPECT_TRUE(l.empty());
+        ASSERT_EQ(l, t);
+        ASSERT_TRUE(l.empty());
     }
 }
 
@@ -369,7 +360,7 @@ TEST_F(TantivyEquivalenceTest, BenchmarkBuildAndQuery) {
             const std::string& w = vocab[word_pick(rng)];
             auto r = lreader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
                 "f0", std::nullopt, w, FullTextSearch::SearchType::MATCH_ALL, std::nullopt));
-            EXPECT_TRUE(r.ok());
+            ASSERT_TRUE(r.ok());
         }
     });
 
@@ -385,7 +376,7 @@ TEST_F(TantivyEquivalenceTest, BenchmarkBuildAndQuery) {
             const std::string& w = vocab[word_pick(rng)];
             auto r = treader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
                 "f0", std::nullopt, w, FullTextSearch::SearchType::MATCH_ALL, std::nullopt));
-            EXPECT_TRUE(r.ok());
+            ASSERT_TRUE(r.ok());
         }
     });
 

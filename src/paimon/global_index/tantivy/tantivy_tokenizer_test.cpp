@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Stage 3 golden-sample test: cppjieba vs jieba-rs (PaimonJiebaTokenizer) diff.
+ * Golden-sample test: cppjieba vs jieba-rs (PaimonJiebaTokenizer) diff.
  *
  * For each mode (mp / mix / full / query), tokenize every line of
  * `test/test_data/tokenizer_golden/golden_*.txt` twice: once with cppjieba
@@ -195,10 +195,10 @@ TEST(TantivyTokenizer, HmmModeReturnsUnsupported) {
     PaimonJiebaTokenizer* handle = nullptr;
     PaimonTantivyStatus st =
         paimon_tantivy_tokenizer_new("hmm", /*with_position=*/true, dict_dir.c_str(), &handle);
-    EXPECT_EQ(st, PaimonTantivyStatus::PAIMON_TANTIVY_STATUS_UNSUPPORTED);
-    EXPECT_EQ(handle, nullptr);
+    ASSERT_EQ(st, PaimonTantivyStatus::PAIMON_TANTIVY_STATUS_UNSUPPORTED);
+    ASSERT_EQ(handle, nullptr);
     std::string err = paimon_tantivy_last_error();
-    EXPECT_NE(err.find("hmm"), std::string::npos);
+    ASSERT_NE(err.find("hmm"), std::string::npos);
 }
 
 // ---------------- positive jieba-rs behavior assertions ----------------
@@ -224,7 +224,7 @@ TEST_P(JiebaRsBehavior, ProducesExpectedTokens) {
                                                           dict_dir.c_str(), &handle);
     ASSERT_EQ(st, PaimonTantivyStatus::PAIMON_TANTIVY_STATUS_OK) << paimon_tantivy_last_error();
     auto got = TokenizeWithTantivy(handle, c.input);
-    EXPECT_EQ(got, c.expected) << "mode=" << c.mode << " input=" << c.input;
+    ASSERT_EQ(got, c.expected) << "mode=" << c.mode << " input=" << c.input;
     paimon_tantivy_tokenizer_free(handle);
 }
 

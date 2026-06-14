@@ -18,7 +18,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <optional>
 #include <string>
 
@@ -81,12 +80,11 @@ static inline const char kDefaultTantivyWriteTokenizer[] = "default";
 /// caller applies its own policy for the missing case (the writer treats it as
 /// an error because a jieba index needs a dictionary, while the reader tolerates
 /// it because paimon-java archives use the built-in tokenizer and need none).
-inline std::optional<std::string> GetJiebaDictionaryDirFromEnv() {
-    const char* env_dir = std::getenv(kJiebaDictDirEnv);
-    if (env_dir != nullptr && *env_dir != '\0') {
-        return std::string(env_dir);
-    }
-    return std::nullopt;
-}
+///
+/// In test builds, falls back to the JIEBA_TEST_DICT_DIR compile-time macro (set
+/// on the support objlib) so tests don't have to mutate process-wide env state.
+/// Defined in tantivy_defs.cpp (single TU) and mirrors LuceneUtils::
+/// GetJiebaDictionaryDir.
+std::optional<std::string> GetJiebaDictionaryDirFromEnv();
 
 }  // namespace paimon::tantivy

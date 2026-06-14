@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Stage 4 writer test: build a tantivy-fulltext global index from an Arrow batch,
+ * Writer test: build a tantivy-fulltext global index from an Arrow batch,
  * persist it through GlobalIndexFileManager, then verify the resulting file
  * conforms to the packing format documented in tantivy_defs.h:
  *
  *   [i32 version | i32 file_count |
  *     (i32 name_len | name | i64 file_len | file_bytes)*]
  *
- * Stage 6 (reader) will round-trip these bytes back to a queryable index;
+ * The reader round-trips these bytes back to a queryable index;
  * this stage only checks structural validity + meta correctness.
  */
 
@@ -134,12 +134,6 @@ std::vector<PackedEntry> ParsePacked(const std::vector<uint8_t>& bytes) {
 
 class TantivyGlobalIndexWriterTest : public ::testing::Test {
  public:
-    void SetUp() override {
-        // Make jieba dict dir visible to the writer's GetJiebaDictionaryDir
-        // (it reads the env var directly).
-        setenv(kJiebaDictDirEnv, JIEBA_TEST_DICT_DIR, /*overwrite=*/1);
-    }
-
     std::unique_ptr<::ArrowSchema> CreateArrowSchema(
         const std::shared_ptr<arrow::DataType>& data_type) const {
         auto c_schema = std::make_unique<::ArrowSchema>();
@@ -158,7 +152,9 @@ class TantivyGlobalIndexWriterTest : public ::testing::Test {
         ::ArrowArray c_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &c_array));
         std::vector<int64_t> relative_row_ids(array->length());
-        for (int64_t i = 0; i < array->length(); ++i) relative_row_ids[i] = i;
+        for (int64_t i = 0; i < array->length(); ++i) {
+            relative_row_ids[i] = i;
+        }
         PAIMON_RETURN_NOT_OK(writer->AddBatch(&c_array, std::move(relative_row_ids)));
         return writer->Finish();
     }
@@ -193,23 +189,23 @@ TEST_F(TantivyGlobalIndexWriterTest, EnglishCorpusProducesValidPackedIndex) {
     const auto& meta = metas[0];
 
     auto file_name = PathUtil::GetName(meta.file_path);
-    EXPECT_TRUE(StringUtils::StartsWith(file_name, "tantivy-fulltext-global-index-"))
+    ASSERT_TRUE(StringUtils::StartsWith(file_name, "tantivy-fulltext-global-index-"))
         << "file_name=" << file_name;
-    EXPECT_TRUE(StringUtils::EndsWith(file_name, ".index"));
+    ASSERT_TRUE(StringUtils::EndsWith(file_name, ".index"));
     ASSERT_TRUE(meta.metadata);
-    EXPECT_EQ(std::string(meta.metadata->data(), meta.metadata->size()),
+    ASSERT_EQ(std::string(meta.metadata->data(), meta.metadata->size()),
               R"({"write.omit-term-freq-and-position":"false"})");
-    EXPECT_GT(meta.file_size, 8);
+    ASSERT_GT(meta.file_size, 8);
 
     auto bytes = ReadFile(meta.file_path);
     ASSERT_EQ(static_cast<int64_t>(bytes.size()), meta.file_size);
     auto entries = ParsePacked(bytes);
-    EXPECT_FALSE(entries.empty());
+    ASSERT_FALSE(entries.empty());
     bool has_meta_json = false;
     for (const auto& e : entries) {
         if (e.name == "meta.json") has_meta_json = true;
     }
-    EXPECT_TRUE(has_meta_json) << "expected meta.json in packed entries";
+    ASSERT_TRUE(has_meta_json) << "expected meta.json in packed entries";
 }
 
 TEST_F(TantivyGlobalIndexWriterTest, ChineseCorpusProducesValidPackedIndex) {
@@ -233,7 +229,7 @@ TEST_F(TantivyGlobalIndexWriterTest, ChineseCorpusProducesValidPackedIndex) {
     auto bytes = ReadFile(meta.file_path);
     ASSERT_EQ(static_cast<int64_t>(bytes.size()), meta.file_size);
     auto entries = ParsePacked(bytes);
-    EXPECT_FALSE(entries.empty());
+    ASSERT_FALSE(entries.empty());
 }
 
 TEST_F(TantivyGlobalIndexWriterTest, NullStringRowsBecomeEmptyDocuments) {
@@ -266,7 +262,7 @@ TEST_F(TantivyGlobalIndexWriterTest, RejectsHmmTokenizeMode) {
     };
     auto res = TantivyGlobalIndexWriter::Create("f0", data_type_, file_writer, options, pool_);
     ASSERT_FALSE(res.ok());
-    EXPECT_TRUE(res.status().IsNotImplemented()) << res.status().ToString();
+    ASSERT_TRUE(res.status().IsNotImplemented()) << res.status().ToString();
 }
 
 }  // namespace paimon::tantivy::test
