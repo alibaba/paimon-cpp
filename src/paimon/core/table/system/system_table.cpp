@@ -126,6 +126,24 @@ const std::vector<SystemTableRegistryEntry>& SystemTableRegistry() {
              auto options = MergeOptions(table_schema, dynamic_options);
              return std::make_shared<ConsumersSystemTable>(fs, table_path, LoadBranch(options));
          }},
+        {ManifestsSystemTable::kName,
+         [](const std::shared_ptr<FileSystem>& fs, const std::string& table_path,
+            const std::shared_ptr<TableSchema>& table_schema,
+            const std::map<std::string, std::string>& dynamic_options)
+             -> Result<std::shared_ptr<SystemTable>> {
+             auto options = MergeOptions(table_schema, dynamic_options);
+             return std::make_shared<ManifestsSystemTable>(fs, table_path, LoadBranch(options),
+                                                           table_schema, std::move(options));
+         }},
+        {FilesSystemTable::kName,
+         [](const std::shared_ptr<FileSystem>& fs, const std::string& table_path,
+            const std::shared_ptr<TableSchema>& table_schema,
+            const std::map<std::string, std::string>& dynamic_options)
+             -> Result<std::shared_ptr<SystemTable>> {
+             auto options = MergeOptions(table_schema, dynamic_options);
+             return std::make_shared<FilesSystemTable>(fs, table_path, LoadBranch(options),
+                                                       table_schema, std::move(options));
+         }},
     };
     return registry;
 }
