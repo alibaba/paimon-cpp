@@ -61,7 +61,6 @@ SimpleStatsEvolution::SimpleStatsEvolution(const std::vector<DataField>& data_fi
         const auto& data_field = data_fields[i];
         id_to_data_fields_.emplace(data_field.Id(), std::make_pair(i, data_field));
     }
-    std::map<std::string, DataField> name_to_table_fields;
     for (const auto& field : table_fields) {
         name_to_table_fields_.emplace(field.Name(), field);
     }

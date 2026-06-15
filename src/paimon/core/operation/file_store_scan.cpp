@@ -71,7 +71,6 @@ Result<std::shared_ptr<Predicate>> FileStoreScan::ReconstructPredicateWithNonCas
         }
         auto data_iter = id_to_data_fields.find(table_iter->second.Id());
         if (data_iter == id_to_data_fields.end()) {
-            excluded_field_names.insert(field_name);
             continue;
         }
         // Exclude fields requiring casting to avoid false negatives in stats filtering.

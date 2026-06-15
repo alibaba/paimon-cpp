@@ -513,13 +513,12 @@ TEST_F(KeyValueFileStoreScanTest, TestFilterByValueFilterWithSchemaEvolution) {
     ASSERT_TRUE(keep);
 }
 
-TEST_F(KeyValueFileStoreScanTest, TestFilterByValueFilterWithNewFieldKeepsOldSchemaFile) {
+TEST_F(KeyValueFileStoreScanTest, TestFilterByValueFilterWithNewFieldUsesNullStats) {
     std::string table_path =
         paimon::test::GetDataDir() + "orc/pk_table_with_alter_table.db/pk_table_with_alter_table";
     std::vector<std::map<std::string, std::string>> partition_filters = {};
 
-    // `e` only exists in schema-1. Schema-0 files must be kept because their stats cannot prove
-    // whether the evolved row should match the current-schema predicate.
+    // `e` only exists in schema-1. Schema-0 files expose it to stats filtering as all NULL.
     auto greater_than = PredicateBuilder::GreaterThan(/*field_index=*/7, /*field_name=*/"e",
                                                       FieldType::INT, Literal(30));
     auto scan_filter = std::make_shared<ScanFilter>(/*predicate=*/greater_than,
@@ -557,6 +556,16 @@ TEST_F(KeyValueFileStoreScanTest, TestFilterByValueFilterWithNewFieldKeepsOldSch
             /*write_cols=*/std::nullopt));
 
     ASSERT_OK_AND_ASSIGN(bool keep, scan->FilterByStats(old_schema_entry));
+    ASSERT_FALSE(keep);
+
+    auto is_null = PredicateBuilder::IsNull(/*field_index=*/7, /*field_name=*/"e", FieldType::INT);
+    scan_filter = std::make_shared<ScanFilter>(/*predicate=*/is_null,
+                                               /*partition_filters=*/partition_filters,
+                                               /*bucket_filter=*/0);
+    ASSERT_OK_AND_ASSIGN(scan, CreateFileStoreScan(table_path, scan_filter,
+                                                   /*table_schema_id=*/1, /*snapshot_id=*/6));
+    scan->EnableValueFilter();
+    ASSERT_OK_AND_ASSIGN(keep, scan->FilterByStats(old_schema_entry));
     ASSERT_TRUE(keep);
 }
 }  // namespace paimon::test
