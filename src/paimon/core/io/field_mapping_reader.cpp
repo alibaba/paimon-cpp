@@ -158,10 +158,9 @@ Result<BatchReader::ReadBatchWithBitmap> FieldMappingReader::NextBatchWithBitmap
     // mapping non-partition array
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> casted_non_partition_array,
                            CastNonPartitionArrayIfNeed(non_partition_array));
-    PAIMON_RETURN_NOT_OK(
-        MappingFields(casted_non_partition_array, non_partition_info_.non_partition_read_schema,
-                      non_partition_info_.idx_in_target_read_schema, &target_array,
-                      &target_field_names));
+    PAIMON_RETURN_NOT_OK(MappingFields(
+        casted_non_partition_array, non_partition_info_.non_partition_read_schema,
+        non_partition_info_.idx_in_target_read_schema, &target_array, &target_field_names));
 
     // mapping partition array
     if (partition_info_ != std::nullopt) {
@@ -170,10 +169,9 @@ Result<BatchReader::ReadBatchWithBitmap> FieldMappingReader::NextBatchWithBitmap
                                    GeneratePartitionArray(non_partition_array->length()));
         }
         auto trim_partition_array = partition_array_->Slice(0, non_partition_array->length());
-        PAIMON_RETURN_NOT_OK(
-            MappingFields(trim_partition_array, partition_info_.value().partition_read_schema,
-                          partition_info_.value().idx_in_target_read_schema, &target_array,
-                          &target_field_names));
+        PAIMON_RETURN_NOT_OK(MappingFields(
+            trim_partition_array, partition_info_.value().partition_read_schema,
+            partition_info_.value().idx_in_target_read_schema, &target_array, &target_field_names));
     }
     // mapping non-exist array
     if (non_exist_field_info_ != std::nullopt) {
@@ -182,10 +180,10 @@ Result<BatchReader::ReadBatchWithBitmap> FieldMappingReader::NextBatchWithBitmap
                                    GenerateNonExistArray(non_partition_array->length()));
         }
         auto trim_non_exist_array = non_exist_array_->Slice(0, non_partition_array->length());
-        PAIMON_RETURN_NOT_OK(
-            MappingFields(trim_non_exist_array, non_exist_field_info_.value().non_exist_read_schema,
-                          non_exist_field_info_.value().idx_in_target_read_schema, &target_array,
-                          &target_field_names));
+        PAIMON_RETURN_NOT_OK(MappingFields(trim_non_exist_array,
+                                           non_exist_field_info_.value().non_exist_read_schema,
+                                           non_exist_field_info_.value().idx_in_target_read_schema,
+                                           &target_array, &target_field_names));
     }
 
     // construct target array
@@ -303,10 +301,10 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::GenerateNonExistArray(
 }
 
 Status FieldMappingReader::MappingFields(const std::shared_ptr<arrow::Array>& data_array,
-                                        const std::vector<DataField>& read_fields_of_data_array,
-                                        const std::vector<int32_t>& idx_in_target_schema,
-                                        arrow::ArrayVector* target_array,
-                                        std::vector<std::string>* target_field_names) {
+                                         const std::vector<DataField>& read_fields_of_data_array,
+                                         const std::vector<int32_t>& idx_in_target_schema,
+                                         arrow::ArrayVector* target_array,
+                                         std::vector<std::string>* target_field_names) {
     auto* struct_array = arrow::internal::checked_cast<arrow::StructArray*>(data_array.get());
     assert(struct_array);
     assert(struct_array->fields().size() == idx_in_target_schema.size());
@@ -323,14 +321,12 @@ Status FieldMappingReader::MappingFields(const std::shared_ptr<arrow::Array>& da
 
         // Filter map entries by selected keys if metadata is present.
         if (field_array->type()->id() == arrow::Type::MAP) {
-            std::set<std::string> selected_keys =
-                NestedProjectionUtils::GetMapSelectedKeys(
-                    read_fields_of_data_array[i].ArrowField());
+            std::set<std::string> selected_keys = NestedProjectionUtils::GetMapSelectedKeys(
+                read_fields_of_data_array[i].ArrowField());
             if (!selected_keys.empty()) {
-                PAIMON_ASSIGN_OR_RAISE(
-                    field_array,
-                    NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-                        field_array, selected_keys));
+                PAIMON_ASSIGN_OR_RAISE(field_array,
+                                       NestedProjectionUtils::FilterMapArrayBySelectedKeys(
+                                           field_array, selected_keys));
             }
         }
 

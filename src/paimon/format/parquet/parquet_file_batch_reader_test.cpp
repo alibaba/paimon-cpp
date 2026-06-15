@@ -416,15 +416,13 @@ TEST_F(ParquetFileBatchReaderTest, TestSetReadSchemaWithLegacyParquetMissingFiel
 
     std::shared_ptr<arrow::ChunkedArray> expected_array;
     ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(
-                    arrow::struct_(read_schema->fields()),
-                    {R"([
+                    arrow::struct_(read_schema->fields()), {R"([
         ["Lucy", 1, 14.1]
     ])"},
                     &expected_array)
                     .ok());
     ASSERT_TRUE(result_array->Equals(expected_array))
-        << "expected: " << expected_array->ToString() << "\nactual: "
-        << result_array->ToString();
+        << "expected: " << expected_array->ToString() << "\nactual: " << result_array->ToString();
 }
 
 TEST_F(ParquetFileBatchReaderTest, TestNextBatchSimple) {

@@ -28,8 +28,8 @@ namespace paimon::test {
 
 // Helper: create an arrow::Field with paimon.id metadata
 static std::shared_ptr<arrow::Field> MakeField(const std::string& name,
-                                                const std::shared_ptr<arrow::DataType>& type,
-                                                int32_t paimon_id) {
+                                               const std::shared_ptr<arrow::DataType>& type,
+                                               int32_t paimon_id) {
     DataField data_field(paimon_id, arrow::field(name, type));
     return DataField::ConvertDataFieldToArrowField(data_field);
 }
@@ -53,8 +53,8 @@ TEST(NestedProjectionUtilsTest, GetPaimonFieldId_Nullptr) {
 // ============== FindFieldByPaimonId ==============
 
 TEST(NestedProjectionUtilsTest, FindFieldByPaimonId_Found) {
-    auto struct_type = arrow::struct_({MakeField("x", arrow::int32(), 1),
-                                       MakeField("y", arrow::utf8(), 2)});
+    auto struct_type =
+        arrow::struct_({MakeField("x", arrow::int32(), 1), MakeField("y", arrow::utf8(), 2)});
     auto found = NestedProjectionUtils::FindFieldByPaimonId(struct_type, 2);
     ASSERT_NE(found, nullptr);
     ASSERT_EQ(found->name(), "y");
@@ -91,9 +91,9 @@ TEST(NestedProjectionUtilsTest, PruneDataType_StructPruneSubset) {
     // data: STRUCT<x:INT(id=1), y:STRING(id=2), z:DOUBLE(id=3)>
     // read: STRUCT<x:INT(id=1)>
     // expected: STRUCT<x:INT(id=1)>
-    auto data_type = arrow::struct_({MakeField("x", arrow::int32(), 1),
-                                     MakeField("y", arrow::utf8(), 2),
-                                     MakeField("z", arrow::float64(), 3)});
+    auto data_type =
+        arrow::struct_({MakeField("x", arrow::int32(), 1), MakeField("y", arrow::utf8(), 2),
+                        MakeField("z", arrow::float64(), 3)});
     auto read_type = arrow::struct_({MakeField("x", arrow::int32(), 1)});
 
     ASSERT_OK_AND_ASSIGN(auto result, NestedProjectionUtils::PruneDataType(read_type, data_type));
@@ -117,8 +117,8 @@ TEST(NestedProjectionUtilsTest, PruneDataType_NestedStruct) {
     // data: STRUCT<inner:STRUCT<a:INT(id=10), b:STRING(id=11)>(id=1)>
     // read: STRUCT<inner:STRUCT<a:INT(id=10)>(id=1)>
     // expected: STRUCT<inner:STRUCT<a:INT(id=10)>(id=1)>
-    auto inner_data = arrow::struct_({MakeField("a", arrow::int32(), 10),
-                                      MakeField("b", arrow::utf8(), 11)});
+    auto inner_data =
+        arrow::struct_({MakeField("a", arrow::int32(), 10), MakeField("b", arrow::utf8(), 11)});
     auto data_type = arrow::struct_({MakeField("inner", inner_data, 1)});
 
     auto inner_read = arrow::struct_({MakeField("a", arrow::int32(), 10)});
@@ -135,8 +135,8 @@ TEST(NestedProjectionUtilsTest, PruneDataType_NestedStruct) {
 TEST(NestedProjectionUtilsTest, PruneDataType_ListWithStructElement) {
     // data: LIST<STRUCT<a:INT(id=10), b:STRING(id=11)>>
     // read: LIST<STRUCT<a:INT(id=10)>>
-    auto inner_data = arrow::struct_({MakeField("a", arrow::int32(), 10),
-                                      MakeField("b", arrow::utf8(), 11)});
+    auto inner_data =
+        arrow::struct_({MakeField("a", arrow::int32(), 10), MakeField("b", arrow::utf8(), 11)});
     auto data_type = arrow::list(arrow::field("item", inner_data));
 
     auto inner_read = arrow::struct_({MakeField("a", arrow::int32(), 10)});
@@ -153,8 +153,8 @@ TEST(NestedProjectionUtilsTest, PruneDataType_ListWithStructElement) {
 TEST(NestedProjectionUtilsTest, PruneDataType_MapWithStructValue) {
     // data: MAP<STRING, STRUCT<a:INT(id=10), b:STRING(id=11)>>
     // read: MAP<STRING, STRUCT<a:INT(id=10)>>
-    auto inner_data = arrow::struct_({MakeField("a", arrow::int32(), 10),
-                                      MakeField("b", arrow::utf8(), 11)});
+    auto inner_data =
+        arrow::struct_({MakeField("a", arrow::int32(), 10), MakeField("b", arrow::utf8(), 11)});
     auto data_type = arrow::map(arrow::utf8(), inner_data);
 
     auto inner_read = arrow::struct_({MakeField("a", arrow::int32(), 10)});
@@ -183,10 +183,9 @@ TEST(NestedProjectionUtilsTest, PruneArray_StructPrune) {
     std::shared_ptr<arrow::Array> y_array;
     ASSERT_TRUE(y_builder.Finish(&y_array).ok());
 
-    auto struct_type = arrow::struct_({arrow::field("x", arrow::int32()),
-                                       arrow::field("y", arrow::utf8())});
-    auto struct_result = arrow::StructArray::Make({x_array, y_array},
-                                                   struct_type->fields());
+    auto struct_type =
+        arrow::struct_({arrow::field("x", arrow::int32()), arrow::field("y", arrow::utf8())});
+    auto struct_result = arrow::StructArray::Make({x_array, y_array}, struct_type->fields());
     ASSERT_TRUE(struct_result.ok());
     auto struct_array = struct_result.ValueUnsafe();
 
@@ -212,10 +211,10 @@ TEST(NestedProjectionUtilsTest, PruneArray_IdenticalType) {
 // ============== GetMapSelectedKeys ==============
 
 TEST(NestedProjectionUtilsTest, GetMapSelectedKeys_Present) {
-    auto metadata = arrow::KeyValueMetadata::Make(
-        {DataField::MAP_SELECTED_KEYS}, {"key1,key2,key3"});
-    auto field = arrow::field("m", arrow::map(arrow::utf8(), arrow::int32()), /*nullable=*/true,
-                              metadata);
+    auto metadata =
+        arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"key1,key2,key3"});
+    auto field =
+        arrow::field("m", arrow::map(arrow::utf8(), arrow::int32()), /*nullable=*/true, metadata);
     auto keys = NestedProjectionUtils::GetMapSelectedKeys(field);
     ASSERT_EQ(keys.size(), 3);
     ASSERT_TRUE(keys.count("key1"));
@@ -230,10 +229,9 @@ TEST(NestedProjectionUtilsTest, GetMapSelectedKeys_Absent) {
 }
 
 TEST(NestedProjectionUtilsTest, GetMapSelectedKeys_EmptyString) {
-    auto metadata = arrow::KeyValueMetadata::Make(
-        {DataField::MAP_SELECTED_KEYS}, {""});
-    auto field = arrow::field("m", arrow::map(arrow::utf8(), arrow::int32()), /*nullable=*/true,
-                              metadata);
+    auto metadata = arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {""});
+    auto field =
+        arrow::field("m", arrow::map(arrow::utf8(), arrow::int32()), /*nullable=*/true, metadata);
     auto keys = NestedProjectionUtils::GetMapSelectedKeys(field);
     ASSERT_TRUE(keys.empty());
 }
@@ -276,7 +274,8 @@ TEST(NestedProjectionUtilsTest, FilterMapArrayBySelectedKeys_Basic) {
     });
 
     std::set<std::string> selected = {"a", "c"};
-    ASSERT_OK_AND_ASSIGN(auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(map_array, selected));
+    ASSERT_OK_AND_ASSIGN(auto filtered,
+                         NestedProjectionUtils::FilterMapArrayBySelectedKeys(map_array, selected));
 
     auto result = std::static_pointer_cast<arrow::MapArray>(filtered);
     ASSERT_EQ(result->length(), 2);
@@ -295,7 +294,8 @@ TEST(NestedProjectionUtilsTest, FilterMapArrayBySelectedKeys_Basic) {
 TEST(NestedProjectionUtilsTest, FilterMapArrayBySelectedKeys_EmptySelectedKeys) {
     auto map_array = BuildStringInt32MapArray({{{"a", 1}}});
     std::set<std::string> empty_keys;
-    ASSERT_OK_AND_ASSIGN(auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(map_array, empty_keys));
+    ASSERT_OK_AND_ASSIGN(
+        auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(map_array, empty_keys));
     // Should return original array unchanged
     ASSERT_EQ(filtered.get(), map_array.get());
 }
@@ -303,7 +303,8 @@ TEST(NestedProjectionUtilsTest, FilterMapArrayBySelectedKeys_EmptySelectedKeys) 
 TEST(NestedProjectionUtilsTest, FilterMapArrayBySelectedKeys_AllKept) {
     auto map_array = BuildStringInt32MapArray({{{"a", 1}, {"b", 2}}});
     std::set<std::string> selected = {"a", "b"};
-    ASSERT_OK_AND_ASSIGN(auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(map_array, selected));
+    ASSERT_OK_AND_ASSIGN(auto filtered,
+                         NestedProjectionUtils::FilterMapArrayBySelectedKeys(map_array, selected));
     // All entries match, should return original
     ASSERT_EQ(filtered.get(), map_array.get());
 }
@@ -311,7 +312,8 @@ TEST(NestedProjectionUtilsTest, FilterMapArrayBySelectedKeys_AllKept) {
 TEST(NestedProjectionUtilsTest, FilterMapArrayBySelectedKeys_NoneKept) {
     auto map_array = BuildStringInt32MapArray({{{"a", 1}, {"b", 2}}});
     std::set<std::string> selected = {"x", "y"};
-    ASSERT_OK_AND_ASSIGN(auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(map_array, selected));
+    ASSERT_OK_AND_ASSIGN(auto filtered,
+                         NestedProjectionUtils::FilterMapArrayBySelectedKeys(map_array, selected));
     auto result = std::static_pointer_cast<arrow::MapArray>(filtered);
     ASSERT_EQ(result->length(), 1);
     ASSERT_EQ(result->value_length(0), 0);
@@ -319,12 +321,12 @@ TEST(NestedProjectionUtilsTest, FilterMapArrayBySelectedKeys_NoneKept) {
 
 TEST(NestedProjectionUtilsTest, FilterMapArrayBySelectedKeys_WithNull) {
     // maps[0] = {"a":1}, maps[1] = null, maps[2] = {"b":2,"c":3}
-    auto map_array = BuildStringInt32MapArray(
-        {{{"a", 1}}, {}, {{"b", 2}, {"c", 3}}},
-        {true, false, true});
+    auto map_array =
+        BuildStringInt32MapArray({{{"a", 1}}, {}, {{"b", 2}, {"c", 3}}}, {true, false, true});
 
     std::set<std::string> selected = {"a", "c"};
-    ASSERT_OK_AND_ASSIGN(auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(map_array, selected));
+    ASSERT_OK_AND_ASSIGN(auto filtered,
+                         NestedProjectionUtils::FilterMapArrayBySelectedKeys(map_array, selected));
     auto result = std::static_pointer_cast<arrow::MapArray>(filtered);
     ASSERT_EQ(result->length(), 3);
     // maps[0] = {"a":1}
@@ -340,7 +342,8 @@ TEST(NestedProjectionUtilsTest, FilterMapArrayBySelectedKeys_WithNull) {
 TEST(NestedProjectionUtilsTest, FilterMapArrayBySelectedKeys_EmptyArray) {
     auto map_array = BuildStringInt32MapArray({});
     std::set<std::string> selected = {"a"};
-    ASSERT_OK_AND_ASSIGN(auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(map_array, selected));
+    ASSERT_OK_AND_ASSIGN(auto filtered,
+                         NestedProjectionUtils::FilterMapArrayBySelectedKeys(map_array, selected));
     ASSERT_EQ(filtered->length(), 0);
 }
 

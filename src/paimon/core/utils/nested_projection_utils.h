@@ -45,8 +45,7 @@ class PAIMON_EXPORT NestedProjectionUtils {
         if (!result.ok()) {
             return -1;
         }
-        std::optional<int32_t> field_id =
-            StringUtils::StringToValue<int32_t>(result.ValueUnsafe());
+        std::optional<int32_t> field_id = StringUtils::StringToValue<int32_t>(result.ValueUnsafe());
         return field_id.value_or(-1);
     }
 
@@ -88,15 +87,13 @@ class PAIMON_EXPORT NestedProjectionUtils {
     /// Parse the "paimon.map.selected-keys" metadata from an Arrow field.
     /// Returns an empty set if the metadata key is absent or the field is not a MAP.
     /// The metadata value must be a JSON array of strings, e.g. '["key1","key2"]'.
-    static std::set<std::string> GetMapSelectedKeys(
-        const std::shared_ptr<arrow::Field>& field);
+    static std::set<std::string> GetMapSelectedKeys(const std::shared_ptr<arrow::Field>& field);
 
     /// Filter a MapArray so that only entries whose key is in `selected_keys` are kept.
     /// Only supports string-keyed maps. Returns the original array unchanged if
     /// `selected_keys` is empty.
     static Result<std::shared_ptr<arrow::Array>> FilterMapArrayBySelectedKeys(
-        const std::shared_ptr<arrow::Array>& map_array,
-        const std::set<std::string>& selected_keys);
+        const std::shared_ptr<arrow::Array>& map_array, const std::set<std::string>& selected_keys);
 };
 
 }  // namespace paimon

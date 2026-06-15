@@ -70,34 +70,29 @@ Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::P
         case arrow::Type::LIST: {
             const auto& read_list = static_cast<const arrow::ListType&>(*read_type);
             const auto& data_list = static_cast<const arrow::ListType&>(*data_type);
-            PAIMON_ASSIGN_OR_RAISE(
-                std::optional<std::shared_ptr<arrow::DataType>> pruned_elem,
-                PruneDataType(read_list.value_type(), data_list.value_type()));
+            PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<arrow::DataType>> pruned_elem,
+                                   PruneDataType(read_list.value_type(), data_list.value_type()));
             if (!pruned_elem.has_value()) {
                 return std::optional<std::shared_ptr<arrow::DataType>>(std::nullopt);
             }
-            std::shared_ptr<arrow::DataType> result_type = arrow::list(
-                arrow::field(data_list.value_field()->name(), pruned_elem.value(),
-                             data_list.value_field()->nullable(),
-                             data_list.value_field()->metadata()));
+            std::shared_ptr<arrow::DataType> result_type = arrow::list(arrow::field(
+                data_list.value_field()->name(), pruned_elem.value(),
+                data_list.value_field()->nullable(), data_list.value_field()->metadata()));
             return std::optional<std::shared_ptr<arrow::DataType>>(std::move(result_type));
         }
 
         case arrow::Type::MAP: {
             const auto& read_map = static_cast<const arrow::MapType&>(*read_type);
             const auto& data_map = static_cast<const arrow::MapType&>(*data_type);
-            PAIMON_ASSIGN_OR_RAISE(
-                std::optional<std::shared_ptr<arrow::DataType>> pruned_key,
-                PruneDataType(read_map.key_type(), data_map.key_type()));
-            PAIMON_ASSIGN_OR_RAISE(
-                std::optional<std::shared_ptr<arrow::DataType>> pruned_value,
-                PruneDataType(read_map.item_type(), data_map.item_type()));
+            PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<arrow::DataType>> pruned_key,
+                                   PruneDataType(read_map.key_type(), data_map.key_type()));
+            PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<arrow::DataType>> pruned_value,
+                                   PruneDataType(read_map.item_type(), data_map.item_type()));
             if (!pruned_key.has_value() || !pruned_value.has_value()) {
                 return std::optional<std::shared_ptr<arrow::DataType>>(std::nullopt);
             }
-            std::shared_ptr<arrow::DataType> result_type =
-                arrow::map(pruned_key.value(), pruned_value.value(),
-                           data_map.key_field()->nullable());
+            std::shared_ptr<arrow::DataType> result_type = arrow::map(
+                pruned_key.value(), pruned_value.value(), data_map.key_field()->nullable());
             return std::optional<std::shared_ptr<arrow::DataType>>(std::move(result_type));
         }
 
@@ -137,8 +132,8 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::PruneArray(
             PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
                 std::shared_ptr<arrow::StructArray> result_struct,
                 arrow::StructArray::Make(pruned_children, pruned_fields,
-                                         struct_array->null_bitmap(),
-                                         struct_array->null_count(), struct_array->offset()));
+                                         struct_array->null_bitmap(), struct_array->null_count(),
+                                         struct_array->offset()));
             return std::static_pointer_cast<arrow::Array>(result_struct);
         }
 
@@ -150,9 +145,9 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::PruneArray(
                                    PruneArray(list_array->values(), target_elem_type));
             PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
                 std::shared_ptr<arrow::ListArray> result_list,
-                arrow::ListArray::FromArrays(
-                    *list_array->offsets(), *pruned_values, arrow::default_memory_pool(),
-                    list_array->null_bitmap(), list_array->null_count()));
+                arrow::ListArray::FromArrays(*list_array->offsets(), *pruned_values,
+                                             arrow::default_memory_pool(),
+                                             list_array->null_bitmap(), list_array->null_count()));
             return std::static_pointer_cast<arrow::Array>(result_list);
         }
 
@@ -195,8 +190,7 @@ std::set<std::string> NestedProjectionUtils::GetMapSelectedKeys(
 }
 
 Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-    const std::shared_ptr<arrow::Array>& array,
-    const std::set<std::string>& selected_keys) {
+    const std::shared_ptr<arrow::Array>& array, const std::set<std::string>& selected_keys) {
     if (selected_keys.empty() || !array || array->length() == 0) {
         return array;
     }
@@ -205,9 +199,9 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySel
     auto map_type = std::static_pointer_cast<arrow::MapType>(array->type());
 
     if (map_type->key_type()->id() != arrow::Type::STRING) {
-        return Status::Invalid(fmt::format(
-            "FilterMapArrayBySelectedKeys only supports string keys, got {}",
-            map_type->key_type()->ToString()));
+        return Status::Invalid(
+            fmt::format("FilterMapArrayBySelectedKeys only supports string keys, got {}",
+                        map_type->key_type()->ToString()));
     }
 
     auto keys_array = std::static_pointer_cast<arrow::StringArray>(map_array->keys());
@@ -279,16 +273,14 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySel
         filtered_keys = key_slices[0];
         filtered_values = value_slices[0];
     } else {
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(filtered_keys,
-                                          arrow::Concatenate(key_slices));
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(filtered_values,
-                                          arrow::Concatenate(value_slices));
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(filtered_keys, arrow::Concatenate(key_slices));
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(filtered_values, arrow::Concatenate(value_slices));
     }
 
     // Build new offsets array
     arrow::Int32Builder offset_builder;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(offset_builder.Reserve(
-        static_cast<int64_t>(new_offsets.size())));
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(
+        offset_builder.Reserve(static_cast<int64_t>(new_offsets.size())));
     for (int32_t offset : new_offsets) {
         offset_builder.UnsafeAppend(offset);
     }
@@ -298,8 +290,7 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySel
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
         std::shared_ptr<arrow::Array> result_map,
         arrow::MapArray::FromArrays(new_offsets_array, filtered_keys, filtered_values,
-                                    arrow::default_memory_pool(),
-                                    map_array->null_bitmap()));
+                                    arrow::default_memory_pool(), map_array->null_bitmap()));
     return result_map;
 }
 

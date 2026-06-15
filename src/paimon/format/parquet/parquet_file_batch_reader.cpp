@@ -96,11 +96,12 @@ Result<std::shared_ptr<arrow::Array>> PruneArrayToReadType(
             pruned_children.reserve(target_struct_type->num_fields());
             pruned_fields.reserve(target_struct_type->num_fields());
             for (const auto& target_field : target_struct_type->fields()) {
-                auto src_field = FindMatchingReadField(struct_array->type()->fields(), target_field);
+                auto src_field =
+                    FindMatchingReadField(struct_array->type()->fields(), target_field);
                 if (!src_field) {
-                    return Status::Invalid(fmt::format(
-                        "PruneArrayToReadType: field '{}' not found in struct array",
-                        target_field->name()));
+                    return Status::Invalid(
+                        fmt::format("PruneArrayToReadType: field '{}' not found in struct array",
+                                    target_field->name()));
                 }
                 auto child = struct_array->GetFieldByName(src_field->name());
                 PAIMON_ASSIGN_OR_RAISE(auto pruned_child,
@@ -133,11 +134,12 @@ Result<std::shared_ptr<arrow::Array>> PruneArrayToReadType(
         case arrow::Type::MAP: {
             auto map_array = std::static_pointer_cast<arrow::MapArray>(array);
             const auto& target_map_type = static_cast<const arrow::MapType&>(*target_type);
-            PAIMON_ASSIGN_OR_RAISE(auto pruned_keys,
-                                   PruneArrayToReadType(map_array->keys(), target_map_type.key_type()));
-            PAIMON_ASSIGN_OR_RAISE(auto pruned_items,
-                                   PruneArrayToReadType(map_array->items(),
-                                                        target_map_type.item_type()));
+            PAIMON_ASSIGN_OR_RAISE(
+                auto pruned_keys,
+                PruneArrayToReadType(map_array->keys(), target_map_type.key_type()));
+            PAIMON_ASSIGN_OR_RAISE(
+                auto pruned_items,
+                PruneArrayToReadType(map_array->items(), target_map_type.item_type()));
             PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
                 std::shared_ptr<arrow::Array> result_map,
                 arrow::MapArray::FromArrays(map_array->offsets(), pruned_keys, pruned_items,

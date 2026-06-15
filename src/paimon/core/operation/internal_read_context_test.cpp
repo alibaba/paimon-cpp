@@ -103,7 +103,8 @@ TEST(InternalReadContext, TestReadWithRowTrackingAndScoreFields) {
         // test simple
         std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
         ReadContextBuilder context_builder(path);
-        context_builder.SetReadFieldNames({"f3", "f0", "_ROW_ID", "_SEQUENCE_NUMBER", "_INDEX_SCORE"});
+        context_builder.SetReadFieldNames(
+            {"f3", "f0", "_ROW_ID", "_SEQUENCE_NUMBER", "_INDEX_SCORE"});
         ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
         SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
         ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));

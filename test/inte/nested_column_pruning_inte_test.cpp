@@ -49,22 +49,23 @@ class RecordBatch;
 
 namespace paimon::test {
 
-class NestedColumnPruningInteTest
-    : public ::testing::Test,
-      public ::testing::WithParamInterface<std::string> {
+class NestedColumnPruningInteTest : public ::testing::Test,
+                                    public ::testing::WithParamInterface<std::string> {
     void SetUp() override {
         file_format_ = GetParam();
         dir_ = UniqueTestDirectory::Create("local");
         test_dir_ = dir_->Str();
         table_path_ = PathUtil::JoinPath(test_dir_, "foo.db/bar");
     }
-    void TearDown() override { dir_.reset(); }
+    void TearDown() override {
+        dir_.reset();
+    }
 
  protected:
-    static std::shared_ptr<arrow::Field> AnnotateField(
-        const std::shared_ptr<arrow::Field>& field, int32_t paimon_id) {
-        auto metadata = arrow::KeyValueMetadata::Make(
-            {DataField::FIELD_ID}, {std::to_string(paimon_id)});
+    static std::shared_ptr<arrow::Field> AnnotateField(const std::shared_ptr<arrow::Field>& field,
+                                                       int32_t paimon_id) {
+        auto metadata =
+            arrow::KeyValueMetadata::Make({DataField::FIELD_ID}, {std::to_string(paimon_id)});
         if (field->metadata()) {
             auto merged = field->metadata()->Merge(*metadata);
             return field->WithMetadata(merged);
@@ -100,9 +101,8 @@ TEST_P(NestedColumnPruningInteTest, PruneStructSubFields) {
     };
 
     ASSERT_OK_AND_ASSIGN(
-        auto helper,
-        TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
-                           /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+        auto helper, TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
 
     // Write data
     std::string data = R"([
@@ -111,20 +111,17 @@ TEST_P(NestedColumnPruningInteTest, PruneStructSubFields) {
         [3, [30, "foo", 3.3]],
         [4, [40, "bar", 4.4]]
     ])";
-    ASSERT_OK_AND_ASSIGN(
-        auto batch,
-        TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
-                                    /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
     int64_t commit_identifier = 0;
-    ASSERT_OK_AND_ASSIGN(
-        auto commit_msgs,
-        helper->WriteAndCommit(std::move(batch), commit_identifier++,
-                               /*expected_commit_messages=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
 
     // Scan to get splits
-    ASSERT_OK_AND_ASSIGN(
-        auto data_splits,
-        helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_FALSE(data_splits.empty());
 
     // Build projected schema: only read f0 (full) and f1.a (sub-field of struct)
@@ -148,8 +145,7 @@ TEST_P(NestedColumnPruningInteTest, PruneStructSubFields) {
     ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
     ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_splits));
-    ASSERT_OK_AND_ASSIGN(auto read_result,
-                         ReadResultCollector::CollectResult(batch_reader.get()));
+    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
 
     // Expected: struct with _VALUE_KIND, f0, f1{a}
     arrow::FieldVector expected_fields = {
@@ -200,28 +196,24 @@ TEST_P(NestedColumnPruningInteTest, PruneEntireStructField) {
     };
 
     ASSERT_OK_AND_ASSIGN(
-        auto helper,
-        TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
-                           /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+        auto helper, TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
 
     std::string data = R"([
         [100, [1, "aa"], 0.1],
         [200, [2, "bb"], 0.2],
         [300, [3, "cc"], 0.3]
     ])";
-    ASSERT_OK_AND_ASSIGN(
-        auto batch,
-        TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
-                                    /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
     int64_t commit_identifier = 0;
-    ASSERT_OK_AND_ASSIGN(
-        auto commit_msgs,
-        helper->WriteAndCommit(std::move(batch), commit_identifier++,
-                               /*expected_commit_messages=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
 
-    ASSERT_OK_AND_ASSIGN(
-        auto data_splits,
-        helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
 
     // Only read f0 and f2, skip f1 entirely.
     // IDs: f0->0, f1->1, f1.x->2, f1.y->3, f2->4
@@ -239,8 +231,7 @@ TEST_P(NestedColumnPruningInteTest, PruneEntireStructField) {
     ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
     ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_splits));
-    ASSERT_OK_AND_ASSIGN(auto read_result,
-                         ReadResultCollector::CollectResult(batch_reader.get()));
+    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
 
     arrow::FieldVector expected_fields = {
         arrow::field("_VALUE_KIND", arrow::int8()),
@@ -293,28 +284,24 @@ TEST_P(NestedColumnPruningInteTest, PruneDeepNestedStruct) {
     };
 
     ASSERT_OK_AND_ASSIGN(
-        auto helper,
-        TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
-                           /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+        auto helper, TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
 
     std::string data = R"([
         [1, [10, [100, "aaa"]]],
         [2, [20, [200, "bbb"]]],
         [3, [30, [300, "ccc"]]]
     ])";
-    ASSERT_OK_AND_ASSIGN(
-        auto batch,
-        TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
-                                    /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
     int64_t commit_identifier = 0;
-    ASSERT_OK_AND_ASSIGN(
-        auto commit_msgs,
-        helper->WriteAndCommit(std::move(batch), commit_identifier++,
-                               /*expected_commit_messages=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
 
-    ASSERT_OK_AND_ASSIGN(
-        auto data_splits,
-        helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
 
     // Field IDs (assigned sequentially by catalog):
     // f0->0, f1->1, f1.a->2, f1.inner->3, f1.inner.x->4, f1.inner.y->5
@@ -340,17 +327,16 @@ TEST_P(NestedColumnPruningInteTest, PruneDeepNestedStruct) {
     ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
     ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_splits));
-    ASSERT_OK_AND_ASSIGN(auto read_result,
-                         ReadResultCollector::CollectResult(batch_reader.get()));
+    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
 
     arrow::FieldVector expected_fields = {
         arrow::field("_VALUE_KIND", arrow::int8()),
         arrow::field("f0", arrow::int32()),
         arrow::field("f1", arrow::struct_({
-            arrow::field("inner", arrow::struct_({
-                arrow::field("x", arrow::int64()),
-            })),
-        })),
+                               arrow::field("inner", arrow::struct_({
+                                                         arrow::field("x", arrow::int64()),
+                                                     })),
+                           })),
     };
     auto expected_type = arrow::struct_(expected_fields);
     std::string expected_data = R"([
@@ -391,9 +377,8 @@ TEST_P(NestedColumnPruningInteTest, MapSelectedKeys) {
     };
 
     ASSERT_OK_AND_ASSIGN(
-        auto helper,
-        TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
-                           /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+        auto helper, TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
 
     // Write data: each row has a map with keys "a", "b", "c"
     std::string data = R"([
@@ -401,30 +386,28 @@ TEST_P(NestedColumnPruningInteTest, MapSelectedKeys) {
         [2, [["a", 100], ["c", 300]]],
         [3, [["b", 200], ["c", 400], ["d", 500]]]
     ])";
-    ASSERT_OK_AND_ASSIGN(
-        auto batch,
-        TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
-                                    /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
     int64_t commit_identifier = 0;
-    ASSERT_OK_AND_ASSIGN(
-        auto commit_msgs,
-        helper->WriteAndCommit(std::move(batch), commit_identifier++,
-                               /*expected_commit_messages=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
 
     // Scan to get splits
-    ASSERT_OK_AND_ASSIGN(
-        auto data_splits,
-        helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_FALSE(data_splits.empty());
 
     // Build projected schema: read f0 and f1 with selected keys "a,c"
-    auto selected_keys_metadata = arrow::KeyValueMetadata::Make(
-        {DataField::MAP_SELECTED_KEYS}, {"a,c"});
+    auto selected_keys_metadata =
+        arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"a,c"});
     arrow::FieldVector projected_fields = {
         AnnotateField(arrow::field("f0", arrow::int32()), 0),
-        AnnotateField(arrow::field("f1", map_type), 1)->WithMetadata(
-            AnnotateField(arrow::field("f1", map_type), 1)
-                ->metadata()->Merge(*selected_keys_metadata)),
+        AnnotateField(arrow::field("f1", map_type), 1)
+            ->WithMetadata(AnnotateField(arrow::field("f1", map_type), 1)
+                               ->metadata()
+                               ->Merge(*selected_keys_metadata)),
     };
     auto projected_schema = arrow::schema(projected_fields);
 
@@ -438,8 +421,7 @@ TEST_P(NestedColumnPruningInteTest, MapSelectedKeys) {
     ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
     ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_splits));
-    ASSERT_OK_AND_ASSIGN(auto read_result,
-                         ReadResultCollector::CollectResult(batch_reader.get()));
+    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
 
     // Expected: only keys "a" and "c" remain in each map
     arrow::FieldVector expected_fields = {
@@ -470,7 +452,8 @@ TEST_P(NestedColumnPruningInteTest, MapSelectedKeys) {
 
 // Test: Deeper nested struct — prune sub-fields of a struct inside a struct inside another struct.
 TEST_P(NestedColumnPruningInteTest, PruneDeeperNestedStruct) {
-    // Table schema: f0 (int32), f1 (struct{a: int32, inner1: struct{x: int64, inner2: struct{p: utf8, q: float64}}})
+    // Table schema: f0 (int32), f1 (struct{a: int32, inner1: struct{x: int64, inner2: struct{p:
+    // utf8, q: float64}}})
     auto inner2_struct = arrow::struct_({
         arrow::field("p", arrow::utf8()),
         arrow::field("q", arrow::float64()),
@@ -497,31 +480,28 @@ TEST_P(NestedColumnPruningInteTest, PruneDeeperNestedStruct) {
     };
 
     ASSERT_OK_AND_ASSIGN(
-        auto helper,
-        TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
-                           /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+        auto helper, TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
 
     std::string data = R"([
         [1, [10, [100, ["ppp", 1.1]]]],
         [2, [20, [200, ["qqq", 2.2]]]],
         [3, [30, [300, ["rrr", 3.3]]]]
     ])";
-    ASSERT_OK_AND_ASSIGN(
-        auto batch,
-        TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
-                                    /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
     int64_t commit_identifier = 0;
-    ASSERT_OK_AND_ASSIGN(
-        auto commit_msgs,
-        helper->WriteAndCommit(std::move(batch), commit_identifier++,
-                               /*expected_commit_messages=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
 
-    ASSERT_OK_AND_ASSIGN(
-        auto data_splits,
-        helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
 
     // Field IDs (assigned sequentially by catalog):
-    // f0->0, f1->1, f1.a->2, f1.inner1->3, f1.inner1.x->4, f1.inner1.inner2->5, f1.inner1.inner2.p->6, f1.inner1.inner2.q->7
+    // f0->0, f1->1, f1.a->2, f1.inner1->3, f1.inner1.x->4, f1.inner1.inner2->5,
+    // f1.inner1.inner2.p->6, f1.inner1.inner2.q->7
     //
     // Projected: f0, f1{inner1{inner2{p}}}
     auto pruned_inner2 = arrow::struct_({
@@ -547,19 +527,20 @@ TEST_P(NestedColumnPruningInteTest, PruneDeeperNestedStruct) {
     ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
     ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_splits));
-    ASSERT_OK_AND_ASSIGN(auto read_result,
-                         ReadResultCollector::CollectResult(batch_reader.get()));
+    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
 
     arrow::FieldVector expected_fields = {
         arrow::field("_VALUE_KIND", arrow::int8()),
         arrow::field("f0", arrow::int32()),
-        arrow::field("f1", arrow::struct_({
-            arrow::field("inner1", arrow::struct_({
-                arrow::field("inner2", arrow::struct_({
-                    arrow::field("p", arrow::utf8()),
-                })),
-            })),
-        })),
+        arrow::field(
+            "f1", arrow::struct_({
+                      arrow::field("inner1",
+                                   arrow::struct_({
+                                       arrow::field("inner2", arrow::struct_({
+                                                                  arrow::field("p", arrow::utf8()),
+                                                              })),
+                                   })),
+                  })),
     };
     auto expected_type = arrow::struct_(expected_fields);
     std::string expected_data = R"([

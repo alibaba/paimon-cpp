@@ -42,9 +42,8 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
         // Nested column pruning path: user provided a projected C ArrowSchema
         // where STRUCT types may contain only a subset of sub-fields.
         // ImportSchema consumes the C schema — that's fine, it's one-shot usage.
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-            std::shared_ptr<arrow::Schema> projected_schema,
-            arrow::ImportSchema(context->GetReadSchema()));
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> projected_schema,
+                                          arrow::ImportSchema(context->GetReadSchema()));
         PAIMON_ASSIGN_OR_RAISE(read_data_fields,
                                DataField::ConvertArrowSchemaToDataFields(projected_schema));
         // Validate that every top-level field exists in the table schema by field ID.
