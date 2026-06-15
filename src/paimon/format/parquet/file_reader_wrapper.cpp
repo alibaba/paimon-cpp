@@ -121,13 +121,10 @@ Result<std::unique_ptr<FileReaderWrapper>> FileReaderWrapper::Create(
 FileReaderWrapper::~FileReaderWrapper() {
     WaitForPendingPreBuffer();
 
-    // Wait for all pending Arrow IO tasks (e.g. ReadRowgroup) to complete before destroying
-    // file_reader_.
+    // Drain all pending Arrow IO tasks before destroying file_reader_.
     auto io_pool = arrow::internal::GetCpuThreadPool();
     if (io_pool) {
-        // Shutdown waits for all pending tasks to complete.
-        // Ignore errors - we're in destructor and shutdown failure doesn't affect correctness.
-        (void)io_pool->Shutdown();
+        (void)io_pool->WaitForIdle();
     }
 }
 
