@@ -16,9 +16,15 @@
 
 #include "paimon/core/operation/append_only_file_store_write.h"
 
+#include <functional>
 #include <vector>
 
+#include "arrow/c/bridge.h"
+#include "arrow/c/helpers.h"
 #include "paimon/common/data/binary_row.h"
+#include "paimon/common/data/shredding/map_shared_shredding_batch_converter.h"
+#include "paimon/common/data/shredding/map_shared_shredding_utils.h"
+#include "paimon/common/data/shredding/map_shredding_defs.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/core/append/append_only_writer.h"
@@ -111,10 +117,14 @@ Result<std::vector<std::shared_ptr<DataFileMeta>>> AppendOnlyFileStoreWrite::Com
 
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> reader,
                            CreateFilesReader(partition, bucket, dv_factory, to_compact));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<MapSharedShreddingContext> shredding_context,
+        MapSharedShreddingUtils::CreateShreddingContext(write_schema_, options_));
     auto rewriter =
         std::make_unique<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
             options_.GetTargetFileSize(/*has_primary_key=*/false),
-            GetDataFileWriterCreator(partition, bucket, write_schema_, write_cols_, to_compact));
+            GetDataFileWriterCreator(partition, bucket, write_schema_, write_cols_, to_compact,
+                                     shredding_context));
 
     ScopeGuard reader_guard([&]() {
         if (reader) {
@@ -210,34 +220,58 @@ AppendOnlyFileStoreWrite::SingleFileWriterCreator
 AppendOnlyFileStoreWrite::GetDataFileWriterCreator(
     const BinaryRow& partition, int32_t bucket, const std::shared_ptr<arrow::Schema>& schema,
     const std::optional<std::vector<std::string>>& write_cols,
-    const std::vector<std::shared_ptr<DataFileMeta>>& to_compact) const {
+    const std::vector<std::shared_ptr<DataFileMeta>>& to_compact,
+    const std::shared_ptr<MapSharedShreddingContext>& shredding_context) const {
     return
-        [this, partition, bucket, schema, write_cols, to_compact]()
+        [this, partition, bucket, schema, write_cols, to_compact, shredding_context]()
             -> Result<
                 std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>> {
+            PAIMON_ASSIGN_OR_RAISE(MapSharedShreddingBatchConverter::ConverterBundle bundle,
+                                   MapSharedShreddingBatchConverter::CreateConverter(
+                                       schema, shredding_context, pool_));
+            std::shared_ptr<arrow::Schema> file_schema =
+                bundle.physical_schema ? bundle.physical_schema : schema;
+
             ::ArrowSchema arrow_schema;
             ScopeGuard guard([&arrow_schema]() { ArrowSchemaRelease(&arrow_schema); });
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schema, &arrow_schema));
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*file_schema, &arrow_schema));
             auto format = options_.GetFileFormat();
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<WriterBuilder> writer_builder,
                 format->CreateWriterBuilder(&arrow_schema, options_.GetWriteBatchSize()));
             writer_builder->WithMemoryPool(pool_);
 
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schema, &arrow_schema));
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*file_schema, &arrow_schema));
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FormatStatsExtractor> stats_extractor,
                                    format->CreateStatsExtractor(&arrow_schema));
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<DataFilePathFactory> data_file_path_factory,
                 file_store_path_factory_->CreateDataFilePathFactory(partition, bucket));
+
+            std::function<Status(ArrowArray*, ArrowArray*)> batch_converter;
+            if (bundle.converter) {
+                auto converter = bundle.converter;
+                batch_converter = [converter](ArrowArray* input, ArrowArray* output) -> Status {
+                    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ArrowArray> physical,
+                                           converter->Convert(input));
+                    ArrowArrayMove(physical.get(), output);
+                    return Status::OK();
+                };
+            }
+
             auto writer = std::make_unique<DataFileWriter>(
-                options_.GetFileCompression(), std::function<Status(ArrowArray*, ArrowArray*)>(),
-                table_schema_->Id(),
+                options_.GetFileCompression(), batch_converter, table_schema_->Id(),
                 std::make_shared<LongCounter>(to_compact[0]->min_sequence_number),
                 FileSource::Compact(), stats_extractor, data_file_path_factory->IsExternalPath(),
                 write_cols, pool_);
             PAIMON_RETURN_NOT_OK(writer->Init(options_.GetFileSystem(),
                                               data_file_path_factory->NewPath(), writer_builder));
+
+            if (bundle.converter) {
+                writer->SetMetadataFinalizer(MapSharedShreddingUtils::BuildMetadataFinalizer(
+                    bundle.converter, MapSharedShreddingDefine::kDefaultDictCompression,
+                    shredding_context, file_schema));
+            }
             return writer;
         };
 }

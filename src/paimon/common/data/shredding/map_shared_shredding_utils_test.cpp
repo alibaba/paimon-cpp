@@ -91,7 +91,7 @@ TEST(MapSharedShreddingUtilsTest, LogicalToPhysicalSchemaBasic) {
 
     // Build expected schema for comparison
     auto expected_struct = arrow::struct_({
-        arrow::field("__field_mapping", arrow::list(arrow::int32()), true),
+        arrow::field("__field_mapping", arrow::list(arrow::int32()), false),
         arrow::field("__col_0", arrow::utf8(), true),
         arrow::field("__col_1", arrow::utf8(), true),
         arrow::field("__col_2", arrow::utf8(), true),
@@ -118,7 +118,7 @@ TEST(MapSharedShreddingUtilsTest, LogicalToPhysicalSchemaNestedValue) {
                                                    schema, field_to_num_columns));
 
     auto expected_struct = arrow::struct_({
-        arrow::field("__field_mapping", arrow::list(arrow::int32()), true),
+        arrow::field("__field_mapping", arrow::list(arrow::int32()), false),
         arrow::field("__col_0", nested_value, true),
         arrow::field("__col_1", nested_value, true),
         arrow::field("__overflow", arrow::map(arrow::int32(), nested_value), true),
