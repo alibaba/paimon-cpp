@@ -820,6 +820,7 @@ TEST(SchemaValidationTest, ValidateInvalidConfiguration) {
                             "Data evolution config must disabled with deletion-vectors.enabled");
     }
 }
+
 TEST(SchemaValidationTest, TestMapStorageLayout) {
     auto f0 = arrow::field("f0", arrow::utf8());
     auto f1 = arrow::field("f1", arrow::int32());

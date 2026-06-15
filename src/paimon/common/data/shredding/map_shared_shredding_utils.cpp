@@ -138,7 +138,7 @@ namespace {
 std::string JsonEncodeObject(
     std::function<void(rapidjson::Document*, rapidjson::Document::AllocatorType*)> builder) {
     rapidjson::Document doc(rapidjson::kObjectType);
-    auto allocator = doc.GetAllocator();
+    auto& allocator = doc.GetAllocator();
     builder(&doc, &allocator);
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -149,7 +149,7 @@ std::string JsonEncodeObject(
 std::string JsonEncodeArray(
     std::function<void(rapidjson::Document*, rapidjson::Document::AllocatorType*)> builder) {
     rapidjson::Document doc(rapidjson::kArrayType);
-    auto allocator = doc.GetAllocator();
+    auto& allocator = doc.GetAllocator();
     builder(&doc, &allocator);
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
