@@ -437,4 +437,126 @@ TEST_F(KeyValueFileStoreScanTest, TestFilterByValueFilterWithValueStatsCols) {
     ASSERT_OK_AND_ASSIGN(keep, scan->FilterByStats(entry_keep));
     ASSERT_TRUE(keep);
 }
+
+TEST_F(KeyValueFileStoreScanTest, TestFilterByValueFilterWithSchemaEvolution) {
+    std::string table_path =
+        paimon::test::GetDataDir() + "orc/pk_table_with_alter_table.db/pk_table_with_alter_table";
+    std::vector<std::map<std::string, std::string>> partition_filters = {};
+
+    // In schema-1, `c` is renamed from schema-0 field `b` and moves to index 3.
+    auto greater_than = PredicateBuilder::GreaterThan(/*field_index=*/3, /*field_name=*/"c",
+                                                      FieldType::INT, Literal(30));
+    auto scan_filter = std::make_shared<ScanFilter>(/*predicate=*/greater_than,
+                                                    /*partition_filters=*/partition_filters,
+                                                    /*bucket_filter=*/0);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<KeyValueFileStoreScan> scan,
+                         CreateFileStoreScan(table_path, scan_filter,
+                                             /*table_schema_id=*/1, /*snapshot_id=*/6));
+    scan->EnableValueFilter();
+
+    auto pool = GetDefaultPool();
+    // Build schema-0 dense stats for field `b`; after evolution they are tested against
+    // schema-1 field `c`.
+    SimpleStats value_stats = BinaryRowGenerator::GenerateStats(
+        /*min=*/{10}, /*max=*/{20}, /*null=*/{0}, pool.get());
+    std::vector<std::string> value_stats_cols = {"b"};
+    ManifestEntry entry(
+        /*kind=*/FileKind::Add(), /*partition=*/BinaryRow::EmptyRow(), /*bucket=*/0,
+        /*total_buckets=*/1,
+        std::make_shared<DataFileMeta>(
+            /*file_name=*/"schema0_name", /*file_size=*/1024, /*row_count=*/10,
+            /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
+            /*key_stats=*/SimpleStats::EmptyStats(),
+            /*value_stats=*/value_stats,
+            /*min_sequence_number=*/0,
+            /*max_sequence_number=*/10,
+            /*schema_id=*/0,
+            /*level=*/1,
+            /*extra_files=*/std::vector<std::optional<std::string>>(),
+            /*creation_time=*/Timestamp(0, 0),
+            /*delete_row_count=*/std::nullopt,
+            /*embedded_index=*/nullptr,
+            /*file_source=*/FileSource::Append(),
+            /*value_stats_cols=*/value_stats_cols,
+            /*external_path=*/std::nullopt,
+            /*first_row_id=*/std::nullopt,
+            /*write_cols=*/std::nullopt));
+
+    SimpleStats value_stats_keep = BinaryRowGenerator::GenerateStats(
+        /*min=*/{40}, /*max=*/{50}, /*null=*/{0}, pool.get());
+    ManifestEntry entry_keep(
+        /*kind=*/FileKind::Add(), /*partition=*/BinaryRow::EmptyRow(), /*bucket=*/0,
+        /*total_buckets=*/1,
+        std::make_shared<DataFileMeta>(
+            /*file_name=*/"schema0_name_keep", /*file_size=*/1024, /*row_count=*/10,
+            /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
+            /*key_stats=*/SimpleStats::EmptyStats(),
+            /*value_stats=*/value_stats_keep,
+            /*min_sequence_number=*/0,
+            /*max_sequence_number=*/10,
+            /*schema_id=*/0,
+            /*level=*/1,
+            /*extra_files=*/std::vector<std::optional<std::string>>(),
+            /*creation_time=*/Timestamp(0, 0),
+            /*delete_row_count=*/std::nullopt,
+            /*embedded_index=*/nullptr,
+            /*file_source=*/FileSource::Append(),
+            /*value_stats_cols=*/value_stats_cols,
+            /*external_path=*/std::nullopt,
+            /*first_row_id=*/std::nullopt,
+            /*write_cols=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(bool keep, scan->FilterByStats(entry));
+    ASSERT_FALSE(keep);
+
+    ASSERT_OK_AND_ASSIGN(keep, scan->FilterByStats(entry_keep));
+    ASSERT_TRUE(keep);
+}
+
+TEST_F(KeyValueFileStoreScanTest, TestFilterByValueFilterWithNewFieldKeepsOldSchemaFile) {
+    std::string table_path =
+        paimon::test::GetDataDir() + "orc/pk_table_with_alter_table.db/pk_table_with_alter_table";
+    std::vector<std::map<std::string, std::string>> partition_filters = {};
+
+    // `e` only exists in schema-1. Schema-0 files must be kept because their stats cannot prove
+    // whether the evolved row should match the current-schema predicate.
+    auto greater_than = PredicateBuilder::GreaterThan(/*field_index=*/7, /*field_name=*/"e",
+                                                      FieldType::INT, Literal(30));
+    auto scan_filter = std::make_shared<ScanFilter>(/*predicate=*/greater_than,
+                                                    /*partition_filters=*/partition_filters,
+                                                    /*bucket_filter=*/0);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<KeyValueFileStoreScan> scan,
+                         CreateFileStoreScan(table_path, scan_filter,
+                                             /*table_schema_id=*/1, /*snapshot_id=*/6));
+    scan->EnableValueFilter();
+
+    auto pool = GetDefaultPool();
+    SimpleStats value_stats = BinaryRowGenerator::GenerateStats(
+        /*min=*/{10}, /*max=*/{20}, /*null=*/{0}, pool.get());
+    std::vector<std::string> value_stats_cols = {"b"};
+    ManifestEntry old_schema_entry(
+        /*kind=*/FileKind::Add(), /*partition=*/BinaryRow::EmptyRow(), /*bucket=*/0,
+        /*total_buckets=*/1,
+        std::make_shared<DataFileMeta>(
+            /*file_name=*/"schema0_missing_e", /*file_size=*/1024, /*row_count=*/10,
+            /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
+            /*key_stats=*/SimpleStats::EmptyStats(),
+            /*value_stats=*/value_stats,
+            /*min_sequence_number=*/0,
+            /*max_sequence_number=*/10,
+            /*schema_id=*/0,
+            /*level=*/1,
+            /*extra_files=*/std::vector<std::optional<std::string>>(),
+            /*creation_time=*/Timestamp(0, 0),
+            /*delete_row_count=*/std::nullopt,
+            /*embedded_index=*/nullptr,
+            /*file_source=*/FileSource::Append(),
+            /*value_stats_cols=*/value_stats_cols,
+            /*external_path=*/std::nullopt,
+            /*first_row_id=*/std::nullopt,
+            /*write_cols=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(bool keep, scan->FilterByStats(old_schema_entry));
+    ASSERT_TRUE(keep);
+}
 }  // namespace paimon::test

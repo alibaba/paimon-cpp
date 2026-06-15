@@ -23,8 +23,8 @@
 #include <optional>
 #include <shared_mutex>
 
-#include "glog/log_severity.h"
 #include "glog/logging.h"
+#include "glog/log_severity.h"
 #include "glog/raw_logging.h"
 
 namespace paimon {

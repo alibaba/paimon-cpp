@@ -201,11 +201,6 @@ Result<std::unique_ptr<TableScan>> NewDataTableScan(const std::shared_ptr<ScanCo
         return Status::Invalid("not found latest schema");
     }
     const auto& table_schema = latest_table_schema.value();
-    if (table_schema->Id() != TableSchema::FIRST_SCHEMA_ID &&
-        !table_schema->PrimaryKeys().empty()) {
-        return Status::NotImplemented(
-            "do not support schema evolution in pk table while scan process");
-    }
     // merge options
     auto options = table_schema->Options();
     for (const auto& [key, value] : context->GetOptions()) {
