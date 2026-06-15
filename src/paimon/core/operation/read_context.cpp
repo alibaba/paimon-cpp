@@ -222,6 +222,9 @@ Result<std::unique_ptr<ReadContext>> ReadContextBuilder::Finish() {
     if (impl_->path_.empty()) {
         return Status::Invalid("cannot read with empty table path");
     }
+    if (impl_->enable_prefetch_ && impl_->prefetch_max_parallel_num_ == 0) {
+        return Status::Invalid("prefetch max parallel num should be greater than 0");
+    }
     if (impl_->enable_prefetch_ && impl_->prefetch_batch_count_ <= 0) {
         return Status::Invalid("prefetch batch count should be greater than 0");
     }
@@ -230,10 +233,14 @@ Result<std::unique_ptr<ReadContext>> ReadContextBuilder::Finish() {
         return Status::Invalid(
             "prefetch batch count should be greater than or equal to prefetch max parallel num");
     }
+    if (impl_->specific_file_system_ && !impl_->fs_scheme_to_identifier_map_.empty()) {
+        return Status::Invalid(
+            "WithFileSystem() and WithFileSystemSchemeToIdentifierMap() cannot be used together");
+    }
     if (!impl_->executor_) {
         // If the user do not set executor, create default executor by prefetch batch count
         uint32_t thread_count = impl_->enable_prefetch_ ? impl_->prefetch_max_parallel_num_ : 1;
-        impl_->executor_ = CreateDefaultExecutor(thread_count);
+        PAIMON_ASSIGN_OR_RAISE(impl_->executor_, CreateDefaultExecutor(thread_count));
     }
 
     if (impl_->enable_multi_thread_row_to_batch_ && impl_->row_to_batch_thread_number_ <= 0) {

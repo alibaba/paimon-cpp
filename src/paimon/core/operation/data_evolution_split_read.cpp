@@ -185,7 +185,7 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::WrapWithBlobViewRes
     // use global thread number
     uint32_t cpu_count = std::thread::hardware_concurrency();
     uint32_t thread_num = cpu_count > 0 ? cpu_count : 1;
-    std::shared_ptr<Executor> executor = CreateDefaultExecutor(thread_num);
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Executor> executor, CreateDefaultExecutor(thread_num));
     PAIMON_ASSIGN_OR_RAISE(
         BlobViewResolver resolver,
         BlobViewLookup::CreateResolver(blob_view_structs, catalog_context, pool_, executor));

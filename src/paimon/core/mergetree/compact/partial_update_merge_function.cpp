@@ -269,7 +269,11 @@ void PartialUpdateMergeFunction::Reset() {
     current_key_.reset();
     meet_insert_ = false;
     not_null_column_filled_ = false;
-    row_ = std::make_unique<GenericRow>(getters_.size());
+    if (row_) {
+        row_->ResetFields();
+    } else {
+        row_ = std::make_unique<GenericRow>(getters_.size());
+    }
     last_seq_num_ = 0;
     for (auto& [_, agg] : field_aggregators_) {
         assert(agg);
@@ -304,7 +308,11 @@ Status PartialUpdateMergeFunction::Add(KeyValue&& moved_kv) {
         if (remove_record_on_delete_) {
             if (kv.value_kind == RowKind::Delete()) {
                 current_delete_row_ = true;
-                row_ = std::make_unique<GenericRow>(getters_.size());
+                if (row_) {
+                    row_->ResetFields();
+                } else {
+                    row_ = std::make_unique<GenericRow>(getters_.size());
+                }
                 InitRowAndHoldData(std::move(kv.value));
             } else if (!not_null_column_filled_) {
                 InitRowAndHoldData(std::move(kv.value));
