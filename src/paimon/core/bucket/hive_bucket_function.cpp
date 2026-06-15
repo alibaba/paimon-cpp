@@ -103,6 +103,8 @@ uint32_t HiveBucketFunction::ComputeHash(const BinaryRow& row, int32_t field_ind
             uint32_t bits;
             if (float_value == -0.0f) {
                 bits = 0;
+            } else if (std::isnan(float_value)) {
+                bits = 0x7FC00000U;
             } else {
                 std::memcpy(&bits, &float_value, sizeof(bits));
             }
@@ -113,6 +115,8 @@ uint32_t HiveBucketFunction::ComputeHash(const BinaryRow& row, int32_t field_ind
             uint64_t bits;
             if (double_value == -0.0) {
                 bits = 0;
+            } else if (std::isnan(double_value)) {
+                bits = 0x7FF8000000000000ULL;
             } else {
                 std::memcpy(&bits, &double_value, sizeof(bits));
             }
