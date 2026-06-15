@@ -82,7 +82,7 @@ std::shared_ptr<arrow::DataType> MapSharedShreddingUtils::BuildPhysicalStructTyp
     struct_fields.reserve(num_columns + 2);
 
     struct_fields.push_back(
-        arrow::field(MapSharedShreddingDefine::kFieldMapping, arrow::list(arrow::int32()), true));
+        arrow::field(MapSharedShreddingDefine::kFieldMapping, arrow::list(arrow::int32()), false));
 
     for (int32_t i = 0; i < num_columns; ++i) {
         struct_fields.push_back(arrow::field(MapSharedShreddingDefine::PhysicalColumnName(i),

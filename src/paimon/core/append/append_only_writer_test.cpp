@@ -276,10 +276,11 @@ class AppendOnlyWriterTest : public testing::Test {
         ASSERT_OK(reader->SetReadSchema(c_file_schema.get(), /*predicate=*/nullptr,
                                         /*selection_bitmap=*/std::nullopt));
         ASSERT_OK_AND_ASSIGN(auto result_array, ReadResultCollector::CollectResult(reader.get()));
-        ASSERT_TRUE(expected_array->Equals(result_array))
+        auto view_result_array = result_array->View(expected_array->type()).ValueOrDie();
+        ASSERT_TRUE(expected_array->Equals(view_result_array))
             << "Expected:\n"
             << expected_array->ToString() << "\nActual:\n"
-            << result_array->ToString();
+            << view_result_array->ToString();
     }
 
     /// Reads a file's schema, compares structure against expected physical schema

@@ -152,7 +152,8 @@ class MergeTreeWriterTest : public ::testing::TestWithParam<bool> {
         ASSERT_OK_AND_ASSIGN(auto orc_batch_reader, reader_builder->Build(input_stream));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> result_array,
                              ReadResultCollector::CollectResult(orc_batch_reader.get()));
-        ASSERT_TRUE(expected_array->Equals(result_array)) << result_array->ToString();
+        auto view_result_array = result_array->View(expected_array->type()).ValueOrDie();
+        ASSERT_TRUE(expected_array->Equals(view_result_array)) << view_result_array->ToString();
     }
 
     void CheckShreddingFileSchema(const std::string& data_file_name,
