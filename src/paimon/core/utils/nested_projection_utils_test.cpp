@@ -213,7 +213,7 @@ TEST(NestedProjectionUtilsTest, PruneArray_IdenticalType) {
 
 TEST(NestedProjectionUtilsTest, GetMapSelectedKeys_Present) {
     auto metadata = arrow::KeyValueMetadata::Make(
-        {DataField::MAP_SELECTED_KEYS}, {R"(["key1","key2","key3"])"});
+        {DataField::MAP_SELECTED_KEYS}, {"key1,key2,key3"});
     auto field = arrow::field("m", arrow::map(arrow::utf8(), arrow::int32()), /*nullable=*/true,
                               metadata);
     auto keys = NestedProjectionUtils::GetMapSelectedKeys(field);
@@ -229,9 +229,9 @@ TEST(NestedProjectionUtilsTest, GetMapSelectedKeys_Absent) {
     ASSERT_TRUE(keys.empty());
 }
 
-TEST(NestedProjectionUtilsTest, GetMapSelectedKeys_InvalidJson) {
+TEST(NestedProjectionUtilsTest, GetMapSelectedKeys_EmptyString) {
     auto metadata = arrow::KeyValueMetadata::Make(
-        {DataField::MAP_SELECTED_KEYS}, {"not_json"});
+        {DataField::MAP_SELECTED_KEYS}, {""});
     auto field = arrow::field("m", arrow::map(arrow::utf8(), arrow::int32()), /*nullable=*/true,
                               metadata);
     auto keys = NestedProjectionUtils::GetMapSelectedKeys(field);

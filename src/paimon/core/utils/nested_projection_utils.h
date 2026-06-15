@@ -31,7 +31,7 @@
 namespace paimon {
 
 /// Utility class for nested column pruning and map key selection.
-class NestedProjectionUtils {
+class PAIMON_EXPORT NestedProjectionUtils {
  public:
     NestedProjectionUtils() = delete;
 

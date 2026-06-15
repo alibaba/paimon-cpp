@@ -417,9 +417,9 @@ TEST_P(NestedColumnPruningInteTest, MapSelectedKeys) {
         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_FALSE(data_splits.empty());
 
-    // Build projected schema: read f0 and f1 with selected keys ["a", "c"]
+    // Build projected schema: read f0 and f1 with selected keys "a,c"
     auto selected_keys_metadata = arrow::KeyValueMetadata::Make(
-        {DataField::MAP_SELECTED_KEYS}, {R"(["a","c"])"});
+        {DataField::MAP_SELECTED_KEYS}, {"a,c"});
     arrow::FieldVector projected_fields = {
         AnnotateField(arrow::field("f0", arrow::int32()), 0),
         AnnotateField(arrow::field("f1", map_type), 1)->WithMetadata(
@@ -452,6 +452,120 @@ TEST_P(NestedColumnPruningInteTest, MapSelectedKeys) {
         [0, 1, [["a", 10], ["c", 30]]],
         [0, 2, [["a", 100], ["c", 300]]],
         [0, 3, [["c", 400]]]
+    ])";
+    auto expected_array =
+        arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();
+    auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
+
+    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
+    bool is_equal = expected_chunked->Equals(read_result, equal_options.diff_sink(&std::cout));
+    if (!is_equal) {
+        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
+        std::cout << "[actual_type]   " << read_result->type()->ToString() << std::endl;
+        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
+        std::cout << "[actual]   " << read_result->ToString() << std::endl;
+    }
+    ASSERT_TRUE(is_equal);
+}
+
+// Test: Deeper nested struct — prune sub-fields of a struct inside a struct inside another struct.
+TEST_P(NestedColumnPruningInteTest, PruneDeeperNestedStruct) {
+    // Table schema: f0 (int32), f1 (struct{a: int32, inner1: struct{x: int64, inner2: struct{p: utf8, q: float64}}})
+    auto inner2_struct = arrow::struct_({
+        arrow::field("p", arrow::utf8()),
+        arrow::field("q", arrow::float64()),
+    });
+    auto inner1_struct = arrow::struct_({
+        arrow::field("x", arrow::int64()),
+        arrow::field("inner2", inner2_struct),
+    });
+    auto outer_struct = arrow::struct_({
+        arrow::field("a", arrow::int32()),
+        arrow::field("inner1", inner1_struct),
+    });
+    arrow::FieldVector table_fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", outer_struct),
+    };
+    auto table_schema = arrow::schema(table_fields);
+
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "AVRO"},
+        {Options::FILE_FORMAT, StringUtils::ToUpperCase(file_format_)},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+    };
+
+    ASSERT_OK_AND_ASSIGN(
+        auto helper,
+        TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
+                           /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+
+    std::string data = R"([
+        [1, [10, [100, ["ppp", 1.1]]]],
+        [2, [20, [200, ["qqq", 2.2]]]],
+        [3, [30, [300, ["rrr", 3.3]]]]
+    ])";
+    ASSERT_OK_AND_ASSIGN(
+        auto batch,
+        TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
+                                    /*partition_map=*/{}, /*bucket=*/0, {}));
+    int64_t commit_identifier = 0;
+    ASSERT_OK_AND_ASSIGN(
+        auto commit_msgs,
+        helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                               /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(
+        auto data_splits,
+        helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+
+    // Field IDs (assigned sequentially by catalog):
+    // f0->0, f1->1, f1.a->2, f1.inner1->3, f1.inner1.x->4, f1.inner1.inner2->5, f1.inner1.inner2.p->6, f1.inner1.inner2.q->7
+    //
+    // Projected: f0, f1{inner1{inner2{p}}}
+    auto pruned_inner2 = arrow::struct_({
+        AnnotateField(arrow::field("p", arrow::utf8()), 6),
+    });
+    auto pruned_inner1 = arrow::struct_({
+        AnnotateField(arrow::field("inner2", pruned_inner2), 5),
+    });
+    auto pruned_outer = arrow::struct_({
+        AnnotateField(arrow::field("inner1", pruned_inner1), 3),
+    });
+    arrow::FieldVector projected_fields = {
+        AnnotateField(arrow::field("f0", arrow::int32()), 0),
+        AnnotateField(arrow::field("f1", pruned_outer), 1),
+    };
+    auto projected_schema = arrow::schema(projected_fields);
+
+    ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_schema).ok());
+
+    ReadContextBuilder read_context_builder(table_path_);
+    read_context_builder.SetOptions(options).SetReadSchema(&c_schema);
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_splits));
+    ASSERT_OK_AND_ASSIGN(auto read_result,
+                         ReadResultCollector::CollectResult(batch_reader.get()));
+
+    arrow::FieldVector expected_fields = {
+        arrow::field("_VALUE_KIND", arrow::int8()),
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::struct_({
+            arrow::field("inner1", arrow::struct_({
+                arrow::field("inner2", arrow::struct_({
+                    arrow::field("p", arrow::utf8()),
+                })),
+            })),
+        })),
+    };
+    auto expected_type = arrow::struct_(expected_fields);
+    std::string expected_data = R"([
+        [0, 1, [[[ "ppp" ]]]],
+        [0, 2, [[[ "qqq" ]]]],
+        [0, 3, [[[ "rrr" ]]]]
     ])";
     auto expected_array =
         arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();

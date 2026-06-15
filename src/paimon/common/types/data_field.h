@@ -41,8 +41,8 @@ class DataField : public Jsonizable<DataField> {
 
     static constexpr char FIELD_ID[] = "paimon.id";
     static constexpr char DESCRIPTION[] = "paimon.description";
-    /// Metadata key for map field selected keys. The value is a JSON array of
-    /// string keys, e.g. '["key1","key2"]'. Only string-keyed maps are supported.
+    /// Metadata key for map field selected keys. The value is a comma-separated
+    /// string of key names, e.g. 'key1,key2'. Only string-keyed maps are supported.
     static constexpr char MAP_SELECTED_KEYS[] = "paimon.map.selected-keys";
 
  public:

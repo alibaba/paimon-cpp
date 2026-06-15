@@ -395,6 +395,38 @@ TEST_F(ParquetFileBatchReaderTest, TestSetReadSchema) {
     ASSERT_FALSE(result_with_read_schema);
 }
 
+TEST_F(ParquetFileBatchReaderTest, TestSetReadSchemaWithLegacyParquetMissingFieldIds) {
+    std::string file_name = paimon::test::GetDataDir() +
+                            "/parquet/append_09.db/append_09/f1=20/bucket-0/"
+                            "data-b446f78a-2cfb-4b3b-add8-31295d24a277-0.parquet";
+
+    std::vector<DataField> read_fields = {
+        DataField(0, arrow::field("f0", arrow::utf8())),
+        DataField(2, arrow::field("f2", arrow::int32())),
+        DataField(3, arrow::field("f3", arrow::float64())),
+    };
+    auto read_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields);
+
+    auto parquet_batch_reader =
+        PrepareParquetFileBatchReader(file_name, read_schema, /*predicate=*/nullptr,
+                                      /*selection_bitmap=*/std::nullopt, batch_size_);
+
+    ASSERT_OK_AND_ASSIGN(auto result_array, paimon::test::ReadResultCollector::CollectResult(
+                                                parquet_batch_reader.get()));
+
+    std::shared_ptr<arrow::ChunkedArray> expected_array;
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(
+                    arrow::struct_(read_schema->fields()),
+                    {R"([
+        ["Lucy", 1, 14.1]
+    ])"},
+                    &expected_array)
+                    .ok());
+    ASSERT_TRUE(result_array->Equals(expected_array))
+        << "expected: " << expected_array->ToString() << "\nactual: "
+        << result_array->ToString();
+}
+
 TEST_F(ParquetFileBatchReaderTest, TestNextBatchSimple) {
     std::string file_name = paimon::test::GetDataDir() +
                             "parquet/parquet_append_table.db/parquet_append_table/bucket-0/"

@@ -27,8 +27,8 @@
 #include "arrow/array/concatenate.h"
 #include "arrow/type.h"
 #include "fmt/format.h"
+#include "paimon/common/utils/string_utils.h"
 #include "paimon/status.h"
-#include "rapidjson/document.h"
 
 namespace paimon {
 
@@ -188,17 +188,9 @@ std::set<std::string> NestedProjectionUtils::GetMapSelectedKeys(
     if (!get_result.ok()) {
         return result;
     }
-    const std::string& json_str = get_result.ValueUnsafe();
-    rapidjson::Document doc;
-    doc.Parse(json_str.c_str());
-    if (doc.HasParseError() || !doc.IsArray()) {
-        return result;
-    }
-    for (rapidjson::SizeType i = 0; i < doc.Size(); ++i) {
-        if (doc[i].IsString()) {
-            result.emplace(doc[i].GetString(), doc[i].GetStringLength());
-        }
-    }
+    const std::string& value = get_result.ValueUnsafe();
+    auto tokens = StringUtils::Split(value, ",");
+    result.insert(tokens.begin(), tokens.end());
     return result;
 }
 

@@ -59,6 +59,99 @@ class Predicate;
 
 namespace paimon::parquet {
 
+namespace {
+
+std::shared_ptr<arrow::Field> FindMatchingReadField(
+    const arrow::FieldVector& read_fields, const std::shared_ptr<arrow::Field>& file_field) {
+    int32_t file_field_id = NestedProjectionUtils::GetPaimonFieldId(file_field);
+    if (file_field_id != -1) {
+        for (const auto& candidate : read_fields) {
+            if (NestedProjectionUtils::GetPaimonFieldId(candidate) == file_field_id) {
+                return candidate;
+            }
+        }
+    }
+
+    for (const auto& candidate : read_fields) {
+        if (candidate->name() == file_field->name()) {
+            return candidate;
+        }
+    }
+    return nullptr;
+}
+
+Result<std::shared_ptr<arrow::Array>> PruneArrayToReadType(
+    const std::shared_ptr<arrow::Array>& array,
+    const std::shared_ptr<arrow::DataType>& target_type) {
+    if (!array || array->type()->Equals(target_type)) {
+        return array;
+    }
+
+    switch (target_type->id()) {
+        case arrow::Type::STRUCT: {
+            auto struct_array = std::static_pointer_cast<arrow::StructArray>(array);
+            auto target_struct_type = std::static_pointer_cast<arrow::StructType>(target_type);
+            arrow::ArrayVector pruned_children;
+            arrow::FieldVector pruned_fields;
+            pruned_children.reserve(target_struct_type->num_fields());
+            pruned_fields.reserve(target_struct_type->num_fields());
+            for (const auto& target_field : target_struct_type->fields()) {
+                auto src_field = FindMatchingReadField(struct_array->type()->fields(), target_field);
+                if (!src_field) {
+                    return Status::Invalid(fmt::format(
+                        "PruneArrayToReadType: field '{}' not found in struct array",
+                        target_field->name()));
+                }
+                auto child = struct_array->GetFieldByName(src_field->name());
+                PAIMON_ASSIGN_OR_RAISE(auto pruned_child,
+                                       PruneArrayToReadType(child, target_field->type()));
+                pruned_children.push_back(std::move(pruned_child));
+                pruned_fields.push_back(src_field->WithType(pruned_children.back()->type()));
+            }
+            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+                std::shared_ptr<arrow::StructArray> result_struct,
+                arrow::StructArray::Make(pruned_children, pruned_fields,
+                                         struct_array->null_bitmap(), struct_array->null_count(),
+                                         struct_array->offset()));
+            return std::static_pointer_cast<arrow::Array>(result_struct);
+        }
+
+        case arrow::Type::LIST: {
+            auto list_array = std::static_pointer_cast<arrow::ListArray>(array);
+            const auto& target_elem_type =
+                static_cast<const arrow::ListType&>(*target_type).value_type();
+            PAIMON_ASSIGN_OR_RAISE(auto pruned_values,
+                                   PruneArrayToReadType(list_array->values(), target_elem_type));
+            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+                std::shared_ptr<arrow::ListArray> result_list,
+                arrow::ListArray::FromArrays(*list_array->offsets(), *pruned_values,
+                                             arrow::default_memory_pool(),
+                                             list_array->null_bitmap(), list_array->null_count()));
+            return std::static_pointer_cast<arrow::Array>(result_list);
+        }
+
+        case arrow::Type::MAP: {
+            auto map_array = std::static_pointer_cast<arrow::MapArray>(array);
+            const auto& target_map_type = static_cast<const arrow::MapType&>(*target_type);
+            PAIMON_ASSIGN_OR_RAISE(auto pruned_keys,
+                                   PruneArrayToReadType(map_array->keys(), target_map_type.key_type()));
+            PAIMON_ASSIGN_OR_RAISE(auto pruned_items,
+                                   PruneArrayToReadType(map_array->items(),
+                                                        target_map_type.item_type()));
+            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+                std::shared_ptr<arrow::Array> result_map,
+                arrow::MapArray::FromArrays(map_array->offsets(), pruned_keys, pruned_items,
+                                            arrow::default_memory_pool()));
+            return result_map;
+        }
+
+        default:
+            return array;
+    }
+}
+
+}  // namespace
+
 ParquetFileBatchReader::ParquetFileBatchReader(
     std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
     std::unique_ptr<FileReaderWrapper>&& reader, const std::map<std::string, std::string>& options,
@@ -373,6 +466,7 @@ Result<BatchReader::ReadBatch> ParquetFileBatchReader::NextBatch() {
         }
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,
                                           batch->ToStructArray());
+        PAIMON_ASSIGN_OR_RAISE(array, PruneArrayToReadType(array, read_data_type_));
         PAIMON_ASSIGN_OR_RAISE(bool need_cast, ParquetTimestampConverter::NeedCastArrayForTimestamp(
                                                    array->type(), read_data_type_));
         if (need_cast) {
@@ -473,9 +567,8 @@ void ParquetFileBatchReader::CollectLeafIndices(const std::shared_ptr<arrow::Dat
                                                 std::vector<int32_t>* indices) {
     if (file_type->id() == arrow::Type::STRUCT) {
         for (const auto& file_child : file_type->fields()) {
-            int32_t file_child_id = NestedProjectionUtils::GetPaimonFieldId(file_child);
             std::shared_ptr<arrow::Field> read_child =
-                NestedProjectionUtils::FindFieldByPaimonId(read_type, file_child_id);
+                FindMatchingReadField(read_type->fields(), file_child);
             if (read_child) {
                 CollectLeafIndices(read_child->type(), file_child->type(), leaf_index, indices);
             } else {
@@ -518,15 +611,8 @@ Result<std::vector<int32_t>> ParquetFileBatchReader::ComputeNestedColumnIndices(
     int32_t leaf_index = 0;
 
     for (const auto& file_field : file_schema->fields()) {
-        int32_t file_field_id = NestedProjectionUtils::GetPaimonFieldId(file_field);
-        // Find matching field in read_schema by paimon field ID.
-        std::shared_ptr<arrow::Field> read_field = nullptr;
-        for (const auto& candidate : read_schema->fields()) {
-            if (NestedProjectionUtils::GetPaimonFieldId(candidate) == file_field_id) {
-                read_field = candidate;
-                break;
-            }
-        }
+        std::shared_ptr<arrow::Field> read_field =
+            FindMatchingReadField(read_schema->fields(), file_field);
 
         if (read_field) {
             CollectLeafIndices(read_field->type(), file_field->type(), &leaf_index, &indices);
