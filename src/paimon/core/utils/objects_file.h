@@ -191,17 +191,13 @@ template <typename T>
 Result<MemorySegment> ObjectsFile<T>::ReadFileSegment(const std::string& file_path) const {
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<InputStream> input_stream,
                            file_system_->Open(file_path));
-    PAIMON_ASSIGN_OR_RAISE(uint64_t input_length, input_stream->Length());
-    if (input_length > std::numeric_limits<int32_t>::max()) {
-        return Status::Invalid(
-            fmt::format("file {}, length {} is too large", file_path, input_length));
-    }
+    PAIMON_ASSIGN_OR_RAISE(int64_t input_length, input_stream->Length());
 
     PAIMON_RETURN_NOT_OK(input_stream->Seek(0, FS_SEEK_SET));
-    auto bytes = std::make_shared<Bytes>(static_cast<size_t>(input_length), pool_.get());
-    PAIMON_ASSIGN_OR_RAISE(int32_t actual_read_size,
-                           input_stream->Read(bytes->data(), static_cast<uint32_t>(input_length)));
-    if (actual_read_size != static_cast<int32_t>(input_length)) {
+    auto bytes = std::make_shared<Bytes>(input_length, pool_.get());
+    PAIMON_ASSIGN_OR_RAISE(int64_t actual_read_size,
+                           input_stream->Read(bytes->data(), input_length));
+    if (actual_read_size != input_length) {
         return Status::IOError(fmt::format(
             "Unexpected EOF while reading manifest file {}, expected {} bytes, got {} bytes",
             file_path, input_length, actual_read_size));

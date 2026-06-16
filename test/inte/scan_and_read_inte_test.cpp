@@ -612,10 +612,9 @@ TEST_F(ScanAndReadInteTest, TestWithPKWithDvBatchScanSnapshot6) {
         ASSERT_OK_AND_ASSIGN(int64_t count, count_reader->CountRows());
         ASSERT_EQ(count, read_result->length());
     };
-    check_result("parquet");
-#ifdef PAIMON_ENABLE_ORC
-    check_result("orc");
-#endif
+    for (auto [file_format, enable_prefetch] : GetTestValuesForScanAndReadInteTest()) {
+        check_result(file_format);
+    }
     check_result("avro");
 }
 

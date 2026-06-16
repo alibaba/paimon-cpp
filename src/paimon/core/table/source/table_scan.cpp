@@ -85,9 +85,8 @@ class TableScanImpl {
         auto schema_manager = std::make_shared<SchemaManager>(fs, context->GetPath(), branch);
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<ManifestList> manifest_list,
-            ManifestList::Create(
-                fs, manifest_file_format, core_options.GetManifestCompression(), path_factory,
-                core_options.GetCache(), memory_pool));
+            ManifestList::Create(fs, manifest_file_format, core_options.GetManifestCompression(),
+                                 path_factory, core_options.GetCache(), memory_pool));
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<arrow::Schema> partition_schema,
             FieldMapping::GetPartitionSchema(arrow_schema, table_schema->PartitionKeys()));
