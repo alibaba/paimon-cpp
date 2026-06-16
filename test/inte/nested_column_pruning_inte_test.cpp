@@ -26,7 +26,6 @@
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
-#include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
@@ -63,17 +62,6 @@ class NestedColumnPruningInteTest : public ::testing::Test,
     }
 
  protected:
-    static std::shared_ptr<arrow::Field> AnnotateField(const std::shared_ptr<arrow::Field>& field,
-                                                       int32_t paimon_id) {
-        auto metadata =
-            arrow::KeyValueMetadata::Make({DataField::FIELD_ID}, {std::to_string(paimon_id)});
-        if (field->metadata()) {
-            auto merged = field->metadata()->Merge(*metadata);
-            return field->WithMetadata(merged);
-        }
-        return field->WithMetadata(metadata);
-    }
-
     std::string file_format_;
     std::string test_dir_;
     std::string table_path_;
@@ -126,13 +114,12 @@ TEST_P(NestedColumnPruningInteTest, PruneStructSubFields) {
     ASSERT_FALSE(data_splits.empty());
 
     // Build projected schema: only read f0 (full) and f1.a (sub-field of struct)
-    // Catalog assigns IDs: f0->0, f1->1, f1.a->2, f1.b->3, f1.c->4
     auto pruned_struct_type = arrow::struct_({
-        AnnotateField(arrow::field("a", arrow::int32()), 2),
+        arrow::field("a", arrow::int32()),
     });
     arrow::FieldVector projected_fields = {
-        AnnotateField(arrow::field("f0", arrow::int32()), 0),
-        AnnotateField(arrow::field("f1", pruned_struct_type), 1),
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", pruned_struct_type),
     };
     auto projected_schema = arrow::schema(projected_fields);
 
@@ -217,10 +204,9 @@ TEST_P(NestedColumnPruningInteTest, PruneEntireStructField) {
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
 
     // Only read f0 and f2, skip f1 entirely.
-    // IDs: f0->0, f1->1, f1.x->2, f1.y->3, f2->4
     arrow::FieldVector projected_fields = {
-        AnnotateField(arrow::field("f0", arrow::int32()), 0),
-        AnnotateField(arrow::field("f2", arrow::float64()), 4),
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f2", arrow::float64()),
     };
     auto projected_schema = arrow::schema(projected_fields);
 
@@ -304,19 +290,16 @@ TEST_P(NestedColumnPruningInteTest, PruneDeepNestedStruct) {
     ASSERT_OK_AND_ASSIGN(auto data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
 
-    // Field IDs (assigned sequentially by catalog):
-    // f0->0, f1->1, f1.a->2, f1.inner->3, f1.inner.x->4, f1.inner.y->5
-    //
     // Projected: f0, f1{inner{x}} — skip f1.a and f1.inner.y
     auto pruned_inner = arrow::struct_({
-        AnnotateField(arrow::field("x", arrow::int64()), 4),
+        arrow::field("x", arrow::int64()),
     });
     auto pruned_outer = arrow::struct_({
-        AnnotateField(arrow::field("inner", pruned_inner), 3),
+        arrow::field("inner", pruned_inner),
     });
     arrow::FieldVector projected_fields = {
-        AnnotateField(arrow::field("f0", arrow::int32()), 0),
-        AnnotateField(arrow::field("f1", pruned_outer), 1),
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", pruned_outer),
     };
     auto projected_schema = arrow::schema(projected_fields);
 
@@ -405,21 +388,18 @@ TEST_P(NestedColumnPruningInteTest, PruneNestedStructWithSpecialFields) {
     ASSERT_OK_AND_ASSIGN(auto data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
 
-    // Field IDs (assigned sequentially by catalog):
-    // f0->0, f1->1, f1.a->2, f1.inner->3, f1.inner.x->4, f1.inner.y->5
     // Projected: f0, f1{inner{x}}, _SEQUENCE_NUMBER, _ROW_ID
     auto pruned_inner = arrow::struct_({
-        AnnotateField(arrow::field("x", arrow::int64()), 4),
+        arrow::field("x", arrow::int64()),
     });
     auto pruned_outer = arrow::struct_({
-        AnnotateField(arrow::field("inner", pruned_inner), 3),
+        arrow::field("inner", pruned_inner),
     });
     arrow::FieldVector projected_fields = {
-        AnnotateField(arrow::field("f0", arrow::int32()), 0),
-        AnnotateField(arrow::field("f1", pruned_outer), 1),
-        AnnotateField(arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
-                      SpecialFields::SequenceNumber().Id()),
-        AnnotateField(arrow::field("_ROW_ID", arrow::int64()), SpecialFields::RowId().Id()),
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", pruned_outer),
+        arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+        arrow::field("_ROW_ID", arrow::int64()),
     };
     auto projected_schema = arrow::schema(projected_fields);
 
@@ -501,11 +481,8 @@ TEST_P(NestedColumnPruningInteTest, MapSelectedKeys) {
     auto selected_keys_metadata =
         arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"a,c"});
     arrow::FieldVector projected_fields = {
-        AnnotateField(arrow::field("f0", arrow::int32()), 0),
-        AnnotateField(arrow::field("f1", map_type), 1)
-            ->WithMetadata(AnnotateField(arrow::field("f1", map_type), 1)
-                               ->metadata()
-                               ->Merge(*selected_keys_metadata)),
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", map_type)->WithMetadata(selected_keys_metadata),
     };
     auto projected_schema = arrow::schema(projected_fields);
 
@@ -597,23 +574,19 @@ TEST_P(NestedColumnPruningInteTest, PruneDeeperNestedStruct) {
     ASSERT_OK_AND_ASSIGN(auto data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
 
-    // Field IDs (assigned sequentially by catalog):
-    // f0->0, f1->1, f1.a->2, f1.inner1->3, f1.inner1.x->4, f1.inner1.inner2->5,
-    // f1.inner1.inner2.p->6, f1.inner1.inner2.q->7
-    //
     // Projected: f0, f1{inner1{inner2{p}}}
     auto pruned_inner2 = arrow::struct_({
-        AnnotateField(arrow::field("p", arrow::utf8()), 6),
+        arrow::field("p", arrow::utf8()),
     });
     auto pruned_inner1 = arrow::struct_({
-        AnnotateField(arrow::field("inner2", pruned_inner2), 5),
+        arrow::field("inner2", pruned_inner2),
     });
     auto pruned_outer = arrow::struct_({
-        AnnotateField(arrow::field("inner1", pruned_inner1), 3),
+        arrow::field("inner1", pruned_inner1),
     });
     arrow::FieldVector projected_fields = {
-        AnnotateField(arrow::field("f0", arrow::int32()), 0),
-        AnnotateField(arrow::field("f1", pruned_outer), 1),
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", pruned_outer),
     };
     auto projected_schema = arrow::schema(projected_fields);
 

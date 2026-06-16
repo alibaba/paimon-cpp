@@ -17,10 +17,13 @@
 #include "paimon/core/operation/internal_read_context.h"
 
 #include <optional>
+#include <unordered_map>
 #include <utility>
 
+#include "arrow/api.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
+#include "fmt/format.h"
 #include "paimon/common/predicate/predicate_validator.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
@@ -29,6 +32,100 @@
 #include "paimon/status.h"
 
 namespace paimon {
+
+std::shared_ptr<arrow::Field> InternalReadContext::FindFieldByName(
+    const arrow::FieldVector& fields, const std::string& name) {
+    for (const auto& field : fields) {
+        if (field->name() == name) {
+            return field;
+        }
+    }
+    return nullptr;
+}
+
+std::shared_ptr<arrow::Field> InternalReadContext::MergeReadFieldMetadata(
+    const std::shared_ptr<arrow::Field>& aligned_field,
+    const std::shared_ptr<arrow::Field>& read_field) {
+    if (!read_field->HasMetadata() || !read_field->metadata()) {
+        return aligned_field;
+    }
+    std::unordered_map<std::string, std::string> metadata_map;
+    read_field->metadata()->ToUnorderedMap(&metadata_map);
+    metadata_map.erase(DataField::FIELD_ID);
+    if (metadata_map.empty()) {
+        return aligned_field;
+    }
+    auto metadata = std::make_shared<arrow::KeyValueMetadata>(metadata_map);
+    return aligned_field->WithMergedMetadata(metadata);
+}
+
+Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTableFieldIds(
+    const std::shared_ptr<arrow::Field>& read_field,
+    const std::shared_ptr<arrow::Field>& table_field) {
+    if (read_field->type()->id() != table_field->type()->id()) {
+        return Status::Invalid(fmt::format(
+            "Read schema field '{}' type {} does not match table field type {}", 
+            read_field->name(), read_field->type()->ToString(),
+            table_field->type()->ToString()));
+    }
+
+    auto type_id = read_field->type()->id();
+    if (type_id == arrow::Type::STRUCT) {
+        auto read_struct = std::static_pointer_cast<arrow::StructType>(read_field->type());
+        auto table_struct = std::static_pointer_cast<arrow::StructType>(table_field->type());
+        arrow::FieldVector rebased_children;
+        rebased_children.reserve(read_struct->num_fields());
+        for (const auto& read_child : read_struct->fields()) {
+            auto table_child = FindFieldByName(table_struct->fields(), read_child->name());
+            if (!table_child) {
+                return Status::Invalid(fmt::format(
+                    "Read schema nested field '{}' does not exist in table field '{}'", 
+                    read_child->name(), table_field->name()));
+            }
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> rebased_child,
+                                   AlignReadFieldWithTableFieldIds(read_child, table_child));
+            rebased_children.push_back(rebased_child);
+        }
+        auto rebased_type = arrow::struct_(rebased_children);
+        auto aligned_field = table_field->WithType(rebased_type)->WithName(read_field->name());
+        return MergeReadFieldMetadata(aligned_field, read_field);
+    }
+
+    if (type_id == arrow::Type::LIST) {
+        auto read_list = std::static_pointer_cast<arrow::ListType>(read_field->type());
+        auto table_list = std::static_pointer_cast<arrow::ListType>(table_field->type());
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> rebased_value_field,
+                               AlignReadFieldWithTableFieldIds(read_list->value_field(),
+                                                               table_list->value_field()));
+        auto rebased_type = arrow::list(rebased_value_field);
+        auto aligned_field = table_field->WithType(rebased_type)->WithName(read_field->name());
+        return MergeReadFieldMetadata(aligned_field, read_field);
+    }
+
+    if (type_id == arrow::Type::MAP) {
+        auto read_map = std::static_pointer_cast<arrow::MapType>(read_field->type());
+        auto table_map = std::static_pointer_cast<arrow::MapType>(table_field->type());
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> rebased_key_field,
+                               AlignReadFieldWithTableFieldIds(read_map->key_field(),
+                                                               table_map->key_field()));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> rebased_item_field,
+                               AlignReadFieldWithTableFieldIds(read_map->item_field(),
+                                                               table_map->item_field()));
+        auto rebased_type = arrow::map(rebased_key_field->type(), rebased_item_field);
+        auto aligned_field = table_field->WithType(rebased_type)->WithName(read_field->name());
+        return MergeReadFieldMetadata(aligned_field, read_field);
+    }
+
+    if (!read_field->type()->Equals(table_field->type())) {
+        return Status::Invalid(fmt::format(
+            "Read schema field '{}' type {} does not match table field type {}", 
+            read_field->name(), read_field->type()->ToString(),
+            table_field->type()->ToString()));
+    }
+
+    auto aligned_field = table_field->WithType(read_field->type())->WithName(read_field->name());
+    return MergeReadFieldMetadata(aligned_field, read_field);
+}
 
 std::optional<DataField> InternalReadContext::TryResolveSpecialFieldById(
     int32_t field_id, const CoreOptions& core_options) {
@@ -93,29 +190,24 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
     // Priority: projected_arrow_schema > read_field_ids > read_field_names
     std::vector<DataField> read_data_fields;
     if (context->HasReadSchema()) {
-        // Nested column pruning path: user provided a projected C ArrowSchema
+        // Nested column pruning path: user provided a read C ArrowSchema
         // where STRUCT types may contain only a subset of sub-fields.
         // ImportSchema consumes the C schema — that's fine, it's one-shot usage.
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> projected_schema,
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> read_schema,
                                           arrow::ImportSchema(context->GetReadSchema()));
-        PAIMON_ASSIGN_OR_RAISE(read_data_fields,
-                               DataField::ConvertArrowSchemaToDataFields(projected_schema));
+        read_data_fields.reserve(read_schema->num_fields());
         // Align special-field validation with read_field_ids/read_field_names branches.
-        for (auto& field : read_data_fields) {
+        for (const auto& read_field : read_schema->fields()) {
             if (auto resolved_special_field =
-                    TryResolveSpecialFieldById(field.Id(), core_options)) {
-                field = *resolved_special_field;
+                    TryResolveSpecialFieldByName(read_field->name(), core_options)) {
+                read_data_fields.push_back(*resolved_special_field);
                 continue;
             }
-            if (SpecialFields::IsSpecialFieldName(field.Name())) {
-                if (auto resolved_special_field =
-                        TryResolveSpecialFieldByName(field.Name(), core_options)) {
-                    field = *resolved_special_field;
-                    continue;
-                }
-            }
-            PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] DataField unused,
-                                   table_schema->GetField(field.Id()));
+            PAIMON_ASSIGN_OR_RAISE(DataField table_field, table_schema->GetField(read_field->name()));
+            PAIMON_ASSIGN_OR_RAISE(
+                std::shared_ptr<arrow::Field> aligned_field,
+                AlignReadFieldWithTableFieldIds(read_field, table_field.ArrowField()));
+            read_data_fields.emplace_back(table_field.Id(), aligned_field, table_field.Description());
         }
     } else if (!context->GetReadFieldIds().empty()) {
         read_data_fields.reserve(context->GetReadFieldIds().size());

@@ -116,6 +116,14 @@ class InternalReadContext {
                                                                const CoreOptions& core_options);
     static std::optional<DataField> TryResolveSpecialFieldByName(const std::string& name,
                                                                  const CoreOptions& core_options);
+    static std::shared_ptr<arrow::Field> FindFieldByName(const arrow::FieldVector& fields,
+                                                         const std::string& name);
+    static std::shared_ptr<arrow::Field> MergeReadFieldMetadata(
+        const std::shared_ptr<arrow::Field>& aligned_field,
+        const std::shared_ptr<arrow::Field>& read_field);
+    static Result<std::shared_ptr<arrow::Field>> AlignReadFieldWithTableFieldIds(
+        const std::shared_ptr<arrow::Field>& read_field,
+        const std::shared_ptr<arrow::Field>& table_field);
 
     std::shared_ptr<ReadContext> read_context_;
     std::shared_ptr<TableSchema> table_schema_;

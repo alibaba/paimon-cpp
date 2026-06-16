@@ -236,4 +236,32 @@ TEST(InternalReadContext, TestReadWithProjectedSchemaAndSpecialFields) {
     }
 }
 
+TEST(InternalReadContext, TestReadWithProjectedSchemaWithoutFieldIds) {
+    std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+
+    auto projected_schema =
+        arrow::schema({arrow::field("f3", arrow::float64()), arrow::field("f0", arrow::utf8())});
+    ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_schema).ok());
+
+    ReadContextBuilder context_builder(path);
+    context_builder.SetReadSchema(&c_schema);
+    ASSERT_OK_AND_ASSIGN(auto unique_read_context, context_builder.Finish());
+    std::shared_ptr<ReadContext> read_context = std::move(unique_read_context);
+
+    SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
+    ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));
+
+    ASSERT_OK_AND_ASSIGN(auto internal_context,
+                         InternalReadContext::Create(read_context, table_schema,
+                                                     table_schema->Options()));
+
+    std::vector<DataField> expected_fields = {
+        DataField(3, arrow::field("f3", arrow::float64())),
+        DataField(0, arrow::field("f0", arrow::utf8())),
+    };
+    auto expected_schema = DataField::ConvertDataFieldsToArrowSchema(expected_fields);
+    ASSERT_TRUE(internal_context->GetReadSchema()->Equals(expected_schema));
+}
+
 }  // namespace paimon::test

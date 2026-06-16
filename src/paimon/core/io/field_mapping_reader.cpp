@@ -67,24 +67,13 @@ FieldMappingReader::FieldMappingReader(int32_t field_count,
         if (non_partition_info_.cast_executors[i] != nullptr) {
             need_casting_ = true;
         }
-        // Always keep mapping enabled for nested fields so we can validate
-        // that format readers really honor pushed nested projections.
-        auto type_id = non_partition_info_.non_partition_read_schema[i].Type()->id();
-        if (type_id == arrow::Type::STRUCT || type_id == arrow::Type::LIST ||
-            type_id == arrow::Type::MAP) {
-            need_mapping_ = true;
-        }
         // Field name change (RENAME COLUMN) also requires mapping: data schema
         // carries the file's physical name while read schema carries the
         // post-rename logical name. If we skipped mapping, the inner reader's
         // batch would be passed through with the old physical name and the
         // consumer's name-based lookup against the read schema would fail.
-        // Nested type difference (nested column pruning) also requires mapping
-        // so we can validate that format readers honor the pushed read schema.
         if (non_partition_info_.non_partition_data_schema[i].Name() !=
-                non_partition_info_.non_partition_read_schema[i].Name() ||
-            !non_partition_info_.non_partition_data_schema[i].Type()->Equals(
-                non_partition_info_.non_partition_read_schema[i].Type())) {
+            non_partition_info_.non_partition_read_schema[i].Name()) {
             need_mapping_ = true;
         }
         // Map selected-keys metadata also requires mapping so that
@@ -317,14 +306,6 @@ Status FieldMappingReader::MappingFields(const std::shared_ptr<arrow::Array>& da
     assert(struct_array->fields().size() == idx_in_target_schema.size());
     for (size_t i = 0; i < idx_in_target_schema.size(); i++) {
         std::shared_ptr<arrow::Array> field_array = struct_array->field(i);
-
-        const std::shared_ptr<arrow::DataType>& target_type = read_fields_of_data_array[i].Type();
-        if (!field_array->type()->Equals(target_type)) {
-            return Status::Invalid(fmt::format(
-                "FieldMappingReader mapping failed: format reader returned type {} for field '{}' but expected {}. Nested sub-field projection must be handled by format SetReadSchema.",
-                field_array->type()->ToString(), read_fields_of_data_array[i].Name(),
-                target_type->ToString()));
-        }
 
         // Filter map entries by selected keys if metadata is present.
         if (field_array->type()->id() == arrow::Type::MAP) {
