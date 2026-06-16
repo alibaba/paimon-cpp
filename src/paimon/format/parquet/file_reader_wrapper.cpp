@@ -105,8 +105,11 @@ Result<std::unique_ptr<FileReaderWrapper>> FileReaderWrapper::Create(
         }
         int num_cols = file_reader->parquet_reader()->metadata()->num_columns();
         std::vector<int32_t> columns_indices = arrow::internal::Iota(num_cols);
+        std::shared_ptr<arrow::Schema> file_schema;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader->GetSchema(&file_schema));
         auto file_reader_wrapper = std::unique_ptr<FileReaderWrapper>(new FileReaderWrapper(
             std::move(file_reader), all_row_group_ranges, num_rows, num_cols, batch_size, pool));
+        file_reader_wrapper->file_schema_ = std::move(file_schema);
         std::vector<TargetRowGroup> all_target_row_groups;
         for (int32_t i = 0; i < file_reader_wrapper->GetNumberOfRowGroups(); i++) {
             all_target_row_groups.emplace_back(/*rg_index=*/i, /*is_partially_matched=*/false,
@@ -131,9 +134,7 @@ FileReaderWrapper::~FileReaderWrapper() {
 
 Result<std::shared_ptr<arrow::Schema>> FileReaderWrapper::GetSchema() const {
     try {
-        std::shared_ptr<arrow::Schema> file_schema;
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetSchema(&file_schema));
-        return file_schema;
+        return file_schema_;
     }
     PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("FileReaderWrapper::GetSchema")
 }
@@ -241,13 +242,16 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::NextPageFiltered(
         auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
             file_reader_->parquet_reader(), target_rg, target_column_indices_);
         bool pre_buffered = !prebuffered_ranges_.empty();
+        if (!file_schema_) {
+            return Status::Invalid("file reader wrapper has no cached file schema");
+        }
         int64_t max_chunksize = batch_size_ > 0 ? batch_size_ : std::numeric_limits<int64_t>::max();
-        PAIMON_ASSIGN_OR_RAISE(
-            current_page_filtered_reader_,
-            PageFilteredRowGroupReader::ReadFilteredRowGroup(
-                file_reader_.get(), target_rg, target_column_indices_, leaf_to_field_idx_,
-                page_filtered_read_schema_, file_reader_->properties().cache_options(),
-                pre_buffered, page_ranges, max_chunksize, pool_));
+        PAIMON_ASSIGN_OR_RAISE(current_page_filtered_reader_,
+                               PageFilteredRowGroupReader::ReadFilteredRowGroup(
+                                   file_reader_.get(), target_rg, target_column_indices_,
+                                   leaf_to_field_idx_, file_schema_, page_filtered_read_schema_,
+                                   file_reader_->properties().cache_options(), pre_buffered,
+                                   page_ranges, max_chunksize, pool_));
         current_filtered_row_ranges_ = target_rg.row_ranges;
         current_filtered_rg_start_ = all_row_group_ranges_[rg_id].first;
         filtered_global_offset_ = 0;
@@ -474,9 +478,11 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
         }
 
         bool has_partially_matched = fully_matched_row_groups.size() != active_count;
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> file_schema, GetSchema());
+        if (file_schema_ == nullptr) {
+            return Status::Invalid("file reader wrapper has no cached file schema");
+        }
         if (has_partially_matched) {
-            PAIMON_RETURN_NOT_OK(BuildPageFilteredSchema(file_schema, column_indices));
+            PAIMON_RETURN_NOT_OK(BuildPageFilteredSchema(file_schema_, column_indices));
         }
 
         WaitForPendingPreBuffer();
@@ -498,7 +504,7 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
         // Otherwise GetRecordBatchReader already issued PreBuffer internally.
         if (has_partially_matched) {
             PAIMON_ASSIGN_OR_RAISE(std::vector<::arrow::io::ReadRange> all_ranges,
-                                   CollectPreBufferRanges(file_schema, column_indices));
+                                   CollectPreBufferRanges(file_schema_, column_indices));
             DispatchPreBuffer(std::move(all_ranges));
         }
 

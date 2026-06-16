@@ -67,6 +67,7 @@ class PageFilteredRowGroupReader {
     static Result<std::unique_ptr<arrow::RecordBatchReader>> ReadFilteredRowGroup(
         ::parquet::arrow::FileReader* arrow_file_reader, const TargetRowGroup& target_row_group,
         const std::vector<int32_t>& column_indices, const std::vector<int32_t>& leaf_to_field_idx,
+        const std::shared_ptr<arrow::Schema>& file_schema,
         const std::shared_ptr<arrow::Schema>& arrow_schema,
         const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
         const std::vector<::arrow::io::ReadRange>& page_ranges, int64_t max_chunksize,
@@ -133,6 +134,7 @@ class PageFilteredRowGroupReader {
                       const TargetRowGroup& target_row_group,
                       const std::vector<int32_t>& column_indices,
                       const std::vector<int32_t>& leaf_to_field_idx,
+                      const std::shared_ptr<arrow::Schema>& file_schema,
                       std::shared_ptr<::arrow::MemoryPool> pool);
 
     /// Assemble output columns by dispatching each arrow field to either
@@ -140,6 +142,7 @@ class PageFilteredRowGroupReader {
     static Result<std::vector<std::shared_ptr<arrow::ChunkedArray>>> AssembleFilteredColumns(
         ::parquet::arrow::FileReader* file_reader, const TargetRowGroup& target_row_group,
         const std::vector<int32_t>& column_indices, const std::vector<int32_t>& leaf_to_field_idx,
+        const std::shared_ptr<arrow::Schema>& file_schema,
         const std::shared_ptr<arrow::Schema>& arrow_schema,
         const std::unordered_map<int32_t, std::shared_ptr<arrow::ChunkedArray>>& nested_columns,
         std::shared_ptr<::arrow::MemoryPool> pool);

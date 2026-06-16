@@ -167,6 +167,7 @@ class FileReaderWrapper {
 
     std::unique_ptr<::parquet::arrow::FileReader> file_reader_;
     std::unique_ptr<arrow::RecordBatchReader> batch_reader_;
+    std::shared_ptr<arrow::Schema> file_schema_;
 
     std::vector<std::pair<uint64_t, uint64_t>> all_row_group_ranges_;
     std::vector<int32_t> target_column_indices_;
