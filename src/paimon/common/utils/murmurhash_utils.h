@@ -182,7 +182,9 @@ class MurmurHashUtils {
         int32_t length_aligned = length_in_bytes - length_in_bytes % 4;
         int32_t h1 = HashBytesByInt(segment, offset, length_aligned, seed);
         for (int32_t i = length_aligned; i < length_in_bytes; i++) {
-            int32_t k1 = MixK1(segment.Get(offset + i));
+            auto byte = static_cast<uint8_t>(segment.Get(offset + i));
+            int32_t signed_byte = byte < 128 ? byte : static_cast<int32_t>(byte) - 256;
+            int32_t k1 = MixK1(signed_byte);
             h1 = MixH1(h1, k1);
         }
         return Fmix(h1, length_in_bytes);
@@ -238,10 +240,10 @@ class MurmurHashUtils {
         return value;
     }
 
-    static char GetByte(const void* base, int64_t offset) {
-        char value;
-        std::memcpy(&value, static_cast<const char*>(base) + offset, sizeof(char));
-        return value;
+    static int32_t GetByte(const void* base, int64_t offset) {
+        uint8_t value;
+        std::memcpy(&value, static_cast<const char*>(base) + offset, sizeof(uint8_t));
+        return value < 128 ? value : static_cast<int32_t>(value) - 256;
     }
 
  public:

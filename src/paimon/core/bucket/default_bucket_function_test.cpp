@@ -16,13 +16,27 @@
 
 #include "paimon/core/bucket/default_bucket_function.h"
 
+#include <limits>
+
 #include "gtest/gtest.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
+
+namespace {
+
+void CheckDefaultBucket(const DefaultBucketFunction& func, const BinaryRow& row,
+                        int32_t expected_hash, int32_t expected_bucket) {
+    constexpr int32_t kNumBuckets = 1000;
+    ASSERT_EQ(expected_hash, row.HashCode());
+    ASSERT_EQ(expected_bucket, func.Bucket(row, kNumBuckets));
+}
+
+}  // namespace
 
 TEST(DefaultBucketFunctionTest, TestBasicHashMod) {
     auto pool = GetDefaultPool();
@@ -77,6 +91,47 @@ TEST(DefaultBucketFunctionTest, TestMultiFieldRow) {
     ASSERT_GE(bucket, 0);
     ASSERT_LT(bucket, num_buckets);
     ASSERT_EQ(std::abs(row.HashCode() % num_buckets), bucket);
+}
+
+TEST(DefaultBucketFunctionTest, TestFloatSpecialValuesCompatibleWithJava) {
+    auto pool = GetDefaultPool();
+    DefaultBucketFunction func;
+
+    // Verified with Java DefaultBucketFunction and NUM_BUCKETS = 1000.
+    CheckDefaultBucket(
+        func,
+        BinaryRowGenerator::GenerateRow({std::numeric_limits<float>::quiet_NaN()}, pool.get()),
+        -2039172089, 89);
+    CheckDefaultBucket(
+        func, BinaryRowGenerator::GenerateRow({std::numeric_limits<float>::infinity()}, pool.get()),
+        2139216202, 202);
+    CheckDefaultBucket(
+        func,
+        BinaryRowGenerator::GenerateRow({-std::numeric_limits<float>::infinity()}, pool.get()),
+        -106221671, 671);
+    CheckDefaultBucket(func, BinaryRowGenerator::GenerateRow({0.0f}, pool.get()), -300363099, 99);
+    CheckDefaultBucket(func, BinaryRowGenerator::GenerateRow({-0.0f}, pool.get()), 916225219, 219);
+}
+
+TEST(DefaultBucketFunctionTest, TestDoubleSpecialValuesCompatibleWithJava) {
+    auto pool = GetDefaultPool();
+    DefaultBucketFunction func;
+
+    // Verified with Java DefaultBucketFunction and NUM_BUCKETS = 1000.
+    CheckDefaultBucket(
+        func,
+        BinaryRowGenerator::GenerateRow({std::numeric_limits<double>::quiet_NaN()}, pool.get()),
+        -1323214697, 697);
+    CheckDefaultBucket(
+        func,
+        BinaryRowGenerator::GenerateRow({std::numeric_limits<double>::infinity()}, pool.get()),
+        -1556713404, 404);
+    CheckDefaultBucket(
+        func,
+        BinaryRowGenerator::GenerateRow({-std::numeric_limits<double>::infinity()}, pool.get()),
+        -2079171840, 840);
+    CheckDefaultBucket(func, BinaryRowGenerator::GenerateRow({0.0}, pool.get()), -300363099, 99);
+    CheckDefaultBucket(func, BinaryRowGenerator::GenerateRow({-0.0}, pool.get()), 302122119, 119);
 }
 
 }  // namespace paimon::test

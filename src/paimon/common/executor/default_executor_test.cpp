@@ -28,6 +28,7 @@
 #include "paimon/executor.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
+#include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
 
@@ -83,7 +84,7 @@ TEST(DefaultExecutorTest, TestViaWithException) {
 }
 
 TEST(DefaultExecutorTest, TestShutdownNowDropsPendingTasks) {
-    auto executor = CreateDefaultExecutor(/*thread_count=*/1);
+    ASSERT_OK_AND_ASSIGN(auto executor, CreateDefaultExecutor(/*thread_count=*/1));
     std::atomic<bool> first_started = false;
     std::atomic<int32_t> executed_count = 0;
     std::promise<void> release_first_task;
@@ -112,7 +113,7 @@ TEST(DefaultExecutorTest, TestShutdownNowDropsPendingTasks) {
 }
 
 TEST(DefaultExecutorTest, TestAddTaskAfterShutdownNowIgnored) {
-    auto executor = CreateDefaultExecutor(/*thread_count=*/1);
+    ASSERT_OK_AND_ASSIGN(auto executor, CreateDefaultExecutor(/*thread_count=*/1));
     std::atomic<int32_t> executed_count = 0;
 
     executor->ShutdownNow();
@@ -120,6 +121,11 @@ TEST(DefaultExecutorTest, TestAddTaskAfterShutdownNowIgnored) {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     ASSERT_EQ(executed_count.load(), 0);
+}
+
+TEST(DefaultExecutorTest, TestCreateWithZeroThreadCount) {
+    ASSERT_NOK_WITH_MSG(CreateDefaultExecutor(/*thread_count=*/0),
+                        "default executor thread count should be greater than 0");
 }
 
 }  // namespace paimon::test

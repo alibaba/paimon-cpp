@@ -50,11 +50,11 @@ KeyValueDataFileRecordReader::KeyValueDataFileRecordReader(
 
 Result<bool> KeyValueDataFileRecordReader::Iterator::HasNext() const {
     int64_t array_length = reader_->row_kind_array_->length();
-    const auto& selection_bitmap = reader_->selection_bitmap_;
-    if (selection_bitmap.Cardinality() == array_length) {
+    if (selection_cardinality_ == array_length) {
         // all rows are selected in bitmap
         return cursor_ < array_length;
     }
+    const auto& selection_bitmap = reader_->selection_bitmap_;
     auto iter = selection_bitmap.EqualOrLarger(cursor_);
     if (iter == selection_bitmap.End()) {
         // no row are selected

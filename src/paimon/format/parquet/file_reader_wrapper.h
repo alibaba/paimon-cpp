@@ -55,8 +55,8 @@ class FileReaderWrapper {
     ~FileReaderWrapper();
 
     static Result<std::unique_ptr<FileReaderWrapper>> Create(
-        std::unique_ptr<::parquet::arrow::FileReader>&& reader, ::arrow::MemoryPool* pool,
-        int64_t batch_size);
+        std::unique_ptr<::parquet::arrow::FileReader>&& reader, int64_t batch_size,
+        std::shared_ptr<arrow::MemoryPool> pool);
 
     /// Seek to the specified row number.
     /// @param row_number The row to seek to (must be at a row group boundary).
@@ -87,7 +87,7 @@ class FileReaderWrapper {
     }
 
     /// Get the underlying Parquet file reader.
-    ::parquet::arrow::FileReader* GetFileReader() const {
+    ::parquet::arrow::FileReader* GetFileReader() {
         return file_reader_.get();
     }
 
@@ -109,24 +109,18 @@ class FileReaderWrapper {
 
     /// Prepare for lazy reading of the specified row groups and columns.
     /// Actual reader initialization is deferred until the first Next() call.
-    Status PrepareForReadingLazy(const std::set<int32_t>& row_group_indices,
+    Status PrepareForReadingLazy(const std::vector<TargetRowGroup>& target_row_groups,
                                  const std::vector<int32_t>& column_indices);
 
     /// Prepare for immediate reading of the specified row groups and columns.
     /// Initializes the reader and starts pre-buffering I/O.
-    Status PrepareForReading(const std::set<int32_t>& row_group_indices,
+    Status PrepareForReading(const std::vector<TargetRowGroup>& target_row_groups,
                              const std::vector<int32_t>& column_indices);
 
-    /// Filter row groups by read ranges, returning only those that overlap.
-    Result<std::set<int32_t>> FilterRowGroupsByReadRanges(
-        const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges,
-        const std::vector<int32_t>& src_row_groups) const;
-
-    /// Set per-row-group RowRanges for page-level filtering.
-    /// Only partially matched row groups should have entries.
-    void SetRowGroupRowRanges(const std::map<int32_t, RowRanges>& ranges) {
-        row_group_row_ranges_ = ranges;
-    }
+    /// Apply read ranges to the current target_row_groups_, keeping only those
+    /// whose row-group range is equal to one of the given read ranges.
+    /// Resets reader state so that the next Next() call will re-initialize.
+    Status ApplyReadRanges(const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges);
 
     /// Get the page index reader for the file.
     /// Returns nullptr if page index is not available.
@@ -144,21 +138,38 @@ class FileReaderWrapper {
  private:
     FileReaderWrapper(std::unique_ptr<::parquet::arrow::FileReader>&& file_reader,
                       const std::vector<std::pair<uint64_t, uint64_t>>& all_row_group_ranges,
-                      uint64_t num_rows, ::arrow::MemoryPool* pool, int64_t batch_size);
+                      uint64_t num_rows, int64_t batch_size,
+                      std::shared_ptr<::arrow::MemoryPool> pool);
 
-    Result<std::set<int32_t>> ReadRangesToRowGroupIds(
-        const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) const;
-    Result<int32_t> GetRowGroupId(std::pair<uint64_t, uint64_t> target_range) const;
+    /// Wait for all pending PreBuffer operations to complete.
+    void WaitForPendingPreBuffer();
+
+    /// Advance current_row_group_idx_ to the next row group and update next_row_to_read_.
+    void AdvanceToNextRowGroup();
+
+    /// Read next batch from a page-filtered row group. Returns nullptr when the RG is exhausted.
+    Result<std::shared_ptr<arrow::RecordBatch>> NextPageFiltered();
+
+    /// Read next batch from the fully-matched batch_reader_. Returns nullptr when exhausted.
+    Result<std::shared_ptr<arrow::RecordBatch>> NextFullyMatched();
+
+    /// Build page_filtered_read_schema_ from the given column indices. No-op if already built.
+    Status BuildPageFilteredSchema(const std::vector<int32_t>& column_indices);
+
+    /// Collect all byte ranges that need pre-buffering (page-filtered + fully-matched).
+    std::vector<::arrow::io::ReadRange> CollectPreBufferRanges(
+        const std::vector<int32_t>& column_indices);
+
+    /// Dispatch a single PreBufferRanges call with merged ranges.
+    void DispatchPreBuffer(std::vector<::arrow::io::ReadRange> ranges);
 
     std::unique_ptr<::parquet::arrow::FileReader> file_reader_;
     std::unique_ptr<arrow::RecordBatchReader> batch_reader_;
 
     std::vector<std::pair<uint64_t, uint64_t>> all_row_group_ranges_;
-    std::set<int32_t> target_row_group_indices_;
-    std::vector<std::pair<uint64_t, uint64_t>> target_row_groups_;
     std::vector<int32_t> target_column_indices_;
 
-    ::arrow::MemoryPool* pool_;
+    std::shared_ptr<::arrow::MemoryPool> pool_;
     int64_t batch_size_;  // 0 means no limit
 
     const uint64_t num_rows_;
@@ -175,13 +186,8 @@ class FileReaderWrapper {
     RowRanges current_filtered_row_ranges_;   // RowRanges for the active page-filtered RG
     uint64_t current_filtered_rg_start_ = 0;  // Absolute row-group start row number
 
-    // Page-level filtering state. Externally injected via SetRowGroupRowRanges and
-    // looked up by row group index when entering a page-filtered RG.
-    std::map<int32_t, RowRanges> row_group_row_ranges_;
-
-    // Set of target_row_groups_ positional indices that use page-filtered reading.
-    // Built in PrepareForReading from row_group_row_ranges_.
-    std::set<uint64_t> page_filtered_indices_;
+    // Target row groups with row ranges for none page-level filtering and page-level filtering
+    std::vector<TargetRowGroup> target_row_groups_;
 
     // Arrow schema covering target_column_indices_, used when constructing the per-RG
     // page-filtered reader. Cached in PrepareForReading because it's identical across
@@ -190,9 +196,6 @@ class FileReaderWrapper {
 
     // Track pre-buffered ranges so we can wait on destruction
     std::vector<::arrow::io::ReadRange> prebuffered_ranges_;
-
-    /// Wait for all pending PreBuffer operations to complete.
-    void WaitForPendingPreBuffer();
 };
 
 }  // namespace paimon::parquet

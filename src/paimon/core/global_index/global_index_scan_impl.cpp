@@ -61,7 +61,8 @@ Result<std::unique_ptr<GlobalIndexScanImpl>> GlobalIndexScanImpl::Create(
             uint32_t cpu_count = std::thread::hardware_concurrency();
             thread_num = cpu_count > 0 ? static_cast<int32_t>(cpu_count) : 1;
         }
-        final_executor = CreateDefaultExecutor(static_cast<uint32_t>(thread_num.value()));
+        PAIMON_ASSIGN_OR_RAISE(final_executor,
+                               CreateDefaultExecutor(static_cast<uint32_t>(thread_num.value())));
     }
     auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> external_paths, options.CreateExternalPaths());

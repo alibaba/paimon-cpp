@@ -86,8 +86,11 @@ uint32_t HiveBucketFunction::ComputeHash(const BinaryRow& row, int32_t field_ind
     switch (info.type) {
         case FieldType::BOOLEAN:
             return HiveHasher::HashInt(row.GetBoolean(field_index) ? 1 : 0);
-        case FieldType::TINYINT:
-            return HiveHasher::HashInt(static_cast<uint32_t>(row.GetByte(field_index)));
+        case FieldType::TINYINT: {
+            auto byte = static_cast<uint8_t>(row.GetByte(field_index));
+            int32_t signed_byte = byte < 128 ? byte : static_cast<int32_t>(byte) - 256;
+            return HiveHasher::HashInt(static_cast<uint32_t>(signed_byte));
+        }
         case FieldType::SMALLINT:
             return HiveHasher::HashInt(static_cast<uint32_t>(row.GetShort(field_index)));
         case FieldType::INT:
@@ -100,6 +103,8 @@ uint32_t HiveBucketFunction::ComputeHash(const BinaryRow& row, int32_t field_ind
             uint32_t bits;
             if (float_value == -0.0f) {
                 bits = 0;
+            } else if (std::isnan(float_value)) {
+                bits = 0x7FC00000U;
             } else {
                 std::memcpy(&bits, &float_value, sizeof(bits));
             }
@@ -110,6 +115,8 @@ uint32_t HiveBucketFunction::ComputeHash(const BinaryRow& row, int32_t field_ind
             uint64_t bits;
             if (double_value == -0.0) {
                 bits = 0;
+            } else if (std::isnan(double_value)) {
+                bits = 0x7FF8000000000000ULL;
             } else {
                 std::memcpy(&bits, &double_value, sizeof(bits));
             }
