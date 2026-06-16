@@ -80,6 +80,77 @@ std::shared_ptr<arrow::Field> FindMatchingReadField(
     return nullptr;
 }
 
+int32_t FindMatchingFileFieldIndex(const arrow::FieldVector& file_fields,
+                                   const std::shared_ptr<arrow::Field>& read_field) {
+    int32_t read_field_id = NestedProjectionUtils::GetPaimonFieldId(read_field);
+    if (read_field_id != -1) {
+        for (int32_t i = 0; i < static_cast<int32_t>(file_fields.size()); ++i) {
+            if (NestedProjectionUtils::GetPaimonFieldId(file_fields[i]) == read_field_id) {
+                return i;
+            }
+        }
+    }
+
+    for (int32_t i = 0; i < static_cast<int32_t>(file_fields.size()); ++i) {
+        if (file_fields[i]->name() == read_field->name()) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+Result<std::shared_ptr<arrow::RecordBatch>> AlignBatchToReadSchemaOrder(
+    const std::shared_ptr<arrow::RecordBatch>& batch,
+    const std::shared_ptr<arrow::DataType>& read_data_type) {
+    auto read_struct = std::dynamic_pointer_cast<arrow::StructType>(read_data_type);
+    if (!read_struct) {
+        return Status::Invalid(fmt::format("Read data type must be struct, got {}",
+                                           read_data_type->ToString()));
+    }
+    if (batch->num_columns() != read_struct->num_fields()) {
+        return Status::Invalid(fmt::format(
+            "Batch column count {} does not match read schema field count {}", batch->num_columns(),
+            read_struct->num_fields()));
+    }
+
+    bool already_aligned = true;
+    for (int32_t i = 0; i < batch->num_columns(); ++i) {
+        if (batch->schema()->field(i)->name() != read_struct->field(i)->name()) {
+            already_aligned = false;
+            break;
+        }
+    }
+    if (already_aligned) {
+        return batch;
+    }
+
+    std::unordered_map<std::string, int32_t> batch_field_index;
+    batch_field_index.reserve(static_cast<size_t>(batch->num_columns()));
+    for (int32_t i = 0; i < batch->num_columns(); ++i) {
+        batch_field_index.emplace(batch->schema()->field(i)->name(), i);
+    }
+
+    std::vector<std::shared_ptr<arrow::Array>> aligned_columns;
+    aligned_columns.reserve(static_cast<size_t>(batch->num_columns()));
+    arrow::FieldVector aligned_fields;
+    aligned_fields.reserve(static_cast<size_t>(batch->num_columns()));
+
+    for (int32_t i = 0; i < read_struct->num_fields(); ++i) {
+        const auto& read_field = read_struct->field(i);
+        auto it = batch_field_index.find(read_field->name());
+        if (it == batch_field_index.end()) {
+            return Status::Invalid(fmt::format(
+                "Parquet batch column '{}' not found while aligning to read schema", 
+                read_field->name()));
+        }
+        aligned_columns.push_back(batch->column(it->second));
+        aligned_fields.push_back(read_field);
+    }
+
+    auto aligned_schema = arrow::schema(aligned_fields);
+    return arrow::RecordBatch::Make(aligned_schema, batch->num_rows(), aligned_columns);
+}
+
 }  // namespace
 
 ParquetFileBatchReader::ParquetFileBatchReader(
@@ -394,6 +465,7 @@ Result<BatchReader::ReadBatch> ParquetFileBatchReader::NextBatch() {
         if (batch == nullptr) {
             return BatchReader::MakeEofBatch();
         }
+        PAIMON_ASSIGN_OR_RAISE(batch, AlignBatchToReadSchemaOrder(batch, read_data_type_));
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,
                                           batch->ToStructArray());
         PAIMON_ASSIGN_OR_RAISE(bool need_cast, ParquetTimestampConverter::NeedCastArrayForTimestamp(
@@ -537,17 +609,24 @@ Result<std::vector<int32_t>> ParquetFileBatchReader::ComputeNestedColumnIndices(
     const std::shared_ptr<arrow::Schema>& read_schema,
     const std::shared_ptr<arrow::Schema>& file_schema) {
     std::vector<int32_t> indices;
-    int32_t leaf_index = 0;
+    std::vector<int32_t> file_field_leaf_starts;
+    file_field_leaf_starts.reserve(file_schema->num_fields());
 
+    int32_t file_leaf_index = 0;
     for (const auto& file_field : file_schema->fields()) {
-        std::shared_ptr<arrow::Field> read_field =
-            FindMatchingReadField(read_schema->fields(), file_field);
+        file_field_leaf_starts.push_back(file_leaf_index);
+        SkipLeafIndices(file_field->type(), &file_leaf_index);
+    }
 
-        if (read_field) {
-            CollectLeafIndices(read_field->type(), file_field->type(), &leaf_index, &indices);
-        } else {
-            SkipLeafIndices(file_field->type(), &leaf_index);
+    const auto& file_fields = file_schema->fields();
+    for (const auto& read_field : read_schema->fields()) {
+        int32_t file_field_idx = FindMatchingFileFieldIndex(file_fields, read_field);
+        if (file_field_idx < 0) {
+            continue;
         }
+        int32_t leaf_index = file_field_leaf_starts[file_field_idx];
+        CollectLeafIndices(read_field->type(), file_fields[file_field_idx]->type(), &leaf_index,
+                           &indices);
     }
     return indices;
 }
