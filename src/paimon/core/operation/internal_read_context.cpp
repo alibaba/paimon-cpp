@@ -33,8 +33,8 @@
 
 namespace paimon {
 
-std::shared_ptr<arrow::Field> InternalReadContext::FindFieldByName(
-    const arrow::FieldVector& fields, const std::string& name) {
+std::shared_ptr<arrow::Field> InternalReadContext::FindFieldByName(const arrow::FieldVector& fields,
+                                                                   const std::string& name) {
     for (const auto& field : fields) {
         if (field->name() == name) {
             return field;
@@ -64,9 +64,8 @@ Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTab
     const std::shared_ptr<arrow::Field>& table_field) {
     if (read_field->type()->id() != table_field->type()->id()) {
         return Status::Invalid(fmt::format(
-            "Read schema field '{}' type {} does not match table field type {}", 
-            read_field->name(), read_field->type()->ToString(),
-            table_field->type()->ToString()));
+            "Read schema field '{}' type {} does not match table field type {}", read_field->name(),
+            read_field->type()->ToString(), table_field->type()->ToString()));
     }
 
     auto type_id = read_field->type()->id();
@@ -78,9 +77,9 @@ Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTab
         for (const auto& read_child : read_struct->fields()) {
             auto table_child = FindFieldByName(table_struct->fields(), read_child->name());
             if (!table_child) {
-                return Status::Invalid(fmt::format(
-                    "Read schema nested field '{}' does not exist in table field '{}'", 
-                    read_child->name(), table_field->name()));
+                return Status::Invalid(
+                    fmt::format("Read schema nested field '{}' does not exist in table field '{}'",
+                                read_child->name(), table_field->name()));
             }
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> rebased_child,
                                    AlignReadFieldWithTableFieldIds(read_child, table_child));
@@ -94,9 +93,9 @@ Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTab
     if (type_id == arrow::Type::LIST) {
         auto read_list = std::static_pointer_cast<arrow::ListType>(read_field->type());
         auto table_list = std::static_pointer_cast<arrow::ListType>(table_field->type());
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> rebased_value_field,
-                               AlignReadFieldWithTableFieldIds(read_list->value_field(),
-                                                               table_list->value_field()));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<arrow::Field> rebased_value_field,
+            AlignReadFieldWithTableFieldIds(read_list->value_field(), table_list->value_field()));
         auto rebased_type = arrow::list(rebased_value_field);
         auto aligned_field = table_field->WithType(rebased_type)->WithName(read_field->name());
         return MergeReadFieldMetadata(aligned_field, read_field);
@@ -105,12 +104,12 @@ Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTab
     if (type_id == arrow::Type::MAP) {
         auto read_map = std::static_pointer_cast<arrow::MapType>(read_field->type());
         auto table_map = std::static_pointer_cast<arrow::MapType>(table_field->type());
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> rebased_key_field,
-                               AlignReadFieldWithTableFieldIds(read_map->key_field(),
-                                                               table_map->key_field()));
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> rebased_item_field,
-                               AlignReadFieldWithTableFieldIds(read_map->item_field(),
-                                                               table_map->item_field()));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<arrow::Field> rebased_key_field,
+            AlignReadFieldWithTableFieldIds(read_map->key_field(), table_map->key_field()));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<arrow::Field> rebased_item_field,
+            AlignReadFieldWithTableFieldIds(read_map->item_field(), table_map->item_field()));
         auto rebased_type = arrow::map(rebased_key_field->type(), rebased_item_field);
         auto aligned_field = table_field->WithType(rebased_type)->WithName(read_field->name());
         return MergeReadFieldMetadata(aligned_field, read_field);
@@ -118,9 +117,8 @@ Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTab
 
     if (!read_field->type()->Equals(table_field->type())) {
         return Status::Invalid(fmt::format(
-            "Read schema field '{}' type {} does not match table field type {}", 
-            read_field->name(), read_field->type()->ToString(),
-            table_field->type()->ToString()));
+            "Read schema field '{}' type {} does not match table field type {}", read_field->name(),
+            read_field->type()->ToString(), table_field->type()->ToString()));
     }
 
     auto aligned_field = table_field->WithType(read_field->type())->WithName(read_field->name());
@@ -203,11 +201,13 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
                 read_data_fields.push_back(*resolved_special_field);
                 continue;
             }
-            PAIMON_ASSIGN_OR_RAISE(DataField table_field, table_schema->GetField(read_field->name()));
+            PAIMON_ASSIGN_OR_RAISE(DataField table_field,
+                                   table_schema->GetField(read_field->name()));
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<arrow::Field> aligned_field,
                 AlignReadFieldWithTableFieldIds(read_field, table_field.ArrowField()));
-            read_data_fields.emplace_back(table_field.Id(), aligned_field, table_field.Description());
+            read_data_fields.emplace_back(table_field.Id(), aligned_field,
+                                          table_field.Description());
         }
     } else if (!context->GetReadFieldIds().empty()) {
         read_data_fields.reserve(context->GetReadFieldIds().size());

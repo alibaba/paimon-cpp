@@ -252,9 +252,9 @@ TEST(InternalReadContext, TestReadWithProjectedSchemaWithoutFieldIds) {
     SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
     ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));
 
-    ASSERT_OK_AND_ASSIGN(auto internal_context,
-                         InternalReadContext::Create(read_context, table_schema,
-                                                     table_schema->Options()));
+    ASSERT_OK_AND_ASSIGN(
+        auto internal_context,
+        InternalReadContext::Create(read_context, table_schema, table_schema->Options()));
 
     std::vector<DataField> expected_fields = {
         DataField(3, arrow::field("f3", arrow::float64())),
