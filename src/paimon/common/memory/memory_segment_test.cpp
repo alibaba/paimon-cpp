@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/common/memory/memory_segment.h"
+#include "paimon/memory/memory_segment.h"
 
 #include <climits>
 #include <cstdlib>

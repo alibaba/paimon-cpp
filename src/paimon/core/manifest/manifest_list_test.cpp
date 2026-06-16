@@ -21,6 +21,7 @@
 
 #include "arrow/type.h"
 #include "gtest/gtest.h"
+#include "paimon/core/core_options.h"
 #include "paimon/core/manifest/manifest_file_meta.h"
 #include "paimon/core/stats/simple_stats.h"
 #include "paimon/core/utils/file_store_path_factory.h"
@@ -49,8 +50,10 @@ class ManifestListTest : public testing::Test {
                                  /*legacy_partition_name_enabled=*/true, /*external_paths=*/{},
                                  /*global_index_external_path=*/std::nullopt,
                                  /*index_file_in_data_file_dir=*/false, pool));
-        EXPECT_OK_AND_ASSIGN(auto manifest_list, ManifestList::Create(file_system, file_format,
-                                                                      "zstd", path_factory, pool));
+        EXPECT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
+        EXPECT_OK_AND_ASSIGN(auto manifest_list,
+                             ManifestList::Create(file_system, file_format, "zstd", path_factory,
+                                                  options.GetCache(), pool));
         return manifest_list;
     }
 

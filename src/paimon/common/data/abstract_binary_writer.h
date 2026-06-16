@@ -21,7 +21,7 @@
 #include <string_view>
 
 #include "paimon/common/data/binary_writer.h"
-#include "paimon/common/memory/memory_segment.h"
+#include "paimon/memory/memory_segment.h"
 
 namespace paimon {
 class BinaryArray;

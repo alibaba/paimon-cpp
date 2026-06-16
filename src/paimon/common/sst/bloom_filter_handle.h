@@ -19,6 +19,9 @@
 #include <cstdint>
 #include <string>
 
+#include "paimon/memory/bytes.h"
+#include "paimon/memory/memory_segment.h"
+#include "paimon/result.h"
 #include "paimon/visibility.h"
 
 namespace paimon {

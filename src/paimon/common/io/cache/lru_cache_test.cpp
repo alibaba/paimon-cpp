@@ -25,10 +25,10 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "paimon/common/io/cache/cache.h"
+#include "paimon/cache/cache.h"
 #include "paimon/common/io/cache/cache_key.h"
-#include "paimon/common/memory/memory_segment.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/memory/memory_segment.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -358,6 +358,27 @@ TEST_F(LruCacheTest, TestPutMovesToFront) {
     ASSERT_OK(cache.Put(key2, MakeValue(100, 'C', make_callback(2))));
     ASSERT_EQ(evicted.size(), 1);
     ASSERT_EQ(evicted[0], 1);
+}
+
+TEST_F(LruCacheTest, TestForKindSetsKeyKind) {
+    LruCache cache(1024);
+
+    auto key = CacheKey::ForKind("test_file", 0, 64, CacheKind::MANIFEST);
+    bool supplier_seen_kind = false;
+    auto supplier =
+        [&](const std::shared_ptr<CacheKey>& supplier_key) -> Result<std::shared_ptr<CacheValue>> {
+        supplier_seen_kind = supplier_key->GetKind() == CacheKind::MANIFEST;
+        return MakeValue(64, 'M');
+    };
+
+    ASSERT_OK_AND_ASSIGN(auto value, cache.Get(key, supplier));
+    ASSERT_TRUE(supplier_seen_kind);
+    ASSERT_EQ(CacheKind::MANIFEST, key->GetKind());
+    ASSERT_EQ('M', value->GetSegment().Get(0));
+
+    auto put_key = CacheKey::ForKind("test_file", 1, 64, CacheKind::MANIFEST);
+    ASSERT_OK(cache.Put(put_key, MakeValue(64, 'P')));
+    ASSERT_EQ(CacheKind::MANIFEST, put_key->GetKind());
 }
 
 /// Verifies that multiple evictions happen when a single large entry is inserted.

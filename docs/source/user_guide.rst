@@ -24,6 +24,7 @@ User Guide
    user_guide/schema
    user_guide/snapshot
    user_guide/manifest
+   user_guide/manifest_cache
    user_guide/data_types
    user_guide/primary_key_table
    user_guide/append_only_table

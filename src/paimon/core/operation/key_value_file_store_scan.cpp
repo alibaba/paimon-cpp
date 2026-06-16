@@ -33,6 +33,7 @@
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/options/merge_engine.h"
+#include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/stats/simple_stats.h"
 #include "paimon/core/stats/simple_stats_evolution.h"
@@ -189,14 +190,25 @@ Result<bool> KeyValueFileStoreScan::FilterByValueFilter(const ManifestEntry& ent
 
     const auto& meta = entry.File();
 
-    // Primary key table currently does not support schema evolution for value filtering.
-    // Here we only handle `value_stats_cols` (dense stats) projection.
-    if (meta->schema_id != table_schema_->Id()) {
-        return Status::NotImplemented(
-            "Primary key table does not support schema evolution in FilterByValueFilter");
+    std::shared_ptr<TableSchema> data_schema = table_schema_;
+    std::shared_ptr<Predicate> trimmed_predicates = value_filter_;
+    int64_t data_schema_id = meta->schema_id;
+    if (data_schema_id != table_schema_->Id()) {
+        PAIMON_ASSIGN_OR_RAISE(data_schema, schema_manager_->ReadSchema(data_schema_id));
     }
 
-    auto evolution = evolutions_->GetOrCreate(table_schema_);
+    auto evolution = evolutions_->GetOrCreate(data_schema);
+    if (data_schema_id != table_schema_->Id()) {
+        PAIMON_ASSIGN_OR_RAISE(trimmed_predicates,
+                               ReconstructPredicateWithNonCastedFields(value_filter_, evolution));
+    }
+    if (!trimmed_predicates) {
+        return true;
+    }
+    auto predicate_filter = std::dynamic_pointer_cast<PredicateFilter>(trimmed_predicates);
+    if (!predicate_filter) {
+        return Status::Invalid("invalid value predicate, cannot cast to PredicateFilter");
+    }
 
     PAIMON_ASSIGN_OR_RAISE(
         SimpleStatsEvolution::EvolutionStats new_stats,
@@ -205,8 +217,8 @@ Result<bool> KeyValueFileStoreScan::FilterByValueFilter(const ManifestEntry& ent
     try {
         PAIMON_ASSIGN_OR_RAISE(
             bool predicate_result,
-            value_filter_->Test(schema_, meta->row_count, *(new_stats.min_values),
-                                *(new_stats.max_values), *(new_stats.null_counts)));
+            predicate_filter->Test(schema_, meta->row_count, *(new_stats.min_values),
+                                   *(new_stats.max_values), *(new_stats.null_counts)));
         return predicate_result;
     } catch (const std::exception& e) {
         return Status::Invalid(fmt::format("FilterByValueFilter failed for file {}, with {} error",

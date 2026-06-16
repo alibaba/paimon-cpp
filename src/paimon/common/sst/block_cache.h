@@ -21,8 +21,8 @@
 #include <unordered_map>
 
 #include "paimon/common/io/cache/cache_manager.h"
-#include "paimon/common/memory/memory_segment.h"
 #include "paimon/fs/file_system.h"
+#include "paimon/memory/memory_segment.h"
 #include "paimon/reader/batch_reader.h"
 #include "paimon/result.h"
 namespace paimon {
