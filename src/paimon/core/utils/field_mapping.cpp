@@ -162,8 +162,8 @@ Result<std::vector<std::shared_ptr<CastExecutor>>> FieldMappingBuilder::CreateDa
             if (read_type == FieldType::MAP || read_type == FieldType::ARRAY ||
                 read_type == FieldType::STRUCT) {
                 // Nested types may differ due to nested column pruning (different
-                // number of sub-fields). No cast is needed — pruning is handled
-                // separately by PruneDataType / PruneArray.
+                // number of sub-fields). No cast is needed — type pruning is
+                // handled by PruneDataType during field mapping construction.
                 cast_executors.push_back(nullptr);
                 continue;
             }

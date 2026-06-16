@@ -169,45 +169,6 @@ TEST(NestedProjectionUtilsTest, PruneDataType_MapWithStructValue) {
     ASSERT_EQ(map_type->item_type()->field(0)->name(), "a");
 }
 
-// ============== PruneArray ==============
-
-TEST(NestedProjectionUtilsTest, PruneArray_StructPrune) {
-    // Build a StructArray with fields x:INT, y:STRING
-    arrow::Int32Builder x_builder;
-    ASSERT_TRUE(x_builder.AppendValues({1, 2, 3}).ok());
-    std::shared_ptr<arrow::Array> x_array;
-    ASSERT_TRUE(x_builder.Finish(&x_array).ok());
-
-    arrow::StringBuilder y_builder;
-    ASSERT_TRUE(y_builder.AppendValues({"a", "b", "c"}).ok());
-    std::shared_ptr<arrow::Array> y_array;
-    ASSERT_TRUE(y_builder.Finish(&y_array).ok());
-
-    auto struct_type =
-        arrow::struct_({arrow::field("x", arrow::int32()), arrow::field("y", arrow::utf8())});
-    auto struct_result = arrow::StructArray::Make({x_array, y_array}, struct_type->fields());
-    ASSERT_TRUE(struct_result.ok());
-    auto struct_array = struct_result.ValueUnsafe();
-
-    // Prune to only keep "x"
-    auto target_type = arrow::struct_({arrow::field("x", arrow::int32())});
-    ASSERT_OK_AND_ASSIGN(auto pruned, NestedProjectionUtils::PruneArray(struct_array, target_type));
-
-    ASSERT_EQ(pruned->type()->num_fields(), 1);
-    ASSERT_EQ(pruned->type()->field(0)->name(), "x");
-    ASSERT_EQ(pruned->length(), 3);
-}
-
-TEST(NestedProjectionUtilsTest, PruneArray_IdenticalType) {
-    arrow::Int32Builder builder;
-    ASSERT_TRUE(builder.AppendValues({10, 20}).ok());
-    std::shared_ptr<arrow::Array> array;
-    ASSERT_TRUE(builder.Finish(&array).ok());
-
-    ASSERT_OK_AND_ASSIGN(auto pruned, NestedProjectionUtils::PruneArray(array, arrow::int32()));
-    ASSERT_EQ(pruned.get(), array.get());  // Same pointer — no copy.
-}
-
 // ============== GetMapSelectedKeys ==============
 
 TEST(NestedProjectionUtilsTest, GetMapSelectedKeys_Present) {

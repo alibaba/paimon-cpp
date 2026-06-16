@@ -77,13 +77,6 @@ class PAIMON_EXPORT NestedProjectionUtils {
         const std::shared_ptr<arrow::DataType>& read_type,
         const std::shared_ptr<arrow::DataType>& data_type);
 
-    /// Prune a StructArray so that only the sub-fields present in `target_type`
-    /// are kept. Used as a fallback when the format reader returns more columns
-    /// than requested.
-    static Result<std::shared_ptr<arrow::Array>> PruneArray(
-        const std::shared_ptr<arrow::Array>& array,
-        const std::shared_ptr<arrow::DataType>& target_type);
-
     /// Parse the "paimon.map.selected-keys" metadata from an Arrow field.
     /// Returns an empty set if the metadata key is absent or the field is not a MAP.
     /// The metadata value must be a JSON array of strings, e.g. '["key1","key2"]'.

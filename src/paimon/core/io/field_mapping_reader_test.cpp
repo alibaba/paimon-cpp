@@ -45,6 +45,7 @@
 #include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
+#include "paimon/testing/mock/mock_file_batch_reader.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/testharness.h"
@@ -621,6 +622,48 @@ TEST_F(FieldMappingReaderTest, TestReadWithSchemaEvolutionPureRename) {
 
     CheckResult(data_schema, data_array, read_schema, /*predicate=*/nullptr,
                 /*partition_keys=*/{}, BinaryRow::EmptyRow(), expected);
+}
+
+TEST_F(FieldMappingReaderTest, TestNestedProjectionMismatchShouldFailFast) {
+    // File data has full nested struct f1{a,b}.
+    std::vector<DataField> data_fields = {
+        DataField(0, arrow::field("f0", arrow::int32())),
+        DataField(1, arrow::field("f1", arrow::struct_({arrow::field("a", arrow::int32()),
+                                                          arrow::field("b", arrow::utf8())})))
+    };
+    auto data_schema = DataField::ConvertDataFieldsToArrowSchema(data_fields);
+    auto data_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(data_schema->fields()), R"([
+        [1, [10, "x"]],
+        [2, [20, "y"]]
+    ])")
+            .ValueOrDie());
+
+    // Read schema requests pruned nested struct f1{a}.
+    std::vector<DataField> read_fields = {
+        DataField(0, arrow::field("f0", arrow::int32())),
+        DataField(1, arrow::field("f1", arrow::struct_({arrow::field("a", arrow::int32())})))
+    };
+    auto read_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields);
+
+    ASSERT_OK_AND_ASSIGN(auto mapping_builder,
+                         FieldMappingBuilder::Create(read_schema, /*partition_keys=*/{},
+                                                     /*predicate=*/nullptr));
+    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_schema));
+
+    // Mock reader ignores SetReadSchema and still returns full nested payload.
+    auto mock_reader = std::make_unique<MockFileBatchReader>(
+        data_array, data_array->type(), /*read_batch_size=*/10);
+
+    auto reader = std::make_shared<FieldMappingReader>(
+        /*field_count=*/read_schema->num_fields(), std::move(mock_reader), BinaryRow::EmptyRow(),
+        std::move(mapping), pool_);
+
+    auto result = ReadResultCollector::CollectResult(reader.get());
+    ASSERT_FALSE(result.ok());
+    ASSERT_NE(result.status().ToString().find("Nested sub-field projection must be handled"),
+              std::string::npos)
+        << result.status().ToString();
 }
 
 TEST_F(FieldMappingReaderTest, TestReadWithSchemaEvolutionWithRenameAndModifyTypeAndPredicate) {

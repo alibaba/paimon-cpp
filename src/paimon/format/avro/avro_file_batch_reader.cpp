@@ -33,6 +33,30 @@
 
 namespace paimon::avro {
 
+namespace {
+
+bool IsNestedType(const std::shared_ptr<arrow::DataType>& type) {
+    return type->id() == arrow::Type::STRUCT || type->id() == arrow::Type::LIST ||
+           type->id() == arrow::Type::MAP;
+}
+
+Status ValidateUnsupportedNestedProjection(const std::shared_ptr<arrow::Schema>& file_schema,
+                                           const std::shared_ptr<arrow::Schema>& read_schema) {
+    for (const auto& read_field : read_schema->fields()) {
+        auto file_field = file_schema->GetFieldByName(read_field->name());
+        if (!file_field) {
+            continue;
+        }
+        if (IsNestedType(read_field->type()) && !read_field->type()->Equals(file_field->type())) {
+            return Status::Invalid(
+                "SetReadSchema failed: avro reader does not support nested sub-field projection");
+        }
+    }
+    return Status::OK();
+}
+
+}  // namespace
+
 AvroFileBatchReader::AvroFileBatchReader(const std::shared_ptr<InputStream>& input_stream,
                                          const std::shared_ptr<::arrow::DataType>& file_data_type,
                                          std::unique_ptr<::avro::DataFileReaderBase>&& reader,
@@ -146,7 +170,8 @@ Status AvroFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
                                       arrow::ImportSchema(read_schema));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> file_schema,
                            ArrowUtils::DataTypeToSchema(file_data_type_));
-    PAIMON_ASSIGN_OR_RAISE(std::set<size_t> read_fields_projection,
+    PAIMON_RETURN_NOT_OK(ValidateUnsupportedNestedProjection(file_schema, arrow_read_schema));
+    PAIMON_ASSIGN_OR_RAISE(read_fields_projection_,
                            CalculateReadFieldsProjection(file_schema, arrow_read_schema->fields()));
     std::shared_ptr<::arrow::DataType> read_data_type = arrow::struct_(arrow_read_schema->fields());
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::unique_ptr<arrow::ArrayBuilder> array_builder,
