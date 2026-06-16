@@ -71,14 +71,14 @@ Result<BinaryRow> ManifestFileMetaSerializer::ToRow(const ManifestFileMeta& reco
     if (!min_row_id) {
         writer.SetNullAt(11);
     } else {
-        writer.WriteInt(11, min_row_id.value());
+        writer.WriteLong(11, min_row_id.value());
     }
 
     auto max_row_id = record.MaxRowId();
     if (!max_row_id) {
         writer.SetNullAt(12);
     } else {
-        writer.WriteInt(12, max_row_id.value());
+        writer.WriteLong(12, max_row_id.value());
     }
     writer.Complete();
     return row;
