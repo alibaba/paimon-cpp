@@ -154,10 +154,12 @@ class FileReaderWrapper {
     Result<std::shared_ptr<arrow::RecordBatch>> NextFullyMatched();
 
     /// Build page_filtered_read_schema_ from the given column indices. No-op if already built.
-    Status BuildPageFilteredSchema(const std::vector<int32_t>& column_indices);
+    Status BuildPageFilteredSchema(const std::shared_ptr<arrow::Schema>& file_schema,
+                                   const std::vector<int32_t>& column_indices);
 
     /// Collect all byte ranges that need pre-buffering (page-filtered + fully-matched).
     Result<std::vector<::arrow::io::ReadRange>> CollectPreBufferRanges(
+        const std::shared_ptr<arrow::Schema>& file_schema,
         const std::vector<int32_t>& column_indices);
 
     /// Dispatch a single PreBufferRanges call with merged ranges.

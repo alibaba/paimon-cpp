@@ -241,13 +241,4 @@ void FlattenSchema(const std::shared_ptr<arrow::DataType>& type, int32_t* index,
     }
 }
 
-paimon::Result<bool> IsNestedType(::parquet::arrow::FileReader* arrow_file_reader,
-                                  int32_t field_index) {
-    std::shared_ptr<arrow::Schema> schema;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow_file_reader->GetSchema(&schema));
-
-    auto id = schema->field(field_index)->type()->id();
-    return id == arrow::Type::STRUCT || id == arrow::Type::LIST || id == arrow::Type::MAP;
-}
-
 }  // namespace paimon::parquet

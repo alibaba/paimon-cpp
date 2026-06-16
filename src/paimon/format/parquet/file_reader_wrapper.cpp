@@ -26,6 +26,7 @@
 #include "arrow/type.h"
 #include "arrow/util/range.h"
 #include "fmt/format.h"
+#include "paimon/core/schema/arrow_schema_validator.h"
 #include "paimon/format/parquet/column_index_filter.h"
 #include "paimon/format/parquet/page_filtered_row_group_reader.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
@@ -349,20 +350,19 @@ Status FileReaderWrapper::PrepareForReadingLazy(
     return Status::OK();
 }
 
-Status FileReaderWrapper::BuildPageFilteredSchema(const std::vector<int32_t>& column_indices) {
+Status FileReaderWrapper::BuildPageFilteredSchema(const std::shared_ptr<arrow::Schema>& file_schema,
+                                                  const std::vector<int32_t>& column_indices) {
     if (page_filtered_read_schema_) {
         return Status::OK();
     }
-    std::shared_ptr<arrow::Schema> schema;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetSchema(&schema));
     std::vector<std::shared_ptr<arrow::Field>> fields;
 
     // Build a complete leaf → top-level field index mapping for ALL fields (nested and flat alike).
     // leaf_to_field_idx_ maps every leaf to its owning field_idx; callers use IsNestedType() on
     // the owning field's type to distinguish nested from flat columns.
     int32_t leaf_idx = 0;
-    for (int field_idx = 0; field_idx < schema->num_fields(); ++field_idx) {
-        const auto& field = schema->field(field_idx);
+    for (int field_idx = 0; field_idx < file_schema->num_fields(); ++field_idx) {
+        const auto& field = file_schema->field(field_idx);
         std::vector<int32_t> leaf_indices;
         FlattenSchema(field->type(), &leaf_idx, &leaf_indices);
         for (int32_t idx : leaf_indices) {
@@ -376,7 +376,7 @@ Status FileReaderWrapper::BuildPageFilteredSchema(const std::vector<int32_t>& co
     for (int32_t requested_leaf : column_indices) {
         int32_t field_idx = leaf_to_field_idx_[requested_leaf];
         if (seen_field_indices.insert(field_idx).second) {
-            fields.push_back(schema->field(field_idx));
+            fields.push_back(file_schema->field(field_idx));
         }
     }
 
@@ -385,7 +385,7 @@ Status FileReaderWrapper::BuildPageFilteredSchema(const std::vector<int32_t>& co
 }
 
 Result<std::vector<::arrow::io::ReadRange>> FileReaderWrapper::CollectPreBufferRanges(
-    const std::vector<int32_t>& column_indices) {
+    const std::shared_ptr<arrow::Schema>& file_schema, const std::vector<int32_t>& column_indices) {
     std::vector<::arrow::io::ReadRange> ranges;
     auto file_metadata = file_reader_->parquet_reader()->metadata();
 
@@ -394,7 +394,7 @@ Result<std::vector<::arrow::io::ReadRange>> FileReaderWrapper::CollectPreBufferR
     std::vector<int32_t> nested_column_indices;
     for (int32_t col_idx : column_indices) {
         int32_t field_idx = leaf_to_field_idx_[col_idx];
-        PAIMON_ASSIGN_OR_RAISE(bool is_nested, IsNestedType(file_reader_.get(), field_idx));
+        bool is_nested = ArrowSchemaValidator::IsNestedType(file_schema->field(field_idx)->type());
         if (is_nested) {
             nested_column_indices.push_back(col_idx);
         } else {
@@ -474,8 +474,9 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
         }
 
         bool has_partially_matched = fully_matched_row_groups.size() != active_count;
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> file_schema, GetSchema());
         if (has_partially_matched) {
-            PAIMON_RETURN_NOT_OK(BuildPageFilteredSchema(column_indices));
+            PAIMON_RETURN_NOT_OK(BuildPageFilteredSchema(file_schema, column_indices));
         }
 
         WaitForPendingPreBuffer();
@@ -497,7 +498,7 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
         // Otherwise GetRecordBatchReader already issued PreBuffer internally.
         if (has_partially_matched) {
             PAIMON_ASSIGN_OR_RAISE(std::vector<::arrow::io::ReadRange> all_ranges,
-                                   CollectPreBufferRanges(column_indices));
+                                   CollectPreBufferRanges(file_schema, column_indices));
             DispatchPreBuffer(std::move(all_ranges));
         }
 

@@ -61,8 +61,4 @@ namespace paimon::parquet {
 void FlattenSchema(const std::shared_ptr<arrow::DataType>& type, int32_t* index,
                    std::vector<int32_t>* index_vector);
 
-/// Returns true if the Arrow type requires nested-column fallback reading
-/// (i.e. STRUCT, LIST, or MAP), false for flat/primitive columns.
-Result<bool> IsNestedType(::parquet::arrow::FileReader* arrow_file_reader, int32_t field_index);
-
 }  // namespace paimon::parquet

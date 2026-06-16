@@ -29,6 +29,7 @@
 #include "arrow/util/future.h"
 #include "fmt/format.h"
 #include "paimon/common/utils/arrow/status_utils.h"
+#include "paimon/core/schema/arrow_schema_validator.h"
 #include "parquet/arrow/reader.h"
 #include "parquet/arrow/reader_internal.h"
 #include "parquet/metadata.h"
@@ -344,7 +345,7 @@ PageFilteredRowGroupReader::AssembleFilteredColumns(
         }
         // Use the file-schema field index (from leaf_to_field_idx), NOT the read-schema
         // field_idx, because IsNestedType() indexes into the file schema.
-        PAIMON_ASSIGN_OR_RAISE(bool is_nested, IsNestedType(file_reader, field_idx));
+        bool is_nested = ArrowSchemaValidator::IsNestedType(file_schema->field(field_idx)->type());
         auto field = file_schema->field(field_idx);
         if (!is_nested) {
             // Non-nested column: page-level skip/read.
