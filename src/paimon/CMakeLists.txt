@@ -66,6 +66,7 @@ set(PAIMON_COMMON_SRCS
     common/io/data_output_stream.cpp
     common/io/memory_segment_output_stream.cpp
     common/io/offset_input_stream.cpp
+    common/io/cache/cache.cpp
     common/io/cache/cache_key.cpp
     common/io/cache/cache_manager.cpp
     common/io/cache/lru_cache.cpp

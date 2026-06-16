@@ -135,7 +135,8 @@ Result<std::unique_ptr<FileStoreScan>> CreateFileStoreScan(
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<ManifestList> manifest_list,
         ManifestList::Create(core_options.GetFileSystem(), core_options.GetManifestFormat(),
-                             core_options.GetManifestCompression(), path_factory, pool));
+                             core_options.GetManifestCompression(), path_factory,
+                             core_options.GetCache(), pool));
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<ManifestFile> manifest_file,
         ManifestFile::Create(core_options.GetFileSystem(), core_options.GetManifestFormat(),

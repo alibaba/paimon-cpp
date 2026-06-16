@@ -82,6 +82,12 @@ TEST(AppendOnlyFileStoreScanTest, TestReconstructPredicateWithNonCastedFields) {
         auto result,
         AppendOnlyFileStoreScan::ReconstructPredicateWithNonCastedFields(predicate, evo));
     ASSERT_EQ(*result, *child4);
+
+    auto key_predicate =
+        PredicateBuilder::IsNull(/*field_index=*/1, /*field_name=*/"key0", FieldType::INT);
+    ASSERT_OK_AND_ASSIGN(result, AppendOnlyFileStoreScan::ReconstructPredicateWithNonCastedFields(
+                                     key_predicate, evo));
+    ASSERT_EQ(*result, *key_predicate);
 }
 
 TEST(AppendOnlyFileStoreScanTest, TestReadPartitionEntries) {

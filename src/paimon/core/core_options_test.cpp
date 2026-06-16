@@ -55,6 +55,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(8 * 1024 * 1024L, core_options.GetManifestTargetFileSize());
     ASSERT_EQ(16 * 1024 * 1024L, core_options.GetManifestFullCompactionThresholdSize());
     ASSERT_EQ(30, core_options.GetManifestMergeMinCount());
+    ASSERT_EQ(nullptr, core_options.GetCache());
     ASSERT_EQ(128 * 1024 * 1024L, core_options.GetSourceSplitTargetSize());
     ASSERT_EQ(4 * 1024 * 1024L, core_options.GetSourceSplitOpenFileCost());
     ASSERT_EQ(1024, core_options.GetReadBatchSize());
@@ -289,6 +290,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(16 * 1024 * 1024L, core_options.GetManifestTargetFileSize());
     ASSERT_EQ(32 * 1024 * 1024L, core_options.GetManifestFullCompactionThresholdSize());
     ASSERT_EQ(2, core_options.GetManifestMergeMinCount());
+    ASSERT_EQ(nullptr, core_options.GetCache());
     ASSERT_EQ(24 * 1024 * 1024L, core_options.GetSourceSplitTargetSize());
     ASSERT_EQ(32 * 1024 * 1024L, core_options.GetSourceSplitOpenFileCost());
     ASSERT_EQ(2048, core_options.GetReadBatchSize());
@@ -863,9 +865,11 @@ TEST(CoreOptionsTest, TestCopyAssignmentOperator) {
 
     // Verify the target's ToMap matches the source's ToMap
     ASSERT_EQ(source.ToMap(), target.ToMap());
+    ASSERT_EQ(source.GetCache(), target.GetCache());
 
     CoreOptions target2 = source;
     ASSERT_EQ(source.ToMap(), target2.ToMap());
+    ASSERT_EQ(source.GetCache(), target2.GetCache());
 }
 
 TEST(CoreOptionsTest, TestAssignmentIndependence) {
