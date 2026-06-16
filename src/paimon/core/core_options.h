@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "paimon/bucket/bucket_function_type.h"
+#include "paimon/cache/cache.h"
 #include "paimon/core/options/changelog_producer.h"
 #include "paimon/core/options/compress_options.h"
 #include "paimon/core/options/external_path_strategy.h"
@@ -42,6 +43,7 @@
 namespace paimon {
 
 class ExpireConfig;
+class Cache;
 
 class PAIMON_EXPORT CoreOptions {
  public:
@@ -78,6 +80,8 @@ class PAIMON_EXPORT CoreOptions {
     std::optional<int64_t> GetScanTimestampMillis() const;
 
     int64_t GetManifestTargetFileSize() const;
+    std::shared_ptr<Cache> GetCache() const;
+    CoreOptions& WithCache(const std::shared_ptr<Cache>& cache);
     StartupMode GetStartupMode() const;
 
     int32_t GetReadBatchSize() const;

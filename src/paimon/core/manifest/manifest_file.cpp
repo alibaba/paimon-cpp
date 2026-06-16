@@ -54,7 +54,7 @@ ManifestFile::ManifestFile(const std::shared_ptr<FileSystem>& file_system,
                            const std::shared_ptr<arrow::Schema>& partition_type)
     : ObjectsFile<ManifestEntry>(file_system, reader_builder, writer_builder,
                                  std::make_unique<ManifestEntrySerializer>(pool), compression,
-                                 path_factory, pool),
+                                 path_factory, options.GetCache(), pool),
       target_file_size_(target_file_size),
       options_(options),
       partition_type_(partition_type) {}

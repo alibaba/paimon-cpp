@@ -52,11 +52,24 @@
 #include "paimon/table/source/startup_mode.h"
 #include "paimon/table/source/table_scan.h"
 #include "paimon/testing/utils/binary_row_generator.h"
+#include "paimon/testing/utils/manifest_cache_test_utils.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
-class ScanInteTest : public testing::Test {
+enum class ManifestCacheMode { NoCache, Cache };
+
+class ScanInteTest : public testing::TestWithParam<ManifestCacheMode> {
  public:
+    Result<std::unique_ptr<ScanContext>> FinishScanContext(ScanContextBuilder& builder) {
+        if (GetParam() == ManifestCacheMode::Cache) {
+            if (!cache_) {
+                cache_ = std::make_shared<CountingManifestRoutingCache>();
+            }
+            builder.WithCache(cache_);
+        }
+        return builder.Finish();
+    }
+
     std::vector<std::shared_ptr<DataSplitImpl>> CollectDataSplits(
         const std::shared_ptr<Plan>& plan) const {
         std::vector<std::shared_ptr<DataSplitImpl>> result_data_splits;
@@ -106,6 +119,8 @@ class ScanInteTest : public testing::Test {
     }
 
  private:
+    std::shared_ptr<Cache> cache_;
+
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
 
     std::shared_ptr<arrow::DataType> arrow_data_type_ =
@@ -241,11 +256,38 @@ class ScanInteTest : public testing::Test {
             /*write_cols=*/std::nullopt);
 };
 
-TEST_F(ScanInteTest, TestScanAppendWithSnapshot1) {
+TEST(ScanInteManifestCacheTest, TestRepeatedScanReusesManifestCache) {
+    auto manifest_cache = std::make_shared<CountingManifestRoutingCache>();
+    std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
+
+    auto run_scan = [&]() -> Result<std::shared_ptr<Plan>> {
+        ScanContextBuilder context_builder(table_path);
+        context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "1").WithCache(manifest_cache);
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ScanContext> scan_context, context_builder.Finish());
+        PAIMON_ASSIGN_OR_RAISE(auto table_scan, TableScan::Create(std::move(scan_context)));
+        return table_scan->CreatePlan();
+    };
+
+    ASSERT_OK_AND_ASSIGN(auto first_plan, run_scan());
+    ASSERT_TRUE(first_plan->SnapshotId());
+    ASSERT_EQ(1, first_plan->SnapshotId().value());
+    ASSERT_FALSE(first_plan->Splits().empty());
+    ASSERT_GT(manifest_cache->SupplierCallCount(), 0);
+    int64_t supplier_calls_after_first_scan = manifest_cache->SupplierCallCount();
+
+    ASSERT_OK_AND_ASSIGN(auto second_plan, run_scan());
+    ASSERT_EQ(first_plan->SnapshotId(), second_plan->SnapshotId());
+    ASSERT_EQ(first_plan->Splits().size(), second_plan->Splits().size());
+    ASSERT_GT(manifest_cache->GetCount(), supplier_calls_after_first_scan);
+    ASSERT_EQ(supplier_calls_after_first_scan, manifest_cache->SupplierCallCount());
+}
+
+TEST_P(ScanInteTest, TestScanAppendWithSnapshot1) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
     ScanContextBuilder context_builder(table_path);
     context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "1");
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> scan_context,
+                         FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check snapshot id
@@ -297,11 +339,11 @@ TEST_F(ScanInteTest, TestScanAppendWithSnapshot1) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithSnapshot3) {
+TEST_P(ScanInteTest, TestScanAppendWithSnapshot3) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
     ScanContextBuilder context_builder(table_path);
     context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "3");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check snapshot id
@@ -352,36 +394,36 @@ TEST_F(ScanInteTest, TestScanAppendWithSnapshot3) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanInvalidSnapshot) {
+TEST_P(ScanInteTest, TestScanInvalidSnapshot) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
     ScanContextBuilder context_builder(table_path);
     context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "100");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_NOK_WITH_MSG(
         table_scan->CreatePlan(),
         "The specified scan snapshotId 100 is out of available snapshotId range [1, 5].");
 }
 
-TEST_F(ScanInteTest, TestBatchScanMultipleTimes) {
+TEST_P(ScanInteTest, TestBatchScanMultipleTimes) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
     ScanContextBuilder context_builder(table_path);
     context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "1");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // batch scan multiple
     ASSERT_NOK_WITH_MSG(table_scan->CreatePlan(), "end of scan");
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithSnapshot3WithSplitTargetSize) {
+TEST_P(ScanInteTest, TestScanAppendWithSnapshot3WithSplitTargetSize) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
     ScanContextBuilder context_builder(table_path);
     context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "3")
         .AddOption(Options::SOURCE_SPLIT_OPEN_FILE_COST, "1024")
         .AddOption(Options::SOURCE_SPLIT_TARGET_SIZE, "2048");
     // open cost = 1024, and split target size is 2048, indicates at most 2 files in a split
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check snapshot id
@@ -444,11 +486,11 @@ TEST_F(ScanInteTest, TestScanAppendWithSnapshot3WithSplitTargetSize) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithSnapshot3WithRowCountLimit) {
+TEST_P(ScanInteTest, TestScanAppendWithSnapshot3WithRowCountLimit) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
     ScanContextBuilder context_builder(table_path);
     context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "3").SetLimit(3);
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check snapshot id
@@ -490,11 +532,11 @@ TEST_F(ScanInteTest, TestScanAppendWithSnapshot3WithRowCountLimit) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithSnapshot3WithBucketFilter) {
+TEST_P(ScanInteTest, TestScanAppendWithSnapshot3WithBucketFilter) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
     ScanContextBuilder context_builder(table_path);
     context_builder.SetBucketFilter(0).AddOption(Options::SCAN_SNAPSHOT_ID, "3");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check snapshot id
@@ -532,12 +574,12 @@ TEST_F(ScanInteTest, TestScanAppendWithSnapshot3WithBucketFilter) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithStreamWithDefaultMode) {
+TEST_P(ScanInteTest, TestScanAppendWithStreamWithDefaultMode) {
     // from snapshot is specified
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
     ScanContextBuilder context_builder(table_path);
     context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "1").WithStreamingMode(true);
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
 
     DataSplitImpl::Builder builder1_1(
@@ -645,12 +687,12 @@ TEST_F(ScanInteTest, TestScanAppendWithStreamWithDefaultMode) {
     CheckStreamScanResult(table_scan.get(), expected_snapshot_ids, expected_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithStreamOfLatestFullMode) {
+TEST_P(ScanInteTest, TestScanAppendWithStreamOfLatestFullMode) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
     ScanContextBuilder context_builder(table_path);
     context_builder.AddOption(Options::SCAN_MODE, StartupMode::LatestFull().ToString())
         .WithStreamingMode(true);
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
 
     DataSplitImpl::Builder builder1(
@@ -699,11 +741,11 @@ TEST_F(ScanInteTest, TestScanAppendWithStreamOfLatestFullMode) {
     CheckStreamScanResult(table_scan.get(), expected_snapshot_ids, expected_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithBatchScanOfLatestMode) {
+TEST_P(ScanInteTest, TestScanAppendWithBatchScanOfLatestMode) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
     ScanContextBuilder context_builder(table_path);
     context_builder.AddOption(Options::SCAN_MODE, StartupMode::Latest().ToString());
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check snapshot id
@@ -754,27 +796,27 @@ TEST_F(ScanInteTest, TestScanAppendWithBatchScanOfLatestMode) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithStreamOfLatestMode) {
+TEST_P(ScanInteTest, TestScanAppendWithStreamOfLatestMode) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
 
     ScanContextBuilder context_builder(table_path);
     context_builder.AddOption(Options::SCAN_MODE, StartupMode::Latest().ToString())
         .WithStreamingMode(true);
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
 
     std::vector<std::optional<int64_t>> expected_snapshot_ids = {};
     CheckStreamScanResult(table_scan.get(), expected_snapshot_ids, {});
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithStreamOfFromSnapshotMode) {
+TEST_P(ScanInteTest, TestScanAppendWithStreamOfFromSnapshotMode) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
 
     ScanContextBuilder context_builder(table_path);
     context_builder.AddOption(Options::SCAN_MODE, StartupMode::FromSnapshot().ToString())
         .AddOption(Options::SCAN_SNAPSHOT_ID, "2")
         .WithStreamingMode(true);
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
 
     DataSplitImpl::Builder builder2_1(
@@ -839,14 +881,14 @@ TEST_F(ScanInteTest, TestScanAppendWithStreamOfFromSnapshotMode) {
     CheckStreamScanResult(table_scan.get(), expected_snapshot_ids, expected_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithStreamOfFromSnapshotFullMode) {
+TEST_P(ScanInteTest, TestScanAppendWithStreamOfFromSnapshotFullMode) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
 
     ScanContextBuilder context_builder(table_path);
     context_builder.AddOption(Options::SCAN_MODE, StartupMode::FromSnapshotFull().ToString())
         .AddOption(Options::SCAN_SNAPSHOT_ID, "2")
         .WithStreamingMode(true);
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_TRUE(scan_context);
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
 
@@ -924,13 +966,13 @@ TEST_F(ScanInteTest, TestScanAppendWithStreamOfFromSnapshotFullMode) {
     CheckStreamScanResult(table_scan.get(), expected_snapshot_ids, expected_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithInvalidOptions) {
+TEST_P(ScanInteTest, TestScanAppendWithInvalidOptions) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
     {
         ScanContextBuilder context_builder(table_path);
         context_builder.AddOption(Options::SCAN_MODE, StartupMode::FromSnapshot().ToString())
             .WithStreamingMode(true);
-        ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+        ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
         ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
         ASSERT_NOK_WITH_MSG(
             table_scan->CreatePlan(),
@@ -939,13 +981,13 @@ TEST_F(ScanInteTest, TestScanAppendWithInvalidOptions) {
     {
         ScanContextBuilder context_builder(table_path);
         context_builder.AddOption(Options::BUCKET, "-2").WithStreamingMode(true);
-        ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+        ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
         ASSERT_NOK_WITH_MSG(TableScan::Create(std::move(scan_context)),
                             "do not support bucket=-2 in scan process");
     }
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithEqualPredicate) {
+TEST_P(ScanInteTest, TestScanAppendWithSnapshot1WithEqualPredicate) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
 
     std::string val("Bob");
@@ -955,7 +997,7 @@ TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithEqualPredicate) {
 
     ScanContextBuilder context_builder(table_path);
     context_builder.SetPredicate(predicate).AddOption(Options::SCAN_SNAPSHOT_ID, "1");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check snapshot id
@@ -979,7 +1021,7 @@ TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithEqualPredicate) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithStreamWithAndPredicate) {
+TEST_P(ScanInteTest, TestScanAppendWithStreamWithAndPredicate) {
     // from snapshot is specified
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
 
@@ -1003,7 +1045,7 @@ TEST_F(ScanInteTest, TestScanAppendWithStreamWithAndPredicate) {
     context_builder.SetPredicate(predicate)
         .AddOption(Options::SCAN_SNAPSHOT_ID, "1")
         .WithStreamingMode(true);
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
 
     DataSplitImpl::Builder builder1_2(
@@ -1055,14 +1097,14 @@ TEST_F(ScanInteTest, TestScanAppendWithStreamWithAndPredicate) {
     CheckStreamScanResult(table_scan.get(), expected_snapshot_ids, expected_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithPartitionFilter) {
+TEST_P(ScanInteTest, TestScanAppendWithSnapshot1WithPartitionFilter) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
 
     std::map<std::string, std::string> partition_keys;
     partition_keys["f1"] = "10";
     ScanContextBuilder context_builder(table_path);
     context_builder.SetPartitionFilter({partition_keys}).AddOption(Options::SCAN_SNAPSHOT_ID, "1");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check snapshot id
@@ -1101,19 +1143,19 @@ TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithPartitionFilter) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithInvalidPartitionFilter) {
+TEST_P(ScanInteTest, TestScanAppendWithSnapshot1WithInvalidPartitionFilter) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
 
     std::map<std::string, std::string> partition_keys;
     partition_keys["invalid_partition_key"] = "10";
     ScanContextBuilder context_builder(table_path);
     context_builder.SetPartitionFilter({partition_keys}).AddOption(Options::SCAN_SNAPSHOT_ID, "1");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_NOK_WITH_MSG(TableScan::Create(std::move(scan_context)),
                         "field invalid_partition_key does not exist in partition keys");
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithPartitionFilterAndPredicateFilter) {
+TEST_P(ScanInteTest, TestScanAppendWithSnapshot1WithPartitionFilterAndPredicateFilter) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
 
     // set predicate filter, f1 = 20
@@ -1127,7 +1169,7 @@ TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithPartitionFilterAndPredicateF
     context_builder.SetPredicate(predicate)
         .SetPartitionFilter({partition_keys})
         .AddOption(Options::SCAN_SNAPSHOT_ID, "1");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check snapshot id
@@ -1166,7 +1208,7 @@ TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithPartitionFilterAndPredicateF
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithMultiPartitionKeys) {
+TEST_P(ScanInteTest, TestScanAppendWithSnapshot1WithMultiPartitionKeys) {
     std::string table_path = paimon::test::GetDataDir() +
                              "orc/multi_partition_append_table.db/multi_partition_append_table";
 
@@ -1177,7 +1219,7 @@ TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithMultiPartitionKeys) {
 
     ScanContextBuilder context_builder(table_path);
     context_builder.SetPartitionFilter({partition_keys}).AddOption(Options::SCAN_SNAPSHOT_ID, "1");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check snapshot id
@@ -1218,7 +1260,7 @@ TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithMultiPartitionKeys) {
 }
 
 // test complex type ts & decimal
-TEST_F(ScanInteTest, TestScanAppendComplexDataWithSnapshot4WithPredicateFilter) {
+TEST_P(ScanInteTest, TestScanAppendComplexDataWithSnapshot4WithPredicateFilter) {
     std::string table_path =
         paimon::test::GetDataDir() + "orc/append_complex_data.db/append_complex_data";
     // set predicate filter
@@ -1233,7 +1275,7 @@ TEST_F(ScanInteTest, TestScanAppendComplexDataWithSnapshot4WithPredicateFilter) 
 
     ScanContextBuilder context_builder(table_path);
     context_builder.SetPredicate(predicate).AddOption(Options::SCAN_SNAPSHOT_ID, "4");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     ASSERT_TRUE(result_plan);
@@ -1279,7 +1321,7 @@ TEST_F(ScanInteTest, TestScanAppendComplexDataWithSnapshot4WithPredicateFilter) 
 }
 
 // test complex type date & binary
-TEST_F(ScanInteTest, TestScanAppendComplexDataWithSnapshot4WithPredicateFilter2) {
+TEST_P(ScanInteTest, TestScanAppendComplexDataWithSnapshot4WithPredicateFilter2) {
     std::string table_path =
         paimon::test::GetDataDir() + "orc/append_complex_data.db/append_complex_data";
     // set predicate filter
@@ -1294,7 +1336,7 @@ TEST_F(ScanInteTest, TestScanAppendComplexDataWithSnapshot4WithPredicateFilter2)
 
     ScanContextBuilder context_builder(table_path);
     context_builder.SetPredicate(predicate).AddOption(Options::SCAN_SNAPSHOT_ID, "4");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check snapshot id
@@ -1344,14 +1386,14 @@ TEST_F(ScanInteTest, TestScanAppendComplexDataWithSnapshot4WithPredicateFilter2)
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithEnableStatsDenseStore) {
+TEST_P(ScanInteTest, TestScanAppendWithSnapshot1WithEnableStatsDenseStore) {
     std::string table_path = paimon::test::GetDataDir() +
                              "orc/append_10_stats_dense_store.db/append_10_stats_dense_store";
     ScanContextBuilder context_builder(table_path);
     auto predicate = PredicateBuilder::GreaterThan(/*field_index=*/3, /*field_name=*/"f3",
                                                    FieldType::DOUBLE, Literal(13.0));
     context_builder.SetPredicate(predicate).AddOption(Options::SCAN_SNAPSHOT_ID, "1");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check data splits
@@ -1438,7 +1480,7 @@ TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithEnableStatsDenseStore) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithEnableStatsDenseStore2) {
+TEST_P(ScanInteTest, TestScanAppendWithSnapshot1WithEnableStatsDenseStore2) {
     std::string table_path = paimon::test::GetDataDir() +
                              "orc/append_10_stats_dense_store.db/append_10_stats_dense_store";
     ScanContextBuilder context_builder(table_path);
@@ -1449,7 +1491,7 @@ TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithEnableStatsDenseStore2) {
     auto predicate = PredicateBuilder::And({greater_than, equal}).value();
 
     context_builder.SetPredicate(predicate).AddOption(Options::SCAN_SNAPSHOT_ID, "1");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check data splits
@@ -1483,40 +1525,40 @@ TEST_F(ScanInteTest, TestScanAppendWithSnapshot1WithEnableStatsDenseStore2) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanPKWithSnapshot1WithBucketStats) {
+TEST_P(ScanInteTest, TestScanPKWithSnapshot1WithBucketStats) {
     std::string table_path = paimon::test::GetDataDir() +
                              "orc/pk_table_with_total_buckets.db/pk_table_with_total_buckets";
     ScanContextBuilder context_builder(table_path);
     context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "1").SetBucketFilter(2);
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     ASSERT_EQ(result_plan->SnapshotId().value(), 1);
     ASSERT_TRUE(result_plan->Splits().empty());
 }
 
-TEST_F(ScanInteTest, TestScanPKWithInvalidOptions) {
+TEST_P(ScanInteTest, TestScanPKWithInvalidOptions) {
     std::string table_path = paimon::test::GetDataDir() +
                              "orc/pk_table_with_total_buckets.db/pk_table_with_total_buckets";
     ScanContextBuilder context_builder(table_path);
     context_builder.AddOption(Options::BUCKET, "-1").WithStreamingMode(true);
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_NOK_WITH_MSG(TableScan::Create(std::move(scan_context)),
                         "do not support pk table bucket=-1 in scan process");
 }
 
-TEST_F(ScanInteTest, TestReadWithNoSnapshot) {
+TEST_P(ScanInteTest, TestReadWithNoSnapshot) {
     std::string table_path = paimon::test::GetDataDir() +
                              "orc/append_table_with_nested_type.db/append_table_with_nested_type";
     ScanContextBuilder context_builder(table_path);
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     ASSERT_FALSE(result_plan->SnapshotId());
     ASSERT_TRUE(result_plan->Splits().empty());
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithAlterTableWithCast) {
+TEST_P(ScanInteTest, TestScanAppendWithAlterTableWithCast) {
     std::string table_path =
         paimon::test::GetDataDir() +
         "orc/append_table_alter_table_with_cast.db/append_table_alter_table_with_cast";
@@ -1543,7 +1585,7 @@ TEST_F(ScanInteTest, TestScanAppendWithAlterTableWithCast) {
     ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({child1, child2, child3}));
 
     context_builder.SetPredicate(predicate).AddOption(Options::SCAN_SNAPSHOT_ID, "2");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check data splits
@@ -1581,7 +1623,7 @@ TEST_F(ScanInteTest, TestScanAppendWithAlterTableWithCast) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithAlterTableWithNoCast) {
+TEST_P(ScanInteTest, TestScanAppendWithAlterTableWithNoCast) {
     std::string table_path = paimon::test::GetDataDir() +
                              "orc/append_table_with_alter_table.db/append_table_with_alter_table";
     ScanContextBuilder context_builder(table_path);
@@ -1593,7 +1635,7 @@ TEST_F(ScanInteTest, TestScanAppendWithAlterTableWithNoCast) {
     ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({child1, child2}));
 
     context_builder.SetPredicate(predicate).AddOption(Options::SCAN_SNAPSHOT_ID, "2");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check data splits
@@ -1656,7 +1698,7 @@ TEST_F(ScanInteTest, TestScanAppendWithAlterTableWithNoCast) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithAlterTableWithDenseField) {
+TEST_P(ScanInteTest, TestScanAppendWithAlterTableWithDenseField) {
     std::string table_path = paimon::test::GetDataDir() +
                              "orc/append_table_with_alter_table_with_dense_field.db/"
                              "append_table_with_alter_table_with_dense_field";
@@ -1669,7 +1711,7 @@ TEST_F(ScanInteTest, TestScanAppendWithAlterTableWithDenseField) {
     ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({child1, child3}));
 
     context_builder.SetPredicate(predicate).AddOption(Options::SCAN_SNAPSHOT_ID, "2");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check data splits
@@ -1704,7 +1746,7 @@ TEST_F(ScanInteTest, TestScanAppendWithAlterTableWithDenseField) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithBitmapEmbeddedIndex) {
+TEST_P(ScanInteTest, TestScanAppendWithBitmapEmbeddedIndex) {
     std::string table_path =
         paimon::test::GetDataDir() + "orc/append_with_bitmap.db/append_with_bitmap/";
     ScanContextBuilder context_builder(table_path);
@@ -1716,7 +1758,7 @@ TEST_F(ScanInteTest, TestScanAppendWithBitmapEmbeddedIndex) {
     ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({child1, child2}));
 
     context_builder.SetPredicate(predicate).AddOption(Options::SCAN_SNAPSHOT_ID, "1");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check data splits
@@ -1780,7 +1822,7 @@ TEST_F(ScanInteTest, TestScanAppendWithBitmapEmbeddedIndex) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithBitmapEmbeddedIndexWithEmptyResult) {
+TEST_P(ScanInteTest, TestScanAppendWithBitmapEmbeddedIndexWithEmptyResult) {
     std::string table_path =
         paimon::test::GetDataDir() + "orc/append_with_bitmap.db/append_with_bitmap/";
     ScanContextBuilder context_builder(table_path);
@@ -1792,13 +1834,13 @@ TEST_F(ScanInteTest, TestScanAppendWithBitmapEmbeddedIndexWithEmptyResult) {
     ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({child1, child2}));
 
     context_builder.SetPredicate(predicate).AddOption(Options::SCAN_SNAPSHOT_ID, "1");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     ASSERT_TRUE(result_plan->Splits().empty());
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithBitmapNoEmbeddedIndex) {
+TEST_P(ScanInteTest, TestScanAppendWithBitmapNoEmbeddedIndex) {
     std::string table_path =
         paimon::test::GetDataDir() +
         "orc/append_with_bitmap_no_embedding.db/append_with_bitmap_no_embedding/";
@@ -1811,7 +1853,7 @@ TEST_F(ScanInteTest, TestScanAppendWithBitmapNoEmbeddedIndex) {
     ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({child1, child2}));
 
     context_builder.SetPredicate(predicate).AddOption(Options::SCAN_SNAPSHOT_ID, "1");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check data splits
@@ -1845,7 +1887,7 @@ TEST_F(ScanInteTest, TestScanAppendWithBitmapNoEmbeddedIndex) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithBitmapAndAlterTable) {
+TEST_P(ScanInteTest, TestScanAppendWithBitmapAndAlterTable) {
     std::string table_path =
         paimon::test::GetDataDir() +
         "orc/append_with_bitmap_alter_table.db/append_with_bitmap_alter_table/";
@@ -1855,7 +1897,7 @@ TEST_F(ScanInteTest, TestScanAppendWithBitmapAndAlterTable) {
                                                    FieldType::INT, Literal(100));
 
     context_builder.SetPredicate(predicate).AddOption(Options::SCAN_SNAPSHOT_ID, "2");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
 
@@ -1913,7 +1955,7 @@ TEST_F(ScanInteTest, TestScanAppendWithBitmapAndAlterTable) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithBitmapAndAlterTable3) {
+TEST_P(ScanInteTest, TestScanAppendWithBitmapAndAlterTable3) {
     std::string table_path =
         paimon::test::GetDataDir() +
         "orc/append_with_bitmap_alter_table.db/append_with_bitmap_alter_table/";
@@ -1924,7 +1966,7 @@ TEST_F(ScanInteTest, TestScanAppendWithBitmapAndAlterTable3) {
     ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({child1, child2}));
 
     context_builder.SetPredicate(predicate).AddOption(Options::SCAN_SNAPSHOT_ID, "2");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
 
@@ -1987,7 +2029,7 @@ TEST_F(ScanInteTest, TestScanAppendWithBitmapAndAlterTable3) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithBitmapAndAlterTable2) {
+TEST_P(ScanInteTest, TestScanAppendWithBitmapAndAlterTable2) {
     std::string table_path =
         paimon::test::GetDataDir() +
         "orc/append_with_bitmap_alter_table.db/append_with_bitmap_alter_table/";
@@ -2000,7 +2042,7 @@ TEST_F(ScanInteTest, TestScanAppendWithBitmapAndAlterTable2) {
                                                    FieldType::BIGINT, Literal(100l));
 
     context_builder.SetPredicate(predicate).AddOption(Options::SCAN_SNAPSHOT_ID, "2");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
 
@@ -2063,7 +2105,7 @@ TEST_F(ScanInteTest, TestScanAppendWithBitmapAndAlterTable2) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithBitmapAndAlterTableWithEmptyResult) {
+TEST_P(ScanInteTest, TestScanAppendWithBitmapAndAlterTableWithEmptyResult) {
     std::string table_path =
         paimon::test::GetDataDir() +
         "orc/append_with_bitmap_alter_table.db/append_with_bitmap_alter_table/";
@@ -2078,35 +2120,36 @@ TEST_F(ScanInteTest, TestScanAppendWithBitmapAndAlterTableWithEmptyResult) {
     ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({child1, child2}));
 
     context_builder.SetPredicate(predicate).AddOption(Options::SCAN_SNAPSHOT_ID, "2");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     ASSERT_TRUE(result_plan->Splits().empty());
 }
 
-TEST_F(ScanInteTest, TestScanAppendWithTag1) {
+TEST_P(ScanInteTest, TestScanAppendWithTag1) {
     std::string table_path =
         paimon::test::GetDataDir() + "orc/append_table_with_tag.db/append_table_with_tag";
     ScanContextBuilder context_builder(table_path);
     context_builder.AddOption(Options::SCAN_TAG_NAME, "1");
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> scan_context,
+                         FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     // check snapshot id
     ASSERT_EQ(1, result_plan->SnapshotId().value());
 }
 
-TEST_F(ScanInteTest, TestScanInvalidTag) {
+TEST_P(ScanInteTest, TestScanInvalidTag) {
     std::string table_path =
         paimon::test::GetDataDir() + "orc/append_table_with_tag.db/append_table_with_tag";
     ScanContextBuilder context_builder(table_path);
     context_builder.AddOption(Options::SCAN_TAG_NAME, "unknown");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_NOK_WITH_MSG(table_scan->CreatePlan(), "Tag 'unknown' doesn't exist.");
 }
 
-TEST_F(ScanInteTest, TestWithAppendTimestampMillisBatchScan) {
+TEST_P(ScanInteTest, TestWithAppendTimestampMillisBatchScan) {
     std::string table_path = GetDataDir() + "orc/append_09.db/append_09";
 
     auto fs = std::make_shared<LocalFileSystem>();
@@ -2117,7 +2160,7 @@ TEST_F(ScanInteTest, TestWithAppendTimestampMillisBatchScan) {
     {
         ScanContextBuilder builder(table_path);
         builder.AddOption(Options::SCAN_TIMESTAMP_MILLIS, std::to_string(snap3.TimeMillis()));
-        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, FinishScanContext(builder));
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> scan, TableScan::Create(std::move(ctx)));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan, scan->CreatePlan());
         ASSERT_EQ(plan->SnapshotId().value(), 3);
@@ -2126,7 +2169,7 @@ TEST_F(ScanInteTest, TestWithAppendTimestampMillisBatchScan) {
     {
         ScanContextBuilder builder(table_path);
         builder.AddOption(Options::SCAN_TIMESTAMP_MILLIS, std::to_string(snap3.TimeMillis() - 1));
-        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, FinishScanContext(builder));
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> scan, TableScan::Create(std::move(ctx)));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan, scan->CreatePlan());
         ASSERT_EQ(plan->SnapshotId().value(), 2);
@@ -2136,7 +2179,7 @@ TEST_F(ScanInteTest, TestWithAppendTimestampMillisBatchScan) {
         ScanContextBuilder builder(table_path);
         builder.AddOption(Options::SCAN_TIMESTAMP_MILLIS,
                           std::to_string(std::numeric_limits<int64_t>::max()));
-        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, FinishScanContext(builder));
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> scan, TableScan::Create(std::move(ctx)));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan, scan->CreatePlan());
         ASSERT_EQ(plan->SnapshotId().value(), 5);
@@ -2145,14 +2188,14 @@ TEST_F(ScanInteTest, TestWithAppendTimestampMillisBatchScan) {
     {
         ScanContextBuilder builder(table_path);
         builder.AddOption(Options::SCAN_TIMESTAMP_MILLIS, "0");
-        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, FinishScanContext(builder));
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> scan, TableScan::Create(std::move(ctx)));
         ASSERT_NOK_WITH_MSG(scan->CreatePlan(),
                             "There is currently no snapshot earlier than or equal to timestamp");
     }
 }
 
-TEST_F(ScanInteTest, TestWithAppendTimestampMillisStreamScan) {
+TEST_P(ScanInteTest, TestWithAppendTimestampMillisStreamScan) {
     std::string table_path = GetDataDir() + "orc/append_09.db/append_09";
 
     auto fs = std::make_shared<LocalFileSystem>();
@@ -2164,7 +2207,7 @@ TEST_F(ScanInteTest, TestWithAppendTimestampMillisStreamScan) {
     {
         ScanContextBuilder builder(table_path);
         builder.AddOption(Options::SCAN_TIMESTAMP_MILLIS, "0").WithStreamingMode(true);
-        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, FinishScanContext(builder));
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> scan, TableScan::Create(std::move(ctx)));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan0, scan->CreatePlan());
         ASSERT_EQ(plan0->SnapshotId(), std::nullopt);
@@ -2176,7 +2219,7 @@ TEST_F(ScanInteTest, TestWithAppendTimestampMillisStreamScan) {
         ScanContextBuilder builder(table_path);
         builder.AddOption(Options::SCAN_TIMESTAMP_MILLIS, std::to_string(snap2.TimeMillis() + 1))
             .WithStreamingMode(true);
-        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, FinishScanContext(builder));
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> scan, TableScan::Create(std::move(ctx)));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan0, scan->CreatePlan());
         ASSERT_EQ(plan0->SnapshotId(), std::nullopt);
@@ -2188,7 +2231,7 @@ TEST_F(ScanInteTest, TestWithAppendTimestampMillisStreamScan) {
         ScanContextBuilder builder(table_path);
         builder.AddOption(Options::SCAN_TIMESTAMP_MILLIS, std::to_string(snap3.TimeMillis()))
             .WithStreamingMode(true);
-        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, FinishScanContext(builder));
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> scan, TableScan::Create(std::move(ctx)));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan0, scan->CreatePlan());
         ASSERT_EQ(plan0->SnapshotId(), std::nullopt);
@@ -2202,12 +2245,26 @@ TEST_F(ScanInteTest, TestWithAppendTimestampMillisStreamScan) {
             .AddOption(Options::SCAN_TIMESTAMP_MILLIS,
                        std::to_string(std::numeric_limits<int64_t>::max()))
             .WithStreamingMode(true);
-        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, FinishScanContext(builder));
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> scan, TableScan::Create(std::move(ctx)));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan0, scan->CreatePlan());
         ASSERT_EQ(plan0->SnapshotId(), std::nullopt);
         ASSERT_TRUE(plan0->Splits().empty());
     }
 }
+
+std::string ManifestCacheModeName(const testing::TestParamInfo<ManifestCacheMode>& info) {
+    switch (info.param) {
+        case ManifestCacheMode::NoCache:
+            return "NoCache";
+        case ManifestCacheMode::Cache:
+            return "Cache";
+    }
+    return "Unknown";
+}
+
+INSTANTIATE_TEST_SUITE_P(ManifestCacheMode, ScanInteTest,
+                         testing::Values(ManifestCacheMode::NoCache, ManifestCacheMode::Cache),
+                         ManifestCacheModeName);
 
 }  // namespace paimon::test

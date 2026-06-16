@@ -33,7 +33,8 @@ ScanContext::ScanContext(const std::string& path, bool is_streaming_mode,
                          const std::shared_ptr<MemoryPool>& memory_pool,
                          const std::shared_ptr<Executor>& executor,
                          const std::shared_ptr<FileSystem>& specific_file_system,
-                         const std::map<std::string, std::string>& options)
+                         const std::map<std::string, std::string>& options,
+                         const std::shared_ptr<Cache>& cache)
     : path_(path),
       is_streaming_mode_(is_streaming_mode),
       limit_(limit),
@@ -42,7 +43,8 @@ ScanContext::ScanContext(const std::string& path, bool is_streaming_mode,
       memory_pool_(memory_pool),
       executor_(executor),
       specific_file_system_(specific_file_system),
-      options_(options) {}
+      options_(options),
+      cache_(cache) {}
 
 ScanContext::~ScanContext() = default;
 
@@ -61,6 +63,7 @@ class ScanContextBuilder::Impl {
         executor_ = CreateDefaultExecutor();
         specific_file_system_.reset();
         options_.clear();
+        cache_.reset();
     }
 
  private:
@@ -75,6 +78,7 @@ class ScanContextBuilder::Impl {
     std::shared_ptr<Executor> executor_ = CreateDefaultExecutor();
     std::shared_ptr<FileSystem> specific_file_system_;
     std::map<std::string, std::string> options_;
+    std::shared_ptr<Cache> cache_;
 };
 
 ScanContextBuilder::ScanContextBuilder(const std::string& path)
@@ -143,6 +147,11 @@ ScanContextBuilder& ScanContextBuilder::WithFileSystem(
     return *this;
 }
 
+ScanContextBuilder& ScanContextBuilder::WithCache(const std::shared_ptr<Cache>& cache) {
+    impl_->cache_ = cache;
+    return *this;
+}
+
 Result<std::unique_ptr<ScanContext>> ScanContextBuilder::Finish() {
     PAIMON_ASSIGN_OR_RAISE(impl_->path_, PathUtil::NormalizePath(impl_->path_));
     if (impl_->path_.empty()) {
@@ -153,7 +162,7 @@ Result<std::unique_ptr<ScanContext>> ScanContextBuilder::Finish() {
         std::make_shared<ScanFilter>(impl_->predicates_, impl_->partition_filters_,
                                      impl_->bucket_filter_),
         impl_->global_index_result_, impl_->memory_pool_, impl_->executor_,
-        impl_->specific_file_system_, impl_->options_);
+        impl_->specific_file_system_, impl_->options_, impl_->cache_);
     impl_->Reset();
     return ctx;
 }

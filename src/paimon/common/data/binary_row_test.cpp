@@ -27,7 +27,6 @@
 #include "paimon/common/data/binary_row_writer.h"
 #include "paimon/common/data/serializer/binary_row_serializer.h"
 #include "paimon/common/io/memory_segment_output_stream.h"
-#include "paimon/common/memory/memory_segment.h"
 #include "paimon/common/memory/memory_segment_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/decimal_utils.h"
@@ -36,6 +35,7 @@
 #include "paimon/io/data_input_stream.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/memory/memory_segment.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
 

@@ -58,8 +58,8 @@
 #include <cstring>
 #include <memory>
 
-#include "paimon/common/memory/memory_segment.h"
 #include "paimon/memory/bytes.h"
+#include "paimon/memory/memory_segment.h"
 
 namespace paimon {
 

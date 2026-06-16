@@ -95,7 +95,7 @@ class KeyValueFileStoreScanTest : public testing::Test {
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<ManifestList> manifest_list,
             ManifestList::Create(fs, manifest_file_format, core_options.GetManifestCompression(),
-                                 path_factory, pool_));
+                                 path_factory, core_options.GetCache(), pool_));
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<arrow::Schema> partition_schema,
             FieldMapping::GetPartitionSchema(arrow_schema, table_schema->PartitionKeys()));

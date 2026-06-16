@@ -86,7 +86,7 @@ class TableScanImpl {
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<ManifestList> manifest_list,
             ManifestList::Create(fs, manifest_file_format, core_options.GetManifestCompression(),
-                                 path_factory, memory_pool));
+                                 path_factory, core_options.GetCache(), memory_pool));
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<arrow::Schema> partition_schema,
             FieldMapping::GetPartitionSchema(arrow_schema, table_schema->PartitionKeys()));
@@ -174,7 +174,7 @@ Result<std::unique_ptr<TableScan>> TableScan::Create(std::unique_ptr<ScanContext
     // load schema
     PAIMON_ASSIGN_OR_RAISE(CoreOptions tmp_options,
                            CoreOptions::FromMap(shared_context->GetOptions(),
-                                                shared_context->GetSpecificFileSystem()));
+                                                shared_context->GetSpecificFileSystem(), {}));
     PAIMON_ASSIGN_OR_RAISE(std::optional<SystemTablePath> system_table_path,
                            SystemTableLoader::TryParsePath(shared_context->GetPath()));
     if (system_table_path) {
@@ -192,7 +192,7 @@ namespace {
 Result<std::unique_ptr<TableScan>> NewDataTableScan(const std::shared_ptr<ScanContext>& context) {
     PAIMON_ASSIGN_OR_RAISE(
         CoreOptions tmp_options,
-        CoreOptions::FromMap(context->GetOptions(), context->GetSpecificFileSystem()));
+        CoreOptions::FromMap(context->GetOptions(), context->GetSpecificFileSystem(), {}));
     std::string branch = BranchManager::NormalizeBranch(tmp_options.GetBranch());
     SchemaManager schema_manager(tmp_options.GetFileSystem(), context->GetPath(), branch);
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_table_schema,
@@ -207,7 +207,8 @@ Result<std::unique_ptr<TableScan>> NewDataTableScan(const std::shared_ptr<ScanCo
         options[key] = value;
     }
     PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options,
-                           CoreOptions::FromMap(options, context->GetSpecificFileSystem()));
+                           CoreOptions::FromMap(options, context->GetSpecificFileSystem(), {}));
+    core_options.WithCache(context->GetCache());
     // validate options
     if (core_options.GetBucket() == -1) {
         if (!table_schema->PrimaryKeys().empty()) {
