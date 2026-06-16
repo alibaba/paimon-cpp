@@ -120,7 +120,8 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
         options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] = "true";
         ASSERT_OK_AND_ASSIGN(
             auto batch_reader,
-            ParquetFileBatchReader::Create(std::move(in_stream), arrow_pool_, options, batch_size));
+            ParquetFileBatchReader::Create(std::move(in_stream), arrow_pool_, options, batch_size,
+                                           /*file_metadata=*/nullptr));
         auto c_schema = std::make_unique<ArrowSchema>();
         ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
         ASSERT_OK(batch_reader->SetReadSchema(c_schema.get(), predicate,

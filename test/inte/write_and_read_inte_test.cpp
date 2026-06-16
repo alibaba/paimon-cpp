@@ -42,6 +42,7 @@
 #include "paimon/table/source/startup_mode.h"
 #include "paimon/table/source/table_read.h"
 #include "paimon/table/source/table_scan.h"
+#include "paimon/testing/utils/counting_cache_test_utils.h"
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/test_helper.h"
 #include "paimon/testing/utils/testharness.h"
@@ -1096,6 +1097,95 @@ TEST_P(WriteAndReadInteTest, TestAppendWithParquetPageIndexFilter) {
 ])")
             .ValueOrDie());
     ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+}
+
+TEST_P(WriteAndReadInteTest, TestAppendWithParquetMetadataCache) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "parquet" || file_system != "local") {
+        return;
+    }
+
+    auto test_dir = UniqueTestDirectory::Create("local");
+    arrow::FieldVector fields = {arrow::field("f0", arrow::utf8()),
+                                 arrow::field("f1", arrow::int32())};
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "orc"},      {Options::FILE_FORMAT, "parquet"},
+        {Options::TARGET_FILE_SIZE, "1048576"}, {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, "local"},
+    };
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(test_dir->Str(), schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/true));
+    std::string table_path = test_dir->Str() + "/foo.db/bar";
+
+    std::string data = R"([
+        ["banana", 2],
+        ["dog", 1],
+        ["lucy", 14],
+        ["mouse", 100]
+    ])";
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                                /*expected_commit_messages=*/std::nullopt));
+
+    arrow::FieldVector fields_with_row_kind = fields;
+    fields_with_row_kind.insert(fields_with_row_kind.begin(),
+                                arrow::field("_VALUE_KIND", arrow::int8()));
+    auto expected_data_type = arrow::struct_(fields_with_row_kind);
+    auto expected = std::make_shared<arrow::ChunkedArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(expected_data_type, R"([
+            [0, "banana", 2],
+            [0, "dog", 1],
+            [0, "lucy", 14],
+            [0, "mouse", 100]
+        ])")
+            .ValueOrDie());
+
+    auto cache =
+        std::make_shared<CountingRoutingCache>(CacheKind::PARQUET_METADATA, 128 * 1024 * 1024);
+    auto read_once = [&]() -> Result<bool> {
+        ScanContextBuilder scan_context_builder(table_path);
+        scan_context_builder.AddOption(Options::SCAN_MODE, StartupMode::LatestFull().ToString());
+        PAIMON_ASSIGN_OR_RAISE(auto scan_context, scan_context_builder.Finish());
+        PAIMON_ASSIGN_OR_RAISE(auto table_scan, TableScan::Create(std::move(scan_context)));
+        PAIMON_ASSIGN_OR_RAISE(auto result_plan, table_scan->CreatePlan());
+        if (result_plan->SnapshotId() != std::optional<int64_t>(1)) {
+            return Status::Invalid("unexpected snapshot id");
+        }
+        if (result_plan->Splits().empty()) {
+            return Status::Invalid("no splits found");
+        }
+
+        ReadContextBuilder read_context_builder(table_path);
+        read_context_builder.WithCache(cache);
+        PAIMON_ASSIGN_OR_RAISE(auto read_context, read_context_builder.Finish());
+        PAIMON_ASSIGN_OR_RAISE(auto table_read, TableRead::Create(std::move(read_context)));
+        PAIMON_ASSIGN_OR_RAISE(auto batch_reader, table_read->CreateReader(result_plan->Splits()));
+        PAIMON_ASSIGN_OR_RAISE(auto read_result,
+                               ReadResultCollector::CollectResult(batch_reader.get()));
+        if (!read_result) {
+            return Status::Invalid("read result is null");
+        }
+        return expected->Equals(read_result);
+    };
+
+    ASSERT_OK_AND_ASSIGN(bool first_success, read_once());
+    ASSERT_TRUE(first_success);
+    ASSERT_EQ(1, cache->GetCount());
+    ASSERT_EQ(1, cache->SupplierCallCount());
+    ASSERT_EQ(1, cache->Size());
+    ASSERT_EQ(CacheKind::PARQUET_METADATA, cache->LastKind());
+
+    ASSERT_OK_AND_ASSIGN(bool second_success, read_once());
+    ASSERT_TRUE(second_success);
+    ASSERT_EQ(2, cache->GetCount());
+    ASSERT_EQ(1, cache->SupplierCallCount());
+    ASSERT_EQ(1, cache->Size());
+    ASSERT_EQ(CacheKind::PARQUET_METADATA, cache->LastKind());
 }
 
 INSTANTIATE_TEST_SUITE_P(FileFormatAndFileSystem, WriteAndReadInteTest,

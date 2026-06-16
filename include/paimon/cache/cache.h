@@ -32,6 +32,7 @@ class CacheValue;
 enum class CacheKind {
     DEFAULT,
     MANIFEST,
+    PARQUET_METADATA,
 };
 
 class PAIMON_EXPORT CacheKey {
@@ -40,6 +41,7 @@ class PAIMON_EXPORT CacheKey {
                                                  int32_t length, bool is_index);
     static std::shared_ptr<CacheKey> ForKind(const std::string& file_path, int64_t position,
                                              int32_t length, CacheKind kind);
+    static std::shared_ptr<CacheKey> ForParquetMeta(const std::string& file_uri);
 
  public:
     virtual ~CacheKey() = default;
