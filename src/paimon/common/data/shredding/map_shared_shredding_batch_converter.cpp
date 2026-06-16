@@ -267,6 +267,11 @@ Status MapSharedShreddingBatchConverter::AppendOverflow(
     const std::unordered_map<int32_t, int64_t>& field_id_to_value_index,
     arrow::MapBuilder* overflow_builder, arrow::Int32Builder* overflow_key_builder,
     arrow::ArrayBuilder* overflow_value_builder) {
+    if (allocation.overflow_fields.empty()) {
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(overflow_builder->AppendNull());
+        return Status::OK();
+    }
+
     PAIMON_RETURN_NOT_OK_FROM_ARROW(overflow_builder->Append());
     for (int32_t overflow_field_id : allocation.overflow_fields) {
         auto it = field_id_to_value_index.find(overflow_field_id);

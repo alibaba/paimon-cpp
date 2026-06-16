@@ -152,8 +152,7 @@ class MergeTreeWriterTest : public ::testing::TestWithParam<bool> {
         ASSERT_OK_AND_ASSIGN(auto orc_batch_reader, reader_builder->Build(input_stream));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> result_array,
                              ReadResultCollector::CollectResult(orc_batch_reader.get()));
-        auto view_result_array = result_array->View(expected_array->type()).ValueOrDie();
-        ASSERT_TRUE(expected_array->Equals(view_result_array)) << view_result_array->ToString();
+        ASSERT_TRUE(expected_array->Equals(result_array)) << result_array->ToString();
     }
 
     void CheckShreddingFileSchema(const std::string& data_file_name,
@@ -451,8 +450,8 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMapDataFileMetaInfo) {
 
     std::shared_ptr<arrow::ChunkedArray> expected_array;
     ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(physical_type, {R"([
-      [14, 0, 1, [[0, 1, -1], 50, 60, null, []]],
-      [15, 0, 2, [[2, 3, 0], 70, 80, 90, []]]
+      [14, 0, 1, [[0, 1, -1], 50, 60, null, null]],
+      [15, 0, 2, [[2, 3, 0], 70, 80, 90, null]]
     ])"},
                                                                  &expected_array)
                     .ok());

@@ -33,7 +33,7 @@ std::map<std::string, int32_t> MapSharedShreddingContext::ComputeNextK() const {
             result[field_name] = k_max;
         } else {
             int32_t window_max = ComputeWindowMax(it->second);
-            result[field_name] = std::min(window_max, k_max);
+            result[field_name] = std::max(1, std::min(window_max, k_max));
         }
     }
     return result;

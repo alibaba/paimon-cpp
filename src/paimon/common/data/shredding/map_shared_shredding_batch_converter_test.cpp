@@ -86,8 +86,8 @@ TEST_F(MapSharedShreddingBatchConverterTest, BasicConversion) {
     //   Row0: a=fid0->col0, b=fid1->col1, col2 unused
     //   Row1: b=fid1->col0, c=fid2->col1, a=fid0->col2
     auto expected = ArrayFromJSON(physical_type, R"([
-        [100, [[0, 1, -1], 1, 2, null, []]],
-        [200, [[1, 2, 0],  3, 4, 5,    []]]
+        [100, [[0, 1, -1], 1, 2, null, null]],
+        [200, [[1, 2, 0],  3, 4, 5,    null]]
     ])")
                         .ValueOrDie();
 
@@ -136,8 +136,8 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueStruct) {
                              physical_type, &converter);
 
     auto expected = ArrayFromJSON(physical_type, R"([
-        [1, [[0, 1],  [1, 1.5],     [null, 2.5], []]],
-        [2, [[2, -1], [3, 3.5],     null,         []]],
+        [1, [[0, 1],  [1, 1.5],     [null, 2.5], null]],
+        [2, [[2, -1], [3, 3.5],     null,         null]],
         [3, [[0, 2],  [null, null], [5, 5.5],     [[1, [6, 6.5]]]]],
         [4, null]
     ])")
@@ -185,9 +185,9 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueList) {
                              physical_type, &converter);
 
     auto expected = ArrayFromJSON(physical_type, R"([
-        [1, [[0, 1],  [1, null, 2], [3],    []]],
-        [2, [[0, -1], [null],       null,   []]],
-        [3, [[2, -1], [5, 6, 7],    null,   []]],
+        [1, [[0, 1],  [1, null, 2], [3],    null]],
+        [2, [[0, -1], [null],       null,   null]],
+        [3, [[2, -1], [5, 6, 7],    null,   null]],
         [4, [[1, 0],  [8],       [9, 10],   [[2, [null]]]]]
     ])")
                         .ValueOrDie();
@@ -235,8 +235,8 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueMap) {
                              physical_type, &converter);
 
     auto expected = ArrayFromJSON(physical_type, R"([
-        [1, [[0, 1],  [["x", 1], ["y", null]], [["z", 3]],  []]],
-        [2, [[2, -1], [["p", null]],            null,        []]],
+        [1, [[0, 1],  [["x", 1], ["y", null]], [["z", 3]],  null]],
+        [2, [[2, -1], [["p", null]],            null,        null]],
         [3, null],
         [4, [[0, 1],  [["m", 7]],              [["n", 8]],  [[2, [["o", 9]]]]]]
     ])")
@@ -289,8 +289,8 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedComplex) {
                              physical_type, &converter);
 
     auto expected = ArrayFromJSON(physical_type, R"([
-        [1, [[0, 1],  [10, ["t1", "t2"], [["x", 1]]], [20, ["t3"], [["y", 2], ["z", 3]]], []]],
-        [2, [[2, -1], [null, null, [["p", null]]],     null,                                []]],
+        [1, [[0, 1],  [10, ["t1", "t2"], [["x", 1]]], [20, ["t3"], [["y", 2], ["z", 3]]], null]],
+        [2, [[2, -1], [null, null, [["p", null]]],     null,                                null]],
         [3, [[0, 1],  [30, [null, "t4"], []],          [null, [], [["q", 5]]],              [[2, [40, ["t5"], [["r", 6]]]]]]],
         [4, null]
     ])")
@@ -345,8 +345,8 @@ TEST_F(MapSharedShreddingBatchConverterTest, MultipleMapFields) {
                              physical_type, &converter);
 
     auto expected = ArrayFromJSON(physical_type, R"([
-        [1, [[0, 1],  10, 20, []],              [[0, 1, -1], 1.1, 2.2, null, []]],
-        [2, [[2, 0],  30, 40, [[1, 50]]],       [[2, -1, -1], 3.3, null, null, []]],
+        [1, [[0, 1],  10, 20, null],            [[0, 1, -1], 1.1, 2.2, null, null]],
+        [2, [[2, 0],  30, 40, [[1, 50]]],       [[2, -1, -1], 3.3, null, null, null]],
         [3, null,                                [[0, 1, 2], 4.4, 5.5, 6.6, [[3, 7.7]]]]
     ])")
                         .ValueOrDie();

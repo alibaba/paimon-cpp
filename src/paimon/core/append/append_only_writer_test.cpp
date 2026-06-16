@@ -276,11 +276,10 @@ class AppendOnlyWriterTest : public testing::Test {
         ASSERT_OK(reader->SetReadSchema(c_file_schema.get(), /*predicate=*/nullptr,
                                         /*selection_bitmap=*/std::nullopt));
         ASSERT_OK_AND_ASSIGN(auto result_array, ReadResultCollector::CollectResult(reader.get()));
-        auto view_result_array = result_array->View(expected_array->type()).ValueOrDie();
-        ASSERT_TRUE(expected_array->Equals(view_result_array))
+        ASSERT_TRUE(expected_array->Equals(result_array))
             << "Expected:\n"
             << expected_array->ToString() << "\nActual:\n"
-            << view_result_array->ToString();
+            << result_array->ToString();
     }
 
     /// Reads a file's schema, compares structure against expected physical schema
@@ -937,13 +936,188 @@ TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapFieldContent) {
     auto physical_type = arrow::struct_(expected_physical_schema->fields());
     std::shared_ptr<arrow::ChunkedArray> expected_array;
     ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(physical_type, {R"([
-        [1, [[0, 1, -1], 10, 20, null, []]],
-        [2, [[2, 0, 1],  30, 40, 50,   []]],
-        [3, [[0, -1, -1], 60, null, null, []]]
+        [1, [[0, 1, -1], 10, 20, null, null]],
+        [2, [[2, 0, 1],  30, 40, 50,   null]],
+        [3, [[0, -1, -1], 60, null, null, null]]
     ])"},
                                                                  &expected_array)
                     .ok());
     CheckFileContent(data_file_path, format, expected_array);
+}
+
+TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapAllEmptyFirstFile) {
+    std::string format = GetFormat();
+    auto options = CreateOptions({
+        {Options::FILE_FORMAT, format},
+        {Options::MANIFEST_FORMAT, format},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {Options::WRITE_ONLY, "true"},
+    });
+
+    auto logical_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+    });
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = CreatePathFactory(dir->Str(), format, options);
+
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         AppendOnlyWriter::Create(options, /*schema_id=*/0, logical_schema,
+                                                  /*write_cols=*/std::nullopt,
+                                                  /*max_sequence_number=*/-1, path_factory,
+                                                  compact_manager_, memory_pool_));
+
+    auto batch = CreateBatch(logical_schema, R"([
+        [1, []],
+        [2, []]
+    ])");
+    ASSERT_OK(writer->Write(std::move(batch)));
+    ASSERT_OK_AND_ASSIGN(CommitIncrement inc, writer->PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_OK(writer->Close());
+
+    ASSERT_EQ(1, inc.GetNewFilesIncrement().NewFiles().size());
+    std::string data_file_path =
+        path_factory->ToPath(inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
+
+    std::map<std::string, int32_t> first_file_k = {{"tags", 3}};
+    ASSERT_OK_AND_ASSIGN(auto first_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                logical_schema, first_file_k));
+    MapSharedShreddingFieldMeta empty_meta;
+    empty_meta.num_columns = 3;
+    empty_meta.max_row_width = 0;
+    CheckShreddingFileSchema(data_file_path, format, first_schema, /*field_index=*/1, empty_meta,
+                             options.GetFileCompression());
+
+    auto physical_type = arrow::struct_(first_schema->fields());
+    std::shared_ptr<arrow::ChunkedArray> expected_array;
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(physical_type, {R"([
+        [1, [[-1, -1, -1], null, null, null, null]],
+        [2, [[-1, -1, -1], null, null, null, null]]
+    ])"},
+                                                                 &expected_array)
+                    .ok());
+    CheckFileContent(data_file_path, format, expected_array);
+}
+
+TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapAllNullThenAllEmptyFiles) {
+    std::string format = GetFormat();
+    auto options = CreateOptions({
+        {Options::FILE_FORMAT, format},
+        {Options::MANIFEST_FORMAT, format},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {Options::WRITE_ONLY, "true"},
+    });
+
+    auto logical_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+    });
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = CreatePathFactory(dir->Str(), format, options);
+
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         AppendOnlyWriter::Create(options, /*schema_id=*/0, logical_schema,
+                                                  /*write_cols=*/std::nullopt,
+                                                  /*max_sequence_number=*/-1, path_factory,
+                                                  compact_manager_, memory_pool_));
+
+    auto null_batch = CreateBatch(logical_schema, R"([
+        [1, null],
+        [2, null]
+    ])");
+    ASSERT_OK(writer->Write(std::move(null_batch)));
+    ASSERT_OK_AND_ASSIGN(CommitIncrement null_inc, writer->PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_EQ(1, null_inc.GetNewFilesIncrement().NewFiles().size());
+    std::string null_file_path =
+        path_factory->ToPath(null_inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
+
+    std::map<std::string, int32_t> first_file_k = {{"tags", 3}};
+    ASSERT_OK_AND_ASSIGN(auto first_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                logical_schema, first_file_k));
+    MapSharedShreddingFieldMeta empty_meta;
+    empty_meta.num_columns = 3;
+    empty_meta.max_row_width = 0;
+    CheckShreddingFileSchema(null_file_path, format, first_schema, /*field_index=*/1, empty_meta,
+                             options.GetFileCompression());
+
+    auto first_physical_type = arrow::struct_(first_schema->fields());
+    std::shared_ptr<arrow::ChunkedArray> expected_null_array;
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(first_physical_type, {R"([
+        [1, null],
+        [2, null]
+    ])"},
+                                                                 &expected_null_array)
+                    .ok());
+    CheckFileContent(null_file_path, format, expected_null_array);
+
+    auto empty_batch = CreateBatch(logical_schema, R"([
+        [3, []],
+        [4, []]
+    ])");
+    ASSERT_OK(writer->Write(std::move(empty_batch)));
+    ASSERT_OK_AND_ASSIGN(CommitIncrement empty_inc,
+                         writer->PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_EQ(1, empty_inc.GetNewFilesIncrement().NewFiles().size());
+    std::string empty_file_path =
+        path_factory->ToPath(empty_inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
+
+    // Previous file observed max_row_width=0, but the next file must still keep at least one
+    // physical value column so shared-shredding never produces a K=0 schema.
+    std::map<std::string, int32_t> second_file_k = {{"tags", 1}};
+    ASSERT_OK_AND_ASSIGN(auto second_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                 logical_schema, second_file_k));
+    empty_meta.num_columns = 1;
+    CheckShreddingFileSchema(empty_file_path, format, second_schema, /*field_index=*/1, empty_meta,
+                             options.GetFileCompression());
+
+    auto second_physical_type = arrow::struct_(second_schema->fields());
+    std::shared_ptr<arrow::ChunkedArray> expected_empty_array;
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(second_physical_type, {R"([
+        [3, [[-1], null, null]],
+        [4, [[-1], null, null]]
+    ])"},
+                                                                 &expected_empty_array)
+                    .ok());
+    CheckFileContent(empty_file_path, format, expected_empty_array);
+
+    auto null_value_batch = CreateBatch(logical_schema, R"([
+        [5, [["a", null]]],
+        [6, [["b", null]]],
+        [7, [["c", 7], ["d", null]]]
+    ])");
+    ASSERT_OK(writer->Write(std::move(null_value_batch)));
+    ASSERT_OK_AND_ASSIGN(CommitIncrement null_value_inc,
+                         writer->PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_EQ(1, null_value_inc.GetNewFilesIncrement().NewFiles().size());
+    std::string null_value_file_path =
+        path_factory->ToPath(null_value_inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
+
+    MapSharedShreddingFieldMeta null_value_meta;
+    null_value_meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}, {"d", 3}};
+    null_value_meta.field_to_columns = {{0, {0}}, {1, {0}}, {2, {0}}};
+    null_value_meta.overflow_field_set = {3};
+    null_value_meta.num_columns = 1;
+    null_value_meta.max_row_width = 2;
+    CheckShreddingFileSchema(null_value_file_path, format, second_schema, /*field_index=*/1,
+                             null_value_meta, options.GetFileCompression());
+
+    std::shared_ptr<arrow::ChunkedArray> expected_null_value_array;
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(second_physical_type, {R"([
+        [5, [[0], null, null]],
+        [6, [[1], null, null]],
+        [7, [[2], 7, [[3, null]]]]
+    ])"},
+                                                                 &expected_null_value_array)
+                    .ok());
+    CheckFileContent(null_value_file_path, format, expected_null_value_array);
+
+    ASSERT_OK(writer->Close());
 }
 
 TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapWithOverflow) {
@@ -1009,7 +1183,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapWithOverflow) {
     auto physical_type = arrow::struct_(expected_physical_schema->fields());
     std::shared_ptr<arrow::ChunkedArray> expected_array;
     ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(physical_type, {R"([
-        [1, [[0, 1],  1, 2, []]],
+        [1, [[0, 1],  1, 2, null]],
         [2, [[2, 0],  3, 4, [[1, 5]]]],
         [3, [[3, 4],  6, 7, [[5, 8], [0, 9]]]]
     ])"},
@@ -1142,7 +1316,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
     auto physical_type3 = arrow::struct_(phys_schema3->fields());
     std::shared_ptr<arrow::ChunkedArray> expected_array3;
     ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(physical_type3, {R"([
-        [4, [[0, 1, 2, 3, -1], 1000, 2000, 3000, 4000, null, []]]
+        [4, [[0, 1, 2, 3, -1], 1000, 2000, 3000, 4000, null, null]]
     ])"},
                                                                  &expected_array3)
                     .ok());
@@ -1350,9 +1524,9 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapDataFileMetaInfo) {
 
     std::shared_ptr<arrow::ChunkedArray> expected_array;
     ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(physical_type, {R"([
-        [1, [[0, 1, -1], 10, 20, null, []]],
-        [2, [[2, -1, -1], 30, null, null, []]],
-        [3, [[0, 1, 2],  40, 50, 60, []]]
+        [1, [[0, 1, -1], 10, 20, null, null]],
+        [2, [[2, -1, -1], 30, null, null, null]],
+        [3, [[0, 1, 2],  40, 50, 60, null]]
     ])"},
                                                                  &expected_array)
                     .ok());
@@ -1448,8 +1622,8 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapWithBlobSeparation) 
     auto physical_type = arrow::struct_(expected_physical_schema->fields());
     std::shared_ptr<arrow::ChunkedArray> expected_array;
     ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(physical_type, {R"([
-        [1, [[0, 1, -1], 10, 20, null, []]],
-        [2, [[2, -1, -1], 30, null, null, []]]
+        [1, [[0, 1, -1], 10, 20, null, null]],
+        [2, [[2, -1, -1], 30, null, null, null]]
     ])"},
                                                                  &expected_array)
                     .ok());

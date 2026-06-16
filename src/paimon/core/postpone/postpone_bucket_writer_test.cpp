@@ -106,10 +106,8 @@ class PostponeBucketWriterTest : public ::testing::Test,
                                               /*selection_bitmap=*/std::nullopt));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> result_array,
                              ReadResultCollector::CollectResult(batch_reader.get()));
-        auto view_result_array = result_array->View(expected_array->type()).ValueOrDie();
-        ASSERT_TRUE(expected_array->Equals(view_result_array))
-            << view_result_array->ToString() << "\n != \n"
-            << expected_array->ToString();
+        ASSERT_TRUE(expected_array->Equals(result_array)) << result_array->ToString() << "\n != \n"
+                                                          << expected_array->ToString();
     }
 
     void CheckShreddingFileSchema(const std::string& file_format_str,
@@ -375,8 +373,8 @@ TEST_F(PostponeBucketWriterTest, TestSharedShreddingMap) {
     auto physical_type = arrow::struct_(expected_schema->fields());
     std::shared_ptr<arrow::ChunkedArray> expected_array;
     ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(physical_type, {R"([
-        [-1, 0, "Lucy", [[0, 1, -1], 1, 2, null, []]],
-        [-1, 0, "Bob",  [[2, 0, -1], 3, 4, null, []]]
+        [-1, 0, "Lucy", [[0, 1, -1], 1, 2, null, null]],
+        [-1, 0, "Bob",  [[2, 0, -1], 3, 4, null, null]]
     ])"},
                                                                  &expected_array)
                     .ok());
