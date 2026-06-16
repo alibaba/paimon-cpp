@@ -112,6 +112,11 @@ class InternalReadContext {
                         const std::shared_ptr<arrow::Schema>& read_schema,
                         const CoreOptions& options);
 
+    static std::optional<DataField> TryResolveSpecialFieldById(int32_t field_id,
+                                                               const CoreOptions& core_options);
+    static std::optional<DataField> TryResolveSpecialFieldByName(const std::string& name,
+                                                                 const CoreOptions& core_options);
+
     std::shared_ptr<ReadContext> read_context_;
     std::shared_ptr<TableSchema> table_schema_;
     std::shared_ptr<arrow::Schema> read_schema_;

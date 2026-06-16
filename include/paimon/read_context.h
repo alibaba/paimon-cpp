@@ -167,7 +167,7 @@ class PAIMON_EXPORT ReadContext {
     PrefetchCacheMode prefetch_cache_mode_;
     CacheConfig cache_config_;
     std::shared_ptr<Cache> cache_;
-    ArrowSchema* read_schema_ = nullptr;  // C ABI schema for nested column pruning, not owned
+    ArrowSchema* read_schema_ = nullptr;
 };
 
 /// `ReadContextBuilder` used to build a `ReadContext`, has input validation.

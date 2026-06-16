@@ -16,6 +16,7 @@
 
 #include "paimon/core/operation/internal_read_context.h"
 
+#include <optional>
 #include <utility>
 
 #include "arrow/c/abi.h"
@@ -28,6 +29,59 @@
 #include "paimon/status.h"
 
 namespace paimon {
+
+std::optional<DataField> InternalReadContext::TryResolveSpecialFieldById(
+    int32_t field_id, const CoreOptions& core_options) {
+    if (field_id == SpecialFields::ValueKind().Id()) {
+        return SpecialFields::ValueKind();
+    }
+    if (field_id == SpecialFields::RowId().Id()) {
+        if (core_options.RowTrackingEnabled()) {
+            return SpecialFields::RowId();
+        }
+        return std::nullopt;
+    }
+    if (field_id == SpecialFields::SequenceNumber().Id()) {
+        if (core_options.RowTrackingEnabled() || core_options.KeyValueSequenceNumberEnabled()) {
+            return SpecialFields::SequenceNumber();
+        }
+        return std::nullopt;
+    }
+    if (field_id == SpecialFields::IndexScore().Id()) {
+        if (core_options.DataEvolutionEnabled()) {
+            return SpecialFields::IndexScore();
+        }
+        return std::nullopt;
+    }
+    return std::nullopt;
+}
+
+std::optional<DataField> InternalReadContext::TryResolveSpecialFieldByName(
+    const std::string& name, const CoreOptions& core_options) {
+    if (name == SpecialFields::ValueKind().Name()) {
+        return SpecialFields::ValueKind();
+    }
+    if (name == SpecialFields::RowId().Name()) {
+        if (core_options.RowTrackingEnabled()) {
+            return SpecialFields::RowId();
+        }
+        return std::nullopt;
+    }
+    if (name == SpecialFields::SequenceNumber().Name()) {
+        if (core_options.RowTrackingEnabled() || core_options.KeyValueSequenceNumberEnabled()) {
+            return SpecialFields::SequenceNumber();
+        }
+        return std::nullopt;
+    }
+    if (name == SpecialFields::IndexScore().Name()) {
+        if (core_options.DataEvolutionEnabled()) {
+            return SpecialFields::IndexScore();
+        }
+        return std::nullopt;
+    }
+    return std::nullopt;
+}
+
 Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
     const std::shared_ptr<ReadContext>& context, const std::shared_ptr<TableSchema>& table_schema,
     const std::map<std::string, std::string>& options) {
@@ -46,34 +100,28 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
                                           arrow::ImportSchema(context->GetReadSchema()));
         PAIMON_ASSIGN_OR_RAISE(read_data_fields,
                                DataField::ConvertArrowSchemaToDataFields(projected_schema));
-        // Validate that every top-level field exists in the table schema by field ID.
-        for (const auto& field : read_data_fields) {
-            if (!SpecialFields::IsSpecialFieldName(field.Name())) {
-                PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] DataField unused,
-                                       table_schema->GetField(field.Id()));
+        // Align special-field validation with read_field_ids/read_field_names branches.
+        for (auto& field : read_data_fields) {
+            if (auto resolved_special_field =
+                    TryResolveSpecialFieldById(field.Id(), core_options)) {
+                field = *resolved_special_field;
+                continue;
             }
+            if (SpecialFields::IsSpecialFieldName(field.Name())) {
+                if (auto resolved_special_field =
+                        TryResolveSpecialFieldByName(field.Name(), core_options)) {
+                    field = *resolved_special_field;
+                    continue;
+                }
+            }
+            PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] DataField unused,
+                                   table_schema->GetField(field.Id()));
         }
     } else if (!context->GetReadFieldIds().empty()) {
         read_data_fields.reserve(context->GetReadFieldIds().size());
         for (const auto& field_id : context->GetReadFieldIds()) {
-            // if enable row tracking or data evolution, check special fields
-            if (core_options.RowTrackingEnabled() && field_id == SpecialFields::RowId().Id()) {
-                read_data_fields.push_back(SpecialFields::RowId());
-                continue;
-            }
-            if ((core_options.RowTrackingEnabled() ||
-                 core_options.KeyValueSequenceNumberEnabled()) &&
-                field_id == SpecialFields::SequenceNumber().Id()) {
-                read_data_fields.push_back(SpecialFields::SequenceNumber());
-                continue;
-            }
-            if (field_id == SpecialFields::ValueKind().Id()) {
-                read_data_fields.push_back(SpecialFields::ValueKind());
-                continue;
-            }
-            if (core_options.DataEvolutionEnabled() &&
-                field_id == SpecialFields::IndexScore().Id()) {
-                read_data_fields.push_back(SpecialFields::IndexScore());
+            if (auto resolved_special_field = TryResolveSpecialFieldById(field_id, core_options)) {
+                read_data_fields.push_back(*resolved_special_field);
                 continue;
             }
             PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema->GetField(field_id));
@@ -82,23 +130,8 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
     } else if (!context->GetReadFieldNames().empty()) {
         read_data_fields.reserve(context->GetReadFieldNames().size());
         for (const auto& name : context->GetReadFieldNames()) {
-            // if enable row tracking or data evolution, check special fields
-            if (core_options.RowTrackingEnabled() && name == SpecialFields::RowId().Name()) {
-                read_data_fields.push_back(SpecialFields::RowId());
-                continue;
-            }
-            if ((core_options.RowTrackingEnabled() ||
-                 core_options.KeyValueSequenceNumberEnabled()) &&
-                name == SpecialFields::SequenceNumber().Name()) {
-                read_data_fields.push_back(SpecialFields::SequenceNumber());
-                continue;
-            }
-            if (name == SpecialFields::ValueKind().Name()) {
-                read_data_fields.push_back(SpecialFields::ValueKind());
-                continue;
-            }
-            if (core_options.DataEvolutionEnabled() && name == SpecialFields::IndexScore().Name()) {
-                read_data_fields.push_back(SpecialFields::IndexScore());
+            if (auto resolved_special_field = TryResolveSpecialFieldByName(name, core_options)) {
+                read_data_fields.push_back(*resolved_special_field);
                 continue;
             }
             PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema->GetField(name));

@@ -26,6 +26,7 @@
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
+#include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
@@ -357,6 +358,103 @@ TEST_P(NestedColumnPruningInteTest, PruneDeepNestedStruct) {
         std::cout << "[actual]   " << read_result->ToString() << std::endl;
     }
     ASSERT_TRUE(is_equal);
+}
+
+// Test: Nested projected schema with special fields under row tracking.
+TEST_P(NestedColumnPruningInteTest, PruneNestedStructWithSpecialFields) {
+    // Table schema: f0 (int32), f1 (struct{a: int32, inner: struct{x: int64, y: utf8}})
+    auto inner_struct = arrow::struct_({
+        arrow::field("x", arrow::int64()),
+        arrow::field("y", arrow::utf8()),
+    });
+    auto outer_struct = arrow::struct_({
+        arrow::field("a", arrow::int32()),
+        arrow::field("inner", inner_struct),
+    });
+    arrow::FieldVector table_fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", outer_struct),
+    };
+    auto table_schema = arrow::schema(table_fields);
+
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "AVRO"},
+        {Options::FILE_FORMAT, StringUtils::ToUpperCase(file_format_)},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+        {Options::ROW_TRACKING_ENABLED, "true"},
+    };
+
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+
+    std::string data = R"([
+        [1, [10, [100, "aaa"]]],
+        [2, [20, [200, "bbb"]]],
+        [3, [30, [300, "ccc"]]]
+    ])";
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    int64_t commit_identifier = 0;
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+
+    // Field IDs (assigned sequentially by catalog):
+    // f0->0, f1->1, f1.a->2, f1.inner->3, f1.inner.x->4, f1.inner.y->5
+    // Projected: f0, f1{inner{x}}, _SEQUENCE_NUMBER, _ROW_ID
+    auto pruned_inner = arrow::struct_({
+        AnnotateField(arrow::field("x", arrow::int64()), 4),
+    });
+    auto pruned_outer = arrow::struct_({
+        AnnotateField(arrow::field("inner", pruned_inner), 3),
+    });
+    arrow::FieldVector projected_fields = {
+        AnnotateField(arrow::field("f0", arrow::int32()), 0),
+        AnnotateField(arrow::field("f1", pruned_outer), 1),
+        AnnotateField(arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+                      SpecialFields::SequenceNumber().Id()),
+        AnnotateField(arrow::field("_ROW_ID", arrow::int64()), SpecialFields::RowId().Id()),
+    };
+    auto projected_schema = arrow::schema(projected_fields);
+
+    ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_schema).ok());
+
+    ReadContextBuilder read_context_builder(table_path_);
+    read_context_builder.SetOptions(options).SetReadSchema(&c_schema);
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_splits));
+    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
+
+    ASSERT_EQ(read_result->num_chunks(), 1);
+    auto result_array = std::dynamic_pointer_cast<arrow::StructArray>(read_result->chunk(0));
+    ASSERT_TRUE(result_array);
+
+    ASSERT_TRUE(result_array->GetFieldByName("_SEQUENCE_NUMBER"));
+    ASSERT_TRUE(result_array->GetFieldByName("_ROW_ID"));
+    auto nested_col = result_array->GetFieldByName("f1");
+    ASSERT_TRUE(nested_col);
+
+    auto expected_nested_type = arrow::struct_({
+        arrow::field("inner", arrow::struct_({arrow::field("x", arrow::int64())})),
+    });
+    ASSERT_TRUE(nested_col->type()->Equals(expected_nested_type));
+
+    auto expected_nested_array =
+        arrow::ipc::internal::json::ArrayFromJSON(expected_nested_type, R"([
+            [[100]],
+            [[200]],
+            [[300]]
+        ])")
+            .ValueOrDie();
+    ASSERT_TRUE(nested_col->Equals(expected_nested_array));
 }
 
 // Test: Table has MAP<STRING, INT32> field, read with selected keys filter.
