@@ -156,8 +156,8 @@ struct GatherEvalEncodedTag {
                                std::span<float>>)
     constexpr void operator()(const M& m, const E& e, const S& s, const DataSource& data,
                               std::span<const uint64_t> rowIds, std::span<float> results) const
-        noexcept(noexcept(encode_space::GetEncodedRow(data, uint64_t {})) && noexcept(
-            EvalEncoded(m, e, s, encode_space::GetEncodedRow(data, uint64_t {}))))
+        noexcept(noexcept(encode_space::GetEncodedRow(data, uint64_t {})) &&
+                 noexcept(EvalEncoded(m, e, s, encode_space::GetEncodedRow(data, uint64_t {}))))
     {
         for (std::size_t i = 0; i < rowIds.size(); ++i) {
             const auto row = encode_space::GetEncodedRow(data, rowIds[i]);
@@ -208,5 +208,32 @@ struct GatherEvalEncodedWithLowerBoundsTag {
     }
 };
 inline constexpr GatherEvalEncodedWithLowerBoundsTag GatherEvalEncodedWithLowerBounds {};
+
+struct SymmetricEvalEncodedTag {
+    /**
+     * @brief Computes distance between two encoded vectors (symmetric distance).
+     *
+     * Used when both vectors are encoded (quantized), such as in graph construction where we
+     * need to compute distances between stored vectors without a raw query vector.
+     *
+     * @param headerA Header of the first encoded vector.
+     * @param codesA Codes of the first encoded vector.
+     * @param headerB Header of the second encoded vector.
+     * @param codesB Codes of the second encoded vector.
+     */
+    template <class M, class E, class S, class HeaderT>
+        requires TagInvocable<SymmetricEvalEncodedTag, M, E, const S&, const HeaderT&, const std::byte*, const HeaderT&,
+                              const std::byte*>
+    constexpr auto operator()(const M& m, const E& e, const S& s, const HeaderT& headerA, const std::byte* codesA,
+                              const HeaderT& headerB, const std::byte* codesB) const
+        noexcept(noexcept(TagInvoke(std::declval<SymmetricEvalEncodedTag>(), m, e, s, headerA, codesA, headerB,
+                                    codesB)))
+            -> TagInvokeResult<SymmetricEvalEncodedTag, M, E, const S&, const HeaderT&, const std::byte*,
+                               const HeaderT&, const std::byte*>
+    {
+        return TagInvoke(*this, m, e, s, headerA, codesA, headerB, codesB);
+    }
+};
+inline constexpr SymmetricEvalEncodedTag SymmetricEvalEncoded {};
 
 } // namespace lumina::dist

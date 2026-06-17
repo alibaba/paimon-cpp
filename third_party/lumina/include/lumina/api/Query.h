@@ -27,6 +27,5 @@ struct Query {
     const float* data = nullptr;
     const uint64_t size = 0;
 };
-// using Query = std::span<const float>;
 
 } // namespace lumina::api

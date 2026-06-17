@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "arrow/api.h"
+#include "lumina/api/LuminaSearcher.h"
 #include "lumina/api/Options.h"
 #include "lumina/extensions/SearchWithFilterExtension.h"
 #include "paimon/global_index/bitmap_global_index_result.h"

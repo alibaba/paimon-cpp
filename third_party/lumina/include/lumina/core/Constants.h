@@ -38,9 +38,14 @@ constexpr std::string_view kIndexType = "index.type"; // Index type
 // Available index.type values
 constexpr std::string_view kIndexTypeBruteforce = "bruteforce";
 constexpr std::string_view kIndexTypeDemo = "demo";
-constexpr std::string_view kIndexTypeHnsw = "hnsw";
+constexpr std::string_view kIndexTypeFlatnsw = "flatnsw";
 constexpr std::string_view kIndexTypeIvf = "ivf";
 constexpr std::string_view kIndexTypeDiskANN = "diskann";
+
+// Experimental index types
+// These index types are under development and may change without notice.
+// Users must explicitly enable experimental features via kEnableExperimental option.
+inline constexpr std::string_view kEnableExperimental = "index.enable_experimental";
 
 // Distance-related options
 constexpr std::string_view kDistancePrefix = "distance.";
@@ -88,21 +93,43 @@ constexpr std::string_view kSearchNprobe = "search.nprobe";
 // Extension options
 constexpr std::string_view kExtensionPrefix = "extension.";
 constexpr std::string_view kExtensionSearchWithFilter = "extension.search_with_filter";
+constexpr std::string_view kExtensionSearchWithTag = "extension.search_with_tag";
 constexpr std::string_view kExtensionCkptThreshold = "extension.build.ckpt.threshold";
 constexpr std::string_view kExtensionCkptCount = "extension.build.ckpt.count";
 constexpr std::string_view kExtensionGetVector = "extension.search.get_vector";
-
-/* constexpr std::string_view kExtensionFilterDsl = "filter.dsl"; */
-/* constexpr std::string_view kExtensionFilterTags = "filter.tags"; */
-/* constexpr std::string_view kExtensionFilterMode = "filter.mode"; */
-/* constexpr std::string_view kExtensionTimeoutMs = "timeout.ms"; */
-
+constexpr std::string_view kExtensionTagSchema = "extension.build.tag.tag_schema";
+constexpr std::string_view kExtensionTagMaxRangeLabelRatio = "extension.build.tag.max_range_label_ratio";
+// Available extension.build.tag.tag_schema keys
+constexpr std::string_view kExtensionTagKName = "key_name";
+constexpr std::string_view kExtensionTagType = "type";
+constexpr std::string_view kExtensionTagVType = "value_type";
+// Maximum length of a extension.build.tag.tag_schema key_name
+constexpr uint16_t kMaxTagKNameLength = UINT16_MAX;
+// Available extension.build.tag.tag_schema type values
+constexpr std::string_view kExtensionTagTypeEnum = "enum";
+constexpr std::string_view kExtensionTagTypeRange = "range";
+// Available extension.build.tag.tag_schema value_type values
+constexpr std::string_view kExtensionTagVTypeString = "string";
+constexpr std::string_view kExtensionTagVTypeInt64 = "int64";
+constexpr std::string_view kExtensionTagVTypeDouble = "double";
+// DistributeBuildCombinedExtension
+constexpr std::string_view kExtensionDistributeBuildPrefix = "extension.build.distribute_build.";
+constexpr std::string_view kExtensionDistributeBuildDispatchCount =
+    "extension.build.distribute_build.partition.dispatch_count";
+constexpr std::string_view kExtensionDistributeBuildPartitionCount =
+    "extension.build.distribute_build.partition.partition_count";
+constexpr std::string_view kExtensionDistributeBuildCentroidCount =
+    "extension.build.distribute_build.partition.centroid_count";
+constexpr std::string_view kExtensionDistributeBuildPartitionType = "extension.build.distribute_build.partition.type";
+constexpr std::string_view kExtensionDistributeBuildKmeans = "kmeans";
+constexpr std::string_view kExtensionDistributeBuildMaxKmeansEpoch =
+    "extension.build.distribute_build.partition.kmeans.max_epoch";
+constexpr std::string_view kExtensionDistributeBuildKmeansThreadCount =
+    "extension.build.distribute_build.partition.kmeans.thread_count";
 // Query stats options (session-level)
 constexpr std::string_view kQueryStatsPrefix = "query_stats.";
 constexpr std::string_view kQueryStatsDistanceCalculateCount = "query_stats.distance_calculate_count";
 constexpr std::string_view kQueryStatsFilteredCount = "query_stats.filtered_count";
-
-/* // Other common options */
 
 // Vector math constants
 constexpr double CAL_EPS = 1e-8;

@@ -19,9 +19,10 @@
 
 #include <concepts>
 #include <cstdint>
-#include <lumina/core/ErrorCodes.h>
 #include <span>
 #include <utility>
+
+#include <lumina/core/ErrorCodes.h>
 
 namespace lumina::dist::encode_space {
 
@@ -61,7 +62,7 @@ struct EncodeBatchTag {
     template <class ModelT, class Src, class... Ctx>
         requires TagInvocable<EncodeBatchTag, const ModelT&, Src, EncodedBatchBuilder, Ctx&&...>
     constexpr auto operator()(const ModelT& model, Src src, EncodedBatchBuilder out, Ctx&&... ctx) const
-        noexcept(noexcept(TagInvoke(std::declval<EncodeBatchTag>(), model, src, out, ctx...)))
+        noexcept(noexcept(TagInvoke(std::declval<EncodeBatchTag>(), model, src, out, std::forward<Ctx>(ctx)...)))
             -> TagInvokeResult<EncodeBatchTag, const ModelT&, Src, EncodedBatchBuilder, Ctx&&...>
     {
         return TagInvoke(*this, model, src, out, std::forward<Ctx>(ctx)...);
@@ -69,5 +70,21 @@ struct EncodeBatchTag {
 };
 
 inline constexpr EncodeBatchTag EncodeBatch {};
+
+// Model convention:
+//  - Caller sets config fields on Model (header, chunkOffsets, dim) before calling Train.
+//  - Train validates config, then fills output fields (codebooks, centroids, etc.).
+//  - Runtime parameters (threadCount, maxEpoch) go through TrainOptions, never into Model.
+struct TrainTag {
+    template <class ModelT, class... Ctx>
+        requires TagInvocable<TrainTag, ModelT&, std::span<const float>, uint64_t, Ctx&&...>
+    constexpr auto operator()(ModelT& model, std::span<const float> data, uint64_t n, Ctx&&... ctx) const
+        noexcept(noexcept(TagInvoke(std::declval<TrainTag>(), model, data, n, std::forward<Ctx>(ctx)...)))
+            -> TagInvokeResult<TrainTag, ModelT&, std::span<const float>, uint64_t, Ctx&&...>
+    {
+        return TagInvoke(*this, model, data, n, std::forward<Ctx>(ctx)...);
+    }
+};
+inline constexpr TrainTag Train {};
 
 } // namespace lumina::dist::encode_space

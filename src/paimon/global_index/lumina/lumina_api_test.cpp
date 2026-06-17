@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #include "lumina/api/LuminaBuilder.h"
+#include "lumina/api/LuminaSearcher.h"
 #include "lumina/core/Constants.h"
 #include "lumina/core/Status.h"
 #include "lumina/core/Types.h"
@@ -133,7 +134,7 @@ class LuminaInterfaceTest : public ::testing::Test {
         ASSERT_GT(paimon_pool->MaxMemoryUsage(), 0);
     }
 
-    void CheckResult(const std::vector<::lumina::api::LuminaSearcher::SearchHit>& search_result,
+    void CheckResult(const std::vector<::lumina::api::SearchHit>& search_result,
                      const std::vector<::lumina::core::vector_id_t>& expected_row_ids,
                      const std::vector<float>& expected_distances) const {
         ASSERT_EQ(search_result.size(), expected_row_ids.size());

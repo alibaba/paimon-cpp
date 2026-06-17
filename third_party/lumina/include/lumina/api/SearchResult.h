@@ -15,13 +15,21 @@
  */
 
 #pragma once
-#include <cstdint>
+#include <lumina/core/Types.h>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
-namespace lumina::core {
+namespace lumina::api {
 
-// Unified external identifier types
-using vector_id_t = std::uint64_t;
-using dimension_t = std::uint32_t;
-using label_id_t = std::uint64_t;
+struct SearchHit {
+    core::vector_id_t id {0};
+    float distance {0.0f};
+};
 
-} // namespace lumina::core
+struct SearchResult {
+    std::vector<SearchHit> topk;
+    std::unordered_map<std::string, std::string> searchStats;
+};
+
+} // namespace lumina::api

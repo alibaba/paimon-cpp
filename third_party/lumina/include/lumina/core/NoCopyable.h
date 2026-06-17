@@ -32,8 +32,8 @@ class NoMoveable
 {
 protected:
     constexpr NoMoveable() = default;
-    NoMoveable(const NoMoveable&) = delete;
-    NoMoveable& operator=(const NoMoveable&) = delete;
+    NoMoveable(const NoMoveable&) = default;
+    NoMoveable& operator=(const NoMoveable&) = default;
     NoMoveable(NoMoveable&&) = delete;
     NoMoveable& operator=(NoMoveable&&) = delete;
 };
