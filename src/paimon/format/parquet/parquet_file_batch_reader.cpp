@@ -42,6 +42,7 @@
 #include "paimon/core/schema/arrow_schema_validator.h"
 #include "paimon/format/parquet/parquet_field_id_converter.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
+#include "paimon/format/parquet/parquet_schema_util.h"
 #include "paimon/format/parquet/parquet_timestamp_converter.h"
 #include "paimon/format/parquet/predicate_converter.h"
 #include "paimon/reader/batch_reader.h"
@@ -155,21 +156,23 @@ Status ParquetFileBatchReader::SetReadSchema(
             }
         }
 
-        std::vector<int32_t> row_groups = arrow::internal::Iota(reader_->GetNumberOfRowGroups());
+        TargetRowGroups target_row_groups =
+            TargetRowGroup::MakeSerialRowGroups(reader_->GetNumberOfRowGroups());
         if (predicate) {
-            PAIMON_ASSIGN_OR_RAISE(row_groups,
-                                   FilterRowGroupsByPredicate(predicate, file_schema, row_groups));
+            PAIMON_ASSIGN_OR_RAISE(
+                target_row_groups,
+                FilterRowGroupsByPredicate(predicate, file_schema, target_row_groups));
         }
         if (selection_bitmap) {
-            PAIMON_ASSIGN_OR_RAISE(row_groups,
-                                   FilterRowGroupsByBitmap(selection_bitmap.value(), row_groups));
+            PAIMON_ASSIGN_OR_RAISE(
+                target_row_groups,
+                FilterRowGroupsByBitmap(selection_bitmap.value(), target_row_groups));
         }
         // Apply page-level filtering after bitmap pruning so we don't read page index
         // pages for row groups that the bitmap already excluded.
         // If no predicate is provided, skip page-level filtering, row_group_row_ranges will be
         // empty
-        std::map<int32_t, RowRanges> row_group_row_ranges;
-        if (predicate && !row_groups.empty()) {
+        if (predicate && !target_row_groups.empty()) {
             PAIMON_ASSIGN_OR_RAISE(
                 bool enable_page_index_filter,
                 OptionsUtils::GetValueFromMap<bool>(options_, PARQUET_READ_ENABLE_PAGE_INDEX_FILTER,
@@ -188,13 +191,9 @@ Status ParquetFileBatchReader::SetReadSchema(
                         column_name_to_index[name] = indices[0];
                     }
                 }
-
-                std::pair<std::vector<int32_t>, std::map<int32_t, RowRanges>> page_filter_result;
                 PAIMON_ASSIGN_OR_RAISE(
-                    page_filter_result,
-                    FilterRowGroupsByPageIndex(predicate, column_name_to_index, row_groups));
-                row_groups = std::move(page_filter_result.first);
-                row_group_row_ranges = std::move(page_filter_result.second);
+                    target_row_groups,
+                    FilterRowGroupsByPageIndex(predicate, column_name_to_index, target_row_groups));
             }
         }
 
@@ -202,30 +201,17 @@ Status ParquetFileBatchReader::SetReadSchema(
 
         metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_TOTAL,
                              reader_->GetNumberOfRowGroups());
-        metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_AFTER_FILTER, row_groups.size());
-
-        // Build TargetRowGroup list with page-filter info in one shot.
-        std::vector<TargetRowGroup> target_row_groups;
-        for (int32_t rg_id : row_groups) {
-            auto it = row_group_row_ranges.find(rg_id);
-            if (it != row_group_row_ranges.end()) {
-                target_row_groups.emplace_back(/*rg_index=*/rg_id, /*is_partially_matched=*/true,
-                                               /*ranges=*/it->second);
-            } else {
-                target_row_groups.emplace_back(/*rg_index=*/rg_id,
-                                               /*is_partially_matched=*/false,
-                                               /*ranges=*/RowRanges());
-            }
-        }
+        metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_AFTER_FILTER,
+                             target_row_groups.size());
         PAIMON_RETURN_NOT_OK(reader_->PrepareForReadingLazy(target_row_groups, column_indices));
     }
     PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetFileBatchReader::SetReadSchema")
     return Status::OK();
 }
 
-Result<std::vector<int32_t>> ParquetFileBatchReader::FilterRowGroupsByPredicate(
+Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByPredicate(
     const std::shared_ptr<Predicate>& predicate, const std::shared_ptr<arrow::Schema> file_schema,
-    const std::vector<int32_t>& src_row_groups) const {
+    const TargetRowGroups& src_row_groups) const {
     if (!predicate) {
         return Status::Invalid("cannot pushdown an empty predicate");
     }
@@ -248,58 +234,122 @@ Result<std::vector<int32_t>> ParquetFileBatchReader::FilterRowGroupsByPredicate(
         std::shared_ptr<arrow::dataset::ParquetFileFragment> file_fragment,
         parquet_file_format->MakeFragment(
             file_source, /*partition_expression=*/PredicateConverter::AlwaysTrue(),
-            /*physical_schema=*/nullptr, /*row_groups=*/src_row_groups));
+            /*physical_schema=*/nullptr,
+            /*row_groups=*/TargetRowGroup::GetRowGroupIndices(src_row_groups)));
     PAIMON_RETURN_NOT_OK_FROM_ARROW(
         file_fragment->EnsureCompleteMetadata(reader_->GetFileReader()));
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(arrow::dataset::FragmentVector target_fragments,
                                       file_fragment->SplitByRowGroup(bind_expr));
-    std::vector<int32_t> target_row_groups;
+    TargetRowGroups target_row_groups;
     target_row_groups.reserve(src_row_groups.size());
     for (const auto& fragment : target_fragments) {
         auto parquet_fragment = dynamic_cast<arrow::dataset::ParquetFileFragment*>(fragment.get());
         if (!parquet_fragment) {
             return Status::Invalid("cannot cast to ParquetFileFragment in ParquetFileBatchReader");
         }
-        target_row_groups.insert(target_row_groups.end(), parquet_fragment->row_groups().begin(),
-                                 parquet_fragment->row_groups().end());
+        for (auto rg_index : parquet_fragment->row_groups()) {
+            target_row_groups.emplace_back(rg_index);
+        }
     }
     return target_row_groups;
 }
 
-Result<std::vector<int32_t>> ParquetFileBatchReader::FilterRowGroupsByBitmap(
-    const RoaringBitmap32& bitmap, const std::vector<int32_t>& src_row_groups) const {
+Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByBitmap(
+    const RoaringBitmap32& bitmap, const TargetRowGroups& src_row_groups) const {
     if (bitmap.IsEmpty()) {
         return Status::Invalid("cannot push down an empty bitmap to ParquetFileBatchReader");
     }
+
+    auto meta_data = reader_->GetFileReader()->parquet_reader()->metadata();
     const auto& all_row_group_ranges = reader_->GetAllRowGroupRanges();
-    // filter row groups by row range
-    std::vector<int32_t> target_row_groups;
-    for (const auto& row_group_idx : src_row_groups) {
+
+    TargetRowGroups target_row_groups;
+    for (const auto& row_group : src_row_groups) {
+        int32_t row_group_idx = row_group.GetRowGroupIndex();
         if (static_cast<size_t>(row_group_idx) >= all_row_group_ranges.size()) {
             return Status::Invalid(
                 fmt::format("src row group {} not in row group meta", row_group_idx));
         }
         const auto& [start_row_idx, end_row_idx] = all_row_group_ranges[row_group_idx];
-        if (bitmap.ContainsAny(start_row_idx, end_row_idx)) {
-            target_row_groups.push_back(row_group_idx);
+        if (!bitmap.ContainsAny(start_row_idx, end_row_idx)) {
+            continue;
+        }
+
+        int64_t rg_row_count = meta_data->RowGroup(row_group_idx)->num_rows();
+        auto page_ranges = FilterPagesByBitmap(bitmap, row_group_idx, start_row_idx, rg_row_count);
+        if (page_ranges.has_value()) {
+            target_row_groups.emplace_back(/*row_group_idx=*/row_group_idx,
+                                           /*is_partially_matched=*/true,
+                                           /*row_ranges=*/page_ranges.value());
+        } else {
+            target_row_groups.emplace_back(row_group_idx);
         }
     }
     return target_row_groups;
+}
+
+std::optional<RowRanges> ParquetFileBatchReader::FilterPagesByBitmap(const RoaringBitmap32& bitmap,
+                                                                     int32_t row_group_idx,
+                                                                     uint64_t rg_start_row,
+                                                                     int64_t rg_row_count) const {
+    int32_t column_with_offset_index = FindColumnWithOffsetIndex(row_group_idx);
+    if (column_with_offset_index < 0) {
+        return std::nullopt;
+    }
+
+    auto page_index_reader = reader_->GetPageIndexReader();
+    if (!page_index_reader) {
+        return std::nullopt;
+    }
+
+    auto rg_page_index_reader = page_index_reader->RowGroup(row_group_idx);
+    if (!rg_page_index_reader) {
+        return std::nullopt;
+    }
+
+    auto offset_index = rg_page_index_reader->GetOffsetIndex(column_with_offset_index);
+    if (!offset_index) {
+        return std::nullopt;
+    }
+
+    const auto& pages = offset_index->page_locations();
+    auto num_pages = static_cast<int64_t>(pages.size());
+    RowRanges filtered_row_ranges;
+    for (int64_t i = 0; i < num_pages; ++i) {
+        int64_t page_start_row = pages[i].first_row_index;
+        // The bitmap is [from, to) while page row range is [from, to]
+        int64_t page_end_row =
+            (i + 1 < num_pages) ? pages[i + 1].first_row_index - 1 : rg_row_count - 1;
+        if (bitmap.ContainsAny(rg_start_row + page_start_row, rg_start_row + page_end_row + 1)) {
+            filtered_row_ranges.Add(RowRanges::Range(page_start_row, page_end_row));
+        }
+    }
+    return filtered_row_ranges;
+}
+
+int32_t ParquetFileBatchReader::FindColumnWithOffsetIndex(int32_t row_group_idx) const {
+    auto rg_meta = reader_->GetFileReader()->parquet_reader()->metadata()->RowGroup(row_group_idx);
+    if (!rg_meta) {
+        return -1;
+    }
+    for (int col = 0; col < rg_meta->num_columns(); ++col) {
+        if (rg_meta->ColumnChunk(col)->GetOffsetIndexLocation().has_value()) {
+            return col;
+        }
+    }
+    return -1;
 }
 
 // Uses page-level column index statistics to filter row groups and store per-row-group
 // RowRanges for true page-level skipping. A row group is excluded if ALL its pages are
 // determined to not match the predicate. For partially matched row groups, RowRanges
 // are stored for page-level filtering during reading.
-Result<std::pair<std::vector<int32_t>, std::map<int32_t, RowRanges>>>
-ParquetFileBatchReader::FilterRowGroupsByPageIndex(
+Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByPageIndex(
     const std::shared_ptr<Predicate>& predicate,
     const std::map<std::string, int32_t>& column_name_to_index,
-    const std::vector<int32_t>& src_row_groups) {
-    std::map<int32_t, RowRanges> rg_row_ranges;
-
+    const TargetRowGroups& src_row_groups) const {
     if (!predicate) {
-        return std::make_pair(src_row_groups, rg_row_ranges);
+        return src_row_groups;
     }
 
     auto page_index_reader = reader_->GetPageIndexReader();
@@ -307,35 +357,41 @@ ParquetFileBatchReader::FilterRowGroupsByPageIndex(
         PAIMON_LOG_DEBUG(logger_,
                          "Page index not available in file, skipping page-level filtering (%s)",
                          PARQUET_WRITE_ENABLE_PAGE_INDEX);
-        return std::make_pair(src_row_groups, rg_row_ranges);
+        return src_row_groups;
     }
 
     auto file_metadata = reader_->GetFileReader()->parquet_reader()->metadata();
 
-    std::vector<int32_t> target_row_groups;
-    target_row_groups.reserve(src_row_groups.size());
+    TargetRowGroups target_row_groups;
 
-    for (int32_t row_group_idx : src_row_groups) {
+    for (const auto& row_group : src_row_groups) {
+        int32_t row_group_idx = row_group.GetRowGroupIndex();
         auto result =
             reader_->CalculateFilteredRowRanges(row_group_idx, predicate, column_name_to_index);
 
         if (!result.ok()) {
-            target_row_groups.push_back(row_group_idx);
+            target_row_groups.emplace_back(row_group);
             continue;
         }
 
         const auto& row_ranges = result.value();
         if (!row_ranges.IsEmpty()) {
-            target_row_groups.push_back(row_group_idx);
-
             int64_t rg_row_count = file_metadata->RowGroup(row_group_idx)->num_rows();
-            if (row_ranges.RowCount() < rg_row_count) {
-                rg_row_ranges[row_group_idx] = row_ranges;
+            auto intersection = row_group.IsPartiallyMatched()
+                                    ? RowRanges::Intersection(row_group.GetRowRanges(), row_ranges)
+                                    : row_ranges;
+            if (intersection.IsEmpty()) {
+                continue;
+            }
+            if (intersection.RowCount() < rg_row_count) {
+                target_row_groups.emplace_back(row_group_idx, true, intersection);
+            } else {
+                target_row_groups.emplace_back(row_group_idx);
             }
         }
     }
 
-    return std::make_pair(std::move(target_row_groups), std::move(rg_row_ranges));
+    return target_row_groups;
 }
 
 Result<BatchReader::ReadBatch> ParquetFileBatchReader::NextBatch() {

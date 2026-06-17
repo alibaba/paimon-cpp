@@ -37,6 +37,7 @@
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/format/parquet/file_reader_wrapper.h"
 #include "paimon/format/parquet/row_ranges.h"
+#include "paimon/format/parquet/target_row_group.h"
 #include "paimon/logging.h"
 #include "paimon/reader/prefetch_file_batch_reader.h"
 #include "paimon/result.h"
@@ -149,22 +150,27 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
             index_vector->push_back((*index)++);
         }
     }
+    int32_t FindColumnWithOffsetIndex(int32_t row_group_idx) const;
+
+    std::optional<RowRanges> FilterPagesByBitmap(const RoaringBitmap32& bitmap,
+                                                 int32_t row_group_idx, uint64_t rg_start_row,
+                                                 int64_t rg_row_count) const;
 
     // precondition: predicate supposed not be empty
-    Result<std::vector<int32_t>> FilterRowGroupsByPredicate(
+    Result<TargetRowGroups> FilterRowGroupsByPredicate(
         const std::shared_ptr<Predicate>& predicate,
         const std::shared_ptr<arrow::Schema> file_schema,
-        const std::vector<int32_t>& src_row_groups) const;
+        const TargetRowGroups& src_row_groups) const;
 
-    Result<std::vector<int32_t>> FilterRowGroupsByBitmap(
-        const RoaringBitmap32& bitmap, const std::vector<int32_t>& src_row_groups) const;
+    Result<TargetRowGroups> FilterRowGroupsByBitmap(const RoaringBitmap32& bitmap,
+                                                    const TargetRowGroups& src_row_groups) const;
 
     // Apply page-level filtering using column index.
     // Returns (filtered row groups, per-row-group RowRanges for partial matches).
-    Result<std::pair<std::vector<int32_t>, std::map<int32_t, RowRanges>>>
-    FilterRowGroupsByPageIndex(const std::shared_ptr<Predicate>& predicate,
-                               const std::map<std::string, int32_t>& column_name_to_index,
-                               const std::vector<int32_t>& src_row_groups);
+    Result<TargetRowGroups> FilterRowGroupsByPageIndex(
+        const std::shared_ptr<Predicate>& predicate,
+        const std::map<std::string, int32_t>& column_name_to_index,
+        const TargetRowGroups& src_row_groups) const;
 
  private:
     std::map<std::string, std::string> options_;

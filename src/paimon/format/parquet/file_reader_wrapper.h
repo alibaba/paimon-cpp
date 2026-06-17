@@ -33,6 +33,7 @@
 #include "arrow/type_fwd.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/format/parquet/row_ranges.h"
+#include "paimon/format/parquet/target_row_group.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 #include "parquet/arrow/reader.h"
