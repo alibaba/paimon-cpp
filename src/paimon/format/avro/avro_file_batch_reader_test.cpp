@@ -295,6 +295,39 @@ TEST_F(AvroFileBatchReaderTest, TestReadMapTypes) {
     ASSERT_TRUE(expected_array->Equals(result_array));
 }
 
+TEST_F(AvroFileBatchReaderTest, TestSetReadSchemaRejectNestedSubFieldProjection) {
+    std::string path = PathUtil::JoinPath(dir_->Str(), "nested_projection_unsupported.avro");
+
+    arrow::FieldVector write_fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::struct_({arrow::field("a", arrow::int32()),
+                                           arrow::field("b", arrow::utf8())}))};
+    auto write_type = arrow::struct_(write_fields);
+    auto write_array =
+        arrow::ipc::internal::json::ArrayFromJSON(write_type, R"([
+            [1, [10, "x"]],
+            [2, [20, "y"]]
+        ])")
+            .ValueOrDie();
+    WriteData(write_array, path, /*compression=*/"null");
+
+    ASSERT_OK_AND_ASSIGN(auto reader_builder,
+                         file_format_->CreateReaderBuilder(/*batch_size=*/1024));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(path));
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, reader_builder->Build(in));
+
+    arrow::FieldVector read_fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::struct_({arrow::field("a", arrow::int32())}))};
+    auto read_schema = arrow::schema(read_fields);
+    std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
+
+    ASSERT_NOK_WITH_MSG(batch_reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr,
+                                                    /*selection_bitmap=*/std::nullopt),
+                        "does not support nested sub-field projection");
+}
+
 TEST_F(AvroFileBatchReaderTest, TestGetPreviousBatchFirstRowNumber) {
     std::string path = paimon::test::GetDataDir() +
                        "/avro/append_simple.db/"

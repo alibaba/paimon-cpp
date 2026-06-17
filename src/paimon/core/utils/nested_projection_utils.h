@@ -77,6 +77,11 @@ class PAIMON_EXPORT NestedProjectionUtils {
         const std::shared_ptr<arrow::DataType>& read_type,
         const std::shared_ptr<arrow::DataType>& data_type);
 
+    /// Returns true if `read_schema` requests a nested sub-field projection against
+    /// `file_schema` (same top-level field, but nested STRUCT/LIST/MAP subtree is pruned).
+    static Result<bool> HasNestedSubfieldProjection(const std::shared_ptr<arrow::Schema>& file_schema,
+                                                    const std::shared_ptr<arrow::Schema>& read_schema);
+
     /// Parse the "paimon.map.selected-keys" metadata from an Arrow field.
     /// Returns an empty set if the metadata key is absent or the field is not a MAP.
     /// The metadata value must be a JSON array of strings, e.g. '["key1","key2"]'.
@@ -87,6 +92,14 @@ class PAIMON_EXPORT NestedProjectionUtils {
     /// `selected_keys` is empty.
     static Result<std::shared_ptr<arrow::Array>> FilterMapArrayBySelectedKeys(
         const std::shared_ptr<arrow::Array>& map_array, const std::set<std::string>& selected_keys);
+
+ private:
+    static std::shared_ptr<arrow::Field> FindFieldByName(const arrow::FieldVector& fields,
+                                                         const std::string& name);
+
+    static Result<bool> HasNestedSubfieldProjectionType(
+        const std::shared_ptr<arrow::DataType>& file_type,
+        const std::shared_ptr<arrow::DataType>& read_type);
 };
 
 }  // namespace paimon

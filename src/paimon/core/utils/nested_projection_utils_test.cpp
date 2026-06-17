@@ -169,6 +169,38 @@ TEST(NestedProjectionUtilsTest, PruneDataType_MapWithStructValue) {
     ASSERT_EQ(map_type->item_type()->field(0)->name(), "a");
 }
 
+TEST(NestedProjectionUtilsTest, HasNestedSubfieldProjection_NoProjection) {
+    auto file_schema = arrow::schema({
+        MakeField("f0", arrow::int32(), 1),
+        MakeField("f1", arrow::struct_({MakeField("a", arrow::int32(), 2)}), 3),
+    });
+    auto read_schema = arrow::schema({
+        MakeField("f0", arrow::int32(), 1),
+        MakeField("f1", arrow::struct_({MakeField("a", arrow::int32(), 2)}), 3),
+    });
+    ASSERT_OK_AND_ASSIGN(auto has_nested_projection,
+                         NestedProjectionUtils::HasNestedSubfieldProjection(file_schema,
+                                                                            read_schema));
+    ASSERT_FALSE(has_nested_projection);
+}
+
+TEST(NestedProjectionUtilsTest, HasNestedSubfieldProjection_WithProjection) {
+    auto file_schema = arrow::schema({
+        MakeField("f0", arrow::int32(), 1),
+        MakeField("f1", arrow::struct_({MakeField("a", arrow::int32(), 2),
+                                         MakeField("b", arrow::utf8(), 4)}),
+                  3),
+    });
+    auto read_schema = arrow::schema({
+        MakeField("f0", arrow::int32(), 1),
+        MakeField("f1", arrow::struct_({MakeField("a", arrow::int32(), 2)}), 3),
+    });
+    ASSERT_OK_AND_ASSIGN(auto has_nested_projection,
+                         NestedProjectionUtils::HasNestedSubfieldProjection(file_schema,
+                                                                            read_schema));
+    ASSERT_TRUE(has_nested_projection);
+}
+
 // ============== GetMapSelectedKeys ==============
 
 TEST(NestedProjectionUtilsTest, GetMapSelectedKeys_Present) {

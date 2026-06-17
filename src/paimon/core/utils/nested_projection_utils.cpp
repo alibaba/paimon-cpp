@@ -32,6 +32,65 @@
 
 namespace paimon {
 
+std::shared_ptr<arrow::Field> NestedProjectionUtils::FindFieldByName(
+    const arrow::FieldVector& fields, const std::string& name) {
+    for (const auto& field : fields) {
+        if (field->name() == name) {
+            return field;
+        }
+    }
+    return nullptr;
+}
+
+Result<bool> NestedProjectionUtils::HasNestedSubfieldProjectionType(
+    const std::shared_ptr<arrow::DataType>& file_type,
+    const std::shared_ptr<arrow::DataType>& read_type) {
+    if (file_type->id() != read_type->id()) {
+        return false;
+    }
+
+    switch (file_type->id()) {
+        case arrow::Type::STRUCT: {
+            auto file_struct = std::static_pointer_cast<arrow::StructType>(file_type);
+            auto read_struct = std::static_pointer_cast<arrow::StructType>(read_type);
+            if (read_struct->num_fields() != file_struct->num_fields()) {
+                return true;
+            }
+            for (const auto& read_child : read_struct->fields()) {
+                auto file_child = FindFieldByName(file_struct->fields(), read_child->name());
+                if (!file_child) {
+                    return true;
+                }
+                PAIMON_ASSIGN_OR_RAISE(bool child_has_nested_projection,
+                                       HasNestedSubfieldProjectionType(file_child->type(),
+                                                                       read_child->type()));
+                if (child_has_nested_projection) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        case arrow::Type::LIST: {
+            auto file_list = std::static_pointer_cast<arrow::ListType>(file_type);
+            auto read_list = std::static_pointer_cast<arrow::ListType>(read_type);
+            return HasNestedSubfieldProjectionType(file_list->value_type(), read_list->value_type());
+        }
+        case arrow::Type::MAP: {
+            auto file_map = std::static_pointer_cast<arrow::MapType>(file_type);
+            auto read_map = std::static_pointer_cast<arrow::MapType>(read_type);
+            PAIMON_ASSIGN_OR_RAISE(bool key_has_nested_projection,
+                                   HasNestedSubfieldProjectionType(file_map->key_type(),
+                                                                   read_map->key_type()));
+            if (key_has_nested_projection) {
+                return true;
+            }
+            return HasNestedSubfieldProjectionType(file_map->item_type(), read_map->item_type());
+        }
+        default:
+            return false;
+    }
+}
+
 Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::PruneDataType(
     const std::shared_ptr<arrow::DataType>& read_type,
     const std::shared_ptr<arrow::DataType>& data_type) {
@@ -101,6 +160,28 @@ Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::P
             // separately by CastExecutor).
             return std::optional<std::shared_ptr<arrow::DataType>>(data_type);
     }
+}
+
+Result<bool> NestedProjectionUtils::HasNestedSubfieldProjection(
+    const std::shared_ptr<arrow::Schema>& file_schema,
+    const std::shared_ptr<arrow::Schema>& read_schema) {
+    for (const auto& read_field : read_schema->fields()) {
+        auto file_field = file_schema->GetFieldByName(read_field->name());
+        if (!file_field) {
+            continue;
+        }
+        if (read_field->type()->id() == arrow::Type::STRUCT ||
+            read_field->type()->id() == arrow::Type::LIST ||
+            read_field->type()->id() == arrow::Type::MAP) {
+            PAIMON_ASSIGN_OR_RAISE(bool has_nested_projection,
+                                   HasNestedSubfieldProjectionType(file_field->type(),
+                                                                   read_field->type()));
+            if (has_nested_projection) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 // Map selected-keys support
