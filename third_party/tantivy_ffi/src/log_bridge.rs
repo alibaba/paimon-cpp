@@ -2,7 +2,7 @@
 //! (via `tantivy::debug` / `info` etc.). This module registers a global
 //! `log::Log` implementation that forwards records to a C callback.
 //!
-//! Contract (see docs/dev/tantivy_ffi_design.md §7):
+//! Contract:
 //! - C++ calls `paimon_tantivy_set_log_callback(cb)` once at process startup
 //! - Passing null unregisters (reverts to stderr)
 //! - Callback receives (level, msg_ptr, msg_len); pointer is non-null,
@@ -11,7 +11,7 @@
 //! - Callback must be thread-safe: tantivy writes from worker threads
 //!
 //! NOTE: tantivy uses `tracing` in newer versions and `log` in others.
-//! Our current `tantivy = "0.22"` uses `log` (verified Stage 0.5 probe).
+//! Our current `tantivy = "0.22"` uses `log`.
 //! If a future upgrade switches to `tracing`, install a `tracing-log`
 //! bridge here.
 

@@ -75,14 +75,10 @@ Result<std::shared_ptr<TantivyGlobalIndexReader>> TantivyGlobalIndexReader::Crea
         bool omit_term_freq_and_positions,
         OptionsUtils::GetValueFromMap(write_options, kTantivyWriteOmitTermFreqAndPositions, false));
 
-    // Tolerate a missing jieba dict dir on the read path: paimon-java tantivy
-    // archives use the built-in `"default"` (SimpleTokenizer) and do not need
-    // jieba — the Rust reader's tokenizer-registration branch skips dict_dir
-    // entirely in that case (third_party/tantivy_ffi/src/reader.rs:111 →
-    // `let _ = (mode, dict_dir)`). For archives that DO use jieba (paimon-cpp
-    // written with `tantivy.write.tokenizer = paimon_jieba`), the Rust side
-    // surfaces a clear "create paimon_jieba tokenizer" failure when it tries to
-    // load the dictionary from an empty path, so the error stays actionable.
+    // Tolerate a missing jieba dict dir on the read path: paimon-java archives
+    // use the built-in "default" tokenizer and need no dictionary, so the Rust
+    // reader ignores dict_dir for them. Archives that do use jieba still get an
+    // actionable error from the Rust side when the dictionary path is empty.
     std::string dict_dir = GetJiebaDictionaryDirFromEnv().value_or(std::string());
 
     // Streaming read path:

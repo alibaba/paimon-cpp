@@ -203,7 +203,9 @@ TEST_F(TantivyGlobalIndexWriterTest, EnglishCorpusProducesValidPackedIndex) {
     ASSERT_FALSE(entries.empty());
     bool has_meta_json = false;
     for (const auto& e : entries) {
-        if (e.name == "meta.json") has_meta_json = true;
+        if (e.name == "meta.json") {
+            has_meta_json = true;
+        }
     }
     ASSERT_TRUE(has_meta_json) << "expected meta.json in packed entries";
 }

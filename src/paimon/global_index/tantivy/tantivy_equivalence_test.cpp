@@ -237,7 +237,7 @@ TEST_F(TantivyEquivalenceTest, EnglishBagOfWordsBattery) {
     };
     for (const auto& c : cases) {
         auto [l, t] = RunPair(pair, c.query, c.type);
-        ASSERT_EQ(l, t) << "diverge: query=" << c.query << " type=" << static_cast<int>(c.type);
+        ASSERT_EQ(l, t) << "diverge: query=" << c.query << " type=" << static_cast<int32_t>(c.type);
     }
 }
 
@@ -273,7 +273,7 @@ TEST_F(TantivyEquivalenceTest, ChineseQueryModeBattery) {
     };
     for (const auto& c : cases) {
         auto [l, t] = RunPair(pair, c.query, c.type);
-        ASSERT_EQ(l, t) << "diverge: query=" << c.query << " type=" << static_cast<int>(c.type);
+        ASSERT_EQ(l, t) << "diverge: query=" << c.query << " type=" << static_cast<int32_t>(c.type);
     }
 }
 
@@ -314,26 +314,30 @@ TEST_F(TantivyEquivalenceTest, BenchmarkBuildAndQuery) {
     // Build a synthetic 200-doc corpus and time write + 100 random queries.
     // This is a reportable baseline, NOT a perf gate — assertions only check
     // semantic correctness (each query returns >= 0 docs without erroring).
-    constexpr int kDocCount = 200;
-    constexpr int kQueryCount = 100;
+    constexpr int32_t kDocCount = 200;
+    constexpr int32_t kQueryCount = 100;
     std::vector<std::string> vocab = {"alpha",  "beta", "gamma", "delta", "epsilon",
                                       "zeta",   "eta",  "theta", "iota",  "kappa",
                                       "lambda", "mu",   "nu",    "xi",    "omicron"};
     std::mt19937 rng(0xC0DE);
     std::uniform_int_distribution<size_t> word_pick(0, vocab.size() - 1);
-    std::uniform_int_distribution<int> word_count(3, 12);
+    std::uniform_int_distribution<int32_t> word_count(3, 12);
 
     // Build the corpus as a JSON Arrow array.
     std::string json = "[";
-    for (int i = 0; i < kDocCount; ++i) {
+    for (int32_t i = 0; i < kDocCount; ++i) {
         json += "[\"";
-        int n = word_count(rng);
-        for (int w = 0; w < n; ++w) {
-            if (w > 0) json += ' ';
+        int32_t n = word_count(rng);
+        for (int32_t w = 0; w < n; ++w) {
+            if (w > 0) {
+                json += ' ';
+            }
             json += vocab[word_pick(rng)];
         }
         json += "\"]";
-        if (i + 1 < kDocCount) json += ",";
+        if (i + 1 < kDocCount) {
+            json += ",";
+        }
     }
     json += "]";
 
@@ -356,11 +360,12 @@ TEST_F(TantivyEquivalenceTest, BenchmarkBuildAndQuery) {
     auto lreader = OpenOne("lucene-fts", data_type, lopt, lmeta, lroot->Str());
 
     auto lquery_ms = time_ms([&] {
-        for (int i = 0; i < kQueryCount; ++i) {
+        for (int32_t i = 0; i < kQueryCount; ++i) {
             const std::string& w = vocab[word_pick(rng)];
-            auto r = lreader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-                "f0", std::nullopt, w, FullTextSearch::SearchType::MATCH_ALL, std::nullopt));
-            ASSERT_TRUE(r.ok());
+            ASSERT_OK_AND_ASSIGN(
+                auto r,
+                lreader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                    "f0", std::nullopt, w, FullTextSearch::SearchType::MATCH_ALL, std::nullopt)));
         }
     });
 
@@ -372,11 +377,12 @@ TEST_F(TantivyEquivalenceTest, BenchmarkBuildAndQuery) {
     auto treader = OpenOne("tantivy-fulltext", data_type, {}, tmeta, troot->Str());
 
     auto tquery_ms = time_ms([&] {
-        for (int i = 0; i < kQueryCount; ++i) {
+        for (int32_t i = 0; i < kQueryCount; ++i) {
             const std::string& w = vocab[word_pick(rng)];
-            auto r = treader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-                "f0", std::nullopt, w, FullTextSearch::SearchType::MATCH_ALL, std::nullopt));
-            ASSERT_TRUE(r.ok());
+            ASSERT_OK_AND_ASSIGN(
+                auto r,
+                treader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                    "f0", std::nullopt, w, FullTextSearch::SearchType::MATCH_ALL, std::nullopt)));
         }
     });
 

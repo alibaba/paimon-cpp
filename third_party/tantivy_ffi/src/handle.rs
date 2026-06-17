@@ -1,6 +1,6 @@
 //! Opaque handle helpers.
 //!
-//! Contract (see docs/dev/tantivy_ffi_design.md §3 Category A):
+//! Contract:
 //! - Rust creates handles with `Box::into_raw(Box::new(T))`
 //! - C++ must free with the matching `xxx_free(*mut T)` function, once
 //! - Functions accepting handles treat null as invalid argument

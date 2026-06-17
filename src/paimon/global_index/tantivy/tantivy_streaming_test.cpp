@@ -21,19 +21,13 @@
  *      by Rust stream_mutex, results consistent, no race
  *   3. ConcurrentCreateAndDropReaders — 10 threads each open/query/close their
  *      own reader on the same archive; no leaks, release exactly-once per reader
- *   4. StreamingBenchmarkLog — builds a medium index, prints RSS/timing to
- *      stderr for baseline comparison
  *
  * We don't duplicate tests already covered by the Rust unit tests
  * (callback_directory::tests::* for Directory semantics, writer::tests::
- * streaming_chunk_size_bounded_by_buffer for the 64KB buffer guarantee).
+ * streaming_chunk_size_bounded_by_buffer for the streaming buffer guarantee).
  */
 
-#include <sys/resource.h>
-
 #include <atomic>
-#include <chrono>
-#include <cinttypes>
 #include <cstring>
 #include <memory>
 #include <thread>
@@ -123,15 +117,16 @@ class StreamingTestFixture : public ::testing::Test {
         auto global_index = std::make_shared<TantivyGlobalIndex>(options);
         auto path_factory = std::make_shared<FakeIndexPathFactory>(root);
         auto file_writer = std::make_shared<GlobalIndexFileManager>(fs_, path_factory);
-        auto w = global_index->CreateWriter("f0", c_schema.get(), file_writer, pool_).value();
+        EXPECT_OK_AND_ASSIGN(auto w,
+                             global_index->CreateWriter("f0", c_schema.get(), file_writer, pool_));
         ::ArrowArray c_array;
         EXPECT_TRUE(arrow::ExportArray(*struct_array, &c_array).ok());
         std::vector<int64_t> relative_row_ids(struct_array->length());
         for (int64_t i = 0; i < struct_array->length(); ++i) {
             relative_row_ids[i] = i;
         }
-        EXPECT_TRUE(w->AddBatch(&c_array, std::move(relative_row_ids)).ok());
-        auto metas = w->Finish().value();
+        EXPECT_OK(w->AddBatch(&c_array, std::move(relative_row_ids)));
+        EXPECT_OK_AND_ASSIGN(auto metas, w->Finish());
         EXPECT_EQ(metas.size(), 1u);
 
         // Move root_dir into the result — it stays alive as long as the
@@ -148,7 +143,9 @@ class StreamingTestFixture : public ::testing::Test {
         auto global_index = std::make_shared<TantivyGlobalIndex>(options);
         auto path_factory = std::make_shared<FakeIndexPathFactory>(root);
         auto file_reader = std::make_shared<GlobalIndexFileManager>(fs_, path_factory);
-        return global_index->CreateReader(c_schema.get(), file_reader, {meta}, pool_).value();
+        EXPECT_OK_AND_ASSIGN(
+            auto reader, global_index->CreateReader(c_schema.get(), file_reader, {meta}, pool_));
+        return reader;
     }
 
     std::shared_ptr<FullTextSearch> BuildMatchAll(const std::string& query) {
@@ -173,8 +170,7 @@ TEST(ParseArchiveHeaderFuzz, TruncatedHeader) {
     // Fewer than 4 bytes → DataInputStream::ReadValue<int32_t> fails
     std::string bytes = "\x00\x00";
     ByteArrayInputStream in(bytes.data(), bytes.size());
-    auto r = ArchiveLayout::Parse(&in);
-    ASSERT_FALSE(r.ok()) << "expected failure on truncated header";
+    ASSERT_NOK(ArchiveLayout::Parse(&in)) << "expected failure on truncated header";
 }
 
 TEST(ParseArchiveHeaderFuzz, NegativeFileCount) {
@@ -182,10 +178,7 @@ TEST(ParseArchiveHeaderFuzz, NegativeFileCount) {
     char bytes[4] = {static_cast<char>(0xFF), static_cast<char>(0xFF), static_cast<char>(0xFF),
                      static_cast<char>(0xFF)};
     ByteArrayInputStream in(bytes, 4);
-    auto r = ArchiveLayout::Parse(&in);
-    ASSERT_FALSE(r.ok());
-    ASSERT_NE(r.status().message().find("bad file_count"), std::string::npos)
-        << r.status().ToString();
+    ASSERT_NOK_WITH_MSG(ArchiveLayout::Parse(&in), "bad file_count");
 }
 
 TEST(ParseArchiveHeaderFuzz, NameLenOutOfRange) {
@@ -199,10 +192,7 @@ TEST(ParseArchiveHeaderFuzz, NameLenOutOfRange) {
                      static_cast<char>(0xFF),
                      static_cast<char>(0xFF)};
     ByteArrayInputStream in(bytes, 8);
-    auto r = ArchiveLayout::Parse(&in);
-    ASSERT_FALSE(r.ok());
-    ASSERT_NE(r.status().message().find("bad name_len"), std::string::npos)
-        << r.status().ToString();
+    ASSERT_NOK_WITH_MSG(ArchiveLayout::Parse(&in), "bad name_len");
 }
 
 TEST(ParseArchiveHeaderFuzz, ZeroFileCountSucceeds) {
@@ -210,9 +200,8 @@ TEST(ParseArchiveHeaderFuzz, ZeroFileCountSucceeds) {
     // tantivy::Index::open finds no meta.json, but parse itself OK.
     char bytes[4] = {0, 0, 0, 0};
     ByteArrayInputStream in(bytes, 4);
-    auto r = ArchiveLayout::Parse(&in);
-    ASSERT_TRUE(r.ok()) << r.status().ToString();
-    ASSERT_EQ(r.value().count, 0u);
+    ASSERT_OK_AND_ASSIGN(auto r, ArchiveLayout::Parse(&in));
+    ASSERT_EQ(r.count, 0u);
 }
 
 TEST(ParseArchiveHeaderFuzz, PayloadLenNegative) {
@@ -241,10 +230,7 @@ TEST(ParseArchiveHeaderFuzz, PayloadLenNegative) {
         static_cast<char>(0xFF),
     };
     ByteArrayInputStream in(bytes, sizeof(bytes));
-    auto r = ArchiveLayout::Parse(&in);
-    ASSERT_FALSE(r.ok());
-    ASSERT_NE(r.status().message().find("bad data_len"), std::string::npos)
-        << r.status().ToString();
+    ASSERT_NOK_WITH_MSG(ArchiveLayout::Parse(&in), "bad data_len");
 }
 
 // =========================================================================
@@ -259,13 +245,13 @@ TEST_F(StreamingTestFixture, ConcurrentQueryOnSameReader) {
     auto fts = BuildMatchAll("apple");
 
     // 4 threads × 20 queries each, all must return 50 rowIds
-    constexpr int kThreads = 4;
-    constexpr int kIters = 20;
+    constexpr int32_t kThreads = 4;
+    constexpr int32_t kIters = 20;
     std::vector<std::thread> threads;
-    std::atomic<int> failures{0};
-    for (int t = 0; t < kThreads; ++t) {
+    std::atomic<int32_t> failures{0};
+    for (int32_t t = 0; t < kThreads; ++t) {
         threads.emplace_back([&] {
-            for (int i = 0; i < kIters; ++i) {
+            for (int32_t i = 0; i < kIters; ++i) {
                 auto result = reader->VisitFullTextSearch(fts);
                 if (!result.ok() || !result.value()) {
                     failures++;
@@ -284,7 +270,9 @@ TEST_F(StreamingTestFixture, ConcurrentQueryOnSameReader) {
             }
         });
     }
-    for (auto& th : threads) th.join();
+    for (auto& th : threads) {
+        th.join();
+    }
     ASSERT_EQ(failures.load(), 0) << "concurrent queries produced inconsistent results";
 }
 
@@ -297,12 +285,12 @@ TEST_F(StreamingTestFixture, ConcurrentCreateAndDropReaders) {
     // Validates exactly-once release (no UAF under ASAN) and open/close race safety.
     auto wr = BuildArchive(20);
 
-    constexpr int kThreads = 10;
+    constexpr int32_t kThreads = 10;
     std::vector<std::thread> threads;
-    std::atomic<int> failures{0};
-    for (int t = 0; t < kThreads; ++t) {
+    std::atomic<int32_t> failures{0};
+    for (int32_t t = 0; t < kThreads; ++t) {
         threads.emplace_back([&, t] {
-            for (int i = 0; i < 5; ++i) {
+            for (int32_t i = 0; i < 5; ++i) {
                 auto reader = OpenReader(wr.root_dir, wr.meta);
                 if (!reader) {
                     failures++;
@@ -318,50 +306,10 @@ TEST_F(StreamingTestFixture, ConcurrentCreateAndDropReaders) {
             (void)t;
         });
     }
-    for (auto& th : threads) th.join();
+    for (auto& th : threads) {
+        th.join();
+    }
     ASSERT_EQ(failures.load(), 0);
-}
-
-// =========================================================================
-// 4. Benchmark log (non-assertion)
-// =========================================================================
-
-TEST_F(StreamingTestFixture, StreamingBenchmarkLog) {
-    auto rss_kb = []() {
-        struct rusage ru;
-        getrusage(RUSAGE_SELF, &ru);
-        // Linux: KB; macOS: bytes
-        return static_cast<int64_t>(ru.ru_maxrss);
-    };
-
-    int64_t rss_before = rss_kb();
-    auto t0 = std::chrono::steady_clock::now();
-    auto wr = BuildArchive(200);
-    auto t1 = std::chrono::steady_clock::now();
-    int64_t rss_after_write = rss_kb();
-
-    auto reader = OpenReader(wr.root_dir, wr.meta);
-    auto t2 = std::chrono::steady_clock::now();
-    int64_t rss_after_open = rss_kb();
-
-    auto fts = BuildMatchAll("apple");
-    auto result = reader->VisitFullTextSearch(fts);
-    auto t3 = std::chrono::steady_clock::now();
-
-    auto write_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
-    auto open_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-    auto query_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2).count();
-
-    std::fprintf(stderr,
-                 "[BENCHMARK] streaming (200 docs): "
-                 "write=%" PRId64 "ms open=%" PRId64 "ms query=%" PRId64
-                 "ms "
-                 "rss_before=%" PRId64 "KB rss_after_write=%" PRId64 "KB rss_after_open=%" PRId64
-                 "KB\n",
-                 static_cast<int64_t>(write_ms), static_cast<int64_t>(open_ms),
-                 static_cast<int64_t>(query_ms), rss_before, rss_after_write, rss_after_open);
-    ASSERT_TRUE(result.ok());
-    SUCCEED();
 }
 
 }  // namespace

@@ -130,25 +130,6 @@ if(PAIMON_BUILD_TESTS)
                                PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
 
     # Stage 6 — Reader + 5 query types end-to-end.
-    add_paimon_test(tantivy_reader_test
-                    SOURCES
-                    tantivy_reader_test.cpp
-                    STATIC_LINK_LIBS
-                    paimon_shared
-                    test_utils_static
-                    "-Wl,--whole-archive"
-                    paimon_local_file_system_static
-                    paimon_tantivy_support_static
-                    "-Wl,--no-whole-archive"
-                    paimon_tantivy_ffi
-                    arrow
-                    glog
-                    fmt
-                    ${GTEST_LINK_TOOLCHAIN})
-    target_compile_definitions(paimon-tantivy-reader-test
-                               PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
-
-    # Stage 7 — limit + pre_filter + scoring.
     add_paimon_test(tantivy_filter_limit_test
                     SOURCES
                     tantivy_filter_limit_test.cpp

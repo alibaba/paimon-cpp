@@ -60,8 +60,8 @@ inline Status FfiStatusToStatus(::PaimonTantivyStatus code) {
                 return "UnknownFfiStatus";
         }
     }();
-    std::string msg =
-        fmt::format("tantivy-ffi[{}({})]: {}", name, static_cast<int>(code), err ? err : "(null)");
+    std::string msg = fmt::format("tantivy-ffi[{}({})]: {}", name, static_cast<int32_t>(code),
+                                  err ? err : "(null)");
     switch (code) {
         case PAIMON_TANTIVY_STATUS_NOT_FOUND:
             return Status::NotExist(msg);

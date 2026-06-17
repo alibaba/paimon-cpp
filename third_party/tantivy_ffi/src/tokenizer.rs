@@ -1,11 +1,11 @@
 //! PaimonJiebaTokenizer: tantivy Tokenizer impl wrapping jieba-rs.
 //!
-//! Contract (see docs/dev/tantivy_ffi_design.md §4.2 and migration plan Stage 3):
+//! Contract:
 //! - Behavior-equivalent with `JiebaAnalyzer` in src/paimon/global_index/lucene/
 //! - 5 modes: mp / hmm / mix / full / query
 //!   - `hmm` is Unsupported (jieba-rs has no standalone HMM entry point)
 //!   - `mp` accepts cut(hmm=false) but does not replicate cppjieba's
-//!     max_word_len truncation (docs/dev/tantivy_ffi_design.md §9.3 entry)
+//!     max_word_len truncation
 //! - Normalize: skip pure whitespace, skip stop_words, lowercase ASCII-only tokens
 //! - Token offsets: byte offsets into the original UTF-8 string
 //! - `with_position=false`: all tokens emitted at `position=0` (disables PhraseQuery)
@@ -289,7 +289,7 @@ pub unsafe extern "C" fn paimon_tantivy_tokenizer_free(tok: *mut PaimonJiebaToke
 }
 
 /// Tokenize a string and return a newline-delimited list of tokens as bytes.
-/// Used for Stage 3 golden-sample tests (easy to diff from C++).
+/// Used for golden-sample tests (easy to diff from C++).
 ///
 /// Output format:
 ///   `<offset_from>\t<offset_to>\t<position>\t<text>\n` for each token.

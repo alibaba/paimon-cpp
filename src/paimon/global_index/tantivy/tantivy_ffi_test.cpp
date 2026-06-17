@@ -32,7 +32,7 @@ extern "C" {
 #include "paimon_tantivy_ffi.h"  // NOLINT(build/include_subdir)
 }
 
-namespace paimon::tantivy {
+namespace paimon::tantivy::test {
 
 // ------------------------- last_error contract -------------------------
 
@@ -94,7 +94,7 @@ TEST(TantivyFfiBuffer, EmptyBufferGuard) {
 // temporary wrapping of the buffer API: alloc buffers repeatedly, ensure no
 // crash (LSAN / ASAN would catch leaks).
 TEST(TantivyFfiBuffer, StressAllocFree) {
-    for (int i = 0; i < 1000; ++i) {
+    for (int32_t i = 0; i < 1000; ++i) {
         BufferGuard g;
         // We don't have a way to populate the buffer from C++ here;
         // this just exercises empty construction + destruction path.
@@ -105,7 +105,7 @@ TEST(TantivyFfiBuffer, StressAllocFree) {
 // ------------------------- log bridge -------------------------
 
 namespace {
-std::atomic<int> g_log_count{0};
+std::atomic<int32_t> g_log_count{0};
 extern "C" void CountingLogCb(int32_t /*level*/, const char* /*msg*/, std::size_t /*len*/) {
     g_log_count.fetch_add(1, std::memory_order_relaxed);
 }
@@ -135,4 +135,4 @@ TEST(TantivyFfi, VersionReachable) {
     ASSERT_GT(std::strlen(v), 0u);
 }
 
-}  // namespace paimon::tantivy
+}  // namespace paimon::tantivy::test

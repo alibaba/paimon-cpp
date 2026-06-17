@@ -73,7 +73,7 @@ impl PaimonTantivyWriter {
         if field_name.is_empty() {
             return Err("field_name must be non-empty".into());
         }
-        // Schema is fixed to match paimon-java (decision B1): row_id (u64
+        // Schema is fixed to match paimon-java: row_id (u64
         // stored+indexed+fast) + text (TEXT). The caller-supplied `field_name`
         // parameter is currently ignored by the Rust schema (kept for FFI
         // backward-compatibility); the C++ side still uses it to extract the
@@ -130,7 +130,7 @@ impl PaimonTantivyWriter {
                 .register(PAIMON_TOKENIZER_NAME, tokenizer);
         }
 
-        // Default multi-threaded writer (B1 schema stores row_id explicitly so
+        // Default multi-threaded writer (schema stores row_id explicitly so
         // we no longer need single-threaded ordering invariants). tantivy will
         // use min(num_cpus, MAX_NUM_THREAD=8) workers, splitting heap budget.
         let writer: IndexWriter = index
@@ -236,7 +236,7 @@ impl PaimonTantivyWriter {
 }
 
 // =========================================================================
-// Streaming pack (W1)
+// Streaming pack
 // =========================================================================
 
 /// Streaming pack buffer size. 1MB matches the buffer size data-lake storage
@@ -245,7 +245,7 @@ impl PaimonTantivyWriter {
 /// does not affect stack usage.
 const WRITER_STREAM_BUFFER_SIZE: usize = 1024 * 1024;
 
-/// Callback table passed from C++ for streaming writer output (W1).
+/// Callback table passed from C++ for streaming writer output.
 ///
 /// `ctx` is an opaque pointer to C++'s `WriteCtx` (holding a `paimon::OutputStream`).
 /// `write` is called in-order by Rust (not concurrently) to push bytes.
@@ -616,7 +616,7 @@ mod tests {
 
     #[test]
     fn multi_thread_writer_default() {
-        // B1 schema stores row_id explicitly so we no longer enforce
+        // Schema stores row_id explicitly so we no longer enforce
         // single-threaded writer. Just verify many docs across threads land
         // correctly and force-merge collapses to a single segment.
         let mut w =

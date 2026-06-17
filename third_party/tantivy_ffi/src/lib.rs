@@ -1,13 +1,8 @@
 //! paimon_tantivy_ffi: C ABI layer for tantivy + jieba-rs,
 //! consumed by paimon-cpp's `tantivy-fulltext` global index.
 //!
-//! See `docs/dev/tantivy_ffi_design.md` for the contract.
-//!
-//! Stage 1: scaffold + version FFI.
-//! Stage 2: error / handle / buffer / log modules.
-//! Stage 3: tokenizer.
-//! Stage 4: writer.
-//! Later stages fill in directory / reader / query.
+//! Modules: error / handle / buffer / log (common FFI layer), tokenizer,
+//! writer, callback directory, and reader (query).
 
 #![deny(unsafe_op_in_unsafe_fn)]
 

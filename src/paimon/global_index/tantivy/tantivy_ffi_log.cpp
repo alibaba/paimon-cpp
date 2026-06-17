@@ -26,8 +26,10 @@ extern "C" {
 }
 
 namespace paimon::tantivy {
-namespace {
 
+// Not in an anonymous namespace: `extern "C"` (external linkage) and an
+// anonymous namespace (internal linkage) are contradictory. Only referenced
+// via function pointer below, so symbol visibility is not a concern.
 /// Level mapping matches Rust side (0=trace..4=error).
 extern "C" void PaimonTantivyLogAdapter(int32_t level, const char* msg, std::size_t len) {
     // msg is NOT null-terminated; slice with len.
@@ -53,8 +55,6 @@ extern "C" void PaimonTantivyLogAdapter(int32_t level, const char* msg, std::siz
             break;
     }
 }
-
-}  // namespace
 
 void InstallTantivyLogBridge() {
     paimon_tantivy_set_log_callback(&PaimonTantivyLogAdapter);

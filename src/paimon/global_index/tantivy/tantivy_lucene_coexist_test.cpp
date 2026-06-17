@@ -146,15 +146,13 @@ class TantivyLuceneCoexistTest : public ::testing::Test {
     }
 
     static std::set<int64_t> ExtractDocIds(const std::shared_ptr<GlobalIndexResult>& result) {
-        const RoaringBitmap64* bitmap = nullptr;
         Result<const RoaringBitmap64*> br = Status::Invalid("no result");
         if (auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(result)) {
             br = scored->GetBitmap();
         } else if (auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(result)) {
             br = plain->GetBitmap();
         }
-        EXPECT_TRUE(br.ok()) << br.status().ToString();
-        bitmap = br.value();
+        EXPECT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, std::move(br));
         std::set<int64_t> out;
         if (bitmap) {
             for (auto it = bitmap->Begin(); it != bitmap->End(); ++it) {
@@ -219,13 +217,13 @@ TEST_F(TantivyLuceneCoexistTest, SideBySideEnglishCorpusReturnsSameDocIds) {
     ASSERT_EQ(tantivy_reader->GetIndexType(), std::string("tantivy-fulltext"));
 
     auto run_pair = [&](const std::string& q, FullTextSearch::SearchType t) {
-        auto lr = lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-            "f0", /*limit=*/std::nullopt, q, t, /*pre_filter=*/std::nullopt));
-        auto tr = tantivy_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-            "f0", /*limit=*/std::nullopt, q, t, /*pre_filter=*/std::nullopt));
-        EXPECT_TRUE(lr.ok()) << "lucene: " << lr.status().ToString();
-        EXPECT_TRUE(tr.ok()) << "tantivy: " << tr.status().ToString();
-        return std::make_pair(ExtractDocIds(lr.value()), ExtractDocIds(tr.value()));
+        EXPECT_OK_AND_ASSIGN(auto lr,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0", /*limit=*/std::nullopt, q, t, /*pre_filter=*/std::nullopt)));
+        EXPECT_OK_AND_ASSIGN(auto tr,
+                             tantivy_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0", /*limit=*/std::nullopt, q, t, /*pre_filter=*/std::nullopt)));
+        return std::make_pair(ExtractDocIds(lr), ExtractDocIds(tr));
     };
 
     // For an English bag-of-words corpus the two implementations should agree
@@ -259,7 +257,7 @@ TEST_F(TantivyLuceneCoexistTest, IndependentLifecycleNoStateLeakage) {
     // we'd see crashes or stale results.
     auto data_type = arrow::struct_({arrow::field("f0", arrow::utf8())});
 
-    for (int round = 0; round < 3; ++round) {
+    for (int32_t round = 0; round < 3; ++round) {
         auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
             ["round payload one"],
             ["round payload two"]
@@ -276,15 +274,14 @@ TEST_F(TantivyLuceneCoexistTest, IndependentLifecycleNoStateLeakage) {
         ASSERT_OK_AND_ASSIGN(auto lr, OpenReader(kLucene, lroot->Str(), data_type, {}, lm));
         ASSERT_OK_AND_ASSIGN(auto tr, OpenReader(kTantivy, troot->Str(), data_type, {}, tm));
 
-        auto lq = lr->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-            "f0", std::nullopt, "payload", FullTextSearch::SearchType::MATCH_ALL, std::nullopt));
-        auto tq = tr->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-            "f0", std::nullopt, "payload", FullTextSearch::SearchType::MATCH_ALL, std::nullopt));
-        ASSERT_TRUE(lq.ok());
-        ASSERT_TRUE(tq.ok());
-        ASSERT_EQ(ExtractDocIds(lq.value()), (std::set<int64_t>{0, 1})) << "lucene round " << round;
-        ASSERT_EQ(ExtractDocIds(tq.value()), (std::set<int64_t>{0, 1}))
-            << "tantivy round " << round;
+        ASSERT_OK_AND_ASSIGN(auto lq, lr->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                          "f0", std::nullopt, "payload",
+                                          FullTextSearch::SearchType::MATCH_ALL, std::nullopt)));
+        ASSERT_OK_AND_ASSIGN(auto tq, tr->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                          "f0", std::nullopt, "payload",
+                                          FullTextSearch::SearchType::MATCH_ALL, std::nullopt)));
+        ASSERT_EQ(ExtractDocIds(lq), (std::set<int64_t>{0, 1})) << "lucene round " << round;
+        ASSERT_EQ(ExtractDocIds(tq), (std::set<int64_t>{0, 1})) << "tantivy round " << round;
     }
 }
 

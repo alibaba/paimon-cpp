@@ -10,7 +10,7 @@
 //!   4 PREFIX    — RegexQuery `<escaped>.*` (no tokenization, mirrors lucene-fts)
 //!   5 WILDCARD  — RegexQuery from glob pattern (`*` → `.*`, `?` → `.`, others escaped)
 //!
-//! Decision B1 (paimon-java compat): row_id is stored as an explicit u64 field
+//! For paimon-java compatibility, row_id is stored as an explicit u64 field
 //! (`fast` for O(1) retrieval). Reader translates tantivy DocAddress → row_id
 //! via `fast_fields().u64("row_id").first(doc_id)` per segment.
 //!
@@ -75,7 +75,7 @@ pub struct PaimonTantivyReader {
 impl PaimonTantivyReader {
     /// Construct a reader from a pre-built callback-backed Directory.
     /// Layout (file names + offsets + lengths) must come from the caller
-    /// (C++ side `ParseArchiveHeader`); Rust does not re-parse the archive.
+    /// (C++ side `ArchiveLayout::Parse`); Rust does not re-parse the archive.
     pub fn new(
         directory: PaimonCallbackDirectory,
         mode: TokenizeMode,
@@ -85,7 +85,7 @@ impl PaimonTantivyReader {
         let index = Index::open(directory)
             .map_err(|e| format!("tantivy::Index::open: {e}"))?;
 
-        // Resolve fields by their fixed names (B1: schema is `row_id` + `text`).
+        // Resolve fields by their fixed names (schema is `row_id` + `text`).
         let schema = index.schema();
         let text_field = schema.get_field(PAIMON_TEXT_FIELD_NAME).map_err(|e| {
             format!("tantivy index missing '{PAIMON_TEXT_FIELD_NAME}' field: {e}")
@@ -271,7 +271,7 @@ impl PaimonTantivyReader {
     /// truncation so high-score matches outside the filter don't crowd out valid ones.
     ///
     /// **v0.2 contract change**: previously `limit.is_some()` implicitly triggered scoring; now
-    /// scoring is gated solely by `with_score`. See changelog in tantivy_ffi_design.md §4.6.
+    /// scoring is gated solely by `with_score`.
     pub fn search_with_limit_and_filter(
         &self,
         search_type: SearchType,
@@ -643,7 +643,7 @@ impl Collector for AllScoredCollector {
 /// Construct a streaming reader from a layout table + pread callbacks.
 ///
 /// The layout arrays (names / offsets / lengths) are produced by C++-side
-/// `ParseArchiveHeader` after reading only the archive header bytes. Payload
+/// `ArchiveLayout::Parse` after reading only the archive header bytes. Payload
 /// bytes are fetched lazily through `callbacks.read_at` as tantivy reads.
 ///
 /// # Arguments
@@ -965,7 +965,7 @@ mod tests {
     fn open(packed: &[u8]) -> PaimonTantivyReader {
         // Simulate production flow: parse archive header → build layout →
         // back PaimonCallbackDirectory with a mock pread that reads from the
-        // packed Vec. Once C++ `ParseArchiveHeader` (K3) is in place, prod
+        // packed Vec. Once C++ `ArchiveLayout::Parse` is in place, prod
         // uses the same PaimonCallbackDirectory path.
         let (dir, _backend) = build_directory_from_archive(packed.to_vec());
         PaimonTantivyReader::new(dir, TokenizeMode::Mix, true, &dict_dir()).unwrap()
@@ -1035,7 +1035,7 @@ mod tests {
         assert_eq!(wildcard_to_regex("*a*"), ".*a.*");
     }
 
-    // ----- limit + pre_filter + scoring (B1: row_id-based) -----
+    // ----- limit + pre_filter + scoring (row_id-based) -----
 
     #[test]
     fn limit_returns_top_n_with_scores() {
@@ -1144,7 +1144,7 @@ mod tests {
         assert!(rows.is_empty());
     }
 
-    // ----- B1: row_id is independent of doc_id -----
+    // ----- row_id is independent of doc_id -----
 
     #[test]
     fn pre_filter_uses_row_id_not_doc_id() {

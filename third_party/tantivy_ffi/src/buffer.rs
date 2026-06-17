@@ -1,6 +1,6 @@
 //! `paimon_tantivy_buffer_t`: Rust-allocated byte buffer returned to C++.
 //!
-//! Contract (see docs/dev/tantivy_ffi_design.md §3 Category B):
+//! Contract:
 //! - Buffer is allocated by Rust (as a `Box<[u8]>`)
 //! - C++ reads `data[0..len]`, **must not** write past len
 //! - C++ must call `paimon_tantivy_buffer_free()` exactly once per non-empty buffer

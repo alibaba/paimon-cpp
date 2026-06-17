@@ -85,10 +85,9 @@ class TantivyFilterLimitTest : public ::testing::Test {
         auto path_factory = std::make_shared<FakeIndexPathFactory>(root);
         auto fm = std::make_shared<GlobalIndexFileManager>(fs_, path_factory);
         auto data_type = arrow::struct_({arrow::field("f0", arrow::utf8())});
-        auto writer_res =
-            TantivyGlobalIndexWriter::Create("f0", data_type, fm, options, GetDefaultPool());
-        EXPECT_TRUE(writer_res.ok()) << writer_res.status().ToString();
-        auto writer = writer_res.value();
+        EXPECT_OK_AND_ASSIGN(auto writer_res, TantivyGlobalIndexWriter::Create(
+                                                  "f0", data_type, fm, options, GetDefaultPool()));
+        auto writer = writer_res;
         ::ArrowArray c_array;
         EXPECT_TRUE(arrow::ExportArray(*array, &c_array).ok());
         std::vector<int64_t> relative_row_ids(array->length());
@@ -96,9 +95,8 @@ class TantivyFilterLimitTest : public ::testing::Test {
             relative_row_ids[i] = i;
         }
         EXPECT_TRUE(writer->AddBatch(&c_array, std::move(relative_row_ids)).ok());
-        auto metas_res = writer->Finish();
-        EXPECT_TRUE(metas_res.ok()) << metas_res.status().ToString();
-        return {fm, metas_res.value()[0]};
+        EXPECT_OK_AND_ASSIGN(auto metas_res, writer->Finish());
+        return {fm, metas_res[0]};
     }
 
     static std::vector<int64_t> BitmapToVec(const RoaringBitmap64& b) {
@@ -137,9 +135,8 @@ TEST_F(TantivyFilterLimitTest, LimitProducesScoredResultTopN) {
                                                 FullTextSearch::SearchType::MATCH_ALL,
                                                 /*pre_filter=*/std::nullopt);
     fts->with_score = true;  // v0.2: explicit score opt-in
-    auto res = reader->VisitFullTextSearch(fts);
-    ASSERT_TRUE(res.ok()) << res.status().ToString();
-    auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value());
+    ASSERT_OK_AND_ASSIGN(auto res, reader->VisitFullTextSearch(fts));
+    auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res);
     ASSERT_TRUE(scored) << "expected BitmapScoredGlobalIndexResult";
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, scored->GetBitmap());
     auto ids = BitmapToVec(*bitmap);
@@ -159,13 +156,13 @@ TEST_F(TantivyFilterLimitTest, NoLimitReturnsBitmapResult) {
     auto [fm, meta] = WriteAndOpen(array, {});
     ASSERT_OK_AND_ASSIGN(auto reader,
                          TantivyGlobalIndexReader::Create("f0", meta, fm, {}, GetDefaultPool()));
-    auto res = reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-        "f0", /*limit=*/std::nullopt, "doc", FullTextSearch::SearchType::MATCH_ALL,
-        /*pre_filter=*/std::nullopt));
-    ASSERT_TRUE(res.ok()) << res.status().ToString();
+    ASSERT_OK_AND_ASSIGN(
+        auto res, reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                      "f0", /*limit=*/std::nullopt, "doc", FullTextSearch::SearchType::MATCH_ALL,
+                      /*pre_filter=*/std::nullopt)));
     // No limit ⇒ NOT a BitmapScoredGlobalIndexResult; just BitmapGlobalIndexResult.
-    ASSERT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value()));
-    auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res.value());
+    ASSERT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res));
+    auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res);
     ASSERT_TRUE(plain);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, plain->GetBitmap());
     ASSERT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{0, 1}));
@@ -179,11 +176,11 @@ TEST_F(TantivyFilterLimitTest, PreFilterIntersectsWithoutLimit) {
     auto [fm, meta] = WriteAndOpen(array, {});
     ASSERT_OK_AND_ASSIGN(auto reader,
                          TantivyGlobalIndexReader::Create("f0", meta, fm, {}, GetDefaultPool()));
-    auto res = reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-        "f0", /*limit=*/std::nullopt, "alpha", FullTextSearch::SearchType::MATCH_ALL,
-        /*pre_filter=*/RoaringBitmap64::From({0l, 2l, 100l})));
-    ASSERT_TRUE(res.ok()) << res.status().ToString();
-    auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res.value());
+    ASSERT_OK_AND_ASSIGN(
+        auto res, reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                      "f0", /*limit=*/std::nullopt, "alpha", FullTextSearch::SearchType::MATCH_ALL,
+                      /*pre_filter=*/RoaringBitmap64::From({0l, 2l, 100l}))));
+    auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res);
     ASSERT_TRUE(plain);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, plain->GetBitmap());
     ASSERT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{0, 2}));
@@ -205,9 +202,8 @@ TEST_F(TantivyFilterLimitTest, PreFilterAppliedBeforeLimit) {
                                                 FullTextSearch::SearchType::MATCH_ALL,
                                                 /*pre_filter=*/RoaringBitmap64::From({1l}));
     fts->with_score = true;  // v0.2: explicit score opt-in
-    auto res = reader->VisitFullTextSearch(fts);
-    ASSERT_TRUE(res.ok()) << res.status().ToString();
-    auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value());
+    ASSERT_OK_AND_ASSIGN(auto res, reader->VisitFullTextSearch(fts));
+    auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res);
     ASSERT_TRUE(scored);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, scored->GetBitmap());
     ASSERT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{1}));
@@ -223,11 +219,11 @@ TEST_F(TantivyFilterLimitTest, EmptyPreFilterReturnsEmpty) {
     ASSERT_OK_AND_ASSIGN(auto reader,
                          TantivyGlobalIndexReader::Create("f0", meta, fm, {}, GetDefaultPool()));
     RoaringBitmap64 empty;  // explicitly empty
-    auto res = reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-        "f0", /*limit=*/std::nullopt, "alpha", FullTextSearch::SearchType::MATCH_ALL,
-        /*pre_filter=*/empty));
-    ASSERT_TRUE(res.ok()) << res.status().ToString();
-    auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res.value());
+    ASSERT_OK_AND_ASSIGN(
+        auto res, reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                      "f0", /*limit=*/std::nullopt, "alpha", FullTextSearch::SearchType::MATCH_ALL,
+                      /*pre_filter=*/empty)));
+    auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res);
     ASSERT_TRUE(plain);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, plain->GetBitmap());
     ASSERT_TRUE(bitmap->IsEmpty());
@@ -245,9 +241,8 @@ TEST_F(TantivyFilterLimitTest, LimitGreaterThanMatchesReturnsAll) {
                                                 FullTextSearch::SearchType::MATCH_ALL,
                                                 /*pre_filter=*/std::nullopt);
     fts->with_score = true;  // v0.2: explicit score opt-in
-    auto res = reader->VisitFullTextSearch(fts);
-    ASSERT_TRUE(res.ok()) << res.status().ToString();
-    auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value());
+    ASSERT_OK_AND_ASSIGN(auto res, reader->VisitFullTextSearch(fts));
+    auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res);
     ASSERT_TRUE(scored);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, scored->GetBitmap());
     ASSERT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{0, 1}));
@@ -273,11 +268,10 @@ TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitNoneAllRowsNoScore) {
                                                 FullTextSearch::SearchType::MATCH_ALL,
                                                 /*pre_filter=*/std::nullopt);
     fts->with_score = false;
-    auto res = reader->VisitFullTextSearch(fts);
-    ASSERT_TRUE(res.ok()) << res.status().ToString();
+    ASSERT_OK_AND_ASSIGN(auto res, reader->VisitFullTextSearch(fts));
     // Must NOT be scored.
-    ASSERT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value()));
-    auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res.value());
+    ASSERT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res));
+    auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res);
     ASSERT_TRUE(plain);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, plain->GetBitmap());
     ASSERT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{0, 1, 2}));
@@ -299,11 +293,10 @@ TEST_F(TantivyFilterLimitTest, WithScoreFalseLimitNAnyNNoScore) {
                                                 FullTextSearch::SearchType::MATCH_ALL,
                                                 /*pre_filter=*/std::nullopt);
     fts->with_score = false;
-    auto res = reader->VisitFullTextSearch(fts);
-    ASSERT_TRUE(res.ok()) << res.status().ToString();
+    ASSERT_OK_AND_ASSIGN(auto res, reader->VisitFullTextSearch(fts));
     // Must NOT be scored.
-    ASSERT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value()));
-    auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res.value());
+    ASSERT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res));
+    auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res);
     ASSERT_TRUE(plain);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, plain->GetBitmap());
     // Only cardinality matters — selection order is arbitrary and depends on
@@ -330,9 +323,8 @@ TEST_F(TantivyFilterLimitTest, WithScoreTrueLimitNoneAllRowsWithScore) {
                                                 FullTextSearch::SearchType::MATCH_ALL,
                                                 /*pre_filter=*/std::nullopt);
     fts->with_score = true;
-    auto res = reader->VisitFullTextSearch(fts);
-    ASSERT_TRUE(res.ok()) << res.status().ToString();
-    auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value());
+    ASSERT_OK_AND_ASSIGN(auto res, reader->VisitFullTextSearch(fts));
+    auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res);
     ASSERT_TRUE(scored) << "with_score=true must produce BitmapScoredGlobalIndexResult";
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, scored->GetBitmap());
     ASSERT_EQ(BitmapToVec(*bitmap), (std::vector<int64_t>{0, 1, 2}));
@@ -360,9 +352,8 @@ TEST_F(TantivyFilterLimitTest, WithScoreTrueLimitNTopNWithScore) {
                                                 FullTextSearch::SearchType::MATCH_ALL,
                                                 /*pre_filter=*/std::nullopt);
     fts->with_score = true;
-    auto res = reader->VisitFullTextSearch(fts);
-    ASSERT_TRUE(res.ok()) << res.status().ToString();
-    auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value());
+    ASSERT_OK_AND_ASSIGN(auto res, reader->VisitFullTextSearch(fts));
+    auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res);
     ASSERT_TRUE(scored);
     ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, scored->GetBitmap());
     ASSERT_EQ(bitmap->Cardinality(), 2u);
@@ -385,13 +376,12 @@ TEST_F(TantivyFilterLimitTest, WithScoreDefaultIsFalse) {
     auto fts = std::make_shared<FullTextSearch>("f0", /*limit=*/2, "doc",
                                                 FullTextSearch::SearchType::MATCH_ALL,
                                                 /*pre_filter=*/std::nullopt);
-    auto res = reader->VisitFullTextSearch(fts);
-    ASSERT_TRUE(res.ok()) << res.status().ToString();
+    ASSERT_OK_AND_ASSIGN(auto res, reader->VisitFullTextSearch(fts));
     // v0.2 contract: with_score defaults to false, so even with limit set the
     // result is BitmapGlobalIndexResult (NOT BitmapScoredGlobalIndexResult).
-    ASSERT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res.value()))
+    ASSERT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res))
         << "v0.2: limit alone must NOT imply scoring; with_score=true is required";
-    auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res.value());
+    auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(res);
     ASSERT_TRUE(plain);
 }
 

@@ -27,7 +27,7 @@ extern "C" {
 #include "paimon_tantivy_ffi.h"  // NOLINT(build/include_subdir)
 }
 
-namespace paimon::tantivy {
+namespace paimon::tantivy::test {
 
 TEST(TantivySmoke, VersionIsReachable) {
     const char* version = paimon_tantivy_version();
@@ -49,4 +49,4 @@ TEST(TantivySmoke, VersionPointerIsStable) {
     ASSERT_EQ(std::strcmp(v1, v2), 0);
 }
 
-}  // namespace paimon::tantivy
+}  // namespace paimon::tantivy::test

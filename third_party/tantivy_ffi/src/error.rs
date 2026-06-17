@@ -1,6 +1,6 @@
 //! Error model for paimon_tantivy_ffi.
 //!
-//! See docs/dev/tantivy_ffi_design.md §2. Contract:
+//! Contract:
 //! - Every fallible FFI function returns `paimon_tantivy_status_t`
 //! - Failure sets `last_error` (thread-local) with human-readable text
 //! - C++ calls `paimon_tantivy_last_error()` after a non-OK status to fetch text

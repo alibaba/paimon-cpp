@@ -35,7 +35,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -100,7 +99,7 @@ class JavaCompatTest : public ::testing::Test {
         std::string fixture_dir = PAIMON_TANTIVY_JAVA_FIXTURE_DIR;
         std::string archive_path = PathUtil::JoinPath(fixture_dir, fixture_name);
 
-        auto file_status = fs_->GetFileStatus(archive_path).value();
+        EXPECT_OK_AND_ASSIGN(auto file_status, fs_->GetFileStatus(archive_path));
         int64_t file_size = file_status->GetLen();
         EXPECT_GT(file_size, 4) << "fixture archive must exist and be > 4 bytes";
 
@@ -119,9 +118,9 @@ class JavaCompatTest : public ::testing::Test {
         auto c_schema = std::make_unique<::ArrowSchema>();
         EXPECT_TRUE(arrow::ExportType(*data_type, c_schema.get()).ok());
 
-        auto reader_res = global_index->CreateReader(c_schema.get(), file_reader, {io_meta}, pool_);
-        EXPECT_TRUE(reader_res.ok()) << reader_res.status().ToString();
-        return reader_res.value();
+        EXPECT_OK_AND_ASSIGN(auto reader_res, global_index->CreateReader(
+                                                  c_schema.get(), file_reader, {io_meta}, pool_));
+        return reader_res;
     }
 
     std::shared_ptr<FullTextSearch> BuildFts(FullTextSearch::SearchType type,
@@ -139,26 +138,21 @@ class JavaCompatTest : public ::testing::Test {
                                          FullTextSearch::SearchType type,
                                          const std::string& query) {
         auto fts = BuildFts(type, query);
-        auto result = reader->VisitFullTextSearch(fts);
-        EXPECT_OK(result.status()) << result.status().ToString();
         // This helper returns a value, so gtest ASSERT_* (which `return;`) cannot
-        // be used; guard each deref explicitly so a failure does not cascade into
-        // calling .value() on a failed Result.
-        if (!result.ok()) return {};
-        std::shared_ptr<GlobalIndexResult> r = result.value();
+        // be used here; use the EXPECT_OK family.
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexResult> r,
+                             reader->VisitFullTextSearch(fts));
 
         const RoaringBitmap64* bitmap = nullptr;
         if (auto plain = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(r)) {
-            auto b = plain->GetBitmap();
-            EXPECT_OK(b.status()) << b.status().ToString();
-            if (b.ok()) bitmap = b.value();
+            EXPECT_OK_AND_ASSIGN(bitmap, plain->GetBitmap());
         } else if (auto scored = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(r)) {
-            auto b = scored->GetBitmap();
-            EXPECT_OK(b.status()) << b.status().ToString();
-            if (b.ok()) bitmap = b.value();
+            EXPECT_OK_AND_ASSIGN(bitmap, scored->GetBitmap());
         }
         EXPECT_TRUE(bitmap != nullptr);
-        if (bitmap == nullptr) return {};
+        if (bitmap == nullptr) {
+            return {};
+        }
 
         std::vector<int64_t> out;
         for (auto it = bitmap->Begin(); it != bitmap->End(); ++it) {
@@ -278,77 +272,23 @@ TEST_F(JavaCompatTest, AllDocsReachableByRowId) {
 
 TEST_F(JavaCompatTest, ProductionSampleProbe) {
     const std::string fixture_name = "production_sample.archive";
-    const std::string fixture_dir = PAIMON_TANTIVY_JAVA_FIXTURE_DIR;
-    const std::string archive_path = PathUtil::JoinPath(fixture_dir, fixture_name);
 
-    // 1) parse archive header, dump layout
-    auto stream_res = fs_->Open(archive_path);
-    ASSERT_TRUE(stream_res.ok()) << stream_res.status().ToString();
-    std::shared_ptr<InputStream> stream = std::move(stream_res).value();
-    auto layout_res = ArchiveLayout::Parse(stream.get());
-    ASSERT_TRUE(layout_res.ok()) << layout_res.status().ToString();
-    const auto& layout = layout_res.value();
-    std::cerr << "[PROBE] archive=" << fixture_name << " file_count=" << layout.count << "\n";
-    for (std::size_t i = 0; i < layout.count; ++i) {
-        std::cerr << "  [" << i << "] " << layout.names[i] << "  offset=" << layout.offsets[i]
-                  << "  length=" << layout.lengths[i] << "\n";
-    }
-
-    // 2) open reader and print the schema-declared tokenizer name
+    // Open a reader over the Java-written production sample archive.
     auto reader = OpenFixture(fixture_name);
     ASSERT_TRUE(reader != nullptr);
 
-    // 3) scan for keywords we'd expect based on user-provided text samples
-    //    ("Apache Paimon / full-text search / vector / lumina / streaming / ...").
-    //    tokenizer is "default" — lowercased word-granular tokens.
+    // Keywords expected from the production text samples; tokenizer is "default"
+    // (lowercased, word-granular).
     const std::vector<std::string> probes = {
         "apache", "paimon",    "is",     "a",     "lake",       "format",     "supports",
         "full",   "text",      "search", "in",    "vector",     "similarity", "using",
         "lumina", "streaming", "and",    "batch", "processing", "engine",
     };
 
-    std::cerr << "[PROBE] MATCH_ALL per-term row_ids:\n";
-    for (const auto& term : probes) {
-        auto ids = RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ALL, term);
-        std::cerr << "  " << term << " -> [";
-        for (std::size_t i = 0; i < ids.size(); ++i) {
-            if (i > 0) std::cerr << ", ";
-            std::cerr << ids[i];
-        }
-        std::cerr << "]\n";
-    }
-
-    // 4) union of everything to see every row_id present in the archive
-    std::string all_terms;
-    for (const auto& t : probes) {
-        if (!all_terms.empty()) all_terms += " ";
-        all_terms += t;
-    }
-    auto all_ids = RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ANY, all_terms);
-    std::cerr << "[PROBE] union all probe terms -> row_id count=" << all_ids.size() << " [";
-    for (std::size_t i = 0; i < all_ids.size(); ++i) {
-        if (i > 0) std::cerr << ", ";
-        std::cerr << all_ids[i];
-    }
-    std::cerr << "]\n";
-
-    // 5) a few common phrases from the user's snippet
-    for (const auto& phrase : std::vector<std::string>{
-             "apache paimon", "full text", "vector similarity", "streaming and batch"}) {
-        auto ids = RunSearchRowIds(reader, FullTextSearch::SearchType::PHRASE, phrase);
-        std::cerr << "[PROBE] PHRASE \"" << phrase << "\" -> [";
-        for (std::size_t i = 0; i < ids.size(); ++i) {
-            if (i > 0) std::cerr << ", ";
-            std::cerr << ids[i];
-        }
-        std::cerr << "]\n";
-    }
-
-    // sanity: the archive is readable at all — at least one probe term hits.
+    // The archive must be readable — at least one probe term hits.
     bool any_hit = false;
     for (const auto& term : probes) {
-        auto ids = RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ALL, term);
-        if (!ids.empty()) {
+        if (!RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ALL, term).empty()) {
             any_hit = true;
             break;
         }
@@ -425,10 +365,7 @@ TEST_F(JavaCompatTest, CppWriteDefaultTokenizerForJavaCrossRead) {
     const std::string out_dir = PAIMON_TANTIVY_CPP_FIXTURE_DIR;
     const std::string fixture_name = "english_default.archive";
     // Ensure dir exists (CMake does NOT create it automatically).
-    {
-        auto mk = fs_->Mkdirs(out_dir);
-        ASSERT_TRUE(mk.ok()) << mk.ToString();
-    }
+    ASSERT_OK(fs_->Mkdirs(out_dir));
     // Clean any prior fixture so each test run writes fresh bytes.
     {
         const std::string archive_path_cleanup = PathUtil::JoinPath(out_dir, fixture_name);
@@ -445,15 +382,16 @@ TEST_F(JavaCompatTest, CppWriteDefaultTokenizerForJavaCrossRead) {
     std::map<std::string, std::string> options{
         {kTantivyWriteTokenizer, "default"},
     };
-    auto writer_res =
-        TantivyGlobalIndexWriter::Create("f0", data_type, file_writer, options, pool_);
-    ASSERT_TRUE(writer_res.ok()) << writer_res.status().ToString();
-    auto writer = writer_res.value();
+    ASSERT_OK_AND_ASSIGN(auto writer_res, TantivyGlobalIndexWriter::Create(
+                                              "f0", data_type, file_writer, options, pool_));
+    auto writer = writer_res;
 
     // Build an arrow batch from kEnglishDocs.
     std::string json = "[";
     for (std::size_t i = 0; i < sizeof(kEnglishDocs) / sizeof(kEnglishDocs[0]); ++i) {
-        if (i > 0) json += ",";
+        if (i > 0) {
+            json += ",";
+        }
         json += "[\"";
         json += kEnglishDocs[i];
         json += "\"]";
@@ -467,25 +405,20 @@ TEST_F(JavaCompatTest, CppWriteDefaultTokenizerForJavaCrossRead) {
         relative_row_ids[i] = i;
     }
     ASSERT_TRUE(writer->AddBatch(&c_array, std::move(relative_row_ids)).ok());
-    auto metas_res = writer->Finish();
-    ASSERT_TRUE(metas_res.ok()) << metas_res.status().ToString();
-    ASSERT_EQ(metas_res.value().size(), 1u);
-    const auto& meta = metas_res.value().front();
+    ASSERT_OK_AND_ASSIGN(auto metas_res, writer->Finish());
+    ASSERT_EQ(metas_res.size(), 1u);
+    const auto& meta = metas_res.front();
     const std::string archive_path = meta.file_path;
-    std::cerr << "[CPP-WRITE] archive_path=" << archive_path << " file_size=" << meta.file_size
-              << "\n";
 
     // 2) Archive header sanity: 16+ files, meta.json present, tokenizer in schema.
-    auto stream_res = fs_->Open(archive_path);
-    ASSERT_TRUE(stream_res.ok()) << stream_res.status().ToString();
-    std::shared_ptr<InputStream> stream = std::move(stream_res).value();
-    auto layout_res = ArchiveLayout::Parse(stream.get());
-    ASSERT_TRUE(layout_res.ok()) << layout_res.status().ToString();
-    const auto& layout = layout_res.value();
-    std::cerr << "[CPP-WRITE] file_count=" << layout.count << "\n";
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> stream, fs_->Open(archive_path));
+    ASSERT_OK_AND_ASSIGN(auto layout_res, ArchiveLayout::Parse(stream.get()));
+    const auto& layout = layout_res;
     bool has_meta_json = false;
     for (std::size_t i = 0; i < layout.count; ++i) {
-        if (layout.names[i] == "meta.json") has_meta_json = true;
+        if (layout.names[i] == "meta.json") {
+            has_meta_json = true;
+        }
     }
     ASSERT_TRUE(has_meta_json);
 
@@ -494,7 +427,7 @@ TEST_F(JavaCompatTest, CppWriteDefaultTokenizerForJavaCrossRead) {
     //    any reader-side tokenizer config.
     //    Build a reader directly off the archive path (mirrors OpenFixture
     //    but rooted at the cpp fixtures dir).
-    auto file_status = fs_->GetFileStatus(archive_path).value();
+    ASSERT_OK_AND_ASSIGN(auto file_status, fs_->GetFileStatus(archive_path));
     int64_t file_size = file_status->GetLen();
     auto meta_bytes = std::make_shared<Bytes>(std::string("{}"), pool_.get());
     GlobalIndexIOMeta io_meta(archive_path, file_size, meta_bytes);
@@ -506,10 +439,9 @@ TEST_F(JavaCompatTest, CppWriteDefaultTokenizerForJavaCrossRead) {
     auto c_schema = std::make_unique<::ArrowSchema>();
     ASSERT_TRUE(arrow::ExportType(*data_type, c_schema.get()).ok());
 
-    auto reader_res =
-        reader_factory->CreateReader(c_schema.get(), reader_file_mgr, {io_meta}, pool_);
-    ASSERT_TRUE(reader_res.ok()) << reader_res.status().ToString();
-    auto reader = reader_res.value();
+    ASSERT_OK_AND_ASSIGN(auto reader_res, reader_factory->CreateReader(
+                                              c_schema.get(), reader_file_mgr, {io_meta}, pool_));
+    auto reader = reader_res;
 
     // Golden expectations (identical to paimon-java's english_simple.golden.json)
     ASSERT_EQ(RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ALL, "apple"),
@@ -529,9 +461,6 @@ TEST_F(JavaCompatTest, CppWriteDefaultTokenizerForJavaCrossRead) {
     ASSERT_EQ(RunSearchRowIds(reader, FullTextSearch::SearchType::MATCH_ANY,
                               "apple banana cherry durian fig grape elderberry"),
               (std::vector<int64_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
-
-    std::cerr << "[CPP-WRITE] SUCCESS: archive ready for paimon-java read at " << archive_path
-              << "\n";
 }
 
 }  // namespace paimon::tantivy::test

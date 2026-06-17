@@ -35,11 +35,11 @@ namespace paimon::tantivy {
 /// `paimon_tantivy_reader_new_streaming`; Rust invokes `paimon_cpp_stream_release`
 /// when the reader handle is freed, which `delete`s this struct.
 ///
-/// `pread_mu` is a defensive per-ctx lock: the underlying `InputStream::Read(
-/// buffer, size, offset)` is declared pread-style (thread-safe, no position
-/// mutation) but a few subclasses (notably `JindoInputStream`) have member-
-/// variable races in practice. Rust also has its own `stream_mutex` that
-/// serializes reads at the Directory level; `pread_mu` is belt-and-suspenders.
+/// `pread_mu` is a defensive per-ctx lock: `InputStream::Read(buffer, size,
+/// offset)` is declared pread-style (thread-safe, no position mutation), but a
+/// few subclasses (notably `JindoInputStream`) have member-variable races. Rust
+/// already serializes reads via its own `stream_mutex`; `pread_mu` is a
+/// redundant safeguard at the C++ layer.
 struct StreamCtx {
     std::shared_ptr<InputStream> stream;
     std::mutex pread_mu;

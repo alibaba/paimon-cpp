@@ -4,19 +4,19 @@
 //!
 //! ## Why callback-based?
 //!
-//! V1 loaded the entire archive (100MB+) into `RamDirectory` at reader
-//! construction, giving ~2x archive peak RAM and paying the whole download
-//! cost up front even for small queries. V3 keeps just the `HashMap<PathBuf,
-//! FileMeta>` layout and issues pread calls through the FFI callback whenever
-//! tantivy asks for bytes — peak RAM is ~KB, startup is ~header size.
+//! Loading the entire archive (100MB+) into `RamDirectory` at reader
+//! construction would give ~2x archive peak RAM and pay the whole download
+//! cost up front even for small queries. This directory keeps just the
+//! `HashMap<PathBuf, FileMeta>` layout and issues pread calls through the FFI
+//! callback whenever tantivy asks for bytes — peak RAM is ~KB, startup is
+//! ~header size.
 //!
 //! ## Concurrency
 //!
-//! V3 serializes `read_at` via `stream_mutex` (same as Java JniDir's
+//! `read_at` is serialized via `stream_mutex` (same as Java JniDir's
 //! `stream_lock`). pread-style callbacks in principle allow concurrent reads,
 //! but some `paimon::InputStream` subclasses (notably `JindoInputStream`)
-//! have shared-state races, so V3 plays it safe. V3.5 removes the mutex —
-//! see `docs/dev/tantivy_directory_upgrade_plan.md` §5.
+//! have shared-state races, so we play it safe.
 
 use std::collections::HashMap;
 use std::ffi::c_void;
@@ -95,9 +95,8 @@ pub struct PaimonCallbackDirectory {
     /// via `atomic_write`; we keep them in memory instead of pushing back
     /// through C++ (read-only archive). Shared across clones.
     atomic_data: Arc<Mutex<HashMap<PathBuf, Vec<u8>>>>,
-    /// V3 conservative approach: serialize seek+read (mirrors Java JniDir's
-    /// `stream_lock`). V3.5 will drop this lock; see
-    /// `tantivy_directory_upgrade_plan.md` §5.
+    /// Serialize seek+read (mirrors Java JniDir's `stream_lock`) to guard
+    /// against shared-state races in some InputStream subclasses.
     stream_mutex: Arc<Mutex<()>>,
 }
 
@@ -129,7 +128,7 @@ impl PaimonCallbackDirectory {
         }
     }
 
-    /// Perform an FFI pread. Serialized via `stream_mutex` (V3 invariant).
+    /// Perform an FFI pread. Serialized via `stream_mutex`.
     fn pread(&self, offset: u64, len: usize) -> io::Result<Vec<u8>> {
         let _guard = self.stream_mutex.lock().map_err(|e| {
             io::Error::new(io::ErrorKind::Other, format!("stream_mutex poisoned: {e}"))
@@ -377,7 +376,7 @@ pub(crate) mod test_support {
     }
 
     /// Parse the archive header — mirrors the layout that
-    /// C++ `ParseArchiveHeader` will produce in production (K3).
+    /// C++ `ArchiveLayout::Parse` produces in production.
     fn parse_archive_header(bytes: &[u8]) -> Vec<(String, u64, u64)> {
         let mut off = 0usize;
         let file_count = i32::from_be_bytes(bytes[off..off + 4].try_into().unwrap()) as usize;

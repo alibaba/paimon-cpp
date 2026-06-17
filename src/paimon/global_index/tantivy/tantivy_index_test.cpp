@@ -179,9 +179,8 @@ TEST_F(TantivyGlobalIndexIntegrationTest, EnglishCorpus) {
         // expectations (otherwise unscored Path B returns any-N, non-deterministic).
         auto fts = std::make_shared<FullTextSearch>("f0", limit, q, t, filter);
         fts->with_score = true;
-        auto res = t_reader->VisitFullTextSearch(fts);
-        EXPECT_TRUE(res.ok()) << res.status().ToString();
-        return res.value();
+        EXPECT_OK_AND_ASSIGN(auto res, t_reader->VisitFullTextSearch(fts));
+        return res;
     };
 
     CheckResult(run("document", FullTextSearch::SearchType::MATCH_ALL, 10), {2, 1, 0});
@@ -213,6 +212,22 @@ TEST_F(TantivyGlobalIndexIntegrationTest, EnglishCorpus) {
     CheckResult(run("document test", FullTextSearch::SearchType::MATCH_ALL, std::nullopt,
                     RoaringBitmap64::From({1l, 2l, 3l, 100l})),
                 {2});
+
+    // Unscored path: no with_score ⇒ BitmapGlobalIndexResult (not scored), same
+    // matches across all 5 SearchTypes. (Previously covered by reader_test.)
+    auto run_unscored = [&](const std::string& q, FullTextSearch::SearchType t) {
+        EXPECT_OK_AND_ASSIGN(auto res,
+                             t_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0", std::nullopt, q, t, std::nullopt)));
+        EXPECT_FALSE(std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(res))
+            << "unscored query must not return a scored result";
+        return res;
+    };
+    CheckResult(run_unscored("document", FullTextSearch::SearchType::MATCH_ALL), {0, 1, 2});
+    CheckResult(run_unscored("test new", FullTextSearch::SearchType::MATCH_ANY), {0, 1, 2});
+    CheckResult(run_unscored("test document", FullTextSearch::SearchType::PHRASE), {0});
+    CheckResult(run_unscored("unorder", FullTextSearch::SearchType::PREFIX), {3});
+    CheckResult(run_unscored("*order*", FullTextSearch::SearchType::WILDCARD), {3});
 }
 
 TEST_F(TantivyGlobalIndexIntegrationTest, ChineseCorpus) {
@@ -249,9 +264,8 @@ TEST_F(TantivyGlobalIndexIntegrationTest, ChineseCorpus) {
         // expectations (otherwise unscored Path B returns any-N, non-deterministic).
         auto fts = std::make_shared<FullTextSearch>("f0", limit, q, t, filter);
         fts->with_score = true;
-        auto res = t_reader->VisitFullTextSearch(fts);
-        EXPECT_TRUE(res.ok()) << res.status().ToString();
-        return res.value();
+        EXPECT_OK_AND_ASSIGN(auto res, t_reader->VisitFullTextSearch(fts));
+        return res;
     };
 
     CheckResult(run("模块", FullTextSearch::SearchType::MATCH_ALL, 10), {0, 2});
@@ -263,6 +277,17 @@ TEST_F(TantivyGlobalIndexIntegrationTest, ChineseCorpus) {
                     RoaringBitmap64::From({1l, 3l, 4l})),
                 {1, 3});
     CheckResult(run("模块技术", FullTextSearch::SearchType::MATCH_ANY), {0, 1, 2, 3});
+
+    // Unscored path on jieba-tokenized Chinese. (Previously covered by reader_test.)
+    auto run_unscored = [&](const std::string& q, FullTextSearch::SearchType t) {
+        EXPECT_OK_AND_ASSIGN(auto res,
+                             t_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0", std::nullopt, q, t, std::nullopt)));
+        return res;
+    };
+    CheckResult(run_unscored("模块", FullTextSearch::SearchType::MATCH_ALL), {0, 2});
+    CheckResult(run_unscored("模块技术", FullTextSearch::SearchType::MATCH_ANY), {0, 1, 2, 3});
+    CheckResult(run_unscored("发展方向", FullTextSearch::SearchType::PHRASE), {4});
 }
 
 TEST_F(TantivyGlobalIndexIntegrationTest, FactoryLookupReturnsTantivyIndexer) {
