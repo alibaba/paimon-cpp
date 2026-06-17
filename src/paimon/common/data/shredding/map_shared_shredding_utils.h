@@ -20,6 +20,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -45,6 +46,13 @@ class MapSharedShreddingUtils {
     MapSharedShreddingUtils() = delete;
     ~MapSharedShreddingUtils() = delete;
 
+    /// Returns the physical column indices for the given field name from the shredding meta.
+    /// @param meta The shredding field meta parsed from file footer.
+    /// @param name The field name to look up.
+    /// @return Vector of physical column indices assigned to this field,
+    ///         or Status::Invalid if the field name or field id is not found.
+    static Result<std::vector<int32_t>> GetPhysicalColumnIndices(
+        const MapSharedShreddingFieldMeta& meta, const std::string& name);
     // ---- Column detection ----
 
     /// Checks whether a given arrow field is MAP<STRING, T> (the type prerequisite for shredding).
@@ -80,6 +88,13 @@ class MapSharedShreddingUtils {
         const std::shared_ptr<arrow::Schema>& logical_schema,
         const std::map<std::string, int32_t>& field_to_num_columns);
 
+    /// Builds a projected physical Struct type for one shredding MAP column.
+    /// The struct always contains __field_mapping and only the requested physical columns.
+    static std::shared_ptr<arrow::DataType> BuildSpecificPhysicalStructType(
+        const std::shared_ptr<arrow::DataType>& value_type,
+        const std::set<int32_t>& physical_col_ids, bool value_nullable,
+        bool include_overflow = false);
+
     /// Builds field_to_num_columns map from DetectShreddingColumns result and CoreOptions.
     /// @param shredding_field_names Field names returned by DetectShreddingColumns.
     /// @param options CoreOptions containing per-column max-columns config.
@@ -106,6 +121,10 @@ class MapSharedShreddingUtils {
 
     /// Checks whether a KeyValueMetadata contains shredding MAP metadata.
     static bool HasShreddingMetadata(const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
+
+    /// Checks whether a field in MapSharedShreddingFieldMeta is a overflow field.
+    static Result<bool> IsOverflowField(const MapSharedShreddingFieldMeta& meta,
+                                        const std::string& name);
 
     // ---- Writer helpers ----
 
