@@ -164,9 +164,11 @@ Status ParquetFileBatchReader::SetReadSchema(
                 FilterRowGroupsByPredicate(predicate, file_schema, target_row_groups));
         }
         if (selection_bitmap) {
-            PAIMON_ASSIGN_OR_RAISE(
-                target_row_groups,
-                FilterRowGroupsByBitmap(selection_bitmap.value(), target_row_groups));
+            // walkaround: page index filter does not support nested fields for now, skip page index
+            // bitmap pushdown if there is any nested field in the schema
+            PAIMON_ASSIGN_OR_RAISE(target_row_groups,
+                                   FilterRowGroupsByBitmap(selection_bitmap.value(),
+                                                           target_row_groups, has_nested_field));
         }
         // Apply page-level filtering after bitmap pruning so we don't read page index
         // pages for row groups that the bitmap already excluded.
@@ -255,7 +257,8 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByPredicate(
 }
 
 Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByBitmap(
-    const RoaringBitmap32& bitmap, const TargetRowGroups& src_row_groups) const {
+    const RoaringBitmap32& bitmap, const TargetRowGroups& src_row_groups,
+    bool has_nested_column) const {
     if (bitmap.IsEmpty()) {
         return Status::Invalid("cannot push down an empty bitmap to ParquetFileBatchReader");
     }
@@ -276,6 +279,12 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByBitmap(
         }
 
         int64_t rg_row_count = meta_data->RowGroup(row_group_idx)->num_rows();
+        if (has_nested_column) {
+            // For nested schema, we cannot apply page-level filtering, so we directly add the whole
+            // row group if bitmap matches.
+            target_row_groups.emplace_back(row_group_idx);
+            continue;
+        }
         auto page_ranges = FilterPagesByBitmap(bitmap, row_group_idx, start_row_idx, rg_row_count);
         if (page_ranges.has_value()) {
             target_row_groups.emplace_back(/*row_group_idx=*/row_group_idx,

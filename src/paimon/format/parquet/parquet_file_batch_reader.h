@@ -163,7 +163,8 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         const TargetRowGroups& src_row_groups) const;
 
     Result<TargetRowGroups> FilterRowGroupsByBitmap(const RoaringBitmap32& bitmap,
-                                                    const TargetRowGroups& src_row_groups) const;
+                                                    const TargetRowGroups& src_row_groups,
+                                                    bool has_nested_column) const;
 
     // Apply page-level filtering using column index.
     // Returns (filtered row groups, per-row-group RowRanges for partial matches).

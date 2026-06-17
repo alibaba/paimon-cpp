@@ -1115,6 +1115,95 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnPageFilter) {
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
 
+/// Test: nested map projection falls back to row-group-level filtering when page index filter is
+/// unavailable for nested read schemas.
+///
+/// Schema: { id: int32, props: map<utf8, int32> }
+/// Read schema only contains the nested "props" column.
+/// 100 rows, 10 per page, 1 row group.
+/// Predicate: id >= 30 would be a partial-row-group match at first 50-row group.
+/// Because nested schema disables page-level filtering, the entire first row group (0..49) is read,
+/// so rows [0, 99] should all be returned.
+TEST_F(PageFilteredRowGroupReaderTest, NestedMapRowGroupFallback) {
+    std::string file_name = dir_->Str() + "/nested_map_projection_fallback.parquet";
+    auto data = MakeMapColumnData(100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
+
+    auto field_props = arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()));
+    auto read_schema = arrow::schema({arrow::field("id", arrow::int32()), field_props});
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(70, 100);
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, nullptr, bitmap, &result);
+
+    ASSERT_TRUE(result);
+    // Because page-level filtering is skipped for nested schemas, we read full row groups.
+    ASSERT_EQ(50, result->length());
+
+    auto expected = data->Slice(50, 50);
+    ASSERT_TRUE(expected->Equals(result->chunk(0)));
+}
+
+/// Test: nested list projection falls back to row-group-level filtering when page index filter is
+/// unavailable for nested read schemas.
+///
+/// Schema: { id: int32, tags: list<item: int32> }
+/// Read schema only contains the nested "tags" column.
+/// Predicate: id >= 30 would be a partial-row-group match at first 50-row group.
+/// Because nested schema disables page-level filtering, the entire first row group (0..49) is read.
+TEST_F(PageFilteredRowGroupReaderTest, NestedListRowGroupFallback) {
+    std::string file_name = dir_->Str() + "/nested_list_projection_fallback.parquet";
+    auto data = MakeListColumnData(100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
+
+    auto field_tags = arrow::field("tags", arrow::list(arrow::field("item", arrow::int32())));
+    auto read_schema = arrow::schema({arrow::field("id", arrow::int32()), field_tags});
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(70, 100);
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, nullptr, bitmap, &result);
+
+    ASSERT_TRUE(result);
+    ASSERT_EQ(50, result->length());
+
+    auto expected = data->Slice(50, 50);
+    ASSERT_TRUE(expected->Equals(result->chunk(0)));
+}
+
+/// Test: nested struct projection falls back to row-group-level filtering when page index filter is
+/// unavailable for nested read schemas.
+///
+/// Schema: { id: int32, info: struct<x: int32, y: int32> }
+/// Read schema only contains the nested "info" column.
+/// Predicate: id >= 30 would be a partial-row-group match at first 50-row group.
+/// Because nested schema disables page-level filtering, the entire first row group (0..49) is read.
+TEST_F(PageFilteredRowGroupReaderTest, NestedStructRowGroupFallback) {
+    std::string file_name = dir_->Str() + "/nested_struct_projection_fallback.parquet";
+    auto data = MakeNestedStructData(100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
+
+    auto field_x = arrow::field("x", arrow::int32());
+    auto field_y = arrow::field("y", arrow::int32());
+    auto field_info = arrow::field("info", arrow::struct_({field_x, field_y}));
+    auto read_schema = arrow::schema({arrow::field("id", arrow::int32()), field_info});
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(70, 100);
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, nullptr, bitmap, &result);
+
+    ASSERT_TRUE(result);
+    ASSERT_EQ(50, result->length());
+
+    auto expected = data->Slice(50, 50);
+    ASSERT_TRUE(expected->Equals(result->chunk(0)));
+}
+
 /// Test: rowgroup-level filtering with multiple adjacent nested columns (struct + list).
 ///
 /// Schema: { id: int32, info: struct<x: int32, y: int32>, tags: list<item: int32> }
@@ -1170,6 +1259,7 @@ TEST_F(PageFilteredRowGroupReaderTest, MultipleAdjacentNestedColumns) {
     // Build expected result: rows 50-99 from the original data
     auto expected = data->Slice(50, 50);
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
+}
 /// Test: bitmap hits all pages of a subset of row groups (no predicate).
 ///
 /// 200 rows, 10 rows per page, 100 rows per row group → 2 row groups.
