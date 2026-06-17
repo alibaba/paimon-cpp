@@ -30,6 +30,8 @@
 #include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/core/utils/file_store_path_factory_cache.h"
 namespace paimon {
+class MapSharedShreddingContext;
+
 /// Default `CompactRewriter` for merge trees.
 class MergeTreeCompactRewriter : public CompactRewriter {
  public:
@@ -79,6 +81,7 @@ class MergeTreeCompactRewriter : public CompactRewriter {
                              std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
                              MergeFunctionWrapperFactory merge_function_wrapper_factory,
                              const std::shared_ptr<CancellationController>& cancellation_controller,
+                             const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
                              const std::shared_ptr<MemoryPool>& pool);
 
     using KeyValueRollingFileWriter =
@@ -119,6 +122,9 @@ class MergeTreeCompactRewriter : public CompactRewriter {
     std::shared_ptr<FileStorePathFactoryCache> path_factory_cache_;
     MergeFunctionWrapperFactory merge_function_wrapper_factory_;
     std::shared_ptr<CancellationController> cancellation_controller_;
+
+    /// Cross-file shared context for shared-shredding MAP columns (nullable).
+    std::shared_ptr<MapSharedShreddingContext> shredding_context_;
 };
 
 }  // namespace paimon

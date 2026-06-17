@@ -17,6 +17,8 @@
 #include "paimon/format/lance/lance_format_writer.h"
 
 #include <cassert>
+#include <map>
+#include <string>
 
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
@@ -80,6 +82,10 @@ Result<bool> LanceFormatWriter::ReachTargetSize(bool suggested_check, int64_t ta
         return tell_pos >= static_cast<uint64_t>(target_size);
     }
     return false;
+}
+
+Status LanceFormatWriter::AddMetadata(const std::map<std::string, std::string>& /*metadata*/) {
+    return Status::NotImplemented("AddMetadata is not supported by lance format writer.");
 }
 
 Status LanceFormatWriter::Finish() {

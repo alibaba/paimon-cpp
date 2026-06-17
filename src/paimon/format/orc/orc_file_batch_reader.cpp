@@ -24,9 +24,13 @@
 #include <utility>
 
 #include "arrow/c/bridge.h"
+#include "arrow/io/memory.h"
+#include "arrow/ipc/api.h"
+#include "arrow/util/base64.h"
 #include "fmt/format.h"
 #include "orc/OrcFile.hh"
 #include "paimon/common/metrics/metrics_impl.h"
+#include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/options_utils.h"
@@ -105,6 +109,21 @@ Result<std::unique_ptr<OrcFileBatchReader>> OrcFileBatchReader::Create(
 
 Result<std::unique_ptr<::ArrowSchema>> OrcFileBatchReader::GetFileSchema() const {
     assert(reader_);
+
+    // If the writer stored a serialized Arrow schema with per-field metadata via
+    // AddMetadata, prefer that over the plain ORC type tree.
+    if (reader_->HasMetadataValue(ArrowUtils::kArrowSchemaMetadataKey)) {
+        std::string encoded = reader_->GetMetadataValue(ArrowUtils::kArrowSchemaMetadataKey);
+        std::string decoded = arrow::util::base64_decode(encoded);
+        auto buffer = arrow::Buffer::FromString(std::move(decoded));
+        arrow::io::BufferReader buf_reader(buffer);
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> schema,
+                                          arrow::ipc::ReadSchema(&buf_reader, nullptr));
+        auto c_schema = std::make_unique<::ArrowSchema>();
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schema, c_schema.get()));
+        return c_schema;
+    }
+
     const auto& orc_file_type = reader_->GetOrcType();
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::DataType> arrow_file_type,
                            OrcAdapter::GetArrowType(&orc_file_type));

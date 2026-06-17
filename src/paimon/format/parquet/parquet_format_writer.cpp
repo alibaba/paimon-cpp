@@ -16,12 +16,16 @@
 
 #include "paimon/format/parquet/parquet_format_writer.h"
 
+#include <map>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "arrow/c/bridge.h"
 #include "arrow/memory_pool.h"
 #include "arrow/record_batch.h"
+#include "arrow/util/base64.h"
+#include "arrow/util/key_value_metadata.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/arrow/arrow_output_stream_adapter.h"
 #include "paimon/common/utils/arrow/status_utils.h"
@@ -76,6 +80,18 @@ Status ParquetFormatWriter::Flush() {
 Status ParquetFormatWriter::Finish() {
     PAIMON_RETURN_NOT_OK(Flush());
     PAIMON_RETURN_NOT_OK_FROM_ARROW(writer_->Close());
+    return Status::OK();
+}
+
+Status ParquetFormatWriter::AddMetadata(const std::map<std::string, std::string>& metadata) {
+    if (metadata.empty()) {
+        return Status::OK();
+    }
+    auto key_value_metadata = std::make_shared<arrow::KeyValueMetadata>();
+    for (const auto& [key, value] : metadata) {
+        key_value_metadata->Append(key, arrow::util::base64_encode(std::string_view(value)));
+    }
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(writer_->AddKeyValueMetadata(key_value_metadata));
     return Status::OK();
 }
 
