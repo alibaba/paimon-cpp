@@ -110,7 +110,7 @@ Result<std::shared_ptr<arrow::Schema>> MapSharedShreddingUtils::LogicalToPhysica
             auto value_type = map_type->item_type();
             bool value_nullable = map_type->item_field()->nullable();
             auto physical_type = BuildPhysicalStructType(value_type, it->second, value_nullable);
-            auto physical_field = arrow::field(field->name(), physical_type, field->nullable());
+            auto physical_field = field->WithType(physical_type);
             physical_fields.push_back(physical_field);
         } else {
             physical_fields.push_back(field);

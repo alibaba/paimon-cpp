@@ -90,7 +90,7 @@ class MergeTreeCompactRewriter : public CompactRewriter {
     using KeyValueConsumerCreator =
         AsyncKeyValueProducerAndConsumer<KeyValue, KeyValueBatch>::ConsumerCreator;
 
-    std::unique_ptr<KeyValueRollingFileWriter> CreateRollingRowWriter(int32_t level);
+    Result<std::unique_ptr<KeyValueRollingFileWriter>> CreateRollingRowWriter(int32_t level);
 
     Result<KeyValueConsumerCreator> GenerateKeyValueConsumer() const;
 

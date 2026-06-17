@@ -357,7 +357,7 @@ class UnPooledStructBuilder : public EmptyBuilder {
         arrow::FieldVector fields;
         fields.reserve(children_.size());
         for (size_t i = 0; i < children_.size(); i++) {
-            fields.emplace_back(arrow::field(type_->field(i)->name(), children_[i]->type()));
+            fields.emplace_back(type_->field(i)->WithType(children_[i]->type()));
         }
         return arrow::struct_(fields);
     }
@@ -953,7 +953,7 @@ arrow::Result<std::shared_ptr<arrow::Array>> NormalizeArray(
                 auto child_length = struct_array->data()->child_data[i]->length;
                 auto child_offset = struct_array->data()->child_data[i]->offset;
                 // field function will change length & offset in child data
-                std::shared_ptr<arrow::Array> child = struct_array->field(static_cast<int>(i));
+                std::shared_ptr<arrow::Array> child = struct_array->field(static_cast<int32_t>(i));
                 const std::shared_ptr<arrow::Buffer> child_bitmap = child->null_bitmap();
                 std::shared_ptr<arrow::Buffer> final_child_bitmap;
                 if (child_bitmap == nullptr && bitmap == nullptr) {
@@ -1227,7 +1227,7 @@ arrow::Status WriteStructBatch(const arrow::Array& array,
     for (std::size_t i = 0; i < size; i++) {
         batch->fields[i]->resize(arrow_length);
         ARROW_RETURN_NOT_OK(
-            WriteBatch(*(struct_array->field(static_cast<int>(i))), batch->fields[i]));
+            WriteBatch(*(struct_array->field(static_cast<int32_t>(i))), batch->fields[i]));
     }
     return arrow::Status::OK();
 }

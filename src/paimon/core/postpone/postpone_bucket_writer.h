@@ -54,6 +54,7 @@ class PostponeBucketWriter : public BatchWriter {
         const std::vector<std::string>& trimmed_primary_keys,
         const std::shared_ptr<DataFilePathFactory>& path_factory, int64_t schema_id,
         const std::shared_ptr<arrow::Schema>& value_schema, const CoreOptions& options,
+        const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
         const std::shared_ptr<MemoryPool>& pool);
 
     ~PostponeBucketWriter() override {

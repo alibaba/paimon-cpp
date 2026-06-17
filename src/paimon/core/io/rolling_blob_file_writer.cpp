@@ -40,13 +40,12 @@ class DataType;
 namespace paimon {
 
 RollingBlobFileWriter::RollingBlobFileWriter(
-    int64_t target_file_size,
-    std::function<Result<std::unique_ptr<MainWriter>>()> create_file_writer,
+    int64_t target_file_size, const std::shared_ptr<MainWriterFactory>& writer_factory,
     const std::shared_ptr<arrow::Schema>& blob_schema,
     MultipleBlobFileWriter::BlobWriterCreator blob_writer_creator,
     const std::shared_ptr<arrow::DataType>& data_type, const std::set<std::string>& inline_fields)
     : RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>(target_file_size,
-                                                                      create_file_writer),
+                                                                      writer_factory),
       blob_schema_(blob_schema),
       blob_writer_creator_(std::move(blob_writer_creator)),
       data_type_(data_type),
@@ -122,7 +121,8 @@ Result<std::vector<std::shared_ptr<DataFileMeta>>> RollingBlobFileWriter::GetRes
 
 Result<std::shared_ptr<DataFileMeta>> RollingBlobFileWriter::CloseMainWriter() {
     PAIMON_RETURN_NOT_OK(current_writer_->Close());
-    PAIMON_ASSIGN_OR_RAISE(auto abort_executor, current_writer_->GetAbortExecutor());
+    PAIMON_ASSIGN_OR_RAISE(MainWriter::AbortExecutor abort_executor,
+                           current_writer_->GetAbortExecutor());
     closed_writers_.push_back(abort_executor);
     return current_writer_->GetResult();
 }

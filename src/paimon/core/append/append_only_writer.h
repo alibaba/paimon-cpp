@@ -17,7 +17,6 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -29,7 +28,6 @@
 #include "paimon/core/compact/compact_manager.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
-#include "paimon/core/io/single_file_writer.h"
 #include "paimon/core/utils/batch_writer.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -49,22 +47,23 @@ class MapSharedShreddingContext;
 class RecordBatch;
 template <typename T, typename R>
 class RollingFileWriter;
+template <typename T, typename R>
+class SingleFileWriterFactory;
 class LongCounter;
 class DataFilePathFactory;
 class MemoryPool;
 class Metrics;
-class FormatStatsExtractor;
-class WriterBuilder;
 
 class AppendOnlyWriter : public BatchWriter {
  public:
-    static Result<std::unique_ptr<AppendOnlyWriter>> Create(
-        const CoreOptions& options, int64_t schema_id,
-        const std::shared_ptr<arrow::Schema>& write_schema,
-        const std::optional<std::vector<std::string>>& write_cols, int64_t max_sequence_number,
-        const std::shared_ptr<DataFilePathFactory>& path_factory,
-        const std::shared_ptr<CompactManager>& compact_manager,
-        const std::shared_ptr<MemoryPool>& memory_pool);
+    AppendOnlyWriter(const CoreOptions& options, int64_t schema_id,
+                     const std::shared_ptr<arrow::Schema>& write_schema,
+                     const std::optional<std::vector<std::string>>& write_cols,
+                     int64_t max_sequence_number,
+                     const std::shared_ptr<DataFilePathFactory>& path_factory,
+                     const std::shared_ptr<CompactManager>& compact_manager,
+                     const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
+                     const std::shared_ptr<MemoryPool>& memory_pool);
 
     ~AppendOnlyWriter() override;
 
@@ -93,19 +92,10 @@ class AppendOnlyWriter : public BatchWriter {
     }
 
  private:
-    using SingleFileWriterCreator = std::function<
-        Result<std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>>()>;
+    using WriterFactory =
+        std::shared_ptr<SingleFileWriterFactory<::ArrowArray*, std::shared_ptr<DataFileMeta>>>;
     using RollingFileWriterResult =
         Result<std::unique_ptr<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>>;
-
-    AppendOnlyWriter(const CoreOptions& options, int64_t schema_id,
-                     const std::shared_ptr<arrow::Schema>& write_schema,
-                     const std::optional<std::vector<std::string>>& write_cols,
-                     int64_t max_sequence_number,
-                     const std::shared_ptr<DataFilePathFactory>& path_factory,
-                     const std::shared_ptr<CompactManager>& compact_manager,
-                     const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
-                     const std::shared_ptr<MemoryPool>& memory_pool);
 
     RollingFileWriterResult CreateRollingRowWriter();
     RollingFileWriterResult CreateRollingBlobWriter(
@@ -115,13 +105,12 @@ class AppendOnlyWriter : public BatchWriter {
     Result<CommitIncrement> DrainIncrement();
     Status Flush(bool wait_for_latest_compaction, bool forced_full_compaction);
 
-    SingleFileWriterCreator GetDataFileWriterCreator(
+    WriterFactory GetDataFileWriterFactory(
         const std::shared_ptr<arrow::Schema>& schema,
         const std::optional<std::vector<std::string>>& write_cols) const;
 
-    SingleFileWriterCreator GetBlobFileWriterCreator(
-        const std::shared_ptr<WriterBuilder>& writer_builder,
-        const std::shared_ptr<FormatStatsExtractor>& stats_extractor,
+    WriterFactory GetBlobFileWriterFactory(
+        const std::shared_ptr<arrow::Schema>& single_field_schema,
         const std::optional<std::vector<std::string>>& write_cols) const;
 
     Status TrySyncLatestCompaction(bool blocking);

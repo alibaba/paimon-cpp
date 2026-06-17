@@ -82,7 +82,7 @@ Result<CompactResult> ChangelogMergeTreeRewriter::RewriteOrProduceChangelog(
 
     std::unique_ptr<MergeTreeCompactRewriter::KeyValueRollingFileWriter> compact_file_writer;
     if (rewrite_compact_file) {
-        compact_file_writer = CreateRollingRowWriter(output_level);
+        PAIMON_ASSIGN_OR_RAISE(compact_file_writer, CreateRollingRowWriter(output_level));
     }
     // TODO(xinyu.lxy): produce changelog
     ScopeGuard write_guard([&]() -> void {

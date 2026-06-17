@@ -136,6 +136,7 @@ TEST(MapSharedShreddingUtilsTest, LogicalToPhysicalSchemaNullable) {
     ASSERT_OK_AND_ASSIGN(
         auto physical, MapSharedShreddingUtils::LogicalToPhysicalSchema(schema_nullable, col_map));
     auto struct_type = physical->field(0)->type();
+    ASSERT_TRUE(struct_type->field(0)->nullable());
     ASSERT_TRUE(struct_type->field(1)->nullable());
     ASSERT_TRUE(struct_type->field(2)->nullable());
 
@@ -148,6 +149,21 @@ TEST(MapSharedShreddingUtilsTest, LogicalToPhysicalSchemaNullable) {
     auto struct_type2 = physical2->field(0)->type();
     ASSERT_FALSE(struct_type2->field(1)->nullable());
     ASSERT_FALSE(struct_type2->field(2)->nullable());
+}
+
+TEST(MapSharedShreddingUtilsTest, LogicalToPhysicalSchemaPreservesFieldMetadata) {
+    auto metadata = std::make_shared<arrow::KeyValueMetadata>();
+    metadata->Append("paimon.field.id", "7");
+    metadata->Append("description", "original map field");
+    auto map_type = arrow::map(arrow::utf8(), arrow::int64());
+    auto schema = arrow::schema({arrow::field("m", map_type, false, metadata)});
+    std::map<std::string, int32_t> col_map = {{"m", 2}};
+
+    ASSERT_OK_AND_ASSIGN(auto physical_schema,
+                         MapSharedShreddingUtils::LogicalToPhysicalSchema(schema, col_map));
+
+    ASSERT_FALSE(physical_schema->field(0)->nullable());
+    ASSERT_TRUE(physical_schema->field(0)->metadata()->Equals(*metadata));
 }
 
 TEST(MapSharedShreddingUtilsTest, LogicalToPhysicalSchemaNoShreddingColumns) {

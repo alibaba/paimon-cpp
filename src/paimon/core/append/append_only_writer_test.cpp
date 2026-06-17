@@ -38,6 +38,7 @@
 #include "paimon/common/data/blob_descriptor.h"
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/data/blob_view_struct.h"
+#include "paimon/common/data/shredding/map_shared_shredding_context.h"
 #include "paimon/common/data/shredding/map_shared_shredding_utils.h"
 #include "paimon/common/data/shredding/map_shredding_defs.h"
 #include "paimon/common/fs/external_path_provider.h"
@@ -309,6 +310,21 @@ class AppendOnlyWriterTest : public testing::Test {
         ASSERT_EQ(expected_meta, deserialized_meta);
     }
 
+    Result<std::unique_ptr<AppendOnlyWriter>> CreateAppendOnlyWriter(
+        const CoreOptions& options, int64_t schema_id,
+        const std::shared_ptr<arrow::Schema>& write_schema,
+        const std::optional<std::vector<std::string>>& write_cols, int64_t max_sequence_number,
+        const std::shared_ptr<DataFilePathFactory>& path_factory,
+        const std::shared_ptr<CompactManager>& compact_manager,
+        const std::shared_ptr<MemoryPool>& memory_pool) const {
+        PAIMON_ASSIGN_OR_RAISE(
+            auto shredding_context,
+            MapSharedShreddingUtils::CreateShreddingContext(write_schema, options));
+        return std::make_unique<AppendOnlyWriter>(options, schema_id, write_schema, write_cols,
+                                                  max_sequence_number, path_factory,
+                                                  compact_manager, shredding_context, memory_pool);
+    }
+
  protected:
     std::shared_ptr<MemoryPool> memory_pool_;
     std::shared_ptr<CompactManager> compact_manager_;
@@ -334,7 +350,7 @@ TEST_F(AppendOnlyWriterTest, TestEmptyCommits) {
     ASSERT_OK(path_factory->Init(dir->Str(), "mock_format", options.DataFilePrefix(), nullptr));
 
     ASSERT_OK_AND_ASSIGN(
-        auto writer, AppendOnlyWriter::Create(
+        auto writer, CreateAppendOnlyWriter(
                          options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
                          /*max_sequence_number=*/-1, path_factory, compact_manager_, memory_pool_));
     for (int32_t i = 0; i < 3; i++) {
@@ -364,7 +380,7 @@ TEST_F(AppendOnlyWriterTest, TestWriteAndPrepareCommit) {
     auto path_factory = std::make_shared<DataFilePathFactory>();
     ASSERT_OK(path_factory->Init(dir->Str(), "mock_format", options.DataFilePrefix(), nullptr));
     ASSERT_OK_AND_ASSIGN(
-        auto writer, AppendOnlyWriter::Create(
+        auto writer, CreateAppendOnlyWriter(
                          options, /*schema_id=*/2, schema, /*write_cols=*/std::nullopt,
                          /*max_sequence_number=*/-1, path_factory, compact_manager_, memory_pool_));
     arrow::StringBuilder builder;
@@ -407,7 +423,7 @@ TEST_F(AppendOnlyWriterTest, TestWriteAndClose) {
     auto path_factory = std::make_shared<DataFilePathFactory>();
     ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
     ASSERT_OK_AND_ASSIGN(
-        auto writer, AppendOnlyWriter::Create(
+        auto writer, CreateAppendOnlyWriter(
                          options, /*schema_id=*/1, schema, /*write_cols=*/std::nullopt,
                          /*max_sequence_number=*/-1, path_factory, compact_manager_, memory_pool_));
     auto struct_type = arrow::struct_(fields);
@@ -452,7 +468,7 @@ TEST_F(AppendOnlyWriterTest, TestInvalidRowKind) {
     auto path_factory = std::make_shared<DataFilePathFactory>();
     ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
     ASSERT_OK_AND_ASSIGN(
-        auto writer, AppendOnlyWriter::Create(
+        auto writer, CreateAppendOnlyWriter(
                          options, /*schema_id=*/1, schema, /*write_cols=*/std::nullopt,
                          /*max_sequence_number=*/-1, path_factory, compact_manager_, memory_pool_));
     auto struct_type = arrow::struct_(fields);
@@ -491,7 +507,7 @@ TEST_F(AppendOnlyWriterTest, TestPrepareCommitWaitCompactionUsesBlockingGetResul
     arrow::FieldVector fields = {arrow::field("f0", arrow::utf8())};
     auto schema = arrow::schema(fields);
     ASSERT_OK_AND_ASSIGN(
-        auto writer, AppendOnlyWriter::Create(
+        auto writer, CreateAppendOnlyWriter(
                          options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
                          /*max_sequence_number=*/-1, path_factory, compact_manager, memory_pool_));
 
@@ -514,7 +530,7 @@ TEST_F(AppendOnlyWriterTest, TestPrepareCommitForceCompactUsesBlockingGetResult)
     arrow::FieldVector fields = {arrow::field("f0", arrow::utf8())};
     auto schema = arrow::schema(fields);
     ASSERT_OK_AND_ASSIGN(
-        auto writer, AppendOnlyWriter::Create(
+        auto writer, CreateAppendOnlyWriter(
                          options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
                          /*max_sequence_number=*/-1, path_factory, compact_manager, memory_pool_));
 
@@ -558,7 +574,7 @@ TEST_F(AppendOnlyWriterTest,
     arrow::FieldVector fields = {arrow::field("f0", arrow::utf8())};
     auto schema = arrow::schema(fields);
     ASSERT_OK_AND_ASSIGN(
-        auto writer, AppendOnlyWriter::Create(
+        auto writer, CreateAppendOnlyWriter(
                          options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
                          /*max_sequence_number=*/-1, path_factory, compact_manager, memory_pool_));
 
@@ -602,7 +618,7 @@ TEST_F(AppendOnlyWriterTest, TestCloseDeletesCompactAfterFiles) {
     arrow::FieldVector fields = {arrow::field("f0", arrow::utf8())};
     auto schema = arrow::schema(fields);
     ASSERT_OK_AND_ASSIGN(
-        auto writer, AppendOnlyWriter::Create(
+        auto writer, CreateAppendOnlyWriter(
                          options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
                          /*max_sequence_number=*/-1, path_factory, compact_manager, memory_pool_));
 
@@ -635,7 +651,7 @@ TEST_F(AppendOnlyWriterTest, TestCloseCleansDeletionFile) {
     arrow::FieldVector fields = {arrow::field("f0", arrow::utf8())};
     auto schema = arrow::schema(fields);
     ASSERT_OK_AND_ASSIGN(
-        auto writer, AppendOnlyWriter::Create(
+        auto writer, CreateAppendOnlyWriter(
                          options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
                          /*max_sequence_number=*/-1, path_factory, compact_manager, memory_pool_));
 
@@ -658,7 +674,7 @@ TEST_F(AppendOnlyWriterTest, TestCompactNotCompletedTriggersCompaction) {
     arrow::FieldVector fields = {arrow::field("f0", arrow::utf8())};
     auto schema = arrow::schema(fields);
     ASSERT_OK_AND_ASSIGN(
-        auto writer, AppendOnlyWriter::Create(
+        auto writer, CreateAppendOnlyWriter(
                          options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
                          /*max_sequence_number=*/-1, path_factory, compact_manager, memory_pool_));
 
@@ -678,7 +694,7 @@ TEST_F(AppendOnlyWriterTest, TestCompactPassesFullCompactionFlag) {
     arrow::FieldVector fields = {arrow::field("f0", arrow::utf8())};
     auto schema = arrow::schema(fields);
     ASSERT_OK_AND_ASSIGN(
-        auto writer, AppendOnlyWriter::Create(
+        auto writer, CreateAppendOnlyWriter(
                          options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
                          /*max_sequence_number=*/-1, path_factory, compact_manager, memory_pool_));
 
@@ -700,7 +716,7 @@ TEST_F(AppendOnlyWriterTest, TestWriteWithSingleBlobField) {
     auto schema = arrow::schema({int_field, blob_field});
 
     ASSERT_OK_AND_ASSIGN(
-        auto writer, AppendOnlyWriter::Create(
+        auto writer, CreateAppendOnlyWriter(
                          options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
                          /*max_sequence_number=*/-1, path_factory, compact_manager_, memory_pool_));
 
@@ -736,7 +752,7 @@ TEST_F(AppendOnlyWriterTest, TestWriteWithMultipleBlobFields) {
         arrow::schema({arrow::field("id", arrow::int32()), BlobUtils::ToArrowField("blob1", false),
                        BlobUtils::ToArrowField("blob2", false)});
     ASSERT_OK_AND_ASSIGN(
-        auto writer, AppendOnlyWriter::Create(
+        auto writer, CreateAppendOnlyWriter(
                          options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
                          /*max_sequence_number=*/-1, path_factory, compact_manager_, memory_pool_));
 
@@ -775,7 +791,7 @@ TEST_F(AppendOnlyWriterTest, TestMultiplePrepareCommitSequenceContinuity) {
     arrow::FieldVector fields = {arrow::field("f0", arrow::utf8())};
     auto schema = arrow::schema(fields);
     ASSERT_OK_AND_ASSIGN(
-        auto writer, AppendOnlyWriter::Create(
+        auto writer, CreateAppendOnlyWriter(
                          options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
                          /*max_sequence_number=*/-1, path_factory, compact_manager_, memory_pool_));
 
@@ -804,7 +820,7 @@ TEST_F(AppendOnlyWriterTest, TestWriteValidBlobViewField) {
     auto schema =
         arrow::schema({arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("view", true)});
     ASSERT_OK_AND_ASSIGN(
-        auto writer, AppendOnlyWriter::Create(
+        auto writer, CreateAppendOnlyWriter(
                          options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
                          /*max_sequence_number=*/-1, path_factory, compact_manager_, memory_pool_));
 
@@ -841,7 +857,7 @@ TEST_F(AppendOnlyWriterTest, TestWriteInvalidBlobViewFieldRejected) {
     auto schema =
         arrow::schema({arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("view", true)});
     ASSERT_OK_AND_ASSIGN(
-        auto writer, AppendOnlyWriter::Create(
+        auto writer, CreateAppendOnlyWriter(
                          options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
                          /*max_sequence_number=*/-1, path_factory, compact_manager_, memory_pool_));
 
@@ -872,6 +888,39 @@ class AppendOnlyWriterShreddingTest : public AppendOnlyWriterTest,
 INSTANTIATE_TEST_SUITE_P(FileFormats, AppendOnlyWriterShreddingTest,
                          ::testing::Values("parquet", "orc"));
 
+TEST_F(AppendOnlyWriterTest, TestSharedShreddingMapRejectsAvroFormatOnCommit) {
+    auto options = CreateOptions({
+        {Options::FILE_FORMAT, "avro"},
+        {Options::MANIFEST_FORMAT, "avro"},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {Options::WRITE_ONLY, "true"},
+    });
+
+    auto logical_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+    });
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = CreatePathFactory(dir->Str(), "avro", options);
+
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         CreateAppendOnlyWriter(options, /*schema_id=*/0, logical_schema,
+                                                /*write_cols=*/std::nullopt,
+                                                /*max_sequence_number=*/-1, path_factory,
+                                                compact_manager_, memory_pool_));
+
+    auto batch = CreateBatch(logical_schema, R"([
+        [1, [["a", 10]]]
+    ])");
+    ASSERT_OK(writer->Write(std::move(batch)));
+    ASSERT_NOK_WITH_MSG(writer->PrepareCommit(/*wait_compaction=*/true),
+                        "AddMetadata is not supported by avro format writer.");
+    ASSERT_OK(writer->Close());
+}
+
 TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapFieldContent) {
     std::string format = GetFormat();
     // Configure with shared-shredding map on "tags" field, K=3.
@@ -894,10 +943,10 @@ TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapFieldContent) {
     auto path_factory = CreatePathFactory(dir->Str(), format, options);
 
     ASSERT_OK_AND_ASSIGN(auto writer,
-                         AppendOnlyWriter::Create(options, /*schema_id=*/0, logical_schema,
-                                                  /*write_cols=*/std::nullopt,
-                                                  /*max_sequence_number=*/-1, path_factory,
-                                                  compact_manager_, memory_pool_));
+                         CreateAppendOnlyWriter(options, /*schema_id=*/0, logical_schema,
+                                                /*write_cols=*/std::nullopt,
+                                                /*max_sequence_number=*/-1, path_factory,
+                                                compact_manager_, memory_pool_));
 
     // Write a batch with MAP data using the logical schema.
     // Row0: id=1, tags={a:10, b:20}          → fits K=3
@@ -965,10 +1014,10 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapAllEmptyFirstFile) {
     auto path_factory = CreatePathFactory(dir->Str(), format, options);
 
     ASSERT_OK_AND_ASSIGN(auto writer,
-                         AppendOnlyWriter::Create(options, /*schema_id=*/0, logical_schema,
-                                                  /*write_cols=*/std::nullopt,
-                                                  /*max_sequence_number=*/-1, path_factory,
-                                                  compact_manager_, memory_pool_));
+                         CreateAppendOnlyWriter(options, /*schema_id=*/0, logical_schema,
+                                                /*write_cols=*/std::nullopt,
+                                                /*max_sequence_number=*/-1, path_factory,
+                                                compact_manager_, memory_pool_));
 
     auto batch = CreateBatch(logical_schema, R"([
         [1, []],
@@ -1022,10 +1071,10 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapAllNullThenAllEmptyF
     auto path_factory = CreatePathFactory(dir->Str(), format, options);
 
     ASSERT_OK_AND_ASSIGN(auto writer,
-                         AppendOnlyWriter::Create(options, /*schema_id=*/0, logical_schema,
-                                                  /*write_cols=*/std::nullopt,
-                                                  /*max_sequence_number=*/-1, path_factory,
-                                                  compact_manager_, memory_pool_));
+                         CreateAppendOnlyWriter(options, /*schema_id=*/0, logical_schema,
+                                                /*write_cols=*/std::nullopt,
+                                                /*max_sequence_number=*/-1, path_factory,
+                                                compact_manager_, memory_pool_));
 
     auto null_batch = CreateBatch(logical_schema, R"([
         [1, null],
@@ -1141,10 +1190,10 @@ TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapWithOverflow) {
     auto path_factory = CreatePathFactory(dir->Str(), format, options);
 
     ASSERT_OK_AND_ASSIGN(auto writer,
-                         AppendOnlyWriter::Create(options, /*schema_id=*/0, logical_schema,
-                                                  /*write_cols=*/std::nullopt,
-                                                  /*max_sequence_number=*/-1, path_factory,
-                                                  compact_manager_, memory_pool_));
+                         CreateAppendOnlyWriter(options, /*schema_id=*/0, logical_schema,
+                                                /*write_cols=*/std::nullopt,
+                                                /*max_sequence_number=*/-1, path_factory,
+                                                compact_manager_, memory_pool_));
 
     // Row0: {a:1, b:2}           → fits K=2
     // Row1: {c:3, a:4, b:5}      → 3 keys, K=2: c→col0, a→col1, b→overflow
@@ -1212,10 +1261,10 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
     auto path_factory = CreatePathFactory(dir->Str(), format, options);
 
     ASSERT_OK_AND_ASSIGN(auto writer,
-                         AppendOnlyWriter::Create(options, /*schema_id=*/0, logical_schema,
-                                                  /*write_cols=*/std::nullopt,
-                                                  /*max_sequence_number=*/-1, path_factory,
-                                                  compact_manager_, memory_pool_));
+                         CreateAppendOnlyWriter(options, /*schema_id=*/0, logical_schema,
+                                                /*write_cols=*/std::nullopt,
+                                                /*max_sequence_number=*/-1, path_factory,
+                                                compact_manager_, memory_pool_));
 
     // --- File 1: max_row_width = 3, K = K_max = 10 (first file, no history) ---
     auto batch1 = CreateBatch(logical_schema, R"([
@@ -1325,6 +1374,66 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
     ASSERT_OK(writer->Close());
 }
 
+TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapUsesInitialContextForFirstFile) {
+    std::string format = GetFormat();
+    auto options = CreateOptions({
+        {Options::FILE_FORMAT, format},
+        {Options::MANIFEST_FORMAT, format},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "10"},
+        {Options::WRITE_ONLY, "true"},
+    });
+
+    auto logical_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+    });
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = CreatePathFactory(dir->Str(), format, options);
+
+    auto initial_context =
+        std::make_shared<MapSharedShreddingContext>(std::map<std::string, int32_t>{{"tags", 10}});
+    initial_context->ReportFileStats("tags", 2);
+    auto writer = std::make_unique<AppendOnlyWriter>(
+        options, /*schema_id=*/0, logical_schema, /*write_cols=*/std::nullopt,
+        /*max_sequence_number=*/-1, path_factory, compact_manager_, initial_context, memory_pool_);
+
+    auto batch = CreateBatch(logical_schema, R"([
+        [1, [["a", 10], ["b", 20], ["c", 30]]]
+    ])");
+    ASSERT_OK(writer->Write(std::move(batch)));
+    ASSERT_OK_AND_ASSIGN(CommitIncrement inc, writer->PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_EQ(1, inc.GetNewFilesIncrement().NewFiles().size());
+
+    std::string file_path =
+        path_factory->ToPath(inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
+
+    std::map<std::string, int32_t> column_to_k = {{"tags", 2}};
+    ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                   logical_schema, column_to_k));
+    MapSharedShreddingFieldMeta expected_meta;
+    expected_meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}};
+    expected_meta.field_to_columns = {{0, {0}}, {1, {1}}};
+    expected_meta.overflow_field_set = {2};
+    expected_meta.num_columns = 2;
+    expected_meta.max_row_width = 3;
+    CheckShreddingFileSchema(file_path, format, physical_schema, /*field_index=*/1, expected_meta,
+                             options.GetFileCompression());
+
+    auto physical_type = arrow::struct_(physical_schema->fields());
+    std::shared_ptr<arrow::ChunkedArray> expected_array;
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(physical_type, {R"([
+        [1, [[0, 1], 10, 20, [[2, 30]]]]
+    ])"},
+                                                                 &expected_array)
+                    .ok());
+    CheckFileContent(file_path, format, expected_array);
+
+    ASSERT_OK(writer->Close());
+}
+
 TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsWithKAdaptation) {
     std::string format = GetFormat();
     // Two shared-shredding MAP fields with different initial K: tags(K=8), attrs(K=4).
@@ -1349,10 +1458,10 @@ TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsWithKA
     auto path_factory = CreatePathFactory(dir->Str(), format, options);
 
     ASSERT_OK_AND_ASSIGN(auto writer,
-                         AppendOnlyWriter::Create(options, /*schema_id=*/0, logical_schema,
-                                                  /*write_cols=*/std::nullopt,
-                                                  /*max_sequence_number=*/-1, path_factory,
-                                                  compact_manager_, memory_pool_));
+                         CreateAppendOnlyWriter(options, /*schema_id=*/0, logical_schema,
+                                                /*write_cols=*/std::nullopt,
+                                                /*max_sequence_number=*/-1, path_factory,
+                                                compact_manager_, memory_pool_));
     std::string compression = options.GetFileCompression();
 
     // --- File 1: first file, tags K=8, attrs K=4 ---
@@ -1479,10 +1588,10 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapDataFileMetaInfo) {
     auto path_factory = CreatePathFactory(dir->Str(), format, options);
 
     ASSERT_OK_AND_ASSIGN(auto writer,
-                         AppendOnlyWriter::Create(options, /*schema_id=*/5, logical_schema,
-                                                  /*write_cols=*/std::nullopt,
-                                                  /*max_sequence_number=*/9, path_factory,
-                                                  compact_manager_, memory_pool_));
+                         CreateAppendOnlyWriter(options, /*schema_id=*/5, logical_schema,
+                                                /*write_cols=*/std::nullopt,
+                                                /*max_sequence_number=*/9, path_factory,
+                                                compact_manager_, memory_pool_));
 
     // Write 3 rows.
     auto batch = CreateBatch(logical_schema, R"([
@@ -1559,10 +1668,10 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapWithBlobSeparation) 
     auto path_factory = CreatePathFactory(dir->Str(), format, options);
 
     ASSERT_OK_AND_ASSIGN(auto writer,
-                         AppendOnlyWriter::Create(options, /*schema_id=*/0, logical_schema,
-                                                  /*write_cols=*/std::nullopt,
-                                                  /*max_sequence_number=*/-1, path_factory,
-                                                  compact_manager_, memory_pool_));
+                         CreateAppendOnlyWriter(options, /*schema_id=*/0, logical_schema,
+                                                /*write_cols=*/std::nullopt,
+                                                /*max_sequence_number=*/-1, path_factory,
+                                                compact_manager_, memory_pool_));
 
     // Write rows with id, blob_data, and tags.
     // Row0: id=1, blob="hello", tags={a:10, b:20}

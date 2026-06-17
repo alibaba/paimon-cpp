@@ -64,6 +64,7 @@ class MergeTreeWriter : public BatchWriter {
         int64_t schema_id, const std::shared_ptr<arrow::Schema>& value_schema,
         const CoreOptions& options, const std::shared_ptr<CompactManager>& compact_manager,
         const std::shared_ptr<IOManager>& io_manager, bool enable_multi_thread_spill,
+        const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
         const std::shared_ptr<MemoryPool>& pool);
 
     Status Write(std::unique_ptr<RecordBatch>&& batch) override;

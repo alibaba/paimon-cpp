@@ -18,6 +18,7 @@
 
 #include <cstddef>
 #include <map>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -28,13 +29,25 @@
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
+#include "arrow/ipc/json_simple.h"
 #include "arrow/type.h"
 #include "gtest/gtest.h"
 #include "paimon/catalog/catalog.h"
 #include "paimon/catalog/identifier.h"
+#include "paimon/commit_context.h"
+#include "paimon/common/data/shredding/map_shared_shredding_utils.h"
+#include "paimon/common/data/shredding/map_shredding_defs.h"
+#include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/path_util.h"
+#include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/table/sink/commit_message_impl.h"
+#include "paimon/file_store_commit.h"
 #include "paimon/file_store_write.h"
+#include "paimon/format/file_format.h"
+#include "paimon/format/file_format_factory.h"
+#include "paimon/format/reader_builder.h"
+#include "paimon/fs/local/local_file_system.h"
+#include "paimon/reader/file_batch_reader.h"
 #include "paimon/record_batch.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/test_helper.h"
@@ -96,6 +109,86 @@ class KeyValueFileStoreWriteTest : public ::testing::Test {
             ArrowArrayRelease(&arrow_array);
         }
         return write_status;
+    }
+
+    void CreateTable(const std::string& warehouse, const std::shared_ptr<arrow::Schema>& schema,
+                     const std::map<std::string, std::string>& options) const {
+        ::ArrowSchema c_schema;
+        ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
+        ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(warehouse, options));
+        ASSERT_OK(catalog->CreateDatabase("foo", {}, /*ignore_if_exists=*/false));
+        ASSERT_OK(catalog->CreateTable(Identifier("foo", "bar"), &c_schema,
+                                       /*partition_keys=*/{}, /*primary_keys=*/{"id"}, options,
+                                       /*ignore_if_exists=*/false));
+    }
+
+    std::unique_ptr<RecordBatch> MakeBatch(const std::shared_ptr<arrow::Schema>& schema,
+                                           const std::string& json) const {
+        auto struct_type = arrow::struct_(schema->fields());
+        auto array = arrow::ipc::internal::json::ArrayFromJSON(struct_type, json).ValueOrDie();
+        ::ArrowArray arrow_array;
+        EXPECT_TRUE(arrow::ExportArray(*array, &arrow_array).ok());
+        RecordBatchBuilder batch_builder(&arrow_array);
+        return batch_builder.SetBucket(0).Finish().value();
+    }
+
+    std::vector<std::shared_ptr<CommitMessage>> WriteAndPrepare(
+        const std::string& table_path, const std::shared_ptr<arrow::Schema>& schema,
+        const std::map<std::string, std::string>& options, const std::string& json,
+        int64_t commit_identifier) const {
+        WriteContextBuilder builder(table_path, "test");
+        builder.SetOptions(options);
+        EXPECT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context, builder.Finish());
+        EXPECT_OK_AND_ASSIGN(auto file_store_write,
+                             FileStoreWrite::Create(std::move(write_context)));
+        EXPECT_OK(file_store_write->Write(MakeBatch(schema, json)));
+        EXPECT_OK_AND_ASSIGN(auto commit_msgs, file_store_write->PrepareCommit(
+                                                   /*wait_compaction=*/false, commit_identifier));
+        EXPECT_OK(file_store_write->Close());
+        return commit_msgs;
+    }
+
+    std::shared_ptr<DataFileMeta> OnlyNewFile(
+        const std::vector<std::shared_ptr<CommitMessage>>& commit_msgs) const {
+        EXPECT_EQ(1, commit_msgs.size());
+        auto msg = std::dynamic_pointer_cast<CommitMessageImpl>(commit_msgs[0]);
+        EXPECT_NE(nullptr, msg);
+        EXPECT_EQ(1, msg->GetNewFilesIncrement().NewFiles().size());
+        return msg->GetNewFilesIncrement().NewFiles()[0];
+    }
+
+    void Commit(const std::string& table_path, const std::map<std::string, std::string>& options,
+                const std::vector<std::shared_ptr<CommitMessage>>& commit_msgs) const {
+        CommitContextBuilder builder(table_path, "test");
+        builder.SetOptions(options);
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(auto file_store_commit,
+                             FileStoreCommit::Create(std::move(commit_context)));
+        ASSERT_OK(file_store_commit->Commit(commit_msgs));
+    }
+
+    std::shared_ptr<arrow::Schema> ReadDataFileSchema(
+        const std::string& table_path, const std::shared_ptr<DataFileMeta>& file,
+        const std::map<std::string, std::string>& options) const {
+        std::string file_path =
+            PathUtil::JoinPath(PathUtil::JoinPath(table_path, "bucket-0"), file->file_name);
+        auto fs = std::make_shared<LocalFileSystem>();
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream, fs->Open(file_path));
+        EXPECT_OK_AND_ASSIGN(auto format_str, file->FileFormat());
+        EXPECT_OK_AND_ASSIGN(auto file_format, FileFormatFactory::Get(format_str, options));
+        EXPECT_OK_AND_ASSIGN(auto reader_builder, file_format->CreateReaderBuilder(10));
+        EXPECT_OK_AND_ASSIGN(auto reader, reader_builder->Build(input_stream));
+        EXPECT_OK_AND_ASSIGN(auto c_file_schema, reader->GetFileSchema());
+        return arrow::ImportSchema(c_file_schema.get()).ValueOrDie();
+    }
+
+    MapSharedShreddingFieldMeta ShreddingMeta(const std::shared_ptr<arrow::Schema>& file_schema,
+                                              int32_t field_index) const {
+        auto metadata = file_schema->field(field_index)->metadata();
+        EXPECT_NE(nullptr, metadata);
+        return MapSharedShreddingUtils::DeserializeMetadata(
+                   metadata->Copy(), MapSharedShreddingDefine::kDefaultDictCompression)
+            .value();
     }
 };
 
@@ -217,6 +310,53 @@ TEST_F(KeyValueFileStoreWriteTest,
     ASSERT_OK_AND_ASSIGN(auto commit_messages,
                          file_store_write->PrepareCommit(/*wait_compaction=*/true));
     ASSERT_EQ(commit_messages.size(), 1);
+}
+
+TEST_F(KeyValueFileStoreWriteTest, TestSharedShreddingMapRestoreInitializesNextWriter) {
+    std::map<std::string, std::string> options = {
+        {"file.format", "parquet"},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "10"},
+        {"write-only", "true"},
+        {"bucket", "1"},
+        {"enable-pk-commit-in-inte-test", ""},
+    };
+    auto logical_schema = arrow::schema({
+        arrow::field("id", arrow::int32(), /*nullable=*/false),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+    });
+    auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(logical_schema);
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    CreateTable(dir->Str(), logical_schema, options);
+    std::string table_path = PathUtil::JoinPath(dir->Str(), "foo.db/bar");
+
+    auto first_commit_msgs = WriteAndPrepare(table_path, logical_schema, options, R"([
+        [1, [["a", 1], ["b", 2]]]
+    ])",
+                                             /*commit_identifier=*/0);
+    auto first_file_schema =
+        ReadDataFileSchema(table_path, OnlyNewFile(first_commit_msgs), options);
+    auto first_meta = ShreddingMeta(first_file_schema, /*field_index=*/3);
+    ASSERT_EQ(10, first_meta.num_columns);
+    ASSERT_EQ(2, first_meta.max_row_width);
+    Commit(table_path, options, first_commit_msgs);
+
+    auto second_commit_msgs = WriteAndPrepare(table_path, logical_schema, options, R"([
+        [2, [["c", 3], ["d", 4], ["e", 5]]]
+    ])",
+                                              /*commit_identifier=*/1);
+    auto second_file_schema =
+        ReadDataFileSchema(table_path, OnlyNewFile(second_commit_msgs), options);
+    auto second_meta = ShreddingMeta(second_file_schema, /*field_index=*/3);
+
+    ASSERT_OK_AND_ASSIGN(
+        auto expected_second_schema,
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(write_schema, {{"tags", 2}}));
+    ASSERT_TRUE(second_file_schema->Equals(*expected_second_schema, /*check_metadata=*/false));
+    ASSERT_EQ(2, second_meta.num_columns);
+    ASSERT_EQ(3, second_meta.max_row_width);
 }
 
 TEST_F(KeyValueFileStoreWriteTest, TestSpillSimple) {

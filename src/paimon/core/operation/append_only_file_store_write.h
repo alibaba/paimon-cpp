@@ -29,7 +29,6 @@
 #include "paimon/core/compact/cancellation_controller.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/deletionvectors/deletion_vector.h"
-#include "paimon/core/io/single_file_writer.h"
 #include "paimon/core/operation/abstract_file_store_write.h"
 #include "paimon/core/table/bucket_mode.h"
 #include "paimon/file_store_write.h"
@@ -39,6 +38,7 @@
 #include "paimon/type_fwd.h"
 
 struct ArrowSchema;
+struct ArrowArray;
 
 namespace arrow {
 class Schema;
@@ -49,10 +49,13 @@ namespace paimon {
 struct DataFileMeta;
 class BatchWriter;
 class BucketedDvMaintainer;
+class DataFilePathFactory;
 class FileStorePathFactory;
 class FileStoreScan;
 class SnapshotManager;
 class ScanFilter;
+template <typename T, typename R>
+class SingleFileWriterFactory;
 class MetricsImpl;
 class BinaryRow;
 class CoreOptions;
@@ -94,8 +97,8 @@ class AppendOnlyFileStoreWrite : public AbstractFileStoreWrite {
         const std::shared_ptr<CancellationController>& cancellation_controller);
 
  private:
-    using SingleFileWriterCreator = std::function<
-        Result<std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>>()>;
+    using WriterFactory =
+        std::shared_ptr<SingleFileWriterFactory<::ArrowArray*, std::shared_ptr<DataFileMeta>>>;
 
     Result<std::shared_ptr<BatchWriter>> CreateWriter(
         const BinaryRow& partition, int32_t bucket,
@@ -106,8 +109,9 @@ class AppendOnlyFileStoreWrite : public AbstractFileStoreWrite {
     Result<std::unique_ptr<FileStoreScan>> CreateFileStoreScan(
         const std::shared_ptr<ScanFilter>& filter) const override;
 
-    SingleFileWriterCreator GetDataFileWriterCreator(
-        const BinaryRow& partition, int32_t bucket, const std::shared_ptr<arrow::Schema>& schema,
+    WriterFactory GetDataFileWriterFactory(
+        const std::shared_ptr<DataFilePathFactory>& data_file_path_factory,
+        const std::shared_ptr<arrow::Schema>& schema,
         const std::optional<std::vector<std::string>>& write_cols,
         const std::vector<std::shared_ptr<DataFileMeta>>& to_compact,
         const std::shared_ptr<MapSharedShreddingContext>& shredding_context) const;
