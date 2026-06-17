@@ -23,12 +23,13 @@
 #include <cstdio>
 #include <memory>
 #include <mutex>
-#include <ostream>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <thread>
 #include <vector>
+
+#include <lumina/core/NoCopyable.h>
 
 namespace lumina::telemetry {
 
@@ -87,7 +88,7 @@ private:
 };
 
 // ---- RAII line builder: supports << style ----
-class LogLine
+class LogLine : public core::NoCopyable, public core::NoMoveable
 {
 public:
     LogLine(LogLevel lvl, std::string_view module, const char* file, int line)
@@ -114,7 +115,7 @@ public:
 
 private:
     LogLevel _level;
-    std::string _module;
+    std::string_view _module;
     const char* _file;
     int _line;
     std::ostringstream _oss;
@@ -209,7 +210,8 @@ inline std::string FormatString(const char* fmt, ...)
 // ---- Printf-style formatting macros ----
 #define LUMINA_LOG(level, fmt, ...)                                                                                    \
     do {                                                                                                               \
-        if (::lumina::telemetry::Logger::Instance().ShouldLog(level)) {                                                \
+        if (static_cast<int>(level) >= static_cast<int>(LUMINA_LOG_COMPILE_LEVEL) &&                                   \
+            ::lumina::telemetry::Logger::Instance().ShouldLog(level)) {                                                \
             ::lumina::telemetry::Logger::Instance().Submit(                                                            \
                 level, ::lumina::telemetry::detail::Basename(__FILE__),                                                \
                 ::lumina::telemetry::detail::FormatString(fmt, ##__VA_ARGS__), __FILE__, __LINE__);                    \
@@ -225,18 +227,19 @@ inline std::string FormatString(const char* fmt, ...)
 // Convenience: log Status errors
 #define LUMINA_LOG_IF_ERROR(status_expr)                                                                               \
     do {                                                                                                               \
-        const auto& _s = (status_expr);                                                                                \
-        if (!_s.IsOk()) {                                                                                              \
-            LUMINA_LOG_WARN() << "Status=" << static_cast<int>(_s.Code()) << " Msg=" << _s.Message();                  \
+        const auto& _lumina_log_st_ = (status_expr);                                                                   \
+        if (!_lumina_log_st_.IsOk()) {                                                                                 \
+            LUMINA_LOG_WARN() << "Status=" << static_cast<int>(_lumina_log_st_.Code())                                 \
+                              << " Msg=" << _lumina_log_st_.Message();                                                 \
         }                                                                                                              \
     } while (0)
 
 #define LUMINA_LOG_IF_ERROR_F(status_expr, fmt, ...)                                                                   \
     do {                                                                                                               \
-        const auto& _s = (status_expr);                                                                                \
-        if (!_s.IsOk()) {                                                                                              \
-            LUMINA_LOG_WARN_F("Status=[%d] Msg=[%s]: " fmt, static_cast<int>(_s.Code()), _s.Message().c_str(),         \
-                              ##__VA_ARGS__);                                                                          \
+        const auto& _lumina_log_st_ = (status_expr);                                                                   \
+        if (!_lumina_log_st_.IsOk()) {                                                                                 \
+            LUMINA_LOG_WARN_F("Status=[%d] Msg=[%s]: " fmt, static_cast<int>(_lumina_log_st_.Code()),                  \
+                              _lumina_log_st_.Message().c_str(), ##__VA_ARGS__);                                       \
         }                                                                                                              \
     } while (0)
 

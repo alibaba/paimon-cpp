@@ -17,6 +17,7 @@
 #pragma once
 #include <array>
 #include <cstddef>
+#include <lumina/core/Macro.h>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -30,8 +31,8 @@ struct PhantomWrapper {
         : _val(std::forward<Args>(args)...)
     {
     }
-    T& Get() { return _val; }
-    const T& Get() const { return _val; }
+    T& Get() LUMINA_LIFETIME_BOUND { return _val; }
+    const T& Get() const LUMINA_LIFETIME_BOUND { return _val; }
 
 private:
     T _val;

@@ -20,11 +20,12 @@
 #include <cstdint>
 #include <functional>
 #include <iterator>
+#include <span>
+
 #include <lumina/api/Extension.h>
 #include <lumina/api/LuminaSearcher.h>
 #include <lumina/core/Constants.h>
 #include <lumina/core/Status.h>
-#include <span>
 
 namespace lumina::extensions { inline namespace experimental {
 // Extension for searcher to provide random access to vectors
@@ -33,9 +34,6 @@ class GetVectorExtension final : public api::ISearchExtension
 public:
     GetVectorExtension() = default;
     ~GetVectorExtension() override = default;
-
-    GetVectorExtension(GetVectorExtension&&) noexcept = delete;
-    GetVectorExtension& operator=(GetVectorExtension&&) noexcept = delete;
 
     constexpr static std::string_view ExtensionName() { return core::kExtensionGetVector; }
 
@@ -61,6 +59,7 @@ public:
         return _getVectorIds();
     }
 
+    // -- Internal: called by backend wiring, not for direct use --
     void SetFunc(std::function<GetVectorFn> func) noexcept { _getVector = std::move(func); }
     void SetFunc(std::function<GetVectorIdsFn> func) noexcept { _getVectorIds = std::move(func); }
 

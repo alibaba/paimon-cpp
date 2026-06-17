@@ -30,56 +30,51 @@
 #include <memory_resource>
 #include <string>
 #include <unordered_map>
-#include <utility>
 #include <vector>
-
-namespace lumina::io {
-class FileReader;
-}
 
 namespace lumina::api {
 
-// External "narrow waist" searcher
-class LuminaSearcher final : public core::NoCopyable
+// Real-time, in-memory vector indexing. Single-writer Insert, concurrent Search.
+class LuminaStreamer final : public core::NoCopyable
 {
 public:
     class Impl;
-    LuminaSearcher(std::unique_ptr<Impl> impl) noexcept;
-    // -- Semantics: movable, not copyable --
-    LuminaSearcher(LuminaSearcher&&) noexcept;
-    LuminaSearcher& operator=(LuminaSearcher&&) noexcept;
-    ~LuminaSearcher() noexcept;
 
-    static core::Result<LuminaSearcher> Create(const SearcherOptions& options) noexcept;
-    static core::Result<LuminaSearcher> Create(const SearcherOptions& options,
+    LuminaStreamer(LuminaStreamer&&) noexcept;
+    LuminaStreamer& operator=(LuminaStreamer&&) noexcept;
+    explicit LuminaStreamer(std::unique_ptr<Impl> impl) noexcept;
+    ~LuminaStreamer() noexcept;
+
+    static core::Result<LuminaStreamer> Create(const StreamerOptions& options) noexcept;
+    static core::Result<LuminaStreamer> Create(const StreamerOptions& options,
                                                const core::MemoryResourceConfig& memoryConfig) noexcept;
 
-    core::Status Open(const IOOptions& ioOptions) noexcept;
-    core::Status Open(std::unique_ptr<io::FileReader> reader, const IOOptions& ioOptions) noexcept;
+    /** Insert a single vector.
+     *  @param data  Non-null pointer to exactly dim floats; returns InvalidArgument if null.
+     *  @param id    Caller-assigned identifier. Uniqueness is NOT enforced. */
+    core::Status Insert(const float* data, core::vector_id_t id) noexcept;
 
     using SearchHit = api::SearchHit;
     using SearchResult = api::SearchResult;
 
-    // Index info: basic searcher metadata
+    // Search is `const`: it does not mutate any observable state of this
+    // instance. Safe to call concurrently with other Search/GetMeta calls and
+    // with a single in-flight Insert (see class-level thread-safety note).
+    core::Result<SearchResult> Search(const Query& q, const SearchOptions& options) const noexcept;
+    core::Result<SearchResult> Search(const Query& q, const SearchOptions& options,
+                                      std::pmr::memory_resource& sessionPool) const noexcept;
+
     struct IndexInfo {
-        uint64_t count {0};        // Total vectors
+        uint64_t count {0};        // Total vectors currently visible to Search.
         core::dimension_t dim {0}; // Vector dimension
     };
 
-    core::Result<SearchResult> Search(const Query& q, const SearchOptions& options) noexcept;
-    core::Result<SearchResult> Search(const Query& q, const SearchOptions& options,
-                                      std::pmr::memory_resource& sessionPool) noexcept;
-    // -- Metadata --
     IndexInfo GetMeta() const noexcept;
 
-    // -- Lifecycle --
-    core::Status Close() noexcept;
-
     // -- Extension attach (per instance) --
-    core::Status Attach(ISearchExtension& ext) noexcept;
+    core::Status Attach(IStreamExtension& ext) noexcept;
 
 private:
-    // pImpl: internal orchestration and backend selection live in the implementation
     std::unique_ptr<Impl> _p;
 };
 

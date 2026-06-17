@@ -18,12 +18,13 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <lumina/core/Constants.h>
-#include <lumina/core/Types.h>
-#include <lumina/distance/Metric.h>
 #include <span>
 #include <string_view>
 #include <utility>
+
+#include <lumina/core/Constants.h>
+#include <lumina/core/Types.h>
+#include <lumina/distance/Metric.h>
 
 namespace lumina::dist {
 
@@ -31,7 +32,7 @@ constexpr float kDefaultEps = 1e-9;
 
 template <class Tag, class... Args>
 concept TagInvocable = requires(Tag t, Args&&... args) {
-    TagInvoke(t, static_cast<Args&&>(args)...); // Find implementation via ADL
+    TagInvoke(t, static_cast<Args &&>(args)...); // Find implementation via ADL
 };
 
 template <class Tag, class... Args>
@@ -39,12 +40,8 @@ using TagInvokeResult = decltype(TagInvoke(std::declval<Tag>(), std::declval<Arg
 
 template <class M>
 concept IsMetricT = requires {
-    {
-        M::Name
-    } -> std::convertible_to<std::string_view>;
-    {
-        M::LowerIsBetter
-    } -> std::convertible_to<bool>;
+    { M::Name } -> std::convertible_to<std::string_view>;
+    { M::LowerIsBetter } -> std::convertible_to<bool>;
 };
 
 // -- CPO: Eval --
@@ -83,6 +80,40 @@ struct BatchEvalTag {
     }
 };
 inline constexpr BatchEvalTag BatchEvalF {};
+
+// -- CPO: BatchScatterEval --
+// Computes distance from a query to N scattered candidate vectors, sharing query register loads.
+// Used by graph/IVF traversal for amortized SIMD throughput.
+// N is a compile-time constant; optimized TagInvoke specializations can be provided for any N.
+// Without a specialization, falls back to per-candidate EvalF.
+template <uint32_t N>
+struct BatchScatterEvalTag {
+    static_assert(N >= 1, "BatchScatterEvalTag requires N >= 1");
+
+    // Primary: optimized TagInvoke exists for this N
+    template <IsMetricT M>
+        requires TagInvocable<BatchScatterEvalTag<N>, M, const float*, core::dimension_t,
+                              std::span<const float* const, N>, std::span<float, N>>
+    constexpr void operator()(const M& m, const float* query, core::dimension_t dim,
+                              std::span<const float* const, N> candidates, std::span<float, N> results) const
+        noexcept(noexcept(TagInvoke(std::declval<BatchScatterEvalTag<N>>(), m, query, dim, candidates, results)))
+    {
+        TagInvoke(*this, m, query, dim, candidates, results);
+    }
+
+    // Fallback: loop over EvalF for each candidate
+    template <IsMetricT M>
+        requires(!TagInvocable<BatchScatterEvalTag<N>, M, const float*, core::dimension_t,
+                               std::span<const float* const, N>, std::span<float, N>>)
+    constexpr void operator()(const M& m, const float* query, core::dimension_t dim,
+                              std::span<const float* const, N> candidates, std::span<float, N> results) const noexcept
+    {
+        auto querySpan = std::span<const float>(query, dim);
+        for (uint32_t i = 0; i < N; ++i) {
+            results[i] = EvalF(m, querySpan, std::span<const float>(candidates[i], dim));
+        }
+    }
+};
 
 // check dist val
 struct IsMinDistTag {
