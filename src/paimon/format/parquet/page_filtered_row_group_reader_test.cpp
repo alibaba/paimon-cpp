@@ -1124,7 +1124,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnPageFilter) {
 /// Predicate: id >= 30 would be a partial-row-group match at first 50-row group.
 /// Because nested schema disables page-level filtering, the entire first row group (0..49) is read,
 /// so rows [0, 99] should all be returned.
-TEST_F(PageFilteredRowGroupReaderTest, NestedMapRowGroupFallback) {
+TEST_F(PageFilteredRowGroupReaderTest, NestedMapBitmapFallback) {
     std::string file_name = dir_->Str() + "/nested_map_projection_fallback.parquet";
     auto data = MakeMapColumnData(100);
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
@@ -1153,7 +1153,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapRowGroupFallback) {
 /// Read schema only contains the nested "tags" column.
 /// Predicate: id >= 30 would be a partial-row-group match at first 50-row group.
 /// Because nested schema disables page-level filtering, the entire first row group (0..49) is read.
-TEST_F(PageFilteredRowGroupReaderTest, NestedListRowGroupFallback) {
+TEST_F(PageFilteredRowGroupReaderTest, NestedListBitmapFallback) {
     std::string file_name = dir_->Str() + "/nested_list_projection_fallback.parquet";
     auto data = MakeListColumnData(100);
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
@@ -1181,7 +1181,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedListRowGroupFallback) {
 /// Read schema only contains the nested "info" column.
 /// Predicate: id >= 30 would be a partial-row-group match at first 50-row group.
 /// Because nested schema disables page-level filtering, the entire first row group (0..49) is read.
-TEST_F(PageFilteredRowGroupReaderTest, NestedStructRowGroupFallback) {
+TEST_F(PageFilteredRowGroupReaderTest, NestedStructBitmapFallback) {
     std::string file_name = dir_->Str() + "/nested_struct_projection_fallback.parquet";
     auto data = MakeNestedStructData(100);
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
