@@ -62,34 +62,8 @@ namespace paimon::parquet {
 
 namespace {
 
-int32_t GetFieldIdForMatching(const std::shared_ptr<arrow::Field>& field) {
-    int32_t field_id = NestedProjectionUtils::GetPaimonFieldId(field);
-    if (field_id != -1) {
-        return field_id;
-    }
-    if (!field || !field->HasMetadata() || !field->metadata()) {
-        return -1;
-    }
-    auto get_result = field->metadata()->Get(ParquetFieldIdConverter::PARQUET_FIELD_ID);
-    if (!get_result.ok()) {
-        return -1;
-    }
-    std::optional<int32_t> parquet_field_id =
-        StringUtils::StringToValue<int32_t>(get_result.ValueUnsafe());
-    return parquet_field_id.value_or(-1);
-}
-
 std::shared_ptr<arrow::Field> FindMatchingReadField(
     const arrow::FieldVector& read_fields, const std::shared_ptr<arrow::Field>& file_field) {
-    int32_t file_field_id = GetFieldIdForMatching(file_field);
-    if (file_field_id != -1) {
-        for (const auto& candidate : read_fields) {
-            if (GetFieldIdForMatching(candidate) == file_field_id) {
-                return candidate;
-            }
-        }
-    }
-
     for (const auto& candidate : read_fields) {
         if (candidate->name() == file_field->name()) {
             return candidate;
@@ -100,15 +74,6 @@ std::shared_ptr<arrow::Field> FindMatchingReadField(
 
 int32_t FindMatchingFileFieldIndex(const arrow::FieldVector& file_fields,
                                    const std::shared_ptr<arrow::Field>& read_field) {
-    int32_t read_field_id = GetFieldIdForMatching(read_field);
-    if (read_field_id != -1) {
-        for (int32_t i = 0; i < static_cast<int32_t>(file_fields.size()); ++i) {
-            if (GetFieldIdForMatching(file_fields[i]) == read_field_id) {
-                return i;
-            }
-        }
-    }
-
     for (int32_t i = 0; i < static_cast<int32_t>(file_fields.size()); ++i) {
         if (file_fields[i]->name() == read_field->name()) {
             return i;
