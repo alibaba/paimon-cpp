@@ -132,8 +132,10 @@ Status ParquetFileBatchReader::SetReadSchema(
         std::unordered_map<std::string, std::vector<int32_t>> field_index_map;
         bool has_nested_field = false;
         for (const auto& field : read_schema->fields()) {
-            has_nested_field =
-                has_nested_field || ArrowSchemaValidator::IsNestedType(field->type());
+            if (ArrowSchemaValidator::IsNestedType(field->type())) {
+                has_nested_field = true;
+                break;
+            }
         }
         int32_t i = 0;
         for (const auto& field : file_schema->fields()) {
