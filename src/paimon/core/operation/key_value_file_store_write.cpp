@@ -79,7 +79,8 @@ Result<std::unique_ptr<FileStoreScan>> KeyValueFileStoreWrite::CreateFileStoreSc
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<ManifestList> manifest_list,
         ManifestList::Create(options_.GetFileSystem(), options_.GetManifestFormat(),
-                             options_.GetManifestCompression(), file_store_path_factory_, pool_));
+                             options_.GetManifestCompression(), file_store_path_factory_,
+                             options_.GetCache(), pool_));
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<ManifestFile> manifest_file,
         ManifestFile::Create(options_.GetFileSystem(), options_.GetManifestFormat(),

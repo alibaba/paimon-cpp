@@ -20,11 +20,11 @@
 
 #include "fmt/format.h"
 #include "paimon/common/data/binary_data_read_utils.h"
-#include "paimon/common/memory/memory_segment.h"
 #include "paimon/common/memory/memory_segment_utils.h"
 #include "paimon/io/byte_order.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/memory/memory_segment.h"
 
 namespace paimon {
 const int64_t BinaryRow::FIRST_BYTE_ZERO =

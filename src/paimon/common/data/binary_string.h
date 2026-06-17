@@ -26,7 +26,7 @@
 #include <vector>
 
 #include "paimon/common/data/binary_section.h"
-#include "paimon/common/memory/memory_segment.h"
+#include "paimon/memory/memory_segment.h"
 #include "paimon/visibility.h"
 
 namespace paimon {

@@ -226,10 +226,10 @@ Result<std::vector<ManifestFileMeta>> ReadDataManifests(
     const MetadataSystemTableContext& context, const Snapshot& snapshot,
     const std::shared_ptr<FileStorePathFactory>& path_factory, const CoreOptions& core_options,
     const std::shared_ptr<MemoryPool>& pool) {
-    PAIMON_ASSIGN_OR_RAISE(
-        std::unique_ptr<ManifestList> manifest_list,
-        ManifestList::Create(context.fs, core_options.GetManifestFormat(),
-                             core_options.GetManifestCompression(), path_factory, pool));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ManifestList> manifest_list,
+                           ManifestList::Create(context.fs, core_options.GetManifestFormat(),
+                                                core_options.GetManifestCompression(), path_factory,
+                                                core_options.GetCache(), pool));
     std::vector<ManifestFileMeta> manifests;
     // TODO(suxiaogang223): Align Java ReadAllManifests semantics by including changelog
     // manifests. ReadAllManifests currently delegates to ReadChangelogManifests, which returns

@@ -17,8 +17,8 @@
 #pragma once
 
 #include "paimon/common/data/binary_array.h"
-#include "paimon/common/memory/memory_segment.h"
 #include "paimon/common/memory/memory_segment_utils.h"
+#include "paimon/memory/memory_segment.h"
 namespace paimon {
 /// A binary implementation of `InternalMap` which is backed by a single `MemorySegment`.
 /// Binary layout: [4 byte(keyArray size in bytes)] + [Key BinaryArray] + [Value BinaryArray].
