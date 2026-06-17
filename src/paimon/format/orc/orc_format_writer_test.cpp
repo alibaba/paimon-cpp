@@ -297,43 +297,4 @@ TEST_F(OrcFormatWriterTest, TestPrepareWriterOptions) {
 }
 // TODO(liancheng.lsz): add tests for GetEstimateLength
 
-TEST_F(OrcFormatWriterTest, TestUpdateSchemaTypeMismatch) {
-    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
-    ASSERT_TRUE(test_root_dir);
-    std::string file_name = test_root_dir->Str() + "/update_schema_mismatch.orc";
-
-    auto write_schema = arrow::schema({
-        arrow::field("id", arrow::int32()),
-        arrow::field("name", arrow::utf8()),
-    });
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
-                         file_system_->Create(file_name, /*overwrite=*/true));
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<OrcOutputStreamImpl> output_stream,
-                         OrcOutputStreamImpl::Create(out));
-    ASSERT_OK_AND_ASSIGN(
-        auto format_writer,
-        OrcFormatWriter::Create(std::move(output_stream), *write_schema, /*options=*/{},
-                                /*compression=*/"zstd", /*batch_size=*/10, pool_));
-
-    // Write one batch so the writer is initialized.
-    auto data_type = arrow::struct_(write_schema->fields());
-    auto data =
-        arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([[1, "alice"], [2, "bob"]])")
-            .ValueOrDie();
-    ArrowArray c_array;
-    ASSERT_TRUE(arrow::ExportArray(*data, &c_array).ok());
-    ASSERT_OK(format_writer->AddBatch(&c_array));
-    ASSERT_OK(format_writer->Flush());
-
-    // Build a schema with a different type (int32 -> utf8) — should be rejected.
-    auto wrong_schema = arrow::schema({
-        arrow::field("id", arrow::utf8()),
-        arrow::field("name", arrow::utf8()),
-    });
-    ArrowSchema c_wrong_schema;
-    ASSERT_TRUE(arrow::ExportSchema(*wrong_schema, &c_wrong_schema).ok());
-    ASSERT_NOK_WITH_MSG(format_writer->UpdateSchema(&c_wrong_schema), "differs from original");
-    ArrowSchemaRelease(&c_wrong_schema);
-}
-
 }  // namespace paimon::orc::test

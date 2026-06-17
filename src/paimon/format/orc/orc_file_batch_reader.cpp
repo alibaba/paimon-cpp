@@ -30,6 +30,7 @@
 #include "fmt/format.h"
 #include "orc/OrcFile.hh"
 #include "paimon/common/metrics/metrics_impl.h"
+#include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/options_utils.h"
@@ -110,9 +111,9 @@ Result<std::unique_ptr<::ArrowSchema>> OrcFileBatchReader::GetFileSchema() const
     assert(reader_);
 
     // If the writer stored a serialized Arrow schema with per-field metadata via
-    // UpdateSchema, prefer that over the plain ORC type tree.
-    if (reader_->HasMetadataValue("ARROW:schema")) {
-        std::string encoded = reader_->GetMetadataValue("ARROW:schema");
+    // AddMetadata, prefer that over the plain ORC type tree.
+    if (reader_->HasMetadataValue(ArrowUtils::kArrowSchemaMetadataKey)) {
+        std::string encoded = reader_->GetMetadataValue(ArrowUtils::kArrowSchemaMetadataKey);
         std::string decoded = arrow::util::base64_decode(encoded);
         auto buffer = arrow::Buffer::FromString(std::move(decoded));
         arrow::io::BufferReader buf_reader(buffer);

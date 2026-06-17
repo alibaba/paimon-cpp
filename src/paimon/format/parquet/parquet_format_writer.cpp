@@ -16,11 +16,12 @@
 
 #include "paimon/format/parquet/parquet_format_writer.h"
 
+#include <map>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "arrow/c/bridge.h"
-#include "arrow/ipc/writer.h"
 #include "arrow/memory_pool.h"
 #include "arrow/record_batch.h"
 #include "arrow/util/base64.h"
@@ -82,27 +83,15 @@ Status ParquetFormatWriter::Finish() {
     return Status::OK();
 }
 
-Status ParquetFormatWriter::UpdateSchema(::ArrowSchema* schema) {
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> arrow_schema,
-                                      arrow::ImportSchema(schema));
-    // Validate: the new schema must differ from the original only in per-field metadata.
-    if (!schema_->Equals(*arrow_schema, /*check_metadata=*/false)) {
-        return Status::Invalid(
-            fmt::format("ParquetFormatWriter::UpdateSchema: new schema {} differs from original {} "
-                        "in more than just metadata",
-                        arrow_schema->ToString(), schema_->ToString()));
+Status ParquetFormatWriter::AddMetadata(const std::map<std::string, std::string>& metadata) {
+    if (metadata.empty()) {
+        return Status::OK();
     }
-    // Re-serialize the Arrow Schema (with updated per-field metadata) into
-    // the ARROW:schema key. AddKeyValueMetadata uses Merge (other-first),
-    // so the new ARROW:schema value overwrites the one written at Open time.
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Buffer> serialized,
-                                      arrow::ipc::SerializeSchema(*arrow_schema, pool_.get()));
-    std::string schema_base64 = arrow::util::base64_encode(
-        std::string_view(reinterpret_cast<const char*>(serialized->data()),
-                         static_cast<size_t>(serialized->size())));
-    auto metadata = std::make_shared<arrow::KeyValueMetadata>();
-    metadata->Append("ARROW:schema", std::move(schema_base64));
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(writer_->AddKeyValueMetadata(metadata));
+    auto key_value_metadata = std::make_shared<arrow::KeyValueMetadata>();
+    for (const auto& [key, value] : metadata) {
+        key_value_metadata->Append(key, arrow::util::base64_encode(std::string_view(value)));
+    }
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(writer_->AddKeyValueMetadata(key_value_metadata));
     return Status::OK();
 }
 

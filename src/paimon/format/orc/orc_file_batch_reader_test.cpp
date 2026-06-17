@@ -28,6 +28,7 @@
 #include "arrow/ipc/api.h"
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/defs.h"
 #include "paimon/format/orc/orc_adapter.h"
 #include "paimon/format/orc/orc_format_defs.h"
@@ -43,6 +44,12 @@
 #include "paimon/testing/utils/timezone_guard.h"
 
 namespace paimon::orc::test {
+
+std::string SerializeSchemaToString(const std::shared_ptr<arrow::Schema>& schema) {
+    std::shared_ptr<arrow::Buffer> serialized = arrow::ipc::SerializeSchema(*schema).ValueOrDie();
+    return std::string(reinterpret_cast<const char*>(serialized->data()),
+                       static_cast<size_t>(serialized->size()));
+}
 
 struct TestParam {
     uint64_t natural_read_size;
@@ -1132,8 +1139,8 @@ TEST_F(OrcFileBatchReaderTest, TestListStructPartialProjection) {
                         "type mismatch");
 }
 
-TEST_F(OrcFileBatchReaderTest, TestUpdateSchemaPerFieldMetadata) {
-    // Write a simple ORC file, call UpdateSchema to inject per-field metadata
+TEST_F(OrcFileBatchReaderTest, TestAddMetadataPerFieldMetadata) {
+    // Write a simple ORC file, call AddMetadata to inject per-field metadata
     // before Finish, then read back and verify the file schema carries the metadata.
     auto write_schema = arrow::schema({
         arrow::field("id", arrow::int32()),
@@ -1177,11 +1184,9 @@ TEST_F(OrcFileBatchReaderTest, TestUpdateSchemaPerFieldMetadata) {
         write_schema->field(2)->WithMetadata(score_meta),  // score — custom metadata
     });
 
-    // UpdateSchema must be called before Finish.
-    ArrowSchema c_updated_schema;
-    ASSERT_TRUE(arrow::ExportSchema(*updated_schema, &c_updated_schema).ok());
-    ASSERT_OK(format_writer->UpdateSchema(&c_updated_schema));
-    ArrowSchemaRelease(&c_updated_schema);
+    // AddMetadata must be called before Finish.
+    ASSERT_OK(format_writer->AddMetadata(
+        {{ArrowUtils::kArrowSchemaMetadataKey, SerializeSchemaToString(updated_schema)}}));
     ASSERT_OK(format_writer->Finish());
     ASSERT_OK(out->Flush());
     ASSERT_OK(out->Close());

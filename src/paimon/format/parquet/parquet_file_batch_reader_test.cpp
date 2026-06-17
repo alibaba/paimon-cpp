@@ -18,6 +18,7 @@
 
 #include <iostream>
 #include <limits>
+#include <string>
 
 #include "arrow/api.h"
 #include "arrow/array/array_base.h"
@@ -28,10 +29,12 @@
 #include "arrow/c/bridge.h"
 #include "arrow/io/caching.h"
 #include "arrow/io/interfaces.h"
+#include "arrow/ipc/api.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/arrow/arrow_input_stream_adapter.h"
+#include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/path_util.h"
@@ -55,6 +58,12 @@ class Predicate;
 }  // namespace paimon
 
 namespace paimon::parquet::test {
+
+std::string SerializeSchemaToString(const std::shared_ptr<arrow::Schema>& schema) {
+    std::shared_ptr<arrow::Buffer> serialized = arrow::ipc::SerializeSchema(*schema).ValueOrDie();
+    return std::string(reinterpret_cast<const char*>(serialized->data()),
+                       static_cast<size_t>(serialized->size()));
+}
 
 class ParquetFileBatchReaderTest : public ::testing::Test,
                                    public ::testing::WithParamInterface<bool> {
@@ -683,8 +692,8 @@ TEST_P(ParquetFileBatchReaderTest, TestTimestampType) {
 
 INSTANTIATE_TEST_SUITE_P(TestParam, ParquetFileBatchReaderTest, ::testing::Values(false, true));
 
-TEST_F(ParquetFileBatchReaderTest, TestUpdateSchemaPerFieldMetadata) {
-    // Write a simple parquet file, call UpdateSchema to inject per-field metadata
+TEST_F(ParquetFileBatchReaderTest, TestAddMetadataPerFieldMetadata) {
+    // Write a simple parquet file, call AddMetadata to inject per-field metadata
     // before Finish, then read back and verify the file schema carries the metadata.
     auto write_schema = arrow::schema({
         arrow::field("id", arrow::int32()),
@@ -726,11 +735,9 @@ TEST_F(ParquetFileBatchReaderTest, TestUpdateSchemaPerFieldMetadata) {
         write_schema->field(2)->WithMetadata(score_meta),  // score — custom metadata
     });
 
-    // UpdateSchema must be called before Finish.
-    ArrowSchema c_updated_schema;
-    ASSERT_TRUE(arrow::ExportSchema(*updated_schema, &c_updated_schema).ok());
-    ASSERT_OK(format_writer->UpdateSchema(&c_updated_schema));
-    ArrowSchemaRelease(&c_updated_schema);
+    // AddMetadata must be called before Finish.
+    ASSERT_OK(format_writer->AddMetadata(
+        {{ArrowUtils::kArrowSchemaMetadataKey, SerializeSchemaToString(updated_schema)}}));
     ASSERT_OK(format_writer->Finish());
     ASSERT_OK(out->Flush());
     ASSERT_OK(out->Close());

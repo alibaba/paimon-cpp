@@ -19,6 +19,7 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -26,6 +27,7 @@
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
+#include "arrow/ipc/api.h"
 #include "fmt/format.h"
 #include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/scope_guard.h"
@@ -122,7 +124,7 @@ class SingleFileWriter : public FileWriter<T, R> {
         return Status::OK();
     }
 
-    /// Exports schema to Arrow C Data Interface and forwards UpdateSchema to FormatWriter.
+    /// Serializes schema and forwards it as file metadata to FormatWriter.
     Status UpdateSchema(const std::shared_ptr<arrow::Schema>& schema);
 
     int64_t output_bytes_ = -1;
@@ -238,11 +240,13 @@ Status SingleFileWriter<T, R>::UpdateSchema(const std::shared_ptr<arrow::Schema>
     if (!writer_) {
         return Status::Invalid("Cannot update schema: format writer is not initialized.");
     }
-    ::ArrowSchema c_schema;
-    ArrowSchemaMarkReleased(&c_schema);
-    ScopeGuard guard([&c_schema]() { ArrowSchemaRelease(&c_schema); });
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schema, &c_schema));
-    return writer_->UpdateSchema(&c_schema);
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Buffer> serialized,
+                                      arrow::ipc::SerializeSchema(*schema));
+    std::map<std::string, std::string> metadata;
+    metadata.emplace(ArrowUtils::kArrowSchemaMetadataKey,
+                     std::string(reinterpret_cast<const char*>(serialized->data()),
+                                 static_cast<size_t>(serialized->size())));
+    return writer_->AddMetadata(metadata);
 }
 
 template <typename T, typename R>

@@ -118,7 +118,7 @@ Result<std::unique_ptr<ArrowArray>> MapSharedShreddingBatchConverter::Convert(
 
 Result<std::shared_ptr<arrow::Array>> MapSharedShreddingBatchConverter::ConvertOneColumn(
     const std::shared_ptr<arrow::Array>& map_column,
-    const std::shared_ptr<arrow::DataType>& physical_struct_type, ColumnContext* context) {
+    const std::shared_ptr<arrow::DataType>& physical_struct_type, ColumnContext* context) const {
     auto map_array = std::dynamic_pointer_cast<arrow::MapArray>(map_column);
     PAIMON_CHECK_NOT_NULL(map_array, "MapSharedShreddingBatchConverter: column is not a MapArray");
 
@@ -215,7 +215,7 @@ Result<std::shared_ptr<arrow::Array>> MapSharedShreddingBatchConverter::ConvertO
 void MapSharedShreddingBatchConverter::ExtractRowFields(
     const std::shared_ptr<arrow::StringArray>& keys_array, int64_t start, int64_t length,
     MapSharedShreddingFieldDict* dict, std::vector<int32_t>* field_ids_out,
-    std::unordered_map<int32_t, int64_t>* field_id_to_value_index_out) {
+    std::unordered_map<int32_t, int64_t>* field_id_to_value_index_out) const {
     field_ids_out->clear();
     field_ids_out->reserve(length);
     field_id_to_value_index_out->clear();
@@ -228,10 +228,9 @@ void MapSharedShreddingBatchConverter::ExtractRowFields(
     }
 }
 
-Status MapSharedShreddingBatchConverter::AppendFieldMapping(const RowAllocation& allocation,
-                                                            int32_t num_cols,
-                                                            arrow::ListBuilder* list_builder,
-                                                            arrow::Int32Builder* value_builder) {
+Status MapSharedShreddingBatchConverter::AppendFieldMapping(
+    const RowAllocation& allocation, int32_t num_cols, arrow::ListBuilder* list_builder,
+    arrow::Int32Builder* value_builder) const {
     PAIMON_RETURN_NOT_OK_FROM_ARROW(list_builder->Append());
     for (int32_t c = 0; c < num_cols; ++c) {
         PAIMON_RETURN_NOT_OK_FROM_ARROW(value_builder->Append(allocation.col_to_field[c]));
@@ -242,7 +241,7 @@ Status MapSharedShreddingBatchConverter::AppendFieldMapping(const RowAllocation&
 Status MapSharedShreddingBatchConverter::AppendColumnValues(
     const std::shared_ptr<arrow::Array>& values_array, const RowAllocation& allocation,
     const std::unordered_map<int32_t, int64_t>& field_id_to_value_index, int32_t num_cols,
-    const std::vector<arrow::ArrayBuilder*>& col_builders) {
+    const std::vector<arrow::ArrayBuilder*>& col_builders) const {
     for (int32_t c = 0; c < num_cols; ++c) {
         int32_t assigned_field_id = allocation.col_to_field[c];
         if (assigned_field_id == -1) {
@@ -266,7 +265,7 @@ Status MapSharedShreddingBatchConverter::AppendOverflow(
     const std::shared_ptr<arrow::Array>& values_array, const RowAllocation& allocation,
     const std::unordered_map<int32_t, int64_t>& field_id_to_value_index,
     arrow::MapBuilder* overflow_builder, arrow::Int32Builder* overflow_key_builder,
-    arrow::ArrayBuilder* overflow_value_builder) {
+    arrow::ArrayBuilder* overflow_value_builder) const {
     if (allocation.overflow_fields.empty()) {
         PAIMON_RETURN_NOT_OK_FROM_ARROW(overflow_builder->AppendNull());
         return Status::OK();

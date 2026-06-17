@@ -17,7 +17,9 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <memory>
+#include <string>
 
 #include "paimon/format/format_writer.h"
 #include "paimon/fs/file_system.h"
@@ -62,7 +64,7 @@ class ParquetFormatWriter : public FormatWriter {
         return metrics_;
     }
 
-    Status UpdateSchema(::ArrowSchema* schema) override;
+    Status AddMetadata(const std::map<std::string, std::string>& metadata) override;
 
  private:
     ParquetFormatWriter(std::unique_ptr<::parquet::arrow::FileWriter> writer,

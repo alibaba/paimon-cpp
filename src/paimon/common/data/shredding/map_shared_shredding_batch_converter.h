@@ -100,24 +100,25 @@ class MapSharedShreddingBatchConverter {
     /// @param physical_struct_type The physical struct type from physical_schema for this column.
     Result<std::shared_ptr<arrow::Array>> ConvertOneColumn(
         const std::shared_ptr<arrow::Array>& map_column,
-        const std::shared_ptr<arrow::DataType>& physical_struct_type, ColumnContext* context);
+        const std::shared_ptr<arrow::DataType>& physical_struct_type, ColumnContext* context) const;
 
     /// Extracts field ids and builds field_id -> value_index map for one row.
     void ExtractRowFields(const std::shared_ptr<arrow::StringArray>& keys_array, int64_t start,
                           int64_t length, MapSharedShreddingFieldDict* dict,
                           std::vector<int32_t>* field_ids_out,
-                          std::unordered_map<int32_t, int64_t>* field_id_to_value_index_out);
+                          std::unordered_map<int32_t, int64_t>* field_id_to_value_index_out) const;
 
     /// Appends __field_mapping list for one row.
     Status AppendFieldMapping(const RowAllocation& allocation, int32_t num_cols,
-                              arrow::ListBuilder* list_builder, arrow::Int32Builder* value_builder);
+                              arrow::ListBuilder* list_builder,
+                              arrow::Int32Builder* value_builder) const;
 
     /// Appends __col_0..K-1 values for one row.
     Status AppendColumnValues(const std::shared_ptr<arrow::Array>& values_array,
                               const RowAllocation& allocation,
                               const std::unordered_map<int32_t, int64_t>& field_id_to_value_index,
                               int32_t num_cols,
-                              const std::vector<arrow::ArrayBuilder*>& col_builders);
+                              const std::vector<arrow::ArrayBuilder*>& col_builders) const;
 
     /// Appends __overflow entries for one row.
     Status AppendOverflow(const std::shared_ptr<arrow::Array>& values_array,
@@ -125,7 +126,7 @@ class MapSharedShreddingBatchConverter {
                           const std::unordered_map<int32_t, int64_t>& field_id_to_value_index,
                           arrow::MapBuilder* overflow_builder,
                           arrow::Int32Builder* overflow_key_builder,
-                          arrow::ArrayBuilder* overflow_value_builder);
+                          arrow::ArrayBuilder* overflow_value_builder) const;
 
     std::shared_ptr<arrow::Schema> logical_schema_;
     std::shared_ptr<arrow::Schema> physical_schema_;

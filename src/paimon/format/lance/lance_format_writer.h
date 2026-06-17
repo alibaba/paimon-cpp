@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -59,6 +60,8 @@ class LanceFormatWriter : public FormatWriter {
         // TODO(xinyu.lxy): add metrics
         return metrics_;
     }
+
+    Status AddMetadata(const std::map<std::string, std::string>& metadata) override;
 
  private:
     LanceFormatWriter(LanceFileWriter* file_writer,
