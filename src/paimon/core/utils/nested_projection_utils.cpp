@@ -212,9 +212,8 @@ Result<std::vector<std::string>> NestedProjectionUtils::GetMapSelectedKeys(
     for (auto& token : tokens) {
         StringUtils::Trim(&token);
         if (!deduplicated.insert(token).second) {
-            return Status::Invalid(
-                fmt::format("Duplicate selected key '{}' in {} metadata", token,
-                            DataField::MAP_SELECTED_KEYS));
+            return Status::Invalid(fmt::format("Duplicate selected key '{}' in {} metadata", token,
+                                               DataField::MAP_SELECTED_KEYS));
         }
         result.push_back(token);
     }
@@ -222,8 +221,7 @@ Result<std::vector<std::string>> NestedProjectionUtils::GetMapSelectedKeys(
 }
 
 Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-    const std::shared_ptr<arrow::Array>& array,
-    const std::vector<std::string>& selected_keys) {
+    const std::shared_ptr<arrow::Array>& array, const std::vector<std::string>& selected_keys) {
     if (selected_keys.empty() || !array || array->length() == 0) {
         return array;
     }
@@ -245,9 +243,8 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySel
     deduplicated.reserve(selected_keys.size());
     for (const auto& selected_key : selected_keys) {
         if (!deduplicated.insert(selected_key).second) {
-            return Status::Invalid(
-                fmt::format("Duplicate selected key '{}' in {} metadata", selected_key,
-                            DataField::MAP_SELECTED_KEYS));
+            return Status::Invalid(fmt::format("Duplicate selected key '{}' in {} metadata",
+                                               selected_key, DataField::MAP_SELECTED_KEYS));
         }
     }
 
@@ -275,8 +272,8 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySel
                 }
                 std::string_view key_view = keys_array->GetView(entry_idx);
                 if (key_view == selected_key) {
-                    PAIMON_RETURN_NOT_OK_FROM_ARROW(
-                        key_builder->Append(key_view.data(), static_cast<int32_t>(key_view.size())));
+                    PAIMON_RETURN_NOT_OK_FROM_ARROW(key_builder->Append(
+                        key_view.data(), static_cast<int32_t>(key_view.size())));
                     PAIMON_RETURN_NOT_OK_FROM_ARROW(
                         value_builder->AppendArraySlice(*values_array->data(), entry_idx, 1));
                 }

@@ -901,11 +901,10 @@ TEST_P(NestedColumnPruningInteTest, ParquetPageIndexFilterWithNestedPruning) {
         arrow::field("f1", arrow::struct_({arrow::field("x", arrow::int64())})),
     };
     auto expected_type = arrow::struct_(expected_fields);
-    auto expected_array =
-        arrow::ipc::internal::json::ArrayFromJSON(expected_type, R"([
+    auto expected_array = arrow::ipc::internal::json::ArrayFromJSON(expected_type, R"([
         [0, "Alice", [100]]
     ])")
-            .ValueOrDie();
+                              .ValueOrDie();
     auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
 
     arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();

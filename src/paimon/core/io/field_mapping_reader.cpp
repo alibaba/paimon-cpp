@@ -316,9 +316,9 @@ Status FieldMappingReader::MappingFields(const std::shared_ptr<arrow::Array>& da
 
         // Filter map entries by selected keys if metadata is present.
         if (field_array->type()->id() == arrow::Type::MAP) {
-            PAIMON_ASSIGN_OR_RAISE(
-                std::vector<std::string> selected_keys,
-                NestedProjectionUtils::GetMapSelectedKeys(read_fields_of_data_array[i].ArrowField()));
+            PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> selected_keys,
+                                   NestedProjectionUtils::GetMapSelectedKeys(
+                                       read_fields_of_data_array[i].ArrowField()));
             if (!selected_keys.empty()) {
                 PAIMON_ASSIGN_OR_RAISE(field_array,
                                        NestedProjectionUtils::FilterMapArrayBySelectedKeys(
