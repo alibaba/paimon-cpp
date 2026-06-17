@@ -201,8 +201,7 @@ class PAIMON_EXPORT ReadContextBuilder {
     ///
     /// @param read_field_ids Vector of field ids to read from the table.
     /// @return Reference to this builder for method chaining.
-    /// @note Currently supports top-level field selection. Future versions may support
-    ///       nested field selection using ArrowSchema for more granular projection.
+    /// @note Currently supports top-level field selection.
     /// @note SetReadFieldIds() and SetReadFieldNames() are mutually exclusive.
     ///       Calling both will ignore the read schema set by SetReadFieldNames().
     ReadContextBuilder& SetReadFieldIds(const std::vector<int32_t>& read_field_ids);

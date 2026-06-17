@@ -556,7 +556,6 @@ TEST(MemorySegmentTest, TestDoubleAccess) {
 }
 
 // Bulk Byte Movements
-
 TEST(MemorySegmentTest, TestBulkByteAccess) {
     auto pool = paimon::GetDefaultPool();
     // test expected correct behavior with default offset / length

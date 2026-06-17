@@ -194,7 +194,18 @@ TEST(NestedProjectionUtilsTest, GetMapSelectedKeys_EmptyString) {
     auto field =
         arrow::field("m", arrow::map(arrow::utf8(), arrow::int32()), /*nullable=*/true, metadata);
     auto keys = NestedProjectionUtils::GetMapSelectedKeys(field);
-    ASSERT_TRUE(keys.empty());
+    ASSERT_EQ(keys.size(), 1);
+    ASSERT_TRUE(keys.count(""));
+}
+
+TEST(NestedProjectionUtilsTest, GetMapSelectedKeys_ContainsEmptyToken) {
+    auto metadata = arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"a, ,b"});
+    auto field =
+        arrow::field("m", arrow::map(arrow::utf8(), arrow::int32()), /*nullable=*/true, metadata);
+    auto keys = NestedProjectionUtils::GetMapSelectedKeys(field);
+    ASSERT_EQ(keys.size(), 2);
+    ASSERT_TRUE(keys.count("a"));
+    ASSERT_TRUE(keys.count("b"));
 }
 
 TEST(NestedProjectionUtilsTest, GetMapSelectedKeys_Nullptr) {
@@ -273,6 +284,16 @@ TEST(NestedProjectionUtilsTest, FilterMapArrayBySelectedKeys_AllKept) {
 TEST(NestedProjectionUtilsTest, FilterMapArrayBySelectedKeys_NoneKept) {
     auto map_array = BuildStringInt32MapArray({{{"a", 1}, {"b", 2}}});
     std::set<std::string> selected = {"x", "y"};
+    ASSERT_OK_AND_ASSIGN(auto filtered,
+                         NestedProjectionUtils::FilterMapArrayBySelectedKeys(map_array, selected));
+    auto result = std::static_pointer_cast<arrow::MapArray>(filtered);
+    ASSERT_EQ(result->length(), 1);
+    ASSERT_EQ(result->value_length(0), 0);
+}
+
+TEST(NestedProjectionUtilsTest, FilterMapArrayBySelectedKeys_EmptyKeyMeansFilterAll) {
+    auto map_array = BuildStringInt32MapArray({{{"a", 1}, {"b", 2}}});
+    std::set<std::string> selected = {"a", ""};
     ASSERT_OK_AND_ASSIGN(auto filtered,
                          NestedProjectionUtils::FilterMapArrayBySelectedKeys(map_array, selected));
     auto result = std::static_pointer_cast<arrow::MapArray>(filtered);

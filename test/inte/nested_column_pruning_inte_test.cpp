@@ -525,6 +525,93 @@ TEST_P(NestedColumnPruningInteTest, MapSelectedKeys) {
     ASSERT_TRUE(is_equal);
 }
 
+// Test: MAP_SELECTED_KEYS metadata value is empty string, filter all map entries.
+TEST_P(NestedColumnPruningInteTest, MapSelectedKeysEmptyStringMeansFilterAll) {
+    // Table schema: f0 (int32), f1 (map<string, int32>)
+    auto map_type = arrow::map(arrow::utf8(), arrow::int32());
+    arrow::FieldVector table_fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", map_type),
+    };
+    auto table_schema = arrow::schema(table_fields);
+
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "AVRO"},
+        {Options::FILE_FORMAT, StringUtils::ToUpperCase(file_format_)},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+    };
+
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+
+    // Write data: each row has a map with some entries.
+    std::string data = R"([
+        [1, [["a", 10], ["b", 20], ["c", 30]]],
+        [2, [["a", 100], ["c", 300]]],
+        [3, [["b", 200], ["c", 400], ["d", 500]]]
+    ])";
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    int64_t commit_identifier = 0;
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
+
+    // Scan to get splits
+    ASSERT_OK_AND_ASSIGN(auto data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_FALSE(data_splits.empty());
+
+    // Build projected schema: read f0 and f1 with selected keys metadata set to empty string.
+    auto selected_keys_metadata =
+        arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {""});
+    arrow::FieldVector projected_fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", map_type)->WithMetadata(selected_keys_metadata),
+    };
+    auto projected_schema = arrow::schema(projected_fields);
+
+    ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_schema).ok());
+
+    // Read with projected schema
+    ReadContextBuilder read_context_builder(table_path_);
+    read_context_builder.SetOptions(options).SetReadSchema(&c_schema);
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_splits));
+    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
+
+    // Expected: all map entries are filtered out.
+    arrow::FieldVector expected_fields = {
+        arrow::field("_VALUE_KIND", arrow::int8()),
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::map(arrow::utf8(), arrow::int32())),
+    };
+    auto expected_type = arrow::struct_(expected_fields);
+    std::string expected_data = R"([
+        [0, 1, []],
+        [0, 2, []],
+        [0, 3, []]
+    ])";
+    auto expected_array =
+        arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();
+    auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
+
+    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
+    bool is_equal = expected_chunked->Equals(read_result, equal_options.diff_sink(&std::cout));
+    if (!is_equal) {
+        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
+        std::cout << "[actual_type]   " << read_result->type()->ToString() << std::endl;
+        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
+        std::cout << "[actual]   " << read_result->ToString() << std::endl;
+    }
+    ASSERT_TRUE(is_equal);
+}
+
 // Test: Deeper nested struct — prune sub-fields of a struct inside a struct inside another struct.
 TEST_P(NestedColumnPruningInteTest, PruneDeeperNestedStruct) {
     // Table schema: f0 (int32), f1 (struct{a: int32, inner1: struct{x: int64, inner2: struct{p:

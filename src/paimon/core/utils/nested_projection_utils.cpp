@@ -115,9 +115,21 @@ std::set<std::string> NestedProjectionUtils::GetMapSelectedKeys(
     if (!get_result.ok()) {
         return result;
     }
-    const std::string& value = get_result.ValueUnsafe();
-    auto tokens = StringUtils::Split(value, ",");
-    result.insert(tokens.begin(), tokens.end());
+    std::string value = get_result.ValueUnsafe();
+    StringUtils::Trim(&value);
+    if (value.empty()) {
+        // Metadata is explicitly present but empty: treat as "filter all keys".
+        result.insert("");
+        return result;
+    }
+
+    auto tokens = StringUtils::Split(value, ",", /*ignore_empty=*/true);
+    for (auto& token : tokens) {
+        StringUtils::Trim(&token);
+        if (!token.empty()) {
+            result.insert(token);
+        }
+    }
     return result;
 }
 
@@ -126,6 +138,7 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySel
     if (selected_keys.empty() || !array || array->length() == 0) {
         return array;
     }
+    bool filter_all_keys = selected_keys.count("") > 0;
 
     auto map_array = std::static_pointer_cast<arrow::MapArray>(array);
     auto map_type = std::static_pointer_cast<arrow::MapType>(array->type());
@@ -145,6 +158,9 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySel
     std::vector<bool> keep(total_entries, false);
     int64_t kept_count = 0;
     for (int64_t i = 0; i < total_entries; ++i) {
+        if (filter_all_keys) {
+            continue;
+        }
         if (!keys_array->IsNull(i)) {
             std::string_view key_view = keys_array->GetView(i);
             std::string key_str(key_view.data(), key_view.size());
