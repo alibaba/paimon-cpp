@@ -117,82 +117,6 @@ int32_t FindMatchingFileFieldIndex(const arrow::FieldVector& file_fields,
     return -1;
 }
 
-Result<std::shared_ptr<arrow::RecordBatch>> AlignBatchToReadSchemaOrder(
-    const std::shared_ptr<arrow::RecordBatch>& batch,
-    const std::shared_ptr<arrow::DataType>& read_data_type) {
-    auto read_struct = std::dynamic_pointer_cast<arrow::StructType>(read_data_type);
-    if (!read_struct) {
-        return Status::Invalid(
-            fmt::format("Read data type must be struct, got {}", read_data_type->ToString()));
-    }
-    if (batch->num_columns() != read_struct->num_fields()) {
-        return Status::Invalid(
-            fmt::format("Batch column count {} does not match read schema field count {}",
-                        batch->num_columns(), read_struct->num_fields()));
-    }
-
-    std::unordered_map<int32_t, int32_t> batch_field_id_index;
-    batch_field_id_index.reserve(static_cast<size_t>(batch->num_columns()));
-    std::unordered_map<std::string, int32_t> batch_field_index;
-    batch_field_index.reserve(static_cast<size_t>(batch->num_columns()));
-    for (int32_t i = 0; i < batch->num_columns(); ++i) {
-        const auto& batch_field = batch->schema()->field(i);
-        int32_t batch_field_id = GetFieldIdForMatching(batch_field);
-        if (batch_field_id != -1) {
-            // Keep the first match to remain deterministic if duplicated ids exist.
-            batch_field_id_index.emplace(batch_field_id, i);
-        }
-        batch_field_index.emplace(batch_field->name(), i);
-    }
-
-    auto find_batch_field_index = [&](const std::shared_ptr<arrow::Field>& read_field) -> int32_t {
-        int32_t read_field_id = GetFieldIdForMatching(read_field);
-        if (read_field_id != -1) {
-            auto id_it = batch_field_id_index.find(read_field_id);
-            if (id_it != batch_field_id_index.end()) {
-                return id_it->second;
-            }
-        }
-        auto name_it = batch_field_index.find(read_field->name());
-        if (name_it != batch_field_index.end()) {
-            return name_it->second;
-        }
-        return -1;
-    };
-
-    bool already_aligned = true;
-    for (int32_t i = 0; i < read_struct->num_fields(); ++i) {
-        if (find_batch_field_index(read_struct->field(i)) != i ||
-            batch->schema()->field(i)->name() != read_struct->field(i)->name()) {
-            already_aligned = false;
-            break;
-        }
-    }
-    if (already_aligned) {
-        return batch;
-    }
-
-    std::vector<std::shared_ptr<arrow::Array>> aligned_columns;
-    aligned_columns.reserve(static_cast<size_t>(batch->num_columns()));
-    arrow::FieldVector aligned_fields;
-    aligned_fields.reserve(static_cast<size_t>(batch->num_columns()));
-
-    for (int32_t i = 0; i < read_struct->num_fields(); ++i) {
-        const auto& read_field = read_struct->field(i);
-        int32_t batch_idx = find_batch_field_index(read_field);
-        if (batch_idx < 0) {
-            return Status::Invalid(
-                fmt::format("Parquet batch column '{}' not found while aligning to read schema",
-                            read_field->name()));
-        }
-        aligned_columns.push_back(batch->column(batch_idx));
-        aligned_fields.push_back(read_field);
-    }
-
-    auto aligned_schema = arrow::schema(aligned_fields);
-    return arrow::RecordBatch::Make(aligned_schema, batch->num_rows(), aligned_columns);
-}
-
 }  // namespace
 
 ParquetFileBatchReader::ParquetFileBatchReader(
@@ -303,12 +227,6 @@ Status ParquetFileBatchReader::SetReadSchema(
             std::vector<int32_t> leaf_indices;
             FlattenSchema(field->type(), &flat_idx, &leaf_indices);
             field_index_map[field->name()] = leaf_indices;
-        }
-        std::map<std::string, int32_t> column_name_to_index;
-        for (const auto& [name, indices] : field_index_map) {
-            if (!indices.empty()) {
-                column_name_to_index[name] = indices[0];
-            }
         }
 
         std::vector<int32_t> row_groups = arrow::internal::Iota(reader_->GetNumberOfRowGroups());
@@ -506,7 +424,6 @@ Result<BatchReader::ReadBatch> ParquetFileBatchReader::NextBatch() {
         if (batch == nullptr) {
             return BatchReader::MakeEofBatch();
         }
-        PAIMON_ASSIGN_OR_RAISE(batch, AlignBatchToReadSchemaOrder(batch, read_data_type_));
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,
                                           batch->ToStructArray());
         PAIMON_ASSIGN_OR_RAISE(bool need_cast, ParquetTimestampConverter::NeedCastArrayForTimestamp(
