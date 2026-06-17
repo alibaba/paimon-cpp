@@ -917,7 +917,7 @@ static std::shared_ptr<arrow::StructArray> MakeNestedStructData(int32_t num_rows
 TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnPageFilter) {
     std::string file_name = dir_->Str() + "/nested_struct_filter.parquet";
     auto data = MakeNestedStructData(100);
-    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
 
     auto field_x = arrow::field("x", arrow::int32());
     auto field_y = arrow::field("y", arrow::int32());
@@ -950,7 +950,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnPageFilter) {
 TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnOnlyReadNestedField) {
     std::string file_name = dir_->Str() + "/nested_struct_only_nested.parquet";
     auto data = MakeNestedStructData(100);
-    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
 
     auto field_x = arrow::field("x", arrow::int32());
     auto field_y = arrow::field("y", arrow::int32());
@@ -1043,7 +1043,7 @@ static std::shared_ptr<arrow::StructArray> MakeMapColumnData(int32_t num_rows) {
 TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnPageFilter) {
     std::string file_name = dir_->Str() + "/nested_list_filter.parquet";
     auto data = MakeListColumnData(100);
-    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
 
     auto read_schema =
         arrow::schema({arrow::field("id", arrow::int32()),
@@ -1071,7 +1071,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnPageFilter) {
 TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnPageFilter) {
     std::string file_name = dir_->Str() + "/nested_map_filter.parquet";
     auto data = MakeMapColumnData(100);
-    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
 
     auto read_schema =
         arrow::schema({arrow::field("id", arrow::int32()),
@@ -1131,7 +1131,7 @@ TEST_F(PageFilteredRowGroupReaderTest, MultipleAdjacentNestedColumns) {
                                          {field_id, field_info, field_tags})
                     .ValueOrDie();
 
-    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
 
     auto read_schema = arrow::schema({field_id, field_info, field_tags});
     auto predicate = PredicateBuilder::GreaterOrEqual(
