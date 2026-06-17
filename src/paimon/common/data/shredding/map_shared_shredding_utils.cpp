@@ -408,7 +408,7 @@ MapSharedShreddingUtils::BuildMetadataFinalizer(
     return [converter, compression, context,
             physical_schema]() -> Result<std::shared_ptr<arrow::Schema>> {
         const std::vector<std::string>& shredding_field_names =
-            converter->GetShreddingColumnIndices();
+            converter->GetShreddingColumnNames();
         arrow::FieldVector updated_fields = physical_schema->fields();
         for (const std::string& field_name : shredding_field_names) {
             int32_t col_index = physical_schema->GetFieldIndex(field_name);

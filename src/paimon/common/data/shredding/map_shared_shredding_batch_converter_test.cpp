@@ -93,8 +93,8 @@ TEST_F(MapSharedShreddingBatchConverterTest, BasicConversion) {
 
     AssertArrayEquals(expected, actual);
 
-    // Verify GetShreddingColumnIndices
-    ASSERT_EQ(std::vector<std::string>({"tags"}), converter.GetShreddingColumnIndices());
+    // Verify GetShreddingColumnNames
+    ASSERT_EQ(std::vector<std::string>({"tags"}), converter.GetShreddingColumnNames());
 
     // Verify BuildFieldMeta: a=0,b=1,c=2, K=3, max_row_width=3, no overflow
     MapSharedShreddingFieldMeta expected_meta;
@@ -145,8 +145,8 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueStruct) {
 
     AssertArrayEquals(expected, actual);
 
-    // Verify GetShreddingColumnIndices
-    ASSERT_EQ(std::vector<std::string>({"props"}), converter.GetShreddingColumnIndices());
+    // Verify GetShreddingColumnNames
+    ASSERT_EQ(std::vector<std::string>({"props"}), converter.GetShreddingColumnNames());
 
     // Verify BuildFieldMeta: a=0,b=1,c=2; K=2, max_row_width=3, b overflowed in row2
     MapSharedShreddingFieldMeta expected_meta;
@@ -194,8 +194,8 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueList) {
 
     AssertArrayEquals(expected, actual);
 
-    // Verify GetShreddingColumnIndices
-    ASSERT_EQ(std::vector<std::string>({"tags"}), converter.GetShreddingColumnIndices());
+    // Verify GetShreddingColumnNames
+    ASSERT_EQ(std::vector<std::string>({"tags"}), converter.GetShreddingColumnNames());
 
     // Verify BuildFieldMeta: a=0,b=1,c=2; K=2, max_row_width=3, c overflowed in row3
     MapSharedShreddingFieldMeta expected_meta;
@@ -244,8 +244,8 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedValueMap) {
 
     AssertArrayEquals(expected, actual);
 
-    // Verify GetShreddingColumnIndices
-    ASSERT_EQ(std::vector<std::string>({"nested"}), converter.GetShreddingColumnIndices());
+    // Verify GetShreddingColumnNames
+    ASSERT_EQ(std::vector<std::string>({"nested"}), converter.GetShreddingColumnNames());
 
     // Verify BuildFieldMeta: a=0,b=1,c=2; K=2, max_row_width=3, c overflowed in row3
     MapSharedShreddingFieldMeta expected_meta;
@@ -298,8 +298,8 @@ TEST_F(MapSharedShreddingBatchConverterTest, NestedComplex) {
 
     AssertArrayEquals(expected, actual);
 
-    // Verify GetShreddingColumnIndices
-    ASSERT_EQ(std::vector<std::string>({"data"}), converter.GetShreddingColumnIndices());
+    // Verify GetShreddingColumnNames
+    ASSERT_EQ(std::vector<std::string>({"data"}), converter.GetShreddingColumnNames());
 
     // Verify BuildFieldMeta: a=0,b=1,c=2; K=2, max_row_width=3, c overflowed in row2
     MapSharedShreddingFieldMeta expected_meta;
@@ -353,8 +353,8 @@ TEST_F(MapSharedShreddingBatchConverterTest, MultipleMapFields) {
 
     AssertArrayEquals(expected, actual);
 
-    // Verify GetShreddingColumnIndices returns both columns in order
-    ASSERT_EQ(std::vector<std::string>({"tags", "attrs"}), converter.GetShreddingColumnIndices());
+    // Verify GetShreddingColumnNames returns both columns in order
+    ASSERT_EQ(std::vector<std::string>({"tags", "attrs"}), converter.GetShreddingColumnNames());
 
     // Verify BuildFieldMeta for tags: a=0,b=1,c=2; K=2, max_row_width=3
     MapSharedShreddingFieldMeta tags_meta;

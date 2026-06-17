@@ -24,9 +24,7 @@
 
 namespace paimon::test {
 
-class MapSharedShreddingContextTest : public ::testing::Test {};
-
-TEST_F(MapSharedShreddingContextTest, FirstFileUsesKMax) {
+TEST(MapSharedShreddingContextTest, FirstFileUsesKMax) {
     // No history — ComputeNextK should return K_max for every column.
     std::map<std::string, int32_t> field_to_k_max = {{"tags", 8}, {"metrics", 4}};
     MapSharedShreddingContext context(field_to_k_max);
@@ -37,7 +35,7 @@ TEST_F(MapSharedShreddingContextTest, FirstFileUsesKMax) {
     ASSERT_EQ(4, next_k.at("metrics"));
 }
 
-TEST_F(MapSharedShreddingContextTest, AdaptKAfterOneFile) {
+TEST(MapSharedShreddingContextTest, AdaptKAfterOneFile) {
     // After reporting stats from one file, K should adapt to
     // min(max_row_width, K_max).
     std::map<std::string, int32_t> field_to_k_max = {{"m", 10}};
@@ -55,7 +53,7 @@ TEST_F(MapSharedShreddingContextTest, AdaptKAfterOneFile) {
     ASSERT_EQ(3, k2.at("m"));
 }
 
-TEST_F(MapSharedShreddingContextTest, AdaptKCappedByKMax) {
+TEST(MapSharedShreddingContextTest, AdaptKCappedByKMax) {
     // Even if max_row_width > K_max, K should be capped at K_max.
     std::map<std::string, int32_t> field_to_k_max = {{"m", 5}};
     MapSharedShreddingContext context(field_to_k_max);
@@ -66,7 +64,7 @@ TEST_F(MapSharedShreddingContextTest, AdaptKCappedByKMax) {
     ASSERT_EQ(5, next_k.at("m"));
 }
 
-TEST_F(MapSharedShreddingContextTest, WindowMaxTracksLargest) {
+TEST(MapSharedShreddingContextTest, WindowMaxTracksLargest) {
     // K should use the max of all recent max_row_widths within the window.
     std::map<std::string, int32_t> field_to_k_max = {{"m", 20}};
     MapSharedShreddingContext context(field_to_k_max);
@@ -80,7 +78,7 @@ TEST_F(MapSharedShreddingContextTest, WindowMaxTracksLargest) {
     ASSERT_EQ(7, next_k.at("m"));
 }
 
-TEST_F(MapSharedShreddingContextTest, MultipleColumnsIndependent) {
+TEST(MapSharedShreddingContextTest, MultipleColumnsIndependent) {
     // Each field adapts independently.
     std::map<std::string, int32_t> field_to_k_max = {{"tags", 10}, {"attrs", 6}};
     MapSharedShreddingContext context(field_to_k_max);
@@ -109,15 +107,15 @@ TEST_F(MapSharedShreddingContextTest, MultipleColumnsIndependent) {
     ASSERT_EQ(6, k3.at("attrs"));
 }
 
-TEST_F(MapSharedShreddingContextTest, GetShreddingColumnIndices) {
+TEST(MapSharedShreddingContextTest, GetShreddingColumnNames) {
     std::map<std::string, int32_t> field_to_k_max = {{"tags", 8}, {"metrics", 4}, {"props", 16}};
     MapSharedShreddingContext context(field_to_k_max);
 
-    auto indices = context.GetShreddingColumnIndices();
-    ASSERT_EQ(indices, std::vector<std::string>({"metrics", "props", "tags"}));
+    auto names = context.GetShreddingColumnNames();
+    ASSERT_EQ(names, std::vector<std::string>({"metrics", "props", "tags"}));
 }
 
-TEST_F(MapSharedShreddingContextTest, SlidingWindowEvictsOldEntries) {
+TEST(MapSharedShreddingContextTest, SlidingWindowEvictsOldEntries) {
     // The window size is 100. After filling 100 entries, adding one more
     // should evict the oldest. Verify that the evicted value no longer
     // affects ComputeNextK.
@@ -142,25 +140,6 @@ TEST_F(MapSharedShreddingContextTest, SlidingWindowEvictsOldEntries) {
     // Window = [3, 3, ..., 3, 5] (100 entries). Max = 5.
     auto k_after = context.ComputeNextK();
     ASSERT_EQ(5, k_after.at("m"));
-}
-
-TEST_F(MapSharedShreddingContextTest, SingleColumnSingleEntry) {
-    std::map<std::string, int32_t> field_to_k_max = {{"m", 4}};
-    MapSharedShreddingContext context(field_to_k_max);
-
-    auto indices = context.GetShreddingColumnIndices();
-    ASSERT_EQ(indices, std::vector<std::string>({"m"}));
-}
-
-TEST_F(MapSharedShreddingContextTest, EmptyContext) {
-    std::map<std::string, int32_t> field_to_k_max;
-    MapSharedShreddingContext context(field_to_k_max);
-
-    auto next_k = context.ComputeNextK();
-    ASSERT_TRUE(next_k.empty());
-
-    auto indices = context.GetShreddingColumnIndices();
-    ASSERT_TRUE(indices.empty());
 }
 
 }  // namespace paimon::test

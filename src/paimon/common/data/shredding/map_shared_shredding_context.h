@@ -47,7 +47,7 @@ class MapSharedShreddingContext {
     void ReportFileStats(const std::string& field_name, int32_t max_row_width);
 
     /// Returns the set of shared-shredding field names.
-    std::vector<std::string> GetShreddingColumnIndices() const;
+    std::vector<std::string> GetShreddingColumnNames() const;
 
  private:
     static constexpr int32_t kWindowSize = 100;

@@ -53,8 +53,8 @@ class MapSharedShreddingBatchConverter {
         MapSharedShreddingFieldDict dict;
         MapSharedShreddingColumnAllocator allocator;
 
-        ColumnContext(const std::string& field_name, int32_t num_columns)
-            : field_name(field_name), num_columns(num_columns), allocator(num_columns) {}
+        ColumnContext(const std::string& _field_name, int32_t _num_columns)
+            : field_name(_field_name), num_columns(_num_columns), allocator(_num_columns) {}
     };
 
     struct ConverterBundle {
@@ -93,7 +93,7 @@ class MapSharedShreddingBatchConverter {
     Result<MapSharedShreddingFieldMeta> BuildFieldMeta(const std::string& field_name) const;
 
     /// Returns all shredding column field names.
-    const std::vector<std::string>& GetShreddingColumnIndices() const;
+    const std::vector<std::string>& GetShreddingColumnNames() const;
 
  private:
     /// Converts one MAP<STRING, T> column to physical STRUCT for all rows.

@@ -48,7 +48,7 @@ void MapSharedShreddingContext::ReportFileStats(const std::string& field_name,
     }
 }
 
-std::vector<std::string> MapSharedShreddingContext::GetShreddingColumnIndices() const {
+std::vector<std::string> MapSharedShreddingContext::GetShreddingColumnNames() const {
     std::vector<std::string> names;
     names.reserve(column_to_k_max_.size());
     for (const auto& [field_name, _] : column_to_k_max_) {

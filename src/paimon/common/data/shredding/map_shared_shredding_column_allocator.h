@@ -66,7 +66,7 @@ class MapSharedShreddingColumnAllocator {
  private:
     int32_t num_columns_;
 
-    // ---- Accumulated file-level metadata ----
+    // ---- Accumulated field-level metadata ----
     std::map<int32_t, std::set<int32_t>> field_to_columns_;
     std::set<int32_t> overflow_field_set_;
     int32_t max_row_width_ = 0;

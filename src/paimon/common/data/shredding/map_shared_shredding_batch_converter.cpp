@@ -308,8 +308,7 @@ Result<MapSharedShreddingFieldMeta> MapSharedShreddingBatchConverter::BuildField
         "cannot find field_name '{}' in MapSharedShreddingBatchConverter contexts", field_name));
 }
 
-const std::vector<std::string>& MapSharedShreddingBatchConverter::GetShreddingColumnIndices()
-    const {
+const std::vector<std::string>& MapSharedShreddingBatchConverter::GetShreddingColumnNames() const {
     return shredding_field_names_;
 }
 
