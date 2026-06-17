@@ -79,8 +79,9 @@ class PAIMON_EXPORT NestedProjectionUtils {
 
     /// Returns true if `read_schema` requests a nested sub-field projection against
     /// `file_schema` (same top-level field, but nested STRUCT/LIST/MAP subtree is pruned).
-    static Result<bool> HasNestedSubfieldProjection(const std::shared_ptr<arrow::Schema>& file_schema,
-                                                    const std::shared_ptr<arrow::Schema>& read_schema);
+    static Result<bool> HasNestedSubfieldProjection(
+        const std::shared_ptr<arrow::Schema>& file_schema,
+        const std::shared_ptr<arrow::Schema>& read_schema);
 
     /// Parse the "paimon.map.selected-keys" metadata from an Arrow field.
     /// Returns an empty set if the metadata key is absent or the field is not a MAP.

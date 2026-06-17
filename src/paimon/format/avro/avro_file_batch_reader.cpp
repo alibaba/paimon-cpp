@@ -147,9 +147,9 @@ Status AvroFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
                                       arrow::ImportSchema(read_schema));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> file_schema,
                            ArrowUtils::DataTypeToSchema(file_data_type_));
-    PAIMON_ASSIGN_OR_RAISE(bool has_nested_projection,
-                           NestedProjectionUtils::HasNestedSubfieldProjection(file_schema,
-                                                                             arrow_read_schema));
+    PAIMON_ASSIGN_OR_RAISE(
+        bool has_nested_projection,
+        NestedProjectionUtils::HasNestedSubfieldProjection(file_schema, arrow_read_schema));
     if (has_nested_projection) {
         return Status::Invalid(
             "SetReadSchema failed: avro reader does not support nested sub-field projection");

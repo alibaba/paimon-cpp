@@ -251,7 +251,7 @@ TEST_F(LanceFileReaderWriterTest, TestRejectNestedSubFieldProjection) {
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::int32()),
         arrow::field("f1", arrow::struct_({arrow::field("sub_f0", arrow::boolean()),
-                                            arrow::field("sub_f1", arrow::int64())}))};
+                                           arrow::field("sub_f1", arrow::int64())}))};
     auto schema = arrow::schema(fields);
     auto array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([

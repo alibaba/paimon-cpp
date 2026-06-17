@@ -72,9 +72,9 @@ Status LanceFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::ArrowSchema> c_file_schema, GetFileSchema());
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> file_schema,
                                       arrow::ImportSchema(c_file_schema.get()));
-    PAIMON_ASSIGN_OR_RAISE(bool has_nested_projection,
-                           NestedProjectionUtils::HasNestedSubfieldProjection(file_schema,
-                                                                             arrow_read_schema));
+    PAIMON_ASSIGN_OR_RAISE(
+        bool has_nested_projection,
+        NestedProjectionUtils::HasNestedSubfieldProjection(file_schema, arrow_read_schema));
     if (has_nested_projection) {
         return Status::Invalid(
             "SetReadSchema failed: lance reader does not support nested sub-field projection");

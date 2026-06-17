@@ -303,12 +303,11 @@ TEST_F(AvroFileBatchReaderTest, TestSetReadSchemaRejectNestedSubFieldProjection)
         arrow::field("f1", arrow::struct_({arrow::field("a", arrow::int32()),
                                            arrow::field("b", arrow::utf8())}))};
     auto write_type = arrow::struct_(write_fields);
-    auto write_array =
-        arrow::ipc::internal::json::ArrayFromJSON(write_type, R"([
+    auto write_array = arrow::ipc::internal::json::ArrayFromJSON(write_type, R"([
             [1, [10, "x"]],
             [2, [20, "y"]]
         ])")
-            .ValueOrDie();
+                           .ValueOrDie();
     WriteData(write_array, path, /*compression=*/"null");
 
     ASSERT_OK_AND_ASSIGN(auto reader_builder,

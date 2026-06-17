@@ -104,13 +104,13 @@ Result<std::shared_ptr<arrow::RecordBatch>> AlignBatchToReadSchemaOrder(
     const std::shared_ptr<arrow::DataType>& read_data_type) {
     auto read_struct = std::dynamic_pointer_cast<arrow::StructType>(read_data_type);
     if (!read_struct) {
-        return Status::Invalid(fmt::format("Read data type must be struct, got {}",
-                                           read_data_type->ToString()));
+        return Status::Invalid(
+            fmt::format("Read data type must be struct, got {}", read_data_type->ToString()));
     }
     if (batch->num_columns() != read_struct->num_fields()) {
-        return Status::Invalid(fmt::format(
-            "Batch column count {} does not match read schema field count {}", batch->num_columns(),
-            read_struct->num_fields()));
+        return Status::Invalid(
+            fmt::format("Batch column count {} does not match read schema field count {}",
+                        batch->num_columns(), read_struct->num_fields()));
     }
 
     bool already_aligned = true;
@@ -139,9 +139,9 @@ Result<std::shared_ptr<arrow::RecordBatch>> AlignBatchToReadSchemaOrder(
         const auto& read_field = read_struct->field(i);
         auto it = batch_field_index.find(read_field->name());
         if (it == batch_field_index.end()) {
-            return Status::Invalid(fmt::format(
-                "Parquet batch column '{}' not found while aligning to read schema", 
-                read_field->name()));
+            return Status::Invalid(
+                fmt::format("Parquet batch column '{}' not found while aligning to read schema",
+                            read_field->name()));
         }
         aligned_columns.push_back(batch->column(it->second));
         aligned_fields.push_back(read_field);

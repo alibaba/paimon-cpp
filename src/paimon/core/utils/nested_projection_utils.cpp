@@ -61,9 +61,9 @@ Result<bool> NestedProjectionUtils::HasNestedSubfieldProjectionType(
                 if (!file_child) {
                     return true;
                 }
-                PAIMON_ASSIGN_OR_RAISE(bool child_has_nested_projection,
-                                       HasNestedSubfieldProjectionType(file_child->type(),
-                                                                       read_child->type()));
+                PAIMON_ASSIGN_OR_RAISE(
+                    bool child_has_nested_projection,
+                    HasNestedSubfieldProjectionType(file_child->type(), read_child->type()));
                 if (child_has_nested_projection) {
                     return true;
                 }
@@ -73,14 +73,15 @@ Result<bool> NestedProjectionUtils::HasNestedSubfieldProjectionType(
         case arrow::Type::LIST: {
             auto file_list = std::static_pointer_cast<arrow::ListType>(file_type);
             auto read_list = std::static_pointer_cast<arrow::ListType>(read_type);
-            return HasNestedSubfieldProjectionType(file_list->value_type(), read_list->value_type());
+            return HasNestedSubfieldProjectionType(file_list->value_type(),
+                                                   read_list->value_type());
         }
         case arrow::Type::MAP: {
             auto file_map = std::static_pointer_cast<arrow::MapType>(file_type);
             auto read_map = std::static_pointer_cast<arrow::MapType>(read_type);
-            PAIMON_ASSIGN_OR_RAISE(bool key_has_nested_projection,
-                                   HasNestedSubfieldProjectionType(file_map->key_type(),
-                                                                   read_map->key_type()));
+            PAIMON_ASSIGN_OR_RAISE(
+                bool key_has_nested_projection,
+                HasNestedSubfieldProjectionType(file_map->key_type(), read_map->key_type()));
             if (key_has_nested_projection) {
                 return true;
             }
@@ -173,9 +174,9 @@ Result<bool> NestedProjectionUtils::HasNestedSubfieldProjection(
         if (read_field->type()->id() == arrow::Type::STRUCT ||
             read_field->type()->id() == arrow::Type::LIST ||
             read_field->type()->id() == arrow::Type::MAP) {
-            PAIMON_ASSIGN_OR_RAISE(bool has_nested_projection,
-                                   HasNestedSubfieldProjectionType(file_field->type(),
-                                                                   read_field->type()));
+            PAIMON_ASSIGN_OR_RAISE(
+                bool has_nested_projection,
+                HasNestedSubfieldProjectionType(file_field->type(), read_field->type()));
             if (has_nested_projection) {
                 return true;
             }
