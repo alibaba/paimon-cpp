@@ -19,6 +19,7 @@
 #include "arrow/api.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/arrow/status_utils.h"
+#include "paimon/core/utils/nested_projection_utils.h"
 #include "paimon/format/lance/lance_utils.h"
 namespace paimon::lance {
 LanceFileBatchReader::LanceFileBatchReader(LanceFileReader* file_reader, int32_t batch_size,
@@ -66,9 +67,19 @@ Result<std::unique_ptr<::ArrowSchema>> LanceFileBatchReader::GetFileSchema() con
 Status LanceFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
                                            const std::shared_ptr<Predicate>& predicate,
                                            const std::optional<RoaringBitmap32>& selection_bitmap) {
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> arrow_schema,
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> arrow_read_schema,
                                       arrow::ImportSchema(read_schema));
-    read_field_names_ = arrow_schema->field_names();
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::ArrowSchema> c_file_schema, GetFileSchema());
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> file_schema,
+                                      arrow::ImportSchema(c_file_schema.get()));
+    PAIMON_ASSIGN_OR_RAISE(bool has_nested_projection,
+                           NestedProjectionUtils::HasNestedSubfieldProjection(file_schema,
+                                                                             arrow_read_schema));
+    if (has_nested_projection) {
+        return Status::Invalid(
+            "SetReadSchema failed: lance reader does not support nested sub-field projection");
+    }
+    read_field_names_ = arrow_read_schema->field_names();
     assert(!read_field_names_.empty());
     read_row_ids_.clear();
     if (selection_bitmap) {
