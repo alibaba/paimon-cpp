@@ -39,6 +39,7 @@
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/options_utils.h"
+#include "paimon/common/utils/string_utils.h"
 #include "paimon/core/schema/arrow_schema_validator.h"
 #include "paimon/core/utils/nested_projection_utils.h"
 #include "paimon/format/parquet/parquet_field_id_converter.h"
@@ -61,12 +62,29 @@ namespace paimon::parquet {
 
 namespace {
 
+int32_t GetFieldIdForMatching(const std::shared_ptr<arrow::Field>& field) {
+    int32_t field_id = NestedProjectionUtils::GetPaimonFieldId(field);
+    if (field_id != -1) {
+        return field_id;
+    }
+    if (!field || !field->HasMetadata() || !field->metadata()) {
+        return -1;
+    }
+    auto get_result = field->metadata()->Get(ParquetFieldIdConverter::PARQUET_FIELD_ID);
+    if (!get_result.ok()) {
+        return -1;
+    }
+    std::optional<int32_t> parquet_field_id =
+        StringUtils::StringToValue<int32_t>(get_result.ValueUnsafe());
+    return parquet_field_id.value_or(-1);
+}
+
 std::shared_ptr<arrow::Field> FindMatchingReadField(
     const arrow::FieldVector& read_fields, const std::shared_ptr<arrow::Field>& file_field) {
-    int32_t file_field_id = NestedProjectionUtils::GetPaimonFieldId(file_field);
+    int32_t file_field_id = GetFieldIdForMatching(file_field);
     if (file_field_id != -1) {
         for (const auto& candidate : read_fields) {
-            if (NestedProjectionUtils::GetPaimonFieldId(candidate) == file_field_id) {
+            if (GetFieldIdForMatching(candidate) == file_field_id) {
                 return candidate;
             }
         }
@@ -82,10 +100,10 @@ std::shared_ptr<arrow::Field> FindMatchingReadField(
 
 int32_t FindMatchingFileFieldIndex(const arrow::FieldVector& file_fields,
                                    const std::shared_ptr<arrow::Field>& read_field) {
-    int32_t read_field_id = NestedProjectionUtils::GetPaimonFieldId(read_field);
+    int32_t read_field_id = GetFieldIdForMatching(read_field);
     if (read_field_id != -1) {
         for (int32_t i = 0; i < static_cast<int32_t>(file_fields.size()); ++i) {
-            if (NestedProjectionUtils::GetPaimonFieldId(file_fields[i]) == read_field_id) {
+            if (GetFieldIdForMatching(file_fields[i]) == read_field_id) {
                 return i;
             }
         }
@@ -113,21 +131,45 @@ Result<std::shared_ptr<arrow::RecordBatch>> AlignBatchToReadSchemaOrder(
                         batch->num_columns(), read_struct->num_fields()));
     }
 
-    bool already_aligned = true;
+    std::unordered_map<int32_t, int32_t> batch_field_id_index;
+    batch_field_id_index.reserve(static_cast<size_t>(batch->num_columns()));
+    std::unordered_map<std::string, int32_t> batch_field_index;
+    batch_field_index.reserve(static_cast<size_t>(batch->num_columns()));
     for (int32_t i = 0; i < batch->num_columns(); ++i) {
-        if (batch->schema()->field(i)->name() != read_struct->field(i)->name()) {
+        const auto& batch_field = batch->schema()->field(i);
+        int32_t batch_field_id = GetFieldIdForMatching(batch_field);
+        if (batch_field_id != -1) {
+            // Keep the first match to remain deterministic if duplicated ids exist.
+            batch_field_id_index.emplace(batch_field_id, i);
+        }
+        batch_field_index.emplace(batch_field->name(), i);
+    }
+
+    auto find_batch_field_index = [&](const std::shared_ptr<arrow::Field>& read_field) -> int32_t {
+        int32_t read_field_id = GetFieldIdForMatching(read_field);
+        if (read_field_id != -1) {
+            auto id_it = batch_field_id_index.find(read_field_id);
+            if (id_it != batch_field_id_index.end()) {
+                return id_it->second;
+            }
+        }
+        auto name_it = batch_field_index.find(read_field->name());
+        if (name_it != batch_field_index.end()) {
+            return name_it->second;
+        }
+        return -1;
+    };
+
+    bool already_aligned = true;
+    for (int32_t i = 0; i < read_struct->num_fields(); ++i) {
+        if (find_batch_field_index(read_struct->field(i)) != i ||
+            batch->schema()->field(i)->name() != read_struct->field(i)->name()) {
             already_aligned = false;
             break;
         }
     }
     if (already_aligned) {
         return batch;
-    }
-
-    std::unordered_map<std::string, int32_t> batch_field_index;
-    batch_field_index.reserve(static_cast<size_t>(batch->num_columns()));
-    for (int32_t i = 0; i < batch->num_columns(); ++i) {
-        batch_field_index.emplace(batch->schema()->field(i)->name(), i);
     }
 
     std::vector<std::shared_ptr<arrow::Array>> aligned_columns;
@@ -137,13 +179,13 @@ Result<std::shared_ptr<arrow::RecordBatch>> AlignBatchToReadSchemaOrder(
 
     for (int32_t i = 0; i < read_struct->num_fields(); ++i) {
         const auto& read_field = read_struct->field(i);
-        auto it = batch_field_index.find(read_field->name());
-        if (it == batch_field_index.end()) {
+        int32_t batch_idx = find_batch_field_index(read_field);
+        if (batch_idx < 0) {
             return Status::Invalid(
                 fmt::format("Parquet batch column '{}' not found while aligning to read schema",
                             read_field->name()));
         }
-        aligned_columns.push_back(batch->column(it->second));
+        aligned_columns.push_back(batch->column(batch_idx));
         aligned_fields.push_back(read_field);
     }
 
@@ -249,8 +291,7 @@ Status ParquetFileBatchReader::SetReadSchema(
             ParquetFieldIdConverter::GetPaimonIdsFromParquetIds(raw_file_schema));
 
         // Recursively match read_schema against file_schema using paimon field IDs.
-        // For STRUCT fields with nested projection, only the requested sub-fields'
-        // leaf columns are collected.
+        // STRUCT supports sub-field projection; LIST/MAP require exact type match.
         PAIMON_ASSIGN_OR_RAISE(std::vector<int32_t> column_indices,
                                ComputeNestedColumnIndices(read_schema, file_schema));
 
@@ -562,42 +603,45 @@ Result<::parquet::ArrowReaderProperties> ParquetFileBatchReader::CreateArrowRead
 
 // Nested column index computation
 
-void ParquetFileBatchReader::CollectLeafIndices(const std::shared_ptr<arrow::DataType>& read_type,
-                                                const std::shared_ptr<arrow::DataType>& file_type,
-                                                int32_t* leaf_index,
-                                                std::vector<int32_t>* indices) {
+Status ParquetFileBatchReader::CollectLeafIndices(const std::shared_ptr<arrow::DataType>& read_type,
+                                                  const std::shared_ptr<arrow::DataType>& file_type,
+                                                  int32_t* leaf_index,
+                                                  std::vector<int32_t>* indices) {
     if (file_type->id() == arrow::Type::STRUCT) {
         for (const auto& file_child : file_type->fields()) {
             std::shared_ptr<arrow::Field> read_child =
                 FindMatchingReadField(read_type->fields(), file_child);
             if (read_child) {
-                CollectLeafIndices(read_child->type(), file_child->type(), leaf_index, indices);
+                PAIMON_RETURN_NOT_OK(CollectLeafIndices(read_child->type(), file_child->type(),
+                                                        leaf_index, indices));
             } else {
                 SkipLeafIndices(file_child->type(), leaf_index);
             }
         }
     } else if (file_type->id() == arrow::Type::LIST || file_type->id() == arrow::Type::MAP) {
-        // LIST/MAP: recurse into all structural children (offsets are not leaf
-        // columns in Parquet, only the value/key fields are).
-        for (int i = 0; i < file_type->num_fields(); i++) {
-            if (i < read_type->num_fields()) {
-                CollectLeafIndices(read_type->field(i)->type(), file_type->field(i)->type(),
-                                   leaf_index, indices);
-            } else {
-                SkipLeafIndices(file_type->field(i)->type(), leaf_index);
-            }
+        // Keep behavior aligned with ORC path: list/map inner partial projection
+        // is currently unsupported and should fail-fast.
+        if (!read_type->Equals(file_type)) {
+            return Status::Invalid(fmt::format(
+                "Parquet does not support partial projection inside list/map: src {} vs target {}",
+                file_type->ToString(), read_type->ToString()));
+        }
+        for (int32_t i = 0; i < file_type->num_fields(); i++) {
+            PAIMON_RETURN_NOT_OK(CollectLeafIndices(
+                read_type->field(i)->type(), file_type->field(i)->type(), leaf_index, indices));
         }
     } else {
         // Leaf column — collect its index.
         indices->push_back((*leaf_index)++);
     }
+    return Status::OK();
 }
 
 void ParquetFileBatchReader::SkipLeafIndices(const std::shared_ptr<arrow::DataType>& file_type,
                                              int32_t* leaf_index) {
     if (file_type->id() == arrow::Type::STRUCT || file_type->id() == arrow::Type::LIST ||
         file_type->id() == arrow::Type::MAP) {
-        for (int i = 0; i < file_type->num_fields(); i++) {
+        for (int32_t i = 0; i < file_type->num_fields(); i++) {
             SkipLeafIndices(file_type->field(i)->type(), leaf_index);
         }
     } else {
@@ -625,8 +669,8 @@ Result<std::vector<int32_t>> ParquetFileBatchReader::ComputeNestedColumnIndices(
             continue;
         }
         int32_t leaf_index = file_field_leaf_starts[file_field_idx];
-        CollectLeafIndices(read_field->type(), file_fields[file_field_idx]->type(), &leaf_index,
-                           &indices);
+        PAIMON_RETURN_NOT_OK(CollectLeafIndices(
+            read_field->type(), file_fields[file_field_idx]->type(), &leaf_index, &indices));
     }
     return indices;
 }

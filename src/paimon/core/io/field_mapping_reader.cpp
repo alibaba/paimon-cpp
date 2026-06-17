@@ -80,8 +80,15 @@ FieldMappingReader::FieldMappingReader(int32_t field_count,
         // FilterMapArrayBySelectedKeys can filter out unwanted entries.
         if (!need_mapping_ &&
             non_partition_info_.non_partition_read_schema[i].Type()->id() == arrow::Type::MAP) {
-            std::set<std::string> selected_keys = NestedProjectionUtils::GetMapSelectedKeys(
+            auto selected_keys_or = NestedProjectionUtils::GetMapSelectedKeys(
                 non_partition_info_.non_partition_read_schema[i].ArrowField());
+            if (!selected_keys_or.ok()) {
+                // Keep mapping enabled so the parse error can be surfaced in
+                // MappingFields where Status can be returned.
+                need_mapping_ = true;
+                continue;
+            }
+            auto& selected_keys = selected_keys_or.value();
             if (!selected_keys.empty()) {
                 need_mapping_ = true;
             }
@@ -309,8 +316,9 @@ Status FieldMappingReader::MappingFields(const std::shared_ptr<arrow::Array>& da
 
         // Filter map entries by selected keys if metadata is present.
         if (field_array->type()->id() == arrow::Type::MAP) {
-            std::set<std::string> selected_keys = NestedProjectionUtils::GetMapSelectedKeys(
-                read_fields_of_data_array[i].ArrowField());
+            PAIMON_ASSIGN_OR_RAISE(
+                std::vector<std::string> selected_keys,
+                NestedProjectionUtils::GetMapSelectedKeys(read_fields_of_data_array[i].ArrowField()));
             if (!selected_keys.empty()) {
                 PAIMON_ASSIGN_OR_RAISE(field_array,
                                        NestedProjectionUtils::FilterMapArrayBySelectedKeys(

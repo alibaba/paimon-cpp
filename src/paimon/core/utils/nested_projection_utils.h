@@ -19,7 +19,6 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -34,6 +33,10 @@ namespace paimon {
 class PAIMON_EXPORT NestedProjectionUtils {
  public:
     NestedProjectionUtils() = delete;
+    ~NestedProjectionUtils() = delete;
+
+    static std::shared_ptr<arrow::Field> FindFieldByName(const arrow::FieldVector& fields,
+                                                         const std::string& name);
 
     /// Extract the paimon field ID from an Arrow field's metadata ("paimon.id").
     /// Returns -1 if the metadata key is not present.
@@ -84,22 +87,23 @@ class PAIMON_EXPORT NestedProjectionUtils {
         const std::shared_ptr<arrow::Schema>& read_schema);
 
     /// Parse the "paimon.map.selected-keys" metadata from an Arrow field.
-    /// Returns an empty set if the field is null, has no metadata, or the metadata key is absent.
+    /// Returns an empty vector if the field is null, has no metadata, or the metadata key
+    /// is absent.
     /// The metadata value is a comma-separated string, e.g. "key1,key2".
-    /// If the metadata key is present with an empty value, returns a set containing
-    /// an empty string sentinel ("") to mean "filter all keys".
-    static std::set<std::string> GetMapSelectedKeys(const std::shared_ptr<arrow::Field>& field);
+    /// Empty tokens are preserved ("" means selecting empty-string keys), and duplicate
+    /// selected keys are rejected as invalid.
+    static Result<std::vector<std::string>> GetMapSelectedKeys(
+        const std::shared_ptr<arrow::Field>& field);
 
     /// Filter a MapArray so that only entries whose key is in `selected_keys` are kept.
-    /// Only supports string-keyed maps. Returns the original array unchanged if
-    /// `selected_keys` is empty.
+    /// Only supports string-keyed maps. The output map entry order follows
+    /// `selected_keys` order, and duplicate selected keys are rejected.
+    /// Returns the original array unchanged if `selected_keys` is empty.
     static Result<std::shared_ptr<arrow::Array>> FilterMapArrayBySelectedKeys(
-        const std::shared_ptr<arrow::Array>& map_array, const std::set<std::string>& selected_keys);
+        const std::shared_ptr<arrow::Array>& map_array,
+        const std::vector<std::string>& selected_keys);
 
  private:
-    static std::shared_ptr<arrow::Field> FindFieldByName(const arrow::FieldVector& fields,
-                                                         const std::string& name);
-
     static Result<bool> HasNestedSubfieldProjectionType(
         const std::shared_ptr<arrow::DataType>& file_type,
         const std::shared_ptr<arrow::DataType>& read_type);

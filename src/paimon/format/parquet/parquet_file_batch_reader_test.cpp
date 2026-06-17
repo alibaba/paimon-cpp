@@ -41,6 +41,7 @@
 #include "paimon/common/utils/path_util.h"
 #include "paimon/defs.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
+#include "paimon/format/parquet/parquet_field_id_converter.h"
 #include "paimon/format/parquet/parquet_format_writer.h"
 #include "paimon/format/parquet/parquet_reader_builder.h"
 #include "paimon/fs/file_system.h"
@@ -490,6 +491,51 @@ TEST_F(ParquetFileBatchReaderTest, TestNextBatchWithOutofOrderTargetSchema) {
                                  read_schema->fields())
             .ValueOrDie();
     auto expected_chunk_array = std::make_shared<arrow::ChunkedArray>(expected_read_array);
+    ASSERT_TRUE(result_array->Equals(expected_chunk_array));
+}
+
+TEST_F(ParquetFileBatchReaderTest, TestNextBatchWithRenamedOutofOrderTargetSchema) {
+    auto write_field_a = arrow::field(
+        "old_a", arrow::int32(),
+        arrow::KeyValueMetadata::Make({ParquetFieldIdConverter::PARQUET_FIELD_ID}, {"1"}));
+    auto write_field_b = arrow::field(
+        "old_b", arrow::int64(),
+        arrow::KeyValueMetadata::Make({ParquetFieldIdConverter::PARQUET_FIELD_ID}, {"2"}));
+    arrow::FieldVector write_fields = {write_field_a, write_field_b};
+    auto write_schema = arrow::schema(write_fields);
+
+    auto write_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(write_fields), R"([
+        [1, 10],
+        [2, 20],
+        [3, 30]
+    ])")
+            .ValueOrDie());
+
+    WriteArray(file_path_, write_array, write_schema, /*write_batch_size=*/3,
+               /*enable_dictionary=*/false, /*max_row_group_length=*/3);
+
+    // Rename fields and read in out-of-order: new_b(id=2), new_a(id=1)
+    auto read_schema = DataField::ConvertDataFieldsToArrowSchema(
+        {DataField(2, arrow::field("new_b", arrow::int64())),
+         DataField(1, arrow::field("new_a", arrow::int32()))});
+
+    auto parquet_batch_reader =
+        PrepareParquetFileBatchReader(file_path_, read_schema, /*predicate=*/nullptr,
+                                      /*selection_bitmap=*/std::nullopt, /*batch_size=*/2);
+
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<arrow::ChunkedArray> result_array,
+        paimon::test::ReadResultCollector::CollectResult(parquet_batch_reader.get()));
+
+    auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(read_schema->fields()), R"([
+        [10, 1],
+        [20, 2],
+        [30, 3]
+    ])")
+            .ValueOrDie());
+    auto expected_chunk_array = std::make_shared<arrow::ChunkedArray>(expected_array);
     ASSERT_TRUE(result_array->Equals(expected_chunk_array));
 }
 

@@ -29,19 +29,10 @@
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/core/schema/arrow_schema_validator.h"
+#include "paimon/core/utils/nested_projection_utils.h"
 #include "paimon/status.h"
 
 namespace paimon {
-
-std::shared_ptr<arrow::Field> InternalReadContext::FindFieldByName(const arrow::FieldVector& fields,
-                                                                   const std::string& name) {
-    for (const auto& field : fields) {
-        if (field->name() == name) {
-            return field;
-        }
-    }
-    return nullptr;
-}
 
 std::shared_ptr<arrow::Field> InternalReadContext::MergeReadFieldMetadata(
     const std::shared_ptr<arrow::Field>& aligned_field,
@@ -75,7 +66,8 @@ Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTab
         arrow::FieldVector rebased_children;
         rebased_children.reserve(read_struct->num_fields());
         for (const auto& read_child : read_struct->fields()) {
-            auto table_child = FindFieldByName(table_struct->fields(), read_child->name());
+            auto table_child =
+                NestedProjectionUtils::FindFieldByName(table_struct->fields(), read_child->name());
             if (!table_child) {
                 return Status::Invalid(
                     fmt::format("Read schema nested field '{}' does not exist in table field '{}'",

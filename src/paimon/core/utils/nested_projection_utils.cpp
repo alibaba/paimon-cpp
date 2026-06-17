@@ -18,6 +18,7 @@
 
 #include <set>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -187,9 +188,9 @@ Result<bool> NestedProjectionUtils::HasNestedSubfieldProjection(
 
 // Map selected-keys support
 
-std::set<std::string> NestedProjectionUtils::GetMapSelectedKeys(
+Result<std::vector<std::string>> NestedProjectionUtils::GetMapSelectedKeys(
     const std::shared_ptr<arrow::Field>& field) {
-    std::set<std::string> result;
+    std::vector<std::string> result;
     if (!field || !field->HasMetadata() || !field->metadata()) {
         return result;
     }
@@ -200,27 +201,32 @@ std::set<std::string> NestedProjectionUtils::GetMapSelectedKeys(
     std::string value = get_result.ValueUnsafe();
     StringUtils::Trim(&value);
     if (value.empty()) {
-        // Metadata is explicitly present but empty: treat as "filter all keys".
-        result.insert("");
+        // Metadata is explicitly present but empty: select the empty-string key.
+        result.push_back("");
         return result;
     }
 
-    auto tokens = StringUtils::Split(value, ",", /*ignore_empty=*/true);
+    auto tokens = StringUtils::Split(value, ",", /*ignore_empty=*/false);
+    std::unordered_set<std::string> deduplicated;
+    deduplicated.reserve(tokens.size());
     for (auto& token : tokens) {
         StringUtils::Trim(&token);
-        if (!token.empty()) {
-            result.insert(token);
+        if (!deduplicated.insert(token).second) {
+            return Status::Invalid(
+                fmt::format("Duplicate selected key '{}' in {} metadata", token,
+                            DataField::MAP_SELECTED_KEYS));
         }
+        result.push_back(token);
     }
     return result;
 }
 
 Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-    const std::shared_ptr<arrow::Array>& array, const std::set<std::string>& selected_keys) {
+    const std::shared_ptr<arrow::Array>& array,
+    const std::vector<std::string>& selected_keys) {
     if (selected_keys.empty() || !array || array->length() == 0) {
         return array;
     }
-    bool filter_all_keys = selected_keys.count("") > 0;
 
     auto map_array = std::static_pointer_cast<arrow::MapArray>(array);
     auto map_type = std::static_pointer_cast<arrow::MapType>(array->type());
@@ -233,94 +239,53 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySel
 
     auto keys_array = std::static_pointer_cast<arrow::StringArray>(map_array->keys());
     auto values_array = map_array->items();
-    int64_t total_entries = keys_array->length();
     int64_t num_maps = map_array->length();
 
-    // Mark which flat entries to keep
-    std::vector<bool> keep(total_entries, false);
-    int64_t kept_count = 0;
-    for (int64_t i = 0; i < total_entries; ++i) {
-        if (filter_all_keys) {
-            continue;
-        }
-        if (!keys_array->IsNull(i)) {
-            std::string_view key_view = keys_array->GetView(i);
-            std::string key_str(key_view.data(), key_view.size());
-            if (selected_keys.count(key_str) > 0) {
-                keep[i] = true;
-                ++kept_count;
-            }
+    std::unordered_set<std::string> deduplicated;
+    deduplicated.reserve(selected_keys.size());
+    for (const auto& selected_key : selected_keys) {
+        if (!deduplicated.insert(selected_key).second) {
+            return Status::Invalid(
+                fmt::format("Duplicate selected key '{}' in {} metadata", selected_key,
+                            DataField::MAP_SELECTED_KEYS));
         }
     }
 
-    if (kept_count == total_entries) {
-        return array;
-    }
-
-    // Collect kept slices as contiguous runs to build filtered key/value arrays
-    // via Slice + Concatenate (avoids arrow::compute::Take dependency).
-    arrow::ArrayVector key_slices;
-    arrow::ArrayVector value_slices;
-    key_slices.reserve(kept_count);
-    value_slices.reserve(kept_count);
-
-    std::vector<int32_t> new_offsets;
-    new_offsets.reserve(num_maps + 1);
-    int32_t running_offset = 0;
+    auto key_builder = std::make_shared<arrow::StringBuilder>();
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+        std::unique_ptr<arrow::ArrayBuilder> value_builder_u,
+        arrow::MakeBuilder(values_array->type(), arrow::default_memory_pool()));
+    auto value_builder = std::shared_ptr<arrow::ArrayBuilder>(std::move(value_builder_u));
+    arrow::MapBuilder map_builder(arrow::default_memory_pool(), key_builder, value_builder);
 
     for (int64_t map_idx = 0; map_idx < num_maps; ++map_idx) {
-        new_offsets.push_back(running_offset);
         if (map_array->IsNull(map_idx)) {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(map_builder.AppendNull());
             continue;
         }
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(map_builder.Append());
         int64_t start = map_array->value_offset(map_idx);
         int64_t end = map_array->value_offset(map_idx + 1);
-        // Collect contiguous runs of kept entries within this map
-        int64_t run_start = -1;
-        for (int64_t entry_idx = start; entry_idx <= end; ++entry_idx) {
-            bool should_keep = (entry_idx < end) && keep[entry_idx];
-            if (should_keep && run_start < 0) {
-                run_start = entry_idx;
-            } else if (!should_keep && run_start >= 0) {
-                int64_t run_len = entry_idx - run_start;
-                key_slices.push_back(keys_array->Slice(run_start, run_len));
-                value_slices.push_back(values_array->Slice(run_start, run_len));
-                running_offset += static_cast<int32_t>(run_len);
-                run_start = -1;
+
+        // Keep selected keys in the exact selected_keys order.
+        for (const auto& selected_key : selected_keys) {
+            for (int64_t entry_idx = start; entry_idx < end; ++entry_idx) {
+                if (keys_array->IsNull(entry_idx)) {
+                    continue;
+                }
+                std::string_view key_view = keys_array->GetView(entry_idx);
+                if (key_view == selected_key) {
+                    PAIMON_RETURN_NOT_OK_FROM_ARROW(
+                        key_builder->Append(key_view.data(), static_cast<int32_t>(key_view.size())));
+                    PAIMON_RETURN_NOT_OK_FROM_ARROW(
+                        value_builder->AppendArraySlice(*values_array->data(), entry_idx, 1));
+                }
             }
         }
     }
-    new_offsets.push_back(running_offset);
 
-    // Build filtered key/value arrays
-    std::shared_ptr<arrow::Array> filtered_keys;
-    std::shared_ptr<arrow::Array> filtered_values;
-    if (key_slices.empty()) {
-        // All entries filtered out — create empty arrays
-        filtered_keys = keys_array->Slice(0, 0);
-        filtered_values = values_array->Slice(0, 0);
-    } else if (key_slices.size() == 1) {
-        filtered_keys = key_slices[0];
-        filtered_values = value_slices[0];
-    } else {
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(filtered_keys, arrow::Concatenate(key_slices));
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(filtered_values, arrow::Concatenate(value_slices));
-    }
-
-    // Build new offsets array
-    arrow::Int32Builder offset_builder;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(
-        offset_builder.Reserve(static_cast<int64_t>(new_offsets.size())));
-    for (int32_t offset : new_offsets) {
-        offset_builder.UnsafeAppend(offset);
-    }
-    std::shared_ptr<arrow::Array> new_offsets_array;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(offset_builder.Finish(&new_offsets_array));
-
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-        std::shared_ptr<arrow::Array> result_map,
-        arrow::MapArray::FromArrays(new_offsets_array, filtered_keys, filtered_values,
-                                    arrow::default_memory_pool(), map_array->null_bitmap()));
+    std::shared_ptr<arrow::Array> result_map;
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(map_builder.Finish(&result_map));
     return result_map;
 }
 
