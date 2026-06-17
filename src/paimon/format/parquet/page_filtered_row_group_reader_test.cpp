@@ -1119,7 +1119,6 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnPageFilter) {
 /// unavailable for nested read schemas.
 ///
 /// Schema: { id: int32, props: map<utf8, int32> }
-/// Read schema only contains the nested "props" column.
 /// 100 rows, 10 per page, 1 row group.
 /// Predicate: id >= 30 would be a partial-row-group match at first 50-row group.
 /// Because nested schema disables page-level filtering, the entire first row group (0..49) is read,
@@ -1150,7 +1149,6 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapBitmapFallback) {
 /// unavailable for nested read schemas.
 ///
 /// Schema: { id: int32, tags: list<item: int32> }
-/// Read schema only contains the nested "tags" column.
 /// Predicate: id >= 30 would be a partial-row-group match at first 50-row group.
 /// Because nested schema disables page-level filtering, the entire first row group (0..49) is read.
 TEST_F(PageFilteredRowGroupReaderTest, NestedListBitmapFallback) {
@@ -1178,7 +1176,6 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedListBitmapFallback) {
 /// unavailable for nested read schemas.
 ///
 /// Schema: { id: int32, info: struct<x: int32, y: int32> }
-/// Read schema only contains the nested "info" column.
 /// Predicate: id >= 30 would be a partial-row-group match at first 50-row group.
 /// Because nested schema disables page-level filtering, the entire first row group (0..49) is read.
 TEST_F(PageFilteredRowGroupReaderTest, NestedStructBitmapFallback) {
