@@ -170,6 +170,8 @@ Status ParquetFileBatchReader::SetReadSchema(
                 bool enable_page_index_filter,
                 OptionsUtils::GetValueFromMap<bool>(options_, PARQUET_READ_ENABLE_PAGE_INDEX_FILTER,
                                                     DEFAULT_PARQUET_READ_ENABLE_PAGE_INDEX_FILTER));
+            // walkaround: page index filter does not support nested fields for now, skip page index
+            // filter if there is any nested field in the schema
             if (enable_page_index_filter && !has_nested_field) {
                 // Build column name to index map for page-level filtering.
                 // For leaf columns, indices[0] is the correct leaf column index in Parquet.
