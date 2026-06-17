@@ -131,10 +131,12 @@ Status ParquetFileBatchReader::SetReadSchema(
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> file_schema, reader_->GetSchema());
         std::unordered_map<std::string, std::vector<int32_t>> field_index_map;
         bool has_nested_field = false;
-        int32_t i = 0;
-        for (const auto& field : file_schema->fields()) {
+        for (const auto& field : read_schema->fields()) {
             has_nested_field =
                 has_nested_field || ArrowSchemaValidator::IsNestedType(field->type());
+        }
+        int32_t i = 0;
+        for (const auto& field : file_schema->fields()) {
             std::vector<int32_t> v;
             FlattenSchema(field->type(), &i, &v);
             field_index_map[field->name()] = v;
