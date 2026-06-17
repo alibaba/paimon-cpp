@@ -30,6 +30,8 @@ class PAIMON_EXPORT ArrowUtils {
     ArrowUtils() = delete;
     ~ArrowUtils() = delete;
 
+    static const char* kArrowSchemaMetadataKey;
+
     static Result<std::shared_ptr<arrow::Schema>> DataTypeToSchema(
         const std::shared_ptr<arrow::DataType>& data_type);
 

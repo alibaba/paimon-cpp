@@ -19,10 +19,11 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <lumina/mpl/TypeList.h>
 #include <string_view>
 #include <type_traits>
 #include <utility>
+
+#include <lumina/mpl/TypeList.h>
 
 namespace lumina::mpl {
 
@@ -229,6 +230,19 @@ public:
         constexpr auto begin() const noexcept { return Iterator<E> {values().data()}; }
         constexpr auto end() const noexcept { return Iterator<E> {values().data() + values().size()}; }
     };
+
+    template <typename E>
+    static constexpr std::string_view EnumToString(E value) noexcept
+    {
+        std::string_view result;
+        using List = EnumTypeList<E>;
+        ForEachType<List>::Run([&]<typename T>() {
+            if (T::Value == value) {
+                result = EnumName<T::Value>();
+            }
+        });
+        return result;
+    }
 };
 
 } // namespace lumina::mpl

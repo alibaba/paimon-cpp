@@ -23,7 +23,7 @@
 
 namespace lumina::core {
 
-enum class IndexE { bruteforce, diskANN, ivf, demo };
+enum class IndexE { bruteforce, diskANN, ivf, demo, flatnsw };
 
 template <IndexE E>
 struct IndexTypeT {
@@ -37,6 +37,8 @@ struct IndexTypeT {
             return kIndexTypeIvf;
         } else if constexpr (E == IndexE::demo) {
             return kIndexTypeDemo;
+        } else if constexpr (E == IndexE::flatnsw) {
+            return kIndexTypeFlatnsw;
         } else {
             return "dummy";
         }
@@ -65,5 +67,11 @@ using IndexTypeList = mpl::EnumHelper::EnumTypeList<IndexE>::Map<IndexTypeMapFun
 
 // Helper to check validity
 inline constexpr bool IsValidIndexE(IndexE e) { return e != static_cast<IndexE>(-1); }
+
+// Check if an index type is experimental
+inline constexpr bool IsExperimentalIndexType(std::string_view indexType) noexcept
+{
+    return indexType == kIndexTypeFlatnsw;
+}
 
 } // namespace lumina::core

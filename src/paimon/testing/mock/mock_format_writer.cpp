@@ -16,6 +16,7 @@
 
 #include "paimon/testing/mock/mock_format_writer.h"
 
+#include <map>
 #include <string>
 #include <utility>
 
@@ -56,6 +57,10 @@ Result<bool> MockFormatWriter::ReachTargetSize(bool suggested_check, int64_t tar
         return true;
     }
     return false;
+}
+
+Status MockFormatWriter::AddMetadata(const std::map<std::string, std::string>& /*metadata*/) {
+    return Status::NotImplemented("AddMetadata is not supported by mock format writer.");
 }
 
 }  // namespace paimon::test

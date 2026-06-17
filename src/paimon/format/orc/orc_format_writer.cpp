@@ -20,12 +20,16 @@
 #include <cassert>
 #include <cstddef>
 #include <exception>
+#include <map>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <utility>
 
 #include "arrow/api.h"
 #include "arrow/array/array_base.h"
 #include "arrow/c/bridge.h"
+#include "arrow/util/base64.h"
 #include "fmt/format.h"
 #include "orc/Common.hh"
 #include "orc/OrcFile.hh"
@@ -204,6 +208,26 @@ std::shared_ptr<Metrics> OrcFormatWriter::GetWriterMetrics() const {
         metrics_->SetCounter(OrcMetrics::WRITE_IO_COUNT, writer_metrics_->IOCount);
     }
     return metrics_;
+}
+
+Status OrcFormatWriter::AddMetadata(const std::map<std::string, std::string>& metadata) {
+    if (metadata.empty()) {
+        return Status::OK();
+    }
+    try {
+        for (const auto& [key, value] : metadata) {
+            writer_->addUserMetadata(key, arrow::util::base64_encode(std::string_view(value)));
+        }
+    } catch (const std::exception& e) {
+        return Status::Invalid(
+            fmt::format("orc format writer AddMetadata failed for file {}, with {} error",
+                        output_stream_->getName(), e.what()));
+    } catch (...) {
+        return Status::UnknownError(
+            fmt::format("orc format writer AddMetadata failed for file {}, with unknown error",
+                        output_stream_->getName()));
+    }
+    return Status::OK();
 }
 
 namespace {

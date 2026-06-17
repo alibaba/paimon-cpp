@@ -17,6 +17,8 @@
 #include "paimon/format/blob/blob_format_writer.h"
 
 #include <algorithm>
+#include <map>
+#include <string>
 
 #include "arrow/api.h"
 #include "arrow/c/bridge.h"
@@ -226,6 +228,10 @@ Status BlobFormatWriter::WriteWithCrc32(const char* data, int64_t length) {
 Result<bool> BlobFormatWriter::ReachTargetSize(bool suggested_check, int64_t target_size) const {
     PAIMON_ASSIGN_OR_RAISE(int64_t current_pos, out_->GetPos());
     return current_pos >= target_size;
+}
+
+Status BlobFormatWriter::AddMetadata(const std::map<std::string, std::string>& /*metadata*/) {
+    return Status::NotImplemented("AddMetadata is not supported by blob format writer.");
 }
 
 template <typename T>

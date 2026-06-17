@@ -1,7 +1,14 @@
 # Overview
 
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![C++ Standard](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
+[![arXiv](https://badgen.net/static/arXiv/2510.22316/red)](https://arxiv.org/abs/2510.22316)
+[![ICDE'26](https://img.shields.io/badge/ICDE'26-paper-brightgreen)](https://icde2026.github.io/)
+
 Lumina is a C++ library for high-performance vector search and persisted indexes. It provides production-oriented
-backends (DiskANN / IVF / Bruteforce), a narrow API surface, and extension points for advanced workflows.
+backends (DiskANN / IVF / Bruteforce / FlatNSW (experimental)), a narrow API surface, and extension points for advanced workflows. For real-time
+ingestion scenarios, an experimental `LuminaStreamer` exposes a single-writer / multi-reader in-memory index (currently
+Bruteforce backend only).
 
 In addition to the core C++ API, Lumina also provides an experimental Python interface covering index building, search, and other basic workflows.
 
@@ -43,14 +50,14 @@ from the API surface to the index format — is made with long-term maintainabil
    |-----------|--------|
    | Attribute-based filtered search | stable |
    | Build checkpointing | experimental |
-   | Range & discrete-label filtering | planned |
-   | Distributed build coordination | planned |
+   | Range & enum tag filtering | experimental |
+   | Distributed build coordination | experimental |
 
 ## Backends at a glance
 
 ### DiskANN
 
-**Scale**: billions of vectors. **Memory**: sub-linear — graph metadata, quantized codes, and a configurable hot-node cache reside in RAM; full-precision or higher-precision quantized vectors stay on disk.
+**Scale**: hundreds of millions to billions of vectors. **Memory**: sub-linear — graph metadata, quantized codes, and a configurable hot-node cache reside in RAM; full-precision or higher-precision quantized vectors stay on disk.
 
 DiskANN builds a Vamana proximity graph offline, then serves queries through a coroutine-based parallel beam search that issues batched, sector-aligned disk reads without blocking threads on I/O. Key engineering choices:
 
@@ -58,7 +65,7 @@ DiskANN builds a Vamana proximity graph offline, then serves queries through a c
 - **Two-tier caching** — A static cache (BFS-loaded entry-region nodes) absorbs the first hops; a dynamic LRU cache adapts to workload skew at runtime.
 - **Build-time checkpointing** — Long builds can resume from a saved checkpoint after interruption, avoiding full restarts on billion-scale datasets.
 - **Quantization** — Both in-memory and on-disk vectors support SQ8, PQ, and RabitQ encoding. The disk encoding can differ from the in-memory one, trading a small recall margin for significantly smaller index files.
-- **Tag-aware graph construction** (in progress) — Filtered search with label dimensions is under active development.
+- **Tag-aware graph construction** (experimental) — Filtered search with enum and range tag dimensions, supporting multi-dimension tag filtering.
 
 
 ### IVF
@@ -67,11 +74,36 @@ DiskANN builds a Vamana proximity graph offline, then serves queries through a c
 
 IVF partitions the vector space into inverted lists via k-means clustering, then searches by probing the nearest lists. Supports SQ8, PQ, and RabitQ quantization to control the memory-accuracy tradeoff. Currently supports L2 distance only; Cosine and InnerProduct are under development. The on-disk snapshot layout is experimental and may change across versions.
 
+### FlatNSW (experimental)
+
+**Scale**: millions to tens of millions of vectors. **Memory**: full dataset plus graph in RAM.
+
+FlatNSW builds a Navigable Small World graph in memory. It supports tag-based filtered search (enum tags, range tags, and mixed mode). Suitable for datasets that fit in memory where you need graph-accelerated search without the disk IO complexity of DiskANN. API and on-disk format may change across versions.
+
 ### Bruteforce
 
 **Scale**: thousands to low millions of vectors. **Memory**: full dataset in RAM.
 
 Bruteforce computes exact distances against every vector — no approximation, no index structure. Use it as a recall-rate baseline for benchmarking other backends, or in production when the dataset is small enough that linear scan meets latency requirements.
+
+## Tag-filtered search (v0.3)
+
+Pure vector similarity is rarely enough in production — users almost always need to combine ANN with structured
+attribute constraints ("find similar images **in this category**", "recommend items **within this price range**").
+The naive post-filter approach wastes traversal budget on vectors that will be discarded, degrading both latency
+and recall.
+
+Lumina v0.3 introduces a unified **tag filtering system** that integrates attribute filtering into graph construction
+and search, rather than applying it as a post-processing step:
+
+- **Enum tags** — discrete categories (e.g., `color=red`, `brand=nike`). Exact match.
+- **Range tags** — continuous or integer intervals (e.g., `price ∈ [100, 500]`).
+- **Multi-dimension** — combine multiple tag dimensions in a single query (e.g., `color=red AND price ∈ [100, 500]`).
+- **Mixed mode** — enum and range tags can coexist on the same index.
+
+The tag system is accessed through two typed extensions — [`BuildWithTagExtension`](../extensions/BuildWithTagExtension.md) for assigning tags during build, and [`SearchWithTagExtension`](../extensions/SearchWithTagExtension.md) for applying filters at query time. The entire tag system is currently experimental.
+
+**Backend support:** FlatNSW, DiskANN, and Bruteforce.
 
 ## Use cases
 
@@ -84,9 +116,9 @@ Bruteforce computes exact distances against every vector — no approximation, n
 
 | Component | What it does |
 |-----------|-------------|
-| **API layer** | `LuminaBuilder`, `LuminaSearcher`, `Options`, `Query` — your main integration surface |
-| **Python facade** | Experimental `lumina` package wrapping Builder/Searcher, plus a filtered-search wrapper |
-| **Backends** | DiskANN, IVF, Bruteforce — the concrete index algorithms |
+| **API layer** | `LuminaBuilder`, `LuminaSearcher`, `LuminaStreamer`, `Options`, `Query` — your main integration surface |
+| **Python facade** | Experimental `lumina` package wrapping Builder/Searcher/Streamer, plus a filtered-search wrapper |
+| **Backends** | DiskANN, IVF, Bruteforce, FlatNSW (experimental) — the concrete index algorithms (Streamer currently runs on the Bruteforce backend only) |
 | **Quantizer** | Vector compression and distance estimation: SQ8, PQ, RabitQ |
 | **IO system** | Binary container format with section management and CRC verification |
 | **Telemetry** | Production logging and metrics hooks |
@@ -101,6 +133,7 @@ Research behind Lumina has been published at top-tier database and systems venue
 
 ## Next steps
 
-- [Python quick start](../PythonQuickStart.md) — run the full build → dump → open → search flow in Python.
-- [DiskANN tuning guide](./DiskANNParameters.md) — graph build and search parameter tuning for DiskANN.
-- [Options reference](./OptionsReference.md) — complete list of configuration keys.
+- [Python quick start](../PythonQuickStart.md) — run the full build → dump → open → search → stream flow in Python.
+- [API docs](../api/README.md) — detailed Builder, Searcher, Streamer, and Options reference.
+- [DiskANN tuning guide](DiskANNParameters.md) — graph build and search parameter tuning for DiskANN.
+- [Options reference](OptionsReference.md) — complete list of configuration keys.

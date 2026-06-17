@@ -31,6 +31,10 @@
 #include "paimon/result.h"
 #include "paimon/status.h"
 
+namespace arrow {
+class Schema;
+}  // namespace arrow
+
 namespace paimon {
 
 class ColumnStats;
@@ -40,6 +44,11 @@ class MemoryPool;
 
 class DataFileWriter : public SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>> {
  public:
+    /// Callback invoked during BeforeFinish() to finalize file metadata.
+    /// Produces an updated schema with per-field metadata (e.g. shredding metadata)
+    /// and may perform other finalization work (e.g. reporting stats to cross-file context).
+    using MetadataFinalizer = std::function<Result<std::shared_ptr<arrow::Schema>>()>;
+
     DataFileWriter(const std::string& compression,
                    std::function<Status(::ArrowArray*, ::ArrowArray*)> converter, int64_t schema_id,
                    const std::shared_ptr<LongCounter>& seq_num_counter, FileSource file_source,
@@ -47,14 +56,20 @@ class DataFileWriter : public SingleFileWriter<::ArrowArray*, std::shared_ptr<Da
                    bool is_external_path, const std::optional<std::vector<std::string>>& write_cols,
                    const std::shared_ptr<MemoryPool>& pool);
 
+    /// Sets the metadata finalizer. Called during BeforeFinish() to produce an updated
+    /// schema and perform finalization callbacks. Must be set before Close().
+    void SetMetadataFinalizer(MetadataFinalizer finalizer);
+
     Status Write(::ArrowArray* batch) override;
 
     Result<std::shared_ptr<DataFileMeta>> GetResult() override;
 
+ protected:
+    Status BeforeFinish() override;
+
  private:
     Result<std::vector<std::shared_ptr<ColumnStats>>> GetFieldStats();
 
- private:
     std::shared_ptr<MemoryPool> pool_;
     int64_t schema_id_;
     bool is_external_path_;
@@ -63,6 +78,7 @@ class DataFileWriter : public SingleFileWriter<::ArrowArray*, std::shared_ptr<Da
     FileSource file_source_;
     std::shared_ptr<FormatStatsExtractor> stats_extractor_;
     std::optional<std::vector<std::string>> write_cols_;
+    MetadataFinalizer metadata_finalizer_;
 };
 
 }  // namespace paimon

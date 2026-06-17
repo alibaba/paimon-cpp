@@ -25,11 +25,12 @@
 namespace lumina::api {
 
 // Weakly-typed C++ entry: normalize string->string maps into typed Options.
-core::Result<BuilderOptions> NormalizeBuilderOptions(const std::unordered_map<std::string, std::string>& raw);
-core::Result<SearcherOptions> NormalizeSearcherOptions(const std::unordered_map<std::string, std::string>& raw);
+core::Result<BuilderOptions> NormalizeBuilderOptions(const std::unordered_map<std::string, std::string>& raw) noexcept;
+core::Result<SearcherOptions>
+NormalizeSearcherOptions(const std::unordered_map<std::string, std::string>& raw) noexcept;
 core::Result<SearchOptions> NormalizeSearchOptions(const std::string& indexType,
-    const std::unordered_map<std::string, std::string>& raw);
+                                                   const std::unordered_map<std::string, std::string>& raw) noexcept;
 // check global search options
-core::Status ValidateSearchOptions(const api::SearchOptions& options);
+core::Status ValidateSearchOptions(const api::SearchOptions& options) noexcept;
 
 } // namespace lumina::api

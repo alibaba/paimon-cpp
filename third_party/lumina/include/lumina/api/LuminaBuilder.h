@@ -46,6 +46,7 @@ class LuminaBuilder final : public core::NoCopyable
 public:
     class Impl;
     LuminaBuilder(LuminaBuilder&&) noexcept;
+    LuminaBuilder& operator=(LuminaBuilder&&) noexcept;
     LuminaBuilder(std::unique_ptr<Impl> impl) noexcept;
     ~LuminaBuilder() noexcept;
     // Typical offline build: create a Builder by preset (e.g. "ivf", "diskann", "bruteforce", "demo")

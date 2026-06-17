@@ -18,7 +18,9 @@
 
 #include <cassert>
 #include <exception>
+#include <map>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "arrow/api.h"
@@ -107,6 +109,10 @@ Result<bool> AvroFormatWriter::ReachTargetSize(bool suggested_check, int64_t tar
         return current_size >= static_cast<uint64_t>(target_size);
     }
     return false;
+}
+
+Status AvroFormatWriter::AddMetadata(const std::map<std::string, std::string>& /*metadata*/) {
+    return Status::NotImplemented("AddMetadata is not supported by avro format writer.");
 }
 
 Status AvroFormatWriter::AddBatch(ArrowArray* batch) {
