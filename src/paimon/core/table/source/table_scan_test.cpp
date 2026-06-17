@@ -47,14 +47,16 @@ TEST(TableScanTest, TestNonExistTable) {
     ASSERT_NOK_WITH_MSG(TableScan::Create(std::move(context)), "not found latest schema");
 }
 
-TEST(TableScanTest, TestNoSchemaEvolution) {
-    // do not bear schema evolution in scan
+TEST(TableScanTest, TestPkSchemaEvolutionScan) {
     std::string path =
         paimon::test::GetDataDir() + "/orc/pk_table_with_alter_table.db/pk_table_with_alter_table/";
     ScanContextBuilder builder(path);
     builder.AddOption(Options::FILE_FORMAT, "orc");
     ASSERT_OK_AND_ASSIGN(auto context, builder.Finish());
-    ASSERT_NOK_WITH_MSG(TableScan::Create(std::move(context)), "do not support schema evolution");
+    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(context)));
+    ASSERT_OK_AND_ASSIGN(auto plan, table_scan->CreatePlan());
+    ASSERT_TRUE(plan->SnapshotId());
+    ASSERT_FALSE(plan->Splits().empty());
 }
 
 }  // namespace paimon::test

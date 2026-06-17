@@ -16,6 +16,7 @@
 
 #pragma once
 #include <lumina/core/ErrorCodes.h>
+#include <lumina/core/Macro.h>
 #include <string>
 #include <utility>
 
@@ -36,14 +37,13 @@ public:
     [[nodiscard]] bool IsOk() const noexcept { return _code == ErrorCode::Ok; }
     [[nodiscard]] bool operator!() const noexcept { return _code != ErrorCode::Ok; }
     [[nodiscard]] ErrorCode Code() const noexcept { return _code; }
-    const std::string& Message() const noexcept { return _msg; }
+    const std::string& Message() const noexcept LUMINA_LIFETIME_BOUND { return _msg; }
 
 private:
     ErrorCode _code;
     std::string _msg;
 };
 
-// TODO(feishi.wzj) add log
 #define LUMINA_RETURN_IF_ERROR(expr)                                                                                   \
     do {                                                                                                               \
         auto _s = (expr);                                                                                              \

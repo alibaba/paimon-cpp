@@ -31,6 +31,7 @@
 
 namespace paimon {
 class CoreOptions;
+class Cache;
 class FileFormat;
 class FileStorePathFactory;
 class FileSystem;
@@ -60,7 +61,7 @@ class IndexManifestFile : public ObjectsFile<IndexManifestEntry> {
                       const std::shared_ptr<WriterBuilder>& writer_builder,
                       const std::string& compression,
                       const std::shared_ptr<PathFactory>& path_factory, int32_t bucket_mode,
-                      const std::shared_ptr<MemoryPool>& pool);
+                      const std::shared_ptr<Cache>& cache, const std::shared_ptr<MemoryPool>& pool);
 
     const int32_t bucket_mode_;
 };

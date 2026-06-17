@@ -16,8 +16,11 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
+#include <string>
 
+#include "paimon/status.h"
 #include "paimon/type_fwd.h"
 
 struct ArrowArray;
@@ -66,6 +69,10 @@ class PAIMON_EXPORT FormatWriter {
     /// Get metrics of the writer
     /// @return The accumulated writer metrics to current state.
     virtual std::shared_ptr<Metrics> GetWriterMetrics() const = 0;
+
+    /// Adds metadata to the file footer. Values are encoded by each format writer
+    /// before being persisted. Must be called before Finish().
+    virtual Status AddMetadata(const std::map<std::string, std::string>& metadata) = 0;
 };
 
 }  // namespace paimon

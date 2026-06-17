@@ -820,13 +820,14 @@ TEST(SchemaValidationTest, ValidateInvalidConfiguration) {
                             "Data evolution config must disabled with deletion-vectors.enabled");
     }
 }
+
 TEST(SchemaValidationTest, TestMapStorageLayout) {
     auto f0 = arrow::field("f0", arrow::utf8());
     auto f1 = arrow::field("f1", arrow::int32());
     auto f2 = arrow::field("f2", arrow::map(arrow::utf8(), arrow::int64()));
     auto f3 = arrow::field("f3", arrow::map(arrow::int32(), arrow::utf8()));
 
-    // Valid: extend on MAP<STRING, T> column
+    // Valid: shared-shredding on MAP<STRING, T> column
     {
         arrow::FieldVector fields = {f0, f1, f2};
         auto schema = arrow::schema(fields);

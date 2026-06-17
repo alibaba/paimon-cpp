@@ -2207,6 +2207,56 @@ TEST_P(ScanAndReadInteTest, TestScanWithPredicateAndReadWithUnorderedFieldForPar
     ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
 }
 
+TEST_P(ScanAndReadInteTest, TestPkSchemaEvolutionScanWithRenamedPkPredicate) {
+    auto [file_format, enable_prefetch] = GetParam();
+    std::string table_path = paimon::test::GetDataDir() + file_format +
+                             "/pk_table_with_alter_table.db/pk_table_with_alter_table/";
+
+    auto predicate = PredicateBuilder::GreaterThan(
+        /*field_index=*/2, /*field_name=*/"key_2", FieldType::INT, Literal(500));
+    ScanContextBuilder scan_context_builder(table_path);
+    scan_context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "6");
+    scan_context_builder.SetPredicate(predicate);
+    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+    ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
+    ASSERT_EQ(result_plan->SnapshotId().value(), 6);
+    ASSERT_EQ(result_plan->Splits().size(), 1);
+
+    size_t data_file_count = 0;
+    for (const auto& split : result_plan->Splits()) {
+        auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
+        ASSERT_TRUE(data_split);
+        data_file_count += data_split->data_files_.size();
+    }
+    ASSERT_EQ(data_file_count, 1);
+
+    ReadContextBuilder read_context_builder(table_path);
+    AddReadOptionsForPrefetch(&read_context_builder);
+    read_context_builder.SetReadSchema({"key1", "k", "key_2", "c", "d", "a", "key0", "e"});
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(result_plan->Splits()));
+    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
+
+    auto expected = std::make_shared<arrow::ChunkedArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(
+            arrow::struct_({arrow::field("_VALUE_KIND", arrow::int8()),
+                            arrow::field("key1", arrow::int32()), arrow::field("k", arrow::utf8()),
+                            arrow::field("key_2", arrow::int32()),
+                            arrow::field("c", arrow::int32()), arrow::field("d", arrow::int32()),
+                            arrow::field("a", arrow::int32()), arrow::field("key0", arrow::int32()),
+                            arrow::field("e", arrow::int32())}),
+            R"([
+[0, 1, "Two roads diverged in a wood, and I took the one less traveled by, And that has made all the difference.", 2, 4, null, 6, 0, null],
+[0, 1, "Alice", 12, 94, null, 96, 0, null],
+[0, 1, "Paul", 502, 504, 508, 506, 0, 509]
+])")
+            .ValueOrDie());
+    ASSERT_TRUE(expected);
+    ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+}
+
 #ifdef PAIMON_ENABLE_LANCE
 TEST_F(ScanAndReadInteTest, TestScanWithPredicateAndReadWithUnorderedFieldForLance) {
     auto test_dir = UniqueTestDirectory::Create("local");

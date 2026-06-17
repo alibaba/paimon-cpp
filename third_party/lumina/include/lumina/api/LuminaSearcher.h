@@ -20,6 +20,7 @@
 #include <lumina/api/Extension.h>
 #include <lumina/api/Options.h>
 #include <lumina/api/Query.h>
+#include <lumina/api/SearchResult.h>
 #include <lumina/core/MemoryResource.h>
 #include <lumina/core/NoCopyable.h>
 #include <lumina/core/Result.h>
@@ -46,6 +47,7 @@ public:
     LuminaSearcher(std::unique_ptr<Impl> impl) noexcept;
     // -- Semantics: movable, not copyable --
     LuminaSearcher(LuminaSearcher&&) noexcept;
+    LuminaSearcher& operator=(LuminaSearcher&&) noexcept;
     ~LuminaSearcher() noexcept;
 
     static core::Result<LuminaSearcher> Create(const SearcherOptions& options) noexcept;
@@ -55,20 +57,13 @@ public:
     core::Status Open(const IOOptions& ioOptions) noexcept;
     core::Status Open(std::unique_ptr<io::FileReader> reader, const IOOptions& ioOptions) noexcept;
 
-    struct SearchHit {
-        core::vector_id_t id {0};
-        float distance {0.0f};
-    };
-
-    struct SearchResult {
-        std::vector<SearchHit> topk;
-        std::unordered_map<std::string, std::string> searchStats;
-    };
+    using SearchHit = api::SearchHit;
+    using SearchResult = api::SearchResult;
 
     // Index info: basic searcher metadata
     struct IndexInfo {
-        uint64_t count {0}; // Total vectors
-        core::dimension_t dim {0};   // Vector dimension
+        uint64_t count {0};        // Total vectors
+        core::dimension_t dim {0}; // Vector dimension
     };
 
     core::Result<SearchResult> Search(const Query& q, const SearchOptions& options) noexcept;

@@ -29,6 +29,7 @@ These keys belong to `api::BuilderOptions`.
 | `diskann.build.slack_pruning_factor` | `FieldType::kDouble` | Pruning factor during graph construction. Must be `> 0`. |
 | `diskann.build.reorder_layout` | `FieldType::kBool` | Whether to reorder the on-disk layout to improve locality. It only takes effect when the final layout can place at least 2 nodes in one sector. |
 | `diskann.build.quantized_build` | `FieldType::kBool` | Uses the in-memory quantizer to compute distances during graph construction. Currently only the `pq` quantizer is supported. |
+| `diskann.build.graph_node_per_sector` | `FieldType::kInt` | Target number of graph nodes packed into one disk sector. Default `4`, max `1024`. The actual count may be increased by alignment. Affects disk read granularity during sector-aligned search; interacts with `reorder_layout` and `sector_aligned_read`. |
 | `diskann.disk_encoding.*` | see "Disk Quantization Parameters" section | Disk quantization parameters. |
 
 ### In-Memory Quantization Parameters
@@ -147,4 +148,12 @@ options from a string map, prefer normalized entry points such as [NormalizeSear
 
 ## Status
 
-v0.2.2 Release Tag (2026-05-14).
+v0.3.0 Release Tag (2026-06-16).
+
+## Related
+
+- [Options API](../api/Options.md)
+- [Options Reference](OptionsReference.md)
+- [Builder API](../api/Builder.md)
+- [Searcher API](../api/Searcher.md)
+- [Checkpoint Extension](../extensions/CheckpointExtension.md)

@@ -136,13 +136,13 @@ Result<arrow::Type::type> BinaryRowPartitionComputer::GetTypeFromArrowSchema(
 
 Result<std::string> BinaryRowPartitionComputer::PartToSimpleString(
     const std::shared_ptr<arrow::Schema>& partition_type, const BinaryRow& partition,
-    const std::string& delimiter, int32_t max_length) {
+    const std::string& delimiter, int32_t max_length, bool legacy_partition_name_enabled) {
     std::vector<DataConverterUtils::BinaryRowFieldToStrConverter> partition_converters;
     partition_converters.reserve(partition_type->num_fields());
     for (const auto& field : partition_type->fields()) {
         PAIMON_ASSIGN_OR_RAISE(DataConverterUtils::BinaryRowFieldToStrConverter converter,
                                DataConverterUtils::CreateBinaryRowFieldToStringConverter(
-                                   field->type()->id(), /*legacy_partition_name_enabled=*/true));
+                                   field->type()->id(), legacy_partition_name_enabled));
         partition_converters.emplace_back(converter);
     }
     std::vector<std::string> partition_vec;

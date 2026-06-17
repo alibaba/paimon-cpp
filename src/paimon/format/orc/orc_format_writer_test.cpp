@@ -27,6 +27,8 @@
 #include "arrow/array/builder_primitive.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
+#include "arrow/c/helpers.h"
+#include "arrow/ipc/api.h"
 #include "gtest/gtest.h"
 #include "orc/Common.hh"
 #include "orc/MemoryPool.hh"

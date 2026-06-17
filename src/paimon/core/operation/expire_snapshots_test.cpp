@@ -73,9 +73,10 @@ class ExpireSnapshotsTest : public testing::Test {
         test_data_path_ = "tmp";
         path_factory_ = CreateFactory(test_data_path_);
 
-        ASSERT_OK_AND_ASSIGN(manifest_list_, ManifestList::Create(fs_, options.GetManifestFormat(),
-                                                                  options.GetManifestCompression(),
-                                                                  path_factory_, mem_pool_));
+        ASSERT_OK_AND_ASSIGN(
+            manifest_list_,
+            ManifestList::Create(fs_, options.GetManifestFormat(), options.GetManifestCompression(),
+                                 path_factory_, options.GetCache(), mem_pool_));
 
         ASSERT_OK_AND_ASSIGN(
             manifest_file_,

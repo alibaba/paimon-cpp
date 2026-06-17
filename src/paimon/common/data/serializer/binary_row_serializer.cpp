@@ -23,9 +23,9 @@
 
 #include "fmt/format.h"
 #include "paimon/common/io/memory_segment_output_stream.h"
-#include "paimon/common/memory/memory_segment.h"
 #include "paimon/io/data_input_stream.h"
 #include "paimon/memory/bytes.h"
+#include "paimon/memory/memory_segment.h"
 
 namespace paimon {
 

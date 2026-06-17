@@ -18,6 +18,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <memory>
 #include <optional>
 #include <set>
@@ -44,6 +45,7 @@ namespace paimon {
 
 class CommitIncrement;
 class ExternalStorageBlobWriter;
+class MapSharedShreddingContext;
 class RecordBatch;
 template <typename T, typename R>
 class RollingFileWriter;
@@ -56,13 +58,13 @@ class WriterBuilder;
 
 class AppendOnlyWriter : public BatchWriter {
  public:
-    AppendOnlyWriter(const CoreOptions& options, int64_t schema_id,
-                     const std::shared_ptr<arrow::Schema>& write_schema,
-                     const std::optional<std::vector<std::string>>& write_cols,
-                     int64_t max_sequence_number,
-                     const std::shared_ptr<DataFilePathFactory>& path_factory,
-                     const std::shared_ptr<CompactManager>& compact_manager,
-                     const std::shared_ptr<MemoryPool>& memory_pool);
+    static Result<std::unique_ptr<AppendOnlyWriter>> Create(
+        const CoreOptions& options, int64_t schema_id,
+        const std::shared_ptr<arrow::Schema>& write_schema,
+        const std::optional<std::vector<std::string>>& write_cols, int64_t max_sequence_number,
+        const std::shared_ptr<DataFilePathFactory>& path_factory,
+        const std::shared_ptr<CompactManager>& compact_manager,
+        const std::shared_ptr<MemoryPool>& memory_pool);
 
     ~AppendOnlyWriter() override;
 
@@ -95,6 +97,15 @@ class AppendOnlyWriter : public BatchWriter {
         Result<std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>>()>;
     using RollingFileWriterResult =
         Result<std::unique_ptr<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>>;
+
+    AppendOnlyWriter(const CoreOptions& options, int64_t schema_id,
+                     const std::shared_ptr<arrow::Schema>& write_schema,
+                     const std::optional<std::vector<std::string>>& write_cols,
+                     int64_t max_sequence_number,
+                     const std::shared_ptr<DataFilePathFactory>& path_factory,
+                     const std::shared_ptr<CompactManager>& compact_manager,
+                     const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
+                     const std::shared_ptr<MemoryPool>& memory_pool);
 
     RollingFileWriterResult CreateRollingRowWriter();
     RollingFileWriterResult CreateRollingBlobWriter(
@@ -136,6 +147,11 @@ class AppendOnlyWriter : public BatchWriter {
     std::unique_ptr<ExternalStorageBlobWriter> external_storage_writer_;
     std::set<std::string> inline_descriptor_fields_;
     std::set<std::string> inline_view_fields_;
+
+    // ---- Shared-shredding MAP support ----
+    /// Cross-file context for K adaptation and shredding column tracking.
+    /// nullptr when no shared-shredding MAP columns are configured.
+    std::shared_ptr<MapSharedShreddingContext> shredding_context_;
 };
 
 }  // namespace paimon

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <immintrin.h>
+
 #if defined(_MSC_VER) && !defined(__clang__)
 #define LUMINA_CXX_VER _MSVC_LANG
 #else
