@@ -84,8 +84,10 @@ class PAIMON_EXPORT NestedProjectionUtils {
         const std::shared_ptr<arrow::Schema>& read_schema);
 
     /// Parse the "paimon.map.selected-keys" metadata from an Arrow field.
-    /// Returns an empty set if the metadata key is absent or the field is not a MAP.
-    /// The metadata value must be a JSON array of strings, e.g. '["key1","key2"]'.
+    /// Returns an empty set if the field is null, has no metadata, or the metadata key is absent.
+    /// The metadata value is a comma-separated string, e.g. "key1,key2".
+    /// If the metadata key is present with an empty value, returns a set containing
+    /// an empty string sentinel ("") to mean "filter all keys".
     static std::set<std::string> GetMapSelectedKeys(const std::shared_ptr<arrow::Field>& field);
 
     /// Filter a MapArray so that only entries whose key is in `selected_keys` are kept.
