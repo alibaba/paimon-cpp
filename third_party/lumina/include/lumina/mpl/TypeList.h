@@ -24,7 +24,6 @@ namespace lumina::mpl {
 
 template <auto T>
 struct Enum2Type {
-    // static_assert(std::is_enum<T>::value, "T must be an enum type");
     static inline constexpr auto Value = T;
 };
 

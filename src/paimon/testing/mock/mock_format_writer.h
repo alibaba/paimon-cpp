@@ -17,7 +17,9 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <memory>
+#include <string>
 
 #include "paimon/format/format_writer.h"
 #include "paimon/result.h"
@@ -44,6 +46,7 @@ class MockFormatWriter : public FormatWriter {
     std::shared_ptr<Metrics> GetWriterMetrics() const override {
         return nullptr;
     }
+    Status AddMetadata(const std::map<std::string, std::string>& metadata) override;
 
  private:
     int64_t counter_ = 0;

@@ -62,6 +62,9 @@ struct MapSharedShreddingDefine {
     /// Overflow column name.
     static constexpr const char* kOverflow = "__overflow";
 
+    /// Default compression codec for field_dict serialization.
+    static constexpr const char* kDefaultDictCompression = "zstd";
+
     /// Returns the name of the i-th physical column: "__col_0", "__col_1", etc.
     static std::string PhysicalColumnName(int32_t index) {
         return "__col_" + std::to_string(index);

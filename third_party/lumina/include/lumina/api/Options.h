@@ -19,10 +19,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <lumina/core/Result.h>
-#include <lumina/core/Status.h>
-#include <lumina/mpl/Concepts.h>
-#include <lumina/telemetry/Log.h>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -32,6 +28,12 @@
 #include <utility>
 #include <variant>
 
+#include <lumina/core/Macro.h>
+#include <lumina/core/Result.h>
+#include <lumina/core/Status.h>
+#include <lumina/mpl/Concepts.h>
+#include <lumina/telemetry/Log.h>
+
 namespace lumina::api {
 
 enum class OptionsType {
@@ -40,6 +42,7 @@ enum class OptionsType {
     Builder,
     Quantizer,
     IO,
+    Streamer,
 };
 
 template <OptionsType T>
@@ -47,7 +50,6 @@ class Options
 {
 public:
     Options() noexcept = default;
-    ~Options() noexcept = default;
 
     using Value = std::variant<int64_t, double, bool, std::string>;
     using Map = std::unordered_map<std::string, Value>;
@@ -122,7 +124,7 @@ public:
     }
 
     // Direct access to all key/value pairs (read-only)
-    const Map& Values() const noexcept { return _values; }
+    const Map& Values() const noexcept LUMINA_LIFETIME_BOUND { return _values; }
 
     // Debug string representation of all options
     std::string DebugString() const noexcept
@@ -177,6 +179,7 @@ private:
 
 using SearchOptions = Options<OptionsType::Search>;
 using SearcherOptions = Options<OptionsType::Searcher>;
+using StreamerOptions = Options<OptionsType::Streamer>;
 using BuilderOptions = Options<OptionsType::Builder>;
 using QuantizerOptions = Options<OptionsType::Quantizer>;
 using IOOptions = Options<OptionsType::IO>;

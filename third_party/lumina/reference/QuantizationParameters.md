@@ -87,8 +87,7 @@ Current behavior:
   `rabitq` can usually reduce memory further, but they also come with stricter constraints and more tuning overhead.
   If you want a clear memory reduction without adding much complexity, `sq8` is usually the first option to try.
 - `Computation speed`: if distance evaluation on encoded vectors becomes the query-side bottleneck, consider `sq8`,
-  `pq`, or `rabitq`. Benchmarks for different quantized distance paths are available under `test/impl/quantizer` for
-  reference.
+  `pq`, or `rabitq`.
 - `Build time`: if you care more about build speed and configuration simplicity, prefer `rawf32` or `sq8`.
   `encoding.pq.thread_count` and `encoding.rabitq.thread_count` mainly improve build throughput. Increasing
   `encoding.pq.max_epoch`, `encoding.rabitq.max_epoch`, and `encoding.rabitq.centroid_count` also increases build
@@ -112,4 +111,11 @@ Current behavior:
 
 ## Status
 
-v0.2.2 Release Tag (2026-05-14).
+v0.3.0 Release Tag (2026-06-16).
+
+## Related
+
+- [Options API](../api/Options.md)
+- [Options Reference](OptionsReference.md)
+- [Builder API](../api/Builder.md)
+- [DiskANN Parameters and Tuning](DiskANNParameters.md)

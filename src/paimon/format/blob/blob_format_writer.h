@@ -18,7 +18,9 @@
 
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <memory>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -70,6 +72,8 @@ class BlobFormatWriter : public FormatWriter {
     std::shared_ptr<Metrics> GetWriterMetrics() const override {
         return metrics_;
     }
+
+    Status AddMetadata(const std::map<std::string, std::string>& metadata) override;
 
  private:
     BlobFormatWriter(const std::shared_ptr<OutputStream>& out, const std::string& uri,
