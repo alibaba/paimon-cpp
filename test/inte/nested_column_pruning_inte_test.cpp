@@ -165,6 +165,100 @@ TEST_P(NestedColumnPruningInteTest, PruneStructSubFields) {
     ASSERT_TRUE(is_equal);
 }
 
+// Test: Two top-level struct columns have the same nested field name; projection should
+// distinguish by parent column.
+TEST_P(NestedColumnPruningInteTest, PruneSameNestedFieldNameFromDifferentStructColumns) {
+    // Table schema: f0 (int32), s0 (struct{f1: int32, a: utf8}), s1 (struct{f1: int32, b: utf8})
+    auto s0_type = arrow::struct_({
+        arrow::field("f1", arrow::int32()),
+        arrow::field("a", arrow::utf8()),
+    });
+    auto s1_type = arrow::struct_({
+        arrow::field("f1", arrow::int32()),
+        arrow::field("b", arrow::utf8()),
+    });
+    arrow::FieldVector table_fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("s0", s0_type),
+        arrow::field("s1", s1_type),
+    };
+    auto table_schema = arrow::schema(table_fields);
+
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "AVRO"},
+        {Options::FILE_FORMAT, StringUtils::ToUpperCase(file_format_)},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+    };
+
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+
+    std::string data = R"([
+        [1, [11, "left-1"], [101, "right-1"]],
+        [2, [22, "left-2"], [202, "right-2"]],
+        [3, [33, "left-3"], [303, "right-3"]]
+    ])";
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    int64_t commit_identifier = 0;
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_FALSE(data_splits.empty());
+
+    // Project only s0.f1 and s1.f1; both nested field names are identical.
+    auto projected_s0 = arrow::struct_({arrow::field("f1", arrow::int32())});
+    auto projected_s1 = arrow::struct_({arrow::field("f1", arrow::int32())});
+    arrow::FieldVector projected_fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("s0", projected_s0),
+        arrow::field("s1", projected_s1),
+    };
+    auto projected_schema = arrow::schema(projected_fields);
+
+    ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_schema).ok());
+
+    ReadContextBuilder read_context_builder(table_path_);
+    read_context_builder.SetOptions(options).SetReadSchema(&c_schema);
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_splits));
+    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
+
+    arrow::FieldVector expected_fields = {
+        arrow::field("_VALUE_KIND", arrow::int8()),
+        arrow::field("f0", arrow::int32()),
+        arrow::field("s0", arrow::struct_({arrow::field("f1", arrow::int32())})),
+        arrow::field("s1", arrow::struct_({arrow::field("f1", arrow::int32())})),
+    };
+    auto expected_type = arrow::struct_(expected_fields);
+    std::string expected_data = R"([
+        [0, 1, [11], [101]],
+        [0, 2, [22], [202]],
+        [0, 3, [33], [303]]
+    ])";
+    auto expected_array =
+        arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();
+    auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
+
+    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
+    bool is_equal = expected_chunked->Equals(read_result, equal_options.diff_sink(&std::cout));
+    if (!is_equal) {
+        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
+        std::cout << "[actual_type]   " << read_result->type()->ToString() << std::endl;
+        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
+        std::cout << "[actual]   " << read_result->ToString() << std::endl;
+    }
+    ASSERT_TRUE(is_equal);
+}
+
 // Test: Querying struct sub-fields with a non-existent nested field should fail fast.
 TEST_P(NestedColumnPruningInteTest, QueryStructSubFieldsWithNonExistentField) {
     // Table schema: f0 (int32), f1 (struct{f1: int32, f2: utf8, f3: float64})
