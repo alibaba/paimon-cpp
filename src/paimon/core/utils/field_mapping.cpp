@@ -17,6 +17,7 @@
 #include "paimon/core/utils/field_mapping.h"
 
 #include <cstddef>
+#include <unordered_map>
 #include <vector>
 
 #include "arrow/type.h"
@@ -35,6 +36,30 @@
 #include "paimon/status.h"
 
 namespace paimon {
+
+DataField FieldMappingBuilder::MergeFieldMetadataByWhitelist(
+    const DataField& data_field, const DataField& read_field,
+    const std::vector<std::string>& metadata_keys_whitelist) const {
+    if (!read_field.ArrowField()->HasMetadata() || !read_field.ArrowField()->metadata()) {
+        return data_field;
+    }
+
+    std::unordered_map<std::string, std::string> metadata_map;
+    for (const auto& key : metadata_keys_whitelist) {
+        auto metadata_value_result = read_field.ArrowField()->metadata()->Get(key);
+        if (metadata_value_result.ok()) {
+            metadata_map[key] = metadata_value_result.ValueUnsafe();
+        }
+    }
+
+    if (metadata_map.empty()) {
+        return data_field;
+    }
+
+    auto metadata = std::make_shared<arrow::KeyValueMetadata>(metadata_map);
+    return DataField(data_field.Id(), data_field.ArrowField()->WithMergedMetadata(metadata),
+                     data_field.Description());
+}
 
 Result<std::shared_ptr<arrow::Schema>> FieldMapping::GetPartitionSchema(
     const std::shared_ptr<arrow::Schema>& schema, const std::vector<std::string>& partition_keys) {
@@ -189,13 +214,15 @@ Result<NonPartitionInfo> FieldMappingBuilder::CreateNonPartitionInfo(
     const std::vector<DataField>& data_fields, const ExistFieldInfo& exist_field_info,
     const std::map<std::string, int32_t>& partition_keys) const {
     NonPartitionInfo non_partition_info;
+    const std::vector<std::string> propagated_metadata_keys = {DataField::MAP_SELECTED_KEYS};
     for (size_t i = 0; i < exist_field_info.exist_data_schema.size(); i++) {
         const auto& data_field = exist_field_info.exist_data_schema[i];
         const auto& read_field = exist_field_info.exist_read_schema[i];
         auto iter = partition_keys.find(read_field.Name());
         if (iter == partition_keys.end()) {
             non_partition_info.non_partition_read_schema.push_back(read_field);
-            non_partition_info.non_partition_data_schema.push_back(data_field);
+            non_partition_info.non_partition_data_schema.push_back(
+                MergeFieldMetadataByWhitelist(data_field, read_field, propagated_metadata_keys));
             non_partition_info.idx_in_target_read_schema.push_back(
                 exist_field_info.idx_in_target_read_schema[i]);
         }
