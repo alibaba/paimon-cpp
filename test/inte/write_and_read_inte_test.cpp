@@ -1146,7 +1146,7 @@ TEST_P(WriteAndReadInteTest, TestAppendWithParquetMetadataCache) {
             .ValueOrDie());
 
     auto cache =
-        std::make_shared<CountingRoutingCache>(CacheKind::PARQUET_METADATA, 128 * 1024 * 1024);
+        std::make_shared<CountingRoutingCache>(CacheKind::DATA_FILE_FOOTER, 128 * 1024 * 1024);
     auto read_once = [&]() -> Result<bool> {
         ScanContextBuilder scan_context_builder(table_path);
         scan_context_builder.AddOption(Options::SCAN_MODE, StartupMode::LatestFull().ToString());
@@ -1178,14 +1178,14 @@ TEST_P(WriteAndReadInteTest, TestAppendWithParquetMetadataCache) {
     ASSERT_EQ(1, cache->GetCount());
     ASSERT_EQ(1, cache->SupplierCallCount());
     ASSERT_EQ(1, cache->Size());
-    ASSERT_EQ(CacheKind::PARQUET_METADATA, cache->LastKind());
+    ASSERT_EQ(CacheKind::DATA_FILE_FOOTER, cache->LastKind());
 
     ASSERT_OK_AND_ASSIGN(bool second_success, read_once());
     ASSERT_TRUE(second_success);
     ASSERT_EQ(2, cache->GetCount());
     ASSERT_EQ(1, cache->SupplierCallCount());
     ASSERT_EQ(1, cache->Size());
-    ASSERT_EQ(CacheKind::PARQUET_METADATA, cache->LastKind());
+    ASSERT_EQ(CacheKind::DATA_FILE_FOOTER, cache->LastKind());
 }
 
 INSTANTIATE_TEST_SUITE_P(FileFormatAndFileSystem, WriteAndReadInteTest,

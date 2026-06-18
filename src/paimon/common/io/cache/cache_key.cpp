@@ -31,10 +31,6 @@ std::shared_ptr<CacheKey> CacheKey::ForKind(const std::string& file_path, int64_
     return key;
 }
 
-std::shared_ptr<CacheKey> CacheKey::ForParquetMeta(const std::string& file_uri) {
-    return ForKind(file_uri, /*position=*/-1, /*length=*/-1, CacheKind::PARQUET_METADATA);
-}
-
 bool PositionCacheKey::IsIndex() const {
     return is_index_;
 }

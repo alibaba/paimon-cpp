@@ -52,7 +52,7 @@
 #include "paimon/table/source/startup_mode.h"
 #include "paimon/table/source/table_scan.h"
 #include "paimon/testing/utils/binary_row_generator.h"
-#include "paimon/testing/utils/manifest_cache_test_utils.h"
+#include "paimon/testing/utils/counting_cache_test_utils.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -63,7 +63,8 @@ class ScanInteTest : public testing::TestWithParam<ManifestCacheMode> {
     Result<std::unique_ptr<ScanContext>> FinishScanContext(ScanContextBuilder& builder) {
         if (GetParam() == ManifestCacheMode::Cache) {
             if (!cache_) {
-                cache_ = std::make_shared<CountingManifestRoutingCache>();
+                cache_ =
+                    std::make_shared<CountingRoutingCache>(CacheKind::MANIFEST, 64 * 1024 * 1024);
             }
             builder.WithCache(cache_);
         }
@@ -257,7 +258,8 @@ class ScanInteTest : public testing::TestWithParam<ManifestCacheMode> {
 };
 
 TEST(ScanInteManifestCacheTest, TestRepeatedScanReusesManifestCache) {
-    auto manifest_cache = std::make_shared<CountingManifestRoutingCache>();
+    auto manifest_cache =
+        std::make_shared<CountingRoutingCache>(CacheKind::MANIFEST, 64 * 1024 * 1024);
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
 
     auto run_scan = [&]() -> Result<std::shared_ptr<Plan>> {

@@ -31,6 +31,7 @@
 #include "paimon/common/utils/arrow/arrow_input_stream_adapter.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/format/parquet/parquet_file_batch_reader.h"
+#include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/reader_builder.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/memory/memory_segment.h"
@@ -58,22 +59,26 @@ class ParquetReaderBuilder : public ReaderBuilder {
 
     Result<std::unique_ptr<FileBatchReader>> Build(
         const std::shared_ptr<InputStream>& path) const override {
-        PAIMON_ASSIGN_OR_RAISE(int64_t file_length, path->Length());
-        std::string file_uri;
-        if (cache_) {
-            Result<std::string> file_uri_result = path->GetUri();
-            if (file_uri_result.ok()) {
-                file_uri = std::move(file_uri_result).value();
+        try {
+            PAIMON_ASSIGN_OR_RAISE(int64_t file_length, path->Length());
+            std::string file_uri;
+            if (cache_) {
+                Result<std::string> file_uri_result = path->GetUri();
+                if (file_uri_result.ok()) {
+                    file_uri = std::move(file_uri_result).value();
+                }
             }
+            std::shared_ptr<arrow::MemoryPool> arrow_pool = GetArrowPool(pool_);
+            auto unique_input_stream =
+                std::make_unique<ArrowInputStreamAdapter>(path, arrow_pool, file_length);
+            std::shared_ptr<arrow::io::RandomAccessFile> input_stream(
+                std::move(unique_input_stream));
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<::parquet::FileMetaData> file_metadata,
+                                   GetCachedParquetMetadata(input_stream, file_uri, arrow_pool));
+            return ParquetFileBatchReader::Create(std::move(input_stream), options_, batch_size_,
+                                                  std::move(file_metadata), arrow_pool);
         }
-        std::shared_ptr<arrow::MemoryPool> arrow_pool = GetArrowPool(pool_);
-        auto unique_input_stream =
-            std::make_unique<ArrowInputStreamAdapter>(path, arrow_pool, file_length);
-        std::shared_ptr<arrow::io::RandomAccessFile> input_stream(std::move(unique_input_stream));
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<::parquet::FileMetaData> file_metadata,
-                               GetCachedParquetMetadata(input_stream, file_uri, arrow_pool));
-        return ParquetFileBatchReader::Create(std::move(input_stream), arrow_pool, options_,
-                                              batch_size_, std::move(file_metadata));
+        PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetReaderBuilder::Build")
     }
 
     Result<std::unique_ptr<FileBatchReader>> Build(const std::string& path) const override {
@@ -134,7 +139,8 @@ class ParquetReaderBuilder : public ReaderBuilder {
             ::parquet::ReaderProperties reader_properties,
             ParquetFileBatchReader::CreateReaderProperties(arrow_pool, options_));
 
-        auto cache_key = CacheKey::ForParquetMeta(file_uri);
+        auto cache_key = CacheKey::ForKind(file_uri, /*position=*/-1, /*length=*/-1,
+                                           CacheKind::DATA_FILE_FOOTER);
         auto supplier =
             [this, &input_stream, reader_properties,
              arrow_pool](const std::shared_ptr<CacheKey>&) -> Result<std::shared_ptr<CacheValue>> {

@@ -44,11 +44,11 @@ Parquet metadata caching is disabled by default. Embedding applications that
 need it can provide a custom ``Cache`` implementation and inject it through
 ``ScanContextBuilder`` or ``ReadContextBuilder``. Parquet reader builders
 receive the cache from the read context and create cache keys with
-``CacheKind::PARQUET_METADATA`` internally.
+``CacheKind::DATA_FILE_FOOTER`` internally.
 
 The cache key represents the file footer and is created from the file URI with
 position ``-1`` and length ``-1``. Callers do not need to construct this key
-directly; they only need to route ``CacheKind::PARQUET_METADATA`` entries to an
+directly; they only need to route ``CacheKind::DATA_FILE_FOOTER`` entries to an
 appropriate cache backend.
 
 Example:
@@ -74,7 +74,7 @@ Example:
     private:
      std::shared_ptr<paimon::Cache> Select(
          const std::shared_ptr<paimon::CacheKey>& key) const {
-       return key && key->GetKind() == paimon::CacheKind::PARQUET_METADATA
+       return key && key->GetKind() == paimon::CacheKind::DATA_FILE_FOOTER
                   ? parquet_metadata_cache_
                   : default_cache_;
      }

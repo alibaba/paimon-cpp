@@ -196,8 +196,8 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
         const std::optional<RoaringBitmap32>& selection_bitmap, int32_t batch_size) const {
         EXPECT_OK_AND_ASSIGN(
             auto parquet_batch_reader,
-            ParquetFileBatchReader::Create(std::move(in_stream), pool_, options, batch_size,
-                                           /*file_metadata=*/nullptr));
+            ParquetFileBatchReader::Create(std::move(in_stream), options, batch_size,
+                                           /*file_metadata=*/nullptr, pool_));
         std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
         auto arrow_status = arrow::ExportSchema(*read_schema, c_schema.get());
         EXPECT_TRUE(arrow_status.ok());
@@ -220,7 +220,7 @@ TEST_F(ParquetFileBatchReaderTest, TestParquetMetadataCacheReusesSerializedFoote
                /*enable_dictionary=*/false,
                /*max_row_group_length=*/struct_array_->length());
 
-    auto cache = std::make_shared<paimon::test::CountingRoutingCache>(CacheKind::PARQUET_METADATA,
+    auto cache = std::make_shared<paimon::test::CountingRoutingCache>(CacheKind::DATA_FILE_FOOTER,
                                                                       128 * 1024 * 1024);
     auto open_reader = [&]() -> Result<std::unique_ptr<ParquetFileBatchReader>> {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> input_stream, fs_->Open(file_path_));
@@ -244,7 +244,7 @@ TEST_F(ParquetFileBatchReaderTest, TestParquetMetadataCacheReusesSerializedFoote
     ASSERT_EQ(1, cache->GetCount());
     ASSERT_EQ(1, cache->SupplierCallCount());
     ASSERT_EQ(1, cache->Size());
-    ASSERT_EQ(CacheKind::PARQUET_METADATA, cache->LastKind());
+    ASSERT_EQ(CacheKind::DATA_FILE_FOOTER, cache->LastKind());
 
     ASSERT_OK_AND_ASSIGN(auto reader2, open_reader());
     ASSERT_OK_AND_ASSIGN(auto schema2, reader2->GetFileSchema());
@@ -254,7 +254,7 @@ TEST_F(ParquetFileBatchReaderTest, TestParquetMetadataCacheReusesSerializedFoote
     ASSERT_EQ(2, cache->GetCount());
     ASSERT_EQ(1, cache->SupplierCallCount());
     ASSERT_EQ(1, cache->Size());
-    ASSERT_EQ(CacheKind::PARQUET_METADATA, cache->LastKind());
+    ASSERT_EQ(CacheKind::DATA_FILE_FOOTER, cache->LastKind());
 }
 
 TEST_F(ParquetFileBatchReaderTest, TestParquetMetadataCacheBypassesWhenGetUriFails) {
@@ -264,7 +264,7 @@ TEST_F(ParquetFileBatchReaderTest, TestParquetMetadataCacheBypassesWhenGetUriFai
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream, fs_->Open(file_path_));
     auto failed_uri_input_stream = std::make_shared<FailedUriInputStream>(input_stream);
-    auto cache = std::make_shared<paimon::test::CountingRoutingCache>(CacheKind::PARQUET_METADATA,
+    auto cache = std::make_shared<paimon::test::CountingRoutingCache>(CacheKind::DATA_FILE_FOOTER,
                                                                       128 * 1024 * 1024);
 
     std::map<std::string, std::string> options;
@@ -350,10 +350,9 @@ TEST_F(ParquetFileBatchReaderTest, TestSetReadSchema) {
     auto in_stream =
         std::make_unique<ArrowInputStreamAdapter>(std::move(input_stream), pool_, length);
     std::map<std::string, std::string> options;
-    ASSERT_OK_AND_ASSIGN(
-        auto parquet_batch_reader,
-        ParquetFileBatchReader::Create(std::move(in_stream), pool_, options, batch_size_,
-                                       /*file_metadata=*/nullptr));
+    ASSERT_OK_AND_ASSIGN(auto parquet_batch_reader,
+                         ParquetFileBatchReader::Create(std::move(in_stream), options, batch_size_,
+                                                        /*file_metadata=*/nullptr, pool_));
     // test GetFileSchema()
     ASSERT_OK_AND_ASSIGN(auto c_file_schema, parquet_batch_reader->GetFileSchema());
     auto arrow_file_schema = arrow::ImportSchema(c_file_schema.get()).ValueOrDie();

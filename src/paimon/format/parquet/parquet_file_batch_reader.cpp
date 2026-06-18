@@ -70,9 +70,9 @@ ParquetFileBatchReader::ParquetFileBatchReader(
 
 Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
     std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
-    const std::shared_ptr<arrow::MemoryPool>& pool,
     const std::map<std::string, std::string>& options, int32_t batch_size,
-    std::shared_ptr<::parquet::FileMetaData> file_metadata) {
+    std::shared_ptr<::parquet::FileMetaData> file_metadata,
+    const std::shared_ptr<arrow::MemoryPool>& pool) {
     try {
         assert(input_stream);
         PAIMON_ASSIGN_OR_RAISE(::parquet::ReaderProperties reader_properties,
