@@ -60,30 +60,6 @@ class Predicate;
 
 namespace paimon::parquet {
 
-namespace {
-
-std::shared_ptr<arrow::Field> FindMatchingReadField(
-    const arrow::FieldVector& read_fields, const std::shared_ptr<arrow::Field>& file_field) {
-    for (const auto& candidate : read_fields) {
-        if (candidate->name() == file_field->name()) {
-            return candidate;
-        }
-    }
-    return nullptr;
-}
-
-int32_t FindMatchingFileFieldIndex(const arrow::FieldVector& file_fields,
-                                   const std::shared_ptr<arrow::Field>& read_field) {
-    for (int32_t i = 0; i < static_cast<int32_t>(file_fields.size()); ++i) {
-        if (file_fields[i]->name() == read_field->name()) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-}  // namespace
-
 ParquetFileBatchReader::ParquetFileBatchReader(
     std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
     std::unique_ptr<FileReaderWrapper>&& reader, const std::map<std::string, std::string>& options,
@@ -491,8 +467,13 @@ Status ParquetFileBatchReader::CollectLeafIndices(const std::shared_ptr<arrow::D
                                                   std::vector<int32_t>* indices) {
     if (file_type->id() == arrow::Type::STRUCT) {
         for (const auto& file_child : file_type->fields()) {
-            std::shared_ptr<arrow::Field> read_child =
-                FindMatchingReadField(read_type->fields(), file_child);
+            std::shared_ptr<arrow::Field> read_child = nullptr;
+            for (const auto& candidate : read_type->fields()) {
+                if (candidate->name() == file_child->name()) {
+                    read_child = candidate;
+                    break;
+                }
+            }
             if (read_child) {
                 PAIMON_RETURN_NOT_OK(CollectLeafIndices(read_child->type(), file_child->type(),
                                                         leaf_index, indices));
@@ -546,7 +527,13 @@ Result<std::vector<int32_t>> ParquetFileBatchReader::ComputeNestedColumnIndices(
 
     const auto& file_fields = file_schema->fields();
     for (const auto& read_field : read_schema->fields()) {
-        int32_t file_field_idx = FindMatchingFileFieldIndex(file_fields, read_field);
+        int32_t file_field_idx = -1;
+        for (int32_t i = 0; i < static_cast<int32_t>(file_fields.size()); ++i) {
+            if (file_fields[i]->name() == read_field->name()) {
+                file_field_idx = i;
+                break;
+            }
+        }
         if (file_field_idx < 0) {
             continue;
         }
