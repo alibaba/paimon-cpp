@@ -120,7 +120,7 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     }
 
     bool SupportPreciseBitmapSelection() const override {
-        return true;
+        return false;
     }
 
  private:
