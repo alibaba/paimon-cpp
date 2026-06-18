@@ -264,4 +264,40 @@ TEST(InternalReadContext, TestReadWithProjectedSchemaWithoutFieldIds) {
     ASSERT_TRUE(internal_context->GetReadSchema()->Equals(expected_schema));
 }
 
+TEST(InternalReadContext, TestProjectedSchemaMetadataWhitelist) {
+    std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+
+    auto read_field = arrow::field("f0", arrow::utf8())
+                          ->WithMetadata(arrow::KeyValueMetadata::Make(
+                              {DataField::MAP_SELECTED_KEYS, "custom.key"},
+                              {"k1,k2", "should_not_propagate"}));
+    auto projected_schema = arrow::schema({read_field});
+    ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_schema).ok());
+
+    ReadContextBuilder context_builder(path);
+    context_builder.SetReadSchema(&c_schema);
+    ASSERT_OK_AND_ASSIGN(auto unique_read_context, context_builder.Finish());
+    std::shared_ptr<ReadContext> read_context = std::move(unique_read_context);
+
+    SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
+    ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));
+
+    ASSERT_OK_AND_ASSIGN(
+        auto internal_context,
+        InternalReadContext::Create(read_context, table_schema, table_schema->Options()));
+
+    auto aligned_field = internal_context->GetReadSchema()->GetFieldByName("f0");
+    ASSERT_TRUE(aligned_field);
+    ASSERT_TRUE(aligned_field->HasMetadata());
+    ASSERT_TRUE(aligned_field->metadata());
+
+    auto selected_keys_result = aligned_field->metadata()->Get(DataField::MAP_SELECTED_KEYS);
+    ASSERT_TRUE(selected_keys_result.ok());
+    ASSERT_EQ(selected_keys_result.ValueUnsafe(), "k1,k2");
+
+    auto custom_metadata_result = aligned_field->metadata()->Get("custom.key");
+    ASSERT_FALSE(custom_metadata_result.ok());
+}
+
 }  // namespace paimon::test

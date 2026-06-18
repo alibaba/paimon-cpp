@@ -212,9 +212,10 @@ class PAIMON_EXPORT ReadContextBuilder {
     /// may contain only a subset of the original sub-fields, enabling nested column
     /// pruning to reduce I/O. Field matching is based on field name: the system
     /// looks up each field by name in the table schema and rebuilds the aligned
-    /// schema using the table schema's type and metadata. Any "paimon.id" metadata
-    /// in the user-provided schema is ignored. Other custom metadata (except
-    /// "paimon.id") is preserved and merged into the final aligned schema.
+    /// schema using the table schema's type and metadata. Metadata propagation
+    /// from the user-provided schema is whitelist-based: currently only
+    /// "paimon.map.selected-keys" is preserved and merged into the final aligned
+    /// schema.
     ///
     /// @param read_schema Arrow C Schema. The caller retains ownership.
     /// @return Reference to this builder for method chaining.

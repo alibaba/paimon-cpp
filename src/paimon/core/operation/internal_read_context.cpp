@@ -34,18 +34,26 @@
 
 namespace paimon {
 
-std::shared_ptr<arrow::Field> InternalReadContext::MergeReadFieldMetadata(
+std::shared_ptr<arrow::Field> InternalReadContext::MergeReadFieldMetadataByWhitelist(
     const std::shared_ptr<arrow::Field>& aligned_field,
-    const std::shared_ptr<arrow::Field>& read_field) {
+    const std::shared_ptr<arrow::Field>& read_field,
+    const std::vector<std::string>& metadata_keys_whitelist) {
     if (!read_field->HasMetadata() || !read_field->metadata()) {
         return aligned_field;
     }
+
     std::unordered_map<std::string, std::string> metadata_map;
-    read_field->metadata()->ToUnorderedMap(&metadata_map);
-    metadata_map.erase(DataField::FIELD_ID);
+    for (const auto& key : metadata_keys_whitelist) {
+        auto metadata_value_result = read_field->metadata()->Get(key);
+        if (metadata_value_result.ok()) {
+            metadata_map[key] = metadata_value_result.ValueUnsafe();
+        }
+    }
+
     if (metadata_map.empty()) {
         return aligned_field;
     }
+
     auto metadata = std::make_shared<arrow::KeyValueMetadata>(metadata_map);
     return aligned_field->WithMergedMetadata(metadata);
 }
@@ -53,6 +61,8 @@ std::shared_ptr<arrow::Field> InternalReadContext::MergeReadFieldMetadata(
 Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTableFieldIds(
     const std::shared_ptr<arrow::Field>& read_field,
     const std::shared_ptr<arrow::Field>& table_field) {
+    static const std::vector<std::string> kReadMetadataWhitelist = {DataField::MAP_SELECTED_KEYS};
+
     if (read_field->type()->id() != table_field->type()->id()) {
         return Status::Invalid(fmt::format(
             "Read schema field '{}' type {} does not match table field type {}", read_field->name(),
@@ -79,7 +89,8 @@ Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTab
         }
         auto rebased_type = arrow::struct_(rebased_children);
         auto aligned_field = table_field->WithType(rebased_type)->WithName(read_field->name());
-        return MergeReadFieldMetadata(aligned_field, read_field);
+        return MergeReadFieldMetadataByWhitelist(aligned_field, read_field,
+                                                 kReadMetadataWhitelist);
     }
 
     if (type_id == arrow::Type::LIST) {
@@ -90,7 +101,8 @@ Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTab
             AlignReadFieldWithTableFieldIds(read_list->value_field(), table_list->value_field()));
         auto rebased_type = arrow::list(rebased_value_field);
         auto aligned_field = table_field->WithType(rebased_type)->WithName(read_field->name());
-        return MergeReadFieldMetadata(aligned_field, read_field);
+        return MergeReadFieldMetadataByWhitelist(aligned_field, read_field,
+                                                 kReadMetadataWhitelist);
     }
 
     if (type_id == arrow::Type::MAP) {
@@ -104,7 +116,8 @@ Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTab
             AlignReadFieldWithTableFieldIds(read_map->item_field(), table_map->item_field()));
         auto rebased_type = arrow::map(rebased_key_field->type(), rebased_item_field);
         auto aligned_field = table_field->WithType(rebased_type)->WithName(read_field->name());
-        return MergeReadFieldMetadata(aligned_field, read_field);
+        return MergeReadFieldMetadataByWhitelist(aligned_field, read_field,
+                                                 kReadMetadataWhitelist);
     }
 
     if (!read_field->type()->Equals(table_field->type())) {
@@ -114,7 +127,7 @@ Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTab
     }
 
     auto aligned_field = table_field->WithType(read_field->type())->WithName(read_field->name());
-    return MergeReadFieldMetadata(aligned_field, read_field);
+    return MergeReadFieldMetadataByWhitelist(aligned_field, read_field, kReadMetadataWhitelist);
 }
 
 std::optional<DataField> InternalReadContext::TryResolveSpecialFieldById(
