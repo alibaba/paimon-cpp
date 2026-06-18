@@ -165,6 +165,70 @@ TEST_P(NestedColumnPruningInteTest, PruneStructSubFields) {
     ASSERT_TRUE(is_equal);
 }
 
+// Test: Querying struct sub-fields with a non-existent nested field should fail fast.
+TEST_P(NestedColumnPruningInteTest, QueryStructSubFieldsWithNonExistentField) {
+    // Table schema: f0 (int32), f1 (struct{f1: int32, f2: utf8, f3: float64})
+    auto struct_type = arrow::struct_({
+        arrow::field("f1", arrow::int32()),
+        arrow::field("f2", arrow::utf8()),
+        arrow::field("f3", arrow::float64()),
+    });
+    arrow::FieldVector table_fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", struct_type),
+    };
+    auto table_schema = arrow::schema(table_fields);
+
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "AVRO"},
+        {Options::FILE_FORMAT, StringUtils::ToUpperCase(file_format_)},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+    };
+
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+
+    std::string data = R"([
+        [1, [11, "a", 1.1]],
+        [2, [22, "b", 2.2]]
+    ])";
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    int64_t commit_identifier = 0;
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_FALSE(data_splits.empty());
+
+    // Query struct sub-fields f2,f3,f4 where f4 does not exist in table schema.
+    auto projected_struct_type = arrow::struct_({
+        arrow::field("f2", arrow::utf8()),
+        arrow::field("f3", arrow::float64()),
+        arrow::field("f4", arrow::int32()),
+    });
+    arrow::FieldVector projected_fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", projected_struct_type),
+    };
+    auto projected_schema = arrow::schema(projected_fields);
+
+    ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_schema).ok());
+
+    ReadContextBuilder read_context_builder(table_path_);
+    read_context_builder.SetOptions(options).SetReadSchema(&c_schema);
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+
+    ASSERT_NOK_WITH_MSG(TableRead::Create(std::move(read_context)),
+                        "Read schema nested field 'f4' does not exist in table field 'f1'");
+}
+
 // Test: Read only top-level fields, skip struct entirely.
 TEST_P(NestedColumnPruningInteTest, PruneEntireStructField) {
     auto struct_type = arrow::struct_({
@@ -882,15 +946,13 @@ TEST_P(NestedColumnPruningInteTest, ParquetPageIndexFilterWithNestedPruning) {
     ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
     auto batch_reader_result = table_read->CreateReader(result_plan->Splits());
     if (!batch_reader_result.ok()) {
-        ASSERT_NE(batch_reader_result.status().ToString().find("has no matching Arrow field"),
-                  std::string::npos);
+        ASSERT_NOK_WITH_MSG(batch_reader_result.status(), "has no matching Arrow field");
         return;
     }
 
     auto read_result_result = ReadResultCollector::CollectResult(batch_reader_result.value().get());
     if (!read_result_result.ok()) {
-        ASSERT_NE(read_result_result.status().ToString().find("has no matching Arrow field"),
-                  std::string::npos);
+        ASSERT_NOK_WITH_MSG(read_result_result.status(), "has no matching Arrow field");
         return;
     }
     auto read_result = std::move(read_result_result.value());
