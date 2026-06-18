@@ -45,6 +45,7 @@ BlobFormatWriter::BlobFormatWriter(const std::shared_ptr<OutputStream>& out, con
       write_consumer_(std::move(write_consumer)) {
     metrics_ = std::make_shared<MetricsImpl>();
     tmp_buffer_ = Bytes::AllocateBytes(kTmpBufferSize, pool_.get());
+    magic_number_bytes_ = IntegerToLittleEndian<int32_t>(BlobDefs::kMagicNumber, pool_);
 }
 
 Result<std::unique_ptr<BlobFormatWriter>> BlobFormatWriter::Create(
@@ -159,9 +160,7 @@ Status BlobFormatWriter::WriteBlob(std::string_view blob_data) {
     PAIMON_ASSIGN_OR_RAISE(int64_t previous_pos, out_->GetPos());
 
     // write magic number
-    static PAIMON_UNIQUE_PTR<Bytes> kMagicNumberBytes =
-        IntegerToLittleEndian<int32_t>(BlobDefs::kMagicNumber, pool_);
-    PAIMON_RETURN_NOT_OK(WriteWithCrc32(kMagicNumberBytes->data(), kMagicNumberBytes->size()));
+    PAIMON_RETURN_NOT_OK(WriteWithCrc32(magic_number_bytes_->data(), magic_number_bytes_->size()));
 
     // write blob content
     // Dynamically check whether blob_data is a serialized BlobDescriptor (by magic header)
@@ -183,8 +182,9 @@ Status BlobFormatWriter::WriteBlob(std::string_view blob_data) {
     while (read_len > 0) {
         PAIMON_ASSIGN_OR_RAISE(int64_t actual_read_len, in->Read(tmp_buffer_->data(), read_len));
         if (actual_read_len != read_len) {
-            return Status::Invalid("actual read length {}, not match with expect length {}",
-                                   actual_read_len, read_len);
+            return Status::Invalid(
+                fmt::format("actual read length {}, not match with expect length {}",
+                            actual_read_len, read_len));
         }
         PAIMON_RETURN_NOT_OK(WriteWithCrc32(tmp_buffer_->data(), actual_read_len));
         total_read_length += actual_read_len;
@@ -212,8 +212,8 @@ Status BlobFormatWriter::WriteBlob(std::string_view blob_data) {
 Status BlobFormatWriter::WriteBytes(const char* data, int64_t length) {
     PAIMON_ASSIGN_OR_RAISE(int64_t actual, out_->Write(data, length));
     if (actual != length) {
-        return Status::Invalid("not suppose actual length {} not match with expect {}", actual,
-                               length);
+        return Status::Invalid(
+            fmt::format("unexpected actual length {} not match with expect {}", actual, length));
     }
     return Status::OK();
 }

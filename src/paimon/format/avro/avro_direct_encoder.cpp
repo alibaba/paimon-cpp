@@ -354,11 +354,11 @@ Status AvroDirectEncoder::EncodeArrowToAvro(const ::avro::NodePtr& avro_node,
                     return Status::Invalid(fmt::format("AVRO_MAP keys must be StringArray, got {}",
                                                        keys->type()->ToString()));
                 }
+                const auto& string_array =
+                    arrow::internal::checked_cast<const arrow::StringArray&>(*keys);
 
                 for (int64_t i = start; i < end; ++i) {
                     encoder->startItem();
-                    const auto& string_array =
-                        arrow::internal::checked_cast<const arrow::StringArray&>(*keys);
                     std::string_view key_value = string_array.GetView(i);
                     encoder->encodeString(std::string(key_value));
 

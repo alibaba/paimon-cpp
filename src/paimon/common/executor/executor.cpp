@@ -134,7 +134,7 @@ void DefaultExecutor::WorkerThread() {
 PAIMON_EXPORT std::shared_ptr<Executor> GetGlobalDefaultExecutor() {
     static uint32_t all_cores = std::thread::hardware_concurrency();
     static std::shared_ptr<Executor> internal =
-        std::make_shared<DefaultExecutor>(/*thread_count=*/all_cores);
+        std::make_shared<DefaultExecutor>(/*thread_count=*/all_cores > 0 ? all_cores : 1);
     return internal;
 }
 

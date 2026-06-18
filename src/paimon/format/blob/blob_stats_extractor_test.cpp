@@ -68,7 +68,7 @@ TEST_F(BlobStatsExtractorTest, TestDifferentBlobFiles) {
         ASSERT_EQ(1u, stats_with_info.first.size());
         ASSERT_TRUE(stats_with_info.first[0]);
         ASSERT_EQ(FieldType::STRING, stats_with_info.first[0]->GetFieldType());
-        ASSERT_EQ("min null, max null, null count 0", stats_with_info.first[0]->ToString());
+        ASSERT_EQ("min null, max null, null count null", stats_with_info.first[0]->ToString());
 
         // Check row count matches expected
         ASSERT_EQ(expected_rows, stats_with_info.second.GetRowCount())
