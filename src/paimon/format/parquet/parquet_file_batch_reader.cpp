@@ -39,6 +39,7 @@
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/options_utils.h"
+#include "paimon/core/schema/arrow_schema_validator.h"
 #include "paimon/format/parquet/parquet_field_id_converter.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/parquet_timestamp_converter.h"
@@ -129,6 +130,13 @@ Status ParquetFileBatchReader::SetReadSchema(
 
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> file_schema, reader_->GetSchema());
         std::unordered_map<std::string, std::vector<int32_t>> field_index_map;
+        bool has_nested_field = false;
+        for (const auto& field : read_schema->fields()) {
+            if (ArrowSchemaValidator::IsNestedType(field->type())) {
+                has_nested_field = true;
+                break;
+            }
+        }
         int32_t i = 0;
         for (const auto& field : file_schema->fields()) {
             std::vector<int32_t> v;
@@ -166,7 +174,9 @@ Status ParquetFileBatchReader::SetReadSchema(
                 bool enable_page_index_filter,
                 OptionsUtils::GetValueFromMap<bool>(options_, PARQUET_READ_ENABLE_PAGE_INDEX_FILTER,
                                                     DEFAULT_PARQUET_READ_ENABLE_PAGE_INDEX_FILTER));
-            if (enable_page_index_filter) {
+            // walkaround: page index filter does not support nested fields for now, skip page index
+            // filter if there is any nested field in the schema
+            if (enable_page_index_filter && !has_nested_field) {
                 // Build column name to index map for page-level filtering.
                 // For leaf columns, indices[0] is the correct leaf column index in Parquet.
                 // For nested types (struct/list/map), FlattenSchema produces multiple leaf indices,
