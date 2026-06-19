@@ -67,13 +67,12 @@ int32_t MapSharedShreddingContext::ComputeAdaptiveWidth(const std::vector<int32_
     std::sort(sorted_values.begin(), sorted_values.end());
 
     int32_t max_width = sorted_values.back();
-    int64_t percentile_rank =
-        static_cast<int64_t>(std::ceil(kPercentileRatio * sorted_values.size()));
+    auto percentile_rank = static_cast<int64_t>(std::ceil(kPercentileRatio * sorted_values.size()));
     percentile_rank = std::clamp<int64_t>(percentile_rank, 1, sorted_values.size());
     int32_t percentile_width = sorted_values[percentile_rank - 1];
 
     // Use P90 to ignore far outliers, but keep max when it is close enough to normal rows.
-    int32_t relative_close_threshold = static_cast<int32_t>(
+    auto relative_close_threshold = static_cast<int32_t>(
         std::ceil(static_cast<double>(percentile_width) * kMaxCloseRelativeRatio));
     if (max_width - percentile_width <= kMaxCloseAbsoluteSlack ||
         max_width <= relative_close_threshold) {

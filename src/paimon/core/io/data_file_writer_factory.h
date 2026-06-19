@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <memory>
 
+#include "paimon/core/core_options.h"
 #include "paimon/result.h"
 
 namespace arrow {
@@ -27,7 +28,6 @@ class Schema;
 
 namespace paimon {
 
-class CoreOptions;
 class FileFormat;
 class FormatStatsExtractor;
 class MemoryPool;
@@ -49,7 +49,7 @@ class DataFileWriterFactory {
                                                   const std::shared_ptr<arrow::Schema>& file_schema,
                                                   bool create_stats_extractor) const;
 
-    const CoreOptions& options_;
+    CoreOptions options_;
     int64_t schema_id_;
     std::shared_ptr<MemoryPool> pool_;
 };
