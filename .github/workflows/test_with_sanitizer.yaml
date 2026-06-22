@@ -44,6 +44,9 @@ jobs:
         uses: ./.github/actions/setup-ccache
         with:
           cache-key-prefix: ccache-sanitizer
+      - name: Install Rust toolchain (tantivy-fts)
+        shell: bash
+        run: ci/scripts/setup_rust.sh
       - name: Build Paimon
         shell: bash
         env:

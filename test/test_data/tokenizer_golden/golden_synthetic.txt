@@ -1,0 +1,38 @@
+Hello World
+hello world
+HELLO WORLD
+Hello 世界
+你好世界
+中国人民共和国
+我爱北京天安门
+北京是中华人民共和国的首都
+南京市长江大桥
+他来到了网易杭研大厦
+小明硕士毕业于中国科学院计算所,后在日本京都大学深造
+工信处女干事每月经过下属科室都要亲口交代24口交换机等技术性器件的安装工作
+结婚的和尚未结婚的
+程序员用Python和Rust写代码
+this is a test 这是一个测试
+Rust tantivy 全文索引
+C++ 到 Rust 的 FFI 桥接
+cpp cppjieba jieba-rs
+分词器 tokenizer
+全文 search
+倒排索引 inverted index
+paimon-cpp tantivy-fts
+100个中文字符被分词器处理
+超长词最长词最长词最长词最长词最长词最长词
+...
+!@#$%^&*()
+"hello"
+'quoted'
+<tag>content</tag>
+{json: "value"}
+[1,2,3]
+line1
+line2
+CJK 标点、。！？
+全角：ＡＢＣ１２３
+ABC123 混合数字字母
+abc123
+ABC123

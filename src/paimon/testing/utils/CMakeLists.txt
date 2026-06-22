@@ -25,6 +25,16 @@ if(PAIMON_BUILD_TESTS OR PAIMON_BUILD_BENCHMARKS)
                    STATIC_LINK_LIBS
                    paimon_static
                    ${GTEST_LINK_TOOLCHAIN})
+
+    # testharness.cpp includes <gtest/gtest.h>, but the objlib compile step does
+    # not link the gtest targets, so it has no ordering dependency on the
+    # googletest ExternalProject. Without this it can race ahead and compile
+    # before googletest_ep extracts its headers (observed as a flaky
+    # "gtest/gtest.h: No such file" in Release builds). Force the headers to
+    # exist before compiling test_utils.
+    if(TARGET googletest_ep)
+        add_dependencies(test_utils_objlib googletest_ep)
+    endif()
 endif()
 
 if(PAIMON_BUILD_TESTS)

@@ -20,6 +20,10 @@
 // Adapted from Apache Iceberg C++
 // https://github.com/apache/iceberg-cpp/blob/main/.devcontainer/devcontainer.json.template
 
+// Default Paimon C++ Dev Container.
+// On Apple Silicon hosts this runs as native aarch64 Linux (fast).
+// For x86_64 verification, use the variant under .devcontainer/x86_64/.
+
 {
 	"name": "Paimon CPP Dev Container",
 	"build": {
@@ -34,16 +38,36 @@
 		"seccomp=unconfined",
 		"--privileged"
 	],
+	"features": {
+		"ghcr.io/devcontainers/features/rust:1": {
+			"version": "stable",
+			"profile": "default"
+		}
+	},
 	"mounts": [
-		"source=${localEnv:HOME}/.ssh,target=/home/paimon/.ssh,type=bind,readonly"
+		"source=${localEnv:HOME}/.ssh,target=/home/paimon/.ssh,type=bind,readonly",
+		"source=paimon-cargo-registry,target=/home/paimon/.cargo/registry,type=volume",
+		"source=paimon-cargo-git,target=/home/paimon/.cargo/git,type=volume",
+		"source=paimon-rust-target,target=${containerWorkspaceFolder}/third_party/tantivy_ffi/target,type=volume",
+		"source=paimon-build,target=${containerWorkspaceFolder}/build,type=volume",
+		"source=paimon-ccache,target=/home/paimon/.ccache,type=volume"
 	],
+	"postCreateCommand": "sudo chown -R paimon:paimon ${containerWorkspaceFolder}/build ${containerWorkspaceFolder}/third_party/tantivy_ffi/target /home/paimon/.ccache /home/paimon/.cargo/registry /home/paimon/.cargo/git 2>/dev/null || true; cargo install cbindgen --locked || true; rustup component add rust-src rust-analyzer clippy rustfmt || true",
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"eamodio.gitlens"
+				"eamodio.gitlens",
+				"rust-lang.rust-analyzer",
+				"vadimcn.vscode-lldb",
+				"llvm-vs-code-extensions.vscode-clangd",
+				"ms-vscode.cmake-tools",
+				"twxs.cmake"
 			],
 			"settings": {
-				"editor.formatOnSave": true
+				"editor.formatOnSave": true,
+				"rust-analyzer.linkedProjects": [
+					"third_party/tantivy_ffi/Cargo.toml"
+				]
 			}
 		}
 	}
