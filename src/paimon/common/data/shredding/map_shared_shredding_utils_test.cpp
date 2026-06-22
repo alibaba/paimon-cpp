@@ -430,16 +430,13 @@ TEST(MapSharedShreddingUtilsTest, GetPhysicalColumnIndicesMultipleFields) {
     meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}};
     meta.field_to_columns = {{0, {0, 1}}, {1, {2, 3, 4}}, {2, {5}}};
 
-    ASSERT_OK_AND_ASSIGN(auto cols_a,
-                         MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "a"));
+    ASSERT_OK_AND_ASSIGN(auto cols_a, MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "a"));
     ASSERT_EQ(cols_a, (std::vector<int32_t>{0, 1}));
 
-    ASSERT_OK_AND_ASSIGN(auto cols_b,
-                         MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "b"));
+    ASSERT_OK_AND_ASSIGN(auto cols_b, MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "b"));
     ASSERT_EQ(cols_b, (std::vector<int32_t>{2, 3, 4}));
 
-    ASSERT_OK_AND_ASSIGN(auto cols_c,
-                         MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "c"));
+    ASSERT_OK_AND_ASSIGN(auto cols_c, MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "c"));
     ASSERT_EQ(cols_c, (std::vector<int32_t>{5}));
 }
 
@@ -449,9 +446,8 @@ TEST(MapSharedShreddingUtilsTest, GetPhysicalColumnIndicesFieldNotFound) {
     meta.name_to_id = {{"age", 0}};
     meta.field_to_columns = {{0, {1}}};
 
-    ASSERT_NOK_WITH_MSG(
-        MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "nonexistent"),
-        "cannot find field nonexistent in map shared shredding meta");
+    ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "nonexistent"),
+                        "cannot find field nonexistent in map shared shredding meta");
 }
 
 // Error: field name not found in empty meta
@@ -468,9 +464,8 @@ TEST(MapSharedShreddingUtilsTest, GetPhysicalColumnIndicesFieldIdMissingInFieldT
     meta.name_to_id = {{"score", 42}};
     meta.field_to_columns = {};
 
-    ASSERT_NOK_WITH_MSG(
-        MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "score"),
-        "cannot find field id 42 in field_to_columns in map shared shredding meta");
+    ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "score"),
+                        "cannot find field id 42 in field_to_columns in map shared shredding meta");
 }
 
 TEST(MapSharedShreddingUtilsTest, IsOverflowField) {

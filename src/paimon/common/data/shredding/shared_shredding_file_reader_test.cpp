@@ -412,9 +412,8 @@ TEST_F(SharedShreddingFileReaderTest, TestListValue) {
     meta.max_row_width = 3;
 
     std::map<std::string, int32_t> field_to_num_columns = {{"tags", 2}};
-    ASSERT_OK_AND_ASSIGN(auto physical_schema,
-                         MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                             logical_schema, field_to_num_columns));
+    ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                   logical_schema, field_to_num_columns));
     auto metadata = std::make_shared<arrow::KeyValueMetadata>();
     ASSERT_OK(MapSharedShreddingUtils::SerializeMetadata(
         meta, MapSharedShreddingDefine::kDefaultDictCompression, metadata.get()));
@@ -422,14 +421,14 @@ TEST_F(SharedShreddingFileReaderTest, TestListValue) {
     physical_fields[1] = physical_fields[1]->WithMetadata(metadata);
     physical_schema = arrow::schema(std::move(physical_fields));
 
-    auto physical_array = arrow::ipc::internal::json::ArrayFromJSON(
-                              arrow::struct_(physical_schema->fields()), R"([
+    auto physical_array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(physical_schema->fields()), R"([
         [1, [[0, 1], [1, null, 2], [3], null]],
         [2, [[2, 0], [5, 6], [7], null]],
         [3, null],
         [4, [[1, 0], [8], [9, 10], [[2, [null]]]]]
     ])")
-                              .ValueOrDie();
+            .ValueOrDie();
     auto reader = CreateReader(physical_array, physical_schema);
 
     auto read_metadata = std::make_shared<arrow::KeyValueMetadata>();
@@ -489,12 +488,10 @@ TEST_F(SharedShreddingFileReaderTest, TestOrcDictionaryEncodedStringValue) {
 
     std::string data_file_path =
         path_factory->ToPath(inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
-    std::map<std::string, std::string> reader_options = {
-        {"orc.read.enable-lazy-decoding", "true"}};
-    ASSERT_OK_AND_ASSIGN(
-        auto reader,
-        SharedShreddingFileReader::Create(
-            OpenFormatReader(data_file_path, format, reader_options), pool_));
+    std::map<std::string, std::string> reader_options = {{"orc.read.enable-lazy-decoding", "true"}};
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         SharedShreddingFileReader::Create(
+                             OpenFormatReader(data_file_path, format, reader_options), pool_));
 
     auto read_metadata = std::make_shared<arrow::KeyValueMetadata>();
     read_metadata->Append("paimon.map.selected-keys", "a,c");
@@ -548,9 +545,8 @@ TEST_F(SharedShreddingFileReaderTest, TestReadsRealFormatFile) {
 
     std::string data_file_path =
         path_factory->ToPath(inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
-    ASSERT_OK_AND_ASSIGN(auto reader,
-                         SharedShreddingFileReader::Create(
-                             OpenFormatReader(data_file_path, format), pool_));
+    ASSERT_OK_AND_ASSIGN(auto reader, SharedShreddingFileReader::Create(
+                                          OpenFormatReader(data_file_path, format), pool_));
 
     auto read_schema = ExportSchema(ReadSchema("a,c"));
     ASSERT_OK(reader->SetReadSchema(read_schema.get(), /*predicate=*/nullptr,

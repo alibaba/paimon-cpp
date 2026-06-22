@@ -63,8 +63,7 @@ class SharedShreddingFileReader : public FileBatchReader {
         const std::shared_ptr<arrow::StructArray>& physical_struct_array) const;
 
     static std::vector<std::pair<std::string, int32_t>> ResolveSelectedKeyIds(
-        const MapSharedShreddingFieldMeta& meta,
-        const std::vector<std::string>& selected_keys);
+        const MapSharedShreddingFieldMeta& meta, const std::vector<std::string>& selected_keys);
 
     static void CollectPhysicalColumns(
         const std::shared_ptr<arrow::StructArray>& physical_struct_array,
