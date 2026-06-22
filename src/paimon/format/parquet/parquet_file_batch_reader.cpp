@@ -287,68 +287,49 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByBitmap(
             target_row_groups.emplace_back(row_group_idx);
             continue;
         }
-        auto page_ranges = FilterPagesByBitmap(bitmap, row_group_idx, start_row_idx, rg_row_count);
-        if (page_ranges.has_value()) {
-            target_row_groups.emplace_back(/*row_group_idx=*/row_group_idx,
-                                           /*is_partially_matched=*/true,
-                                           /*row_ranges=*/page_ranges.value());
-        } else {
-            target_row_groups.emplace_back(row_group_idx);
-        }
+        auto page_ranges = BitmapToRowRanges(bitmap, start_row_idx, end_row_idx);
+        target_row_groups.emplace_back(/*row_group_idx=*/row_group_idx,
+                                       /*is_partially_matched=*/true,
+                                       /*row_ranges=*/page_ranges);
     }
     return target_row_groups;
 }
 
-std::optional<RowRanges> ParquetFileBatchReader::FilterPagesByBitmap(const RoaringBitmap32& bitmap,
-                                                                     int32_t row_group_idx,
-                                                                     uint64_t rg_start_row,
-                                                                     int64_t rg_row_count) const {
-    int32_t column_with_offset_index = FindColumnWithOffsetIndex(row_group_idx);
-    if (column_with_offset_index < 0) {
-        return std::nullopt;
+RowRanges ParquetFileBatchReader::BitmapToRowRanges(const RoaringBitmap32& bitmap,
+                                                    uint64_t start_row, uint64_t end_row) {
+    RowRanges row_ranges;
+
+    if (bitmap.IsEmpty() || start_row >= end_row) {
+        return row_ranges;
     }
 
-    auto page_index_reader = reader_->GetPageIndexReader();
-    if (!page_index_reader) {
-        return std::nullopt;
+    auto it = bitmap.EqualOrLarger(static_cast<int32_t>(start_row));
+    auto end = bitmap.End();
+
+    if (it == end || static_cast<uint64_t>(*it) >= end_row) {
+        return row_ranges;
     }
 
-    auto rg_page_index_reader = page_index_reader->RowGroup(row_group_idx);
-    if (!rg_page_index_reader) {
-        return std::nullopt;
-    }
+    int64_t range_start = *it;
+    int64_t range_end = *it;
 
-    auto offset_index = rg_page_index_reader->GetOffsetIndex(column_with_offset_index);
-    if (!offset_index) {
-        return std::nullopt;
-    }
+    for (++it; it != end; ++it) {
+        int32_t current = *it;
+        if (static_cast<uint64_t>(current) >= end_row) {
+            break;
+        }
 
-    const auto& pages = offset_index->page_locations();
-    auto num_pages = static_cast<int64_t>(pages.size());
-    RowRanges filtered_row_ranges;
-    for (int64_t i = 0; i < num_pages; ++i) {
-        int64_t page_start_row = pages[i].first_row_index;
-        // The bitmap is [from, to) while page row range is [from, to]
-        int64_t page_end_row =
-            (i + 1 < num_pages) ? pages[i + 1].first_row_index - 1 : rg_row_count - 1;
-        if (bitmap.ContainsAny(rg_start_row + page_start_row, rg_start_row + page_end_row + 1)) {
-            filtered_row_ranges.Add(RowRanges::Range(page_start_row, page_end_row));
+        if (current == range_end + 1) {
+            range_end = current;
+        } else {
+            row_ranges.Add(RowRanges::Range(range_start - start_row, range_end - start_row));
+            range_start = current;
+            range_end = current;
         }
     }
-    return filtered_row_ranges;
-}
 
-int32_t ParquetFileBatchReader::FindColumnWithOffsetIndex(int32_t row_group_idx) const {
-    auto rg_meta = reader_->GetFileReader()->parquet_reader()->metadata()->RowGroup(row_group_idx);
-    if (!rg_meta) {
-        return -1;
-    }
-    for (int col = 0; col < rg_meta->num_columns(); ++col) {
-        if (rg_meta->ColumnChunk(col)->GetOffsetIndexLocation().has_value()) {
-            return col;
-        }
-    }
-    return -1;
+    row_ranges.Add(RowRanges::Range(range_start - start_row, range_end - start_row));
+    return row_ranges;
 }
 
 // Uses page-level column index statistics to filter row groups and store per-row-group

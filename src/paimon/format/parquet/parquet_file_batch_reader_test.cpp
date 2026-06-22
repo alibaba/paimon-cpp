@@ -134,12 +134,15 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
     std::unique_ptr<ParquetFileBatchReader> PrepareParquetFileBatchReader(
         const std::string& file_name, const std::shared_ptr<arrow::Schema>& read_schema,
         const std::shared_ptr<Predicate>& predicate,
-        const std::optional<RoaringBitmap32>& selection_bitmap, int32_t batch_size) const {
+        const std::optional<RoaringBitmap32>& selection_bitmap, int32_t batch_size,
+        bool enable_page_level_filter = false) const {
         EXPECT_OK_AND_ASSIGN(auto input_stream, fs_->Open(file_name));
         auto length = fs_->GetFileStatus(file_name).value()->GetLen();
         auto in_stream =
             std::make_unique<ArrowInputStreamAdapter>(std::move(input_stream), pool_, length);
-        std::map<std::string, std::string> options = {};
+        std::map<std::string, std::string> options;
+        options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] =
+            enable_page_level_filter ? "true" : "false";
         return PrepareParquetFileBatchReader(std::move(in_stream), options, read_schema, predicate,
                                              selection_bitmap, batch_size);
     }
@@ -467,7 +470,7 @@ TEST_F(ParquetFileBatchReaderTest, TestCreateArrowReaderProperties) {
     }
 }
 
-TEST_F(ParquetFileBatchReaderTest, TestBitmapPushDownWithMultiRowGroups) {
+TEST_F(ParquetFileBatchReaderTest, TestBitmapRowGroupPushDownWithMultiRowGroups) {
     arrow::FieldVector fields = {arrow::field("f0", arrow::int32())};
     auto arrow_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
@@ -505,8 +508,48 @@ TEST_F(ParquetFileBatchReaderTest, TestBitmapPushDownWithMultiRowGroups) {
     auto expected_array = arrow::ChunkedArray::Make({src_array->Slice(0, 6)}).ValueOrDie();
     ASSERT_TRUE(result_array->Equals(expected_array)) << result_array->ToString();
 }
+TEST_F(ParquetFileBatchReaderTest, TestBitmapPagePushDownWithMultiRowGroups) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32())};
+    auto arrow_type = arrow::struct_(fields);
+    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow_type, R"([
+        [0],
+        [1],
+        [2],
+        [3],
+        [4],
+        [5],
+        [6],
+        [7],
+        [8],
+        [9],
+        [10],
+        [11]
+    ])")
+            .ValueOrDie());
+    auto src_schema = arrow::schema(fields);
+    std::optional<RoaringBitmap32> bitmap = RoaringBitmap32::From({3, 5});
+    // data in file rowGroup0:[0, 1, 2, 3, 4, 5] | rowGroup1:[6, 7, 8, 9, 10, 11]
 
-TEST_F(ParquetFileBatchReaderTest, TestPredicateAndBitmapPushDown) {
+    auto arrow_schema = arrow::schema(fields);
+    WriteArray(file_path_, src_array, arrow_schema, /*write_batch_size=*/12,
+               /*enable_dictionary=*/true,
+               /*max_row_group_length=*/6);
+
+    auto parquet_batch_reader =
+        PrepareParquetFileBatchReader(file_path_, arrow_schema, /*predicate=*/nullptr, bitmap,
+                                      /*batch_size=*/12, /*enable_page_level_filter=*/true);
+
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<arrow::ChunkedArray> result_array,
+        paimon::test::ReadResultCollector::CollectResult(parquet_batch_reader.get()));
+
+    auto expected_array =
+        arrow::ChunkedArray::Make({src_array->Slice(3, 1), src_array->Slice(6, 1)}).ValueOrDie();
+    ASSERT_TRUE(result_array->Equals(expected_array)) << result_array->ToString();
+}
+
+TEST_F(ParquetFileBatchReaderTest, TestPredicateAndBitmapRowGroupPushDown) {
     arrow::FieldVector fields = {arrow::field("f0", arrow::int32())};
     auto arrow_type = arrow::struct_(fields);
     arrow::StructBuilder struct_builder(arrow_type, arrow::default_memory_pool(),
@@ -547,6 +590,64 @@ TEST_F(ParquetFileBatchReaderTest, TestPredicateAndBitmapPushDown) {
 
         auto expected_array =
             arrow::ChunkedArray::Make({src_array->Slice(0, 256), src_array->Slice(512, 256)})
+                .ValueOrDie();
+        ASSERT_TRUE(result_array->Equals(expected_array)) << result_array->ToString();
+    }
+    {
+        // test all data has been filtered out with predicate and bitmap pushdown
+        std::optional<RoaringBitmap32> bitmap = RoaringBitmap32::From({100, 400, 600});
+        auto predicate = PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f0",
+                                                       FieldType::INT, Literal(800));
+        auto parquet_batch_reader = PrepareParquetFileBatchReader(
+            file_path_, arrow_schema, predicate, bitmap, /*batch_size=*/length);
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<arrow::ChunkedArray> result_array,
+            paimon::test::ReadResultCollector::CollectResult(parquet_batch_reader.get()));
+        ASSERT_FALSE(result_array);
+    }
+}
+TEST_F(ParquetFileBatchReaderTest, TestPredicateAndBitmapPagePushDown) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32())};
+    auto arrow_type = arrow::struct_(fields);
+    arrow::StructBuilder struct_builder(arrow_type, arrow::default_memory_pool(),
+                                        {std::make_shared<arrow::Int32Builder>()});
+    auto int_builder = static_cast<arrow::Int32Builder*>(struct_builder.field_builder(0));
+    int32_t length = 1024;
+    for (int32_t i = 0; i < length; ++i) {
+        ASSERT_TRUE(struct_builder.Append().ok());
+        ASSERT_TRUE(int_builder->Append(i).ok());
+    }
+    // data file:
+    // rowGroup0: [0, 256)
+    // rowGroup1: [256, 512)
+    // rowGroup2: [512, 768)
+    // rowGroup3: [768, 1024)
+    std::shared_ptr<arrow::Array> src_array;
+    ASSERT_TRUE(struct_builder.Finish(&src_array).ok());
+    auto src_schema = arrow::schema(fields);
+    auto arrow_schema = arrow::schema(fields);
+    WriteArray(file_path_, src_array, arrow_schema, /*write_batch_size=*/1024,
+               /*enable_dictionary=*/true,
+               /*max_row_group_length=*/256);
+    {
+        // simple case
+        std::optional<RoaringBitmap32> bitmap = RoaringBitmap32::From({100, 400, 600});
+        ASSERT_OK_AND_ASSIGN(
+            auto predicate,
+            PredicateBuilder::Or(
+                {PredicateBuilder::LessThan(/*field_index=*/0, /*field_name=*/"f0", FieldType::INT,
+                                            Literal(255)),
+                 PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f0",
+                                               FieldType::INT, Literal(600))}));
+        auto parquet_batch_reader =
+            PrepareParquetFileBatchReader(file_path_, arrow_schema, predicate, bitmap,
+                                          /*batch_size=*/length, /*enable_page_level_filter=*/true);
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<arrow::ChunkedArray> result_array,
+            paimon::test::ReadResultCollector::CollectResult(parquet_batch_reader.get()));
+
+        auto expected_array =
+            arrow::ChunkedArray::Make({src_array->Slice(100, 1), src_array->Slice(600, 1)})
                 .ValueOrDie();
         ASSERT_TRUE(result_array->Equals(expected_array)) << result_array->ToString();
     }

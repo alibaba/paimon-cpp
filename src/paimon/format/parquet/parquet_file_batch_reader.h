@@ -150,11 +150,13 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
             index_vector->push_back((*index)++);
         }
     }
-    int32_t FindColumnWithOffsetIndex(int32_t row_group_idx) const;
 
-    std::optional<RowRanges> FilterPagesByBitmap(const RoaringBitmap32& bitmap,
-                                                 int32_t row_group_idx, uint64_t rg_start_row,
-                                                 int64_t rg_row_count) const;
+    static RowRanges BitmapToRowRanges(const RoaringBitmap32& bitmap, uint64_t start_row,
+                                       uint64_t end_row);
+
+    Result<TargetRowGroups> FilterPagesByBitmap(const RoaringBitmap32& bitmap,
+                                                int32_t row_group_idx, uint64_t rg_start_row,
+                                                int64_t rg_row_count) const;
 
     // precondition: predicate supposed not be empty
     Result<TargetRowGroups> FilterRowGroupsByPredicate(

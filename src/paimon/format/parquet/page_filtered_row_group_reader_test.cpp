@@ -137,14 +137,14 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
                                         const RoaringBitmap32& bitmap,
                                         std::shared_ptr<arrow::ChunkedArray>* out,
                                         int32_t batch_size = 1024,
-                                        bool enable_page_index_filter = true) {
+                                        bool enable_page_level_filter = true) {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
         ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
         auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
 
         std::map<std::string, std::string> options;
         options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] =
-            enable_page_index_filter ? "true" : "false";
+            enable_page_level_filter ? "true" : "false";
         ASSERT_OK_AND_ASSIGN(
             auto batch_reader,
             ParquetFileBatchReader::Create(std::move(in_stream), arrow_pool_, options, batch_size));
@@ -1376,7 +1376,7 @@ TEST_F(PageFilteredRowGroupReaderTest, BitmapWithPageFilteredOptionDisabled) {
     ASSERT_TRUE(struct_arr);
     auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
     for (int32_t i = 0; i < 100; ++i) {
-        ASSERT_EQ(100 + i, val_arr->Value(100 + i));
+        ASSERT_EQ(100 + i, val_arr->Value(i));
     }
 }
 
