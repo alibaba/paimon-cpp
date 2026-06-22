@@ -36,6 +36,7 @@ class TargetRowGroup {
           row_ranges(std::move(ranges)) {}
 
     TargetRowGroup(const TargetRowGroup& other) = default;
+    TargetRowGroup& operator=(const TargetRowGroup& other) = default;
 
     bool IsExcludedByReadRange() const {
         return excluded_by_read_range;
