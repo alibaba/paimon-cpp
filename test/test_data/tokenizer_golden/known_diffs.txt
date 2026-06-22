@@ -1,0 +1,18 @@
+abc_123
+foo.bar.baz
+https://example.com/path?q=1
+email@example.com
+192.168.1.1
+2026-04-20
+12:34:56
+$100 ¥200 €300
+100%
+3.14
+-1 -2 -3
+a b c d e
+
+	tab	tab
+mixed space       tab
+空   白 和	tab
+  leading and trailing
+中英混合 Mixed CN EN

@@ -23,17 +23,22 @@
 #include <memory>
 #include <utility>
 
-#include "gtest/gtest.h"
 #include "paimon/cache/cache.h"
 #include "paimon/common/io/cache/lru_cache.h"
 #include "paimon/result.h"
 
 namespace paimon::test {
 
-class CountingManifestRoutingCache : public Cache {
+class CountingRoutingCache : public Cache {
  public:
-    explicit CountingManifestRoutingCache(int64_t max_weight = 64 * 1024 * 1024) {
-        caches_[CacheKind::MANIFEST] = std::make_shared<LruCache>(max_weight);
+    CountingRoutingCache(CacheKind kind, int64_t max_weight) {
+        caches_[kind] = std::make_shared<LruCache>(max_weight);
+    }
+
+    explicit CountingRoutingCache(const std::map<CacheKind, int64_t>& max_weights) {
+        for (const auto& [kind, max_weight] : max_weights) {
+            caches_[kind] = std::make_shared<LruCache>(max_weight);
+        }
     }
 
     Result<std::shared_ptr<CacheValue>> Get(
@@ -41,7 +46,9 @@ class CountingManifestRoutingCache : public Cache {
         std::function<Result<std::shared_ptr<CacheValue>>(const std::shared_ptr<CacheKey>&)>
             supplier) override {
         ++get_count_;
-        return GetCache(key)->Get(
+        last_kind_ = key->GetKind();
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Cache> cache, GetCache(key));
+        return cache->Get(
             key,
             [this, supplier = std::move(supplier)](const std::shared_ptr<CacheKey>& supplier_key)
                 -> Result<std::shared_ptr<CacheValue>> {
@@ -52,11 +59,15 @@ class CountingManifestRoutingCache : public Cache {
 
     Status Put(const std::shared_ptr<CacheKey>& key,
                const std::shared_ptr<CacheValue>& value) override {
-        return GetCache(key)->Put(key, value);
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Cache> cache, GetCache(key));
+        return cache->Put(key, value);
     }
 
     void Invalidate(const std::shared_ptr<CacheKey>& key) override {
-        GetCache(key)->Invalidate(key);
+        Result<std::shared_ptr<Cache>> cache = GetCache(key);
+        if (cache.ok()) {
+            cache.value()->Invalidate(key);
+        }
     }
 
     void InvalidateAll() override {
@@ -81,17 +92,23 @@ class CountingManifestRoutingCache : public Cache {
         return supplier_call_count_;
     }
 
+    CacheKind LastKind() const {
+        return last_kind_;
+    }
+
  private:
-    std::shared_ptr<Cache> GetCache(const std::shared_ptr<CacheKey>& key) const {
-        EXPECT_EQ(CacheKind::MANIFEST, key->GetKind());
+    Result<std::shared_ptr<Cache>> GetCache(const std::shared_ptr<CacheKey>& key) const {
         auto iter = caches_.find(key->GetKind());
-        EXPECT_NE(caches_.end(), iter);
-        return iter == caches_.end() ? nullptr : iter->second;
+        if (iter == caches_.end()) {
+            return Status::Invalid("unexpected cache kind");
+        }
+        return iter->second;
     }
 
     std::map<CacheKind, std::shared_ptr<Cache>> caches_;
     int64_t get_count_ = 0;
     int64_t supplier_call_count_ = 0;
+    CacheKind last_kind_ = CacheKind::DEFAULT;
 };
 
 }  // namespace paimon::test

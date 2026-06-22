@@ -17,11 +17,34 @@
 
 # Adapted from Apache Iceberg C++
 # https://github.com/apache/iceberg-cpp/blob/main/.devcontainer/Dockerfile.template
-
+#
 # This Dockerfile is used to build a development container for Paimon C++.
-# It is based on the Ubuntu image and installs necessary dependencies.
+# Base: Ubuntu 24.04. Rust toolchain is installed via Dev Container
+# Feature `ghcr.io/devcontainers/features/rust:1` (see devcontainer.json),
+# so it does NOT appear in this Dockerfile.
 
 FROM ubuntu:24.04
+
+# Optional apt mirror. Defaults to the upstream Ubuntu mirrors so builds work
+# everywhere; pass --build-arg APT_MIRROR=<host> (e.g. http://mirrors.aliyun.com)
+# to use a regional mirror for faster downloads inside mainland China.
+ARG APT_MIRROR=
+RUN if [ -n "${APT_MIRROR}" ]; then \
+        sed -i \
+            -e "s|http://archive.ubuntu.com/ubuntu|${APT_MIRROR}/ubuntu|g" \
+            -e "s|http://security.ubuntu.com/ubuntu|${APT_MIRROR}/ubuntu|g" \
+            -e "s|http://ports.ubuntu.com/ubuntu-ports|${APT_MIRROR}/ubuntu-ports|g" \
+            /etc/apt/sources.list.d/ubuntu.sources; \
+    fi
+
+# Optional rustup mirror for the Dev Container Feature
+# `ghcr.io/devcontainers/features/rust:1` (and any later `rustup` calls).
+# Defaults to the upstream static.rust-lang.org; pass
+# --build-arg RUST_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static for a
+# China-friendly CDN. Set as ENV so it is inherited by every subsequent layer.
+ARG RUST_DIST_SERVER=https://static.rust-lang.org
+ENV RUSTUP_DIST_SERVER=${RUST_DIST_SERVER} \
+    RUSTUP_UPDATE_ROOT=${RUST_DIST_SERVER}/rustup
 
 # Install necessary packages
 RUN apt update && \
@@ -48,6 +71,16 @@ RUN apt update && \
     vim \
     wget \
     sudo \
+    # ---- additions for tantivy-fts migration (Rust + Sanitizer + LLVM) ----
+    clang \
+    clang-format \
+    clang-tidy \
+    lld \
+    llvm \
+    libclang-rt-dev \
+    gdb \
+    lldb \
+    valgrind \
     && rm -rf /var/lib/apt/lists/*
 
 # Add a user for development

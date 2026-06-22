@@ -41,7 +41,7 @@
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/testing/utils/binary_row_generator.h"
-#include "paimon/testing/utils/manifest_cache_test_utils.h"
+#include "paimon/testing/utils/counting_cache_test_utils.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -277,7 +277,8 @@ TEST_F(ManifestFileTest, TestManifestCacheIsDisabledWithoutInjectedCache) {
 TEST_F(ManifestFileTest, TestManifestCacheReusesCachedBytes) {
     auto pool = GetDefaultPool();
     auto counting_file_system = std::make_shared<CountingFileSystem>();
-    auto manifest_cache = std::make_shared<CountingManifestRoutingCache>();
+    auto manifest_cache =
+        std::make_shared<CountingRoutingCache>(CacheKind::MANIFEST, 64 * 1024 * 1024);
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileFormat> file_format,
                          FileFormatFactory::Get("orc", {}));
     std::string root_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";

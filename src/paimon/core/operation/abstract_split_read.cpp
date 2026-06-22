@@ -117,6 +117,7 @@ Result<std::unique_ptr<ReaderBuilder>> AbstractSplitRead::PrepareReaderBuilder(
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReaderBuilder> reader_builder,
                            file_format->CreateReaderBuilder(options_.GetReadBatchSize()));
     reader_builder->WithMemoryPool(pool_);
+    reader_builder->WithCache(options_.GetCache());
     return reader_builder;
 }
 

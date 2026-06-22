@@ -51,6 +51,9 @@ namespace io {
 class RandomAccessFile;
 }  // namespace io
 }  // namespace arrow
+namespace parquet {
+class FileMetaData;
+}  // namespace parquet
 namespace paimon {
 class Metrics;
 class Predicate;
@@ -63,8 +66,13 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
  public:
     static Result<std::unique_ptr<ParquetFileBatchReader>> Create(
         std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
+        const std::map<std::string, std::string>& options, int32_t batch_size,
+        std::shared_ptr<::parquet::FileMetaData> file_metadata,
+        const std::shared_ptr<arrow::MemoryPool>& pool);
+
+    static Result<::parquet::ReaderProperties> CreateReaderProperties(
         const std::shared_ptr<arrow::MemoryPool>& pool,
-        const std::map<std::string, std::string>& options, int32_t batch_size);
+        const std::map<std::string, std::string>& options);
 
     // For timestamp type, we return the schema stored in file, e.g., second in parquet file will
     // store as milli.
@@ -127,10 +135,6 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
                            std::unique_ptr<FileReaderWrapper>&& reader,
                            const std::map<std::string, std::string>& options,
                            const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
-
-    static Result<::parquet::ReaderProperties> CreateReaderProperties(
-        const std::shared_ptr<arrow::MemoryPool>& pool,
-        const std::map<std::string, std::string>& options);
 
     static Result<::parquet::ArrowReaderProperties> CreateArrowReaderProperties(
         const std::shared_ptr<arrow::MemoryPool>& pool,

@@ -744,6 +744,11 @@ macro(build_lucene)
         "-DBoost_INCLUDE_DIR=${BOOST_INCLUDE_DIR}"
         "-DBoost_LIBRARY_DIR=${BOOST_LIBRARY_DIR}"
         "-DBOOST_ROOT=${BOOST_INSTALL}"
+        # Force FindBoost module mode only; ignore system BoostConfig.cmake and
+        # system library paths so lucene_ep links against our vendored boost 1.66,
+        # not a system-installed newer version (e.g. 1.83) with ABI differences.
+        "-DBoost_NO_BOOST_CMAKE=ON"
+        "-DBoost_NO_SYSTEM_PATHS=ON"
         "-DBoost_CHRONO_FOUND=TRUE"
         "-DBoost_THREAD_FOUND=TRUE"
         "-DZLIB_INCLUDE_DIRS=${ZLIB_INCLUDE_DIR}"
@@ -1879,5 +1884,9 @@ endif()
 if(PAIMON_ENABLE_LUCENE)
     build_boost()
     build_lucene()
+endif()
+# jieba (dict + headers) is needed by BOTH lucene-fts and the tantivy jieba
+# tokenizer; build it whenever either backend is on, not only under lucene.
+if(PAIMON_ENABLE_LUCENE OR PAIMON_ENABLE_TANTIVY)
     build_jieba()
 endif()
