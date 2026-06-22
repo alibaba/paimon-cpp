@@ -50,6 +50,9 @@ class RowToArrowArrayConverter {
     RowToArrowArrayConverter(int32_t reserve_count, std::vector<AppendValueFunc>&& appenders,
                              std::unique_ptr<arrow::StructBuilder>&& array_builder,
                              std::unique_ptr<arrow::MemoryPool>&& arrow_pool);
+    RowToArrowArrayConverter(int32_t reserve_count, std::vector<AppendValueFunc>&& appenders,
+                             std::unique_ptr<arrow::StructBuilder>&& array_builder,
+                             const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
 
     static Result<AppendValueFunc> AppendField(bool use_view, arrow::ArrayBuilder* array_builder,
                                                int32_t* reserve_count);
@@ -69,7 +72,7 @@ class RowToArrowArrayConverter {
 
  protected:
     std::vector<int32_t> reserved_sizes_;
-    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
     std::vector<AppendValueFunc> appenders_;
     std::unique_ptr<arrow::StructBuilder> array_builder_;
 };
@@ -84,8 +87,16 @@ RowToArrowArrayConverter<T, R>::RowToArrowArrayConverter(
     int32_t reserve_count, std::vector<RowToArrowArrayConverter<T, R>::AppendValueFunc>&& appenders,
     std::unique_ptr<arrow::StructBuilder>&& array_builder,
     std::unique_ptr<arrow::MemoryPool>&& arrow_pool)
+    : RowToArrowArrayConverter(reserve_count, std::move(appenders), std::move(array_builder),
+                               std::shared_ptr<arrow::MemoryPool>(std::move(arrow_pool))) {}
+
+template <typename T, typename R>
+RowToArrowArrayConverter<T, R>::RowToArrowArrayConverter(
+    int32_t reserve_count, std::vector<RowToArrowArrayConverter<T, R>::AppendValueFunc>&& appenders,
+    std::unique_ptr<arrow::StructBuilder>&& array_builder,
+    const std::shared_ptr<arrow::MemoryPool>& arrow_pool)
     : reserved_sizes_(reserve_count, -1),
-      arrow_pool_(std::move(arrow_pool)),
+      arrow_pool_(arrow_pool),
       appenders_(std::move(appenders)),
       array_builder_(std::move(array_builder)) {}
 

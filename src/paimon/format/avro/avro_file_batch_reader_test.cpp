@@ -24,6 +24,7 @@
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/api.h"
 #include "gtest/gtest.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/manifest/manifest_file.h"
 #include "paimon/core/manifest/manifest_list.h"
@@ -113,6 +114,19 @@ TEST_F(AvroFileBatchReaderTest, TestReadDataWithNull) {
     ASSERT_TRUE(expected_array->Equals(result_array));
     auto read_metrics = reader_holder->GetReaderMetrics();
     ASSERT_TRUE(read_metrics);
+}
+
+TEST_F(AvroFileBatchReaderTest, TestReaderBuilderUsesInjectedArrowPool) {
+    std::string path = paimon::test::GetDataDir() + "/avro/data/avro_with_null";
+    std::shared_ptr<arrow::MemoryPool> arrow_pool = GetArrowPool(pool_);
+    ASSERT_OK_AND_ASSIGN(auto reader_builder, file_format_->CreateReaderBuilder(1024));
+    reader_builder->WithMemoryPool(pool_, arrow_pool);
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(path));
+    ASSERT_OK_AND_ASSIGN(auto reader, reader_builder->Build(in));
+
+    auto* avro_reader = dynamic_cast<AvroFileBatchReader*>(reader.get());
+    ASSERT_NE(nullptr, avro_reader);
+    ASSERT_EQ(arrow_pool.get(), avro_reader->arrow_pool_.get());
 }
 
 TEST_F(AvroFileBatchReaderTest, TestReadWithDifferentBatchSize) {

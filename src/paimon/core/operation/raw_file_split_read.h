@@ -62,6 +62,12 @@ class RawFileSplitRead : public AbstractSplitRead {
                      const std::shared_ptr<MemoryPool>& memory_pool,
                      const std::shared_ptr<Executor>& executor);
 
+    RawFileSplitRead(const std::shared_ptr<FileStorePathFactory>& path_factory,
+                     const std::shared_ptr<InternalReadContext>& context,
+                     const std::shared_ptr<MemoryPool>& memory_pool,
+                     const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
+                     const std::shared_ptr<Executor>& executor);
+
     Result<std::unique_ptr<BatchReader>> CreateReader(const std::shared_ptr<Split>& split) override;
     Result<std::unique_ptr<BatchReader>> CreateReader(
         const BinaryRow& partition, int32_t bucket,

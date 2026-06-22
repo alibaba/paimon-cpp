@@ -28,10 +28,18 @@
 #include "paimon/reader/file_batch_reader.h"
 #include "paimon/result.h"
 
+namespace arrow {
+class MemoryPool;
+}  // namespace arrow
+
 namespace paimon::avro {
 
 class AvroFileBatchReader : public FileBatchReader {
  public:
+    static Result<std::unique_ptr<AvroFileBatchReader>> Create(
+        const std::shared_ptr<InputStream>& input_stream, int32_t batch_size,
+        const std::shared_ptr<MemoryPool>& pool,
+        const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
     static Result<std::unique_ptr<AvroFileBatchReader>> Create(
         const std::shared_ptr<InputStream>& input_stream, int32_t batch_size,
         const std::shared_ptr<MemoryPool>& pool);
@@ -76,13 +84,13 @@ class AvroFileBatchReader : public FileBatchReader {
                         const std::shared_ptr<::arrow::DataType>& file_data_type,
                         std::unique_ptr<::avro::DataFileReaderBase>&& reader,
                         std::unique_ptr<arrow::ArrayBuilder>&& array_builder,
-                        std::unique_ptr<arrow::MemoryPool>&& arrow_pool, int32_t batch_size,
+                        const std::shared_ptr<arrow::MemoryPool>& arrow_pool, int32_t batch_size,
                         const std::shared_ptr<MemoryPool>& pool);
 
     static constexpr size_t BUFFER_SIZE = 1024 * 1024;  // 1M
 
     std::shared_ptr<MemoryPool> pool_;
-    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
     std::shared_ptr<InputStream> input_stream_;
     std::shared_ptr<::arrow::DataType> file_data_type_;
     std::unique_ptr<::avro::DataFileReaderBase> reader_;

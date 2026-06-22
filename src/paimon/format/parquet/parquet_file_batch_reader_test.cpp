@@ -38,6 +38,7 @@
 #include "paimon/defs.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/parquet_format_writer.h"
+#include "paimon/format/parquet/parquet_reader_builder.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/global_config.h"
@@ -175,6 +176,23 @@ TEST_F(ParquetFileBatchReaderTest, TestSimple) {
         std::make_shared<arrow::ChunkedArray>(struct_array_);
     ASSERT_TRUE(result_array->Equals(*expected_array,
                                      arrow::EqualOptions::Defaults().diff_sink(&std::cout)));
+}
+
+TEST_F(ParquetFileBatchReaderTest, TestReaderBuilderUsesInjectedArrowPool) {
+    std::string file_name = paimon::test::GetDataDir() +
+                            "/parquet/parquet_append_table.db/parquet_append_table/bucket-0/"
+                            "data-9ea62f34-1dca-49c1-bf7a-d37303d8fb76-0.parquet";
+    auto paimon_pool = GetDefaultPool();
+    std::shared_ptr<arrow::MemoryPool> arrow_pool = GetArrowPool(paimon_pool);
+
+    ParquetReaderBuilder builder(/*options=*/{}, batch_size_);
+    builder.WithMemoryPool(paimon_pool, arrow_pool);
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream, fs_->Open(file_name));
+    ASSERT_OK_AND_ASSIGN(auto reader, builder.Build(input_stream));
+
+    auto* parquet_reader = dynamic_cast<ParquetFileBatchReader*>(reader.get());
+    ASSERT_NE(nullptr, parquet_reader);
+    ASSERT_EQ(arrow_pool.get(), parquet_reader->arrow_pool_.get());
 }
 
 TEST_F(ParquetFileBatchReaderTest, TestSetReadSchema) {

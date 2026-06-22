@@ -21,14 +21,13 @@
 #include "arrow/c/abi.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/reader/reader_utils.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 
 namespace paimon {
 class MemoryPool;
 
 ConcatBatchReader::ConcatBatchReader(std::vector<std::unique_ptr<BatchReader>>&& readers,
-                                     const std::shared_ptr<MemoryPool>& pool)
-    : arrow_pool_(GetArrowPool(pool)), readers_(std::move(readers)), current_(0) {}
+                                     const std::shared_ptr<arrow::MemoryPool>& arrow_pool)
+    : arrow_pool_(arrow_pool), readers_(std::move(readers)), current_(0) {}
 
 Result<BatchReader::ReadBatch> ConcatBatchReader::NextBatch() {
     PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatchWithBitmap batch_with_bitmap,

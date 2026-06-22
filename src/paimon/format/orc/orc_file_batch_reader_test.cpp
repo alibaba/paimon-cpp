@@ -27,6 +27,7 @@
 #include "arrow/ipc/api.h"
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/defs.h"
 #include "paimon/format/orc/orc_adapter.h"
 #include "paimon/format/orc/orc_format_defs.h"
@@ -35,6 +36,7 @@
 #include "paimon/format/orc/orc_memory_pool.h"
 #include "paimon/format/orc/orc_metrics.h"
 #include "paimon/format/orc/orc_output_stream_impl.h"
+#include "paimon/format/orc/orc_reader_builder.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/testing/utils/read_result_collector.h"
@@ -246,6 +248,23 @@ TEST_F(OrcFileBatchReaderTest, TestSetReadSchema) {
     ASSERT_OK_AND_ASSIGN(result_with_read_schema,
                          paimon::test::ReadResultCollector::CollectResult(orc_batch_reader.get()));
     ASSERT_FALSE(result_with_read_schema);
+}
+
+TEST_F(OrcFileBatchReaderTest, TestReaderBuilderUsesInjectedArrowPool) {
+    std::string file_name = paimon::test::GetDataDir() +
+                            "/orc/append_09.db/append_09/f1=10/bucket-1/"
+                            "data-b9e7c41f-66e8-4dad-b25a-e6e1963becc4-0.orc";
+    auto arrow_pool = GetArrowPool(pool_);
+    std::shared_ptr<FileSystem> file_system = std::make_shared<LocalFileSystem>();
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream, file_system->Open(file_name));
+
+    OrcReaderBuilder builder(/*options=*/{}, batch_size_);
+    builder.WithMemoryPool(pool_, arrow_pool);
+    ASSERT_OK_AND_ASSIGN(auto reader, builder.Build(input_stream));
+
+    auto* orc_reader = dynamic_cast<OrcFileBatchReader*>(reader.get());
+    ASSERT_NE(nullptr, orc_reader);
+    ASSERT_EQ(arrow_pool.get(), orc_reader->arrow_pool_.get());
 }
 
 TEST_F(OrcFileBatchReaderTest, TestCreateRowReaderOptions) {

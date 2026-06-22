@@ -28,14 +28,13 @@
 #include "paimon/common/reader/reader_utils.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/row_kind.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/status.h"
 namespace paimon {
 CompleteIndexScoreBatchReader::CompleteIndexScoreBatchReader(
     std::unique_ptr<BatchReader>&& reader, const std::vector<float>& scores,
-    const std::shared_ptr<MemoryPool>& pool)
-    : arrow_pool_(GetArrowPool(pool)), reader_(std::move(reader)), scores_(scores) {}
+    const std::shared_ptr<arrow::MemoryPool>& arrow_pool)
+    : arrow_pool_(arrow_pool), reader_(std::move(reader)), scores_(scores) {}
 
 Result<BatchReader::ReadBatch> CompleteIndexScoreBatchReader::NextBatch() {
     PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatchWithBitmap batch_with_bitmap,

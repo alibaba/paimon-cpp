@@ -102,12 +102,13 @@ Status DataEvolutionSplitRead::BlobBunch::Add(const std::shared_ptr<DataFileMeta
 DataEvolutionSplitRead::DataEvolutionSplitRead(
     const std::shared_ptr<FileStorePathFactory>& path_factory,
     const std::shared_ptr<InternalReadContext>& context,
-    const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor)
+    const std::shared_ptr<MemoryPool>& memory_pool,
+    const std::shared_ptr<arrow::MemoryPool>& arrow_pool, const std::shared_ptr<Executor>& executor)
     : AbstractSplitRead(path_factory, context,
                         std::make_unique<SchemaManager>(context->GetCoreOptions().GetFileSystem(),
                                                         context->GetPath(),
                                                         context->GetCoreOptions().GetBranch()),
-                        memory_pool, executor) {}
+                        memory_pool, arrow_pool, executor) {}
 
 bool DataEvolutionSplitRead::HasIndexScoreField(const std::shared_ptr<arrow::Schema>& read_schema) {
     return read_schema->GetFieldIndex(SpecialFields::IndexScore().Name()) != -1;
@@ -121,8 +122,8 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::CreateReader(
             std::unique_ptr<BatchReader> batch_reader,
             InnerCreateReader(indexed_split->GetDataSplit(), indexed_split->RowRanges()));
         if (HasIndexScoreField(raw_read_schema_)) {
-            return std::make_unique<CompleteIndexScoreBatchReader>(std::move(batch_reader),
-                                                                   indexed_split->Scores(), pool_);
+            return std::make_unique<CompleteIndexScoreBatchReader>(
+                std::move(batch_reader), indexed_split->Scores(), arrow_pool_);
         }
         return batch_reader;
     } else if (auto data_split = std::dynamic_pointer_cast<DataSplit>(split)) {
@@ -168,11 +169,12 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::InnerCreateReader(
             sub_readers.push_back(std::move(evolution_reader));
         }
     }
-    auto concat_batch_reader = std::make_unique<ConcatBatchReader>(std::move(sub_readers), pool_);
+    auto concat_batch_reader =
+        std::make_unique<ConcatBatchReader>(std::move(sub_readers), arrow_pool_);
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<BatchReader> batch_reader,
         ApplyPredicateFilterIfNeeded(std::move(concat_batch_reader), context_->GetPredicate()));
-    return std::make_unique<CompleteRowKindBatchReader>(std::move(batch_reader), pool_);
+    return std::make_unique<CompleteRowKindBatchReader>(std::move(batch_reader), arrow_pool_);
 }
 Result<std::unique_ptr<FileBatchReader>> DataEvolutionSplitRead::ApplyIndexAndDvReaderIfNeeded(
     std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
@@ -344,14 +346,14 @@ Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionSplitRead::CreateU
                     ObjectUtils::MoveVector<std::unique_ptr<BatchReader>>(std::move(file_readers));
                 // Concat multiple blob files that map to the same data file.
                 file_batch_readers[file_idx] =
-                    std::make_unique<ConcatBatchReader>(std::move(raw_readers), pool_);
+                    std::make_unique<ConcatBatchReader>(std::move(raw_readers), arrow_pool_);
             }
         }
     }
     // TODO(xinyu.lxy): check nullable when reader_offsets[read_field_idx] = -1
     return DataEvolutionFileReader::Create(std::move(file_batch_readers), raw_read_schema_,
                                            options_.GetReadBatchSize(), reader_offsets,
-                                           field_offsets, pool_);
+                                           field_offsets, arrow_pool_);
 }
 
 Result<bool> DataEvolutionSplitRead::Match(const std::shared_ptr<Split>& split,

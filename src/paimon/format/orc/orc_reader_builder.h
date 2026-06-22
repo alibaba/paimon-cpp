@@ -21,6 +21,7 @@
 #include <string>
 #include <utility>
 
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/format/orc/orc_file_batch_reader.h"
 #include "paimon/format/orc/orc_format_defs.h"
@@ -35,6 +36,14 @@ class OrcReaderBuilder : public ReaderBuilder {
 
     ReaderBuilder* WithMemoryPool(const std::shared_ptr<MemoryPool>& pool) override {
         pool_ = pool;
+        arrow_pool_.reset();
+        return this;
+    }
+
+    ReaderBuilder* WithMemoryPool(const std::shared_ptr<MemoryPool>& pool,
+                                  const std::shared_ptr<arrow::MemoryPool>& arrow_pool) override {
+        pool_ = pool;
+        arrow_pool_ = arrow_pool;
         return this;
     }
 
@@ -49,7 +58,10 @@ class OrcReaderBuilder : public ReaderBuilder {
 
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<OrcInputStreamImpl> input_stream,
                                OrcInputStreamImpl::Create(path, natural_read_size));
-        return OrcFileBatchReader::Create(std::move(input_stream), pool_, options_, batch_size_);
+        std::shared_ptr<arrow::MemoryPool> arrow_pool =
+            arrow_pool_ ? arrow_pool_ : std::shared_ptr<arrow::MemoryPool>(GetArrowPool(pool_));
+        return OrcFileBatchReader::Create(std::move(input_stream), pool_, arrow_pool, options_,
+                                          batch_size_);
     }
 
     Result<std::unique_ptr<FileBatchReader>> Build(const std::string& path) const override {
@@ -59,6 +71,7 @@ class OrcReaderBuilder : public ReaderBuilder {
  private:
     int32_t batch_size_ = -1;
     std::shared_ptr<MemoryPool> pool_;
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
     std::map<std::string, std::string> options_;
 };
 }  // namespace paimon::orc

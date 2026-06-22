@@ -23,6 +23,10 @@
 #include "paimon/reader/file_batch_reader.h"
 #include "paimon/type_fwd.h"
 
+namespace arrow {
+class MemoryPool;
+}  // namespace arrow
+
 namespace paimon {
 
 /// Create a file batch reader based on the file path. Allows you to specify memory pool.
@@ -30,8 +34,14 @@ class PAIMON_EXPORT ReaderBuilder {
  public:
     virtual ~ReaderBuilder() = default;
 
-    /// Set memory pool to use.
+    /// Set Paimon memory pool to use.
     virtual ReaderBuilder* WithMemoryPool(const std::shared_ptr<MemoryPool>& pool) = 0;
+
+    /// Set Paimon memory pool and its shared Arrow adaptor.
+    virtual ReaderBuilder* WithMemoryPool(const std::shared_ptr<MemoryPool>& pool,
+                                          const std::shared_ptr<arrow::MemoryPool>&) {
+        return WithMemoryPool(pool);
+    }
 
     /// Build a file batch reader based on the created `InputStream`.
     virtual Result<std::unique_ptr<FileBatchReader>> Build(

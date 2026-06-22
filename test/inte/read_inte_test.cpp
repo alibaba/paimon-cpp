@@ -27,6 +27,7 @@
 #include "arrow/api.h"
 #include "arrow/array/array_base.h"
 #include "arrow/c/abi.h"
+#include "arrow/c/helpers.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/common/data/binary_row.h"
@@ -385,6 +386,49 @@ TEST_P(ReadInteTest, TestReadWithLimits) {
                              read_metrics->GetCounter("orc.read.inclusive.latency.us"));
         ASSERT_GT(latency, 0);
     }
+}
+
+TEST_P(ReadInteTest, TestArrowArrayCanBeReleasedAfterBatchReaderDestroyed) {
+    auto param = GetParam();
+    std::string path =
+        paimon::test::GetDataDir() + "/" + param.file_format + "/append_09.db/append_09";
+    ReadContextBuilder context_builder(path);
+    context_builder.AddOption(Options::FILE_FORMAT, param.file_format)
+        .AddOption(Options::READ_BATCH_SIZE, "1");
+    context_builder.EnablePrefetch(param.enable_prefetch)
+        .SetPrefetchCacheMode(param.cache_mode)
+        .AddOption("test.enable-adaptive-prefetch-strategy",
+                   param.enable_adaptive_prefetch_strategy);
+
+    ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+
+    std::vector<std::string> file_list;
+    if (param.file_format == "orc") {
+        file_list = {"data-db2b44c0-0d73-449d-82a0-4075bd2cb6e3-0.orc",
+                     "data-b913a160-a4d1-4084-af2a-18333c35668e-0.orc"};
+    } else if (param.file_format == "parquet") {
+        file_list = {"data-b446f78a-2cfb-4b3b-add8-31295d24a277-0.parquet",
+                     "data-fd72a479-53ae-42f7-aec0-e982ee555928-0.parquet"};
+    }
+
+    DataSplitsSimple input_data_splits = {{paimon::test::GetDataDir() + "/" + param.file_format +
+                                               "/append_09.db/append_09/f1=20/"
+                                               "bucket-0",
+                                           BinaryRowGenerator::GenerateRow({20}, pool_.get()),
+                                           file_list}};
+
+    auto data_splits = CreateDataSplits(input_data_splits, /*snapshot_id=*/3);
+    ASSERT_EQ(data_splits.size(), 1);
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_splits));
+    ASSERT_OK_AND_ASSIGN(BatchReader::ReadBatch batch, batch_reader->NextBatch());
+    ASSERT_FALSE(BatchReader::IsEofBatch(batch));
+
+    batch_reader->Close();
+    batch_reader.reset();
+
+    ArrowArrayRelease(batch.first.get());
+    ArrowSchemaRelease(batch.second.get());
 }
 
 TEST_P(ReadInteTest, TestReadOnlyPartitionField) {

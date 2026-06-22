@@ -31,8 +31,9 @@ class FallbackTableRead : public TableRead {
  public:
     FallbackTableRead(std::unique_ptr<TableRead> main_table,
                       std::unique_ptr<TableRead> fallback_table,
-                      const std::shared_ptr<MemoryPool>& memory_pool)
-        : TableRead(memory_pool),
+                      const std::shared_ptr<MemoryPool>& memory_pool,
+                      const std::shared_ptr<arrow::MemoryPool>& arrow_pool)
+        : TableRead(memory_pool, arrow_pool),
           main_table_(std::move(main_table)),
           fallback_table_(std::move(fallback_table)) {}
 

@@ -38,6 +38,7 @@
 #include "paimon/status.h"
 
 namespace arrow {
+class MemoryPool;
 class Schema;
 }  // namespace arrow
 
@@ -79,6 +80,13 @@ class MergeFileSplitRead : public AbstractSplitRead {
         const std::shared_ptr<FileStorePathFactory>& path_factory,
         const std::shared_ptr<InternalReadContext>& context,
         const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor);
+
+    static Result<std::unique_ptr<MergeFileSplitRead>> Create(
+        const std::shared_ptr<FileStorePathFactory>& path_factory,
+        const std::shared_ptr<InternalReadContext>& context,
+        const std::shared_ptr<MemoryPool>& memory_pool,
+        const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
+        const std::shared_ptr<Executor>& executor);
 
     Result<std::unique_ptr<BatchReader>> CreateReader(const std::shared_ptr<Split>& split) override;
 
@@ -143,6 +151,7 @@ class MergeFileSplitRead : public AbstractSplitRead {
                        const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
                        const std::shared_ptr<Predicate>& predicate_for_keys,
                        const std::shared_ptr<MemoryPool>& memory_pool,
+                       const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
                        const std::shared_ptr<Executor>& executor);
 
     static Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> CreateMergeFunctionWrapper(

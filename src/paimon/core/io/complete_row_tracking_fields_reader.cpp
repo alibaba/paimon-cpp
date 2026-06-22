@@ -24,16 +24,15 @@
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "paimon/common/table/special_fields.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 
 namespace paimon {
 CompleteRowTrackingFieldsBatchReader::CompleteRowTrackingFieldsBatchReader(
     std::unique_ptr<FileBatchReader>&& reader, const std::optional<int64_t>& first_row_id,
-    int64_t snapshot_id, const std::shared_ptr<MemoryPool>& pool)
+    int64_t snapshot_id, const std::shared_ptr<arrow::MemoryPool>& arrow_pool)
     : first_row_id_(first_row_id),
       snapshot_id_(snapshot_id),
-      arrow_pool_(GetArrowPool(pool)),
+      arrow_pool_(arrow_pool),
       reader_(std::move(reader)) {}
 
 Status CompleteRowTrackingFieldsBatchReader::SetReadSchema(

@@ -30,7 +30,6 @@
 #include "fmt/format.h"
 #include "paimon/common/data/binary_string.h"
 #include "paimon/common/types/data_field.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/core/casting/cast_executor.h"
 #include "paimon/core/casting/casting_utils.h"
@@ -45,9 +44,9 @@ FieldMappingReader::FieldMappingReader(int32_t field_count,
                                        std::unique_ptr<FileBatchReader>&& reader,
                                        const BinaryRow& partition,
                                        std::unique_ptr<FieldMapping>&& mapping,
-                                       const std::shared_ptr<MemoryPool>& pool)
+                                       const std::shared_ptr<arrow::MemoryPool>& arrow_pool)
     : field_count_(field_count),
-      arrow_pool_(GetArrowPool(pool)),
+      arrow_pool_(arrow_pool),
       reader_(std::move(reader)),
       partition_(partition),
       partition_info_(mapping->partition_info),

@@ -27,6 +27,7 @@
 #include "paimon/result.h"
 
 namespace arrow {
+class MemoryPool;
 class Schema;
 }  // namespace arrow
 
@@ -42,7 +43,7 @@ class KeyValueProjectionReader : public BatchReader {
         std::unique_ptr<SortMergeReader>&& sort_merge_reader,
         const std::shared_ptr<arrow::Schema>& target_schema,
         const std::vector<int32_t>& target_to_src_mapping, int32_t batch_size,
-        const std::shared_ptr<MemoryPool>& pool);
+        const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
 
     Result<ReadBatch> NextBatch() override;
 

@@ -42,7 +42,8 @@ class KeyValueProjectionConsumer
  public:
     static Result<std::unique_ptr<KeyValueProjectionConsumer>> Create(
         const std::shared_ptr<arrow::Schema>& target_schema,
-        const std::vector<int32_t>& target_to_src_mapping, const std::shared_ptr<MemoryPool>& pool);
+        const std::vector<int32_t>& target_to_src_mapping,
+        const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
 
     Result<BatchReader::ReadBatch> NextBatch(const std::vector<KeyValue>& key_value_vec) override;
 
@@ -51,10 +52,10 @@ class KeyValueProjectionConsumer
  private:
     KeyValueProjectionConsumer(int32_t reserve_count, std::vector<AppendValueFunc>&& appenders,
                                std::unique_ptr<arrow::StructBuilder>&& array_builder,
-                               std::unique_ptr<arrow::MemoryPool>&& arrow_pool,
+                               const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
                                const std::vector<int32_t>& target_to_src_mapping)
         : RowToArrowArrayConverter(reserve_count, std::move(appenders), std::move(array_builder),
-                                   std::move(arrow_pool)),
+                                   arrow_pool),
           target_to_src_mapping_(target_to_src_mapping) {}
 
     std::vector<int32_t> target_to_src_mapping_;

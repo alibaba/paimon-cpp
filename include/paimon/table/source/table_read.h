@@ -27,6 +27,10 @@
 #include "paimon/table/source/split.h"
 #include "paimon/visibility.h"
 
+namespace arrow {
+class MemoryPool;
+}
+
 namespace paimon {
 class MemoryPool;
 class ReadContext;
@@ -64,9 +68,11 @@ class PAIMON_EXPORT TableRead {
         const std::shared_ptr<Split>& split) = 0;
 
  protected:
-    explicit TableRead(const std::shared_ptr<MemoryPool>& memory_pool);
+    TableRead(const std::shared_ptr<MemoryPool>& memory_pool,
+              const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
 
  private:
     std::shared_ptr<MemoryPool> pool_;
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
 };
 }  // namespace paimon

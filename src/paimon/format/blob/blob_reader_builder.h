@@ -20,6 +20,7 @@
 #include <memory>
 #include <string>
 
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/format/blob/blob_file_batch_reader.h"
 #include "paimon/format/reader_builder.h"
@@ -35,6 +36,14 @@ class BlobReaderBuilder : public ReaderBuilder {
 
     ReaderBuilder* WithMemoryPool(const std::shared_ptr<MemoryPool>& pool) override {
         pool_ = pool;
+        arrow_pool_.reset();
+        return this;
+    }
+
+    ReaderBuilder* WithMemoryPool(const std::shared_ptr<MemoryPool>& pool,
+                                  const std::shared_ptr<arrow::MemoryPool>& arrow_pool) override {
+        pool_ = pool;
+        arrow_pool_ = arrow_pool;
         return this;
     }
 
@@ -43,7 +52,10 @@ class BlobReaderBuilder : public ReaderBuilder {
         PAIMON_ASSIGN_OR_RAISE(
             bool blob_as_descriptor,
             OptionsUtils::GetValueFromMap<bool>(options_, Options::BLOB_AS_DESCRIPTOR, false));
-        return BlobFileBatchReader::Create(input_stream, batch_size_, blob_as_descriptor, pool_);
+        std::shared_ptr<arrow::MemoryPool> arrow_pool =
+            arrow_pool_ ? arrow_pool_ : std::shared_ptr<arrow::MemoryPool>(GetArrowPool(pool_));
+        return BlobFileBatchReader::Create(input_stream, batch_size_, blob_as_descriptor, pool_,
+                                           arrow_pool);
     }
 
     Result<std::unique_ptr<FileBatchReader>> Build(const std::string& path) const override {
@@ -53,6 +65,7 @@ class BlobReaderBuilder : public ReaderBuilder {
  private:
     int32_t batch_size_;
     std::shared_ptr<MemoryPool> pool_;
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
     std::map<std::string, std::string> options_;
 };
 

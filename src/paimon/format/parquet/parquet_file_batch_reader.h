@@ -76,9 +76,8 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         return reader_->SeekToRow(row_number);
     }
 
-    // Important: output ArrowArray is allocated on arrow_pool_ whose lifecycle holds in
-    // ParquetFileBatchReader. Therefore, we need to hold BatchReader when using output
-    // ArrowArray.
+    // Output ArrowArray buffers use arrow_pool_. The caller must keep a related reader from the
+    // TableRead reader chain alive while using the returned ArrowArray.
     Result<ReadBatch> NextBatch() override;
 
     Result<std::vector<std::pair<uint64_t, uint64_t>>> GenReadRanges(

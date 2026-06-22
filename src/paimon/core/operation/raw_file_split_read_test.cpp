@@ -25,8 +25,10 @@
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/common/data/binary_row.h"
+#include "paimon/common/reader/complete_row_kind_batch_reader.h"
 #include "paimon/common/reader/concat_batch_reader.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/manifest/file_source.h"
@@ -157,18 +159,23 @@ class RawFileSplitReadTest : public ::testing::Test {
                 core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
                 external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
                 pool_));
-        auto split_read =
-            std::make_unique<RawFileSplitRead>(path_factory, std::move(internal_context), pool_,
-                                               CreateDefaultExecutor(/*thread_count=*/2));
+        auto split_read = std::make_unique<RawFileSplitRead>(
+            path_factory, std::move(internal_context), pool_, arrow_pool_,
+            CreateDefaultExecutor(/*thread_count=*/2));
 
         std::vector<std::unique_ptr<BatchReader>> batch_readers;
         batch_readers.reserve(data_splits.size());
         for (const auto& split : data_splits) {
             ASSERT_OK_AND_ASSIGN(std::unique_ptr<BatchReader> reader,
                                  split_read->CreateReader(split));
+            auto* row_kind_reader = dynamic_cast<CompleteRowKindBatchReader*>(reader.get());
+            ASSERT_NE(nullptr, row_kind_reader);
+            ASSERT_EQ(arrow_pool_.get(), row_kind_reader->arrow_pool_.get());
             batch_readers.emplace_back(std::move(reader));
         }
-        auto batch_reader = std::make_unique<ConcatBatchReader>(std::move(batch_readers), pool_);
+        auto batch_reader =
+            std::make_unique<ConcatBatchReader>(std::move(batch_readers), arrow_pool_);
+        ASSERT_EQ(arrow_pool_.get(), batch_reader->arrow_pool_.get());
         ASSERT_OK_AND_ASSIGN(auto result_array,
                              ReadResultCollector::CollectResult(batch_reader.get()));
         ASSERT_TRUE(result_array->Equals(expected_array));
@@ -176,6 +183,7 @@ class RawFileSplitReadTest : public ::testing::Test {
 
  private:
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_ = GetArrowPool(pool_);
 };
 
 // test simple, recall all columns with sequence in data
@@ -404,7 +412,7 @@ TEST_F(RawFileSplitReadTest, TestEmptyPlan) {
 
     auto split_read =
         std::make_unique<RawFileSplitRead>(path_factory, std::move(internal_context), pool_,
-                                           CreateDefaultExecutor(/*thread_count=*/2));
+                                           arrow_pool_, CreateDefaultExecutor(/*thread_count=*/2));
     DataSplitImpl::Builder builder(BinaryRowGenerator::GenerateRow({10, 0}, pool_.get()),
                                    /*bucket=*/0, /*bucket_path=*/
                                    paimon::test::GetDataDir() +
@@ -416,8 +424,12 @@ TEST_F(RawFileSplitReadTest, TestEmptyPlan) {
 
     std::vector<std::unique_ptr<BatchReader>> batch_readers;
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<BatchReader> reader, split_read->CreateReader(data_split));
+    auto* row_kind_reader = dynamic_cast<CompleteRowKindBatchReader*>(reader.get());
+    ASSERT_NE(nullptr, row_kind_reader);
+    ASSERT_EQ(arrow_pool_.get(), row_kind_reader->arrow_pool_.get());
     batch_readers.push_back(std::move(reader));
-    auto batch_reader = std::make_unique<ConcatBatchReader>(std::move(batch_readers), pool_);
+    auto batch_reader = std::make_unique<ConcatBatchReader>(std::move(batch_readers), arrow_pool_);
+    ASSERT_EQ(arrow_pool_.get(), batch_reader->arrow_pool_.get());
     ASSERT_OK_AND_ASSIGN(auto result_array, ReadResultCollector::CollectResult(batch_reader.get()));
     ASSERT_EQ(result_array, nullptr);
 }
@@ -433,9 +445,9 @@ TEST_F(RawFileSplitReadTest, TestMatch) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InternalReadContext> internal_context,
                          InternalReadContext::Create(std::move(read_context), table_schema,
                                                      table_schema->Options()));
-    auto split_read =
-        std::make_unique<RawFileSplitRead>(/*path_factory=*/nullptr, std::move(internal_context),
-                                           pool_, CreateDefaultExecutor(/*thread_count=*/2));
+    auto split_read = std::make_unique<RawFileSplitRead>(
+        /*path_factory=*/nullptr, std::move(internal_context), pool_, arrow_pool_,
+        CreateDefaultExecutor(/*thread_count=*/2));
     auto create_data_split = [this](bool is_streaming,
                                     bool raw_convertible) -> std::shared_ptr<DataSplit> {
         auto meta = std::make_shared<DataFileMeta>(

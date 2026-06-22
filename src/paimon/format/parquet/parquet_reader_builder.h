@@ -38,13 +38,22 @@ class ParquetReaderBuilder : public ReaderBuilder {
 
     ReaderBuilder* WithMemoryPool(const std::shared_ptr<MemoryPool>& pool) override {
         pool_ = pool;
+        arrow_pool_.reset();
+        return this;
+    }
+
+    ReaderBuilder* WithMemoryPool(const std::shared_ptr<MemoryPool>& pool,
+                                  const std::shared_ptr<arrow::MemoryPool>& arrow_pool) override {
+        pool_ = pool;
+        arrow_pool_ = arrow_pool;
         return this;
     }
 
     Result<std::unique_ptr<FileBatchReader>> Build(
         const std::shared_ptr<InputStream>& path) const override {
         PAIMON_ASSIGN_OR_RAISE(uint64_t file_length, path->Length());
-        std::shared_ptr<arrow::MemoryPool> arrow_pool = GetArrowPool(pool_);
+        std::shared_ptr<arrow::MemoryPool> arrow_pool =
+            arrow_pool_ ? arrow_pool_ : std::shared_ptr<arrow::MemoryPool>(GetArrowPool(pool_));
         auto input_stream =
             std::make_unique<ArrowInputStreamAdapter>(path, arrow_pool, file_length);
         return ParquetFileBatchReader::Create(std::move(input_stream), arrow_pool, options_,
@@ -58,6 +67,7 @@ class ParquetReaderBuilder : public ReaderBuilder {
  private:
     int32_t batch_size_ = -1;
     std::shared_ptr<MemoryPool> pool_;
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
     std::map<std::string, std::string> options_;
 };
 

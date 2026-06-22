@@ -30,7 +30,6 @@
 #include "fmt/format.h"
 #include "paimon/common/predicate/predicate_filter.h"
 #include "paimon/common/reader/reader_utils.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/predicate/predicate.h"
 #include "paimon/status.h"
@@ -40,14 +39,12 @@ class MemoryPool;
 
 PredicateBatchReader::PredicateBatchReader(std::unique_ptr<BatchReader>&& reader,
                                            const std::shared_ptr<PredicateFilter>& predicate_filter,
-                                           const std::shared_ptr<MemoryPool>& pool)
-    : arrow_pool_(GetArrowPool(pool)),
-      reader_(std::move(reader)),
-      predicate_filter_(predicate_filter) {}
+                                           const std::shared_ptr<arrow::MemoryPool>& arrow_pool)
+    : arrow_pool_(arrow_pool), reader_(std::move(reader)), predicate_filter_(predicate_filter) {}
 
 Result<std::unique_ptr<PredicateBatchReader>> PredicateBatchReader::Create(
     std::unique_ptr<BatchReader>&& reader, const std::shared_ptr<Predicate>& predicate,
-    const std::shared_ptr<MemoryPool>& pool) {
+    const std::shared_ptr<arrow::MemoryPool>& arrow_pool) {
     if (!predicate) {
         return Status::Invalid("create predicate batch reader failed. predicate is nullptr");
     }
@@ -57,7 +54,7 @@ Result<std::unique_ptr<PredicateBatchReader>> PredicateBatchReader::Create(
             fmt::format("predicate {} does not support Test", predicate->ToString()));
     }
     return std::unique_ptr<PredicateBatchReader>(
-        new PredicateBatchReader(std::move(reader), predicate_filter, pool));
+        new PredicateBatchReader(std::move(reader), predicate_filter, arrow_pool));
 }
 
 Result<BatchReader::ReadBatch> PredicateBatchReader::NextBatch() {

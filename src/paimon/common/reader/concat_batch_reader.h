@@ -33,7 +33,7 @@ class MemoryPool;
 class ConcatBatchReader : public BatchReader {
  public:
     ConcatBatchReader(std::vector<std::unique_ptr<BatchReader>>&& readers,
-                      const std::shared_ptr<MemoryPool>& pool);
+                      const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
 
     Result<ReadBatch> NextBatch() override;
     Result<ReadBatchWithBitmap> NextBatchWithBitmap() override;
@@ -41,7 +41,7 @@ class ConcatBatchReader : public BatchReader {
     std::shared_ptr<Metrics> GetReaderMetrics() const override;
 
  private:
-    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
     std::vector<std::unique_ptr<BatchReader>> readers_;
     size_t current_;
 };

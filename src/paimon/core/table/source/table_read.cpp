@@ -25,6 +25,7 @@
 #include "fmt/format.h"
 #include "paimon/common/reader/concat_batch_reader.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/operation/internal_read_context.h"
@@ -82,7 +83,9 @@ Result<std::unique_ptr<InternalReadContext>> CreateInternalReadContext(
 
 Result<std::unique_ptr<TableRead>> CreateTableRead(
     const std::shared_ptr<InternalReadContext>& internal_context,
-    const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor) {
+    const std::shared_ptr<MemoryPool>& memory_pool,
+    const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
+    const std::shared_ptr<Executor>& executor) {
     const auto& core_options = internal_context->GetCoreOptions();
     const auto& table_schema = internal_context->GetTableSchema();
     auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
@@ -102,13 +105,16 @@ Result<std::unique_ptr<TableRead>> CreateTableRead(
 
     if (internal_context->GetPrimaryKeys().empty()) {
         return std::make_unique<AppendOnlyTableRead>(path_factory, internal_context, memory_pool,
-                                                     executor);
+                                                     arrow_pool, executor);
     }
-    return KeyValueTableRead::Create(path_factory, internal_context, memory_pool, executor);
+    return KeyValueTableRead::Create(path_factory, internal_context, memory_pool, arrow_pool,
+                                     executor);
 }
 }  // namespace
 
-TableRead::TableRead(const std::shared_ptr<MemoryPool>& memory_pool) : pool_(memory_pool) {}
+TableRead::TableRead(const std::shared_ptr<MemoryPool>& memory_pool,
+                     const std::shared_ptr<arrow::MemoryPool>& arrow_pool)
+    : pool_(memory_pool), arrow_pool_(arrow_pool) {}
 
 Result<std::unique_ptr<TableRead>> TableRead::Create(std::unique_ptr<ReadContext> ctx) {
     std::shared_ptr<ReadContext> context = std::move(ctx);
@@ -122,13 +128,14 @@ Result<std::unique_ptr<TableRead>> TableRead::Create(std::unique_ptr<ReadContext
         return Status::Invalid("executor is null pointer");
     }
     auto memory_pool = context->GetMemoryPool();
+    std::shared_ptr<arrow::MemoryPool> arrow_pool = GetArrowPool(memory_pool);
     auto executor = context->GetExecutor();
 
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InternalReadContext> internal_context,
                            CreateInternalReadContext(context, context->GetBranch()));
 
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> table_read,
-                           CreateTableRead(internal_context, memory_pool, executor));
+                           CreateTableRead(internal_context, memory_pool, arrow_pool, executor));
 
     std::optional<std::string> scan_fallback_branch =
         internal_context->GetCoreOptions().GetScanFallbackBranch();
@@ -142,9 +149,9 @@ Result<std::unique_ptr<TableRead>> TableRead::Create(std::unique_ptr<ReadContext
         CreateInternalReadContext(context, /*branch=*/scan_fallback_branch.value()));
 
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> fallback_table_read,
-                           CreateTableRead(fallback_context, memory_pool, executor));
-    return std::make_unique<FallbackTableRead>(std::move(table_read),
-                                               std::move(fallback_table_read), memory_pool);
+                           CreateTableRead(fallback_context, memory_pool, arrow_pool, executor));
+    return std::make_unique<FallbackTableRead>(
+        std::move(table_read), std::move(fallback_table_read), memory_pool, arrow_pool);
 }
 
 Result<std::unique_ptr<BatchReader>> TableRead::CreateReader(
@@ -155,7 +162,7 @@ Result<std::unique_ptr<BatchReader>> TableRead::CreateReader(
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> reader, CreateReader(split));
         batch_readers.emplace_back(std::move(reader));
     }
-    return std::make_unique<ConcatBatchReader>(std::move(batch_readers), pool_);
+    return std::make_unique<ConcatBatchReader>(std::move(batch_readers), arrow_pool_);
 }
 
 }  // namespace paimon

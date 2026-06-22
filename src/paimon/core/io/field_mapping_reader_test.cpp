@@ -33,6 +33,7 @@
 #include "arrow/util/checked_cast.h"
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/core/utils/field_mapping.h"
 #include "paimon/defs.h"
 #include "paimon/format/file_format.h"
@@ -56,6 +57,7 @@ namespace paimon::test {
 class FieldMappingReaderTest : public ::testing::Test {
  public:
     void SetUp() override {
+        arrow_pool_ = GetArrowPool(pool_);
         partition_ = BinaryRowGenerator::GenerateRow({10, 0}, pool_.get());
     }
     void TearDown() override {}
@@ -133,7 +135,8 @@ class FieldMappingReaderTest : public ::testing::Test {
 
         auto reader = std::make_shared<FieldMappingReader>(
             /*field_count=*/read_schema->num_fields(), std::move(orc_batch_reader), partition_,
-            std::move(mapping), pool_);
+            std::move(mapping), arrow_pool_);
+        ASSERT_EQ(arrow_pool_.get(), reader->arrow_pool_.get());
         ASSERT_OK_AND_ASSIGN(auto result_array, ReadResultCollector::CollectResult(reader.get()));
         if (expect_array == nullptr && result_array == nullptr) {
             // expect empty result
@@ -172,7 +175,8 @@ class FieldMappingReaderTest : public ::testing::Test {
 
         auto reader = std::make_shared<FieldMappingReader>(
             /*field_count=*/read_schema->num_fields(), std::move(orc_batch_reader), partition,
-            std::move(mapping), pool_);
+            std::move(mapping), arrow_pool_);
+        ASSERT_EQ(arrow_pool_.get(), reader->arrow_pool_.get());
         ASSERT_OK_AND_ASSIGN(auto result_array, ReadResultCollector::CollectResult(reader.get()));
         if (expect_array == nullptr && result_array == nullptr) {
             // expect empty result
@@ -187,6 +191,7 @@ class FieldMappingReaderTest : public ::testing::Test {
 
  private:
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
     std::vector<DataField> data_fields_ = {DataField(0, arrow::field("f0", arrow::utf8())),
                                            DataField(1, arrow::field("f1", arrow::int32())),
                                            DataField(2, arrow::field("f2", arrow::int32())),
@@ -231,7 +236,8 @@ TEST_F(FieldMappingReaderTest, TestGenerateSinglePartitionArray) {
          std::make_shared<Bytes>("8", pool_.get()), 100},
         pool_.get());
     auto mapping_reader = std::make_unique<FieldMappingReader>(
-        /*field_count=*/10, /*reader=*/nullptr, partition, std::move(field_mapping), pool_);
+        /*field_count=*/10, /*reader=*/nullptr, partition, std::move(field_mapping), arrow_pool_);
+    ASSERT_EQ(arrow_pool_.get(), mapping_reader->arrow_pool_.get());
 
     {
         ASSERT_OK_AND_ASSIGN(auto p9_array, mapping_reader->GenerateSinglePartitionArray(

@@ -39,6 +39,7 @@
 #include "paimon/status.h"
 
 namespace arrow {
+class MemoryPool;
 class Schema;
 }  // namespace arrow
 
@@ -72,6 +73,7 @@ class AbstractSplitRead : public SplitRead {
                       const std::shared_ptr<InternalReadContext>& context,
                       std::unique_ptr<SchemaManager>&& schema_manager,
                       const std::shared_ptr<MemoryPool>& memory_pool,
+                      const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
                       const std::shared_ptr<Executor>& executor);
 
     static std::unordered_map<std::string, DeletionFile> CreateDeletionFileMap(
@@ -122,6 +124,7 @@ class AbstractSplitRead : public SplitRead {
 
  protected:
     std::shared_ptr<MemoryPool> pool_;
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
     std::shared_ptr<Executor> executor_;
     std::shared_ptr<FileStorePathFactory> path_factory_;
     CoreOptions options_;

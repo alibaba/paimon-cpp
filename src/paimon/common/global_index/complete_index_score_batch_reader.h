@@ -39,7 +39,7 @@ class CompleteIndexScoreBatchReader : public BatchReader {
  public:
     CompleteIndexScoreBatchReader(std::unique_ptr<BatchReader>&& reader,
                                   const std::vector<float>& scores,
-                                  const std::shared_ptr<MemoryPool>& pool);
+                                  const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
 
     Result<ReadBatch> NextBatch() override;
 
@@ -60,7 +60,7 @@ class CompleteIndexScoreBatchReader : public BatchReader {
     size_t score_cursor_ = 0;
     int32_t index_score_field_idx_ = -1;
     std::vector<std::string> field_names_with_score_;
-    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
     std::unique_ptr<BatchReader> reader_;
     std::vector<float> scores_;
 };

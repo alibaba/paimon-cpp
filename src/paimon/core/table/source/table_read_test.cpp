@@ -21,16 +21,23 @@
 #include <utility>
 
 #include "gtest/gtest.h"
+#include "paimon/common/reader/complete_row_kind_batch_reader.h"
+#include "paimon/common/reader/concat_batch_reader.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/operation/abstract_split_read.h"
 #include "paimon/core/operation/split_read.h"
 #include "paimon/core/table/source/append_only_table_read.h"
+#include "paimon/core/table/source/fallback_table_read.h"
 #include "paimon/core/table/source/key_value_table_read.h"
 #include "paimon/defs.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/read_context.h"
+#include "paimon/scan_context.h"
 #include "paimon/status.h"
+#include "paimon/table/source/plan.h"
+#include "paimon/table/source/table_scan.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -129,6 +136,84 @@ TEST(TableReadTest, TestCreateAppendOnlyTableRead) {
     ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
     auto append_only_table_read = dynamic_cast<AppendOnlyTableRead*>(table_read.get());
     ASSERT_TRUE(append_only_table_read);
+}
+
+TEST(TableReadTest, TestArrowPoolScopedPerTableRead) {
+    const std::string path = test::GetDataDir() + "/orc/append_09.db/append_09";
+    auto paimon_pool = GetDefaultPool();
+
+    ReadContextBuilder first_builder(path);
+    first_builder.WithMemoryPool(paimon_pool);
+    ASSERT_OK_AND_ASSIGN(auto first_context, first_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto first, TableRead::Create(std::move(first_context)));
+
+    ReadContextBuilder second_builder(path);
+    second_builder.WithMemoryPool(paimon_pool);
+    ASSERT_OK_AND_ASSIGN(auto second_context, second_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto second, TableRead::Create(std::move(second_context)));
+
+    ASSERT_NE(nullptr, first->arrow_pool_);
+    ASSERT_NE(nullptr, second->arrow_pool_);
+    ASSERT_NE(first->arrow_pool_.get(), second->arrow_pool_.get());
+}
+
+TEST(TableReadTest, TestFallbackSharesArrowPool) {
+    const std::string path =
+        test::GetDataDir() + "/orc/append_table_with_rt_branch.db/append_table_with_rt_branch";
+    auto pool = GetDefaultPool();
+    ReadContextBuilder context_builder(path);
+    context_builder.WithMemoryPool(pool);
+    ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+
+    auto fallback_table_read = dynamic_cast<FallbackTableRead*>(table_read.get());
+    ASSERT_NE(nullptr, fallback_table_read);
+    ASSERT_NE(nullptr, fallback_table_read->arrow_pool_);
+    ASSERT_EQ(fallback_table_read->arrow_pool_.get(),
+              fallback_table_read->main_table_->arrow_pool_.get());
+    ASSERT_EQ(fallback_table_read->arrow_pool_.get(),
+              fallback_table_read->fallback_table_->arrow_pool_.get());
+}
+
+TEST(TableReadTest, TestBatchReadersShareArrowPoolAndCanOutliveTableRead) {
+    const std::string path = test::GetDataDir() + "/orc/append_09.db/append_09";
+    auto pool = GetDefaultPool();
+
+    ScanContextBuilder scan_context_builder(path);
+    scan_context_builder.WithMemoryPool(pool);
+    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+    ASSERT_OK_AND_ASSIGN(auto plan, table_scan->CreatePlan());
+    ASSERT_FALSE(plan->Splits().empty());
+
+    ReadContextBuilder read_context_builder(path);
+    read_context_builder.WithMemoryPool(pool);
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+    auto* table_arrow_pool = table_read->arrow_pool_.get();
+    ASSERT_NE(nullptr, table_arrow_pool);
+
+    std::vector<std::shared_ptr<Split>> single_split = {plan->Splits().front()};
+    ASSERT_OK_AND_ASSIGN(auto first_reader, table_read->CreateReader(single_split));
+    ASSERT_OK_AND_ASSIGN(auto second_reader, table_read->CreateReader(single_split));
+
+    auto* first_concat = dynamic_cast<ConcatBatchReader*>(first_reader.get());
+    auto* second_concat = dynamic_cast<ConcatBatchReader*>(second_reader.get());
+    ASSERT_NE(nullptr, first_concat);
+    ASSERT_NE(nullptr, second_concat);
+    ASSERT_EQ(table_arrow_pool, first_concat->arrow_pool_.get());
+    ASSERT_EQ(table_arrow_pool, second_concat->arrow_pool_.get());
+
+    ASSERT_EQ(1, first_concat->readers_.size());
+    auto* first_inner = dynamic_cast<CompleteRowKindBatchReader*>(first_concat->readers_[0].get());
+    ASSERT_NE(nullptr, first_inner);
+    ASSERT_EQ(table_arrow_pool, first_inner->arrow_pool_.get());
+
+    table_read.reset();
+    first_reader->Close();
+    second_reader->Close();
+    first_reader.reset();
+    second_reader.reset();
 }
 
 TEST(TableReadTest, TestMergeOptions) {

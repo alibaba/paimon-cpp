@@ -22,6 +22,7 @@
 #include <utility>
 
 #include "avro/DataFile.hh"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/format/avro/avro_file_batch_reader.h"
 #include "paimon/format/avro/avro_input_stream_impl.h"
 #include "paimon/format/reader_builder.h"
@@ -37,12 +38,22 @@ class AvroReaderBuilder : public ReaderBuilder {
 
     ReaderBuilder* WithMemoryPool(const std::shared_ptr<MemoryPool>& pool) override {
         pool_ = pool;
+        arrow_pool_.reset();
+        return this;
+    }
+
+    ReaderBuilder* WithMemoryPool(const std::shared_ptr<MemoryPool>& pool,
+                                  const std::shared_ptr<arrow::MemoryPool>& arrow_pool) override {
+        pool_ = pool;
+        arrow_pool_ = arrow_pool;
         return this;
     }
 
     Result<std::unique_ptr<FileBatchReader>> Build(
         const std::shared_ptr<InputStream>& path) const override {
-        return AvroFileBatchReader::Create(path, batch_size_, pool_);
+        std::shared_ptr<arrow::MemoryPool> arrow_pool =
+            arrow_pool_ ? arrow_pool_ : std::shared_ptr<arrow::MemoryPool>(GetArrowPool(pool_));
+        return AvroFileBatchReader::Create(path, batch_size_, pool_, arrow_pool);
     }
 
     Result<std::unique_ptr<FileBatchReader>> Build(const std::string& path) const override {
@@ -52,6 +63,7 @@ class AvroReaderBuilder : public ReaderBuilder {
  private:
     const int32_t batch_size_;
     std::shared_ptr<MemoryPool> pool_;
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
     const std::map<std::string, std::string> options_;
 };
 

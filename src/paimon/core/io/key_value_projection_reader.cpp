@@ -34,10 +34,11 @@ Result<std::unique_ptr<KeyValueProjectionReader>> KeyValueProjectionReader::Crea
     std::unique_ptr<SortMergeReader>&& sort_merge_reader,
     const std::shared_ptr<arrow::Schema>& target_schema,
     const std::vector<int32_t>& target_to_src_mapping, int32_t batch_size,
-    const std::shared_ptr<MemoryPool>& pool) {
+    const std::shared_ptr<arrow::MemoryPool>& arrow_pool) {
     std::unique_ptr<RowToArrowArrayConverter<KeyValue, BatchReader::ReadBatch>> projection_consumer;
-    PAIMON_ASSIGN_OR_RAISE(projection_consumer, KeyValueProjectionConsumer::Create(
-                                                    target_schema, target_to_src_mapping, pool));
+    PAIMON_ASSIGN_OR_RAISE(
+        projection_consumer,
+        KeyValueProjectionConsumer::Create(target_schema, target_to_src_mapping, arrow_pool));
     return std::unique_ptr<KeyValueProjectionReader>(new KeyValueProjectionReader(
         batch_size, std::move(sort_merge_reader), std::move(projection_consumer)));
 }

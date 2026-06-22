@@ -52,8 +52,10 @@ AbstractSplitRead::AbstractSplitRead(const std::shared_ptr<FileStorePathFactory>
                                      const std::shared_ptr<InternalReadContext>& context,
                                      std::unique_ptr<SchemaManager>&& schema_manager,
                                      const std::shared_ptr<MemoryPool>& memory_pool,
+                                     const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
                                      const std::shared_ptr<Executor>& executor)
     : pool_(memory_pool),
+      arrow_pool_(arrow_pool),
       executor_(executor),
       path_factory_(path_factory),
       options_(context->GetCoreOptions()),
@@ -129,7 +131,7 @@ Result<std::unique_ptr<BatchReader>> AbstractSplitRead::ApplyPredicateFilterIfNe
     if (!context_->EnablePredicateFilter() || predicate == nullptr) {
         return std::move(reader);
     }
-    return PredicateBatchReader::Create(std::move(reader), predicate, pool_);
+    return PredicateBatchReader::Create(std::move(reader), predicate, arrow_pool_);
 }
 
 Result<std::unique_ptr<ReaderBuilder>> AbstractSplitRead::PrepareReaderBuilder(
@@ -138,7 +140,7 @@ Result<std::unique_ptr<ReaderBuilder>> AbstractSplitRead::PrepareReaderBuilder(
                            FileFormatFactory::Get(format_identifier, options_.ToMap()));
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReaderBuilder> reader_builder,
                            file_format->CreateReaderBuilder(options_.GetReadBatchSize()));
-    reader_builder->WithMemoryPool(pool_);
+    reader_builder->WithMemoryPool(pool_, arrow_pool_);
     return reader_builder;
 }
 
@@ -206,7 +208,8 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingRe
                            CreateFileBatchReader(file_meta, data_file_path, reader_builder));
     if (NeedCompleteRowTrackingFields(options_.RowTrackingEnabled(), read_schema)) {
         file_reader = std::make_unique<CompleteRowTrackingFieldsBatchReader>(
-            std::move(file_reader), file_meta->first_row_id, file_meta->max_sequence_number, pool_);
+            std::move(file_reader), file_meta->first_row_id, file_meta->max_sequence_number,
+            arrow_pool_);
     }
 
     const auto& predicate = field_mapping->non_partition_info.non_partition_filter;
@@ -222,7 +225,7 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingRe
 
     return std::make_unique<FieldMappingReader>(field_mapping_builder->GetReadFieldCount(),
                                                 std::move(final_reader), partition,
-                                                std::move(field_mapping), pool_);
+                                                std::move(field_mapping), arrow_pool_);
 }
 
 Result<std::vector<DataField>> AbstractSplitRead::ProjectFieldsForRowTrackingAndDataEvolution(

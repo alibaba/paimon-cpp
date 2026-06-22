@@ -24,6 +24,7 @@
 #include "gtest/gtest.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/format/file_format.h"
 #include "paimon/format/file_format_factory.h"
 #include "paimon/memory/memory_pool.h"
@@ -37,6 +38,7 @@ class CompleteIndexScoreBatchReaderTest : public ::testing::Test {
  public:
     void SetUp() override {
         pool_ = GetDefaultPool();
+        arrow_pool_ = GetArrowPool(pool_);
     }
     void TearDown() override {
         pool_.reset();
@@ -47,8 +49,10 @@ class CompleteIndexScoreBatchReaderTest : public ::testing::Test {
         const std::vector<float>& scores, int32_t batch_size) const {
         auto file_batch_reader = std::make_unique<MockFileBatchReader>(src_array, src_array->type(),
                                                                        selected_bitmap, batch_size);
-        return std::make_unique<CompleteIndexScoreBatchReader>(std::move(file_batch_reader), scores,
-                                                               pool_);
+        auto reader = std::make_unique<CompleteIndexScoreBatchReader>(std::move(file_batch_reader),
+                                                                      scores, arrow_pool_);
+        EXPECT_EQ(arrow_pool_.get(), reader->arrow_pool_.get());
+        return reader;
     }
 
     std::unique_ptr<BatchReader> PrepareCompleteIndexScoreBatchReader(
@@ -56,12 +60,15 @@ class CompleteIndexScoreBatchReaderTest : public ::testing::Test {
         int32_t batch_size) const {
         auto file_batch_reader =
             std::make_unique<MockFileBatchReader>(src_array, src_array->type(), batch_size);
-        return std::make_unique<CompleteIndexScoreBatchReader>(std::move(file_batch_reader), scores,
-                                                               pool_);
+        auto reader = std::make_unique<CompleteIndexScoreBatchReader>(std::move(file_batch_reader),
+                                                                      scores, arrow_pool_);
+        EXPECT_EQ(arrow_pool_.get(), reader->arrow_pool_.get());
+        return reader;
     }
 
  private:
     std::shared_ptr<MemoryPool> pool_;
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
 };
 
 TEST_F(CompleteIndexScoreBatchReaderTest, TestSimple) {

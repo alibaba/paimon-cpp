@@ -20,8 +20,10 @@
 #include "arrow/c/helpers.h"
 #include "gtest/gtest.h"
 #include "paimon/common/data/blob_utils.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/data/blob.h"
 #include "paimon/format/blob/blob_format_writer.h"
+#include "paimon/format/blob/blob_reader_builder.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/testing/utils/read_result_collector.h"
@@ -146,6 +148,28 @@ TEST_P(BlobFileBatchReaderTest, TestPushdownBitmap) {
     RoaringBitmap32 roaring_3;
     CheckResult(table_path, "data-d7816e8e-6c6d-4e28-9137-837cdf706350-4.blob", {},
                 blob_as_descriptor, roaring_3);
+}
+
+TEST_F(BlobFileBatchReaderTest, TestReaderBuilderUsesInjectedArrowPool) {
+    auto dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    std::string test_data_path = paimon::test::GetDataDir() + "/db_with_blob.db/table_with_blob/";
+    std::string table_path = dir->Str();
+    ASSERT_TRUE(paimon::test::TestUtil::CopyDirectory(test_data_path, table_path));
+
+    std::shared_ptr<arrow::MemoryPool> arrow_pool = GetArrowPool(pool_);
+    std::shared_ptr<FileSystem> fs = std::make_shared<LocalFileSystem>();
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<InputStream> input_stream,
+        fs->Open(table_path + "/bucket-0/data-d7816e8e-6c6d-4e28-9137-837cdf706350-1.blob"));
+
+    BlobReaderBuilder builder(/*batch_size=*/1024, /*options=*/{});
+    builder.WithMemoryPool(pool_, arrow_pool);
+    ASSERT_OK_AND_ASSIGN(auto reader, builder.Build(input_stream));
+
+    auto* blob_reader = dynamic_cast<BlobFileBatchReader*>(reader.get());
+    ASSERT_NE(nullptr, blob_reader);
+    ASSERT_EQ(arrow_pool.get(), blob_reader->arrow_pool_.get());
 }
 
 TEST_F(BlobFileBatchReaderTest, TestRowNumbers) {

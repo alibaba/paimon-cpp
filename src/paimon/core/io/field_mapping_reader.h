@@ -27,7 +27,6 @@
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "paimon/common/data/binary_row.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/core/partition/partition_info.h"
 #include "paimon/core/utils/field_mapping.h"
 #include "paimon/reader/file_batch_reader.h"
@@ -48,7 +47,7 @@ class FieldMappingReader : public FileBatchReader {
  public:
     FieldMappingReader(int32_t field_count, std::unique_ptr<FileBatchReader>&& reader,
                        const BinaryRow& partition, std::unique_ptr<FieldMapping>&& mapping,
-                       const std::shared_ptr<MemoryPool>& pool);
+                       const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
 
     Result<ReadBatch> NextBatch() override {
         return Status::Invalid(

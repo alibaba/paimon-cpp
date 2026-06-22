@@ -32,6 +32,7 @@
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/arrow/arrow_utils.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/object_utils.h"
 #include "paimon/core/core_options.h"
@@ -79,6 +80,16 @@ Result<std::unique_ptr<MergeFileSplitRead>> MergeFileSplitRead::Create(
     const std::shared_ptr<FileStorePathFactory>& path_factory,
     const std::shared_ptr<InternalReadContext>& context,
     const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor) {
+    return Create(path_factory, context, memory_pool,
+                  std::shared_ptr<arrow::MemoryPool>(GetArrowPool(memory_pool)), executor);
+}
+
+Result<std::unique_ptr<MergeFileSplitRead>> MergeFileSplitRead::Create(
+    const std::shared_ptr<FileStorePathFactory>& path_factory,
+    const std::shared_ptr<InternalReadContext>& context,
+    const std::shared_ptr<MemoryPool>& memory_pool,
+    const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
+    const std::shared_ptr<Executor>& executor) {
     const auto& core_options = context->GetCoreOptions();
     const auto& table_schema = context->GetTableSchema();
     assert(table_schema);
@@ -111,7 +122,7 @@ Result<std::unique_ptr<MergeFileSplitRead>> MergeFileSplitRead::Create(
         std::make_unique<SchemaManager>(core_options.GetFileSystem(), context->GetPath(),
                                         context->GetCoreOptions().GetBranch()),
         key_schema, value_schema, read_schema, projection, key_comparator,
-        user_defined_seq_comparator, predicate_for_keys, memory_pool, executor));
+        user_defined_seq_comparator, predicate_for_keys, memory_pool, arrow_pool, executor));
 }
 
 Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateReader(
@@ -135,7 +146,7 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateReader(
     } else {
         PAIMON_ASSIGN_OR_RAISE(batch_reader, CreateMergeReader(data_split, data_file_path_factory));
     }
-    return std::make_unique<CompleteRowKindBatchReader>(std::move(batch_reader), pool_);
+    return std::make_unique<CompleteRowKindBatchReader>(std::move(batch_reader), arrow_pool_);
 }
 
 void MergeFileSplitRead::SetMergeFunctionWrapper(
@@ -229,7 +240,8 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateMergeReader(
                                                       data_file_path_factory));
         batch_readers.push_back(std::move(projection_reader));
     }
-    auto concat_batch_reader = std::make_unique<ConcatBatchReader>(std::move(batch_readers), pool_);
+    auto concat_batch_reader =
+        std::make_unique<ConcatBatchReader>(std::move(batch_readers), arrow_pool_);
     return AbstractSplitRead::ApplyPredicateFilterIfNeeded(std::move(concat_batch_reader),
                                                            context_->GetPredicate());
 }
@@ -253,7 +265,8 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateNoMergeReader(
 
     auto raw_readers =
         ObjectUtils::MoveVector<std::unique_ptr<BatchReader>>(std::move(raw_file_readers));
-    auto concat_batch_reader = std::make_unique<ConcatBatchReader>(std::move(raw_readers), pool_);
+    auto concat_batch_reader =
+        std::make_unique<ConcatBatchReader>(std::move(raw_readers), arrow_pool_);
     return AbstractSplitRead::ApplyPredicateFilterIfNeeded(std::move(concat_batch_reader),
                                                            context_->GetPredicate());
 }
@@ -268,8 +281,10 @@ MergeFileSplitRead::MergeFileSplitRead(
     const std::shared_ptr<FieldsComparator>& key_comparator,
     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
     const std::shared_ptr<Predicate>& predicate_for_keys,
-    const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor)
-    : AbstractSplitRead(path_factory, context, std::move(schema_manager), memory_pool, executor),
+    const std::shared_ptr<MemoryPool>& memory_pool,
+    const std::shared_ptr<arrow::MemoryPool>& arrow_pool, const std::shared_ptr<Executor>& executor)
+    : AbstractSplitRead(path_factory, context, std::move(schema_manager), memory_pool, arrow_pool,
+                        executor),
       key_schema_(key_schema),
       value_schema_(value_schema),
       read_schema_(read_schema),
@@ -416,13 +431,14 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateReaderForSection(
     // KeyValueProjectionReader converts KeyValue objects to arrow array according to projection
     if (!context_->EnableMultiThreadRowToBatch()) {
         return KeyValueProjectionReader::Create(std::move(sort_merge_reader), raw_read_schema_,
-                                                projection_, options_.GetReadBatchSize(), pool_);
+                                                projection_, options_.GetReadBatchSize(),
+                                                arrow_pool_);
     }
     int32_t thread_number = context_->GetRowToBatchThreadNumber();
     assert(thread_number > 0);
     return std::make_unique<AsyncKeyValueProjectionReader>(
         std::move(sort_merge_reader), raw_read_schema_, projection_, options_.GetReadBatchSize(),
-        thread_number, pool_);
+        thread_number, pool_, arrow_pool_);
 }
 
 Result<std::unique_ptr<SortMergeReader>> MergeFileSplitRead::CreateSortMergeReaderForSection(

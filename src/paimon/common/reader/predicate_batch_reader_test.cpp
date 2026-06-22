@@ -28,6 +28,7 @@
 #include "arrow/array/builder_primitive.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/defs.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/literal.h"
@@ -45,6 +46,8 @@ namespace paimon::test {
 class PredicateBatchReaderTest : public ::testing::Test {
  public:
     void SetUp() override {
+        pool_ = GetDefaultPool();
+        arrow_pool_ = GetArrowPool(pool_);
         fields_ = {arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int64()),
                    arrow::field("f2", arrow::boolean())};
         data_type_ = arrow::struct_(fields_);
@@ -74,9 +77,9 @@ class PredicateBatchReaderTest : public ::testing::Test {
     void CheckResult(std::unique_ptr<BatchReader>&& reader,
                      const std::shared_ptr<Predicate>& predicate,
                      const std::shared_ptr<arrow::ChunkedArray>& expected_array) const {
-        ASSERT_OK_AND_ASSIGN(
-            auto predicate_reader,
-            PredicateBatchReader::Create(std::move(reader), predicate, GetDefaultPool()));
+        ASSERT_OK_AND_ASSIGN(auto predicate_reader, PredicateBatchReader::Create(
+                                                        std::move(reader), predicate, arrow_pool_));
+        ASSERT_EQ(arrow_pool_.get(), predicate_reader->arrow_pool_.get());
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> result_array,
                              ReadResultCollector::CollectResult(predicate_reader.get()));
         if (expected_array) {
@@ -89,6 +92,8 @@ class PredicateBatchReaderTest : public ::testing::Test {
  private:
     arrow::FieldVector fields_;
     std::shared_ptr<arrow::DataType> data_type_;
+    std::shared_ptr<MemoryPool> pool_;
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
 };
 
 TEST_F(PredicateBatchReaderTest, TestSimple) {
@@ -191,7 +196,7 @@ TEST_F(PredicateBatchReaderTest, TestFullAndEmptyCase) {
 TEST_F(PredicateBatchReaderTest, TestInvalidInput) {
     auto data_array = PrepareArray(8);
     auto reader = std::make_unique<MockFileBatchReader>(data_array, data_type_, /*batch_size=*/10);
-    ASSERT_NOK_WITH_MSG(PredicateBatchReader::Create(std::move(reader), nullptr, GetDefaultPool()),
+    ASSERT_NOK_WITH_MSG(PredicateBatchReader::Create(std::move(reader), nullptr, arrow_pool_),
                         "create predicate batch reader failed. predicate is nullptr");
 }
 

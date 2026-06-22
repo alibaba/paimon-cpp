@@ -31,16 +31,17 @@ class MemoryPool;
 AppendOnlyTableRead::AppendOnlyTableRead(const std::shared_ptr<FileStorePathFactory>& path_factory,
                                          const std::shared_ptr<InternalReadContext>& context,
                                          const std::shared_ptr<MemoryPool>& memory_pool,
+                                         const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
                                          const std::shared_ptr<Executor>& executor)
-    : TableRead(memory_pool) {
+    : TableRead(memory_pool, arrow_pool) {
     const auto& core_options = context->GetCoreOptions();
     if (core_options.DataEvolutionEnabled()) {
         // add data evolution first
-        split_reads_.push_back(
-            std::make_unique<DataEvolutionSplitRead>(path_factory, context, memory_pool, executor));
+        split_reads_.push_back(std::make_unique<DataEvolutionSplitRead>(
+            path_factory, context, memory_pool, arrow_pool, executor));
     } else {
-        split_reads_.push_back(
-            std::make_unique<RawFileSplitRead>(path_factory, context, memory_pool, executor));
+        split_reads_.push_back(std::make_unique<RawFileSplitRead>(
+            path_factory, context, memory_pool, arrow_pool, executor));
     }
 }
 

@@ -24,6 +24,7 @@
 #include "arrow/array/array_nested.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/status.h"
 #include "paimon/testing/mock/mock_file_batch_reader.h"
@@ -34,6 +35,7 @@ class CompleteRowTrackingFieldsBatchReaderTest : public testing::Test {
  public:
     void SetUp() override {
         pool_ = GetDefaultPool();
+        arrow_pool_ = GetArrowPool(pool_);
     }
 
     void CheckResult(const std::shared_ptr<arrow::Array>& src_array, int64_t first_row_id,
@@ -44,7 +46,8 @@ class CompleteRowTrackingFieldsBatchReaderTest : public testing::Test {
                 std::make_unique<MockFileBatchReader>(src_array, src_array->type(), batch_size);
             auto complete_row_tracking_fields_reader =
                 std::make_shared<CompleteRowTrackingFieldsBatchReader>(
-                    std::move(file_batch_reader), first_row_id, snapshot_id, pool_);
+                    std::move(file_batch_reader), first_row_id, snapshot_id, arrow_pool_);
+            ASSERT_EQ(arrow_pool_.get(), complete_row_tracking_fields_reader->arrow_pool_.get());
             ArrowSchema c_read_schema;
             ASSERT_TRUE(arrow::ExportSchema(*read_schema, &c_read_schema).ok());
             ASSERT_OK(complete_row_tracking_fields_reader->SetReadSchema(
@@ -68,7 +71,8 @@ class CompleteRowTrackingFieldsBatchReaderTest : public testing::Test {
             /*data=*/nullptr, arrow::struct_(file_schema->fields()), /*read_batch_size=*/1);
         auto complete_row_tracking_fields_reader =
             std::make_shared<CompleteRowTrackingFieldsBatchReader>(
-                std::move(file_batch_reader), /*first_row_id=*/10, /*snapshot_id=*/1, pool_);
+                std::move(file_batch_reader), /*first_row_id=*/10, /*snapshot_id=*/1, arrow_pool_);
+        ASSERT_EQ(arrow_pool_.get(), complete_row_tracking_fields_reader->arrow_pool_.get());
         ArrowSchema c_read_schema;
         ASSERT_TRUE(arrow::ExportSchema(*read_schema, &c_read_schema).ok());
         ASSERT_OK(
@@ -84,6 +88,7 @@ class CompleteRowTrackingFieldsBatchReaderTest : public testing::Test {
 
  private:
     std::shared_ptr<MemoryPool> pool_;
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
 };
 
 TEST_F(CompleteRowTrackingFieldsBatchReaderTest, TestSetReadSchema) {
@@ -342,7 +347,8 @@ TEST_F(CompleteRowTrackingFieldsBatchReaderTest, TestInvalidWithReadNonExistFiel
 
     auto complete_row_tracking_fields_reader =
         std::make_shared<CompleteRowTrackingFieldsBatchReader>(
-            std::move(file_batch_reader), /*first_row_id=*/100, /*snapshot_id=*/8, pool_);
+            std::move(file_batch_reader), /*first_row_id=*/100, /*snapshot_id=*/8, arrow_pool_);
+    ASSERT_EQ(arrow_pool_.get(), complete_row_tracking_fields_reader->arrow_pool_.get());
     ArrowSchema c_read_schema;
     ASSERT_TRUE(arrow::ExportSchema(*read_schema, &c_read_schema).ok());
     ASSERT_OK(
@@ -378,7 +384,8 @@ TEST_F(CompleteRowTrackingFieldsBatchReaderTest, TestInvalidNextBatchBeforeSetRe
 
     auto complete_row_tracking_fields_reader =
         std::make_shared<CompleteRowTrackingFieldsBatchReader>(
-            std::move(file_batch_reader), /*first_row_id=*/100, /*snapshot_id=*/8, pool_);
+            std::move(file_batch_reader), /*first_row_id=*/100, /*snapshot_id=*/8, arrow_pool_);
+    ASSERT_EQ(arrow_pool_.get(), complete_row_tracking_fields_reader->arrow_pool_.get());
     ASSERT_NOK_WITH_MSG(complete_row_tracking_fields_reader->NextBatchWithBitmap(),
                         "in CompleteRowTrackingFieldsBatchReader SetReadSchema is supposed to be "
                         "called before NextBatch");
@@ -407,8 +414,10 @@ TEST_F(CompleteRowTrackingFieldsBatchReaderTest, TestInvalidNullFirstRowId) {
         std::make_unique<MockFileBatchReader>(src_array, file_type, /*batch_size=*/10);
 
     auto complete_row_tracking_fields_reader =
-        std::make_shared<CompleteRowTrackingFieldsBatchReader>(
-            std::move(file_batch_reader), /*first_row_id=*/std::nullopt, /*snapshot_id=*/8, pool_);
+        std::make_shared<CompleteRowTrackingFieldsBatchReader>(std::move(file_batch_reader),
+                                                               /*first_row_id=*/std::nullopt,
+                                                               /*snapshot_id=*/8, arrow_pool_);
+    ASSERT_EQ(arrow_pool_.get(), complete_row_tracking_fields_reader->arrow_pool_.get());
     ArrowSchema c_read_schema;
     ASSERT_TRUE(arrow::ExportSchema(*read_schema, &c_read_schema).ok());
     ASSERT_OK(

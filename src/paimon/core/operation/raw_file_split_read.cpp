@@ -25,6 +25,7 @@
 #include "paimon/common/file_index/bitmap/apply_bitmap_index_batch_reader.h"
 #include "paimon/common/reader/complete_row_kind_batch_reader.h"
 #include "paimon/common/reader/concat_batch_reader.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/object_utils.h"
 #include "paimon/core/core_options.h"
@@ -54,11 +55,20 @@ RawFileSplitRead::RawFileSplitRead(const std::shared_ptr<FileStorePathFactory>& 
                                    const std::shared_ptr<InternalReadContext>& context,
                                    const std::shared_ptr<MemoryPool>& memory_pool,
                                    const std::shared_ptr<Executor>& executor)
+    : RawFileSplitRead(
+          path_factory, context, memory_pool,
+          std::shared_ptr<arrow::MemoryPool>(GetArrowPool(memory_pool)), executor) {}
+
+RawFileSplitRead::RawFileSplitRead(const std::shared_ptr<FileStorePathFactory>& path_factory,
+                                   const std::shared_ptr<InternalReadContext>& context,
+                                   const std::shared_ptr<MemoryPool>& memory_pool,
+                                   const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
+                                   const std::shared_ptr<Executor>& executor)
     : AbstractSplitRead(path_factory, context,
                         std::make_unique<SchemaManager>(context->GetCoreOptions().GetFileSystem(),
                                                         context->GetPath(),
                                                         context->GetCoreOptions().GetBranch()),
-                        memory_pool, executor) {}
+                        memory_pool, arrow_pool, executor) {}
 
 Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
     const std::shared_ptr<Split>& split) {
@@ -85,10 +95,11 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
 
     auto raw_readers =
         ObjectUtils::MoveVector<std::unique_ptr<BatchReader>>(std::move(raw_file_readers));
-    auto concat_batch_reader = std::make_unique<ConcatBatchReader>(std::move(raw_readers), pool_);
+    auto concat_batch_reader =
+        std::make_unique<ConcatBatchReader>(std::move(raw_readers), arrow_pool_);
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> batch_reader,
                            ApplyPredicateFilterIfNeeded(std::move(concat_batch_reader), predicate));
-    return std::make_unique<CompleteRowKindBatchReader>(std::move(batch_reader), pool_);
+    return std::make_unique<CompleteRowKindBatchReader>(std::move(batch_reader), arrow_pool_);
 }
 
 Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(

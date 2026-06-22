@@ -30,23 +30,27 @@ class InternalReadContext;
 class MemoryPool;
 
 KeyValueTableRead::KeyValueTableRead(std::vector<std::unique_ptr<SplitRead>>&& split_reads,
-                                     const std::shared_ptr<MemoryPool>& memory_pool)
-    : TableRead(memory_pool), split_reads_(std::move(split_reads)) {}
+                                     const std::shared_ptr<MemoryPool>& memory_pool,
+                                     const std::shared_ptr<arrow::MemoryPool>& arrow_pool)
+    : TableRead(memory_pool, arrow_pool), split_reads_(std::move(split_reads)) {}
 
 Result<std::unique_ptr<TableRead>> KeyValueTableRead::Create(
     const std::shared_ptr<FileStorePathFactory>& path_factory,
     const std::shared_ptr<InternalReadContext>& context,
-    const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor) {
-    auto raw_file_split_read =
-        std::make_unique<RawFileSplitRead>(path_factory, context, memory_pool, executor);
+    const std::shared_ptr<MemoryPool>& memory_pool,
+    const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
+    const std::shared_ptr<Executor>& executor) {
+    auto raw_file_split_read = std::make_unique<RawFileSplitRead>(
+        path_factory, context, memory_pool, arrow_pool, executor);
     std::vector<std::unique_ptr<SplitRead>> split_reads;
     split_reads.emplace_back(std::move(raw_file_split_read));
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<MergeFileSplitRead> merge_file_split_read,
-        MergeFileSplitRead::Create(path_factory, context, memory_pool, executor));
+        MergeFileSplitRead::Create(path_factory, context, memory_pool, arrow_pool, executor));
     split_reads.emplace_back(std::move(merge_file_split_read));
 
-    return std::unique_ptr<TableRead>(new KeyValueTableRead(std::move(split_reads), memory_pool));
+    return std::unique_ptr<TableRead>(
+        new KeyValueTableRead(std::move(split_reads), memory_pool, arrow_pool));
 }
 
 Result<std::unique_ptr<BatchReader>> KeyValueTableRead::CreateReader(

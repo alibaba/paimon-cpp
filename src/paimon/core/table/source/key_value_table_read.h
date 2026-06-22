@@ -38,13 +38,16 @@ class KeyValueTableRead : public TableRead {
     static Result<std::unique_ptr<TableRead>> Create(
         const std::shared_ptr<FileStorePathFactory>& path_factory,
         const std::shared_ptr<InternalReadContext>& context,
-        const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor);
+        const std::shared_ptr<MemoryPool>& memory_pool,
+        const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
+        const std::shared_ptr<Executor>& executor);
 
     Result<std::unique_ptr<BatchReader>> CreateReader(const std::shared_ptr<Split>& split) override;
 
  private:
     KeyValueTableRead(std::vector<std::unique_ptr<SplitRead>>&& split_reads,
-                      const std::shared_ptr<MemoryPool>& memory_pool);
+                      const std::shared_ptr<MemoryPool>& memory_pool,
+                      const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
 
     std::vector<std::unique_ptr<SplitRead>> split_reads_;
     bool force_keep_delete_ = false;

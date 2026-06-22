@@ -55,6 +55,7 @@ class KeyValueProjectionReaderTest : public testing::Test,
  public:
     void SetUp() override {
         pool_ = GetDefaultPool();
+        arrow_pool_ = GetArrowPool(pool_);
     }
 
     std::unique_ptr<BatchReader> GenerateProjectionReader(
@@ -91,15 +92,16 @@ class KeyValueProjectionReaderTest : public testing::Test,
             std::move(concat_readers), user_key_comparator,
             /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper);
         if (!multi_thread_row_to_batch) {
-            EXPECT_OK_AND_ASSIGN(auto projection_reader, KeyValueProjectionReader::Create(
-                                                             std::move(sort_merge_reader),
-                                                             target_schema, target_to_src_mapping,
-                                                             /*batch_size=*/batch_size, pool_));
+            EXPECT_OK_AND_ASSIGN(
+                auto projection_reader,
+                KeyValueProjectionReader::Create(std::move(sort_merge_reader), target_schema,
+                                                 target_to_src_mapping,
+                                                 /*batch_size=*/batch_size, arrow_pool_));
             return std::move(projection_reader);
         } else {
             return std::make_unique<AsyncKeyValueProjectionReader>(
                 std::move(sort_merge_reader), target_schema, target_to_src_mapping, batch_size,
-                /*projection_thread_num=*/3, pool_);
+                /*projection_thread_num=*/3, pool_, arrow_pool_);
         }
     }
 
@@ -144,6 +146,7 @@ class KeyValueProjectionReaderTest : public testing::Test,
                     dynamic_cast<KeyValueProjectionReader*>(projection_reader.get());
                 ASSERT_TRUE(typed_projection_reader);
                 auto& consumer = typed_projection_reader->key_value_consumer_;
+                ASSERT_EQ(arrow_pool_.get(), consumer->arrow_pool_.get());
                 ASSERT_EQ(consumer->reserved_sizes_.size(), expected_reserve_count);
                 for (const auto& reserved_size : consumer->reserved_sizes_) {
                     ASSERT_GT(reserved_size, 0);
@@ -154,6 +157,7 @@ class KeyValueProjectionReaderTest : public testing::Test,
 
  private:
     std::shared_ptr<MemoryPool> pool_;
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
 };
 
 TEST_P(KeyValueProjectionReaderTest, TestBulkData) {

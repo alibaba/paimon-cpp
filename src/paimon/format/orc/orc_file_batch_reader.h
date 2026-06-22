@@ -44,6 +44,10 @@ class OrcFileBatchReader : public PrefetchFileBatchReader {
     ~OrcFileBatchReader() override = default;
     static Result<std::unique_ptr<OrcFileBatchReader>> Create(
         std::unique_ptr<::orc::InputStream>&& input_stream, const std::shared_ptr<MemoryPool>& pool,
+        const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
+        const std::map<std::string, std::string>& options, int32_t batch_size);
+    static Result<std::unique_ptr<OrcFileBatchReader>> Create(
+        std::unique_ptr<::orc::InputStream>&& input_stream, const std::shared_ptr<MemoryPool>& pool,
         const std::map<std::string, std::string>& options, int32_t batch_size);
 
     // For timestamp type, precision info is missing from file
@@ -58,8 +62,8 @@ class OrcFileBatchReader : public PrefetchFileBatchReader {
         return reader_->SetReadRanges(read_ranges);
     }
 
-    // Important: output ArrowArray is allocated on arrow_pool_ whose lifecycle holds in
-    // OrcFileBatchReader. Therefore, we need to hold BatchReader when using output ArrowArray.
+    // Output ArrowArray buffers use arrow_pool_. The caller must keep a related reader from the
+    // TableRead reader chain alive while using the returned ArrowArray.
     Result<ReadBatch> NextBatch() override;
 
     Result<uint64_t> GetPreviousBatchFirstRowNumber() const override {

@@ -31,9 +31,11 @@
 #include "gtest/gtest.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/factories/io_hook.h"
+#include "paimon/common/reader/complete_row_kind_batch_reader.h"
 #include "paimon/common/reader/concat_batch_reader.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/fields_comparator.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/core_options.h"
@@ -347,19 +349,26 @@ class MergeFileSplitReadTest : public ::testing::Test,
                 pool_));
         PAIMON_ASSIGN_OR_RAISE(auto split_read,
                                MergeFileSplitRead::Create(path_factory, std::move(internal_context),
-                                                          pool_, executor_));
+                                                          pool_, arrow_pool_, executor_));
         std::vector<std::unique_ptr<BatchReader>> batch_readers;
         batch_readers.reserve(data_splits.size());
         for (const auto& split : data_splits) {
             PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> reader,
                                    split_read->CreateReader(split));
+            auto* row_kind_reader = dynamic_cast<CompleteRowKindBatchReader*>(reader.get());
+            EXPECT_NE(nullptr, row_kind_reader);
+            EXPECT_EQ(arrow_pool_.get(), row_kind_reader->arrow_pool_.get());
             batch_readers.emplace_back(std::move(reader));
         }
-        return std::make_unique<ConcatBatchReader>(std::move(batch_readers), pool_);
+        auto concat_reader =
+            std::make_unique<ConcatBatchReader>(std::move(batch_readers), arrow_pool_);
+        EXPECT_EQ(arrow_pool_.get(), concat_reader->arrow_pool_.get());
+        return concat_reader;
     }
 
  private:
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_ = GetArrowPool(pool_);
     std::shared_ptr<FileSystem> fs_ = std::make_shared<LocalFileSystem>();
     std::shared_ptr<Executor> executor_ = CreateDefaultExecutor(/*thread_count=*/4);
 };
@@ -620,9 +629,9 @@ TEST_P(MergeFileSplitReadTest, TestSimple) {
 
     auto internal_context = CreateInternalReadContext(read_context);
 
-    ASSERT_OK_AND_ASSIGN(
-        std::unique_ptr<MergeFileSplitRead> split_read,
-        MergeFileSplitRead::Create(/*path_factory=*/nullptr, internal_context, pool_, executor_));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<MergeFileSplitRead> split_read,
+                         MergeFileSplitRead::Create(/*path_factory=*/nullptr, internal_context,
+                                                    pool_, arrow_pool_, executor_));
     auto data_splits = PrepareDataSplit();
 
     // test split read match

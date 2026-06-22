@@ -54,7 +54,7 @@ class DataEvolutionFileReader : public BatchReader {
         std::vector<std::unique_ptr<BatchReader>>&& readers,
         const std::shared_ptr<arrow::Schema>& read_schema, int32_t read_batch_size,
         const std::vector<int32_t>& reader_offsets, const std::vector<int32_t>& field_offsets,
-        const std::shared_ptr<MemoryPool>& pool);
+        const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
 
     Result<ReadBatch> NextBatch() override {
         return Status::Invalid(

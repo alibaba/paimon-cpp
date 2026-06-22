@@ -27,6 +27,7 @@
 #include "gtest/gtest.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/format/file_format.h"
 #include "paimon/format/file_format_factory.h"
 #include "paimon/fs/file_system.h"
@@ -43,6 +44,7 @@ class CompleteRowKindBatchReaderTest : public ::testing::Test {
  public:
     void SetUp() override {
         pool_ = GetDefaultPool();
+        arrow_pool_ = GetArrowPool(pool_);
     }
 
     void TearDown() override {
@@ -64,18 +66,25 @@ class CompleteRowKindBatchReaderTest : public ::testing::Test {
         EXPECT_TRUE(arrow_status.ok());
         EXPECT_OK(orc_batch_reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr,
                                                   /*selection_bitmap=*/std::nullopt));
-        return std::make_unique<CompleteRowKindBatchReader>(std::move(orc_batch_reader), pool_);
+        auto reader =
+            std::make_unique<CompleteRowKindBatchReader>(std::move(orc_batch_reader), arrow_pool_);
+        EXPECT_EQ(arrow_pool_.get(), reader->arrow_pool_.get());
+        return reader;
     }
 
     std::unique_ptr<BatchReader> PrepareCompleteRowKindBatchReader(
         const std::shared_ptr<arrow::Array>& src_array, int32_t batch_size) const {
         auto file_batch_reader =
             std::make_unique<MockFileBatchReader>(src_array, src_array->type(), batch_size);
-        return std::make_unique<CompleteRowKindBatchReader>(std::move(file_batch_reader), pool_);
+        auto reader =
+            std::make_unique<CompleteRowKindBatchReader>(std::move(file_batch_reader), arrow_pool_);
+        EXPECT_EQ(arrow_pool_.get(), reader->arrow_pool_.get());
+        return reader;
     }
 
  private:
     std::shared_ptr<MemoryPool> pool_;
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
 };
 
 TEST_F(CompleteRowKindBatchReaderTest, TestSimple) {

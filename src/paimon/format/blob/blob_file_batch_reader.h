@@ -89,6 +89,10 @@ class BlobFileBatchReader : public FileBatchReader {
 
     static Result<std::unique_ptr<BlobFileBatchReader>> Create(
         const std::shared_ptr<InputStream>& input_stream, int32_t batch_size,
+        bool blob_as_descriptor, const std::shared_ptr<MemoryPool>& pool,
+        const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
+    static Result<std::unique_ptr<BlobFileBatchReader>> Create(
+        const std::shared_ptr<InputStream>& input_stream, int32_t batch_size,
         bool blob_as_descriptor, const std::shared_ptr<MemoryPool>& pool);
 
     Result<std::unique_ptr<::ArrowSchema>> GetFileSchema() const override;
@@ -134,7 +138,8 @@ class BlobFileBatchReader : public FileBatchReader {
     BlobFileBatchReader(const std::shared_ptr<InputStream>& input_stream,
                         const std::string& file_path, const std::vector<int64_t>& blob_lengths,
                         const std::vector<int64_t>& blob_offsets, int32_t batch_size,
-                        bool blob_as_descriptor, const std::shared_ptr<MemoryPool>& pool);
+                        bool blob_as_descriptor, const std::shared_ptr<MemoryPool>& pool,
+                        const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
 
     Result<std::shared_ptr<arrow::Array>> ToArrowArray(
         const std::vector<PAIMON_UNIQUE_PTR<Bytes>>& blobs) const;

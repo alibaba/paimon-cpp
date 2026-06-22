@@ -56,6 +56,14 @@ OrcFileBatchReader::OrcFileBatchReader(std::unique_ptr<::orc::ReaderMetrics>&& r
 Result<std::unique_ptr<OrcFileBatchReader>> OrcFileBatchReader::Create(
     std::unique_ptr<::orc::InputStream>&& input_stream, const std::shared_ptr<MemoryPool>& pool,
     const std::map<std::string, std::string>& options, int32_t batch_size) {
+    std::shared_ptr<arrow::MemoryPool> arrow_pool = GetArrowPool(pool);
+    return Create(std::move(input_stream), pool, arrow_pool, options, batch_size);
+}
+
+Result<std::unique_ptr<OrcFileBatchReader>> OrcFileBatchReader::Create(
+    std::unique_ptr<::orc::InputStream>&& input_stream, const std::shared_ptr<MemoryPool>& pool,
+    const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
+    const std::map<std::string, std::string>& options, int32_t batch_size) {
     assert(input_stream);
     std::string file_name = input_stream->getName();
     try {
@@ -65,7 +73,6 @@ Result<std::unique_ptr<OrcFileBatchReader>> OrcFileBatchReader::Create(
         }
         uint64_t natural_read_size = input_stream->getNaturalReadSize();
         auto orc_pool = std::make_shared<OrcMemoryPool>(pool);
-        std::shared_ptr<arrow::MemoryPool> arrow_pool = GetArrowPool(pool);
         reader_options.setMemoryPool(*orc_pool);
 
         std::unique_ptr<::orc::ReaderMetrics> reader_metrics;
