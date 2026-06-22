@@ -610,8 +610,8 @@ TEST_F(ParquetFileBatchReaderTest, TestReadSchemaWithMapSelectedKeysMetadata) {
 
     // selected-keys metadata is consumed by upper-level field mapping; format reader should
     // still accept the schema and read data correctly.
-    auto read_schema =
-        MakeReadSchema({id_field, WithMapSelectedKeys(map_field, "k1,k3")});  // NOLINT(whitespace/comma)
+    auto read_schema = MakeReadSchema(
+        {id_field, WithMapSelectedKeys(map_field, "k1,k3")});  // NOLINT(whitespace/comma)
 
     auto parquet_batch_reader =
         PrepareParquetFileBatchReader(file_path_, read_schema, /*predicate=*/nullptr,
