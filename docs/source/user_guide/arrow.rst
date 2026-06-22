@@ -120,3 +120,35 @@ Conversion boundaries
   * Export/import data to other Arrow-compatible engines with zero or minimal copies.
 
 - Keep these adapters independent from heavy Arrow C++ SDK dependencies.
+
+TableRead-scoped Arrow memory pool lifetime
+-------------------------------------------
+
+Reader components can allocate Arrow buffers through an adaptor from the Paimon
+memory pool to ``arrow::MemoryPool``. Arrays returned through the Arrow C Data
+Interface may keep buffers that reference this adaptor during release.
+
+The table read path therefore scopes the Arrow memory-pool adaptor to a
+``TableRead`` session instead of an individual ``BatchReader``. A ``TableRead``
+creates one adaptor and shares it with the readers and reader wrappers created
+for that read session.
+
+This ownership model keeps the adaptor alive while the owning ``TableRead`` is
+alive, even if an individual ``BatchReader`` has been closed or destroyed. It
+allows callers to release Arrow C Data objects returned by ``NextBatch()`` after
+the corresponding reader is closed, as long as the ``TableRead`` session still
+owns the shared pool.
+
+The lifetime guarantee is intentionally scoped:
+
+- Returned Arrow arrays may outlive an individual ``BatchReader``.
+- Returned Arrow arrays are not guaranteed to outlive the owning ``TableRead``.
+- Different ``TableRead`` instances use distinct Arrow memory-pool adaptors,
+  even when they are created from the same Paimon memory pool.
+- Standalone format readers, writers, metadata readers, and other paths not
+  created through ``TableRead`` may still manage their own adaptors.
+
+Components in the ``TableRead`` construction path must use the supplied shared
+Arrow memory pool instead of constructing another adaptor from the same Paimon
+memory pool. This keeps ownership explicit and avoids mixing statistics or
+lifetime state across independent table read sessions.
