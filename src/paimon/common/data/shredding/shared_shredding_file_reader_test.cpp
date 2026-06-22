@@ -106,14 +106,8 @@ class SharedShreddingFileReaderTest : public ::testing::Test {
         auto mock_reader = std::make_unique<MockFileBatchReader>(
             physical_array, arrow::struct_(physical_schema->fields()), /*read_batch_size=*/10);
         mock_reader->EnableRandomizeBatchSize(false);
-        EXPECT_OK_AND_ASSIGN(
-            auto table_schema,
-            TableSchema::Create(TableSchema::FIRST_SCHEMA_ID, logical_schema_,
-                                /*partition_keys=*/{}, /*primary_keys=*/{}, options_));
-        EXPECT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options_));
         EXPECT_OK_AND_ASSIGN(auto shared_shredding_reader,
-                             SharedShreddingFileReader::Create(std::move(mock_reader), core_options,
-                                                               *table_schema, pool_));
+                             SharedShreddingFileReader::Create(std::move(mock_reader), pool_));
         return shared_shredding_reader;
     }
 
@@ -161,11 +155,12 @@ class SharedShreddingFileReaderTest : public ::testing::Test {
         return path_factory;
     }
 
-    std::unique_ptr<FileBatchReader> OpenFormatReader(const std::string& file_path,
-                                                      const std::string& format) const {
+    std::unique_ptr<FileBatchReader> OpenFormatReader(
+        const std::string& file_path, const std::string& format,
+        const std::map<std::string, std::string>& options = {}) const {
         auto fs = std::make_shared<LocalFileSystem>();
         EXPECT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream, fs->Open(file_path));
-        EXPECT_OK_AND_ASSIGN(auto file_format, FileFormatFactory::Get(format, /*options=*/{}));
+        EXPECT_OK_AND_ASSIGN(auto file_format, FileFormatFactory::Get(format, options));
         EXPECT_OK_AND_ASSIGN(auto reader_builder,
                              file_format->CreateReaderBuilder(/*batch_size=*/10));
         return reader_builder->Build(input_stream).value();
@@ -225,7 +220,6 @@ TEST_F(SharedShreddingFileReaderTest, TestAllExistSelectedKeysWithOverflow) {
     auto read_schema = ExportSchema(ReadSchema("a,c"));
     ASSERT_OK(reader->SetReadSchema(read_schema.get(), /*predicate=*/nullptr,
                                     /*selection_bitmap=*/std::nullopt));
-
     ASSERT_OK_AND_ASSIGN(auto actual, ReadResultCollector::CollectResult(reader.get()));
 
     std::shared_ptr<arrow::ChunkedArray> expected;
@@ -267,7 +261,7 @@ TEST_F(SharedShreddingFileReaderTest, TestDuplicatedSelectedKeys) {
     auto read_schema = ExportSchema(ReadSchema("a,c,a"));
     ASSERT_NOK_WITH_MSG(reader->SetReadSchema(read_schema.get(), /*predicate=*/nullptr,
                                               /*selection_bitmap=*/std::nullopt),
-                        "duplicate key a in paimon.map.selected-keys for field tags");
+                        "duplicate key [a] in paimon.map.selected-keys for field tags");
 }
 
 TEST_F(SharedShreddingFileReaderTest, TestMissingSelectedKeysReadsWholeMap) {
@@ -343,12 +337,12 @@ TEST_F(SharedShreddingFileReaderTest, TestSpecialSelectedKeys) {
 }
 
 TEST_F(SharedShreddingFileReaderTest, TestSpecialSelectedKeysWithDuplicatedEmptyKey) {
-    for (const std::string& selected_keys : {",", ",,"}) {
+    for (const auto& selected_keys : {",", ",,"}) {
         auto reader = CreateReader();
         auto read_schema = ExportSchema(ReadSchema(selected_keys));
         ASSERT_NOK_WITH_MSG(reader->SetReadSchema(read_schema.get(), /*predicate=*/nullptr,
                                                   /*selection_bitmap=*/std::nullopt),
-                            "duplicate key  in paimon.map.selected-keys for field tags");
+                            "duplicate key [] in paimon.map.selected-keys for field tags");
     }
 }
 
@@ -405,6 +399,124 @@ TEST_F(SharedShreddingFileReaderTest, TestInvalidNullFieldMappingFieldElement) {
                         "__field_mapping element cannot be null");
 }
 
+TEST_F(SharedShreddingFileReaderTest, TestListValue) {
+    std::shared_ptr<arrow::Schema> logical_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::list(arrow::int32()))),
+    });
+    MapSharedShreddingFieldMeta meta;
+    meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}};
+    meta.field_to_columns = {{0, {0, 1}}, {1, {0}}, {2, {0}}};
+    meta.overflow_field_set = {2};
+    meta.num_columns = 2;
+    meta.max_row_width = 3;
+
+    std::map<std::string, int32_t> field_to_num_columns = {{"tags", 2}};
+    ASSERT_OK_AND_ASSIGN(auto physical_schema,
+                         MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                             logical_schema, field_to_num_columns));
+    auto metadata = std::make_shared<arrow::KeyValueMetadata>();
+    ASSERT_OK(MapSharedShreddingUtils::SerializeMetadata(
+        meta, MapSharedShreddingDefine::kDefaultDictCompression, metadata.get()));
+    arrow::FieldVector physical_fields = physical_schema->fields();
+    physical_fields[1] = physical_fields[1]->WithMetadata(metadata);
+    physical_schema = arrow::schema(std::move(physical_fields));
+
+    auto physical_array = arrow::ipc::internal::json::ArrayFromJSON(
+                              arrow::struct_(physical_schema->fields()), R"([
+        [1, [[0, 1], [1, null, 2], [3], null]],
+        [2, [[2, 0], [5, 6], [7], null]],
+        [3, null],
+        [4, [[1, 0], [8], [9, 10], [[2, [null]]]]]
+    ])")
+                              .ValueOrDie();
+    auto reader = CreateReader(physical_array, physical_schema);
+
+    auto read_metadata = std::make_shared<arrow::KeyValueMetadata>();
+    read_metadata->Append("paimon.map.selected-keys", "a,c");
+    arrow::FieldVector read_fields = logical_schema->fields();
+    read_fields[1] = read_fields[1]->WithMetadata(read_metadata);
+    auto read_schema = ExportSchema(arrow::schema(std::move(read_fields)));
+    ASSERT_OK(reader->SetReadSchema(read_schema.get(), /*predicate=*/nullptr,
+                                    /*selection_bitmap=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto actual, ReadResultCollector::CollectResult(reader.get()));
+
+    std::shared_ptr<arrow::ChunkedArray> expected;
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(
+                    arrow::struct_(logical_schema->fields()), {R"([
+                        [1, [["a", [1, null, 2]]]],
+                        [2, [["a", [7]], ["c", [5, 6]]]],
+                        [3, null],
+                        [4, [["a", [9, 10]], ["c", [null]]]]
+                    ])"},
+                    &expected)
+                    .ok());
+    AssertChunkedArrayEquals(expected, actual);
+}
+
+TEST_F(SharedShreddingFileReaderTest, TestOrcDictionaryEncodedStringValue) {
+    std::shared_ptr<arrow::Schema> logical_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::utf8())),
+    });
+    auto options = options_;
+    std::string format = "orc";
+    options[Options::FILE_FORMAT] = format;
+    options["orc.dictionary-key-size-threshold"] = "1";
+    ASSERT_OK_AND_ASSIGN(auto table_schema,
+                         TableSchema::Create(TableSchema::FIRST_SCHEMA_ID, logical_schema,
+                                             /*partition_keys=*/{}, /*primary_keys=*/{}, options));
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    auto path_factory = CreatePathFactory(dir->Str(), format, core_options);
+    auto compact_manager = std::make_shared<NoopCompactManager>();
+    ASSERT_OK_AND_ASSIGN(
+        auto writer,
+        AppendOnlyWriter::Create(core_options, /*schema_id=*/0, logical_schema,
+                                 /*write_cols=*/std::nullopt,
+                                 /*max_sequence_number=*/-1, path_factory, compact_manager, pool_));
+    auto batch = CreateBatch(logical_schema, R"([
+        [1, [["a", "red"], ["b", "blue"]]],
+        [2, [["c", "green"], ["a", "red"], ["b", "blue"]]],
+        [3, null],
+        [4, [["d", "yellow"], ["e", "blue"], ["c", null], ["a", "red"]]]
+    ])");
+    ASSERT_OK(writer->Write(std::move(batch)));
+    ASSERT_OK_AND_ASSIGN(auto inc, writer->PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_OK(writer->Close());
+
+    std::string data_file_path =
+        path_factory->ToPath(inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
+    std::map<std::string, std::string> reader_options = {
+        {"orc.read.enable-lazy-decoding", "true"}};
+    ASSERT_OK_AND_ASSIGN(
+        auto reader,
+        SharedShreddingFileReader::Create(
+            OpenFormatReader(data_file_path, format, reader_options), pool_));
+
+    auto read_metadata = std::make_shared<arrow::KeyValueMetadata>();
+    read_metadata->Append("paimon.map.selected-keys", "a,c");
+    arrow::FieldVector read_fields = logical_schema->fields();
+    read_fields[1] = read_fields[1]->WithMetadata(read_metadata);
+    auto read_schema = ExportSchema(arrow::schema(std::move(read_fields)));
+    ASSERT_OK(reader->SetReadSchema(read_schema.get(), /*predicate=*/nullptr,
+                                    /*selection_bitmap=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto actual, ReadResultCollector::CollectResult(reader.get()));
+    std::shared_ptr<arrow::ChunkedArray> expected;
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(
+                    arrow::struct_(logical_schema->fields()), {R"([
+                        [1, [["a", "red"]]],
+                        [2, [["a", "red"], ["c", "green"]]],
+                        [3, null],
+                        [4, [["a", "red"], ["c", null]]]
+                    ])"},
+                    &expected)
+                    .ok());
+    AssertChunkedArrayEquals(expected, actual);
+}
+
 TEST_F(SharedShreddingFileReaderTest, TestReadsRealFormatFile) {
     // TODO(lisizhuo.lsz): support other format
     auto options = options_;
@@ -437,8 +549,8 @@ TEST_F(SharedShreddingFileReaderTest, TestReadsRealFormatFile) {
     std::string data_file_path =
         path_factory->ToPath(inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
     ASSERT_OK_AND_ASSIGN(auto reader,
-                         SharedShreddingFileReader::Create(OpenFormatReader(data_file_path, format),
-                                                           core_options, *table_schema, pool_));
+                         SharedShreddingFileReader::Create(
+                             OpenFormatReader(data_file_path, format), pool_));
 
     auto read_schema = ExportSchema(ReadSchema("a,c"));
     ASSERT_OK(reader->SetReadSchema(read_schema.get(), /*predicate=*/nullptr,

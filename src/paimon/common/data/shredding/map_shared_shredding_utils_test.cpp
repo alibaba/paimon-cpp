@@ -170,7 +170,7 @@ TEST(MapSharedShreddingUtilsTest, BuildSpecificPhysicalStructTypeWithOverflow) {
         /*include_overflow=*/true);
 
     auto expected = arrow::struct_({
-        arrow::field("__field_mapping", arrow::list(arrow::int32()), false),
+        arrow::field("__field_mapping", arrow::list(arrow::int32()), true),
         arrow::field("__col_1", arrow::int64(), false),
         arrow::field("__col_3", arrow::int64(), false),
         arrow::field("__overflow",
@@ -188,7 +188,7 @@ TEST(MapSharedShreddingUtilsTest, BuildSpecificPhysicalStructTypeWithoutOverflow
         /*include_overflow=*/false);
 
     auto expected = arrow::struct_({
-        arrow::field("__field_mapping", arrow::list(arrow::int32()), false),
+        arrow::field("__field_mapping", arrow::list(arrow::int32()), true),
         arrow::field("__col_3", arrow::utf8(), true),
     });
     ASSERT_TRUE(actual->Equals(*expected)) << "Expected:\n"
@@ -451,14 +451,14 @@ TEST(MapSharedShreddingUtilsTest, GetPhysicalColumnIndicesFieldNotFound) {
 
     ASSERT_NOK_WITH_MSG(
         MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "nonexistent"),
-        "cannot find field nonexistent in map shared sharedding meta");
+        "cannot find field nonexistent in map shared shredding meta");
 }
 
 // Error: field name not found in empty meta
 TEST(MapSharedShreddingUtilsTest, GetPhysicalColumnIndicesEmptyMeta) {
     MapSharedShreddingFieldMeta meta;
     ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "any"),
-                        "cannot find field any in map shared sharedding meta");
+                        "cannot find field any in map shared shredding meta");
 }
 
 // Error: field id exists in name_to_id but is missing from field_to_columns
@@ -470,7 +470,7 @@ TEST(MapSharedShreddingUtilsTest, GetPhysicalColumnIndicesFieldIdMissingInFieldT
 
     ASSERT_NOK_WITH_MSG(
         MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "score"),
-        "cannot find field id 42 in field_to_columns in map shared sharedding meta");
+        "cannot find field id 42 in field_to_columns in map shared shredding meta");
 }
 
 TEST(MapSharedShreddingUtilsTest, IsOverflowField) {
@@ -488,7 +488,7 @@ TEST(MapSharedShreddingUtilsTest, IsOverflowField) {
     ASSERT_TRUE(c_overflow);
 
     ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::IsOverflowField(meta, "missing"),
-                        "cannot find field missing in map shared sharedding meta");
+                        "cannot find field missing in map shared shredding meta");
 }
 
 }  // namespace paimon::test

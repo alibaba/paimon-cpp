@@ -88,12 +88,14 @@ class MapSharedShreddingUtils {
         const std::shared_ptr<arrow::Schema>& logical_schema,
         const std::map<std::string, int32_t>& field_to_num_columns);
 
-    /// Builds a projected physical Struct type for one shredding MAP column.
-    /// The struct always contains __field_mapping and only the requested physical columns.
+    /// Builds the physical Arrow type for one shredding MAP column with physical_col_ids.
+    /// @param value_type The value type of the original MAP.
+    /// @param physical_col_ids The set of physical column ids to include.
+    /// @param value_nullable Whether the MAP's value field is nullable.
+    /// @param include_overflow Whether to include __overflow column.
     static std::shared_ptr<arrow::DataType> BuildSpecificPhysicalStructType(
         const std::shared_ptr<arrow::DataType>& value_type,
-        const std::set<int32_t>& physical_col_ids, bool value_nullable,
-        bool include_overflow = false);
+        const std::set<int32_t>& physical_col_ids, bool value_nullable, bool include_overflow);
 
     /// Builds field_to_num_columns map from DetectShreddingColumns result and CoreOptions.
     /// @param shredding_field_names Field names returned by DetectShreddingColumns.
@@ -150,6 +152,15 @@ class MapSharedShreddingUtils {
     static std::shared_ptr<arrow::DataType> BuildPhysicalStructType(
         const std::shared_ptr<arrow::DataType>& value_type, int32_t num_columns,
         bool value_nullable);
+
+    /// Builds the physical Arrow type for one shredding MAP column with sorted_cols.
+    /// @param value_type The value type of the original MAP.
+    /// @param sorted_cols The vector of physical column ids to include.
+    /// @param value_nullable Whether the MAP's value field is nullable.
+    /// @param include_overflow Whether to include __overflow column.
+    static std::shared_ptr<arrow::DataType> InnerBuildSpecificPhysicalStructType(
+        const std::shared_ptr<arrow::DataType>& value_type, const std::vector<int32_t>& sorted_cols,
+        bool value_nullable, bool include_overflow);
 };
 
 }  // namespace paimon
