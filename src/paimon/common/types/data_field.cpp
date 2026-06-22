@@ -200,11 +200,11 @@ std::shared_ptr<arrow::Field> DataField::MergeFieldMetadataByWhitelist(
 DataField DataField::MergeFieldMetadataByWhitelist(
     const DataField& target_field, const DataField& source_field,
     const std::vector<std::string>& metadata_keys_whitelist) {
-    return DataField(target_field.Id(),
-                     MergeFieldMetadataByWhitelist(target_field.ArrowField(),
-                                                   source_field.ArrowField(),
-                                                   metadata_keys_whitelist),
-                     target_field.Description());
+    return DataField(
+        target_field.Id(),
+        MergeFieldMetadataByWhitelist(target_field.ArrowField(), source_field.ArrowField(),
+                                      metadata_keys_whitelist),
+        target_field.Description());
 }
 
 }  // namespace paimon

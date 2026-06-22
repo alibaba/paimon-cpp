@@ -229,9 +229,8 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySel
     }
 
     if (array->type_id() != arrow::Type::MAP) {
-        return Status::Invalid(
-            fmt::format("FilterMapArrayBySelectedKeys requires map array, got {}",
-                        array->type()->ToString()));
+        return Status::Invalid(fmt::format(
+            "FilterMapArrayBySelectedKeys requires map array, got {}", array->type()->ToString()));
     }
 
     auto map_array = std::static_pointer_cast<arrow::MapArray>(array);
@@ -282,9 +281,8 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySel
 
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::unique_ptr<arrow::ArrayBuilder> key_builder_u,
                                       arrow::MakeBuilder(arrow::utf8(), pool));
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-        std::unique_ptr<arrow::ArrayBuilder> value_builder_u,
-        arrow::MakeBuilder(values_array->type(), pool));
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::unique_ptr<arrow::ArrayBuilder> value_builder_u,
+                                      arrow::MakeBuilder(values_array->type(), pool));
     arrow::MapBuilder map_builder(pool, std::move(key_builder_u), std::move(value_builder_u));
     auto* key_builder = static_cast<arrow::StringBuilder*>(map_builder.key_builder());
     auto* value_builder = map_builder.item_builder();

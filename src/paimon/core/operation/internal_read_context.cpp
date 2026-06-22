@@ -65,7 +65,7 @@ Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTab
         auto rebased_type = arrow::struct_(rebased_children);
         auto aligned_field = table_field->WithType(rebased_type);
         return DataField::MergeFieldMetadataByWhitelist(aligned_field, read_field,
-                                kReadMetadataWhitelist);
+                                                        kReadMetadataWhitelist);
     }
 
     if (type_id == arrow::Type::LIST) {
@@ -77,7 +77,7 @@ Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTab
         auto rebased_type = arrow::list(rebased_value_field);
         auto aligned_field = table_field->WithType(rebased_type);
         return DataField::MergeFieldMetadataByWhitelist(aligned_field, read_field,
-                                kReadMetadataWhitelist);
+                                                        kReadMetadataWhitelist);
     }
 
     if (type_id == arrow::Type::MAP) {
@@ -92,7 +92,7 @@ Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTab
         auto rebased_type = arrow::map(rebased_key_field->type(), rebased_item_field);
         auto aligned_field = table_field->WithType(rebased_type);
         return DataField::MergeFieldMetadataByWhitelist(aligned_field, read_field,
-                                kReadMetadataWhitelist);
+                                                        kReadMetadataWhitelist);
     }
 
     if (!read_field->type()->Equals(table_field->type())) {

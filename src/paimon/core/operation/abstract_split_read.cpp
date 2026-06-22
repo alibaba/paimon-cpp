@@ -205,11 +205,10 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingRe
         return std::unique_ptr<FileBatchReader>();
     }
 
-    PAIMON_ASSIGN_OR_RAISE(
-        std::unique_ptr<FieldMappingReader> mapping_reader,
-        FieldMappingReader::Create(field_mapping_builder->GetReadFieldCount(),
-                                   std::move(final_reader), partition,
-                                   std::move(field_mapping), pool_));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FieldMappingReader> mapping_reader,
+                           FieldMappingReader::Create(field_mapping_builder->GetReadFieldCount(),
+                                                      std::move(final_reader), partition,
+                                                      std::move(field_mapping), pool_));
     return mapping_reader;
 }
 

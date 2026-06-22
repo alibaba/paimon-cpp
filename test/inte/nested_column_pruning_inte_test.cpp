@@ -922,9 +922,9 @@ TEST_P(NestedColumnPruningInteTest, MapSelectedKeysWithOrcDictionaryEncodedMap) 
     ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_splits));
     ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
 
-    ASSERT_OK_AND_ASSIGN(auto decoded_result,
-                         DictArrayConverter::ConvertDictArray(read_result->chunk(0),
-                                                              arrow::default_memory_pool()));
+    ASSERT_OK_AND_ASSIGN(
+        auto decoded_result,
+        DictArrayConverter::ConvertDictArray(read_result->chunk(0), arrow::default_memory_pool()));
     auto actual_chunked = std::make_shared<arrow::ChunkedArray>(decoded_result);
 
     auto expected_type = arrow::struct_({

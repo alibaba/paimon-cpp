@@ -16,9 +16,9 @@
 
 #include "paimon/core/utils/nested_projection_utils.h"
 
+#include "arrow/array/array_nested.h"
 #include "arrow/array/builder_binary.h"
 #include "arrow/array/builder_dict.h"
-#include "arrow/array/array_nested.h"
 #include "arrow/array/builder_nested.h"
 #include "arrow/array/builder_primitive.h"
 #include "arrow/memory_pool.h"
@@ -303,9 +303,8 @@ TEST_F(NestedProjectionUtilsMapArrayTest, FilterMapArrayBySelectedKeysBasic) {
     });
 
     std::vector<std::string> selected = {"a", "c"};
-    ASSERT_OK_AND_ASSIGN(auto filtered,
-                         NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-                             map_array, selected, arrow::default_memory_pool()));
+    ASSERT_OK_AND_ASSIGN(auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(
+                                            map_array, selected, arrow::default_memory_pool()));
 
     auto expected = BuildStringInt32MapArray({
         {{"a", 1}, {"c", 3}},
@@ -317,9 +316,8 @@ TEST_F(NestedProjectionUtilsMapArrayTest, FilterMapArrayBySelectedKeysBasic) {
 TEST_F(NestedProjectionUtilsMapArrayTest, FilterMapArrayBySelectedKeysEmptySelectedKeys) {
     auto map_array = BuildStringInt32MapArray({{{"a", 1}}});
     std::vector<std::string> empty_keys;
-    ASSERT_OK_AND_ASSIGN(
-        auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-                          map_array, empty_keys, arrow::default_memory_pool()));
+    ASSERT_OK_AND_ASSIGN(auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(
+                                            map_array, empty_keys, arrow::default_memory_pool()));
     // Should return original array unchanged
     ASSERT_EQ(filtered.get(), map_array.get());
 }
@@ -327,18 +325,16 @@ TEST_F(NestedProjectionUtilsMapArrayTest, FilterMapArrayBySelectedKeysEmptySelec
 TEST_F(NestedProjectionUtilsMapArrayTest, FilterMapArrayBySelectedKeysAllKept) {
     auto map_array = BuildStringInt32MapArray({{{"a", 1}, {"b", 2}}});
     std::vector<std::string> selected = {"a", "b"};
-    ASSERT_OK_AND_ASSIGN(auto filtered,
-                         NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-                             map_array, selected, arrow::default_memory_pool()));
+    ASSERT_OK_AND_ASSIGN(auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(
+                                            map_array, selected, arrow::default_memory_pool()));
     ASSERT_TRUE(filtered->Equals(map_array));
 }
 
 TEST_F(NestedProjectionUtilsMapArrayTest, FilterMapArrayBySelectedKeysNoneKept) {
     auto map_array = BuildStringInt32MapArray({{{"a", 1}, {"b", 2}}});
     std::vector<std::string> selected = {"x", "y"};
-    ASSERT_OK_AND_ASSIGN(auto filtered,
-                         NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-                             map_array, selected, arrow::default_memory_pool()));
+    ASSERT_OK_AND_ASSIGN(auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(
+                                            map_array, selected, arrow::default_memory_pool()));
     auto expected = BuildStringInt32MapArray({{}});
     ASSERT_TRUE(filtered->Equals(expected));
 }
@@ -346,9 +342,8 @@ TEST_F(NestedProjectionUtilsMapArrayTest, FilterMapArrayBySelectedKeysNoneKept) 
 TEST_F(NestedProjectionUtilsMapArrayTest, FilterMapArrayBySelectedKeysEmptyStringKeySelected) {
     auto map_array = BuildStringInt32MapArray({{{"a", 1}, {"", 9}, {"b", 2}}});
     std::vector<std::string> selected = {""};
-    ASSERT_OK_AND_ASSIGN(auto filtered,
-                         NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-                             map_array, selected, arrow::default_memory_pool()));
+    ASSERT_OK_AND_ASSIGN(auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(
+                                            map_array, selected, arrow::default_memory_pool()));
     auto expected = BuildStringInt32MapArray({{{"", 9}}});
     ASSERT_TRUE(filtered->Equals(expected));
 }
@@ -359,20 +354,17 @@ TEST_F(NestedProjectionUtilsMapArrayTest, FilterMapArrayBySelectedKeysWithNull) 
         BuildStringInt32MapArray({{{"a", 1}}, {}, {{"b", 2}, {"c", 3}}}, {true, false, true});
 
     std::vector<std::string> selected = {"a", "c"};
-    ASSERT_OK_AND_ASSIGN(auto filtered,
-                         NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-                             map_array, selected, arrow::default_memory_pool()));
-    auto expected = BuildStringInt32MapArray(
-        {{{"a", 1}}, {}, {{"c", 3}}}, {true, false, true});
+    ASSERT_OK_AND_ASSIGN(auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(
+                                            map_array, selected, arrow::default_memory_pool()));
+    auto expected = BuildStringInt32MapArray({{{"a", 1}}, {}, {{"c", 3}}}, {true, false, true});
     ASSERT_TRUE(filtered->Equals(expected));
 }
 
 TEST_F(NestedProjectionUtilsMapArrayTest, FilterMapArrayBySelectedKeysEmptyArray) {
     auto map_array = BuildStringInt32MapArray({});
     std::vector<std::string> selected = {"a"};
-    ASSERT_OK_AND_ASSIGN(auto filtered,
-                         NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-                             map_array, selected, arrow::default_memory_pool()));
+    ASSERT_OK_AND_ASSIGN(auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(
+                                            map_array, selected, arrow::default_memory_pool()));
     auto expected = BuildStringInt32MapArray({});
     ASSERT_TRUE(filtered->Equals(expected));
 }
@@ -381,9 +373,8 @@ TEST_F(NestedProjectionUtilsMapArrayTest, FilterMapArrayBySelectedKeysSelectedOr
     auto map_array = BuildStringInt32MapArray({{{"a", 1}, {"b", 2}, {"c", 3}}});
     std::vector<std::string> selected = {"c", "a"};
 
-    ASSERT_OK_AND_ASSIGN(auto filtered,
-                         NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-                             map_array, selected, arrow::default_memory_pool()));
+    ASSERT_OK_AND_ASSIGN(auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(
+                                            map_array, selected, arrow::default_memory_pool()));
     auto expected = BuildStringInt32MapArray({{{"c", 3}, {"a", 1}}});
     ASSERT_TRUE(filtered->Equals(expected));
 }
@@ -392,10 +383,9 @@ TEST_F(NestedProjectionUtilsMapArrayTest, FilterMapArrayBySelectedKeysDuplicateS
     auto map_array = BuildStringInt32MapArray({{{"a", 1}, {"b", 2}}});
     std::vector<std::string> selected = {"a", "a"};
 
-    ASSERT_NOK_WITH_MSG(
-        NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-            map_array, selected, arrow::default_memory_pool()),
-        "Duplicate selected key 'a'");
+    ASSERT_NOK_WITH_MSG(NestedProjectionUtils::FilterMapArrayBySelectedKeys(
+                            map_array, selected, arrow::default_memory_pool()),
+                        "Duplicate selected key 'a'");
 }
 
 TEST_F(NestedProjectionUtilsMapArrayTest, FilterMapArrayBySelectedKeysDictionaryStringKey) {
@@ -431,8 +421,7 @@ TEST_F(NestedProjectionUtilsMapArrayTest, FilterMapArrayBySelectedKeysDictionary
     ASSERT_TRUE(filtered->Equals(expected));
 }
 
-TEST_F(NestedProjectionUtilsMapArrayTest,
-       FilterMapArrayBySelectedKeysDictionaryLargeStringKey) {
+TEST_F(NestedProjectionUtilsMapArrayTest, FilterMapArrayBySelectedKeysDictionaryLargeStringKey) {
     auto map_array = BuildStringInt32MapArray({{{"a", 1}, {"b", 2}}});
     auto map = std::static_pointer_cast<arrow::MapArray>(map_array);
 
@@ -459,9 +448,8 @@ TEST_F(NestedProjectionUtilsMapArrayTest,
         dict_map_type, map->length(), map->value_offsets(), large_string_dict_keys, map->items(),
         map->null_bitmap(), map->null_count(), map->offset());
 
-    ASSERT_OK_AND_ASSIGN(auto filtered,
-                         NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-                             dict_map_array, {"a"}, arrow::default_memory_pool()));
+    ASSERT_OK_AND_ASSIGN(auto filtered, NestedProjectionUtils::FilterMapArrayBySelectedKeys(
+                                            dict_map_array, {"a"}, arrow::default_memory_pool()));
     auto expected = BuildStringInt32MapArray({{{"a", 1}}});
     ASSERT_TRUE(filtered->Equals(expected));
 }

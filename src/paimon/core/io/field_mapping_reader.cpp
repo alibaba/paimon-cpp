@@ -58,8 +58,8 @@ Result<std::unique_ptr<FieldMappingReader>> FieldMappingReader::Create(
     }
 
     for (int32_t i = 0;
-         i < static_cast<int32_t>(mapping_reader->non_partition_info_.idx_in_target_read_schema
-                                      .size());
+         i <
+         static_cast<int32_t>(mapping_reader->non_partition_info_.idx_in_target_read_schema.size());
          i++) {
         if (i != mapping_reader->non_partition_info_.idx_in_target_read_schema[i]) {
             mapping_reader->need_mapping_ = true;

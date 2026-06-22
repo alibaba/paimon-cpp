@@ -115,7 +115,8 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
  public:
     static std::shared_ptr<arrow::Field> WithMapSelectedKeys(
         const std::shared_ptr<arrow::Field>& field, const std::string& selected_keys) {
-        auto metadata = field->metadata() ? field->metadata()->Copy() : arrow::key_value_metadata({});
+        auto metadata =
+            field->metadata() ? field->metadata()->Copy() : arrow::key_value_metadata({});
         auto set_status = metadata->Set(DataField::MAP_SELECTED_KEYS, selected_keys);
         EXPECT_TRUE(set_status.ok()) << set_status.ToString();
         return field->WithMetadata(metadata);
@@ -546,9 +547,9 @@ TEST_F(ParquetFileBatchReaderTest, TestNextBatchWithDictionary) {
 
 TEST_F(ParquetFileBatchReaderTest, TestNestedStructChildProjectionRecall) {
     auto f0 = arrow::field("f0", arrow::int32());
-    auto f1 = arrow::field("f1", arrow::struct_({arrow::field("c0", arrow::int64()),
-                                                  arrow::field("c1", arrow::utf8()),
-                                                  arrow::field("c2", arrow::float64())}));
+    auto f1 = arrow::field(
+        "f1", arrow::struct_({arrow::field("c0", arrow::int64()), arrow::field("c1", arrow::utf8()),
+                              arrow::field("c2", arrow::float64())}));
     auto f2 = arrow::field("f2", arrow::utf8());
 
     auto write_schema = arrow::schema({f0, f1, f2});
@@ -609,8 +610,8 @@ TEST_F(ParquetFileBatchReaderTest, TestReadSchemaWithMapSelectedKeysMetadata) {
 
     // selected-keys metadata is consumed by upper-level field mapping; format reader should
     // still accept the schema and read data correctly.
-    auto read_schema = MakeReadSchema(
-        {id_field, WithMapSelectedKeys(map_field, /*selected_keys=*/"k1,k3")});
+    auto read_schema =
+        MakeReadSchema({id_field, WithMapSelectedKeys(map_field, /*selected_keys=*/"k1,k3")});
 
     auto parquet_batch_reader =
         PrepareParquetFileBatchReader(file_path_, read_schema, /*predicate=*/nullptr,

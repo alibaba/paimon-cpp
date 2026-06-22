@@ -47,9 +47,8 @@ struct FieldMapping;
 class FieldMappingReader : public FileBatchReader {
  public:
     static Result<std::unique_ptr<FieldMappingReader>> Create(
-        int32_t field_count, std::unique_ptr<FileBatchReader>&& reader,
-        const BinaryRow& partition, std::unique_ptr<FieldMapping>&& mapping,
-        const std::shared_ptr<MemoryPool>& pool);
+        int32_t field_count, std::unique_ptr<FileBatchReader>&& reader, const BinaryRow& partition,
+        std::unique_ptr<FieldMapping>&& mapping, const std::shared_ptr<MemoryPool>& pool);
 
     Result<ReadBatch> NextBatch() override {
         return Status::Invalid(

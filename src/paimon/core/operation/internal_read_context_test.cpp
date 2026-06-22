@@ -261,16 +261,17 @@ TEST(InternalReadContext, TestReadWithProjectedSchemaWithoutFieldIds) {
         DataField(0, arrow::field("f0", arrow::utf8())),
     };
     auto expected_schema = DataField::ConvertDataFieldsToArrowSchema(expected_fields);
-    ASSERT_TRUE(internal_context->GetReadSchema()->Equals(expected_schema, /*check_metadata=*/true));
+    ASSERT_TRUE(
+        internal_context->GetReadSchema()->Equals(expected_schema, /*check_metadata=*/true));
 }
 
 TEST(InternalReadContext, TestProjectedSchemaMetadataWhitelist) {
     std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
 
-    auto read_field = arrow::field("f0", arrow::utf8())
-                          ->WithMetadata(arrow::KeyValueMetadata::Make(
-                              {DataField::MAP_SELECTED_KEYS, "custom.key"},
-                              {"k1,k2", "should_not_propagate"}));
+    auto read_field =
+        arrow::field("f0", arrow::utf8())
+            ->WithMetadata(arrow::KeyValueMetadata::Make(
+                {DataField::MAP_SELECTED_KEYS, "custom.key"}, {"k1,k2", "should_not_propagate"}));
     auto projected_schema = arrow::schema({read_field});
     ArrowSchema c_schema;
     ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_schema).ok());
