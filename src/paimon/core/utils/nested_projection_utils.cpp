@@ -152,8 +152,10 @@ Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::P
             if (!pruned_key.has_value() || !pruned_value.has_value()) {
                 return std::optional<std::shared_ptr<arrow::DataType>>(std::nullopt);
             }
-            std::shared_ptr<arrow::DataType> result_type = arrow::map(
-                pruned_key.value(), pruned_value.value(), data_map.key_field()->nullable());
+            std::shared_ptr<arrow::Field> pruned_item_field =
+                data_map.item_field()->WithType(pruned_value.value());
+            std::shared_ptr<arrow::DataType> result_type =
+                arrow::map(pruned_key.value(), pruned_item_field, data_map.keys_sorted());
             return std::optional<std::shared_ptr<arrow::DataType>>(std::move(result_type));
         }
 
@@ -286,6 +288,7 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySel
     arrow::MapBuilder map_builder(pool, std::move(key_builder_u), std::move(value_builder_u));
     auto* key_builder = static_cast<arrow::StringBuilder*>(map_builder.key_builder());
     auto* value_builder = map_builder.item_builder();
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(map_builder.Reserve(num_maps));
 
     for (int64_t map_idx = 0; map_idx < num_maps; ++map_idx) {
         if (map_array->IsNull(map_idx)) {
