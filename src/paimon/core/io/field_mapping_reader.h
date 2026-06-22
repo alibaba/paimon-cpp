@@ -46,9 +46,10 @@ struct FieldMapping;
 
 class FieldMappingReader : public FileBatchReader {
  public:
-    FieldMappingReader(int32_t field_count, std::unique_ptr<FileBatchReader>&& reader,
-                       const BinaryRow& partition, std::unique_ptr<FieldMapping>&& mapping,
-                       const std::shared_ptr<MemoryPool>& pool);
+    static Result<std::unique_ptr<FieldMappingReader>> Create(
+        int32_t field_count, std::unique_ptr<FileBatchReader>&& reader,
+        const BinaryRow& partition, std::unique_ptr<FieldMapping>&& mapping,
+        const std::shared_ptr<MemoryPool>& pool);
 
     Result<ReadBatch> NextBatch() override {
         return Status::Invalid(
@@ -87,6 +88,10 @@ class FieldMappingReader : public FileBatchReader {
     }
 
  private:
+    FieldMappingReader(int32_t field_count, std::unique_ptr<FileBatchReader>&& reader,
+                       const BinaryRow& partition, std::unique_ptr<FieldMapping>&& mapping,
+                       const std::shared_ptr<MemoryPool>& pool);
+
     Result<std::shared_ptr<arrow::Array>> GenerateSinglePartitionArray(int32_t idx,
                                                                        int32_t batch_size) const;
 
@@ -96,11 +101,11 @@ class FieldMappingReader : public FileBatchReader {
     Result<std::shared_ptr<arrow::Array>> CastNonPartitionArrayIfNeed(
         const std::shared_ptr<arrow::Array>& src_array) const;
 
-    static Status MappingFields(const std::shared_ptr<arrow::Array>& src_array,
-                                const std::vector<DataField>& read_fields_of_data_array,
-                                const std::vector<int32_t>& idx_in_target_schema,
-                                arrow::ArrayVector* target_array,
-                                std::vector<std::string>* target_field_names);
+    Status MappingFields(const std::shared_ptr<arrow::Array>& src_array,
+                         const std::vector<DataField>& read_fields_of_data_array,
+                         const std::vector<int32_t>& idx_in_target_schema,
+                         arrow::ArrayVector* target_array,
+                         std::vector<std::string>* target_field_names);
 
  private:
     bool need_mapping_ = false;

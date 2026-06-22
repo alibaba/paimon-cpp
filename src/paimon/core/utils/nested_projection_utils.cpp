@@ -199,7 +199,6 @@ Result<std::vector<std::string>> NestedProjectionUtils::GetMapSelectedKeys(
         return result;
     }
     std::string value = get_result.ValueUnsafe();
-    StringUtils::Trim(&value);
     if (value.empty()) {
         // Metadata is explicitly present but empty: select the empty-string key.
         result.push_back("");
@@ -210,7 +209,6 @@ Result<std::vector<std::string>> NestedProjectionUtils::GetMapSelectedKeys(
     std::unordered_set<std::string> deduplicated;
     deduplicated.reserve(tokens.size());
     for (auto& token : tokens) {
-        StringUtils::Trim(&token);
         if (!deduplicated.insert(token).second) {
             return Status::Invalid(fmt::format("Duplicate selected key '{}' in {} metadata", token,
                                                DataField::MAP_SELECTED_KEYS));
@@ -221,21 +219,55 @@ Result<std::vector<std::string>> NestedProjectionUtils::GetMapSelectedKeys(
 }
 
 Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-    const std::shared_ptr<arrow::Array>& array, const std::vector<std::string>& selected_keys) {
+    const std::shared_ptr<arrow::Array>& array, const std::vector<std::string>& selected_keys,
+    arrow::MemoryPool* pool) {
     if (selected_keys.empty() || !array || array->length() == 0) {
         return array;
+    }
+    if (pool == nullptr) {
+        return Status::Invalid("FilterMapArrayBySelectedKeys requires a non-null memory pool");
+    }
+
+    if (array->type_id() != arrow::Type::MAP) {
+        return Status::Invalid(
+            fmt::format("FilterMapArrayBySelectedKeys requires map array, got {}",
+                        array->type()->ToString()));
     }
 
     auto map_array = std::static_pointer_cast<arrow::MapArray>(array);
     auto map_type = std::static_pointer_cast<arrow::MapType>(array->type());
+    assert(map_array && map_type);
 
-    if (map_type->key_type()->id() != arrow::Type::STRING) {
+    auto key_array = map_array->keys();
+    std::shared_ptr<arrow::StringArray> string_keys;
+    std::shared_ptr<arrow::DictionaryArray> dict_keys;
+    std::shared_ptr<arrow::StringArray> dict_values;
+    std::shared_ptr<arrow::LargeStringArray> dict_large_values;
+    if (key_array->type_id() == arrow::Type::STRING) {
+        string_keys = std::static_pointer_cast<arrow::StringArray>(key_array);
+    } else if (key_array->type_id() == arrow::Type::DICTIONARY) {
+        auto dict_type = std::static_pointer_cast<arrow::DictionaryType>(key_array->type());
+        if (dict_type->value_type()->id() != arrow::Type::STRING &&
+            dict_type->value_type()->id() != arrow::Type::LARGE_STRING) {
+            return Status::Invalid(
+                fmt::format("FilterMapArrayBySelectedKeys only supports string keys or "
+                            "dictionary<string|large_string> keys, got {}",
+                            key_array->type()->ToString()));
+        }
+        dict_keys = std::static_pointer_cast<arrow::DictionaryArray>(key_array);
+        if (dict_type->value_type()->id() == arrow::Type::STRING) {
+            dict_values = std::static_pointer_cast<arrow::StringArray>(dict_keys->dictionary());
+        } else {
+            dict_large_values =
+                std::static_pointer_cast<arrow::LargeStringArray>(dict_keys->dictionary());
+        }
+    } else {
         return Status::Invalid(
-            fmt::format("FilterMapArrayBySelectedKeys only supports string keys, got {}",
-                        map_type->key_type()->ToString()));
+            fmt::format("FilterMapArrayBySelectedKeys only supports string keys or "
+                        "dictionary<string|large_string> keys, got {}",
+                        key_array->type()->ToString()));
     }
 
-    auto keys_array = std::static_pointer_cast<arrow::StringArray>(map_array->keys());
     auto values_array = map_array->items();
     int64_t num_maps = map_array->length();
 
@@ -248,12 +280,14 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySel
         }
     }
 
-    auto key_builder = std::make_shared<arrow::StringBuilder>();
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::unique_ptr<arrow::ArrayBuilder> key_builder_u,
+                                      arrow::MakeBuilder(arrow::utf8(), pool));
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
         std::unique_ptr<arrow::ArrayBuilder> value_builder_u,
-        arrow::MakeBuilder(values_array->type(), arrow::default_memory_pool()));
-    auto value_builder = std::shared_ptr<arrow::ArrayBuilder>(std::move(value_builder_u));
-    arrow::MapBuilder map_builder(arrow::default_memory_pool(), key_builder, value_builder);
+        arrow::MakeBuilder(values_array->type(), pool));
+    arrow::MapBuilder map_builder(pool, std::move(key_builder_u), std::move(value_builder_u));
+    auto* key_builder = static_cast<arrow::StringBuilder*>(map_builder.key_builder());
+    auto* value_builder = map_builder.item_builder();
 
     for (int64_t map_idx = 0; map_idx < num_maps; ++map_idx) {
         if (map_array->IsNull(map_idx)) {
@@ -267,10 +301,29 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySel
         // Keep selected keys in the exact selected_keys order.
         for (const auto& selected_key : selected_keys) {
             for (int64_t entry_idx = start; entry_idx < end; ++entry_idx) {
-                if (keys_array->IsNull(entry_idx)) {
-                    continue;
+                std::string_view key_view;
+                if (string_keys) {
+                    if (string_keys->IsNull(entry_idx)) {
+                        continue;
+                    }
+                    key_view = string_keys->GetView(entry_idx);
+                } else {
+                    if (dict_keys->IsNull(entry_idx)) {
+                        continue;
+                    }
+                    int64_t dict_idx = dict_keys->GetValueIndex(entry_idx);
+                    if (dict_values) {
+                        if (dict_values->IsNull(dict_idx)) {
+                            continue;
+                        }
+                        key_view = dict_values->GetView(dict_idx);
+                    } else {
+                        if (dict_large_values->IsNull(dict_idx)) {
+                            continue;
+                        }
+                        key_view = dict_large_values->GetView(dict_idx);
+                    }
                 }
-                std::string_view key_view = keys_array->GetView(entry_idx);
                 if (key_view == selected_key) {
                     PAIMON_RETURN_NOT_OK_FROM_ARROW(key_builder->Append(
                         key_view.data(), static_cast<int32_t>(key_view.size())));

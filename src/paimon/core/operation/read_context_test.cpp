@@ -18,6 +18,8 @@
 
 #include <utility>
 
+#include "arrow/c/bridge.h"
+#include "arrow/type.h"
 #include "gtest/gtest.h"
 #include "paimon/common/io/cache/lru_cache.h"
 #include "paimon/defs.h"
@@ -147,6 +149,34 @@ TEST(ReadContextTest, TestPrefetchMaxParallelNumZero) {
     builder.EnablePrefetch(true);
     builder.SetPrefetchMaxParallelNum(0);
     ASSERT_NOK_WITH_MSG(builder.Finish(), "prefetch max parallel num should be greater than 0");
+}
+
+TEST(ReadContextTest, TestSetReadSchemaAndHasReadSchema) {
+    auto projected_schema = arrow::schema({arrow::field("f0", arrow::utf8())});
+    ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_schema).ok());
+
+    {
+        ReadContextBuilder builder("table_root_path");
+        builder.SetReadSchema(&c_schema);
+        ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
+        ASSERT_TRUE(ctx->HasReadSchema());
+        ASSERT_EQ(ctx->GetReadSchema(), &c_schema);
+    }
+
+    // ReadContext owns and releases ArrowSchema resources during destruction.
+    ASSERT_EQ(c_schema.release, nullptr);
+}
+
+TEST(ReadContextTest, TestSetInvalidReadSchemaIgnored) {
+    ArrowSchema invalid_schema{};
+
+    ReadContextBuilder builder("table_root_path");
+    builder.SetReadSchema(&invalid_schema);
+    ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
+
+    ASSERT_FALSE(ctx->HasReadSchema());
+    ASSERT_EQ(ctx->GetReadSchema(), nullptr);
 }
 
 }  // namespace paimon::test

@@ -88,10 +88,6 @@ class FieldMappingBuilder {
     Result<std::shared_ptr<Predicate>> CreateDataFilters(
         const std::vector<DataField>& data_fields) const;
 
-    DataField MergeFieldMetadataByWhitelist(
-        const DataField& data_field, const DataField& read_field,
-        const std::vector<std::string>& metadata_keys_whitelist) const;
-
     static Result<std::optional<std::shared_ptr<Predicate>>> ReconstructLeafPredicate(
         const std::shared_ptr<LeafPredicateImpl>& leaf_predicate,
         const std::map<std::string, DataField>& field_name_to_read_fields,

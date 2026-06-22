@@ -62,10 +62,20 @@ ReadContext::ReadContext(
       cache_config_(cache_config),
       cache_(cache) {}
 
-ReadContext::~ReadContext() {}
+ReadContext::~ReadContext() {
+    if (read_schema_ && read_schema_->release) {
+        read_schema_->release(read_schema_);
+    }
+}
 
 void ReadContext::SetReadSchema(ArrowSchema* schema) {
     if (schema && schema->release) {
+        if (schema == read_schema_) {
+            return;
+        }
+        if (read_schema_ && read_schema_->release) {
+            read_schema_->release(read_schema_);
+        }
         read_schema_ = schema;
     }
 }

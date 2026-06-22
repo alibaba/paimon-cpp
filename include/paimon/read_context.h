@@ -133,7 +133,7 @@ class PAIMON_EXPORT ReadContext {
 
     /// Whether a read schema (C ArrowSchema) for nested column pruning was provided.
     bool HasReadSchema() const {
-        return read_schema_ != nullptr;
+        return read_schema_ != nullptr && read_schema_->release != nullptr;
     }
 
     /// Get the read schema as a mutable C ArrowSchema pointer.
@@ -142,7 +142,8 @@ class PAIMON_EXPORT ReadContext {
         return read_schema_;
     }
 
-    /// Set the read schema from a C ArrowSchema pointer. Does NOT take ownership.
+    /// Set the read schema from a C ArrowSchema pointer and take ownership of
+    /// schema resources (released via ArrowSchema::release in destructor).
     /// Called internally by ReadContextBuilder.
     void SetReadSchema(ArrowSchema* schema);
 
@@ -167,6 +168,7 @@ class PAIMON_EXPORT ReadContext {
     PrefetchCacheMode prefetch_cache_mode_;
     CacheConfig cache_config_;
     std::shared_ptr<Cache> cache_;
+    // Owns schema resources referenced by this pointer and releases them in destructor.
     ArrowSchema* read_schema_ = nullptr;
 };
 
@@ -217,7 +219,30 @@ class PAIMON_EXPORT ReadContextBuilder {
     /// "paimon.map.selected-keys" is preserved and merged into the final aligned
     /// schema.
     ///
-    /// @param read_schema Arrow C Schema. The caller retains ownership.
+    /// To prune map entries by key, attach metadata "paimon.map.selected-keys"
+    /// to the target map field in read schema. The value is a comma-separated
+    /// key list, for example: "k1,k2". Only map fields with string key type
+    /// (Arrow utf8) are supported.
+    ///
+    /// Example:
+    /// @code{.cpp}
+    /// auto map_field = arrow::field("m", arrow::map(arrow::utf8(), arrow::int32()));
+    /// auto map_meta = arrow::KeyValueMetadata::Make(
+    ///     {"paimon.map.selected-keys"}, {"k1,k2"});
+    /// auto projected_schema = arrow::schema({
+    ///     arrow::field("id", arrow::int64()),
+    ///     map_field->WithMetadata(map_meta),
+    /// });
+    ///
+    /// ArrowSchema c_schema;
+    /// arrow::ExportSchema(*projected_schema, &c_schema);
+    ///
+    /// ReadContextBuilder builder("/path/to/table");
+    /// builder.SetReadSchema(&c_schema);
+    /// @endcode
+    ///
+    /// @param read_schema Arrow C Schema. Ownership of schema resources is transferred
+    ///        to the built ReadContext.
     /// @return Reference to this builder for method chaining.
     /// @note Priority: read_schema > read_field_ids > read_field_names.
     ///       When set, read_field_ids and read_field_names are ignored.

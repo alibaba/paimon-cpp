@@ -66,6 +66,17 @@ class DataField : public Jsonizable<DataField> {
         const std::vector<DataField>& fields,
         const std::optional<std::vector<std::string>>& projected_cols);
 
+    /// Merge whitelisted metadata from source_field into target_field.
+    static std::shared_ptr<arrow::Field> MergeFieldMetadataByWhitelist(
+        const std::shared_ptr<arrow::Field>& target_field,
+        const std::shared_ptr<arrow::Field>& source_field,
+        const std::vector<std::string>& metadata_keys_whitelist);
+
+    /// Merge whitelisted metadata from source_field into target_field and keep target id/desc.
+    static DataField MergeFieldMetadataByWhitelist(
+        const DataField& target_field, const DataField& source_field,
+        const std::vector<std::string>& metadata_keys_whitelist);
+
     int32_t Id() const {
         return id_;
     }

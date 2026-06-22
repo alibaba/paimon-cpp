@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 
+#include "arrow/memory_pool.h"
 #include "arrow/type.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/string_utils.h"
@@ -96,12 +97,13 @@ class PAIMON_EXPORT NestedProjectionUtils {
         const std::shared_ptr<arrow::Field>& field);
 
     /// Filter a MapArray so that only entries whose key is in `selected_keys` are kept.
-    /// Only supports string-keyed maps. The output map entry order follows
+    /// Supports string keys and dictionary<string|large_string> keys.
+    /// The output map entry order follows
     /// `selected_keys` order, and duplicate selected keys are rejected.
     /// Returns the original array unchanged if `selected_keys` is empty.
     static Result<std::shared_ptr<arrow::Array>> FilterMapArrayBySelectedKeys(
         const std::shared_ptr<arrow::Array>& map_array,
-        const std::vector<std::string>& selected_keys);
+        const std::vector<std::string>& selected_keys, arrow::MemoryPool* pool);
 
  private:
     static Result<bool> HasNestedSubfieldProjectionType(

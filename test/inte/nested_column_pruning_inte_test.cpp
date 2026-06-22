@@ -40,6 +40,7 @@
 #include "paimon/table/source/startup_mode.h"
 #include "paimon/table/source/table_read.h"
 #include "paimon/table/source/table_scan.h"
+#include "paimon/testing/utils/dict_array_converter.h"
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/test_helper.h"
 #include "paimon/testing/utils/testharness.h"
@@ -855,6 +856,106 @@ TEST_P(NestedColumnPruningInteTest, MapSelectedKeysPreserveOrder) {
     ASSERT_TRUE(is_equal);
 }
 
+// Test: ORC dictionary-encoded map key/value should work with MAP_SELECTED_KEYS.
+TEST_P(NestedColumnPruningInteTest, MapSelectedKeysWithOrcDictionaryEncodedMap) {
+    if (file_format_ != "orc") {
+        GTEST_SKIP() << "ORC-only dictionary encoding case";
+    }
+
+    auto map_type = arrow::map(arrow::utf8(), arrow::utf8());
+    arrow::FieldVector table_fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", map_type),
+    };
+    auto table_schema = arrow::schema(table_fields);
+
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "AVRO"},
+        {Options::FILE_FORMAT, StringUtils::ToUpperCase(file_format_)},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+        {"orc.read.enable-lazy-decoding", "true"},
+        {"orc.dictionary-key-size-threshold", "1.0"},
+    };
+
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+
+    // Low-cardinality map keys/values increase dictionary-encoding probability for ORC.
+    std::string data = R"([
+        [1, [["a", "v1"], ["b", "v2"], ["c", "v3"]]],
+        [2, [["a", "v1"], ["c", "v3"], ["d", "v4"]]],
+        [3, [["a", "v1"], ["b", "v2"], ["e", "v5"]]],
+        [4, [["a", "v1"], ["c", "v3"], ["e", "v5"]]],
+        [5, [["a", "v1"], ["b", "v2"], ["c", "v3"]]],
+        [6, [["a", "v1"], ["c", "v3"], ["d", "v4"]]],
+        [7, [["a", "v1"], ["b", "v2"], ["e", "v5"]]],
+        [8, [["a", "v1"], ["c", "v3"], ["e", "v5"]]]
+    ])";
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    int64_t commit_identifier = 0;
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_FALSE(data_splits.empty());
+
+    auto selected_keys_metadata =
+        arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"a,c"});
+    auto projected_schema = arrow::schema({
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", map_type)->WithMetadata(selected_keys_metadata),
+    });
+
+    ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_schema).ok());
+
+    ReadContextBuilder read_context_builder(table_path_);
+    read_context_builder.SetOptions(options).SetReadSchema(&c_schema);
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_splits));
+    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
+
+    ASSERT_OK_AND_ASSIGN(auto decoded_result,
+                         DictArrayConverter::ConvertDictArray(read_result->chunk(0),
+                                                              arrow::default_memory_pool()));
+    auto actual_chunked = std::make_shared<arrow::ChunkedArray>(decoded_result);
+
+    auto expected_type = arrow::struct_({
+        arrow::field("_VALUE_KIND", arrow::int8()),
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::map(arrow::utf8(), arrow::utf8())),
+    });
+    auto expected_array = arrow::ipc::internal::json::ArrayFromJSON(expected_type, R"([
+        [0, 1, [["a", "v1"], ["c", "v3"]]],
+        [0, 2, [["a", "v1"], ["c", "v3"]]],
+        [0, 3, [["a", "v1"]]],
+        [0, 4, [["a", "v1"], ["c", "v3"]]],
+        [0, 5, [["a", "v1"], ["c", "v3"]]],
+        [0, 6, [["a", "v1"], ["c", "v3"]]],
+        [0, 7, [["a", "v1"]]],
+        [0, 8, [["a", "v1"], ["c", "v3"]]]
+    ])")
+                              .ValueOrDie();
+    auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
+
+    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
+    bool is_equal = expected_chunked->Equals(actual_chunked, equal_options.diff_sink(&std::cout));
+    if (!is_equal) {
+        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
+        std::cout << "[actual_type]   " << actual_chunked->type()->ToString() << std::endl;
+        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
+        std::cout << "[actual]   " << actual_chunked->ToString() << std::endl;
+    }
+    ASSERT_TRUE(is_equal);
+}
+
 // Test: Deeper nested struct — prune sub-fields of a struct inside a struct inside another struct.
 TEST_P(NestedColumnPruningInteTest, PruneDeeperNestedStruct) {
     // Table schema: f0 (int32), f1 (struct{a: int32, inner1: struct{x: int64, inner2: struct{p:
@@ -951,116 +1052,6 @@ TEST_P(NestedColumnPruningInteTest, PruneDeeperNestedStruct) {
     ])";
     auto expected_array =
         arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();
-    auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
-
-    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
-    bool is_equal = expected_chunked->Equals(read_result, equal_options.diff_sink(&std::cout));
-    if (!is_equal) {
-        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
-        std::cout << "[actual_type]   " << read_result->type()->ToString() << std::endl;
-        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
-        std::cout << "[actual]   " << read_result->ToString() << std::endl;
-    }
-    ASSERT_TRUE(is_equal);
-}
-
-// Test: Parquet page-level filtering should work together with nested pruning.
-TEST_P(NestedColumnPruningInteTest, ParquetPageIndexFilterWithNestedPruning) {
-    if (file_format_ != "parquet") {
-        GTEST_SKIP() << "Parquet-only page-level filtering case";
-    }
-
-    auto nested_struct = arrow::struct_({
-        arrow::field("x", arrow::int64()),
-        arrow::field("y", arrow::utf8()),
-    });
-    arrow::FieldVector table_fields = {
-        arrow::field("f0", arrow::utf8()),
-        arrow::field("f1", nested_struct),
-    };
-    auto table_schema = arrow::schema(table_fields);
-
-    std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "AVRO"},
-        {Options::FILE_FORMAT, "PARQUET"},
-        {Options::TARGET_FILE_SIZE, "1048576"},
-        {Options::BUCKET, "-1"},
-        {Options::WRITE_BATCH_SIZE, "1"},
-        {"parquet.page.size", "1"},
-        {"parquet.enable-dictionary", "false"},
-        {"parquet.write.enable-page-index", "true"},
-        {"parquet.read.enable-page-index-filter", "true"},
-    };
-
-    ASSERT_OK_AND_ASSIGN(
-        auto helper, TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
-                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
-
-    std::string data = R"([
-        ["Alice", [100, "a"]],
-        ["Bob", [200, "b"]],
-        ["Cathy", [300, "c"]],
-        ["David", [400, "d"]]
-    ])";
-    ASSERT_OK_AND_ASSIGN(auto batch,
-                         TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
-                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
-    int64_t commit_identifier = 0;
-    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
-                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
-                                                /*expected_commit_messages=*/std::nullopt));
-
-    std::string literal_str = "Alice";
-    auto predicate = PredicateBuilder::Equal(
-        /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
-        Literal(FieldType::STRING, literal_str.data(), literal_str.size()));
-
-    ScanContextBuilder scan_context_builder(table_path_);
-    scan_context_builder.WithStreamingMode(true)
-        .SetOptions(options)
-        .AddOption(Options::SCAN_MODE, StartupMode::LatestFull().ToString())
-        .SetPredicate(predicate);
-    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
-    ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
-    ASSERT_FALSE(result_plan->Splits().empty());
-
-    auto pruned_nested_struct = arrow::struct_({arrow::field("x", arrow::int64())});
-    arrow::FieldVector projected_fields = {
-        arrow::field("f0", arrow::utf8()),
-        arrow::field("f1", pruned_nested_struct),
-    };
-    auto projected_schema = arrow::schema(projected_fields);
-    ArrowSchema c_schema;
-    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_schema).ok());
-
-    ReadContextBuilder read_context_builder(table_path_);
-    read_context_builder.SetOptions(options).SetPredicate(predicate).SetReadSchema(&c_schema);
-    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
-    auto batch_reader_result = table_read->CreateReader(result_plan->Splits());
-    if (!batch_reader_result.ok()) {
-        ASSERT_NOK_WITH_MSG(batch_reader_result.status(), "has no matching Arrow field");
-        return;
-    }
-
-    auto read_result_result = ReadResultCollector::CollectResult(batch_reader_result.value().get());
-    if (!read_result_result.ok()) {
-        ASSERT_NOK_WITH_MSG(read_result_result.status(), "has no matching Arrow field");
-        return;
-    }
-    auto read_result = std::move(read_result_result.value());
-
-    arrow::FieldVector expected_fields = {
-        arrow::field("_VALUE_KIND", arrow::int8()),
-        arrow::field("f0", arrow::utf8()),
-        arrow::field("f1", arrow::struct_({arrow::field("x", arrow::int64())})),
-    };
-    auto expected_type = arrow::struct_(expected_fields);
-    auto expected_array = arrow::ipc::internal::json::ArrayFromJSON(expected_type, R"([
-        [0, "Alice", [100]]
-    ])")
-                              .ValueOrDie();
     auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
 
     arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();

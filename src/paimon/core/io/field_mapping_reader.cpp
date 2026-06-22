@@ -43,6 +43,57 @@
 namespace paimon {
 class MemoryPool;
 
+Result<std::unique_ptr<FieldMappingReader>> FieldMappingReader::Create(
+    int32_t field_count, std::unique_ptr<FileBatchReader>&& reader, const BinaryRow& partition,
+    std::unique_ptr<FieldMapping>&& mapping, const std::shared_ptr<MemoryPool>& pool) {
+    auto mapping_reader = std::unique_ptr<FieldMappingReader>(new FieldMappingReader(
+        field_count, std::move(reader), partition, std::move(mapping), pool));
+
+    mapping_reader->need_mapping_ = false;
+    mapping_reader->need_casting_ = false;
+
+    if (mapping_reader->non_exist_field_info_ != std::nullopt ||
+        mapping_reader->partition_info_ != std::nullopt) {
+        mapping_reader->need_mapping_ = true;
+    }
+
+    for (int32_t i = 0;
+         i < static_cast<int32_t>(mapping_reader->non_partition_info_.idx_in_target_read_schema
+                                      .size());
+         i++) {
+        if (i != mapping_reader->non_partition_info_.idx_in_target_read_schema[i]) {
+            mapping_reader->need_mapping_ = true;
+        }
+        if (mapping_reader->non_partition_info_.cast_executors[i] != nullptr) {
+            mapping_reader->need_casting_ = true;
+        }
+        // Field name change (RENAME COLUMN) also requires mapping: data schema
+        // carries the file's physical name while read schema carries the
+        // post-rename logical name. If we skipped mapping, the inner reader's
+        // batch would be passed through with the old physical name and the
+        // consumer's name-based lookup against the read schema would fail.
+        if (mapping_reader->non_partition_info_.non_partition_data_schema[i].Name() !=
+            mapping_reader->non_partition_info_.non_partition_read_schema[i].Name()) {
+            mapping_reader->need_mapping_ = true;
+        }
+        // Map selected-keys metadata must be validated in Create() (fail-fast).
+        // Non-empty selected-keys also requires mapping so that
+        // FilterMapArrayBySelectedKeys can filter out unwanted entries.
+        if (mapping_reader->non_partition_info_.non_partition_read_schema[i].Type()->id() ==
+            arrow::Type::MAP) {
+            PAIMON_ASSIGN_OR_RAISE(
+                std::vector<std::string> selected_keys,
+                NestedProjectionUtils::GetMapSelectedKeys(
+                    mapping_reader->non_partition_info_.non_partition_read_schema[i].ArrowField()));
+            if (!selected_keys.empty()) {
+                mapping_reader->need_mapping_ = true;
+            }
+        }
+    }
+
+    return mapping_reader;
+}
+
 FieldMappingReader::FieldMappingReader(int32_t field_count,
                                        std::unique_ptr<FileBatchReader>&& reader,
                                        const BinaryRow& partition,
@@ -54,47 +105,7 @@ FieldMappingReader::FieldMappingReader(int32_t field_count,
       partition_(partition),
       partition_info_(mapping->partition_info),
       non_partition_info_(mapping->non_partition_info),
-      non_exist_field_info_(mapping->non_exist_field_info) {
-    if (non_exist_field_info_ != std::nullopt || partition_info_ != std::nullopt) {
-        need_mapping_ = true;
-    }
-
-    for (int32_t i = 0;
-         i < static_cast<int32_t>(non_partition_info_.idx_in_target_read_schema.size()); i++) {
-        if (i != non_partition_info_.idx_in_target_read_schema[i]) {
-            need_mapping_ = true;
-        }
-        if (non_partition_info_.cast_executors[i] != nullptr) {
-            need_casting_ = true;
-        }
-        // Field name change (RENAME COLUMN) also requires mapping: data schema
-        // carries the file's physical name while read schema carries the
-        // post-rename logical name. If we skipped mapping, the inner reader's
-        // batch would be passed through with the old physical name and the
-        // consumer's name-based lookup against the read schema would fail.
-        if (non_partition_info_.non_partition_data_schema[i].Name() !=
-            non_partition_info_.non_partition_read_schema[i].Name()) {
-            need_mapping_ = true;
-        }
-        // Map selected-keys metadata also requires mapping so that
-        // FilterMapArrayBySelectedKeys can filter out unwanted entries.
-        if (!need_mapping_ &&
-            non_partition_info_.non_partition_read_schema[i].Type()->id() == arrow::Type::MAP) {
-            auto selected_keys_or = NestedProjectionUtils::GetMapSelectedKeys(
-                non_partition_info_.non_partition_read_schema[i].ArrowField());
-            if (!selected_keys_or.ok()) {
-                // Keep mapping enabled so the parse error can be surfaced in
-                // MappingFields where Status can be returned.
-                need_mapping_ = true;
-                continue;
-            }
-            auto& selected_keys = selected_keys_or.value();
-            if (!selected_keys.empty()) {
-                need_mapping_ = true;
-            }
-        }
-    }
-}
+      non_exist_field_info_(mapping->non_exist_field_info) {}
 
 Result<std::shared_ptr<arrow::Array>> FieldMappingReader::CastNonPartitionArrayIfNeed(
     const std::shared_ptr<arrow::Array>& src_array) const {
@@ -322,7 +333,7 @@ Status FieldMappingReader::MappingFields(const std::shared_ptr<arrow::Array>& da
             if (!selected_keys.empty()) {
                 PAIMON_ASSIGN_OR_RAISE(field_array,
                                        NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-                                           field_array, selected_keys));
+                                           field_array, selected_keys, arrow_pool_.get()));
             }
         }
 

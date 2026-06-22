@@ -155,7 +155,7 @@ Status ParquetFileBatchReader::SetReadSchema(
             std::shared_ptr<arrow::Schema> file_schema,
             ParquetFieldIdConverter::GetPaimonIdsFromParquetIds(raw_file_schema));
 
-        // Recursively match read_schema against file_schema using paimon field IDs.
+        // Recursively match read_schema against file_schema by field names.
         // STRUCT supports sub-field projection; LIST/MAP require exact type match.
         PAIMON_ASSIGN_OR_RAISE(std::vector<int32_t> column_indices,
                                ComputeNestedColumnIndices(read_schema, file_schema));
@@ -535,7 +535,9 @@ Result<std::vector<int32_t>> ParquetFileBatchReader::ComputeNestedColumnIndices(
             }
         }
         if (file_field_idx < 0) {
-            continue;
+            return Status::Invalid(
+                fmt::format("Field '{}' in read schema does not exist in parquet file schema",
+                            read_field->name()));
         }
         int32_t leaf_index = file_field_leaf_starts[file_field_idx];
         PAIMON_RETURN_NOT_OK(CollectLeafIndices(
