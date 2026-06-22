@@ -136,6 +136,16 @@ std::vector<std::shared_ptr<DataFileMeta>> MergeTreeCompactRewriter::ExtractFile
     return files;
 }
 
+Status MergeTreeCompactRewriter::RestoreShreddingContextFromFiles(
+    const std::vector<std::shared_ptr<DataFileMeta>>& files) {
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
+                           CreateDataFilePathFactory(options_.GetFileFormat()->Identifier()));
+    PAIMON_ASSIGN_OR_RAISE(shredding_context_,
+                           MapSharedShreddingCoreUtils::CreateAndRestoreContext(
+                               write_schema_, files, data_file_path_factory, options_, pool_));
+    return Status::OK();
+}
+
 Result<std::unique_ptr<MergeTreeCompactRewriter::KeyValueRollingFileWriter>>
 MergeTreeCompactRewriter::CreateRollingRowWriter(int32_t level) {
     auto format = options_.GetWriteFileFormat(level);
@@ -252,11 +262,7 @@ Result<CompactResult> MergeTreeCompactRewriter::RewriteCompaction(
     PAIMON_ASSIGN_OR_RAISE(MergeTreeCompactRewriter::KeyValueConsumerCreator create_consumer,
                            GenerateKeyValueConsumer());
     auto before = ExtractFilesFromSections(sections);
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
-                           CreateDataFilePathFactory(options_.GetFileFormat()->Identifier()));
-    PAIMON_ASSIGN_OR_RAISE(shredding_context_,
-                           MapSharedShreddingCoreUtils::CreateAndRestoreContext(
-                               write_schema_, before, data_file_path_factory, options_, pool_));
+    PAIMON_RETURN_NOT_OK(RestoreShreddingContextFromFiles(before));
 
     std::vector<std::shared_ptr<MergeTreeCompactRewriter::KeyValueMergeReader>> reader_holders;
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<KeyValueRollingFileWriter> rolling_writer,

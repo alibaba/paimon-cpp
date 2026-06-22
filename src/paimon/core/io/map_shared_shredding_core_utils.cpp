@@ -99,10 +99,7 @@ Status RestoreContextFromRecentFiles(const std::vector<std::shared_ptr<DataFileM
         for (const auto& field_name : candidate_fields) {
             std::shared_ptr<arrow::Field> field = file_schema->GetFieldByName(field_name);
             if (!field) {
-                return Status::Invalid(
-                    fmt::format("Shared-shredding restore expected field '{}' in data file schema, "
-                                "but it was not found.",
-                                field_name));
+                continue;
             }
             const auto& metadata = field->metadata();
             if (!metadata) {

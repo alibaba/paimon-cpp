@@ -71,6 +71,9 @@ class MergeTreeCompactRewriter : public CompactRewriter {
     static std::vector<std::shared_ptr<DataFileMeta>> ExtractFilesFromSections(
         const std::vector<std::vector<SortedRun>>& sections);
 
+    Status RestoreShreddingContextFromFiles(
+        const std::vector<std::shared_ptr<DataFileMeta>>& files);
+
     MergeTreeCompactRewriter(const BinaryRow& partition, int32_t bucket, int64_t schema_id,
                              const std::vector<std::string>& trimmed_primary_keys,
                              const CoreOptions& options,
