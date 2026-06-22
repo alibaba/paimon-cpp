@@ -71,8 +71,9 @@ ParquetFileBatchReader::ParquetFileBatchReader(
 
 Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
     std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
-    const std::shared_ptr<arrow::MemoryPool>& pool,
-    const std::map<std::string, std::string>& options, int32_t batch_size) {
+    const std::map<std::string, std::string>& options, int32_t batch_size,
+    std::shared_ptr<::parquet::FileMetaData> file_metadata,
+    const std::shared_ptr<arrow::MemoryPool>& pool) {
     try {
         assert(input_stream);
         PAIMON_ASSIGN_OR_RAISE(::parquet::ReaderProperties reader_properties,
@@ -82,7 +83,8 @@ Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
                                CreateArrowReaderProperties(pool, options, batch_size));
 
         ::parquet::arrow::FileReaderBuilder file_reader_builder;
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.Open(input_stream, reader_properties));
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(
+            file_reader_builder.Open(input_stream, reader_properties, std::move(file_metadata)));
 
         std::unique_ptr<::parquet::arrow::FileReader> file_reader;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(pool.get())

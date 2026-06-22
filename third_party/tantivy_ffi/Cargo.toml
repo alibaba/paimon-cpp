@@ -1,0 +1,34 @@
+[package]
+name = "paimon_tantivy_ffi"
+version = "0.1.0"
+edition = "2021"
+description = "C FFI layer wrapping tantivy + jieba-rs for paimon-cpp tantivy-fts global index"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+name = "paimon_tantivy_ffi"
+# staticlib: linked by CMake + Corrosion into libpaimon_tantivy_ffi.a
+# rlib:      lets `cargo test` use native Rust linkage when building test binaries
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+tantivy = "0.22"
+jieba-rs = "0.7"
+croaring = "2.0"
+log = "0.4"
+tempfile = "3"
+
+[build-dependencies]
+cbindgen = "0.29"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+
+[profile.dev]
+# Errors propagate across the FFI via status codes; a Rust panic must abort
+# rather than unwind across the FFI boundary.
+panic = "abort"

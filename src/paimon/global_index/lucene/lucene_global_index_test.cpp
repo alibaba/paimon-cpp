@@ -304,6 +304,18 @@ TEST_P(LuceneGlobalIndexTest, TestSimple) {
                 /*pre_filter=*/RoaringBitmap64::From({1l, 2l, 3l, 100l}))));
         CheckResult(result, {2l});
     }
+    // min_score pushdown is not supported by the lucene backend: it must fail
+    // loudly rather than silently ignore the threshold.
+    {
+        auto fts = std::make_shared<FullTextSearch>("f0",
+                                                    /*limit=*/10, "document",
+                                                    FullTextSearch::SearchType::MATCH_ALL,
+                                                    /*pre_filter=*/std::nullopt);
+        fts->min_score = 1.5f;
+        auto result = lucene_reader->VisitFullTextSearch(fts);
+        ASSERT_FALSE(result.ok());
+        ASSERT_TRUE(result.status().IsNotImplemented()) << result.status().ToString();
+    }
 }
 
 TEST_P(LuceneGlobalIndexTest, TestSimpleChinese) {
