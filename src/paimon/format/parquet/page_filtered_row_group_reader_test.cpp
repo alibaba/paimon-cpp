@@ -136,13 +136,15 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
                                         const std::shared_ptr<Predicate>& predicate,
                                         const RoaringBitmap32& bitmap,
                                         std::shared_ptr<arrow::ChunkedArray>* out,
-                                        int32_t batch_size = 1024) {
+                                        int32_t batch_size = 1024,
+                                        bool enable_page_index_filter = true) {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
         ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
         auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
 
         std::map<std::string, std::string> options;
-        options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] = "true";
+        options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] =
+            enable_page_index_filter ? "true" : "false";
         ASSERT_OK_AND_ASSIGN(
             auto batch_reader,
             ParquetFileBatchReader::Create(std::move(in_stream), arrow_pool_, options, batch_size));
@@ -1344,6 +1346,37 @@ TEST_F(PageFilteredRowGroupReaderTest, BitmapAllAndPartialPagesMixed) {
     }
     for (int32_t i = 0; i < 30; ++i) {
         ASSERT_EQ(120 + i, val_arr->Value(100 + i));
+    }
+}
+
+/// Test: bitmap hits partial pages of a row group, with page-filtered option disabled.
+///
+/// 200 rows, 10 rows per page, 100 rows per row group → 2 row groups.
+/// Bitmap: {0..99} hits all of RG0 + {120..149} hits pages 2-4 of RG1.
+/// Expected: 100 rows (100-199) because page-filtered option is disabled, so page-level bitmap is
+/// ignored.
+TEST_F(PageFilteredRowGroupReaderTest, BitmapWithPageFilteredOptionDisabled) {
+    std::string file_name = dir_->Str() + "/bitmap_all_and_partial.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(120, 150);  // pages 2-4 of RG1
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result,
+                                   1024, false);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(100, result->length());
+
+    // Verify: 100-199
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    for (int32_t i = 0; i < 100; ++i) {
+        ASSERT_EQ(100 + i, val_arr->Value(100 + i));
     }
 }
 

@@ -158,6 +158,11 @@ Status ParquetFileBatchReader::SetReadSchema(
 
         TargetRowGroups target_row_groups =
             TargetRowGroup::MakeSerialRowGroups(reader_->GetNumberOfRowGroups());
+        PAIMON_ASSIGN_OR_RAISE(
+            bool enable_page_index_filter,
+            OptionsUtils::GetValueFromMap<bool>(options_, PARQUET_READ_ENABLE_PAGE_INDEX_FILTER,
+                                                DEFAULT_PARQUET_READ_ENABLE_PAGE_INDEX_FILTER));
+
         if (predicate) {
             PAIMON_ASSIGN_OR_RAISE(
                 target_row_groups,
@@ -166,19 +171,16 @@ Status ParquetFileBatchReader::SetReadSchema(
         if (selection_bitmap) {
             // walkaround: page index filter does not support nested fields for now, skip page index
             // bitmap pushdown if there is any nested field in the schema
-            PAIMON_ASSIGN_OR_RAISE(target_row_groups,
-                                   FilterRowGroupsByBitmap(selection_bitmap.value(),
-                                                           target_row_groups, has_nested_field));
+            PAIMON_ASSIGN_OR_RAISE(
+                target_row_groups,
+                FilterRowGroupsByBitmap(selection_bitmap.value(), target_row_groups,
+                                        !has_nested_field && enable_page_index_filter));
         }
         // Apply page-level filtering after bitmap pruning so we don't read page index
         // pages for row groups that the bitmap already excluded.
         // If no predicate is provided, skip page-level filtering, row_group_row_ranges will be
         // empty
         if (predicate && !target_row_groups.empty()) {
-            PAIMON_ASSIGN_OR_RAISE(
-                bool enable_page_index_filter,
-                OptionsUtils::GetValueFromMap<bool>(options_, PARQUET_READ_ENABLE_PAGE_INDEX_FILTER,
-                                                    DEFAULT_PARQUET_READ_ENABLE_PAGE_INDEX_FILTER));
             // walkaround: page index filter does not support nested fields for now, skip page index
             // filter if there is any nested field in the schema
             if (enable_page_index_filter && !has_nested_field) {
@@ -258,7 +260,7 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByPredicate(
 
 Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByBitmap(
     const RoaringBitmap32& bitmap, const TargetRowGroups& src_row_groups,
-    bool has_nested_column) const {
+    bool enable_page_filtered) const {
     if (bitmap.IsEmpty()) {
         return Status::Invalid("cannot push down an empty bitmap to ParquetFileBatchReader");
     }
@@ -279,7 +281,7 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByBitmap(
         }
 
         int64_t rg_row_count = meta_data->RowGroup(row_group_idx)->num_rows();
-        if (has_nested_column) {
+        if (!enable_page_filtered) {
             // For nested schema, we cannot apply page-level filtering, so we directly add the whole
             // row group if bitmap matches.
             target_row_groups.emplace_back(row_group_idx);
