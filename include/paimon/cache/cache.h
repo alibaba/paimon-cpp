@@ -32,6 +32,7 @@ class CacheValue;
 enum class CacheKind {
     DEFAULT,
     MANIFEST,
+    DATA_FILE_FOOTER,
 };
 
 class PAIMON_EXPORT CacheKey {

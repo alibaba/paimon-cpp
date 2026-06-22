@@ -16,6 +16,8 @@
 
 #include "paimon/common/data/shredding/map_shared_shredding_utils.h"
 
+#include <set>
+
 #include "arrow/type.h"
 #include "arrow/util/key_value_metadata.h"
 #include "gtest/gtest.h"
@@ -176,6 +178,38 @@ TEST(MapSharedShreddingUtilsTest, LogicalToPhysicalSchemaNoShreddingColumns) {
     ASSERT_OK_AND_ASSIGN(auto physical_schema,
                          MapSharedShreddingUtils::LogicalToPhysicalSchema(schema, empty_map));
     ASSERT_TRUE(physical_schema->Equals(schema));
+}
+
+TEST(MapSharedShreddingUtilsTest, BuildSpecificPhysicalStructTypeWithOverflow) {
+    auto actual = MapSharedShreddingUtils::BuildSpecificPhysicalStructType(
+        arrow::int64(), /*physical_col_ids=*/{3, 1}, /*value_nullable=*/false,
+        /*include_overflow=*/true);
+
+    auto expected = arrow::struct_({
+        arrow::field("__field_mapping", arrow::list(arrow::int32()), true),
+        arrow::field("__col_1", arrow::int64(), false),
+        arrow::field("__col_3", arrow::int64(), false),
+        arrow::field("__overflow",
+                     arrow::map(arrow::int32(), arrow::field("value", arrow::int64(), false)),
+                     true),
+    });
+    ASSERT_TRUE(actual->Equals(*expected)) << "Expected:\n"
+                                           << expected->ToString() << "\nActual:\n"
+                                           << actual->ToString();
+}
+
+TEST(MapSharedShreddingUtilsTest, BuildSpecificPhysicalStructTypeWithoutOverflow) {
+    auto actual = MapSharedShreddingUtils::BuildSpecificPhysicalStructType(
+        arrow::utf8(), /*physical_col_ids=*/{3}, /*value_nullable=*/true,
+        /*include_overflow=*/false);
+
+    auto expected = arrow::struct_({
+        arrow::field("__field_mapping", arrow::list(arrow::int32()), true),
+        arrow::field("__col_3", arrow::utf8(), true),
+    });
+    ASSERT_TRUE(actual->Equals(*expected)) << "Expected:\n"
+                                           << expected->ToString() << "\nActual:\n"
+                                           << actual->ToString();
 }
 
 // ---- BuildColumnToNumColumns ----
@@ -376,6 +410,96 @@ TEST(MapSharedShreddingUtilsTest, PhysicalColumnName) {
     ASSERT_EQ(MapSharedShreddingDefine::PhysicalColumnName(0), "__col_0");
     ASSERT_EQ(MapSharedShreddingDefine::PhysicalColumnName(1), "__col_1");
     ASSERT_EQ(MapSharedShreddingDefine::PhysicalColumnName(99), "__col_99");
+}
+
+// ---- GetPhysicalColumnIndices ----
+
+// Normal: single physical column per field
+TEST(MapSharedShreddingUtilsTest, GetPhysicalColumnIndicesSingleColumn) {
+    MapSharedShreddingFieldMeta meta;
+    meta.name_to_id = {{"age", 0}, {"name", 1}};
+    meta.field_to_columns = {{0, {2}}, {1, {5}}};
+
+    ASSERT_OK_AND_ASSIGN(auto cols_age,
+                         MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "age"));
+    ASSERT_EQ(cols_age, (std::vector<int32_t>{2}));
+
+    ASSERT_OK_AND_ASSIGN(auto cols_name,
+                         MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "name"));
+    ASSERT_EQ(cols_name, (std::vector<int32_t>{5}));
+}
+
+// Normal: multiple physical columns for one field
+TEST(MapSharedShreddingUtilsTest, GetPhysicalColumnIndicesMultipleColumns) {
+    MapSharedShreddingFieldMeta meta;
+    meta.name_to_id = {{"tags", 0}};
+    meta.field_to_columns = {{0, {0, 3, 7}}};
+
+    ASSERT_OK_AND_ASSIGN(auto cols,
+                         MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "tags"));
+    ASSERT_EQ(cols, (std::vector<int32_t>{0, 3, 7}));
+}
+
+// Normal: many fields each mapping to different physical columns
+TEST(MapSharedShreddingUtilsTest, GetPhysicalColumnIndicesMultipleFields) {
+    MapSharedShreddingFieldMeta meta;
+    meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}};
+    meta.field_to_columns = {{0, {0, 1}}, {1, {2, 3, 4}}, {2, {5}}};
+
+    ASSERT_OK_AND_ASSIGN(auto cols_a, MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "a"));
+    ASSERT_EQ(cols_a, (std::vector<int32_t>{0, 1}));
+
+    ASSERT_OK_AND_ASSIGN(auto cols_b, MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "b"));
+    ASSERT_EQ(cols_b, (std::vector<int32_t>{2, 3, 4}));
+
+    ASSERT_OK_AND_ASSIGN(auto cols_c, MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "c"));
+    ASSERT_EQ(cols_c, (std::vector<int32_t>{5}));
+}
+
+// Error: field name not found in name_to_id
+TEST(MapSharedShreddingUtilsTest, GetPhysicalColumnIndicesFieldNotFound) {
+    MapSharedShreddingFieldMeta meta;
+    meta.name_to_id = {{"age", 0}};
+    meta.field_to_columns = {{0, {1}}};
+
+    ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "nonexistent"),
+                        "cannot find field nonexistent in map shared shredding meta");
+}
+
+// Error: field name not found in empty meta
+TEST(MapSharedShreddingUtilsTest, GetPhysicalColumnIndicesEmptyMeta) {
+    MapSharedShreddingFieldMeta meta;
+    ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "any"),
+                        "cannot find field any in map shared shredding meta");
+}
+
+// Error: field id exists in name_to_id but is missing from field_to_columns
+TEST(MapSharedShreddingUtilsTest, GetPhysicalColumnIndicesFieldIdMissingInFieldToColumns) {
+    MapSharedShreddingFieldMeta meta;
+    // "score" -> field_id 42, but field_to_columns has no entry for 42
+    meta.name_to_id = {{"score", 42}};
+    meta.field_to_columns = {};
+
+    ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::GetPhysicalColumnIndices(meta, "score"),
+                        "cannot find field id 42 in field_to_columns in map shared shredding meta");
+}
+
+TEST(MapSharedShreddingUtilsTest, IsOverflowField) {
+    MapSharedShreddingFieldMeta meta;
+    meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}};
+    meta.overflow_field_set = {0, 2};
+
+    ASSERT_OK_AND_ASSIGN(bool a_overflow, MapSharedShreddingUtils::IsOverflowField(meta, "a"));
+    ASSERT_TRUE(a_overflow);
+
+    ASSERT_OK_AND_ASSIGN(bool b_overflow, MapSharedShreddingUtils::IsOverflowField(meta, "b"));
+    ASSERT_FALSE(b_overflow);
+
+    ASSERT_OK_AND_ASSIGN(bool c_overflow, MapSharedShreddingUtils::IsOverflowField(meta, "c"));
+    ASSERT_TRUE(c_overflow);
+
+    ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::IsOverflowField(meta, "missing"),
+                        "cannot find field missing in map shared shredding meta");
 }
 
 }  // namespace paimon::test

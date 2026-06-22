@@ -96,6 +96,7 @@ function(add_paimon_lib LIB_NAME)
     endif()
     # Necessary to make static linking into other shared libraries work properly
     set_property(TARGET ${LIB_NAME}_objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
+    target_link_libraries(${LIB_NAME}_objlib PUBLIC paimon_sanitizer_flags)
     if(ARG_DEPENDENCIES)
         # In static-only builds, some dependency names are still declared as
         # *_shared. Map them to *_static when the shared target is unavailable.
@@ -181,6 +182,10 @@ function(add_paimon_lib LIB_NAME)
         if(NOT APPLE)
             set(SHARED_LINK_OPTIONS -Wl,--exclude-libs,ALL -Wl,-Bsymbolic
                                     -Wl,--gc-sections)
+            # -z defs (--no-undefined) rejects the __asan_*/__ubsan_* symbols that
+            # sanitizer-instrumented shared libraries legitimately leave undefined
+            # (they are resolved at load time from the executable's sanitizer
+            # runtime). Only enforce it for non-sanitizer builds.
             if(NOT PAIMON_USE_ASAN AND NOT PAIMON_USE_UBSAN)
                 list(APPEND SHARED_LINK_OPTIONS -Wl,-z,defs)
             endif()
@@ -336,6 +341,11 @@ function(add_test_case REL_TEST_NAME)
         target_compile_options(${TEST_NAME} PRIVATE -Wno-global-constructors)
     endif()
     target_compile_options(${TEST_NAME} PRIVATE -fno-access-control)
+    # Test sources initialize char / vector<char> from raw byte values like
+    # {1, -1, ...}; char is unsigned by default on aarch64, which triggers
+    # -Wnarrowing. Disable it for tests so we don't have to sprinkle
+    # static_cast<char>(-1) everywhere. Production code (src/paimon/...) keeps it.
+    target_compile_options(${TEST_NAME} PRIVATE -Wno-narrowing)
 
     add_test(${TEST_NAME}
              ${BUILD_SUPPORT_DIR}/run-test.sh

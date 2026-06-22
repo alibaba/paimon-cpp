@@ -1,0 +1,76 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+// x86_64 variant of the Paimon CPP Dev Container.
+// On Apple Silicon hosts this runs under QEMU emulation (5-10x slower).
+// Use it ONLY for cross-architecture verification (Stage 11), not daily dev.
+//
+// Reuses the same Dockerfile as the default container; only the platform differs.
+//
+// Uses dedicated named volumes (suffix `-amd64`) so build/cargo cache do not
+// collide with the native aarch64 container.
+
+{
+	"name": "Paimon CPP Dev Container (x86_64 via QEMU)",
+	"build": {
+		"dockerfile": "../Dockerfile",
+		"options": [
+			"--platform=linux/amd64"
+		]
+	},
+	"runArgs": [
+		"--platform=linux/amd64",
+		"--ulimit=core=-1",
+		"--cap-add=SYS_ADMIN",
+		"--cap-add=SYS_PTRACE",
+		"--cap-add=PERFMON",
+		"--security-opt",
+		"seccomp=unconfined",
+		"--privileged"
+	],
+	"features": {
+		"ghcr.io/devcontainers/features/rust:1": {
+			"version": "stable",
+			"profile": "default"
+		}
+	},
+	"mounts": [
+		"source=${localEnv:HOME}/.ssh,target=/home/paimon/.ssh,type=bind,readonly",
+		"source=paimon-cargo-registry-amd64,target=/home/paimon/.cargo/registry,type=volume",
+		"source=paimon-cargo-git-amd64,target=/home/paimon/.cargo/git,type=volume",
+		"source=paimon-rust-target-amd64,target=${containerWorkspaceFolder}/third_party/tantivy_ffi/target,type=volume",
+		"source=paimon-build-amd64,target=${containerWorkspaceFolder}/build,type=volume",
+		"source=paimon-ccache-amd64,target=/home/paimon/.ccache,type=volume"
+	],
+	"postCreateCommand": "sudo chown -R paimon:paimon ${containerWorkspaceFolder}/build ${containerWorkspaceFolder}/third_party/tantivy_ffi/target /home/paimon/.ccache /home/paimon/.cargo/registry /home/paimon/.cargo/git 2>/dev/null || true; cargo install cbindgen --locked || true; rustup component add rust-src rust-analyzer clippy rustfmt || true",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"eamodio.gitlens",
+				"rust-lang.rust-analyzer",
+				"vadimcn.vscode-lldb",
+				"llvm-vs-code-extensions.vscode-clangd",
+				"ms-vscode.cmake-tools"
+			],
+			"settings": {
+				"editor.formatOnSave": true
+			}
+		}
+	}
+}
