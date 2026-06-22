@@ -131,7 +131,8 @@ Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::P
         case arrow::Type::LIST: {
             const auto& read_list = static_cast<const arrow::ListType&>(*read_type);
             const auto& data_list = static_cast<const arrow::ListType&>(*data_type);
-            PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<arrow::DataType>> pruned_elem,
+            std::optional<std::shared_ptr<arrow::DataType>> pruned_elem = std::nullopt;
+            PAIMON_ASSIGN_OR_RAISE(pruned_elem,
                                    PruneDataType(read_list.value_type(), data_list.value_type()));
             if (!pruned_elem.has_value()) {
                 return std::optional<std::shared_ptr<arrow::DataType>>(std::nullopt);
@@ -145,9 +146,11 @@ Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::P
         case arrow::Type::MAP: {
             const auto& read_map = static_cast<const arrow::MapType&>(*read_type);
             const auto& data_map = static_cast<const arrow::MapType&>(*data_type);
-            PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<arrow::DataType>> pruned_key,
+            std::optional<std::shared_ptr<arrow::DataType>> pruned_key = std::nullopt;
+            PAIMON_ASSIGN_OR_RAISE(pruned_key,
                                    PruneDataType(read_map.key_type(), data_map.key_type()));
-            PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<arrow::DataType>> pruned_value,
+            std::optional<std::shared_ptr<arrow::DataType>> pruned_value = std::nullopt;
+            PAIMON_ASSIGN_OR_RAISE(pruned_value,
                                    PruneDataType(read_map.item_type(), data_map.item_type()));
             if (!pruned_key.has_value() || !pruned_value.has_value()) {
                 return std::optional<std::shared_ptr<arrow::DataType>>(std::nullopt);
