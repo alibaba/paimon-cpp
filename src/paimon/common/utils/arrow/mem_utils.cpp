@@ -18,6 +18,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <new>
 #include <string>
 
 #include "arrow/memory_pool.h"
@@ -33,18 +34,30 @@ class ArrowMemPoolAdaptor : public arrow::MemoryPool {
         : pool_(*pool), life_holder_(pool) {}
 
     arrow::Status Allocate(int64_t size, int64_t alignment, uint8_t** out) override {
-        *out = reinterpret_cast<uint8_t*>(pool_.Malloc(size, alignment));
-        if (size > 0 && *out == nullptr) {
+        uint8_t* new_out = nullptr;
+        try {
+            new_out = reinterpret_cast<uint8_t*>(pool_.Malloc(size, alignment));
+        } catch (const std::bad_alloc&) {
             return arrow::Status::OutOfMemory(fmt::format("failed to allocate {} bytes", size));
         }
+        if (size > 0 && new_out == nullptr) {
+            return arrow::Status::OutOfMemory(fmt::format("failed to allocate {} bytes", size));
+        }
+        *out = new_out;
         stats_.DidAllocateBytes(size);
         return arrow::Status::OK();
     }
 
     arrow::Status Reallocate(int64_t old_size, int64_t new_size, int64_t alignment,
                              uint8_t** ptr) override {
-        auto* new_ptr =
-            reinterpret_cast<uint8_t*>(pool_.Realloc(*ptr, old_size, new_size, alignment));
+        uint8_t* new_ptr = nullptr;
+        try {
+            new_ptr =
+                reinterpret_cast<uint8_t*>(pool_.Realloc(*ptr, old_size, new_size, alignment));
+        } catch (const std::bad_alloc&) {
+            return arrow::Status::OutOfMemory(
+                fmt::format("failed to reallocate memory from {} to {} bytes", old_size, new_size));
+        }
         if (new_size > 0 && new_ptr == nullptr) {
             return arrow::Status::OutOfMemory(
                 fmt::format("failed to reallocate memory from {} to {} bytes", old_size, new_size));
