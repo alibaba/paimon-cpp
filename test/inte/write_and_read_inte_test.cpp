@@ -47,11 +47,6 @@
 #include "paimon/testing/utils/test_helper.h"
 #include "paimon/testing/utils/testharness.h"
 
-namespace paimon {
-class DataSplit;
-class RecordBatch;
-}  // namespace paimon
-
 namespace paimon::test {
 // This is a sdk end-to-end test demo that supports write, commit, scan, and read operations.
 class WriteAndReadInteTest
