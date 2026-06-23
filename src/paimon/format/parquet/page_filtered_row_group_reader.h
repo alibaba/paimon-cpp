@@ -88,8 +88,9 @@ class PageFilteredRowGroupReader {
 
     /// Execute the skip/read pattern on a RecordReader based on RowRanges.
     static Status ExecuteSkipReadPattern(
-        std::shared_ptr<::parquet::internal::RecordReader> record_reader, const RowRanges& ranges,
-        int64_t total_row_count, int32_t row_group_index, int32_t column_index);
+        const std::shared_ptr<::parquet::internal::RecordReader>& record_reader,
+        const RowRanges& ranges, int64_t total_row_count, int32_t row_group_index,
+        int32_t column_index);
 
     /// Create a data_page_filter callback for a column based on RowRanges + OffsetIndex.
     static std::function<bool(const ::parquet::DataPageStats&)> MakePageFilter(

@@ -113,7 +113,8 @@ Result<std::unique_ptr<FileStoreCommit>> FileStoreCommit::Create(
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<ManifestList> manifest_list,
         ManifestList::Create(options.GetFileSystem(), options.GetManifestFormat(),
-                             options.GetManifestCompression(), path_factory, ctx->GetMemoryPool()));
+                             options.GetManifestCompression(), path_factory, options.GetCache(),
+                             ctx->GetMemoryPool()));
 
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<arrow::Schema> partition_schema,

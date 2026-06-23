@@ -23,6 +23,9 @@
 #include "paimon/common/utils/string_utils.h"
 
 namespace paimon {
+
+const char* ArrowUtils::kArrowSchemaMetadataKey = "ARROW:schema";
+
 Result<std::shared_ptr<arrow::Schema>> ArrowUtils::DataTypeToSchema(
     const std::shared_ptr<arrow::DataType>& data_type) {
     if (data_type->id() != arrow::Type::STRUCT) {

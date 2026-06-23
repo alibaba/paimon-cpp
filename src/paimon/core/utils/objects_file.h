@@ -17,6 +17,7 @@
 #pragma once
 
 #include <functional>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -24,6 +25,8 @@
 
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
+#include "fmt/format.h"
+#include "paimon/cache/cache.h"
 #include "paimon/common/data/columnar/columnar_row.h"
 #include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
@@ -37,6 +40,8 @@
 #include "paimon/format/reader_builder.h"
 #include "paimon/format/writer_builder.h"
 #include "paimon/fs/file_system.h"
+#include "paimon/io/byte_array_input_stream.h"
+#include "paimon/memory/bytes.h"
 #include "paimon/record_batch.h"
 
 namespace paimon {
@@ -50,7 +55,7 @@ class ObjectsFile {
                 const std::shared_ptr<WriterBuilder>& writer_builder,
                 std::unique_ptr<ObjectSerializer<T>>&& serializer, const std::string& compression,
                 const std::shared_ptr<PathFactory>& path_factory,
-                const std::shared_ptr<MemoryPool>& pool);
+                const std::shared_ptr<Cache>& cache, const std::shared_ptr<MemoryPool>& pool);
 
     virtual ~ObjectsFile() = default;
 
@@ -80,6 +85,9 @@ class ObjectsFile {
     std::shared_ptr<FileSystem> file_system_;
     std::shared_ptr<ReaderBuilder> reader_builder_;
     std::string compression_;
+    std::shared_ptr<Cache> cache_;
+
+    Result<MemorySegment> ReadFileSegment(const std::string& file_path) const;
 };
 
 template <typename T>
@@ -89,6 +97,7 @@ ObjectsFile<T>::ObjectsFile(const std::shared_ptr<FileSystem>& file_system,
                             std::unique_ptr<ObjectSerializer<T>>&& serializer,
                             const std::string& compression,
                             const std::shared_ptr<PathFactory>& path_factory,
+                            const std::shared_ptr<Cache>& cache,
                             const std::shared_ptr<MemoryPool>& pool)
     : path_factory_(path_factory),
       pool_(pool),
@@ -96,9 +105,8 @@ ObjectsFile<T>::ObjectsFile(const std::shared_ptr<FileSystem>& file_system,
       writer_builder_(std::move(writer_builder)),
       file_system_(file_system),
       reader_builder_(std::move(reader_builder)),
-      compression_(compression) {
-    // TODO(xinyu.lxy): add cache
-}
+      compression_(compression),
+      cache_(cache) {}
 
 template <typename T>
 Status ObjectsFile<T>::ReadIfFileExist(const std::string& file_name,
@@ -117,8 +125,33 @@ Status ObjectsFile<T>::Read(const std::string& file_name,
                             const std::function<Result<bool>(const T&)>& filter,
                             std::vector<T>* result) const {
     std::string file_path = path_factory_->ToPath(file_name);
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> file_input_stream,
-                           file_system_->Open(file_path));
+    std::shared_ptr<InputStream> file_input_stream;
+    std::shared_ptr<Bytes> cached_bytes;
+    if (cache_) {
+        // Use a whole-file key so cache hits do not need a metadata lookup just to discover file
+        // length.
+        auto cache_key =
+            CacheKey::ForKind(file_path, /*position=*/0, /*length=*/-1, CacheKind::MANIFEST);
+        auto supplier =
+            [this,
+             &file_path](const std::shared_ptr<CacheKey>&) -> Result<std::shared_ptr<CacheValue>> {
+            PAIMON_ASSIGN_OR_RAISE(MemorySegment segment, ReadFileSegment(file_path));
+            return std::make_shared<CacheValue>(segment, CacheCallback());
+        };
+        Result<std::shared_ptr<CacheValue>> cache_result = cache_->Get(cache_key, supplier);
+        if (cache_result.ok() && cache_result.value() &&
+            cache_result.value()->GetSegment().Data() != nullptr) {
+            cached_bytes = cache_result.value()->GetSegment().GetOrCreateHeapMemory(pool_.get());
+            file_input_stream =
+                std::make_shared<ByteArrayInputStream>(cached_bytes->data(), cached_bytes->size());
+        }
+    }
+    if (!file_input_stream) {
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<InputStream> unique_file_input_stream,
+                               file_system_->Open(file_path));
+        file_input_stream = std::shared_ptr<InputStream>(std::move(unique_file_input_stream));
+    }
+
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileBatchReader> batch_reader,
                            reader_builder_->Build(file_input_stream));
     auto reader = std::make_unique<ManifestMetaReader>(std::move(batch_reader),
@@ -152,6 +185,24 @@ Status ObjectsFile<T>::Read(const std::string& file_name,
     }
     reader->Close();
     return Status::OK();
+}
+
+template <typename T>
+Result<MemorySegment> ObjectsFile<T>::ReadFileSegment(const std::string& file_path) const {
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<InputStream> input_stream,
+                           file_system_->Open(file_path));
+    PAIMON_ASSIGN_OR_RAISE(int64_t input_length, input_stream->Length());
+
+    PAIMON_RETURN_NOT_OK(input_stream->Seek(0, FS_SEEK_SET));
+    auto bytes = std::make_shared<Bytes>(input_length, pool_.get());
+    PAIMON_ASSIGN_OR_RAISE(int64_t actual_read_size,
+                           input_stream->Read(bytes->data(), input_length));
+    if (actual_read_size != input_length) {
+        return Status::IOError(fmt::format(
+            "Unexpected EOF while reading manifest file {}, expected {} bytes, got {} bytes",
+            file_path, input_length, actual_read_size));
+    }
+    return MemorySegment::Wrap(bytes);
 }
 
 template <typename T>

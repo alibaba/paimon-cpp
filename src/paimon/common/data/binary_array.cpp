@@ -22,8 +22,8 @@
 
 #include "paimon/common/data/binary_array_writer.h"
 #include "paimon/common/data/binary_data_read_utils.h"
-#include "paimon/common/memory/memory_segment.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/memory/memory_segment.h"
 
 namespace paimon {
 

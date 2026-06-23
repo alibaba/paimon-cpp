@@ -41,6 +41,7 @@ class ChangelogMergeTreeRewriter : public MergeTreeCompactRewriter {
         std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
         MergeFunctionWrapperFactory merge_function_wrapper_factory,
         const std::shared_ptr<CancellationController>& cancellation_controller,
+        const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
         const std::shared_ptr<MemoryPool>& pool);
 
     struct UpgradeStrategy {

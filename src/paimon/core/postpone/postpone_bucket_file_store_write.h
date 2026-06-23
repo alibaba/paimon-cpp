@@ -125,10 +125,11 @@ class PostponeBucketFileStoreWrite : public AbstractFileStoreWrite {
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<DataFilePathFactory> data_file_path_factory,
             file_store_path_factory_->CreateDataFilePathFactory(partition, bucket));
-        auto writer =
-            std::make_shared<PostponeBucketWriter>(trimmed_primary_keys, data_file_path_factory,
-                                                   table_schema_->Id(), schema_, options_, pool_);
-        return std::shared_ptr<BatchWriter>(writer);
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<BatchWriter> writer,
+            PostponeBucketWriter::Create(trimmed_primary_keys, data_file_path_factory,
+                                         table_schema_->Id(), schema_, options_, pool_));
+        return writer;
     }
 
     Result<std::unique_ptr<FileStoreScan>> CreateFileStoreScan(

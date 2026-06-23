@@ -104,4 +104,35 @@ TEST(GenericRowTest, TestSimple) {
         "00:00:00.100000020,123.45678998765432145678,array,row,map,null)",
         row.ToString());
 }
+
+TEST(GenericRowTest, TestResetFields) {
+    auto pool = GetDefaultPool();
+    GenericRow row(3);
+    row.SetField(0, static_cast<int32_t>(1));
+    row.SetField(1, BinaryString::FromString("old", pool.get()));
+    row.SetField(2, Bytes::AllocateBytes("bytes", pool.get()));
+    row.SetRowKind(RowKind::Delete());
+
+    ASSERT_FALSE(row.IsNullAt(0));
+    ASSERT_FALSE(row.IsNullAt(1));
+    ASSERT_FALSE(row.IsNullAt(2));
+    ASSERT_EQ(row.GetRowKind().value(), RowKind::Delete());
+
+    row.ResetFields();
+
+    ASSERT_EQ(row.GetFieldCount(), 3);
+    ASSERT_TRUE(row.IsNullAt(0));
+    ASSERT_TRUE(row.IsNullAt(1));
+    ASSERT_TRUE(row.IsNullAt(2));
+    ASSERT_EQ(row.GetRowKind().value(), RowKind::Insert());
+
+    row.SetField(0, static_cast<int32_t>(2));
+    row.SetField(1, BinaryString::FromString("new", pool.get()));
+    row.SetRowKind(RowKind::UpdateAfter());
+
+    ASSERT_EQ(row.GetInt(0), static_cast<int32_t>(2));
+    ASSERT_EQ(row.GetString(1), BinaryString::FromString("new", pool.get()));
+    ASSERT_TRUE(row.IsNullAt(2));
+    ASSERT_EQ(row.GetRowKind().value(), RowKind::UpdateAfter());
+}
 }  // namespace paimon::test

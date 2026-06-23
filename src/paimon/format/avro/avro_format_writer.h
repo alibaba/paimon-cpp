@@ -18,8 +18,10 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
+#include <string>
 
 #include "arrow/api.h"
 #include "avro/DataFile.hh"
@@ -63,6 +65,8 @@ class AvroFormatWriter : public FormatWriter {
     std::shared_ptr<Metrics> GetWriterMetrics() const override {
         return metrics_;
     }
+
+    Status AddMetadata(const std::map<std::string, std::string>& metadata) override;
 
  private:
     static constexpr size_t DEFAULT_SYNC_INTERVAL = 64 * 1024;

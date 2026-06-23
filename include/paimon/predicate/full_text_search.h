@@ -46,22 +46,27 @@ struct PAIMON_EXPORT FullTextSearch {
 
     FullTextSearch(const std::string& _field_name, std::optional<int32_t> _limit,
                    const std::string& _query, const SearchType& _search_type,
-                   const std::optional<RoaringBitmap64>& _pre_filter)
+                   const std::optional<RoaringBitmap64>& _pre_filter, bool _with_score = false,
+                   std::optional<float> _min_score = std::nullopt)
         : field_name(_field_name),
           limit(_limit),
           query(_query),
           search_type(_search_type),
-          pre_filter(_pre_filter) {}
+          pre_filter(_pre_filter),
+          with_score(_with_score),
+          min_score(_min_score) {}
 
     std::shared_ptr<FullTextSearch> ReplacePreFilter(
         const std::optional<RoaringBitmap64>& _pre_filter) const {
-        return std::make_shared<FullTextSearch>(field_name, limit, query, search_type, _pre_filter);
+        return std::make_shared<FullTextSearch>(field_name, limit, query, search_type, _pre_filter,
+                                                with_score, min_score);
     }
 
     /// Name of the field to search within (must be a full-text indexed field).
     std::string field_name;
-    /// Maximum number of documents to return. If set, limit ordered by top scores. Otherwise, no
-    /// score return.
+    /// Maximum number of documents to return. Purely a truncation switch,
+    /// orthogonal to `with_score`: set `with_score = true` to get relevance
+    /// scores; a non-empty `limit` does not by itself imply scoring.
     std::optional<int32_t> limit;
     /// The query string to search for. The interpretation depends on search_type:
     ///
@@ -85,5 +90,26 @@ struct PAIMON_EXPORT FullTextSearch {
     /// Only rows whose global row ID is present in `pre_filter` will be included during search.
     /// If not set, all rows will be included.
     std::optional<RoaringBitmap64> pre_filter;
+    /// Whether to compute and return relevance scores (e.g. BM25). The 4-path matrix:
+    /// - `with_score=false, limit=nullopt` → BitmapGlobalIndexResult (all rows, no score)
+    /// - `with_score=false, limit=N`       → BitmapGlobalIndexResult (any N matches, unscored)
+    /// - `with_score=true,  limit=nullopt` → BitmapScoredGlobalIndexResult (all rows + all scores)
+    /// - `with_score=true,  limit=N`       → BitmapScoredGlobalIndexResult (top-N by score +
+    /// scores)
+    ///
+    /// For plain `LIMIT N` without ORDER BY (the common case when an online
+    /// engine, e.g. StarRocks, pushes down a predicate) set `with_score=false,
+    /// limit=N` — the unscored fast path. For top-N by relevance use
+    /// `with_score=true, limit=N` and drop the scores in the caller if unneeded.
+    ///
+    /// Default is `false` to avoid score computation overhead for callers that don't need it.
+    bool with_score = false;
+    /// Minimum relevance-score threshold (exclusive); results with score ≤ this value are
+    /// excluded. The score is whatever the backend's similarity produces (e.g. BM25 for
+    /// tantivy, classic TF-IDF for lucene), so a threshold is not directly comparable across
+    /// backends. Only meaningful when scoring is active (`with_score = true` or `limit` set);
+    /// applied before truncation so low-score documents never occupy limit slots.
+    /// Default is nullopt (no threshold filtering).
+    std::optional<float> min_score;
 };
 }  // namespace paimon

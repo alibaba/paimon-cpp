@@ -26,12 +26,12 @@
 #include "arrow/util/checked_cast.h"
 #include "fmt/format.h"
 #include "paimon/common/data/binary_string.h"
-#include "paimon/common/memory/memory_segment.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/memory/memory_segment.h"
 #include "paimon/status.h"
 
 namespace paimon {

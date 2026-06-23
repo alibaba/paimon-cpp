@@ -19,12 +19,15 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
 
 #include "arrow/c/abi.h"
+#include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
+#include "arrow/ipc/api.h"
 #include "fmt/format.h"
 #include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/scope_guard.h"
@@ -38,6 +41,10 @@
 #include "paimon/record_batch.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
+
+namespace arrow {
+class Schema;
+}  // namespace arrow
 
 namespace paimon {
 
@@ -111,6 +118,15 @@ class SingleFileWriter : public FileWriter<T, R> {
     }
 
  protected:
+    /// Hook called after Flush() and before Finish() during Close().
+    /// Subclasses can override to update per-field metadata before the file is finalized.
+    virtual Status BeforeFinish() {
+        return Status::OK();
+    }
+
+    /// Serializes schema and forwards it as file metadata to FormatWriter.
+    Status UpdateSchema(const std::shared_ptr<arrow::Schema>& schema);
+
     int64_t output_bytes_ = -1;
     std::string compression_;
     std::function<Status(T, ArrowArray*)> converter_;
@@ -199,6 +215,7 @@ Status SingleFileWriter<T, R>::Close() {
                         path_.c_str());
     });
     PAIMON_RETURN_NOT_OK(writer_->Flush());
+    PAIMON_RETURN_NOT_OK(BeforeFinish());
     PAIMON_RETURN_NOT_OK(writer_->Finish());
     if (out_) {
         PAIMON_RETURN_NOT_OK(out_->Flush());
@@ -216,6 +233,20 @@ Status SingleFileWriter<T, R>::Close() {
 template <typename T, typename R>
 Result<bool> SingleFileWriter<T, R>::ReachTargetSize(bool suggested_check, int64_t target_size) {
     return writer_->ReachTargetSize(suggested_check, target_size);
+}
+
+template <typename T, typename R>
+Status SingleFileWriter<T, R>::UpdateSchema(const std::shared_ptr<arrow::Schema>& schema) {
+    if (!writer_) {
+        return Status::Invalid("Cannot update schema: format writer is not initialized.");
+    }
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Buffer> serialized,
+                                      arrow::ipc::SerializeSchema(*schema));
+    std::map<std::string, std::string> metadata;
+    metadata.emplace(ArrowUtils::kArrowSchemaMetadataKey,
+                     std::string(reinterpret_cast<const char*>(serialized->data()),
+                                 static_cast<size_t>(serialized->size())));
+    return writer_->AddMetadata(metadata);
 }
 
 template <typename T, typename R>

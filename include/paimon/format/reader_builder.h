@@ -24,6 +24,7 @@
 #include "paimon/type_fwd.h"
 
 namespace paimon {
+class Cache;
 
 /// Create a file batch reader based on the file path. Allows you to specify memory pool.
 class PAIMON_EXPORT ReaderBuilder {
@@ -32,6 +33,12 @@ class PAIMON_EXPORT ReaderBuilder {
 
     /// Set memory pool to use.
     virtual ReaderBuilder* WithMemoryPool(const std::shared_ptr<MemoryPool>& pool) = 0;
+
+    /// Inject a cache for reader-specific immutable metadata.
+    virtual ReaderBuilder* WithCache(const std::shared_ptr<Cache>& cache) {
+        (void)cache;
+        return this;
+    }
 
     /// Build a file batch reader based on the created `InputStream`.
     virtual Result<std::unique_ptr<FileBatchReader>> Build(

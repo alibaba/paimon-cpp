@@ -85,6 +85,14 @@ class OrcReaderWrapper {
         return reader_->getType();
     }
 
+    bool HasMetadataValue(const std::string& key) const {
+        return reader_->hasMetadataValue(key);
+    }
+
+    std::string GetMetadataValue(const std::string& key) const {
+        return reader_->getMetadataValue(key);
+    }
+
     Result<std::vector<std::pair<uint64_t, uint64_t>>> GenReadRanges(
         std::vector<uint64_t> target_column_ids, uint64_t begin_row_num, uint64_t end_row_num,
         bool* need_prefetch) const {

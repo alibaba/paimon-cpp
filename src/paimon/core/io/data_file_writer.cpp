@@ -43,10 +43,25 @@ DataFileWriter::DataFileWriter(
       stats_extractor_(stats_extractor),
       write_cols_(write_cols) {}
 
+void DataFileWriter::SetMetadataFinalizer(MetadataFinalizer finalizer) {
+    metadata_finalizer_ = std::move(finalizer);
+}
+
 Status DataFileWriter::Write(ArrowArray* batch) {
     int64_t record_count = batch->length;
     PAIMON_RETURN_NOT_OK(SingleFileWriter::Write(batch));
     seq_num_counter_->Add(record_count);
+    return Status::OK();
+}
+
+Status DataFileWriter::BeforeFinish() {
+    if (metadata_finalizer_) {
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> updated_schema,
+                               metadata_finalizer_());
+        if (updated_schema) {
+            PAIMON_RETURN_NOT_OK(UpdateSchema(updated_schema));
+        }
+    }
     return Status::OK();
 }
 

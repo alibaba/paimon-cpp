@@ -16,6 +16,7 @@
 
 #include "paimon/core/bucket/hive_bucket_function.h"
 
+#include <cstring>
 #include <limits>
 
 #include "gtest/gtest.h"
@@ -97,6 +98,23 @@ class HiveBucketFunctionTest : public ::testing::Test {
     BinaryRow CreateStringRow(const std::string& value) {
         auto pool = GetDefaultPool();
         return BinaryRowGenerator::GenerateRow({value}, pool.get());
+    }
+
+    BinaryRow CreateByteRow(int8_t value) {
+        auto pool = GetDefaultPool();
+        return BinaryRowGenerator::GenerateRow({value}, pool.get());
+    }
+
+    float FloatFromBits(uint32_t bits) {
+        float value;
+        std::memcpy(&value, &bits, sizeof(value));
+        return value;
+    }
+
+    double DoubleFromBits(uint64_t bits) {
+        double value;
+        std::memcpy(&value, &bits, sizeof(value));
+        return value;
     }
 };
 
@@ -203,6 +221,39 @@ TEST_F(HiveBucketFunctionTest, TestDoubleNegativeZero) {
 
     // -0.0 should be treated as 0L => hashLong(0) = 0
     ASSERT_EQ(func->Bucket(CreateDoubleRow(0.0), 5), func->Bucket(CreateDoubleRow(-0.0), 5));
+}
+
+TEST_F(HiveBucketFunctionTest, TestFloatNaNCanonicalizationCompatibleWithJava) {
+    std::vector<FieldType> field_types = {FieldType::FLOAT};
+    ASSERT_OK_AND_ASSIGN(auto func, HiveBucketFunction::Create(field_types));
+
+    // Verified with Java HiveBucketFunction:
+    // Float.NaN, Float.intBitsToFloat(0x7fa12345), and Float.intBitsToFloat(0x7fc00000)
+    // all hash through Float.floatToIntBits(...) = 0x7fc00000.
+    ASSERT_EQ(344, func->Bucket(CreateFloatRow(std::numeric_limits<float>::quiet_NaN()), 1000));
+    ASSERT_EQ(344, func->Bucket(CreateFloatRow(FloatFromBits(0x7FA12345U)), 1000));
+    ASSERT_EQ(344, func->Bucket(CreateFloatRow(FloatFromBits(0x7FC00000U)), 1000));
+}
+
+TEST_F(HiveBucketFunctionTest, TestDoubleNaNCanonicalizationCompatibleWithJava) {
+    std::vector<FieldType> field_types = {FieldType::DOUBLE};
+    ASSERT_OK_AND_ASSIGN(auto func, HiveBucketFunction::Create(field_types));
+
+    // Verified with Java HiveBucketFunction:
+    // Double.NaN, Double.longBitsToDouble(0x7ff123456789abcd), and canonical NaN
+    // all hash through Double.doubleToLongBits(...) = 0x7ff8000000000000.
+    ASSERT_EQ(360, func->Bucket(CreateDoubleRow(std::numeric_limits<double>::quiet_NaN()), 1000));
+    ASSERT_EQ(360, func->Bucket(CreateDoubleRow(DoubleFromBits(0x7FF123456789ABCDULL)), 1000));
+    ASSERT_EQ(360, func->Bucket(CreateDoubleRow(DoubleFromBits(0x7FF8000000000000ULL)), 1000));
+}
+
+TEST_F(HiveBucketFunctionTest, TestTinyintNegativeValuesCompatibleWithJava) {
+    std::vector<FieldType> field_types = {FieldType::TINYINT};
+    ASSERT_OK_AND_ASSIGN(auto func, HiveBucketFunction::Create(field_types));
+
+    // Verified with Java HiveBucketFunction using DataTypes.TINYINT().
+    ASSERT_EQ(647, func->Bucket(CreateByteRow(static_cast<int8_t>(-1)), 1000));
+    ASSERT_EQ(520, func->Bucket(CreateByteRow(std::numeric_limits<int8_t>::min()), 1000));
 }
 
 /// Test STRING field

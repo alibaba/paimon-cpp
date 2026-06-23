@@ -16,8 +16,10 @@
 
 #include "paimon/format/parquet/parquet_file_batch_reader.h"
 
+#include <functional>
 #include <iostream>
 #include <limits>
+#include <string>
 
 #include "arrow/api.h"
 #include "arrow/array/array_base.h"
@@ -28,22 +30,26 @@
 #include "arrow/c/bridge.h"
 #include "arrow/io/caching.h"
 #include "arrow/io/interfaces.h"
+#include "arrow/ipc/api.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/arrow/arrow_input_stream_adapter.h"
+#include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/defs.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/parquet_format_writer.h"
+#include "paimon/format/parquet/parquet_reader_builder.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/reader/batch_reader.h"
+#include "paimon/testing/utils/counting_cache_test_utils.h"
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/testharness.h"
 #include "paimon/testing/utils/timezone_guard.h"
@@ -55,6 +61,53 @@ class Predicate;
 }  // namespace paimon
 
 namespace paimon::parquet::test {
+
+std::string SerializeSchemaToString(const std::shared_ptr<arrow::Schema>& schema) {
+    std::shared_ptr<arrow::Buffer> serialized = arrow::ipc::SerializeSchema(*schema).ValueOrDie();
+    return std::string(reinterpret_cast<const char*>(serialized->data()),
+                       static_cast<size_t>(serialized->size()));
+}
+
+class FailedUriInputStream : public InputStream {
+ public:
+    explicit FailedUriInputStream(const std::shared_ptr<InputStream>& input) : input_(input) {}
+
+    Status Seek(int64_t offset, SeekOrigin origin) override {
+        return input_->Seek(offset, origin);
+    }
+
+    Result<int64_t> GetPos() const override {
+        return input_->GetPos();
+    }
+
+    Result<int64_t> Read(char* buffer, int64_t size) override {
+        return input_->Read(buffer, size);
+    }
+
+    Result<int64_t> Read(char* buffer, int64_t size, int64_t offset) override {
+        return input_->Read(buffer, size, offset);
+    }
+
+    void ReadAsync(char* buffer, int64_t size, int64_t offset,
+                   std::function<void(Status)>&& callback) override {
+        return input_->ReadAsync(buffer, size, offset, std::move(callback));
+    }
+
+    Result<std::string> GetUri() const override {
+        return Status::Invalid("failed to get uri");
+    }
+
+    Result<int64_t> Length() const override {
+        return input_->Length();
+    }
+
+    Status Close() override {
+        return input_->Close();
+    }
+
+ private:
+    std::shared_ptr<InputStream> input_;
+};
 
 class ParquetFileBatchReaderTest : public ::testing::Test,
                                    public ::testing::WithParamInterface<bool> {
@@ -143,7 +196,8 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
         const std::optional<RoaringBitmap32>& selection_bitmap, int32_t batch_size) const {
         EXPECT_OK_AND_ASSIGN(
             auto parquet_batch_reader,
-            ParquetFileBatchReader::Create(std::move(in_stream), pool_, options, batch_size));
+            ParquetFileBatchReader::Create(std::move(in_stream), options, batch_size,
+                                           /*file_metadata=*/nullptr, pool_));
         std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
         auto arrow_status = arrow::ExportSchema(*read_schema, c_schema.get());
         EXPECT_TRUE(arrow_status.ok());
@@ -151,7 +205,7 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
         return parquet_batch_reader;
     }
 
- private:
+ protected:
     std::string file_path_;
     std::unique_ptr<paimon::test::UniqueTestDirectory> dir_;
     std::shared_ptr<FileSystem> fs_;
@@ -160,6 +214,75 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
     std::shared_ptr<arrow::Schema> schema_;
     std::shared_ptr<arrow::StructArray> struct_array_;
 };
+
+TEST_F(ParquetFileBatchReaderTest, TestParquetMetadataCacheReusesSerializedFooter) {
+    WriteArray(file_path_, struct_array_, schema_, /*write_batch_size=*/struct_array_->length(),
+               /*enable_dictionary=*/false,
+               /*max_row_group_length=*/struct_array_->length());
+
+    auto cache = std::make_shared<paimon::test::CountingRoutingCache>(CacheKind::DATA_FILE_FOOTER,
+                                                                      128 * 1024 * 1024);
+    auto open_reader = [&]() -> Result<std::unique_ptr<ParquetFileBatchReader>> {
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> input_stream, fs_->Open(file_path_));
+        std::map<std::string, std::string> options;
+        ParquetReaderBuilder builder(options, batch_size_);
+        builder.WithMemoryPool(GetDefaultPool())->WithCache(cache);
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileBatchReader> reader,
+                               builder.Build(input_stream));
+        auto parquet_reader = dynamic_cast<ParquetFileBatchReader*>(reader.release());
+        if (parquet_reader == nullptr) {
+            return Status::Invalid("failed to cast FileBatchReader to ParquetFileBatchReader");
+        }
+        return std::unique_ptr<ParquetFileBatchReader>(parquet_reader);
+    };
+
+    ASSERT_OK_AND_ASSIGN(auto reader1, open_reader());
+    ASSERT_OK_AND_ASSIGN(auto schema1, reader1->GetFileSchema());
+    ASSERT_TRUE(schema1);
+    ASSERT_TRUE(schema1->release);
+    schema1->release(schema1.get());
+    ASSERT_EQ(1, cache->GetCount());
+    ASSERT_EQ(1, cache->SupplierCallCount());
+    ASSERT_EQ(1, cache->Size());
+    ASSERT_EQ(CacheKind::DATA_FILE_FOOTER, cache->LastKind());
+
+    ASSERT_OK_AND_ASSIGN(auto reader2, open_reader());
+    ASSERT_OK_AND_ASSIGN(auto schema2, reader2->GetFileSchema());
+    ASSERT_TRUE(schema2);
+    ASSERT_TRUE(schema2->release);
+    schema2->release(schema2.get());
+    ASSERT_EQ(2, cache->GetCount());
+    ASSERT_EQ(1, cache->SupplierCallCount());
+    ASSERT_EQ(1, cache->Size());
+    ASSERT_EQ(CacheKind::DATA_FILE_FOOTER, cache->LastKind());
+}
+
+TEST_F(ParquetFileBatchReaderTest, TestParquetMetadataCacheBypassesWhenGetUriFails) {
+    WriteArray(file_path_, struct_array_, schema_, /*write_batch_size=*/struct_array_->length(),
+               /*enable_dictionary=*/false,
+               /*max_row_group_length=*/struct_array_->length());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream, fs_->Open(file_path_));
+    auto failed_uri_input_stream = std::make_shared<FailedUriInputStream>(input_stream);
+    auto cache = std::make_shared<paimon::test::CountingRoutingCache>(CacheKind::DATA_FILE_FOOTER,
+                                                                      128 * 1024 * 1024);
+
+    std::map<std::string, std::string> options;
+    ParquetReaderBuilder builder(options, batch_size_);
+    builder.WithMemoryPool(GetDefaultPool())->WithCache(cache);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FileBatchReader> reader,
+                         builder.Build(failed_uri_input_stream));
+    auto parquet_reader = dynamic_cast<ParquetFileBatchReader*>(reader.get());
+    ASSERT_TRUE(parquet_reader);
+    ASSERT_OK_AND_ASSIGN(auto file_schema, parquet_reader->GetFileSchema());
+    ASSERT_TRUE(file_schema);
+    ASSERT_TRUE(file_schema->release);
+    file_schema->release(file_schema.get());
+
+    ASSERT_EQ(0, cache->GetCount());
+    ASSERT_EQ(0, cache->SupplierCallCount());
+    ASSERT_EQ(0, cache->Size());
+}
 
 TEST_F(ParquetFileBatchReaderTest, TestReadBinaryWrittenFromBinaryAndLargeBinary) {
     auto check_binary_read_result = [&](const std::shared_ptr<arrow::DataType>& write_type,
@@ -227,9 +350,9 @@ TEST_F(ParquetFileBatchReaderTest, TestSetReadSchema) {
     auto in_stream =
         std::make_unique<ArrowInputStreamAdapter>(std::move(input_stream), pool_, length);
     std::map<std::string, std::string> options;
-    ASSERT_OK_AND_ASSIGN(
-        auto parquet_batch_reader,
-        ParquetFileBatchReader::Create(std::move(in_stream), pool_, options, batch_size_));
+    ASSERT_OK_AND_ASSIGN(auto parquet_batch_reader,
+                         ParquetFileBatchReader::Create(std::move(in_stream), options, batch_size_,
+                                                        /*file_metadata=*/nullptr, pool_));
     // test GetFileSchema()
     ASSERT_OK_AND_ASSIGN(auto c_file_schema, parquet_batch_reader->GetFileSchema());
     auto arrow_file_schema = arrow::ImportSchema(c_file_schema.get()).ValueOrDie();
@@ -682,5 +805,89 @@ TEST_P(ParquetFileBatchReaderTest, TestTimestampType) {
 }
 
 INSTANTIATE_TEST_SUITE_P(TestParam, ParquetFileBatchReaderTest, ::testing::Values(false, true));
+
+TEST_F(ParquetFileBatchReaderTest, TestAddMetadataPerFieldMetadata) {
+    // Write a simple parquet file, call AddMetadata to inject per-field metadata
+    // before Finish, then read back and verify the file schema carries the metadata.
+    auto write_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        arrow::field("name", arrow::utf8()),
+        arrow::field("score", arrow::float64()),
+    });
+
+    std::string file_path = PathUtil::JoinPath(dir_->Str(), "update_schema_test.parquet");
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
+                         fs_->Create(file_path, /*overwrite=*/true));
+
+    ::parquet::WriterProperties::Builder builder;
+    builder.write_batch_size(10);
+    auto writer_properties = builder.build();
+    ASSERT_OK_AND_ASSIGN(auto format_writer,
+                         ParquetFormatWriter::Create(out, write_schema, writer_properties,
+                                                     DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE, pool_));
+
+    // Write one batch of data.
+    auto data = arrow::ipc::internal::json::ArrayFromJSON(
+                    arrow::struct_(write_schema->fields()),
+                    R"([[1, "alice", 95.5], [2, "bob", 88.0], [3, "charlie", 72.3]])")
+                    .ValueOrDie();
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*data, &c_array).ok());
+    ASSERT_OK(format_writer->AddBatch(&c_array));
+    ASSERT_OK(format_writer->Flush());
+
+    // Build an updated schema with per-field metadata on "name" and "score".
+    auto name_meta = std::make_shared<arrow::KeyValueMetadata>();
+    name_meta->Append("shredding.field_mapping", "0:alice,1:bob,2:charlie");
+    name_meta->Append("shredding.num_columns", "3");
+    auto score_meta = std::make_shared<arrow::KeyValueMetadata>();
+    score_meta->Append("custom.unit", "percent");
+
+    auto updated_schema = arrow::schema({
+        write_schema->field(0),                            // id — no metadata
+        write_schema->field(1)->WithMetadata(name_meta),   // name — shredding metadata
+        write_schema->field(2)->WithMetadata(score_meta),  // score — custom metadata
+    });
+
+    // AddMetadata must be called before Finish.
+    ASSERT_OK(format_writer->AddMetadata(
+        {{ArrowUtils::kArrowSchemaMetadataKey, SerializeSchemaToString(updated_schema)}}));
+    ASSERT_OK(format_writer->Finish());
+    ASSERT_OK(out->Flush());
+    ASSERT_OK(out->Close());
+
+    // Read back: GetFileSchema should reflect the updated per-field metadata.
+    auto parquet_batch_reader =
+        PrepareParquetFileBatchReader(file_path, write_schema, /*predicate=*/nullptr,
+                                      /*selection_bitmap=*/std::nullopt, batch_size_);
+
+    ASSERT_OK_AND_ASSIGN(auto c_file_schema, parquet_batch_reader->GetFileSchema());
+    auto file_schema = arrow::ImportSchema(c_file_schema.get()).ValueOrDie();
+
+    // Field 0 "id": no metadata.
+    ASSERT_EQ("id", file_schema->field(0)->name());
+
+    // Field 1 "name": should have the shredding metadata we set.
+    ASSERT_EQ("name", file_schema->field(1)->name());
+    auto read_name_meta = file_schema->field(1)->metadata();
+    ASSERT_NE(nullptr, read_name_meta);
+    auto field_mapping_val = read_name_meta->Get("shredding.field_mapping").ValueOrDie();
+    ASSERT_EQ("0:alice,1:bob,2:charlie", field_mapping_val);
+    auto num_columns_val = read_name_meta->Get("shredding.num_columns").ValueOrDie();
+    ASSERT_EQ("3", num_columns_val);
+
+    // Field 2 "score": should have the custom metadata.
+    ASSERT_EQ("score", file_schema->field(2)->name());
+    auto read_score_meta = file_schema->field(2)->metadata();
+    ASSERT_NE(nullptr, read_score_meta);
+    auto unit_val = read_score_meta->Get("custom.unit").ValueOrDie();
+    ASSERT_EQ("percent", unit_val);
+
+    // Also verify data integrity — read it back and compare content.
+    ASSERT_OK_AND_ASSIGN(auto result_array, paimon::test::ReadResultCollector::CollectResult(
+                                                parquet_batch_reader.get()));
+    ASSERT_EQ(result_array->num_chunks(), 1);
+    ASSERT_TRUE(data->Equals(*result_array->chunk(0))) << result_array->ToString();
+}
 
 }  // namespace paimon::parquet::test

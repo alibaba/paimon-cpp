@@ -16,6 +16,7 @@
 
 #include "paimon/executor.h"
 
+#include <cassert>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
@@ -50,6 +51,7 @@ class DefaultExecutor : public Executor {
 };
 
 DefaultExecutor::DefaultExecutor(uint32_t thread_count) : thread_count_(thread_count) {
+    assert(thread_count > 0);
     for (uint32_t i = 0; i < thread_count_; ++i) {
         workers_.emplace_back(&DefaultExecutor::WorkerThread, this);
     }
@@ -139,10 +141,13 @@ PAIMON_EXPORT std::shared_ptr<Executor> GetGlobalDefaultExecutor() {
 }
 
 PAIMON_EXPORT std::unique_ptr<Executor> CreateDefaultExecutor() {
-    return CreateDefaultExecutor(DEFAULT_EXECUTOR_THREAD_COUNT);
+    return std::make_unique<DefaultExecutor>(DEFAULT_EXECUTOR_THREAD_COUNT);
 }
 
-PAIMON_EXPORT std::unique_ptr<Executor> CreateDefaultExecutor(uint32_t thread_count) {
+PAIMON_EXPORT Result<std::unique_ptr<Executor>> CreateDefaultExecutor(uint32_t thread_count) {
+    if (thread_count == 0) {
+        return Status::Invalid("default executor thread count should be greater than 0");
+    }
     return std::make_unique<DefaultExecutor>(thread_count);
 }
 

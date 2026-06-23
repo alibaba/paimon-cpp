@@ -70,11 +70,12 @@ Result<std::shared_ptr<Predicate>> FileStoreScan::ReconstructPredicateWithNonCas
                 fmt::format("field {} in predicate is not included in table schema", field_name));
         }
         auto data_iter = id_to_data_fields.find(table_iter->second.Id());
-        if (data_iter != id_to_data_fields.end()) {
-            // Exclude fields requiring casting to avoid false negatives in stats filtering.
-            if (!data_iter->second.second.Type()->Equals(table_iter->second.Type())) {
-                excluded_field_names.insert(field_name);
-            }
+        if (data_iter == id_to_data_fields.end()) {
+            continue;
+        }
+        // Exclude fields requiring casting to avoid false negatives in stats filtering.
+        if (!data_iter->second.second.Type()->Equals(table_iter->second.Type())) {
+            excluded_field_names.insert(field_name);
         }
     }
     return PredicateUtils::ExcludePredicateWithFields(predicate, excluded_field_names);

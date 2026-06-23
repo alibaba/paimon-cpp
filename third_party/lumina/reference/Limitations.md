@@ -13,6 +13,9 @@ upgrading persisted indexes.
   insert/delete).
 - **Bruteforce scale**: the Bruteforce backend is not optimized for extremely large datasets; use it mainly as a
   baseline or for smaller scales.
+- **Streamer**: experimental; Bruteforce-only, rawf32-only, fixed capacity.
+  See [Streamer API — Limitations](../api/Streamer.md#limitations) for full details.
+- **FlatNSW**: experimental; in-memory only, API and on-disk format may change across versions.
 
 ### Data model
 
@@ -42,6 +45,10 @@ upgrading persisted indexes.
   first segment in semantic versions such as `1.x.y` to `2.x.y`. Major-version upgrades may break binary compatibility
   and require rebuilding indexes. For stable (non-experimental) index formats, minor and patch upgrades within the same
   major version remain compatible and do not require rebuilds solely because of the version upgrade.
-  The IVF snapshot layout is experimental.
+  The IVF snapshot layout is experimental (see IVF layout).
 - **CRC verification cost**: enabling section CRC verification (`io.verify_crc=true`) costs ~1–3% performance (file
   header/footer CRC is always verified).
+
+## Feedback
+
+If you hit other limitations or bugs, please file an issue: https://github.com/alibaba/lumina/issues

@@ -20,7 +20,7 @@
 
 #include "arrow/api.h"
 #include "paimon/common/data/abstract_binary_writer.h"
-#include "paimon/common/memory/memory_segment.h"
+#include "paimon/memory/memory_segment.h"
 namespace paimon {
 class BinaryArray;
 class MemoryPool;

@@ -55,6 +55,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(8 * 1024 * 1024L, core_options.GetManifestTargetFileSize());
     ASSERT_EQ(16 * 1024 * 1024L, core_options.GetManifestFullCompactionThresholdSize());
     ASSERT_EQ(30, core_options.GetManifestMergeMinCount());
+    ASSERT_EQ(nullptr, core_options.GetCache());
     ASSERT_EQ(128 * 1024 * 1024L, core_options.GetSourceSplitTargetSize());
     ASSERT_EQ(4 * 1024 * 1024L, core_options.GetSourceSplitOpenFileCost());
     ASSERT_EQ(1024, core_options.GetReadBatchSize());
@@ -88,6 +89,8 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_FALSE(core_options.FieldAggIgnoreRetract("f1").value());
     ASSERT_EQ(",", core_options.FieldListAggDelimiter("f1").value());
     ASSERT_FALSE(core_options.FieldCollectAggDistinct("f1").value());
+    ASSERT_EQ(MapStorageLayout::DEFAULT, core_options.GetMapStorageLayout("any_col").value());
+    ASSERT_EQ(256, core_options.GetMapSharedShreddingMaxColumns("any_col").value());
     ASSERT_FALSE(core_options.DeletionVectorsEnabled());
     ASSERT_FALSE(core_options.DeletionVectorsBitmap64());
     ASSERT_EQ(2 * 1024 * 1024, core_options.DeletionVectorTargetFileSize());
@@ -262,7 +265,9 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::LOOKUP_REMOTE_LEVEL_THRESHOLD, "2"},
         {Options::TABLE_READ_SEQUENCE_NUMBER_ENABLED, "true"},
         {Options::KEY_VALUE_SEQUENCE_NUMBER_ENABLED, "true"},
-        {Options::BUCKET_FUNCTION_TYPE, "mod"}};
+        {Options::BUCKET_FUNCTION_TYPE, "mod"},
+        {"fields.metrics.map.storage-layout", "shared-shredding"},
+        {"fields.metrics.map.shared-shredding.max-columns", "128"}};
 
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
     auto fs = core_options.GetFileSystem();
@@ -285,6 +290,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(16 * 1024 * 1024L, core_options.GetManifestTargetFileSize());
     ASSERT_EQ(32 * 1024 * 1024L, core_options.GetManifestFullCompactionThresholdSize());
     ASSERT_EQ(2, core_options.GetManifestMergeMinCount());
+    ASSERT_EQ(nullptr, core_options.GetCache());
     ASSERT_EQ(24 * 1024 * 1024L, core_options.GetSourceSplitTargetSize());
     ASSERT_EQ(32 * 1024 * 1024L, core_options.GetSourceSplitOpenFileCost());
     ASSERT_EQ(2048, core_options.GetReadBatchSize());
@@ -404,6 +410,9 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_TRUE(core_options.LookupRemoteFileEnabled());
     ASSERT_EQ(core_options.GetLookupRemoteLevelThreshold(), 2);
     ASSERT_EQ(BucketFunctionType::MOD, core_options.GetBucketFunctionType());
+    ASSERT_EQ(MapStorageLayout::SHARED_SHREDDING,
+              core_options.GetMapStorageLayout("metrics").value());
+    ASSERT_EQ(128, core_options.GetMapSharedShreddingMaxColumns("metrics").value());
 }
 
 TEST(CoreOptionsTest, TestInvalidCase) {
@@ -856,9 +865,11 @@ TEST(CoreOptionsTest, TestCopyAssignmentOperator) {
 
     // Verify the target's ToMap matches the source's ToMap
     ASSERT_EQ(source.ToMap(), target.ToMap());
+    ASSERT_EQ(source.GetCache(), target.GetCache());
 
     CoreOptions target2 = source;
     ASSERT_EQ(source.ToMap(), target2.ToMap());
+    ASSERT_EQ(source.GetCache(), target2.GetCache());
 }
 
 TEST(CoreOptionsTest, TestAssignmentIndependence) {
@@ -907,4 +918,53 @@ TEST(CoreOptionsTest, TestFallback) {
                   std::vector<std::string>({"new_b1", "new_b2"}));
     }
 }
+
+TEST(CoreOptionsTest, TestMapStorageLayout) {
+    // Test shared-shredding layout configured for a specific column
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{"fields.ext_map.map.storage-layout", "shared-shredding"},
+                                  {"fields.ext_map.map.shared-shredding.max-columns", "64"},
+                                  {"fields.normal_map.map.storage-layout", "default"}}));
+        ASSERT_EQ(MapStorageLayout::SHARED_SHREDDING,
+                  options.GetMapStorageLayout("ext_map").value());
+        ASSERT_EQ(64, options.GetMapSharedShreddingMaxColumns("ext_map").value());
+        ASSERT_EQ(MapStorageLayout::DEFAULT, options.GetMapStorageLayout("normal_map").value());
+        // Unconfigured column falls back to default
+        ASSERT_EQ(MapStorageLayout::DEFAULT, options.GetMapStorageLayout("other").value());
+        ASSERT_EQ(256, options.GetMapSharedShreddingMaxColumns("other").value());
+    }
+    // Test case-insensitive layout value
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{"fields.metrics.map.storage-layout", "Shared-Shredding"}}));
+        ASSERT_EQ(MapStorageLayout::SHARED_SHREDDING,
+                  options.GetMapStorageLayout("metrics").value());
+    }
+    // Test invalid layout value
+    {
+        ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                             CoreOptions::FromMap({{"fields.col.map.storage-layout", "invalid"}}));
+        ASSERT_NOK_WITH_MSG(options.GetMapStorageLayout("col"),
+                            "invalid map.storage-layout: invalid");
+    }
+    // Test invalid max-columns value
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{"fields.col.map.shared-shredding.max-columns", "0"}}));
+        ASSERT_NOK_WITH_MSG(options.GetMapSharedShreddingMaxColumns("col"),
+                            "options map.shared-shredding.max-columns must > 0");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{"fields.col.map.shared-shredding.max-columns", "-1"}}));
+        ASSERT_NOK_WITH_MSG(options.GetMapSharedShreddingMaxColumns("col"),
+                            "options map.shared-shredding.max-columns must > 0");
+    }
+}
+
 }  // namespace paimon::test

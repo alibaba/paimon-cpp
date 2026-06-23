@@ -39,6 +39,7 @@
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/options_utils.h"
+#include "paimon/core/schema/arrow_schema_validator.h"
 #include "paimon/format/parquet/parquet_field_id_converter.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/parquet_timestamp_converter.h"
@@ -70,8 +71,9 @@ ParquetFileBatchReader::ParquetFileBatchReader(
 
 Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
     std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
-    const std::shared_ptr<arrow::MemoryPool>& pool,
-    const std::map<std::string, std::string>& options, int32_t batch_size) {
+    const std::map<std::string, std::string>& options, int32_t batch_size,
+    std::shared_ptr<::parquet::FileMetaData> file_metadata,
+    const std::shared_ptr<arrow::MemoryPool>& pool) {
     try {
         assert(input_stream);
         PAIMON_ASSIGN_OR_RAISE(::parquet::ReaderProperties reader_properties,
@@ -81,7 +83,8 @@ Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
                                CreateArrowReaderProperties(pool, options, batch_size));
 
         ::parquet::arrow::FileReaderBuilder file_reader_builder;
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.Open(input_stream, reader_properties));
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(
+            file_reader_builder.Open(input_stream, reader_properties, std::move(file_metadata)));
 
         std::unique_ptr<::parquet::arrow::FileReader> file_reader;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(pool.get())
@@ -129,6 +132,13 @@ Status ParquetFileBatchReader::SetReadSchema(
 
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> file_schema, reader_->GetSchema());
         std::unordered_map<std::string, std::vector<int32_t>> field_index_map;
+        bool has_nested_field = false;
+        for (const auto& field : read_schema->fields()) {
+            if (ArrowSchemaValidator::IsNestedType(field->type())) {
+                has_nested_field = true;
+                break;
+            }
+        }
         int32_t i = 0;
         for (const auto& field : file_schema->fields()) {
             std::vector<int32_t> v;
@@ -166,7 +176,9 @@ Status ParquetFileBatchReader::SetReadSchema(
                 bool enable_page_index_filter,
                 OptionsUtils::GetValueFromMap<bool>(options_, PARQUET_READ_ENABLE_PAGE_INDEX_FILTER,
                                                     DEFAULT_PARQUET_READ_ENABLE_PAGE_INDEX_FILTER));
-            if (enable_page_index_filter) {
+            // walkaround: page index filter does not support nested fields for now, skip page index
+            // filter if there is any nested field in the schema
+            if (enable_page_index_filter && !has_nested_field) {
                 // Build column name to index map for page-level filtering.
                 // For leaf columns, indices[0] is the correct leaf column index in Parquet.
                 // For nested types (struct/list/map), FlattenSchema produces multiple leaf indices,
@@ -199,11 +211,11 @@ Status ParquetFileBatchReader::SetReadSchema(
         for (int32_t rg_id : row_groups) {
             auto it = row_group_row_ranges.find(rg_id);
             if (it != row_group_row_ranges.end()) {
-                target_row_groups.emplace_back(/*rg_index=*/rg_id, /*page_filtered=*/true,
+                target_row_groups.emplace_back(/*rg_index=*/rg_id, /*is_partially_matched=*/true,
                                                /*ranges=*/it->second);
             } else {
                 target_row_groups.emplace_back(/*rg_index=*/rg_id,
-                                               /*page_filtered=*/false,
+                                               /*is_partially_matched=*/false,
                                                /*ranges=*/RowRanges());
             }
         }

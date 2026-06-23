@@ -18,6 +18,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <functional>
 
 #include "arrow/api.h"
 #include "arrow/array/array_base.h"
@@ -30,6 +31,9 @@
 #include "arrow/scalar.h"
 #include "arrow/util/checked_cast.h"
 #include "fmt/format.h"
+#include "paimon/common/data/shredding/map_shared_shredding_batch_converter.h"
+#include "paimon/common/data/shredding/map_shared_shredding_utils.h"
+#include "paimon/common/data/shredding/map_shredding_defs.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
@@ -52,12 +56,41 @@ namespace paimon {
 class InternalRow;
 class MemoryPool;
 
-PostponeBucketWriter::PostponeBucketWriter(const std::vector<std::string>& trimmed_primary_keys,
-                                           const std::shared_ptr<DataFilePathFactory>& path_factory,
-                                           int64_t schema_id,
-                                           const std::shared_ptr<arrow::Schema>& value_schema,
-                                           const CoreOptions& options,
-                                           const std::shared_ptr<MemoryPool>& pool)
+namespace {
+
+std::shared_ptr<arrow::Schema> BuildPostponeBucketWriteSchema(
+    const std::shared_ptr<arrow::Schema>& value_schema) {
+    arrow::FieldVector target_fields;
+    target_fields.push_back(
+        DataField::ConvertDataFieldToArrowField(SpecialFields::SequenceNumber()));
+    target_fields.push_back(DataField::ConvertDataFieldToArrowField(SpecialFields::ValueKind()));
+    target_fields.insert(target_fields.end(), value_schema->fields().begin(),
+                         value_schema->fields().end());
+    return arrow::schema(target_fields);
+}
+
+}  // namespace
+
+Result<std::unique_ptr<PostponeBucketWriter>> PostponeBucketWriter::Create(
+    const std::vector<std::string>& trimmed_primary_keys,
+    const std::shared_ptr<DataFilePathFactory>& path_factory, int64_t schema_id,
+    const std::shared_ptr<arrow::Schema>& value_schema, const CoreOptions& options,
+    const std::shared_ptr<MemoryPool>& pool) {
+    auto write_schema = BuildPostponeBucketWriteSchema(value_schema);
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<MapSharedShreddingContext> shredding_context,
+                           MapSharedShreddingUtils::CreateShreddingContext(write_schema, options));
+    return std::unique_ptr<PostponeBucketWriter>(
+        new PostponeBucketWriter(trimmed_primary_keys, path_factory, schema_id, value_schema,
+                                 write_schema, options, pool, shredding_context));
+}
+
+PostponeBucketWriter::PostponeBucketWriter(
+    const std::vector<std::string>& trimmed_primary_keys,
+    const std::shared_ptr<DataFilePathFactory>& path_factory, int64_t schema_id,
+    const std::shared_ptr<arrow::Schema>& value_schema,
+    const std::shared_ptr<arrow::Schema>& write_schema, const CoreOptions& options,
+    const std::shared_ptr<MemoryPool>& pool,
+    const std::shared_ptr<MapSharedShreddingContext>& shredding_context)
     : pool_(pool),
       arrow_pool_(GetArrowPool(pool)),
       trimmed_primary_keys_(trimmed_primary_keys),
@@ -65,15 +98,9 @@ PostponeBucketWriter::PostponeBucketWriter(const std::vector<std::string>& trimm
       path_factory_(path_factory),
       schema_id_(schema_id),
       value_type_(arrow::struct_(value_schema->fields())),
-      metrics_(std::make_shared<MetricsImpl>()) {
-    arrow::FieldVector target_fields;
-    target_fields.push_back(
-        DataField::ConvertDataFieldToArrowField(SpecialFields::SequenceNumber()));
-    target_fields.push_back(DataField::ConvertDataFieldToArrowField(SpecialFields::ValueKind()));
-    target_fields.insert(target_fields.end(), value_schema->fields().begin(),
-                         value_schema->fields().end());
-    write_schema_ = arrow::schema(target_fields);
-}
+      write_schema_(write_schema),
+      shredding_context_(shredding_context),
+      metrics_(std::make_shared<MetricsImpl>()) {}
 
 Status PostponeBucketWriter::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
     if (moved_batch->GetData()->length == 0) {
@@ -238,26 +265,50 @@ PostponeBucketWriter::PrepareMinMaxKey(
 
 std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>
 PostponeBucketWriter::CreateRollingRowWriter() const {
-    auto create_file_writer = [&]()
+    auto shredding_context = shredding_context_;
+    auto create_file_writer = [this, shredding_context]()
         -> Result<std::unique_ptr<SingleFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>> {
+        PAIMON_ASSIGN_OR_RAISE(MapSharedShreddingBatchConverter::ConverterBundle bundle,
+                               MapSharedShreddingBatchConverter::CreateConverter(
+                                   write_schema_, shredding_context, pool_));
+        std::shared_ptr<arrow::Schema> file_schema =
+            bundle.physical_schema ? bundle.physical_schema : write_schema_;
+
         ::ArrowSchema arrow_schema;
         ScopeGuard guard([&arrow_schema]() { ArrowSchemaRelease(&arrow_schema); });
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*write_schema_, &arrow_schema));
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*file_schema, &arrow_schema));
         auto format = options_.GetWriteFileFormat(/*level=*/0);
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<WriterBuilder> writer_builder,
             format->CreateWriterBuilder(&arrow_schema, options_.GetWriteBatchSize()));
         writer_builder->WithMemoryPool(pool_);
-        auto converter = [](KeyValueBatch key_value_batch, ArrowArray* array) -> Status {
-            ArrowArrayMove(key_value_batch.batch.get(), array);
-            return Status::OK();
-        };
+        std::function<Status(KeyValueBatch&&, ArrowArray*)> converter;
+        if (bundle.converter) {
+            auto shredding_converter = bundle.converter;
+            converter = [shredding_converter](KeyValueBatch key_value_batch,
+                                              ArrowArray* array) -> Status {
+                PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ArrowArray> physical,
+                                       shredding_converter->Convert(key_value_batch.batch.get()));
+                ArrowArrayMove(physical.get(), array);
+                return Status::OK();
+            };
+        } else {
+            converter = [](KeyValueBatch key_value_batch, ArrowArray* array) -> Status {
+                ArrowArrayMove(key_value_batch.batch.get(), array);
+                return Status::OK();
+            };
+        }
         auto writer = std::make_unique<KeyValueDataFileWriter>(
             options_.GetWriteFileCompression(0), converter, schema_id_, /*level=*/0,
-            FileSource::Append(), trimmed_primary_keys_, /*stats_extractor=*/nullptr, write_schema_,
+            FileSource::Append(), trimmed_primary_keys_, /*stats_extractor=*/nullptr, file_schema,
             path_factory_->IsExternalPath(), pool_);
         PAIMON_RETURN_NOT_OK(
             writer->Init(options_.GetFileSystem(), path_factory_->NewPath(), writer_builder));
+        if (bundle.converter) {
+            writer->SetMetadataFinalizer(MapSharedShreddingUtils::BuildMetadataFinalizer(
+                bundle.converter, MapSharedShreddingDefine::kDefaultDictCompression,
+                shredding_context, file_schema));
+        }
         return writer;
     };
     return std::make_unique<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>(

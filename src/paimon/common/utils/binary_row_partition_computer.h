@@ -60,7 +60,8 @@ class BinaryRowPartitionComputer {
 
     static Result<std::string> PartToSimpleString(
         const std::shared_ptr<arrow::Schema>& partition_type, const BinaryRow& partition,
-        const std::string& delimiter, int32_t max_length);
+        const std::string& delimiter, int32_t max_length,
+        bool legacy_partition_name_enabled = true);
 
  private:
     BinaryRowPartitionComputer(const std::vector<std::string>& partition_keys,

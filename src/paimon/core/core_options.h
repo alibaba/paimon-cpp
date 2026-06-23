@@ -24,11 +24,13 @@
 #include <vector>
 
 #include "paimon/bucket/bucket_function_type.h"
+#include "paimon/cache/cache.h"
 #include "paimon/core/options/changelog_producer.h"
 #include "paimon/core/options/compress_options.h"
 #include "paimon/core/options/external_path_strategy.h"
 #include "paimon/core/options/lookup_compact_mode.h"
 #include "paimon/core/options/lookup_strategy.h"
+#include "paimon/core/options/map_storage_layout.h"
 #include "paimon/core/options/merge_engine.h"
 #include "paimon/core/options/sort_engine.h"
 #include "paimon/format/file_format.h"
@@ -41,6 +43,7 @@
 namespace paimon {
 
 class ExpireConfig;
+class Cache;
 
 class PAIMON_EXPORT CoreOptions {
  public:
@@ -77,6 +80,8 @@ class PAIMON_EXPORT CoreOptions {
     std::optional<int64_t> GetScanTimestampMillis() const;
 
     int64_t GetManifestTargetFileSize() const;
+    std::shared_ptr<Cache> GetCache() const;
+    CoreOptions& WithCache(const std::shared_ptr<Cache>& cache);
     StartupMode GetStartupMode() const;
 
     int32_t GetReadBatchSize() const;
@@ -115,6 +120,10 @@ class PAIMON_EXPORT CoreOptions {
     Result<bool> FieldAggIgnoreRetract(const std::string& field_name) const;
     Result<std::string> FieldListAggDelimiter(const std::string& field_name) const;
     Result<bool> FieldCollectAggDistinct(const std::string& field_name) const;
+
+    Result<MapStorageLayout> GetMapStorageLayout(const std::string& field_name) const;
+    Result<int32_t> GetMapSharedShreddingMaxColumns(const std::string& field_name) const;
+
     bool DeletionVectorsEnabled() const;
     bool DeletionVectorsBitmap64() const;
     int64_t DeletionVectorTargetFileSize() const;

@@ -23,9 +23,9 @@
 #include <type_traits>
 #include <vector>
 
-#include "paimon/common/memory/memory_segment.h"
 #include "paimon/common/utils/math.h"
 #include "paimon/io/byte_order.h"
+#include "paimon/memory/memory_segment.h"
 #include "paimon/type_fwd.h"
 #include "paimon/visibility.h"
 

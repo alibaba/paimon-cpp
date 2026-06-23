@@ -41,9 +41,62 @@
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/testing/utils/binary_row_generator.h"
+#include "paimon/testing/utils/counting_cache_test_utils.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
+
+class CountingFileSystem : public FileSystem {
+ public:
+    Result<std::unique_ptr<InputStream>> Open(const std::string& path) const override {
+        ++open_count;
+        return local_.Open(path);
+    }
+
+    Result<std::unique_ptr<OutputStream>> Create(const std::string& path,
+                                                 bool overwrite) const override {
+        return local_.Create(path, overwrite);
+    }
+
+    Status Mkdirs(const std::string& path) const override {
+        return local_.Mkdirs(path);
+    }
+
+    Status Rename(const std::string& src, const std::string& dst) const override {
+        return local_.Rename(src, dst);
+    }
+
+    Status Delete(const std::string& path, bool recursive = true) const override {
+        return local_.Delete(path, recursive);
+    }
+
+    Result<std::unique_ptr<FileStatus>> GetFileStatus(const std::string& path) const override {
+        ++get_file_status_count;
+        return local_.GetFileStatus(path);
+    }
+
+    Status ListDir(const std::string& directory,
+                   std::vector<std::unique_ptr<BasicFileStatus>>* file_status_list) const override {
+        return local_.ListDir(directory, file_status_list);
+    }
+
+    Status ListFileStatus(
+        const std::string& path,
+        std::vector<std::unique_ptr<FileStatus>>* file_status_list) const override {
+        return local_.ListFileStatus(path, file_status_list);
+    }
+
+    Result<bool> Exists(const std::string& path) const override {
+        return local_.Exists(path);
+    }
+
+    mutable int open_count = 0;
+    mutable int get_file_status_count = 0;
+
+ private:
+    LocalFileSystem local_;
+};
+
 class ManifestFileTest : public testing::Test {
  public:
     std::vector<ManifestEntry> ReadManifestEntry(const std::string& file_format_str,
@@ -179,6 +232,87 @@ TEST_F(ManifestFileTest, TestSimple) {
     expected_manifest_entries.emplace_back(manifest_entry4);
     expected_manifest_entries.emplace_back(manifest_entry5);
     ASSERT_EQ(expected_manifest_entries, manifest_entries);
+}
+
+TEST_F(ManifestFileTest, TestManifestCacheIsDisabledWithoutInjectedCache) {
+    auto pool = GetDefaultPool();
+    auto counting_file_system = std::make_shared<CountingFileSystem>();
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileFormat> file_format,
+                         FileFormatFactory::Get("orc", {}));
+    std::string root_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+    auto unused_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", arrow::utf8())}));
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<FileStorePathFactory> path_factory,
+        FileStorePathFactory::Create(root_path, unused_schema, /*partition_keys=*/{},
+                                     /*default_part_value=*/"", file_format->Identifier(),
+                                     /*data_file_prefix=*/"data-",
+                                     /*legacy_partition_name_enabled=*/true, /*external_paths=*/{},
+                                     /*global_index_external_path=*/std::nullopt,
+                                     /*index_file_in_data_file_dir=*/false, pool));
+    ASSERT_OK_AND_ASSIGN(
+        CoreOptions options,
+        CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}, {Options::MANIFEST_FORMAT, "orc"}}));
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<ManifestFile> manifest_file,
+        ManifestFile::Create(counting_file_system, file_format, "zstd", path_factory,
+                             /*target_file_size=*/1024, pool, options, unused_schema));
+
+    std::vector<ManifestEntry> first_read;
+    ASSERT_OK(manifest_file->Read("manifest-3ea5ee21-d399-4f1c-a749-2fc63dbf0852-1",
+                                  /*filter=*/nullptr, &first_read));
+    ASSERT_EQ(5, first_read.size());
+    ASSERT_EQ(1, counting_file_system->open_count);
+    ASSERT_EQ(0, counting_file_system->get_file_status_count);
+
+    std::vector<ManifestEntry> filtered_read;
+    ASSERT_OK(manifest_file->Read(
+        "manifest-3ea5ee21-d399-4f1c-a749-2fc63dbf0852-1",
+        [](const ManifestEntry& entry) -> Result<bool> { return entry.Kind() == FileKind::Add(); },
+        &filtered_read));
+    ASSERT_EQ(1, filtered_read.size());
+    ASSERT_EQ(2, counting_file_system->open_count);
+    ASSERT_EQ(0, counting_file_system->get_file_status_count);
+}
+
+TEST_F(ManifestFileTest, TestManifestCacheReusesCachedBytes) {
+    auto pool = GetDefaultPool();
+    auto counting_file_system = std::make_shared<CountingFileSystem>();
+    auto manifest_cache =
+        std::make_shared<CountingRoutingCache>(CacheKind::MANIFEST, 64 * 1024 * 1024);
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileFormat> file_format,
+                         FileFormatFactory::Get("orc", {}));
+    std::string root_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+    auto unused_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", arrow::utf8())}));
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<FileStorePathFactory> path_factory,
+        FileStorePathFactory::Create(root_path, unused_schema, /*partition_keys=*/{},
+                                     /*default_part_value=*/"", file_format->Identifier(),
+                                     /*data_file_prefix=*/"data-",
+                                     /*legacy_partition_name_enabled=*/true, /*external_paths=*/{},
+                                     /*global_index_external_path=*/std::nullopt,
+                                     /*index_file_in_data_file_dir=*/false, pool));
+    ASSERT_OK_AND_ASSIGN(
+        CoreOptions options,
+        CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}, {Options::MANIFEST_FORMAT, "orc"}}));
+    options.WithCache(manifest_cache);
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<ManifestFile> manifest_file,
+        ManifestFile::Create(counting_file_system, file_format, "zstd", path_factory,
+                             /*target_file_size=*/1024, pool, options, unused_schema));
+
+    std::vector<ManifestEntry> first_read;
+    ASSERT_OK(manifest_file->Read("manifest-3ea5ee21-d399-4f1c-a749-2fc63dbf0852-1",
+                                  /*filter=*/nullptr, &first_read));
+    std::vector<ManifestEntry> second_read;
+    ASSERT_OK(manifest_file->Read("manifest-3ea5ee21-d399-4f1c-a749-2fc63dbf0852-1",
+                                  /*filter=*/nullptr, &second_read));
+
+    ASSERT_EQ(first_read, second_read);
+    ASSERT_EQ(1, counting_file_system->open_count);
+    ASSERT_EQ(0, counting_file_system->get_file_status_count);
+    ASSERT_EQ(2, manifest_cache->GetCount());
+    ASSERT_EQ(1, manifest_cache->SupplierCallCount());
+    ASSERT_EQ(1, manifest_cache->Size());
 }
 
 TEST_F(ManifestFileTest, TestWithNullCount) {

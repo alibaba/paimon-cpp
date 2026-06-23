@@ -42,7 +42,9 @@ class HiveHasher {
     static uint32_t HashBytes(const char* bytes, int32_t length) {
         uint32_t result = 0;
         for (int32_t i = 0; i < length; i++) {
-            result = result * 31U + static_cast<uint32_t>(static_cast<int32_t>(bytes[i]));
+            auto byte = static_cast<uint8_t>(bytes[i]);
+            int32_t signed_byte = byte < 128 ? byte : static_cast<int32_t>(byte) - 256;
+            result = result * 31U + static_cast<uint32_t>(signed_byte);
         }
         return result;
     }

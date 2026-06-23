@@ -20,7 +20,15 @@ namespace paimon {
 
 std::shared_ptr<CacheKey> CacheKey::ForPosition(const std::string& file_path, int64_t position,
                                                 int32_t length, bool is_index) {
-    return std::make_shared<PositionCacheKey>(file_path, position, length, is_index);
+    return std::make_shared<PositionCacheKey>(file_path, position, length, is_index,
+                                              CacheKind::DEFAULT);
+}
+
+std::shared_ptr<CacheKey> CacheKey::ForKind(const std::string& file_path, int64_t position,
+                                            int32_t length, CacheKind kind) {
+    auto key = std::make_shared<PositionCacheKey>(file_path, position, length,
+                                                  /*is_index=*/false, kind);
+    return key;
 }
 
 bool PositionCacheKey::IsIndex() const {
@@ -41,7 +49,7 @@ bool PositionCacheKey::Equals(const CacheKey& other) const {
         return false;
     }
     return file_path_ == rhs->file_path_ && position_ == rhs->position_ &&
-           length_ == rhs->length_ && is_index_ == rhs->is_index_;
+           length_ == rhs->length_ && is_index_ == rhs->is_index_ && GetKind() == rhs->GetKind();
 }
 
 size_t PositionCacheKey::HashCode() const {
@@ -50,6 +58,8 @@ size_t PositionCacheKey::HashCode() const {
     seed ^= std::hash<int64_t>{}(position_) + HASH_CONSTANT + (seed << 6) + (seed >> 2);
     seed ^= std::hash<int32_t>{}(length_) + HASH_CONSTANT + (seed << 6) + (seed >> 2);
     seed ^= std::hash<bool>{}(is_index_) + HASH_CONSTANT + (seed << 6) + (seed >> 2);
+    seed ^= std::hash<int32_t>{}(static_cast<int32_t>(GetKind())) + HASH_CONSTANT + (seed << 6) +
+            (seed >> 2);
     return seed;
 }
 
