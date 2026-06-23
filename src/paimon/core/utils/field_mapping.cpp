@@ -76,33 +76,6 @@ Result<std::unique_ptr<FieldMapping>> FieldMappingBuilder::CreateFieldMapping(
     // generate exist field info (includes nested type pruning)
     PAIMON_ASSIGN_OR_RAISE(ExistFieldInfo exist_field_info, CreateExistFieldInfo(data_fields));
 
-    // Fields that exist by ID but are fully pruned (e.g., requested nested
-    // sub-fields are all absent) are not present in exist/non-exist sets above.
-    // Materialize them as non-existent so downstream reader returns all-null columns.
-    std::vector<bool> accounted_read_fields(read_fields_.size(), false);
-    for (int32_t idx : exist_field_info.idx_in_target_read_schema) {
-        if (idx >= 0 && static_cast<size_t>(idx) < accounted_read_fields.size()) {
-            accounted_read_fields[idx] = true;
-        }
-    }
-    if (non_exist_field_info != std::nullopt) {
-        for (int32_t idx : non_exist_field_info->idx_in_target_read_schema) {
-            if (idx >= 0 && static_cast<size_t>(idx) < accounted_read_fields.size()) {
-                accounted_read_fields[idx] = true;
-            }
-        }
-    }
-    for (size_t i = 0; i < read_fields_.size(); ++i) {
-        if (accounted_read_fields[i]) {
-            continue;
-        }
-        if (non_exist_field_info == std::nullopt) {
-            non_exist_field_info = NonExistFieldInfo();
-        }
-        non_exist_field_info->non_exist_read_schema.push_back(read_fields_[i]);
-        non_exist_field_info->idx_in_target_read_schema.push_back(static_cast<int32_t>(i));
-    }
-
     // key: partition key, value: partition idx
     std::map<std::string, int32_t> partition_key_to_idx =
         ObjectUtils::CreateIdentifierToIndexMap(partition_keys_);
@@ -186,11 +159,10 @@ Result<std::vector<std::shared_ptr<CastExecutor>>> FieldMappingBuilder::CreateDa
                                FieldTypeUtils::ConvertToFieldType(data_fields[i].Type()->id()));
 
         if (!read_fields[i].Type()->Equals(data_fields[i].Type())) {
-            if (read_type == FieldType::MAP || read_type == FieldType::ARRAY ||
-                read_type == FieldType::STRUCT) {
-                // Nested types may differ due to nested column pruning (different
-                // number of sub-fields). No cast is needed — type pruning is
-                // handled by PruneDataType during field mapping construction.
+            if (read_type == FieldType::STRUCT) {
+                // STRUCT may still differ by nested pruning shape. No cast is
+                // needed — type pruning is handled by PruneDataType during
+                // field mapping construction.
                 cast_executors.push_back(nullptr);
                 continue;
             }

@@ -64,19 +64,19 @@ ReadContext::ReadContext(
 
 ReadContext::~ReadContext() {
     if (read_schema_ && read_schema_->release) {
-        read_schema_->release(read_schema_);
+        read_schema_->release(read_schema_.get());
     }
 }
 
-void ReadContext::SetReadSchema(ArrowSchema* schema) {
+void ReadContext::SetReadSchema(std::unique_ptr<ArrowSchema> schema) {
     if (schema && schema->release) {
-        if (schema == read_schema_) {
+        if (schema.get() == read_schema_.get()) {
             return;
         }
         if (read_schema_ && read_schema_->release) {
-            read_schema_->release(read_schema_);
+            read_schema_->release(read_schema_.get());
         }
-        read_schema_ = schema;
+        read_schema_ = std::move(schema);
     }
 }
 
@@ -87,7 +87,7 @@ class ReadContextBuilder::Impl {
         branch_ = BranchManager::DEFAULT_MAIN_BRANCH;
         read_field_names_.clear();
         read_field_ids_.clear();
-        read_schema_ = nullptr;
+        read_schema_.reset();
         fs_scheme_to_identifier_map_.clear();
         options_.clear();
         predicate_.reset();
@@ -111,7 +111,7 @@ class ReadContextBuilder::Impl {
     std::string branch_ = BranchManager::DEFAULT_MAIN_BRANCH;
     std::vector<std::string> read_field_names_;
     std::vector<int32_t> read_field_ids_;
-    ArrowSchema* read_schema_ = nullptr;
+    std::unique_ptr<ArrowSchema> read_schema_;
     std::map<std::string, std::string> fs_scheme_to_identifier_map_;
     std::map<std::string, std::string> options_;
     std::shared_ptr<Predicate> predicate_;
@@ -163,9 +163,9 @@ ReadContextBuilder& ReadContextBuilder::SetReadFieldIds(
     return *this;
 }
 
-ReadContextBuilder& ReadContextBuilder::SetReadSchema(ArrowSchema* read_schema) {
+ReadContextBuilder& ReadContextBuilder::SetReadSchema(std::unique_ptr<ArrowSchema> read_schema) {
     if (read_schema && read_schema->release) {
-        impl_->read_schema_ = read_schema;
+        impl_->read_schema_ = std::move(read_schema);
     }
     return *this;
 }
@@ -291,7 +291,7 @@ Result<std::unique_ptr<ReadContext>> ReadContextBuilder::Finish() {
         impl_->fs_scheme_to_identifier_map_, impl_->options_, impl_->prefetch_cache_mode_,
         impl_->cache_config_, impl_->cache_);
     if (impl_->read_schema_ && impl_->read_schema_->release) {
-        ctx->SetReadSchema(impl_->read_schema_);
+        ctx->SetReadSchema(std::move(impl_->read_schema_));
     }
     impl_->Reset();
     return ctx;

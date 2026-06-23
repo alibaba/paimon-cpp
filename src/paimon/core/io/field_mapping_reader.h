@@ -99,18 +99,19 @@ class FieldMappingReader : public FileBatchReader {
     Result<std::shared_ptr<arrow::Array>> GenerateNonExistArray(int32_t batch_size) const;
     Result<std::shared_ptr<arrow::Array>> CastNonPartitionArrayIfNeed(
         const std::shared_ptr<arrow::Array>& src_array) const;
-    Result<std::shared_ptr<arrow::Array>> AlignArrayToReadTypeIfNeeded(
-        const std::shared_ptr<arrow::Array>& src_array,
-        const std::shared_ptr<arrow::DataType>& read_type) const;
-    Result<std::shared_ptr<arrow::Array>> AlignStructArrayToReadType(
-        const std::shared_ptr<arrow::StructArray>& src_struct,
-        const std::shared_ptr<arrow::StructType>& read_struct_type) const;
 
     Status MappingFields(const std::shared_ptr<arrow::Array>& src_array,
                          const std::vector<DataField>& read_fields_of_data_array,
                          const std::vector<int32_t>& idx_in_target_schema,
                          arrow::ArrayVector* target_array,
                          std::vector<std::string>* target_field_names);
+
+    Result<bool> HasMapSelectedKeysRecursively(
+        const std::shared_ptr<arrow::Field>& read_field) const;
+
+    Result<std::shared_ptr<arrow::Array>> FilterMapSelectedKeysRecursively(
+        const std::shared_ptr<arrow::Array>& array,
+        const std::shared_ptr<arrow::Field>& read_field) const;
 
  private:
     bool need_mapping_ = false;

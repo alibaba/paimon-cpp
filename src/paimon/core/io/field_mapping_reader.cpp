@@ -43,6 +43,85 @@
 namespace paimon {
 class MemoryPool;
 
+Result<bool> FieldMappingReader::HasMapSelectedKeysRecursively(
+    const std::shared_ptr<arrow::Field>& read_field) const {
+    if (!read_field) {
+        return false;
+    }
+    auto type_id = read_field->type()->id();
+    if (type_id == arrow::Type::MAP) {
+        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> selected_keys,
+                               NestedProjectionUtils::GetMapSelectedKeys(read_field));
+        return !selected_keys.empty();
+    }
+    if (type_id == arrow::Type::STRUCT) {
+        for (const auto& child : read_field->type()->fields()) {
+            PAIMON_ASSIGN_OR_RAISE(bool has_selected_keys,
+                                   HasMapSelectedKeysRecursively(child));
+            if (has_selected_keys) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+Result<std::shared_ptr<arrow::Array>> FieldMappingReader::FilterMapSelectedKeysRecursively(
+    const std::shared_ptr<arrow::Array>& array,
+    const std::shared_ptr<arrow::Field>& read_field) const {
+    if (!array || !read_field) {
+        return array;
+    }
+
+    auto type_id = read_field->type()->id();
+    if (type_id == arrow::Type::MAP) {
+        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> selected_keys,
+                               NestedProjectionUtils::GetMapSelectedKeys(read_field));
+        if (selected_keys.empty()) {
+            return array;
+        }
+        return NestedProjectionUtils::FilterMapArrayBySelectedKeys(array, selected_keys,
+                                                                    arrow_pool_.get());
+    }
+
+    if (type_id == arrow::Type::STRUCT) {
+        if (array->type_id() != arrow::Type::STRUCT) {
+            return Status::Invalid(
+                fmt::format("FilterMapSelectedKeysRecursively requires struct array for read "
+                            "field '{}', got {}",
+                            read_field->name(), array->type()->ToString()));
+        }
+        auto struct_array = std::static_pointer_cast<arrow::StructArray>(array);
+        auto read_struct_type = std::static_pointer_cast<arrow::StructType>(read_field->type());
+        if (struct_array->num_fields() != read_struct_type->num_fields()) {
+            return Status::Invalid(fmt::format(
+                "FilterMapSelectedKeysRecursively struct field count mismatch for '{}': "
+                "array {} vs read {}",
+                read_field->name(), struct_array->num_fields(), read_struct_type->num_fields()));
+        }
+
+        arrow::ArrayVector filtered_children;
+        std::vector<std::shared_ptr<arrow::ArrayData>> filtered_child_data;
+        filtered_children.reserve(struct_array->num_fields());
+        filtered_child_data.reserve(struct_array->num_fields());
+        for (int32_t i = 0; i < struct_array->num_fields(); ++i) {
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> filtered_child,
+                                   FilterMapSelectedKeysRecursively(struct_array->field(i),
+                                                                    read_struct_type->field(i)));
+            filtered_child_data.push_back(filtered_child->data());
+            filtered_children.push_back(std::move(filtered_child));
+        }
+
+        // Preserve parent struct null semantics after filtering children.
+        auto filtered_struct_data = arrow::ArrayData::Make(
+            read_struct_type, struct_array->length(), {struct_array->null_bitmap()},
+            std::move(filtered_child_data), struct_array->null_count(), struct_array->offset());
+        return arrow::MakeArray(std::move(filtered_struct_data));
+    }
+
+    return array;
+}
+
 Result<std::unique_ptr<FieldMappingReader>> FieldMappingReader::Create(
     int32_t field_count, std::unique_ptr<FileBatchReader>&& reader, const BinaryRow& partition,
     std::unique_ptr<FieldMapping>&& mapping, const std::shared_ptr<MemoryPool>& pool) {
@@ -67,15 +146,6 @@ Result<std::unique_ptr<FieldMappingReader>> FieldMappingReader::Create(
         if (mapping_reader->non_partition_info_.cast_executors[i] != nullptr) {
             mapping_reader->need_casting_ = true;
         }
-        // Nested struct mismatch (e.g., requested child not present in file)
-        // requires mapping to materialize missing children as nulls.
-        if (mapping_reader->non_partition_info_.non_partition_read_schema[i].Type()->id() ==
-                arrow::Type::STRUCT &&
-            !mapping_reader->non_partition_info_.non_partition_data_schema[i]
-                 .Type()
-                 ->Equals(mapping_reader->non_partition_info_.non_partition_read_schema[i].Type())) {
-            mapping_reader->need_mapping_ = true;
-        }
         // Field name change (RENAME COLUMN) also requires mapping: data schema
         // carries the file's physical name while read schema carries the
         // post-rename logical name. If we skipped mapping, the inner reader's
@@ -88,15 +158,12 @@ Result<std::unique_ptr<FieldMappingReader>> FieldMappingReader::Create(
         // Map selected-keys metadata must be validated in Create() (fail-fast).
         // Non-empty selected-keys also requires mapping so that
         // FilterMapArrayBySelectedKeys can filter out unwanted entries.
-        if (mapping_reader->non_partition_info_.non_partition_read_schema[i].Type()->id() ==
-            arrow::Type::MAP) {
-            PAIMON_ASSIGN_OR_RAISE(
-                std::vector<std::string> selected_keys,
-                NestedProjectionUtils::GetMapSelectedKeys(
-                    mapping_reader->non_partition_info_.non_partition_read_schema[i].ArrowField()));
-            if (!selected_keys.empty()) {
-                mapping_reader->need_mapping_ = true;
-            }
+        PAIMON_ASSIGN_OR_RAISE(
+            bool has_map_selected_keys,
+            mapping_reader->HasMapSelectedKeysRecursively(
+                mapping_reader->non_partition_info_.non_partition_read_schema[i].ArrowField()));
+        if (has_map_selected_keys) {
+            mapping_reader->need_mapping_ = true;
         }
     }
 
@@ -323,64 +390,6 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::GenerateNonExistArray(
     return arrow_array;
 }
 
-Result<std::shared_ptr<arrow::Array>> FieldMappingReader::AlignStructArrayToReadType(
-    const std::shared_ptr<arrow::StructArray>& src_struct,
-    const std::shared_ptr<arrow::StructType>& read_struct_type) const {
-    arrow::ArrayVector aligned_children;
-    aligned_children.reserve(read_struct_type->num_fields());
-    const auto src_fields = src_struct->type()->fields();
-
-    for (const auto& read_child : read_struct_type->fields()) {
-        int32_t child_idx = -1;
-        for (size_t i = 0; i < src_fields.size(); ++i) {
-            if (src_fields[i]->name() == read_child->name()) {
-                child_idx = static_cast<int32_t>(i);
-                break;
-            }
-        }
-        if (child_idx < 0) {
-            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> null_child,
-                                              arrow::MakeArrayOfNull(
-                                                  read_child->type(), src_struct->length(),
-                                                  arrow_pool_.get()));
-            aligned_children.push_back(std::move(null_child));
-            continue;
-        }
-
-        PAIMON_ASSIGN_OR_RAISE(
-            std::shared_ptr<arrow::Array> aligned_child,
-            AlignArrayToReadTypeIfNeeded(src_struct->field(child_idx), read_child->type()));
-        aligned_children.push_back(std::move(aligned_child));
-    }
-
-    std::vector<std::shared_ptr<arrow::ArrayData>> child_data;
-    child_data.reserve(aligned_children.size());
-    for (const auto& child : aligned_children) {
-        child_data.push_back(child->data());
-    }
-
-    auto aligned_data = arrow::ArrayData::Make(
-        arrow::struct_(read_struct_type->fields()), src_struct->length(),
-        std::vector<std::shared_ptr<arrow::Buffer>>{src_struct->null_bitmap()}, child_data,
-        src_struct->null_count(), src_struct->offset());
-    return arrow::MakeArray(aligned_data);
-}
-
-Result<std::shared_ptr<arrow::Array>> FieldMappingReader::AlignArrayToReadTypeIfNeeded(
-    const std::shared_ptr<arrow::Array>& src_array,
-    const std::shared_ptr<arrow::DataType>& read_type) const {
-    if (src_array->type()->Equals(read_type)) {
-        return src_array;
-    }
-
-    if (src_array->type_id() == arrow::Type::STRUCT && read_type->id() == arrow::Type::STRUCT) {
-        return AlignStructArrayToReadType(std::static_pointer_cast<arrow::StructArray>(src_array),
-                                          std::static_pointer_cast<arrow::StructType>(read_type));
-    }
-
-    return src_array;
-}
-
 Status FieldMappingReader::MappingFields(const std::shared_ptr<arrow::Array>& data_array,
                                          const std::vector<DataField>& read_fields_of_data_array,
                                          const std::vector<int32_t>& idx_in_target_schema,
@@ -390,21 +399,12 @@ Status FieldMappingReader::MappingFields(const std::shared_ptr<arrow::Array>& da
     assert(struct_array);
     assert(struct_array->fields().size() == idx_in_target_schema.size());
     for (size_t i = 0; i < idx_in_target_schema.size(); i++) {
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> field_array,
-                               AlignArrayToReadTypeIfNeeded(struct_array->field(i),
-                                                            read_fields_of_data_array[i].Type()));
+        std::shared_ptr<arrow::Array> field_array = struct_array->field(i);
 
-        // Filter map entries by selected keys if metadata is present.
-        if (field_array->type()->id() == arrow::Type::MAP) {
-            PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> selected_keys,
-                                   NestedProjectionUtils::GetMapSelectedKeys(
-                                       read_fields_of_data_array[i].ArrowField()));
-            if (!selected_keys.empty()) {
-                PAIMON_ASSIGN_OR_RAISE(field_array,
-                                       NestedProjectionUtils::FilterMapArrayBySelectedKeys(
-                                           field_array, selected_keys, arrow_pool_.get()));
-            }
-        }
+        // Filter map entries by selected keys recursively (supports MAP nested in STRUCT).
+        PAIMON_ASSIGN_OR_RAISE(field_array,
+                               FilterMapSelectedKeysRecursively(
+                                   field_array, read_fields_of_data_array[i].ArrowField()));
 
         (*target_array)[idx_in_target_schema[i]] = std::move(field_array);
         (*target_field_names)[idx_in_target_schema[i]] = read_fields_of_data_array[i].Name();

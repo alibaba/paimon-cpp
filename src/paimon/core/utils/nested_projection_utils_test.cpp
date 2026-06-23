@@ -108,12 +108,15 @@ TEST(NestedProjectionUtilsTest, PruneDataTypeStructPruneSubset) {
 TEST(NestedProjectionUtilsTest, PruneDataTypeStructAllFieldsPruned) {
     // data: STRUCT<x:INT(id=1)>
     // read: STRUCT<y:INT(id=99)>  — no match
-    // expected: nullopt
+    // expected: fail-fast (struct-internal schema evolution unsupported)
     auto data_type = arrow::struct_({MakeField("x", arrow::int32(), 1)});
     auto read_type = arrow::struct_({MakeField("y", arrow::int32(), 99)});
 
-    ASSERT_OK_AND_ASSIGN(auto result, NestedProjectionUtils::PruneDataType(read_type, data_type));
-    ASSERT_FALSE(result.has_value());
+    auto result = NestedProjectionUtils::PruneDataType(read_type, data_type);
+    ASSERT_FALSE(result.ok());
+    ASSERT_TRUE(result.status().ToString().find("does not support schema evolution inside struct") !=
+                std::string::npos)
+        << result.status().ToString();
 }
 
 TEST(NestedProjectionUtilsTest, PruneDataTypeNestedStruct) {
@@ -145,12 +148,11 @@ TEST(NestedProjectionUtilsTest, PruneDataTypeListWithStructElement) {
     auto inner_read = arrow::struct_({MakeField("a", arrow::int32(), 10)});
     auto read_type = arrow::list(arrow::field("item", inner_read));
 
-    ASSERT_OK_AND_ASSIGN(auto result, NestedProjectionUtils::PruneDataType(read_type, data_type));
-    ASSERT_TRUE(result.has_value());
-    auto list_type = std::dynamic_pointer_cast<arrow::ListType>(result.value());
-    ASSERT_NE(list_type, nullptr);
-    ASSERT_EQ(list_type->value_type()->num_fields(), 1);
-    ASSERT_EQ(list_type->value_type()->field(0)->name(), "a");
+    auto result = NestedProjectionUtils::PruneDataType(read_type, data_type);
+    ASSERT_FALSE(result.ok());
+    ASSERT_TRUE(result.status().ToString().find("partial projection inside list") !=
+                std::string::npos)
+        << result.status().ToString();
 }
 
 TEST(NestedProjectionUtilsTest, PruneDataTypeMapWithStructValue) {
@@ -163,13 +165,11 @@ TEST(NestedProjectionUtilsTest, PruneDataTypeMapWithStructValue) {
     auto inner_read = arrow::struct_({MakeField("a", arrow::int32(), 10)});
     auto read_type = arrow::map(arrow::utf8(), inner_read);
 
-    ASSERT_OK_AND_ASSIGN(auto result, NestedProjectionUtils::PruneDataType(read_type, data_type));
-    ASSERT_TRUE(result.has_value());
-    auto map_type = std::dynamic_pointer_cast<arrow::MapType>(result.value());
-    ASSERT_NE(map_type, nullptr);
-    ASSERT_TRUE(map_type->key_type()->Equals(arrow::utf8()));
-    ASSERT_EQ(map_type->item_type()->num_fields(), 1);
-    ASSERT_EQ(map_type->item_type()->field(0)->name(), "a");
+    auto result = NestedProjectionUtils::PruneDataType(read_type, data_type);
+    ASSERT_FALSE(result.ok());
+    ASSERT_TRUE(result.status().ToString().find("partial projection inside map") !=
+                std::string::npos)
+        << result.status().ToString();
 }
 
 TEST(NestedProjectionUtilsTest, HasNestedSubfieldProjectionNoProjection) {
@@ -203,6 +203,66 @@ TEST(NestedProjectionUtilsTest, HasNestedSubfieldProjectionWithProjection) {
         auto has_nested_projection,
         NestedProjectionUtils::HasNestedSubfieldProjection(file_schema, read_schema));
     ASSERT_TRUE(has_nested_projection);
+}
+
+TEST(NestedProjectionUtilsTest, HasNestedSubfieldProjectionTypeMismatchReturnsInvalid) {
+    auto file_schema = arrow::schema({
+        MakeField("f0", arrow::struct_({MakeField("a", arrow::int32(), 2)}), 1),
+    });
+    auto read_schema = arrow::schema({
+        MakeField("f0", arrow::list(arrow::field("item", arrow::int32())), 1),
+    });
+
+    ASSERT_NOK_WITH_MSG(
+        NestedProjectionUtils::HasNestedSubfieldProjection(file_schema, read_schema),
+        "requires same nested type kind");
+}
+
+TEST(NestedProjectionUtilsTest, HasNestedSubfieldProjectionAtomicTypeMismatchReturnsFalse) {
+    auto file_schema = arrow::schema({
+        MakeField("f0", arrow::map(arrow::utf8(), arrow::int32()), 1),
+    });
+    auto read_schema = arrow::schema({
+        MakeField("f0", arrow::map(arrow::utf8(), arrow::int16()), 1),
+    });
+
+    ASSERT_OK_AND_ASSIGN(
+        auto has_nested_projection,
+        NestedProjectionUtils::HasNestedSubfieldProjection(file_schema, read_schema));
+    ASSERT_FALSE(has_nested_projection);
+}
+
+TEST(NestedProjectionUtilsTest, HasNestedSubfieldProjectionMissingStructChildReturnsInvalid) {
+    auto file_schema = arrow::schema({
+        MakeField(
+            "f0",
+            arrow::struct_({MakeField("a", arrow::int32(), 2), MakeField("b", arrow::utf8(), 3)}),
+            1),
+    });
+    auto read_schema = arrow::schema({
+        MakeField(
+            "f0",
+            arrow::struct_({MakeField("a", arrow::int32(), 2), MakeField("c", arrow::utf8(), 4)}),
+            1),
+    });
+
+    ASSERT_NOK_WITH_MSG(
+        NestedProjectionUtils::HasNestedSubfieldProjection(file_schema, read_schema),
+        "requested struct child");
+}
+
+TEST(NestedProjectionUtilsTest, HasNestedSubfieldProjectionMissingTopLevelFieldReturnsInvalid) {
+    auto file_schema = arrow::schema({
+        MakeField("f0", arrow::int32(), 1),
+    });
+    auto read_schema = arrow::schema({
+        MakeField("f0", arrow::int32(), 1),
+        MakeField("f1", arrow::struct_({MakeField("a", arrow::int32(), 2)}), 3),
+    });
+
+    ASSERT_NOK_WITH_MSG(
+        NestedProjectionUtils::HasNestedSubfieldProjection(file_schema, read_schema),
+        "missing in file schema");
 }
 
 // ============== GetMapSelectedKeys ==============

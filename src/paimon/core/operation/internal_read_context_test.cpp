@@ -204,10 +204,10 @@ TEST(InternalReadContext, TestReadWithProjectedSchemaAndSpecialFields) {
     // Without options, special fields should be rejected in projected-schema path too.
     {
         auto projected_schema = DataField::ConvertDataFieldsToArrowSchema(projected_fields);
-        ArrowSchema c_schema;
-        ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_schema).ok());
+        auto c_schema = std::make_unique<ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, c_schema.get()).ok());
         ReadContextBuilder context_builder(path);
-        context_builder.SetReadSchema(&c_schema);
+        context_builder.SetReadSchema(std::move(c_schema));
         ASSERT_OK_AND_ASSIGN(auto unique_read_context, context_builder.Finish());
         std::shared_ptr<ReadContext> read_context = std::move(unique_read_context);
         ASSERT_NOK_WITH_MSG(
@@ -222,10 +222,10 @@ TEST(InternalReadContext, TestReadWithProjectedSchemaAndSpecialFields) {
 
     {
         auto projected_schema = DataField::ConvertDataFieldsToArrowSchema(projected_fields);
-        ArrowSchema c_schema;
-        ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_schema).ok());
+        auto c_schema = std::make_unique<ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, c_schema.get()).ok());
         ReadContextBuilder context_builder(path);
-        context_builder.SetReadSchema(&c_schema);
+        context_builder.SetReadSchema(std::move(c_schema));
         ASSERT_OK_AND_ASSIGN(auto unique_read_context, context_builder.Finish());
         std::shared_ptr<ReadContext> read_context = std::move(unique_read_context);
         ASSERT_OK_AND_ASSIGN(
@@ -241,11 +241,11 @@ TEST(InternalReadContext, TestReadWithProjectedSchemaWithoutFieldIds) {
 
     auto projected_schema =
         arrow::schema({arrow::field("f3", arrow::float64()), arrow::field("f0", arrow::utf8())});
-    ArrowSchema c_schema;
-    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_schema).ok());
+    auto c_schema = std::make_unique<ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, c_schema.get()).ok());
 
     ReadContextBuilder context_builder(path);
-    context_builder.SetReadSchema(&c_schema);
+    context_builder.SetReadSchema(std::move(c_schema));
     ASSERT_OK_AND_ASSIGN(auto unique_read_context, context_builder.Finish());
     std::shared_ptr<ReadContext> read_context = std::move(unique_read_context);
 
@@ -273,11 +273,11 @@ TEST(InternalReadContext, TestProjectedSchemaMetadataWhitelist) {
             ->WithMetadata(arrow::KeyValueMetadata::Make(
                 {DataField::MAP_SELECTED_KEYS, "custom.key"}, {"k1,k2", "should_not_propagate"}));
     auto projected_schema = arrow::schema({read_field});
-    ArrowSchema c_schema;
-    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_schema).ok());
+    auto c_schema = std::make_unique<ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, c_schema.get()).ok());
 
     ReadContextBuilder context_builder(path);
-    context_builder.SetReadSchema(&c_schema);
+    context_builder.SetReadSchema(std::move(c_schema));
     ASSERT_OK_AND_ASSIGN(auto unique_read_context, context_builder.Finish());
     std::shared_ptr<ReadContext> read_context = std::move(unique_read_context);
 

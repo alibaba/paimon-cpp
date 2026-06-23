@@ -45,9 +45,6 @@ Result<std::unique_ptr<TableSchema>> TableSchema::Create(
     int64_t schema_id, const std::shared_ptr<arrow::Schema>& schema,
     const std::vector<std::string>& partition_keys, const std::vector<std::string>& primary_keys,
     const std::map<std::string, std::string>& options) {
-    if (schema_id != 0) {
-        return Status::NotImplemented("do not support schema evolution, schema_id must be 0");
-    }
     std::vector<DataField> data_fields;
     int32_t field_id = 0;
     std::set<std::string> primary_key_set;

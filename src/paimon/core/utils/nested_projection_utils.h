@@ -41,32 +41,12 @@ class PAIMON_EXPORT NestedProjectionUtils {
 
     /// Extract the paimon field ID from an Arrow field's metadata ("paimon.id").
     /// Returns -1 if the metadata key is not present.
-    static int32_t GetPaimonFieldId(const std::shared_ptr<arrow::Field>& field) {
-        if (!field || !field->HasMetadata() || !field->metadata()) {
-            return -1;
-        }
-        auto result = field->metadata()->Get(DataField::FIELD_ID);
-        if (!result.ok()) {
-            return -1;
-        }
-        std::optional<int32_t> field_id = StringUtils::StringToValue<int32_t>(result.ValueUnsafe());
-        return field_id.value_or(-1);
-    }
+    static int32_t GetPaimonFieldId(const std::shared_ptr<arrow::Field>& field);
 
     /// Find a child field in a STRUCT DataType by paimon field ID.
     /// Returns nullptr if no child has the given ID.
     static std::shared_ptr<arrow::Field> FindFieldByPaimonId(
-        const std::shared_ptr<arrow::DataType>& struct_type, int32_t field_id) {
-        if (!struct_type || struct_type->id() != arrow::Type::STRUCT) {
-            return nullptr;
-        }
-        for (const auto& child : struct_type->fields()) {
-            if (GetPaimonFieldId(child) == field_id) {
-                return child;
-            }
-        }
-        return nullptr;
-    }
+        const std::shared_ptr<arrow::DataType>& struct_type, int32_t field_id);
 
     /// Recursively prune `data_type` so that only the sub-fields requested by
     /// `read_type` are retained. Matching is done by paimon field ID to support

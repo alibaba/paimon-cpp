@@ -201,12 +201,6 @@ Status ParquetFileBatchReader::SetReadSchema(
 
         read_data_type_ = arrow::struct_(read_schema->fields());
 
-        // Provide the read schema to FileReaderWrapper for page-filtered reading.
-        // This is needed because nested column pruning produces leaf column indices
-        // whose names don't correspond to top-level Arrow fields, so the wrapper
-        // cannot infer the correct schema from leaf column names alone.
-        reader_->SetReadSchemaForPageFilter(read_schema);
-
         metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_TOTAL,
                              reader_->GetNumberOfRowGroups());
         metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_AFTER_FILTER, row_groups.size());

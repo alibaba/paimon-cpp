@@ -153,26 +153,26 @@ TEST(ReadContextTest, TestPrefetchMaxParallelNumZero) {
 
 TEST(ReadContextTest, TestSetReadSchemaAndHasReadSchema) {
     auto projected_schema = arrow::schema({arrow::field("f0", arrow::utf8())});
-    ArrowSchema c_schema;
-    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_schema).ok());
+    auto c_schema = std::make_unique<ArrowSchema>();
+    auto* c_schema_raw = c_schema.get();
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, c_schema.get()).ok());
 
     {
         ReadContextBuilder builder("table_root_path");
-        builder.SetReadSchema(&c_schema);
+        builder.SetReadSchema(std::move(c_schema));
         ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
         ASSERT_TRUE(ctx->HasReadSchema());
-        ASSERT_EQ(ctx->GetReadSchema(), &c_schema);
+        ASSERT_EQ(ctx->GetReadSchema(), c_schema_raw);
     }
 
-    // ReadContext owns and releases ArrowSchema resources during destruction.
-    ASSERT_EQ(c_schema.release, nullptr);
+    ASSERT_EQ(c_schema, nullptr);
 }
 
 TEST(ReadContextTest, TestSetInvalidReadSchemaIgnored) {
-    ArrowSchema invalid_schema{};
+    auto invalid_schema = std::make_unique<ArrowSchema>();
 
     ReadContextBuilder builder("table_root_path");
-    builder.SetReadSchema(&invalid_schema);
+    builder.SetReadSchema(std::move(invalid_schema));
     ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
 
     ASSERT_FALSE(ctx->HasReadSchema());

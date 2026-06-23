@@ -139,13 +139,13 @@ class PAIMON_EXPORT ReadContext {
     /// Get the read schema as a mutable C ArrowSchema pointer.
     /// ImportSchema will consume (release) the schema content.
     ArrowSchema* GetReadSchema() {
-        return read_schema_;
+        return read_schema_.get();
     }
 
-    /// Set the read schema from a C ArrowSchema pointer and take ownership of
+    /// Set the read schema from a C ArrowSchema unique_ptr and take ownership of
     /// schema resources (released via ArrowSchema::release in destructor).
     /// Called internally by ReadContextBuilder.
-    void SetReadSchema(ArrowSchema* schema);
+    void SetReadSchema(std::unique_ptr<ArrowSchema> schema);
 
  private:
     std::string path_;
@@ -168,8 +168,8 @@ class PAIMON_EXPORT ReadContext {
     PrefetchCacheMode prefetch_cache_mode_;
     CacheConfig cache_config_;
     std::shared_ptr<Cache> cache_;
-    // Owns schema resources referenced by this pointer and releases them in destructor.
-    ArrowSchema* read_schema_ = nullptr;
+    // Owns schema resources and releases ArrowSchema::release in destructor.
+    std::unique_ptr<ArrowSchema> read_schema_;
 };
 
 /// `ReadContextBuilder` used to build a `ReadContext`, has input validation.
@@ -193,7 +193,7 @@ class PAIMON_EXPORT ReadContextBuilder {
     /// @param read_field_names Vector of field names to read from the table.
     /// @return Reference to this builder for method chaining.
     /// @note Currently supports top-level field selection. For nested field selection
-    ///       use SetReadSchema(ArrowSchema*) instead.
+    ///       use SetReadSchema(std::unique_ptr<ArrowSchema>) instead.
     ReadContextBuilder& SetReadFieldNames(const std::vector<std::string>& read_field_names);
     /// Set the schema fields to read from the table.
     ///
@@ -234,11 +234,11 @@ class PAIMON_EXPORT ReadContextBuilder {
     ///     map_field->WithMetadata(map_meta),
     /// });
     ///
-    /// ArrowSchema c_schema;
-    /// arrow::ExportSchema(*projected_schema, &c_schema);
+    /// auto c_schema = std::make_unique<ArrowSchema>();
+    /// arrow::ExportSchema(*projected_schema, c_schema.get());
     ///
     /// ReadContextBuilder builder("/path/to/table");
-    /// builder.SetReadSchema(&c_schema);
+    /// builder.SetReadSchema(std::move(c_schema));
     /// @endcode
     ///
     /// @param read_schema Arrow C Schema. Ownership of schema resources is transferred
@@ -246,7 +246,7 @@ class PAIMON_EXPORT ReadContextBuilder {
     /// @return Reference to this builder for method chaining.
     /// @note Priority: read_schema > read_field_ids > read_field_names.
     ///       When set, read_field_ids and read_field_names are ignored.
-    ReadContextBuilder& SetReadSchema(ArrowSchema* read_schema);
+    ReadContextBuilder& SetReadSchema(std::unique_ptr<ArrowSchema> read_schema);
 
     /// Set a configuration options map to set some option entries which are not defined in the
     /// table schema or whose values you want to overwrite.

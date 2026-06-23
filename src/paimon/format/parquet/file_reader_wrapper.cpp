@@ -24,7 +24,6 @@
 #include "arrow/record_batch.h"
 #include "arrow/util/range.h"
 #include "fmt/format.h"
-#include "paimon/core/utils/nested_projection_utils.h"
 #include "paimon/format/parquet/column_index_filter.h"
 #include "paimon/format/parquet/page_filtered_row_group_reader.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
@@ -412,23 +411,6 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
         target_row_groups_ = target_row_groups;
         target_column_indices_ = column_indices;
         page_filtered_read_schema_.reset();
-
-        // Page-level filtering currently has offset issues for nested sub-field projection.
-        // Until fixed, force those reads to use full row-group reads.
-        std::shared_ptr<arrow::Schema> read_schema = external_read_schema_;
-        if (!read_schema) {
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetSchema(&read_schema));
-        }
-        std::shared_ptr<arrow::Schema> file_schema;
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetSchema(&file_schema));
-        PAIMON_ASSIGN_OR_RAISE(
-            bool has_nested_subfield_projection,
-            NestedProjectionUtils::HasNestedSubfieldProjection(file_schema, read_schema));
-        if (has_nested_subfield_projection) {
-            for (auto& trg : target_row_groups_) {
-                trg.is_partially_matched = false;
-            }
-        }
 
         // Partition into fully-matched and page-filtered row groups, skipping excluded ones.
         std::vector<int32_t> fully_matched_row_groups;
