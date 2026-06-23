@@ -17,7 +17,6 @@
 #include "paimon/format/blob/blob_file_batch_reader.h"
 
 #include <algorithm>
-#include <future>
 #include <numeric>
 
 #include "arrow/api.h"
@@ -27,7 +26,6 @@
 #include "arrow/util/bit_util.h"
 #include "fmt/format.h"
 #include "paimon/common/data/blob_utils.h"
-#include "paimon/common/executor/future.h"
 #include "paimon/common/io/offset_input_stream.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
@@ -52,24 +50,24 @@ Result<std::unique_ptr<BlobFileBatchReader>> BlobFileBatchReader::Create(
 
     PAIMON_ASSIGN_OR_RAISE(int64_t file_size, input_stream->Length());
     PAIMON_RETURN_NOT_OK(
-        input_stream->Seek(file_size - BlobDefs::kBlobFileHeaderLength, FS_SEEK_SET));
-    int8_t header[BlobDefs::kBlobFileHeaderLength];
+        input_stream->Seek(file_size - BlobDefs::kBlobFileFooterLength, FS_SEEK_SET));
+    int8_t footer[BlobDefs::kBlobFileFooterLength];
     PAIMON_ASSIGN_OR_RAISE(
         int64_t actual_size,
-        input_stream->Read(reinterpret_cast<char*>(header), BlobDefs::kBlobFileHeaderLength));
-    if (actual_size != BlobDefs::kBlobFileHeaderLength) {
+        input_stream->Read(reinterpret_cast<char*>(footer), BlobDefs::kBlobFileFooterLength));
+    if (actual_size != BlobDefs::kBlobFileFooterLength) {
         return Status::Invalid(
-            fmt::format("actual read size {} not match with expect header length {}", actual_size,
-                        BlobDefs::kBlobFileHeaderLength));
+            fmt::format("actual read size {} not match with expect footer length {}", actual_size,
+                        BlobDefs::kBlobFileFooterLength));
     }
-    int8_t version = header[4];
+    int8_t version = footer[4];
     if (version != BlobDefs::kFileVersion) {
         return Status::Invalid(fmt::format(
             "create blob format reader failed. unsupported blob file version: {}", version));
     }
-    int32_t index_length = GetIndexLength(header, 0);
+    int32_t index_length = GetIndexLength(footer, 0);
     PAIMON_RETURN_NOT_OK(input_stream->Seek(
-        file_size - BlobDefs::kBlobFileHeaderLength - index_length, FS_SEEK_SET));
+        file_size - BlobDefs::kBlobFileFooterLength - index_length, FS_SEEK_SET));
     std::vector<char> index_bytes(index_length, '\0');
     PAIMON_ASSIGN_OR_RAISE(actual_size, input_stream->Read(index_bytes.data(), index_length));
     if (actual_size != index_length) {
