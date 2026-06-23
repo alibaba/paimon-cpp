@@ -327,8 +327,7 @@ TEST_P(NestedColumnPruningInteTest, QueryStructSubFieldsAllNonExistentReturnsNul
         auto message = batch_reader_result.status().ToString();
         ASSERT_TRUE(message.find("does not support schema evolution inside struct") !=
                         std::string::npos ||
-                    message.find("requires paimon.id for nested struct field") !=
-                        std::string::npos)
+                    message.find("requires paimon.id for nested struct field") != std::string::npos)
             << "unexpected error: " << message;
         return;
     }
@@ -408,8 +407,7 @@ TEST_P(NestedColumnPruningInteTest, QueryStructSubFieldsWithNonExistentField) {
         auto message = batch_reader_result.status().ToString();
         ASSERT_TRUE(message.find("does not support schema evolution inside struct") !=
                         std::string::npos ||
-                    message.find("requires paimon.id for nested struct field") !=
-                        std::string::npos)
+                    message.find("requires paimon.id for nested struct field") != std::string::npos)
             << "unexpected error: " << message;
         return;
     }
@@ -508,7 +506,8 @@ TEST_P(NestedColumnPruningInteTest, QueryStructSubFieldsWithTypeMismatchShouldFa
 
 // Test: With SetReadSchema using the new schema, context build should pass,
 // and mismatch against old file type should be rejected in reader creation.
-TEST_P(NestedColumnPruningInteTest, QueryStructSubFieldsWithTypeMismatchAndSetReadSchemaFailAtContext) {
+TEST_P(NestedColumnPruningInteTest,
+       QueryStructSubFieldsWithTypeMismatchAndSetReadSchemaFailAtContext) {
     // File schema (old): f1.a is INT32.
     auto struct_type = arrow::struct_({
         arrow::field("a", arrow::int32()),
@@ -1692,7 +1691,7 @@ TEST_P(NestedColumnPruningInteTest, PruneListStructSubFields) {
     ASSERT_FALSE(read_result_result.ok());
     auto message = read_result_result.status().ToString();
     ASSERT_TRUE(message.find("partial projection inside list/map") != std::string::npos ||
-            message.find("partial projection inside list") != std::string::npos ||
+                message.find("partial projection inside list") != std::string::npos ||
                 message.find("type mismatch") != std::string::npos)
         << "unexpected error: " << message;
 }

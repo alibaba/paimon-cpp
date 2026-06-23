@@ -191,9 +191,10 @@ Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::P
         case arrow::Type::LIST: {
             // Keep behavior aligned with format readers: partial projection inside
             // LIST is unsupported and must fail fast.
-            return Status::Invalid(fmt::format(
-                "PruneDataType does not support partial projection inside list: src {} vs target {}",
-                data_type->ToString(), read_type->ToString()));
+            return Status::Invalid(
+                fmt::format("PruneDataType does not support partial projection inside list: src {} "
+                            "vs target {}",
+                            data_type->ToString(), read_type->ToString()));
         }
 
         case arrow::Type::MAP: {
@@ -296,15 +297,15 @@ Result<MapKeyAccessor> BuildMapKeyAccessor(const std::shared_ptr<arrow::Array>& 
             accessor.dict_values =
                 std::static_pointer_cast<arrow::StringArray>(accessor.dict_keys->dictionary());
         } else {
-            accessor.dict_large_values = std::static_pointer_cast<arrow::LargeStringArray>(
-                accessor.dict_keys->dictionary());
+            accessor.dict_large_values =
+                std::static_pointer_cast<arrow::LargeStringArray>(accessor.dict_keys->dictionary());
         }
         return accessor;
     }
-    return Status::Invalid(fmt::format(
-        "FilterMapArrayBySelectedKeys only supports string keys or "
-        "dictionary<string|large_string> keys, got {}",
-        key_array->type()->ToString()));
+    return Status::Invalid(
+        fmt::format("FilterMapArrayBySelectedKeys only supports string keys or "
+                    "dictionary<string|large_string> keys, got {}",
+                    key_array->type()->ToString()));
 }
 
 Result<std::string_view> GetMapKeyViewAt(const MapKeyAccessor& accessor, int64_t entry_idx) {

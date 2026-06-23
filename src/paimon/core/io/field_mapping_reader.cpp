@@ -56,8 +56,7 @@ Result<bool> FieldMappingReader::HasMapSelectedKeysRecursively(
     }
     if (type_id == arrow::Type::STRUCT) {
         for (const auto& child : read_field->type()->fields()) {
-            PAIMON_ASSIGN_OR_RAISE(bool has_selected_keys,
-                                   HasMapSelectedKeysRecursively(child));
+            PAIMON_ASSIGN_OR_RAISE(bool has_selected_keys, HasMapSelectedKeysRecursively(child));
             if (has_selected_keys) {
                 return true;
             }
@@ -81,7 +80,7 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::FilterMapSelectedKeysR
             return array;
         }
         return NestedProjectionUtils::FilterMapArrayBySelectedKeys(array, selected_keys,
-                                                                    arrow_pool_.get());
+                                                                   arrow_pool_.get());
     }
 
     if (type_id == arrow::Type::STRUCT) {

@@ -205,7 +205,7 @@ TEST(InternalReadContext, TestReadWithProjectedSchemaAndSpecialFields) {
     {
         auto projected_schema = DataField::ConvertDataFieldsToArrowSchema(projected_fields);
         auto c_schema = std::make_unique<ArrowSchema>();
-    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, c_schema.get()).ok());
+        ASSERT_TRUE(arrow::ExportSchema(*projected_schema, c_schema.get()).ok());
         ReadContextBuilder context_builder(path);
         context_builder.SetReadSchema(std::move(c_schema));
         ASSERT_OK_AND_ASSIGN(auto unique_read_context, context_builder.Finish());
@@ -223,7 +223,7 @@ TEST(InternalReadContext, TestReadWithProjectedSchemaAndSpecialFields) {
     {
         auto projected_schema = DataField::ConvertDataFieldsToArrowSchema(projected_fields);
         auto c_schema = std::make_unique<ArrowSchema>();
-    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, c_schema.get()).ok());
+        ASSERT_TRUE(arrow::ExportSchema(*projected_schema, c_schema.get()).ok());
         ReadContextBuilder context_builder(path);
         context_builder.SetReadSchema(std::move(c_schema));
         ASSERT_OK_AND_ASSIGN(auto unique_read_context, context_builder.Finish());

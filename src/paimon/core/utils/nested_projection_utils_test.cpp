@@ -114,8 +114,8 @@ TEST(NestedProjectionUtilsTest, PruneDataTypeStructAllFieldsPruned) {
 
     auto result = NestedProjectionUtils::PruneDataType(read_type, data_type);
     ASSERT_FALSE(result.ok());
-    ASSERT_TRUE(result.status().ToString().find("does not support schema evolution inside struct") !=
-                std::string::npos)
+    ASSERT_TRUE(result.status().ToString().find(
+                    "does not support schema evolution inside struct") != std::string::npos)
         << result.status().ToString();
 }
 
