@@ -67,6 +67,19 @@ class NestedColumnPruningInteTest : public ::testing::Test,
         dir_.reset();
     }
 
+    void AssertChunkedArrayEquals(const std::shared_ptr<arrow::ChunkedArray>& expected,
+                                  const std::shared_ptr<arrow::ChunkedArray>& actual) const {
+        arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
+        bool is_equal = expected->Equals(actual, equal_options.diff_sink(&std::cout));
+        if (!is_equal) {
+            std::cout << "[expected_type] " << expected->type()->ToString() << std::endl;
+            std::cout << "[actual_type]   " << actual->type()->ToString() << std::endl;
+            std::cout << "[expected] " << expected->ToString() << std::endl;
+            std::cout << "[actual]   " << actual->ToString() << std::endl;
+        }
+        ASSERT_TRUE(is_equal);
+    }
+
  protected:
     std::string file_format_;
     std::string test_dir_;
@@ -158,15 +171,7 @@ TEST_P(NestedColumnPruningInteTest, PruneStructSubFields) {
         arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();
     auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
 
-    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
-    bool is_equal = expected_chunked->Equals(read_result, equal_options.diff_sink(&std::cout));
-    if (!is_equal) {
-        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
-        std::cout << "[actual_type]   " << read_result->type()->ToString() << std::endl;
-        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
-        std::cout << "[actual]   " << read_result->ToString() << std::endl;
-    }
-    ASSERT_TRUE(is_equal);
+    AssertChunkedArrayEquals(expected_chunked, read_result);
 }
 
 // Test: Two top-level struct columns have the same nested field name; projection should
@@ -252,15 +257,7 @@ TEST_P(NestedColumnPruningInteTest, PruneSameNestedFieldNameFromDifferentStructC
         arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();
     auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
 
-    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
-    bool is_equal = expected_chunked->Equals(read_result, equal_options.diff_sink(&std::cout));
-    if (!is_equal) {
-        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
-        std::cout << "[actual_type]   " << read_result->type()->ToString() << std::endl;
-        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
-        std::cout << "[actual]   " << read_result->ToString() << std::endl;
-    }
-    ASSERT_TRUE(is_equal);
+    AssertChunkedArrayEquals(expected_chunked, read_result);
 }
 
 // Test: Querying only non-existent struct sub-fields should fail fast.
@@ -670,15 +667,7 @@ TEST_P(NestedColumnPruningInteTest, PruneEntireStructField) {
         arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();
     auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
 
-    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
-    bool is_equal = expected_chunked->Equals(read_result, equal_options.diff_sink(&std::cout));
-    if (!is_equal) {
-        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
-        std::cout << "[actual_type]   " << read_result->type()->ToString() << std::endl;
-        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
-        std::cout << "[actual]   " << read_result->ToString() << std::endl;
-    }
-    ASSERT_TRUE(is_equal);
+    AssertChunkedArrayEquals(expected_chunked, read_result);
 }
 
 // Test: Nested struct — prune sub-fields of a struct inside another struct.
@@ -767,15 +756,7 @@ TEST_P(NestedColumnPruningInteTest, PruneDeepNestedStruct) {
         arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();
     auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
 
-    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
-    bool is_equal = expected_chunked->Equals(read_result, equal_options.diff_sink(&std::cout));
-    if (!is_equal) {
-        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
-        std::cout << "[actual_type]   " << read_result->type()->ToString() << std::endl;
-        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
-        std::cout << "[actual]   " << read_result->ToString() << std::endl;
-    }
-    ASSERT_TRUE(is_equal);
+    AssertChunkedArrayEquals(expected_chunked, read_result);
 }
 
 // Test: Nested projected schema with special fields under row tracking.
@@ -949,15 +930,7 @@ TEST_P(NestedColumnPruningInteTest, MapSelectedKeys) {
         arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();
     auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
 
-    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
-    bool is_equal = expected_chunked->Equals(read_result, equal_options.diff_sink(&std::cout));
-    if (!is_equal) {
-        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
-        std::cout << "[actual_type]   " << read_result->type()->ToString() << std::endl;
-        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
-        std::cout << "[actual]   " << read_result->ToString() << std::endl;
-    }
-    ASSERT_TRUE(is_equal);
+    AssertChunkedArrayEquals(expected_chunked, read_result);
 }
 
 // Test: Selected-keys metadata on MAP nested inside STRUCT should be applied.
@@ -1039,15 +1012,7 @@ TEST_P(NestedColumnPruningInteTest, NestedMapSelectedKeysInStruct) {
         arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();
     auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
 
-    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
-    bool is_equal = expected_chunked->Equals(read_result, equal_options.diff_sink(&std::cout));
-    if (!is_equal) {
-        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
-        std::cout << "[actual_type]   " << read_result->type()->ToString() << std::endl;
-        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
-        std::cout << "[actual]   " << read_result->ToString() << std::endl;
-    }
-    ASSERT_TRUE(is_equal);
+    AssertChunkedArrayEquals(expected_chunked, read_result);
 }
 
 // Test: Partial STRUCT sub-field recall where one recalled child is MAP with selected keys.
@@ -1132,15 +1097,7 @@ TEST_P(NestedColumnPruningInteTest, PruneStructSubFieldsWithNestedMapSelectedKey
         arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();
     auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
 
-    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
-    bool is_equal = expected_chunked->Equals(read_result, equal_options.diff_sink(&std::cout));
-    if (!is_equal) {
-        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
-        std::cout << "[actual_type]   " << read_result->type()->ToString() << std::endl;
-        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
-        std::cout << "[actual]   " << read_result->ToString() << std::endl;
-    }
-    ASSERT_TRUE(is_equal);
+    AssertChunkedArrayEquals(expected_chunked, read_result);
 }
 
 // Test: Null semantics should be preserved when pruning STRUCT sub-fields and
@@ -1230,15 +1187,7 @@ TEST_P(NestedColumnPruningInteTest, PruneStructSubFieldsWithNestedMapSelectedKey
         arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();
     auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
 
-    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
-    bool is_equal = expected_chunked->Equals(read_result, equal_options.diff_sink(&std::cout));
-    if (!is_equal) {
-        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
-        std::cout << "[actual_type]   " << read_result->type()->ToString() << std::endl;
-        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
-        std::cout << "[actual]   " << read_result->ToString() << std::endl;
-    }
-    ASSERT_TRUE(is_equal);
+    AssertChunkedArrayEquals(expected_chunked, read_result);
 }
 
 // Test: MAP_SELECTED_KEYS metadata value is empty string, select empty-string map key.
@@ -1317,15 +1266,7 @@ TEST_P(NestedColumnPruningInteTest, MapSelectedKeysEmptyStringKey) {
         arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();
     auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
 
-    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
-    bool is_equal = expected_chunked->Equals(read_result, equal_options.diff_sink(&std::cout));
-    if (!is_equal) {
-        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
-        std::cout << "[actual_type]   " << read_result->type()->ToString() << std::endl;
-        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
-        std::cout << "[actual]   " << read_result->ToString() << std::endl;
-    }
-    ASSERT_TRUE(is_equal);
+    AssertChunkedArrayEquals(expected_chunked, read_result);
 }
 
 // Test: MAP_SELECTED_KEYS output map entry order should follow selected key order.
@@ -1400,15 +1341,7 @@ TEST_P(NestedColumnPruningInteTest, MapSelectedKeysPreserveOrder) {
         arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();
     auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
 
-    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
-    bool is_equal = expected_chunked->Equals(read_result, equal_options.diff_sink(&std::cout));
-    if (!is_equal) {
-        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
-        std::cout << "[actual_type]   " << read_result->type()->ToString() << std::endl;
-        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
-        std::cout << "[actual]   " << read_result->ToString() << std::endl;
-    }
-    ASSERT_TRUE(is_equal);
+    AssertChunkedArrayEquals(expected_chunked, read_result);
 }
 
 // Test: ORC dictionary-encoded map key/value should work with MAP_SELECTED_KEYS.
@@ -1500,15 +1433,7 @@ TEST_P(NestedColumnPruningInteTest, MapSelectedKeysWithOrcDictionaryEncodedMap) 
                               .ValueOrDie();
     auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
 
-    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
-    bool is_equal = expected_chunked->Equals(actual_chunked, equal_options.diff_sink(&std::cout));
-    if (!is_equal) {
-        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
-        std::cout << "[actual_type]   " << actual_chunked->type()->ToString() << std::endl;
-        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
-        std::cout << "[actual]   " << actual_chunked->ToString() << std::endl;
-    }
-    ASSERT_TRUE(is_equal);
+    AssertChunkedArrayEquals(expected_chunked, actual_chunked);
 }
 
 // Test: Deeper nested struct — prune sub-fields of a struct inside a struct inside another struct.
@@ -1609,15 +1534,7 @@ TEST_P(NestedColumnPruningInteTest, PruneDeeperNestedStruct) {
         arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();
     auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
 
-    arrow::EqualOptions equal_options = arrow::EqualOptions::Defaults();
-    bool is_equal = expected_chunked->Equals(read_result, equal_options.diff_sink(&std::cout));
-    if (!is_equal) {
-        std::cout << "[expected_type] " << expected_chunked->type()->ToString() << std::endl;
-        std::cout << "[actual_type]   " << read_result->type()->ToString() << std::endl;
-        std::cout << "[expected] " << expected_chunked->ToString() << std::endl;
-        std::cout << "[actual]   " << read_result->ToString() << std::endl;
-    }
-    ASSERT_TRUE(is_equal);
+    AssertChunkedArrayEquals(expected_chunked, read_result);
 }
 
 // Test: Nested pruning for LIST<STRUCT<...>> in integration path.
