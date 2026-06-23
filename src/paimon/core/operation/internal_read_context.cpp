@@ -54,9 +54,10 @@ Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTab
             auto table_child =
                 NestedProjectionUtils::FindFieldByName(table_struct->fields(), read_child->name());
             if (!table_child) {
-                return Status::Invalid(
-                    fmt::format("Read schema nested field '{}' does not exist in table field '{}'",
-                                read_child->name(), table_field->name()));
+                // Keep missing children in aligned read schema. They will be
+                // materialized as nulls during field mapping.
+                rebased_children.push_back(read_child);
+                continue;
             }
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> rebased_child,
                                    AlignReadFieldWithTableFieldIds(read_child, table_child));
@@ -167,8 +168,9 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
     core_options.WithCache(context->GetCache());
     // prepare read schema
     // Priority: projected_arrow_schema > read_field_ids > read_field_names
+    const bool has_projected_read_schema = context->HasReadSchema();
     std::vector<DataField> read_data_fields;
-    if (context->HasReadSchema()) {
+    if (has_projected_read_schema) {
         // Nested column pruning path: user provided a read C ArrowSchema
         // where STRUCT types may contain only a subset of sub-fields.
         // ImportSchema consumes the C schema — that's fine, it's one-shot usage.
@@ -215,8 +217,14 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
         read_data_fields = table_schema->Fields();
     }
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(read_data_fields);
-    // validate read schema to avoid redundant fields
-    PAIMON_RETURN_NOT_OK(ArrowSchemaValidator::ValidateSchemaWithFieldId(*read_schema));
+    // validate read schema to avoid redundant fields.
+    // For projected read schema, nested sub-fields may be user-requested fields
+    // that do not exist in table schema, so they may not have paimon field IDs.
+    if (has_projected_read_schema) {
+        PAIMON_RETURN_NOT_OK(ArrowSchemaValidator::ValidateSchema(*read_schema));
+    } else {
+        PAIMON_RETURN_NOT_OK(ArrowSchemaValidator::ValidateSchemaWithFieldId(*read_schema));
+    }
     // validate predicate
     if (context->GetPredicate()) {
         PAIMON_RETURN_NOT_OK(PredicateValidator::ValidatePredicateWithSchema(

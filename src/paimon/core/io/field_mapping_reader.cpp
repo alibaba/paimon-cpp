@@ -67,6 +67,15 @@ Result<std::unique_ptr<FieldMappingReader>> FieldMappingReader::Create(
         if (mapping_reader->non_partition_info_.cast_executors[i] != nullptr) {
             mapping_reader->need_casting_ = true;
         }
+        // Nested struct mismatch (e.g., requested child not present in file)
+        // requires mapping to materialize missing children as nulls.
+        if (mapping_reader->non_partition_info_.non_partition_read_schema[i].Type()->id() ==
+                arrow::Type::STRUCT &&
+            !mapping_reader->non_partition_info_.non_partition_data_schema[i]
+                 .Type()
+                 ->Equals(mapping_reader->non_partition_info_.non_partition_read_schema[i].Type())) {
+            mapping_reader->need_mapping_ = true;
+        }
         // Field name change (RENAME COLUMN) also requires mapping: data schema
         // carries the file's physical name while read schema carries the
         // post-rename logical name. If we skipped mapping, the inner reader's
@@ -314,6 +323,64 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::GenerateNonExistArray(
     return arrow_array;
 }
 
+Result<std::shared_ptr<arrow::Array>> FieldMappingReader::AlignStructArrayToReadType(
+    const std::shared_ptr<arrow::StructArray>& src_struct,
+    const std::shared_ptr<arrow::StructType>& read_struct_type) const {
+    arrow::ArrayVector aligned_children;
+    aligned_children.reserve(read_struct_type->num_fields());
+    const auto src_fields = src_struct->type()->fields();
+
+    for (const auto& read_child : read_struct_type->fields()) {
+        int32_t child_idx = -1;
+        for (size_t i = 0; i < src_fields.size(); ++i) {
+            if (src_fields[i]->name() == read_child->name()) {
+                child_idx = static_cast<int32_t>(i);
+                break;
+            }
+        }
+        if (child_idx < 0) {
+            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> null_child,
+                                              arrow::MakeArrayOfNull(
+                                                  read_child->type(), src_struct->length(),
+                                                  arrow_pool_.get()));
+            aligned_children.push_back(std::move(null_child));
+            continue;
+        }
+
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<arrow::Array> aligned_child,
+            AlignArrayToReadTypeIfNeeded(src_struct->field(child_idx), read_child->type()));
+        aligned_children.push_back(std::move(aligned_child));
+    }
+
+    std::vector<std::shared_ptr<arrow::ArrayData>> child_data;
+    child_data.reserve(aligned_children.size());
+    for (const auto& child : aligned_children) {
+        child_data.push_back(child->data());
+    }
+
+    auto aligned_data = arrow::ArrayData::Make(
+        arrow::struct_(read_struct_type->fields()), src_struct->length(),
+        std::vector<std::shared_ptr<arrow::Buffer>>{src_struct->null_bitmap()}, child_data,
+        src_struct->null_count(), src_struct->offset());
+    return arrow::MakeArray(aligned_data);
+}
+
+Result<std::shared_ptr<arrow::Array>> FieldMappingReader::AlignArrayToReadTypeIfNeeded(
+    const std::shared_ptr<arrow::Array>& src_array,
+    const std::shared_ptr<arrow::DataType>& read_type) const {
+    if (src_array->type()->Equals(read_type)) {
+        return src_array;
+    }
+
+    if (src_array->type_id() == arrow::Type::STRUCT && read_type->id() == arrow::Type::STRUCT) {
+        return AlignStructArrayToReadType(std::static_pointer_cast<arrow::StructArray>(src_array),
+                                          std::static_pointer_cast<arrow::StructType>(read_type));
+    }
+
+    return src_array;
+}
+
 Status FieldMappingReader::MappingFields(const std::shared_ptr<arrow::Array>& data_array,
                                          const std::vector<DataField>& read_fields_of_data_array,
                                          const std::vector<int32_t>& idx_in_target_schema,
@@ -323,7 +390,9 @@ Status FieldMappingReader::MappingFields(const std::shared_ptr<arrow::Array>& da
     assert(struct_array);
     assert(struct_array->fields().size() == idx_in_target_schema.size());
     for (size_t i = 0; i < idx_in_target_schema.size(); i++) {
-        std::shared_ptr<arrow::Array> field_array = struct_array->field(i);
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> field_array,
+                               AlignArrayToReadTypeIfNeeded(struct_array->field(i),
+                                                            read_fields_of_data_array[i].Type()));
 
         // Filter map entries by selected keys if metadata is present.
         if (field_array->type()->id() == arrow::Type::MAP) {

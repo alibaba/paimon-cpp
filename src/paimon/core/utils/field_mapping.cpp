@@ -76,6 +76,33 @@ Result<std::unique_ptr<FieldMapping>> FieldMappingBuilder::CreateFieldMapping(
     // generate exist field info (includes nested type pruning)
     PAIMON_ASSIGN_OR_RAISE(ExistFieldInfo exist_field_info, CreateExistFieldInfo(data_fields));
 
+    // Fields that exist by ID but are fully pruned (e.g., requested nested
+    // sub-fields are all absent) are not present in exist/non-exist sets above.
+    // Materialize them as non-existent so downstream reader returns all-null columns.
+    std::vector<bool> accounted_read_fields(read_fields_.size(), false);
+    for (int32_t idx : exist_field_info.idx_in_target_read_schema) {
+        if (idx >= 0 && static_cast<size_t>(idx) < accounted_read_fields.size()) {
+            accounted_read_fields[idx] = true;
+        }
+    }
+    if (non_exist_field_info != std::nullopt) {
+        for (int32_t idx : non_exist_field_info->idx_in_target_read_schema) {
+            if (idx >= 0 && static_cast<size_t>(idx) < accounted_read_fields.size()) {
+                accounted_read_fields[idx] = true;
+            }
+        }
+    }
+    for (size_t i = 0; i < read_fields_.size(); ++i) {
+        if (accounted_read_fields[i]) {
+            continue;
+        }
+        if (non_exist_field_info == std::nullopt) {
+            non_exist_field_info = NonExistFieldInfo();
+        }
+        non_exist_field_info->non_exist_read_schema.push_back(read_fields_[i]);
+        non_exist_field_info->idx_in_target_read_schema.push_back(static_cast<int32_t>(i));
+    }
+
     // key: partition key, value: partition idx
     std::map<std::string, int32_t> partition_key_to_idx =
         ObjectUtils::CreateIdentifierToIndexMap(partition_keys_);

@@ -99,6 +99,12 @@ class FieldMappingReader : public FileBatchReader {
     Result<std::shared_ptr<arrow::Array>> GenerateNonExistArray(int32_t batch_size) const;
     Result<std::shared_ptr<arrow::Array>> CastNonPartitionArrayIfNeed(
         const std::shared_ptr<arrow::Array>& src_array) const;
+    Result<std::shared_ptr<arrow::Array>> AlignArrayToReadTypeIfNeeded(
+        const std::shared_ptr<arrow::Array>& src_array,
+        const std::shared_ptr<arrow::DataType>& read_type) const;
+    Result<std::shared_ptr<arrow::Array>> AlignStructArrayToReadType(
+        const std::shared_ptr<arrow::StructArray>& src_struct,
+        const std::shared_ptr<arrow::StructType>& read_struct_type) const;
 
     Status MappingFields(const std::shared_ptr<arrow::Array>& src_array,
                          const std::vector<DataField>& read_fields_of_data_array,
