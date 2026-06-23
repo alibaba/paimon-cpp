@@ -39,7 +39,7 @@ AvroFileFormat::AvroFileFormat(const std::map<std::string, std::string>& options
 
 Result<std::unique_ptr<ReaderBuilder>> AvroFileFormat::CreateReaderBuilder(
     int32_t batch_size) const {
-    return std::make_unique<AvroReaderBuilder>(options_, batch_size);
+    return std::make_unique<AvroReaderBuilder>(batch_size);
 }
 
 Result<std::unique_ptr<WriterBuilder>> AvroFileFormat::CreateWriterBuilder(
