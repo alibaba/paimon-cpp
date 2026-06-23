@@ -21,6 +21,7 @@
 
 #include "paimon/common/data/columnar/columnar_batch_context.h"
 #include "paimon/core/io/key_value_data_file_record_reader.h"
+
 namespace paimon::test {
 // mock reader hold data array
 class MockKeyValueDataFileRecordReader : public KeyValueDataFileRecordReader {

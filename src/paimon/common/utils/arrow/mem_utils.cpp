@@ -22,6 +22,7 @@
 
 #include "arrow/memory_pool.h"
 #include "arrow/status.h"
+#include "fmt/format.h"
 #include "paimon/memory/memory_pool.h"
 
 namespace paimon {
@@ -33,13 +34,22 @@ class ArrowMemPoolAdaptor : public arrow::MemoryPool {
 
     arrow::Status Allocate(int64_t size, int64_t alignment, uint8_t** out) override {
         *out = reinterpret_cast<uint8_t*>(pool_.Malloc(size, alignment));
+        if (size > 0 && *out == nullptr) {
+            return arrow::Status::OutOfMemory(fmt::format("failed to allocate {} bytes", size));
+        }
         stats_.DidAllocateBytes(size);
         return arrow::Status::OK();
     }
 
     arrow::Status Reallocate(int64_t old_size, int64_t new_size, int64_t alignment,
                              uint8_t** ptr) override {
-        *ptr = reinterpret_cast<uint8_t*>(pool_.Realloc(*ptr, old_size, new_size, alignment));
+        auto* new_ptr =
+            reinterpret_cast<uint8_t*>(pool_.Realloc(*ptr, old_size, new_size, alignment));
+        if (new_size > 0 && new_ptr == nullptr) {
+            return arrow::Status::OutOfMemory(
+                fmt::format("failed to reallocate memory from {} to {} bytes", old_size, new_size));
+        }
+        *ptr = new_ptr;
         stats_.DidReallocateBytes(old_size, new_size);
         return arrow::Status::OK();
     }

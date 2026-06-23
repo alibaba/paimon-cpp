@@ -16,6 +16,7 @@
 
 #include "paimon/format/orc/orc_file_batch_reader.h"
 
+#include <limits>
 #include <list>
 #include <map>
 #include <memory>
@@ -492,7 +493,8 @@ TEST_P(OrcFileBatchReaderTest, TestNextBatchSimple) {
     for (auto batch_size : {1, 2, 3, 5, 8, 10}) {
         auto orc_batch_reader =
             PrepareOrcFileBatchReader(file_name, &read_schema, batch_size, natural_read_size);
-        ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber().value(), -1);
+        ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
+                  orc_batch_reader->GetPreviousBatchFirstRowNumber().value());
         ASSERT_OK_AND_ASSIGN(auto result_array, paimon::test::ReadResultCollector::CollectResult(
                                                     orc_batch_reader.get()));
         ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber().value(), 8);
@@ -766,7 +768,8 @@ TEST_F(OrcFileBatchReaderTest, TestReadNoField) {
     auto orc_batch_reader = PrepareOrcFileBatchReader(file_name, &read_schema, /*batch_size=*/3,
                                                       /*natural_read_size=*/10);
     // read 3 rows
-    ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber().value(), -1);
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
+              orc_batch_reader->GetPreviousBatchFirstRowNumber().value());
     ASSERT_OK_AND_ASSIGN(auto batch1, orc_batch_reader->NextBatch());
     ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber().value(), 0);
     // read 3 rows

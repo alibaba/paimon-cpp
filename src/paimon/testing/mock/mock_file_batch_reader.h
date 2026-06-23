@@ -17,7 +17,11 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <limits>
 #include <memory>
+#include <random>
 #include <utility>
 #include <vector>
 
@@ -26,8 +30,8 @@
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/reader/reader_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
-#include "paimon/common/utils/date_time_utils.h"
 #include "paimon/reader/prefetch_file_batch_reader.h"
+
 namespace paimon::test {
 
 class MockFileBatchReader : public PrefetchFileBatchReader {
@@ -39,13 +43,14 @@ class MockFileBatchReader : public PrefetchFileBatchReader {
           file_schema_(file_schema),
           read_schema_(arrow::schema(file_schema->fields())),
           batch_size_(read_batch_size) {
+        assert(read_batch_size > 0);
         // add all valid bitmap
-        int32_t data_length = data_ ? data_->length() : 0;
+        int64_t data_length = data_ ? data_->length() : 0;
+        assert(data_length >= 0);
+        assert(data_length <= static_cast<int64_t>(std::numeric_limits<int32_t>::max()));
         bitmap_ = RoaringBitmap32();
-        bitmap_.AddRange(0, data_length);
-        read_end_pos_ = data_length;
-        int64_t seed = DateTimeUtils::GetCurrentUTCTimeUs();
-        std::srand(seed);
+        bitmap_.AddRange(0, static_cast<int32_t>(data_length));
+        read_end_pos_ = static_cast<int32_t>(data_length);
     }
 
     MockFileBatchReader(const std::shared_ptr<arrow::Array>& data,
@@ -93,7 +98,8 @@ class MockFileBatchReader : public PrefetchFileBatchReader {
     }
 
     Status SeekToRow(uint64_t row_number) override {
-        current_pos_ = row_number;
+        assert(row_number <= static_cast<uint64_t>(std::numeric_limits<int32_t>::max()));
+        current_pos_ = static_cast<int32_t>(row_number);
         return Status::OK();
     }
 
@@ -117,7 +123,8 @@ class MockFileBatchReader : public PrefetchFileBatchReader {
             }
             int32_t actual_batch_size = batch_size_;
             if (enable_randomize_batch_size_) {
-                actual_batch_size = std::rand() % batch_size_ + 1;
+                std::uniform_int_distribution<int32_t> distribution(1, batch_size_);
+                actual_batch_size = distribution(random_engine_);
             }
             int32_t batch_end_pos = std::min(read_end_pos_, current_pos_ + actual_batch_size);
             auto slice = data_->Slice(current_pos_, batch_end_pos - current_pos_);
@@ -150,14 +157,14 @@ class MockFileBatchReader : public PrefetchFileBatchReader {
     }
 
     Result<uint64_t> GetPreviousBatchFirstRowNumber() const override {
-        return previous_batch_first_row_num_;
+        return ToReaderRowNumber(previous_batch_first_row_num_);
     }
 
     Result<uint64_t> GetNumberOfRows() const override {
-        return data_ ? data_->length() : 0;
+        return ToReaderRowNumber(read_end_pos_);
     }
     uint64_t GetNextRowToRead() const override {
-        return current_pos_;
+        return ToReaderRowNumber(current_pos_);
     }
     void Close() override {}
 
@@ -170,6 +177,13 @@ class MockFileBatchReader : public PrefetchFileBatchReader {
     }
 
  private:
+    static uint64_t ToReaderRowNumber(int32_t row_number) {
+        if (row_number < 0) {
+            return std::numeric_limits<uint64_t>::max();
+        }
+        return static_cast<uint64_t>(row_number);
+    }
+
     std::shared_ptr<arrow::Array> data_;
     std::shared_ptr<arrow::DataType> file_schema_;
     std::shared_ptr<arrow::Schema> read_schema_;
@@ -181,6 +195,7 @@ class MockFileBatchReader : public PrefetchFileBatchReader {
     Status next_batch_status_;
     bool enable_randomize_batch_size_ = true;
     std::vector<std::pair<uint64_t, uint64_t>> read_ranges_;
+    std::mt19937 random_engine_{std::random_device{}()};
 };
 
 }  // namespace paimon::test
