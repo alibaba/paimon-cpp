@@ -642,4 +642,35 @@ TEST_F(FieldMappingTest, TestCompoundPredicateWithoutPushDown) {
     CheckNonPartitionInfo(mapping->non_partition_info, expected_non_part_info);
 }
 
+TEST_F(FieldMappingTest, TestMapSelectedKeysMetadataPropagatedToDataSchema) {
+    auto map_type = arrow::map(arrow::utf8(), arrow::int32());
+    auto selected_keys_metadata = arrow::KeyValueMetadata::Make(
+        {DataField::MAP_SELECTED_KEYS, "custom.key"}, {"k1,k2", "should_not_propagate"});
+
+    std::vector<DataField> read_fields = {
+        DataField(0, arrow::field("m", map_type)->WithMetadata(selected_keys_metadata)),
+    };
+    auto read_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields);
+
+    std::vector<DataField> data_fields = {
+        DataField(0, arrow::field("m", map_type)),
+    };
+
+    ASSERT_OK_AND_ASSIGN(
+        auto mapping_builder,
+        FieldMappingBuilder::Create(read_schema, /*partition_keys=*/{}, /*predicate=*/nullptr));
+    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields));
+
+    ASSERT_EQ(mapping->non_partition_info.non_partition_data_schema.size(), 1);
+    auto propagated_field = mapping->non_partition_info.non_partition_data_schema[0].ArrowField();
+    ASSERT_TRUE(propagated_field->HasMetadata());
+    ASSERT_TRUE(propagated_field->metadata());
+    auto selected_keys_result = propagated_field->metadata()->Get(DataField::MAP_SELECTED_KEYS);
+    ASSERT_TRUE(selected_keys_result.ok());
+    std::string selected_keys = selected_keys_result.ValueUnsafe();
+    ASSERT_EQ(selected_keys, "k1,k2");
+    auto custom_metadata_result = propagated_field->metadata()->Get("custom.key");
+    ASSERT_FALSE(custom_metadata_result.ok());
+}
+
 }  // namespace paimon::test

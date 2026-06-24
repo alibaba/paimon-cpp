@@ -17,6 +17,7 @@
 #include "paimon/common/data/shredding/map_shared_shredding_context.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace paimon {
 
@@ -32,8 +33,8 @@ std::map<std::string, int32_t> MapSharedShreddingContext::ComputeNextK() const {
             // First file — no history, use K_max.
             result[field_name] = k_max;
         } else {
-            int32_t window_max = ComputeWindowMax(it->second);
-            result[field_name] = std::max(1, std::min(window_max, k_max));
+            int32_t adaptive_width = ComputeAdaptiveWidth(it->second);
+            result[field_name] = std::max(1, std::min(adaptive_width, k_max));
         }
     }
     return result;
@@ -57,12 +58,27 @@ std::vector<std::string> MapSharedShreddingContext::GetShreddingColumnNames() co
     return names;
 }
 
-int32_t MapSharedShreddingContext::ComputeWindowMax(const std::vector<int32_t>& values) {
+int32_t MapSharedShreddingContext::ComputeAdaptiveWidth(const std::vector<int32_t>& values) {
     if (values.empty()) {
         return 0;
     }
-    // TODO(xinyu.lxy): support P99
-    return *std::max_element(values.begin(), values.end());
+
+    std::vector<int32_t> sorted_values(values.begin(), values.end());
+    std::sort(sorted_values.begin(), sorted_values.end());
+
+    int32_t max_width = sorted_values.back();
+    auto percentile_rank = static_cast<int64_t>(std::ceil(kPercentileRatio * sorted_values.size()));
+    percentile_rank = std::clamp<int64_t>(percentile_rank, 1, sorted_values.size());
+    int32_t percentile_width = sorted_values[percentile_rank - 1];
+
+    // Use P90 to ignore far outliers, but keep max when it is close enough to normal rows.
+    auto relative_close_threshold = static_cast<int32_t>(
+        std::ceil(static_cast<double>(percentile_width) * kMaxCloseRelativeRatio));
+    if (max_width - percentile_width <= kMaxCloseAbsoluteSlack ||
+        max_width <= relative_close_threshold) {
+        return max_width;
+    }
+    return percentile_width;
 }
 
 }  // namespace paimon

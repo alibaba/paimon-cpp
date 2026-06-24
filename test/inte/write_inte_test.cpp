@@ -288,7 +288,7 @@ class WriteInteTest : public testing::Test, public ::testing::WithParamInterface
                           const std::string& blob_field,
                           const std::vector<std::shared_ptr<Blob>>& expected_blobs) const {
         ReadContextBuilder read_context_builder(table_path);
-        read_context_builder.SetOptions(options).SetReadSchema({blob_field});
+        read_context_builder.SetOptions(options).SetReadFieldNames({blob_field});
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
                                read_context_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(auto table_read, TableRead::Create(std::move(read_context)));

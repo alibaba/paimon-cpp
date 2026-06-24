@@ -45,6 +45,7 @@
 #include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
+#include "paimon/testing/mock/mock_file_batch_reader.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/testharness.h"
@@ -132,9 +133,10 @@ class FieldMappingReaderTest : public ::testing::Test {
                                    mapping->non_partition_info.non_partition_filter,
                                    /*batch_size=*/1);
 
-        auto reader = std::make_shared<FieldMappingReader>(
-            /*field_count=*/read_schema->num_fields(), std::move(orc_batch_reader), partition_,
-            std::move(mapping), pool_);
+        ASSERT_OK_AND_ASSIGN(
+            auto reader, FieldMappingReader::Create(
+                             /*field_count=*/read_schema->num_fields(), std::move(orc_batch_reader),
+                             partition_, std::move(mapping), pool_));
         ASSERT_OK_AND_ASSIGN(auto result_array, ReadResultCollector::CollectResult(reader.get()));
         if (expect_array == nullptr && result_array == nullptr) {
             // expect empty result
@@ -171,9 +173,10 @@ class FieldMappingReaderTest : public ::testing::Test {
             data_path, fs, data_schema.get(), data_array, arrow_schema.get(),
             /*predicate=*/mapping->non_partition_info.non_partition_filter, /*batch_size=*/1);
 
-        auto reader = std::make_shared<FieldMappingReader>(
-            /*field_count=*/read_schema->num_fields(), std::move(orc_batch_reader), partition,
-            std::move(mapping), pool_);
+        ASSERT_OK_AND_ASSIGN(
+            auto reader, FieldMappingReader::Create(
+                             /*field_count=*/read_schema->num_fields(), std::move(orc_batch_reader),
+                             partition, std::move(mapping), pool_));
         ASSERT_OK_AND_ASSIGN(auto result_array, ReadResultCollector::CollectResult(reader.get()));
         if (expect_array == nullptr && result_array == nullptr) {
             // expect empty result
@@ -231,8 +234,9 @@ TEST_F(FieldMappingReaderTest, TestGenerateSinglePartitionArray) {
         {false, static_cast<int8_t>(1), static_cast<int16_t>(2), static_cast<int32_t>(3),
          static_cast<int64_t>(4), std::string("5"), std::make_shared<Bytes>("6", pool_.get()), 100},
         pool_.get());
-    auto mapping_reader = std::make_unique<FieldMappingReader>(
-        /*field_count=*/8, /*reader=*/nullptr, partition, std::move(field_mapping), pool_);
+    ASSERT_OK_AND_ASSIGN(auto mapping_reader, FieldMappingReader::Create(
+                                                  /*field_count=*/8, /*reader=*/nullptr, partition,
+                                                  std::move(field_mapping), pool_));
 
     {
         ASSERT_OK_AND_ASSIGN(auto p7_array, mapping_reader->GenerateSinglePartitionArray(
@@ -759,5 +763,27 @@ TEST_F(FieldMappingReaderTest, TestReadWithSchemaEvolutionRenameCombinedCast) {
 
     CheckResult(data_schema, data_array, read_schema, /*predicate=*/nullptr,
                 /*partition_keys=*/{}, BinaryRow::EmptyRow(), expected);
+}
+
+TEST_F(FieldMappingReaderTest, TestCreateFailFastOnInvalidMapSelectedKeysMetadata) {
+    auto metadata = arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"a,b,a"});
+    auto map_field = arrow::field("m", arrow::map(arrow::utf8(), arrow::int32()),
+                                  /*nullable=*/true, metadata);
+
+    NonPartitionInfo non_part_info;
+    non_part_info.non_partition_data_schema = {DataField(0, map_field)};
+    non_part_info.non_partition_read_schema = {DataField(0, map_field)};
+    non_part_info.idx_in_target_read_schema = {0};
+    non_part_info.cast_executors = {nullptr};
+
+    auto field_mapping = std::make_unique<FieldMapping>(
+        /*partition_info=*/PartitionInfo(), std::move(non_part_info),
+        /*non_exist_field_info=*/std::nullopt);
+
+    ASSERT_NOK_WITH_MSG(FieldMappingReader::Create(
+                            /*field_count=*/1,
+                            /*reader=*/nullptr,
+                            /*partition=*/BinaryRow::EmptyRow(), std::move(field_mapping), pool_),
+                        "Duplicate selected key 'a'");
 }
 }  // namespace paimon::test

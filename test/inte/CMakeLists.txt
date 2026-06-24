@@ -97,4 +97,11 @@ if(PAIMON_BUILD_TESTS)
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 
+    add_paimon_test(nested_column_pruning_inte_test
+                    STATIC_LINK_LIBS
+                    paimon_shared
+                    ${TEST_STATIC_LINK_LIBS}
+                    test_utils_static
+                    ${GTEST_LINK_TOOLCHAIN})
+
 endif()

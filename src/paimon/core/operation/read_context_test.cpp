@@ -18,6 +18,8 @@
 
 #include <utility>
 
+#include "arrow/c/bridge.h"
+#include "arrow/type.h"
 #include "gtest/gtest.h"
 #include "paimon/common/io/cache/lru_cache.h"
 #include "paimon/defs.h"
@@ -35,7 +37,7 @@ TEST(ReadContextTest, TestDefaultValue) {
     ASSERT_EQ(ctx->GetPath(), "table_root_path");
     ASSERT_TRUE(ctx->GetMemoryPool());
     ASSERT_TRUE(ctx->GetExecutor());
-    ASSERT_TRUE(ctx->GetReadSchema().empty());
+    ASSERT_TRUE(ctx->GetReadFieldNames().empty());
     ASSERT_TRUE(ctx->GetReadFieldIds().empty());
     ASSERT_TRUE(ctx->GetOptions().empty());
     ASSERT_FALSE(ctx->GetPredicate());
@@ -59,7 +61,7 @@ TEST(ReadContextTest, TestSetContent) {
                              /*hole_size_limit=*/128, /*pre_buffer_limit=*/2048);
 
     builder.AddOption("key", "value");
-    builder.SetReadSchema({"f1", "f2"});
+    builder.SetReadFieldNames({"f1", "f2"});
     builder.SetReadFieldIds({0, 1});
     auto predicate =
         PredicateBuilder::IsNull(/*field_index=*/0, /*field_name=*/"f1", FieldType::INT);
@@ -86,7 +88,7 @@ TEST(ReadContextTest, TestSetContent) {
     ASSERT_EQ(ctx->GetPath(), "table_root_path");
     ASSERT_TRUE(ctx->GetMemoryPool());
     ASSERT_TRUE(ctx->GetExecutor());
-    ASSERT_EQ(ctx->GetReadSchema(), std::vector<std::string>({"f1", "f2"}));
+    ASSERT_EQ(ctx->GetReadFieldNames(), std::vector<std::string>({"f1", "f2"}));
     ASSERT_EQ(ctx->GetReadFieldIds(), std::vector<int32_t>({0, 1}));
     ASSERT_EQ(*predicate, *(ctx->GetPredicate()));
     ASSERT_TRUE(ctx->EnablePredicateFilter());
@@ -147,6 +149,34 @@ TEST(ReadContextTest, TestPrefetchMaxParallelNumZero) {
     builder.EnablePrefetch(true);
     builder.SetPrefetchMaxParallelNum(0);
     ASSERT_NOK_WITH_MSG(builder.Finish(), "prefetch max parallel num should be greater than 0");
+}
+
+TEST(ReadContextTest, TestSetReadSchemaAndHasReadSchema) {
+    auto projected_schema = arrow::schema({arrow::field("f0", arrow::utf8())});
+    auto c_schema = std::make_unique<ArrowSchema>();
+    auto* c_schema_raw = c_schema.get();
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, c_schema.get()).ok());
+
+    {
+        ReadContextBuilder builder("table_root_path");
+        builder.SetReadSchema(std::move(c_schema));
+        ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
+        ASSERT_TRUE(ctx->HasReadSchema());
+        ASSERT_EQ(ctx->GetReadSchema(), c_schema_raw);
+    }
+
+    ASSERT_EQ(c_schema, nullptr);
+}
+
+TEST(ReadContextTest, TestSetInvalidReadSchemaIgnored) {
+    auto invalid_schema = std::make_unique<ArrowSchema>();
+
+    ReadContextBuilder builder("table_root_path");
+    builder.SetReadSchema(std::move(invalid_schema));
+    ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
+
+    ASSERT_FALSE(ctx->HasReadSchema());
+    ASSERT_EQ(ctx->GetReadSchema(), nullptr);
 }
 
 }  // namespace paimon::test

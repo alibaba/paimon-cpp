@@ -208,7 +208,8 @@ class MergeTreeWriterTest : public ::testing::TestWithParam<bool> {
         return MergeTreeWriter::Create(
             last_sequence_number, primary_keys_, path_factory, key_comparator_,
             user_defined_seq_comparator, merge_function_wrapper_, schema_id, value_schema_, options,
-            writer_compact_manager, io_manager, /*enable_multi_thread_spill=*/false, pool_);
+            writer_compact_manager, io_manager, /*enable_multi_thread_spill=*/false,
+            /*shredding_context=*/nullptr, pool_);
     }
 
  private:
@@ -397,9 +398,12 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMapDataFileMetaInfo) {
     };
     auto value_schema = DataField::ConvertDataFieldsToArrowSchema(value_fields);
     auto value_type = DataField::ConvertDataFieldsToArrowStructType(value_fields);
+    auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> key_comparator,
                          FieldsComparator::Create({value_fields[0]},
                                                   /*is_ascending_order=*/true));
+    ASSERT_OK_AND_ASSIGN(auto shredding_context,
+                         MapSharedShreddingUtils::CreateShreddingContext(write_schema, options));
 
     ASSERT_OK_AND_ASSIGN(
         auto merge_writer,
@@ -409,7 +413,7 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMapDataFileMetaInfo) {
             /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/5,
             value_schema, options, noop_compact_manager_,
             GetParam() ? std::make_shared<IOManager>(dir->Str() + "/tmp", file_system_) : nullptr,
-            /*enable_multi_thread_spill=*/false, pool_));
+            /*enable_multi_thread_spill=*/false, shredding_context, pool_));
 
     // Each batch contains duplicated primary keys. DeduplicateMergeFunction should keep the
     // latest sequence number for each key across and within batches.
@@ -442,7 +446,6 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMapDataFileMetaInfo) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FileStatus> data_file_status,
                          options.GetFileSystem()->GetFileStatus(expected_data_file_path));
 
-    auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
     std::map<std::string, int32_t> column_to_k = {{"tags", 3}};
     ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                    write_schema, column_to_k));
@@ -509,6 +512,8 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation)
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> key_comparator,
                          FieldsComparator::Create({value_fields[0]},
                                                   /*is_ascending_order=*/true));
+    ASSERT_OK_AND_ASSIGN(auto shredding_context,
+                         MapSharedShreddingUtils::CreateShreddingContext(write_schema, options));
 
     ASSERT_OK_AND_ASSIGN(
         auto merge_writer,
@@ -518,7 +523,7 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation)
             /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
             value_schema, options, noop_compact_manager_,
             GetParam() ? std::make_shared<IOManager>(dir->Str() + "/tmp", file_system_) : nullptr,
-            /*enable_multi_thread_spill=*/false, pool_));
+            /*enable_multi_thread_spill=*/false, shredding_context, pool_));
 
     auto array1 = arrow::ipc::internal::json::ArrayFromJSON(value_type, R"([
       [1, [["a", 10], ["b", 20]], [["x", "v1"]]],
@@ -1358,7 +1363,8 @@ TEST_F(MergeTreeWriterTest, TestSpillWithSameKeyDeduplicate) {
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
                                 noop_compact_manager_, io_manager,
-                                /*enable_multi_thread_spill=*/false, pool_));
+                                /*enable_multi_thread_spill=*/false,
+                                /*shredding_context=*/nullptr, pool_));
 
     std::shared_ptr<arrow::Array> batch1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1426,7 +1432,8 @@ TEST_F(MergeTreeWriterTest, TestIntermediateMergeSpillFileBound) {
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
                                 noop_compact_manager_, io_manager,
-                                /*enable_multi_thread_spill=*/false, pool_));
+                                /*enable_multi_thread_spill=*/false,
+                                /*shredding_context=*/nullptr, pool_));
 
     std::shared_ptr<arrow::Array> batch1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1492,7 +1499,8 @@ TEST_F(MergeTreeWriterTest, TestDiskQuotaExhaustedFallsBackToFlushWriteBuffer) {
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
                                 noop_compact_manager_, io_manager,
-                                /*enable_multi_thread_spill=*/false, pool_));
+                                /*enable_multi_thread_spill=*/false,
+                                /*shredding_context=*/nullptr, pool_));
 
     // Phase 1: Manual FlushMemory path — disk quota exhausted causes fallback.
     std::shared_ptr<arrow::Array> array1 =
@@ -1570,7 +1578,8 @@ TEST_F(MergeTreeWriterTest, TestFlushMemoryQuotaExhaustedFallsBackToFlushWriteBu
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
                                 noop_compact_manager_, io_manager,
-                                /*enable_multi_thread_spill=*/false, pool_));
+                                /*enable_multi_thread_spill=*/false,
+                                /*shredding_context=*/nullptr, pool_));
 
     std::shared_ptr<arrow::Array> array =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1614,7 +1623,8 @@ TEST_F(MergeTreeWriterTest, TestCloseDeletesSpillTempFiles) {
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
                                 noop_compact_manager_, io_manager,
-                                /*enable_multi_thread_spill=*/false, pool_));
+                                /*enable_multi_thread_spill=*/false,
+                                /*shredding_context=*/nullptr, pool_));
 
     std::shared_ptr<arrow::Array> array =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1647,7 +1657,8 @@ TEST_F(MergeTreeWriterTest, TestMultiplePrepareCommitWithSpill) {
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
                                 noop_compact_manager_, io_manager,
-                                /*enable_multi_thread_spill=*/false, pool_));
+                                /*enable_multi_thread_spill=*/false,
+                                /*shredding_context=*/nullptr, pool_));
 
     std::shared_ptr<arrow::Array> array1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1725,7 +1736,8 @@ TEST_F(MergeTreeWriterTest, TestSpillWithIOException) {
                                     key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                     merge_function_wrapper_, /*schema_id=*/0, value_schema_,
                                     options, noop_compact_manager_, io_manager,
-                                    /*enable_multi_thread_spill=*/false, pool_));
+                                    /*enable_multi_thread_spill=*/false,
+                                    /*shredding_context=*/nullptr, pool_));
 
         ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
         io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);

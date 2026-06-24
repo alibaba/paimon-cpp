@@ -41,6 +41,9 @@ class DataField : public Jsonizable<DataField> {
 
     static constexpr char FIELD_ID[] = "paimon.id";
     static constexpr char DESCRIPTION[] = "paimon.description";
+    /// Metadata key for map field selected keys. The value is a comma-separated
+    /// string of key names, e.g. 'key1,key2'. Only string-keyed maps are supported.
+    static constexpr char MAP_SELECTED_KEYS[] = "paimon.map.selected-keys";
 
  public:
     static std::shared_ptr<arrow::Field> ConvertDataFieldToArrowField(const DataField& field);
@@ -62,6 +65,17 @@ class DataField : public Jsonizable<DataField> {
     static Result<std::vector<DataField>> ProjectFields(
         const std::vector<DataField>& fields,
         const std::optional<std::vector<std::string>>& projected_cols);
+
+    /// Merge whitelisted metadata from source_field into target_field.
+    static std::shared_ptr<arrow::Field> MergeFieldMetadataByWhitelist(
+        const std::shared_ptr<arrow::Field>& target_field,
+        const std::shared_ptr<arrow::Field>& source_field,
+        const std::vector<std::string>& metadata_keys_whitelist);
+
+    /// Merge whitelisted metadata from source_field into target_field and keep target id/desc.
+    static DataField MergeFieldMetadataByWhitelist(
+        const DataField& target_field, const DataField& source_field,
+        const std::vector<std::string>& metadata_keys_whitelist);
 
     int32_t Id() const {
         return id_;

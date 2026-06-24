@@ -166,6 +166,20 @@ class SharedShreddingFileReaderTest : public ::testing::Test {
         return reader_builder->Build(input_stream).value();
     }
 
+    Result<std::unique_ptr<AppendOnlyWriter>> CreateAppendOnlyWriter(
+        const CoreOptions& core_options, int64_t schema_id,
+        const std::shared_ptr<arrow::Schema>& logical_schema,
+        const std::optional<std::vector<std::string>>& write_cols, int64_t max_sequence_number,
+        const std::shared_ptr<DataFilePathFactory>& path_factory,
+        const std::shared_ptr<CompactManager>& compact_manager) const {
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<MapSharedShreddingContext> shredding_context,
+            MapSharedShreddingUtils::CreateShreddingContext(logical_schema, core_options));
+        return std::make_unique<AppendOnlyWriter>(core_options, schema_id, logical_schema,
+                                                  write_cols, max_sequence_number, path_factory,
+                                                  compact_manager, shredding_context, pool_);
+    }
+
  private:
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<arrow::Schema> logical_schema_ = arrow::schema({
@@ -473,9 +487,9 @@ TEST_F(SharedShreddingFileReaderTest, TestOrcDictionaryEncodedStringValue) {
     auto compact_manager = std::make_shared<NoopCompactManager>();
     ASSERT_OK_AND_ASSIGN(
         auto writer,
-        AppendOnlyWriter::Create(core_options, /*schema_id=*/0, logical_schema,
-                                 /*write_cols=*/std::nullopt,
-                                 /*max_sequence_number=*/-1, path_factory, compact_manager, pool_));
+        CreateAppendOnlyWriter(core_options, /*schema_id=*/0, logical_schema,
+                               /*write_cols=*/std::nullopt,
+                               /*max_sequence_number=*/-1, path_factory, compact_manager));
     auto batch = CreateBatch(logical_schema, R"([
         [1, [["a", "red"], ["b", "blue"]]],
         [2, [["c", "green"], ["a", "red"], ["b", "blue"]]],
@@ -530,9 +544,9 @@ TEST_F(SharedShreddingFileReaderTest, TestReadsRealFormatFile) {
     auto compact_manager = std::make_shared<NoopCompactManager>();
     ASSERT_OK_AND_ASSIGN(
         auto writer,
-        AppendOnlyWriter::Create(core_options, /*schema_id=*/0, logical_schema_,
-                                 /*write_cols=*/std::nullopt,
-                                 /*max_sequence_number=*/-1, path_factory, compact_manager, pool_));
+        CreateAppendOnlyWriter(core_options, /*schema_id=*/0, logical_schema_,
+                               /*write_cols=*/std::nullopt,
+                               /*max_sequence_number=*/-1, path_factory, compact_manager));
     auto batch = CreateBatch(logical_schema_, R"([
         [1, [["a", 1], ["b", 2]]],
         [2, [["c", 3], ["a", 4], ["b", 5]]],

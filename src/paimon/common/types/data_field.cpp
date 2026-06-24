@@ -173,4 +173,38 @@ Result<std::vector<DataField>> DataField::ProjectFields(
     return projected_fields;
 }
 
+std::shared_ptr<arrow::Field> DataField::MergeFieldMetadataByWhitelist(
+    const std::shared_ptr<arrow::Field>& target_field,
+    const std::shared_ptr<arrow::Field>& source_field,
+    const std::vector<std::string>& metadata_keys_whitelist) {
+    if (!source_field || !source_field->HasMetadata() || !source_field->metadata()) {
+        return target_field;
+    }
+
+    std::unordered_map<std::string, std::string> metadata_map;
+    for (const auto& key : metadata_keys_whitelist) {
+        auto metadata_value_result = source_field->metadata()->Get(key);
+        if (metadata_value_result.ok()) {
+            metadata_map[key] = metadata_value_result.ValueUnsafe();
+        }
+    }
+
+    if (metadata_map.empty()) {
+        return target_field;
+    }
+
+    auto metadata = std::make_shared<arrow::KeyValueMetadata>(metadata_map);
+    return target_field->WithMergedMetadata(metadata);
+}
+
+DataField DataField::MergeFieldMetadataByWhitelist(
+    const DataField& target_field, const DataField& source_field,
+    const std::vector<std::string>& metadata_keys_whitelist) {
+    return DataField(
+        target_field.Id(),
+        MergeFieldMetadataByWhitelist(target_field.ArrowField(), source_field.ArrowField(),
+                                      metadata_keys_whitelist),
+        target_field.Description());
+}
+
 }  // namespace paimon
