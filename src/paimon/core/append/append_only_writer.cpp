@@ -26,53 +26,30 @@
 #include "arrow/c/helpers.h"
 #include "arrow/type.h"
 #include "arrow/util/key_value_metadata.h"
-#include "paimon/common/data/shredding/map_shared_shredding_batch_converter.h"
-#include "paimon/common/data/shredding/map_shared_shredding_context.h"
-#include "paimon/common/data/shredding/map_shared_shredding_utils.h"
-#include "paimon/common/data/shredding/map_shredding_defs.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/types/row_kind.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/long_counter.h"
 #include "paimon/common/utils/scope_guard.h"
+#include "paimon/core/io/append_data_file_writer_factory.h"
+#include "paimon/core/io/blob_data_file_writer_factory.h"
 #include "paimon/core/io/compact_increment.h"
 #include "paimon/core/io/data_file_path_factory.h"
-#include "paimon/core/io/data_file_writer.h"
 #include "paimon/core/io/data_increment.h"
 #include "paimon/core/io/external_storage_blob_writer.h"
 #include "paimon/core/io/multiple_blob_file_writer.h"
 #include "paimon/core/io/rolling_blob_file_writer.h"
 #include "paimon/core/io/rolling_file_writer.h"
+#include "paimon/core/io/shredding_append_data_file_writer_factory.h"
 #include "paimon/core/io/single_file_writer.h"
 #include "paimon/core/manifest/file_source.h"
 #include "paimon/core/operation/blob_file_context.h"
 #include "paimon/core/utils/commit_increment.h"
-#include "paimon/format/file_format.h"
-#include "paimon/format/file_format_factory.h"
-#include "paimon/format/writer_builder.h"
 #include "paimon/macros.h"
 #include "paimon/metrics.h"
 #include "paimon/record_batch.h"
 
 namespace paimon {
-
-class MemoryPool;
-class FormatStatsExtractor;
-
-Result<std::unique_ptr<AppendOnlyWriter>> AppendOnlyWriter::Create(
-    const CoreOptions& options, int64_t schema_id,
-    const std::shared_ptr<arrow::Schema>& write_schema,
-    const std::optional<std::vector<std::string>>& write_cols, int64_t max_sequence_number,
-    const std::shared_ptr<DataFilePathFactory>& path_factory,
-    const std::shared_ptr<CompactManager>& compact_manager,
-    const std::shared_ptr<MemoryPool>& memory_pool) {
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<MapSharedShreddingContext> shredding_context,
-                           MapSharedShreddingUtils::CreateShreddingContext(write_schema, options));
-
-    return std::unique_ptr<AppendOnlyWriter>(
-        new AppendOnlyWriter(options, schema_id, write_schema, write_cols, max_sequence_number,
-                             path_factory, compact_manager, shredding_context, memory_pool));
-}
 
 AppendOnlyWriter::AppendOnlyWriter(
     const CoreOptions& options, int64_t schema_id,
@@ -244,88 +221,37 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingRowWrit
         // No BLOB fields at all -> plain rolling writer
         return std::make_unique<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
             options_.GetTargetFileSize(/*has_primary_key=*/false),
-            GetDataFileWriterCreator(write_schema_, main_write_cols));
+            GetDataFileWriterFactory(write_schema_, main_write_cols));
     } else {
         // All BLOB fields are inline, no .blob files needed -> plain rolling writer
         // The main data file contains all fields including inline descriptors/views.
         return std::make_unique<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
             options_.GetTargetFileSize(/*has_primary_key=*/false),
-            GetDataFileWriterCreator(write_schema_, main_write_cols));
+            GetDataFileWriterFactory(write_schema_, main_write_cols));
     }
 }
 
-AppendOnlyWriter::SingleFileWriterCreator AppendOnlyWriter::GetDataFileWriterCreator(
+AppendOnlyWriter::WriterFactory AppendOnlyWriter::GetDataFileWriterFactory(
     const std::shared_ptr<arrow::Schema>& schema,
     const std::optional<std::vector<std::string>>& write_cols) const {
-    return
-        [this, schema, write_cols]()
-            -> Result<
-                std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>> {
-            // Determine the schema to use for file writing.
-            // When shared-shredding map is active, compute per-file K and build a physical schema.
-            PAIMON_ASSIGN_OR_RAISE(MapSharedShreddingBatchConverter::ConverterBundle bundle,
-                                   MapSharedShreddingBatchConverter::CreateConverter(
-                                       schema, shredding_context_, memory_pool_));
-            std::shared_ptr<arrow::Schema> file_schema =
-                bundle.physical_schema ? bundle.physical_schema : schema;
-
-            ::ArrowSchema arrow_schema;
-            ScopeGuard guard([&arrow_schema]() { ArrowSchemaRelease(&arrow_schema); });
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*file_schema, &arrow_schema));
-            auto format = options_.GetFileFormat();
-            PAIMON_ASSIGN_OR_RAISE(
-                std::shared_ptr<WriterBuilder> writer_builder,
-                format->CreateWriterBuilder(&arrow_schema, options_.GetWriteBatchSize()));
-            writer_builder->WithMemoryPool(memory_pool_);
-
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*file_schema, &arrow_schema));
-            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FormatStatsExtractor> stats_extractor,
-                                   format->CreateStatsExtractor(&arrow_schema));
-            // Build the converter that transforms logical batches to physical batches.
-            // When shredding is active, it performs MAP→STRUCT conversion first.
-            std::function<Status(ArrowArray*, ArrowArray*)> batch_converter;
-            if (bundle.converter) {
-                auto converter = bundle.converter;
-                batch_converter = [converter](ArrowArray* input, ArrowArray* output) -> Status {
-                    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ArrowArray> physical,
-                                           converter->Convert(input));
-                    ArrowArrayMove(physical.get(), output);
-                    return Status::OK();
-                };
-            }
-
-            auto writer = std::make_unique<DataFileWriter>(
-                options_.GetFileCompression(), batch_converter, schema_id_, seq_num_counter_,
-                FileSource::Append(), stats_extractor, path_factory_->IsExternalPath(), write_cols,
-                memory_pool_);
-            PAIMON_RETURN_NOT_OK(
-                writer->Init(options_.GetFileSystem(), path_factory_->NewPath(), writer_builder));
-
-            if (bundle.converter) {
-                writer->SetMetadataFinalizer(MapSharedShreddingUtils::BuildMetadataFinalizer(
-                    bundle.converter, MapSharedShreddingDefine::kDefaultDictCompression,
-                    shredding_context_, file_schema));
-            }
-            return writer;
-        };
+    if (shredding_context_) {
+        return std::make_shared<ShreddingAppendDataFileWriterFactory>(
+            options_, schema_id_, schema, write_cols, seq_num_counter_, FileSource::Append(),
+            path_factory_, shredding_context_, memory_pool_);
+    }
+    return std::make_shared<AppendDataFileWriterFactory>(options_, schema_id_, schema, write_cols,
+                                                         seq_num_counter_, FileSource::Append(),
+                                                         path_factory_, memory_pool_);
 }
 
-AppendOnlyWriter::SingleFileWriterCreator AppendOnlyWriter::GetBlobFileWriterCreator(
-    const std::shared_ptr<WriterBuilder>& writer_builder,
-    const std::shared_ptr<FormatStatsExtractor>& stats_extractor,
+AppendOnlyWriter::WriterFactory AppendOnlyWriter::GetBlobFileWriterFactory(
+    const std::shared_ptr<arrow::Schema>& single_field_schema,
     const std::optional<std::vector<std::string>>& write_cols) const {
-    return
-        [this, writer_builder, stats_extractor, write_cols]()
-            -> Result<
-                std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>> {
-            auto writer = std::make_unique<DataFileWriter>(
-                /*compression=*/"none", std::function<Status(ArrowArray*, ArrowArray*)>(),
-                schema_id_, seq_num_counter_, FileSource::Append(), stats_extractor,
-                path_factory_->IsExternalPath(), write_cols, memory_pool_);
-            PAIMON_RETURN_NOT_OK(writer->Init(options_.GetFileSystem(),
-                                              path_factory_->NewBlobPath(), writer_builder));
-            return writer;
-        };
+    std::shared_ptr<DataFilePathFactory> path_factory = path_factory_;
+    return std::make_shared<BlobDataFileWriterFactory>(
+        options_, schema_id_, single_field_schema, write_cols, seq_num_counter_, path_factory,
+        [path_factory]() { return path_factory->NewBlobPath(); },
+        blob::BlobFormatWriter::WriteConsumer(), memory_pool_);
 }
 
 AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingBlobWriter(
@@ -333,7 +259,8 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingBlobWri
     // Multiple blob fields are supported. Each blob field gets its own rolling file writer
     // via MultipleBlobFileWriter.
     auto blob_schema = schemas.blob_schema;
-    auto blob_writer_creator = [this, blob_schema](const std::string& blob_field_name)
+    MultipleBlobFileWriter::BlobWriterCreator blob_writer_creator =
+        [this, blob_schema](const std::string& blob_field_name)
         -> Result<
             std::unique_ptr<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>> {
         // Create a single-field schema for this blob field
@@ -343,29 +270,16 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingBlobWri
                 fmt::format("Blob field '{}' not found in blob schema", blob_field_name));
         }
         auto single_field_schema = arrow::schema({field});
-        ::ArrowSchema arrow_schema;
-        ScopeGuard guard([&arrow_schema]() { ArrowSchemaRelease(&arrow_schema); });
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*single_field_schema, &arrow_schema));
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileFormat> format,
-                               FileFormatFactory::Get("blob", options_.ToMap()));
-        PAIMON_ASSIGN_OR_RAISE(
-            std::shared_ptr<WriterBuilder> writer_builder,
-            format->CreateWriterBuilder(&arrow_schema, options_.GetWriteBatchSize()));
-        writer_builder->WithMemoryPool(memory_pool_);
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*single_field_schema, &arrow_schema));
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FormatStatsExtractor> stats_extractor,
-                               format->CreateStatsExtractor(&arrow_schema));
-
         std::vector<std::string> write_cols = {blob_field_name};
-        auto single_blob_file_writer_creator =
-            GetBlobFileWriterCreator(writer_builder, stats_extractor, write_cols);
+        auto single_blob_file_writer_factory =
+            GetBlobFileWriterFactory(single_field_schema, write_cols);
         return std::make_unique<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
-            options_.GetBlobTargetFileSize(), single_blob_file_writer_creator);
+            options_.GetBlobTargetFileSize(), single_blob_file_writer_factory);
     };
 
     return std::make_unique<RollingBlobFileWriter>(
         options_.GetTargetFileSize(/*has_primary_key=*/false),
-        GetDataFileWriterCreator(schemas.main_schema, schemas.main_schema->field_names()),
+        GetDataFileWriterFactory(schemas.main_schema, schemas.main_schema->field_names()),
         blob_schema, blob_writer_creator, arrow::struct_(write_schema_->fields()), inline_fields);
 }
 

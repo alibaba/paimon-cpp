@@ -15,6 +15,7 @@
  */
 
 #pragma once
+
 #include "arrow/api.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
@@ -24,7 +25,9 @@
 #include "paimon/core/mergetree/lookup/remote_lookup_file_manager.h"
 #include "paimon/core/mergetree/lookup_levels.h"
 #include "paimon/core/schema/table_schema.h"
+
 namespace paimon {
+
 /// A `MergeTreeCompactRewriter` which produces changelog files by lookup for the compaction
 /// involving level 0 files.
 template <typename T>
@@ -86,7 +89,6 @@ class LookupMergeTreeCompactRewriter : public ChangelogMergeTreeRewriter {
     Result<std::vector<std::shared_ptr<DataFileMeta>>> NotifyRewriteCompactAfter(
         const std::vector<std::shared_ptr<DataFileMeta>>& files) override;
 
- private:
     std::unique_ptr<LookupLevels<T>> lookup_levels_;
     std::shared_ptr<BucketedDvMaintainer> dv_maintainer_;
     std::shared_ptr<RemoteLookupFileManager> remote_lookup_file_manager_;

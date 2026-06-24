@@ -93,7 +93,7 @@ struct WriteResult {
 class StreamingTestFixture : public ::testing::Test {
  public:
     WriteResult BuildArchive(std::size_t n_docs,
-                             const std::string& text_template = "apple banana cherry {}") {
+                             const std::string& text_template = "apple banana cherry %zu") {
         auto root_dir = paimon::test::UniqueTestDirectory::Create();
         EXPECT_TRUE(root_dir);
         std::string root = root_dir->Str();
@@ -239,7 +239,7 @@ TEST(ParseArchiveHeaderFuzz, PayloadLenNegative) {
 
 TEST_F(StreamingTestFixture, ConcurrentQueryOnSameReader) {
     // 50 docs containing "apple" in every one (all should match)
-    auto wr = BuildArchive(50, "apple banana {}");
+    auto wr = BuildArchive(50, "apple banana %zu");
     auto reader = OpenReader(wr.root_dir, wr.meta);
 
     auto fts = BuildMatchAll("apple");

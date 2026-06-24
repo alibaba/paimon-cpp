@@ -27,6 +27,7 @@
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/scope_guard.h"
+#include "paimon/core/utils/nested_projection_utils.h"
 #include "paimon/format/avro/avro_input_stream_impl.h"
 #include "paimon/format/avro/avro_schema_converter.h"
 #include "paimon/reader/batch_reader.h"
@@ -146,7 +147,14 @@ Status AvroFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
                                       arrow::ImportSchema(read_schema));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> file_schema,
                            ArrowUtils::DataTypeToSchema(file_data_type_));
-    PAIMON_ASSIGN_OR_RAISE(std::set<size_t> read_fields_projection,
+    PAIMON_ASSIGN_OR_RAISE(
+        bool has_nested_projection,
+        NestedProjectionUtils::HasNestedSubfieldProjection(file_schema, arrow_read_schema));
+    if (has_nested_projection) {
+        return Status::Invalid(
+            "SetReadSchema failed: avro reader does not support nested sub-field projection");
+    }
+    PAIMON_ASSIGN_OR_RAISE(read_fields_projection_,
                            CalculateReadFieldsProjection(file_schema, arrow_read_schema->fields()));
     std::shared_ptr<::arrow::DataType> read_data_type = arrow::struct_(arrow_read_schema->fields());
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::unique_ptr<arrow::ArrayBuilder> array_builder,
@@ -158,7 +166,6 @@ Status AvroFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
         reader_->close();
     }
     reader_ = std::move(reader);
-    read_fields_projection_ = std::move(read_fields_projection);
     array_builder_ = std::move(array_builder);
     previous_first_row_ = std::numeric_limits<uint64_t>::max();
     next_row_to_read_ = std::numeric_limits<uint64_t>::max();

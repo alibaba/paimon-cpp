@@ -139,7 +139,7 @@ Result<std::shared_ptr<arrow::Schema>> MapSharedShreddingUtils::LogicalToPhysica
             auto value_type = map_type->item_type();
             bool value_nullable = map_type->item_field()->nullable();
             auto physical_type = BuildPhysicalStructType(value_type, it->second, value_nullable);
-            auto physical_field = arrow::field(field->name(), physical_type, field->nullable());
+            auto physical_field = field->WithType(physical_type);
             physical_fields.push_back(physical_field);
         } else {
             physical_fields.push_back(field);
@@ -451,6 +451,10 @@ MapSharedShreddingUtils::BuildMetadataFinalizer(
         arrow::FieldVector updated_fields = physical_schema->fields();
         for (const std::string& field_name : shredding_field_names) {
             int32_t col_index = physical_schema->GetFieldIndex(field_name);
+            if (col_index < 0) {
+                return Status::Invalid(fmt::format(
+                    "Shared-shredding field '{}' not found in physical schema.", field_name));
+            }
             const auto& field = physical_schema->field(col_index);
             auto metadata = field->metadata() ? field->metadata()->Copy()
                                               : std::make_shared<arrow::KeyValueMetadata>();

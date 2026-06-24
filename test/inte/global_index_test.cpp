@@ -195,7 +195,9 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
                     const std::shared_ptr<Plan>& result_plan) const {
         auto splits = result_plan->Splits();
         ReadContextBuilder read_context_builder(table_path);
-        read_context_builder.SetReadSchema(read_schema).SetPredicate(predicate).WithFileSystem(fs_);
+        read_context_builder.SetReadFieldNames(read_schema)
+            .SetPredicate(predicate)
+            .WithFileSystem(fs_);
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
                                read_context_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(auto table_read, TableRead::Create(std::move(read_context)));

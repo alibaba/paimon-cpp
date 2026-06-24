@@ -16,7 +16,7 @@
 # targets. Used to bring in third_party/tantivy_ffi for the tantivy-fulltext
 # global index (see docs/dev/tantivy_fts_migration_plan.md).
 #
-# Pinned to v0.5.0 (stable release). Requires CMake >= 3.22.
+# Pinned to v0.5.2 (stable release). Requires CMake >= 3.22.
 
 include(FetchContent)
 
