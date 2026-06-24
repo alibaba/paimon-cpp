@@ -195,7 +195,7 @@ class MockFileBatchReader : public PrefetchFileBatchReader {
     Status next_batch_status_;
     bool enable_randomize_batch_size_ = true;
     std::vector<std::pair<uint64_t, uint64_t>> read_ranges_;
-    std::mt19937 random_engine_{std::random_device{}()};
+    std::mt19937 random_engine_{std::random_device{}()};  // NOLINT(whitespace/braces)
 };
 
 }  // namespace paimon::test
