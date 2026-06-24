@@ -134,13 +134,6 @@ std::vector<PackedEntry> ParsePacked(const std::vector<uint8_t>& bytes) {
 
 class TantivyGlobalIndexWriterTest : public ::testing::Test {
  public:
-    std::unique_ptr<::ArrowSchema> CreateArrowSchema(
-        const std::shared_ptr<arrow::DataType>& data_type) const {
-        auto c_schema = std::make_unique<::ArrowSchema>();
-        EXPECT_TRUE(arrow::ExportType(*data_type, c_schema.get()).ok());
-        return c_schema;
-    }
-
     Result<std::vector<GlobalIndexIOMeta>> WriteIndex(
         const std::string& root, const std::shared_ptr<arrow::DataType>& data_type,
         const std::map<std::string, std::string>& options,
