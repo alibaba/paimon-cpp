@@ -139,6 +139,19 @@ std::optional<NonExistFieldInfo> FieldMappingBuilder::CreateNonExistFieldInfo(
         if (iter == field_id_to_data_fields.end()) {
             non_exist_field_info.non_exist_read_schema.push_back(read_field);
             non_exist_field_info.idx_in_target_read_schema.push_back(i);
+            continue;
+        }
+
+        // Empty STRUCT projection (f1: struct<>) is a valid request, but
+        // cannot be read from data files directly. Materialize it as nulls.
+        if (read_field.Type()->id() == arrow::Type::STRUCT &&
+            iter->second.Type()->id() == arrow::Type::STRUCT) {
+            auto read_struct = std::static_pointer_cast<arrow::StructType>(read_field.Type());
+            auto data_struct = std::static_pointer_cast<arrow::StructType>(iter->second.Type());
+            if (read_struct->num_fields() == 0 && data_struct->num_fields() > 0) {
+                non_exist_field_info.non_exist_read_schema.push_back(read_field);
+                non_exist_field_info.idx_in_target_read_schema.push_back(i);
+            }
         }
     }
     if (non_exist_field_info.idx_in_target_read_schema.empty()) {

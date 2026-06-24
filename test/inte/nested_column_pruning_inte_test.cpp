@@ -174,6 +174,81 @@ TEST_P(NestedColumnPruningInteTest, PruneStructSubFields) {
     AssertChunkedArrayEquals(expected_chunked, read_result);
 }
 
+// Test: Projecting a STRUCT column as empty struct should return this column
+// as all null values.
+TEST_P(NestedColumnPruningInteTest, ProjectStructColumnAsEmptyStructReturnsNullColumn) {
+    auto struct_type = arrow::struct_({
+        arrow::field("a", arrow::int32()),
+        arrow::field("b", arrow::utf8()),
+    });
+    arrow::FieldVector table_fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", struct_type),
+    };
+    auto table_schema = arrow::schema(table_fields);
+
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "AVRO"},
+        {Options::FILE_FORMAT, StringUtils::ToUpperCase(file_format_)},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+    };
+
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+
+    std::string data = R"([
+        [1, [11, "x"]],
+        [2, [22, "y"]],
+        [3, [33, "z"]]
+    ])";
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(table_fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    int64_t commit_identifier = 0;
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_FALSE(data_splits.empty());
+
+    // Project f1 as empty struct.
+    arrow::FieldVector projected_fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::struct_({})),
+    };
+    auto projected_schema = arrow::schema(projected_fields);
+
+    auto c_schema = std::make_unique<ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, c_schema.get()).ok());
+
+    ReadContextBuilder read_context_builder(table_path_);
+    read_context_builder.SetOptions(options).SetReadSchema(std::move(c_schema));
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_splits));
+    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
+
+    auto expected_type = arrow::struct_({
+        arrow::field("_VALUE_KIND", arrow::int8()),
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::struct_({})),
+    });
+    std::string expected_data = R"([
+        [0, 1, null],
+        [0, 2, null],
+        [0, 3, null]
+    ])";
+    auto expected_array =
+        arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data).ValueOrDie();
+    auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected_array);
+
+    AssertChunkedArrayEquals(expected_chunked, read_result);
+}
+
 // Test: Two top-level struct columns have the same nested field name; projection should
 // distinguish by parent column.
 TEST_P(NestedColumnPruningInteTest, PruneSameNestedFieldNameFromDifferentStructColumns) {
@@ -319,27 +394,11 @@ TEST_P(NestedColumnPruningInteTest, QueryStructSubFieldsAllNonExistentReturnsNul
     read_context_builder.SetOptions(options).SetReadSchema(std::move(c_schema));
     ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
-    auto batch_reader_result = table_read->CreateReader(data_splits);
-    if (!batch_reader_result.ok()) {
-        auto message = batch_reader_result.status().ToString();
-        ASSERT_TRUE(message.find("does not support schema evolution inside struct") !=
-                        std::string::npos ||
-                    message.find("requires paimon.id for nested struct field") != std::string::npos)
-            << "unexpected error: " << message;
-        return;
-    }
-
-    auto read_result_result = ReadResultCollector::CollectResult(batch_reader_result.value().get());
-    ASSERT_FALSE(read_result_result.ok());
-    auto message = read_result_result.status().ToString();
-    ASSERT_TRUE(message.find("does not support schema evolution inside struct") !=
-                    std::string::npos ||
-                message.find("requires paimon.id for nested struct field") != std::string::npos)
-        << "unexpected error: " << message;
+    ASSERT_NOK_WITH_MSG(table_read->CreateReader(data_splits),
+                        "does not support schema evolution inside struct");
 }
 
-// Test: Querying struct sub-fields with partial non-existent nested fields keeps
-// existing nested fields and materializes missing ones as null.
+// Test: Querying only non-existent struct sub-fields should fail fast.
 TEST_P(NestedColumnPruningInteTest, QueryStructSubFieldsWithNonExistentField) {
     // Table schema: f0 (int32), f1 (struct{f1: int32, f2: utf8, f3: float64})
     auto struct_type = arrow::struct_({
@@ -399,23 +458,8 @@ TEST_P(NestedColumnPruningInteTest, QueryStructSubFieldsWithNonExistentField) {
     read_context_builder.SetOptions(options).SetReadSchema(std::move(c_schema));
     ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
-    auto batch_reader_result = table_read->CreateReader(data_splits);
-    if (!batch_reader_result.ok()) {
-        auto message = batch_reader_result.status().ToString();
-        ASSERT_TRUE(message.find("does not support schema evolution inside struct") !=
-                        std::string::npos ||
-                    message.find("requires paimon.id for nested struct field") != std::string::npos)
-            << "unexpected error: " << message;
-        return;
-    }
-
-    auto read_result_result = ReadResultCollector::CollectResult(batch_reader_result.value().get());
-    ASSERT_FALSE(read_result_result.ok());
-    auto message = read_result_result.status().ToString();
-    ASSERT_TRUE(message.find("does not support schema evolution inside struct") !=
-                    std::string::npos ||
-                message.find("requires paimon.id for nested struct field") != std::string::npos)
-        << "unexpected error: " << message;
+    ASSERT_NOK_WITH_MSG(table_read->CreateReader(data_splits),
+                        "does not support schema evolution inside struct");
 }
 
 // Test: Nested schema divergence (simulated evolution mismatch) must fail fast
@@ -1594,23 +1638,8 @@ TEST_P(NestedColumnPruningInteTest, PruneListStructSubFields) {
     read_context_builder.SetOptions(options).SetReadSchema(std::move(c_schema));
     ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
-    auto batch_reader_result = table_read->CreateReader(data_splits);
-    if (!batch_reader_result.ok()) {
-        auto message = batch_reader_result.status().ToString();
-        ASSERT_TRUE(message.find("partial projection inside list/map") != std::string::npos ||
-                    message.find("partial projection inside list") != std::string::npos ||
-                    message.find("type mismatch") != std::string::npos)
-            << "unexpected error: " << message;
-        return;
-    }
-
-    auto read_result_result = ReadResultCollector::CollectResult(batch_reader_result.value().get());
-    ASSERT_FALSE(read_result_result.ok());
-    auto message = read_result_result.status().ToString();
-    ASSERT_TRUE(message.find("partial projection inside list/map") != std::string::npos ||
-                message.find("partial projection inside list") != std::string::npos ||
-                message.find("type mismatch") != std::string::npos)
-        << "unexpected error: " << message;
+    auto create_reader_result = table_read->CreateReader(data_splits);
+    ASSERT_NOK_WITH_MSG(create_reader_result, "partial projection inside list");
 }
 
 INSTANTIATE_TEST_SUITE_P(FileFormats, NestedColumnPruningInteTest,

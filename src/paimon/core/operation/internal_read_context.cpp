@@ -54,10 +54,10 @@ Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTab
             auto table_child =
                 NestedProjectionUtils::FindFieldByName(table_struct->fields(), read_child->name());
             if (!table_child) {
-                // Keep missing children in aligned read schema. They will be
-                // materialized as nulls during field mapping.
-                rebased_children.push_back(read_child);
-                continue;
+                return Status::Invalid(fmt::format(
+                    "Read schema does not support schema evolution inside struct: nested field "
+                    "'{}' does not exist in table field '{}'",
+                    read_child->name(), read_field->name()));
             }
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> rebased_child,
                                    AlignReadFieldWithTableFieldIds(read_child, table_child));

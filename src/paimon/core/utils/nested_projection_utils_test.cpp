@@ -112,11 +112,8 @@ TEST(NestedProjectionUtilsTest, PruneDataTypeStructAllFieldsPruned) {
     auto data_type = arrow::struct_({MakeField("x", arrow::int32(), 1)});
     auto read_type = arrow::struct_({MakeField("y", arrow::int32(), 99)});
 
-    auto result = NestedProjectionUtils::PruneDataType(read_type, data_type);
-    ASSERT_FALSE(result.ok());
-    ASSERT_TRUE(result.status().ToString().find(
-                    "does not support schema evolution inside struct") != std::string::npos)
-        << result.status().ToString();
+    ASSERT_NOK_WITH_MSG(NestedProjectionUtils::PruneDataType(read_type, data_type),
+                        "does not support schema evolution inside struct");
 }
 
 TEST(NestedProjectionUtilsTest, PruneDataTypeNestedStruct) {
@@ -148,11 +145,8 @@ TEST(NestedProjectionUtilsTest, PruneDataTypeListWithStructElement) {
     auto inner_read = arrow::struct_({MakeField("a", arrow::int32(), 10)});
     auto read_type = arrow::list(arrow::field("item", inner_read));
 
-    auto result = NestedProjectionUtils::PruneDataType(read_type, data_type);
-    ASSERT_FALSE(result.ok());
-    ASSERT_TRUE(result.status().ToString().find("partial projection inside list") !=
-                std::string::npos)
-        << result.status().ToString();
+    ASSERT_NOK_WITH_MSG(NestedProjectionUtils::PruneDataType(read_type, data_type),
+                        "partial projection inside list");
 }
 
 TEST(NestedProjectionUtilsTest, PruneDataTypeMapWithStructValue) {
@@ -165,11 +159,8 @@ TEST(NestedProjectionUtilsTest, PruneDataTypeMapWithStructValue) {
     auto inner_read = arrow::struct_({MakeField("a", arrow::int32(), 10)});
     auto read_type = arrow::map(arrow::utf8(), inner_read);
 
-    auto result = NestedProjectionUtils::PruneDataType(read_type, data_type);
-    ASSERT_FALSE(result.ok());
-    ASSERT_TRUE(result.status().ToString().find("partial projection inside map") !=
-                std::string::npos)
-        << result.status().ToString();
+    ASSERT_NOK_WITH_MSG(NestedProjectionUtils::PruneDataType(read_type, data_type),
+                        "partial projection inside map");
 }
 
 TEST(NestedProjectionUtilsTest, HasNestedSubfieldProjectionNoProjection) {
@@ -318,8 +309,8 @@ TEST(NestedProjectionUtilsTest, GetMapSelectedKeysDuplicateKey) {
     auto metadata = arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"a,b,a"});
     auto field =
         arrow::field("m", arrow::map(arrow::utf8(), arrow::int32()), /*nullable=*/true, metadata);
-    auto result = NestedProjectionUtils::GetMapSelectedKeys(field);
-    ASSERT_FALSE(result.ok());
+    ASSERT_NOK_WITH_MSG(NestedProjectionUtils::GetMapSelectedKeys(field),
+                        "Duplicate selected key 'a'");
 }
 
 TEST(NestedProjectionUtilsTest, GetMapSelectedKeysNullptr) {
