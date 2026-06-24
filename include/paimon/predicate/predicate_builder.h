@@ -32,6 +32,17 @@ enum class FieldType;
 ///
 /// PredicateBuilder provides static factory methods to create various types of predicates
 /// that can be used for filtering data in Paimon tables.
+///
+/// The `field_index` parameter accepted by every factory method is the position of the
+/// field in the schema the caller is working with — typically the latest table schema.
+/// When the resulting predicate is later attached to an `InternalReadContext`,
+/// `InternalReadContext::Create` projects each leaf onto the read schema (mirrors
+/// paimon Java's `PredicateProjectionConverter`): leaf field indices are rewritten via
+/// the table-schema → read-schema position mapping (keyed by the stable paimon field
+/// id, so it survives column renames), and leaves / OR branches whose fields are not
+/// in the projection are dropped. Callers therefore do not need to track projection
+/// state themselves. `field_name` is informational (used for debug / display) and
+/// does not participate in projection lookup.
 class PAIMON_EXPORT PredicateBuilder {
  public:
     PredicateBuilder() = delete;
@@ -39,8 +50,10 @@ class PAIMON_EXPORT PredicateBuilder {
 
     /// Create an equality predicate (field == literal).
     ///
-    /// @param field_index The index of the field in read schema (0-based).
-    /// @param field_name The name of the field.
+    /// @param field_index The position of the field in the schema the caller is working
+    ///                    with (0-based); projected onto the read schema by
+    ///                    `InternalReadContext::Create`. See class doc for details.
+    /// @param field_name The name of the field (informational; see class doc).
     /// @param field_type The data type of the field.
     /// @param literal The literal value to compare against.
     /// @return A shared pointer to the created Predicate object.
@@ -99,8 +112,10 @@ class PAIMON_EXPORT PredicateBuilder {
     ///
     /// Tests whether the field value falls within the specified range (inclusive on both ends).
     ///
-    /// @param field_index The index of the field in read schema (0-based).
-    /// @param field_name The name of the field.
+    /// @param field_index The position of the field in the schema the caller is working
+    ///                    with (0-based); projected onto the read schema by
+    ///                    `InternalReadContext::Create`. See class doc for details.
+    /// @param field_name The name of the field (informational; see class doc).
     /// @param field_type The data type of the field.
     /// @param included_lower_bound The lower bound of the range (inclusive).
     /// @param included_upper_bound The upper bound of the range (inclusive).

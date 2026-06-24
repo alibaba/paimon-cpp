@@ -68,18 +68,6 @@ TEST(TableReadTest, TestReadWithInvalidContext) {
                             "schema type double mismatches predicate field type BIGINT");
     }
     {
-        // field idx in predicate mismatch in schema
-        auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f3",
-                                                 FieldType::DOUBLE, Literal(15.0));
-        ReadContextBuilder context_builder(path);
-        context_builder.SetReadSchema({"f3", "f0", "f1"});
-        context_builder.SetPredicate(predicate);
-        ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
-        ASSERT_NOK_WITH_MSG(
-            TableRead::Create(std::move(read_context)),
-            "field f3 has field idx 0 in input schema, mismatch field idx 2 in predicate");
-    }
-    {
         // literal cannot be null
         auto predicate = PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3",
                                                  FieldType::DOUBLE, Literal(FieldType::DOUBLE));

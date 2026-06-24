@@ -62,8 +62,16 @@ class InternalReadContext {
     const std::vector<std::string>& GetPrimaryKeys() const {
         return table_schema_->PrimaryKeys();
     }
+    // Returns the predicate projected onto `read_schema_`. Upstream constructs predicates
+    // against the latest table schema, so when the query projects a subset of columns
+    // the leaf field indices no longer match the projected schema. The projection is
+    // done once at context construction (mirrors paimon Java's
+    // `PredicateProjectionConverter`): leaf indices are rewritten via the table-schema
+    // → read-schema mapping, AND children whose fields are absent from the read schema
+    // are dropped (inclusive), and OR is dropped wholesale if any of its children is not
+    // projectable. May be nullptr if the entire predicate is non-projectable.
     const std::shared_ptr<Predicate>& GetPredicate() const {
-        return read_context_->GetPredicate();
+        return projected_predicate_;
     }
     bool EnablePredicateFilter() const {
         return read_context_->EnablePredicateFilter();
@@ -110,12 +118,13 @@ class InternalReadContext {
     InternalReadContext(const std::shared_ptr<ReadContext>& read_context,
                         const std::shared_ptr<TableSchema>& table_schema,
                         const std::shared_ptr<arrow::Schema>& read_schema,
-                        const CoreOptions& options);
+                        const CoreOptions& options, std::shared_ptr<Predicate> projected_predicate);
 
     std::shared_ptr<ReadContext> read_context_;
     std::shared_ptr<TableSchema> table_schema_;
     std::shared_ptr<arrow::Schema> read_schema_;
     CoreOptions options_;
+    std::shared_ptr<Predicate> projected_predicate_;
 };
 
 }  // namespace paimon

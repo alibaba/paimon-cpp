@@ -42,8 +42,6 @@
 namespace paimon {
 enum class FieldType;
 
-// TODO(xinyu.lxy): predicate field_index use index in read schema now, but java paimon use index
-// in file schema
 std::shared_ptr<Predicate> PredicateBuilder::Equal(int32_t field_index,
                                                    const std::string& field_name,
                                                    const FieldType& field_type,
