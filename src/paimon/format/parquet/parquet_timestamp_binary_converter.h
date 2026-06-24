@@ -23,10 +23,14 @@
 
 namespace paimon::parquet {
 
-class ParquetTimestampConverter {
+// Reconciles a parquet-read array with the read schema for the cases where the parquet physical
+// type legally differs from the read type, in a single per-batch traversal:
+//   - timestamp timezone/unit;
+//   - inline blob descriptors, stored as parquet BINARY but read as LARGE_BINARY (BLOB column).
+class ParquetTimestampBinaryConverter {
  public:
-    ParquetTimestampConverter() = delete;
-    ~ParquetTimestampConverter() = delete;
+    ParquetTimestampBinaryConverter() = delete;
+    ~ParquetTimestampBinaryConverter() = delete;
 
     static Result<std::shared_ptr<arrow::DataType>> AdjustTimezone(
         const std::shared_ptr<arrow::DataType>& src_data_type);

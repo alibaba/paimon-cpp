@@ -326,6 +326,48 @@ TEST_F(ParquetFileBatchReaderTest, TestReadBinaryWrittenFromBinaryAndLargeBinary
     check_binary_read_result(arrow::large_binary(), "large-binary.parquet");
 }
 
+// Inline blob descriptors (blob-descriptor-field) are written to parquet as BINARY, but the
+// blob column is read back through a LARGE_BINARY read schema. The reader must widen
+// BINARY -> LARGE_BINARY for that column -- leaving non-blob columns untouched -- instead of
+// rejecting the type difference in the timestamp type-equality check.
+TEST_F(ParquetFileBatchReaderTest, TestReadBinaryColumnWithLargeBinaryReadSchema) {
+    std::string data_json = R"([
+        [1, "descriptor-1"],
+        [2, ""],
+        [3, null],
+        [4, "descriptor-2"]
+    ])";
+    auto id_field = arrow::field("id", arrow::int32());
+    auto photo_binary_field = arrow::field("photo", arrow::binary());
+    auto write_schema = arrow::schema({id_field, photo_binary_field});
+    auto write_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({id_field, photo_binary_field}),
+                                                  data_json)
+            .ValueOrDie());
+
+    std::string file_path = PathUtil::JoinPath(dir_->Str(), "binary-to-large-binary.parquet");
+    WriteArray(file_path, write_array, write_schema, /*write_batch_size=*/write_array->length(),
+               /*enable_dictionary=*/false, /*max_row_group_length=*/write_array->length());
+
+    // Read schema asks for LARGE_BINARY on the blob column; the non-blob `id` stays int32.
+    auto photo_large_binary_field = arrow::field("photo", arrow::large_binary());
+    auto read_schema = arrow::schema({id_field, photo_large_binary_field});
+    auto parquet_batch_reader =
+        PrepareParquetFileBatchReader(file_path, read_schema, /*predicate=*/nullptr,
+                                      /*selection_bitmap=*/std::nullopt, batch_size_);
+
+    ASSERT_OK_AND_ASSIGN(auto result_array, paimon::test::ReadResultCollector::CollectResult(
+                                                parquet_batch_reader.get()));
+
+    // The blob column is now LARGE_BINARY with the original values; `id` is unchanged.
+    auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(
+            arrow::struct_({id_field, photo_large_binary_field}), data_json)
+            .ValueOrDie());
+    auto expected_chunked_array = std::make_shared<arrow::ChunkedArray>(expected_array);
+    ASSERT_TRUE(result_array->Equals(expected_chunked_array));
+}
+
 TEST_F(ParquetFileBatchReaderTest, TestSimple) {
     std::string file_name = paimon::test::GetDataDir() +
                             "/parquet/parquet_append_table.db/parquet_append_table/bucket-0/"

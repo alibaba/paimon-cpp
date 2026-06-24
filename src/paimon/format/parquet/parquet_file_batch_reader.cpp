@@ -42,7 +42,7 @@
 #include "paimon/core/schema/arrow_schema_validator.h"
 #include "paimon/format/parquet/parquet_field_id_converter.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
-#include "paimon/format/parquet/parquet_timestamp_converter.h"
+#include "paimon/format/parquet/parquet_timestamp_binary_converter.h"
 #include "paimon/format/parquet/predicate_converter.h"
 #include "paimon/reader/batch_reader.h"
 #include "paimon/utils/roaring_bitmap32.h"
@@ -111,7 +111,7 @@ Result<std::unique_ptr<::ArrowSchema>> ParquetFileBatchReader::GetFileSchema() c
                                ParquetFieldIdConverter::GetPaimonIdsFromParquetIds(file_schema));
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<arrow::DataType> new_type,
-            ParquetTimestampConverter::AdjustTimezone(arrow::struct_(new_schema->fields())));
+            ParquetTimestampBinaryConverter::AdjustTimezone(arrow::struct_(new_schema->fields())));
 
         auto c_schema = std::make_unique<::ArrowSchema>();
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportType(*new_type, c_schema.get()));
@@ -348,14 +348,18 @@ Result<BatchReader::ReadBatch> ParquetFileBatchReader::NextBatch() {
         }
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,
                                           batch->ToStructArray());
-        PAIMON_ASSIGN_OR_RAISE(bool need_cast, ParquetTimestampConverter::NeedCastArrayForTimestamp(
-                                                   array->type(), read_data_type_));
+        // Reconcile the read array to the read schema in one traversal: timestamp timezone, and
+        // inline blob descriptors read as BINARY widened to the LARGE_BINARY read type.
+        PAIMON_ASSIGN_OR_RAISE(bool need_cast,
+                               ParquetTimestampBinaryConverter::NeedCastArrayForTimestamp(
+                                   array->type(), read_data_type_));
         if (need_cast) {
-            PAIMON_ASSIGN_OR_RAISE(array, ParquetTimestampConverter::CastArrayForTimestamp(
+            PAIMON_ASSIGN_OR_RAISE(array, ParquetTimestampBinaryConverter::CastArrayForTimestamp(
                                               array, read_data_type_, arrow_pool_));
         }
-        PAIMON_ASSIGN_OR_RAISE(need_cast, ParquetTimestampConverter::NeedCastArrayForTimestamp(
-                                              array->type(), read_data_type_));
+        PAIMON_ASSIGN_OR_RAISE(need_cast,
+                               ParquetTimestampBinaryConverter::NeedCastArrayForTimestamp(
+                                   array->type(), read_data_type_));
         if (need_cast) {
             return Status::Invalid(fmt::format(
                 "unexpected: in parquet, after CastArrayForTimestamp, output type {} not "

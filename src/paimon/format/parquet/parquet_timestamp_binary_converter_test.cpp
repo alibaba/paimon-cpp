@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/format/parquet/parquet_timestamp_converter.h"
+#include "paimon/format/parquet/parquet_timestamp_binary_converter.h"
 
 #include <memory>
 
@@ -28,7 +28,7 @@
 
 namespace paimon::parquet::test {
 
-TEST(ParquetTimestampConverterTest, TestNeedCastArrayForTimestamp) {
+TEST(ParquetTimestampBinaryConverterTest, TestNeedCastArrayForTimestamp) {
     {
         // single field need cast
         arrow::FieldVector fields = {
@@ -38,7 +38,7 @@ TEST(ParquetTimestampConverterTest, TestNeedCastArrayForTimestamp) {
             arrow::field("f0", arrow::timestamp(arrow::TimeUnit::NANO, "UTC")),
         };
         ASSERT_OK_AND_ASSIGN(bool need_cast,
-                             ParquetTimestampConverter::NeedCastArrayForTimestamp(
+                             ParquetTimestampBinaryConverter::NeedCastArrayForTimestamp(
                                  arrow::struct_(fields), arrow::struct_(target_fields)));
         ASSERT_TRUE(need_cast);
     }
@@ -50,7 +50,7 @@ TEST(ParquetTimestampConverterTest, TestNeedCastArrayForTimestamp) {
         arrow::FieldVector target_fields = {
             arrow::field("f2", arrow::list(arrow::timestamp(arrow::TimeUnit::SECOND)))};
         ASSERT_OK_AND_ASSIGN(bool need_cast,
-                             ParquetTimestampConverter::NeedCastArrayForTimestamp(
+                             ParquetTimestampBinaryConverter::NeedCastArrayForTimestamp(
                                  arrow::struct_(fields), arrow::struct_(target_fields)));
         ASSERT_TRUE(need_cast);
     }
@@ -64,7 +64,7 @@ TEST(ParquetTimestampConverterTest, TestNeedCastArrayForTimestamp) {
             arrow::field("f1", arrow::map(arrow::timestamp(arrow::TimeUnit::SECOND),
                                           arrow::timestamp(arrow::TimeUnit::NANO, "UTC")))};
         ASSERT_OK_AND_ASSIGN(bool need_cast,
-                             ParquetTimestampConverter::NeedCastArrayForTimestamp(
+                             ParquetTimestampBinaryConverter::NeedCastArrayForTimestamp(
                                  arrow::struct_(fields), arrow::struct_(target_fields)));
         ASSERT_TRUE(need_cast);
     }
@@ -82,13 +82,13 @@ TEST(ParquetTimestampConverterTest, TestNeedCastArrayForTimestamp) {
                               arrow::field("f1", arrow::timestamp(arrow::TimeUnit::NANO, "UTC"))})),
         };
         ASSERT_OK_AND_ASSIGN(bool need_cast,
-                             ParquetTimestampConverter::NeedCastArrayForTimestamp(
+                             ParquetTimestampBinaryConverter::NeedCastArrayForTimestamp(
                                  arrow::struct_(fields), arrow::struct_(target_fields)));
         ASSERT_TRUE(need_cast);
     }
 }
 
-TEST(ParquetTimestampConverterTest, TestCastArrayForTimestamp) {
+TEST(ParquetTimestampBinaryConverterTest, TestCastArrayForTimestamp) {
     auto timezone = DateTimeUtils::GetLocalTimezoneName();
     arrow::FieldVector fields = {
         arrow::field("f1", arrow::map(arrow::timestamp(arrow::TimeUnit::MILLI),
@@ -121,7 +121,7 @@ TEST(ParquetTimestampConverterTest, TestCastArrayForTimestamp) {
 
     std::shared_ptr<arrow::MemoryPool> pool = GetArrowPool(GetDefaultPool());
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Array> result_array,
-                         ParquetTimestampConverter::CastArrayForTimestamp(
+                         ParquetTimestampBinaryConverter::CastArrayForTimestamp(
                              array, arrow::struct_(target_fields), pool));
 
     auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
@@ -134,7 +134,7 @@ TEST(ParquetTimestampConverterTest, TestCastArrayForTimestamp) {
     ASSERT_TRUE(result_array->Equals(expected_array)) << result_array->ToString();
 }
 
-TEST(ParquetTimestampConverterTest, TestAdjustTimezone) {
+TEST(ParquetTimestampBinaryConverterTest, TestAdjustTimezone) {
     auto timezone = DateTimeUtils::GetLocalTimezoneName();
     arrow::FieldVector fields = {
         arrow::field("f1", arrow::map(arrow::timestamp(arrow::TimeUnit::MILLI),
@@ -159,7 +159,7 @@ TEST(ParquetTimestampConverterTest, TestAdjustTimezone) {
     };
 
     ASSERT_OK_AND_ASSIGN(auto result_type,
-                         ParquetTimestampConverter::AdjustTimezone(arrow::struct_(fields)));
+                         ParquetTimestampBinaryConverter::AdjustTimezone(arrow::struct_(fields)));
     ASSERT_TRUE(result_type->Equals(arrow::struct_(target_fields)));
 }
 }  // namespace paimon::parquet::test
