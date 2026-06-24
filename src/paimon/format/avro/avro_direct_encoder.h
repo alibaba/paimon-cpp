@@ -33,6 +33,9 @@ namespace paimon::avro {
 
 class AvroDirectEncoder {
  public:
+    AvroDirectEncoder() = delete;
+    ~AvroDirectEncoder() = delete;
+
     /// Context for reusing scratch buffers during Avro encoding
     ///
     /// Avoids frequent small allocations by reusing temporary buffers across multiple encode

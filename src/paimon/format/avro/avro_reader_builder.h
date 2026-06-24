@@ -32,8 +32,8 @@ namespace paimon::avro {
 
 class AvroReaderBuilder : public ReaderBuilder {
  public:
-    AvroReaderBuilder(const std::map<std::string, std::string>& options, int32_t batch_size)
-        : batch_size_(batch_size), pool_(GetDefaultPool()), options_(options) {}
+    explicit AvroReaderBuilder(int32_t batch_size)
+        : batch_size_(batch_size), pool_(GetDefaultPool()) {}
 
     ReaderBuilder* WithMemoryPool(const std::shared_ptr<MemoryPool>& pool) override {
         pool_ = pool;
@@ -52,7 +52,6 @@ class AvroReaderBuilder : public ReaderBuilder {
  private:
     const int32_t batch_size_;
     std::shared_ptr<MemoryPool> pool_;
-    const std::map<std::string, std::string> options_;
 };
 
 }  // namespace paimon::avro
