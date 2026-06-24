@@ -80,9 +80,11 @@ Result<CompactResult> ChangelogMergeTreeRewriter::RewriteOrProduceChangelog(
                            GenerateKeyValueConsumer());
     std::vector<std::shared_ptr<MergeTreeCompactRewriter::KeyValueMergeReader>> reader_holders;
 
+    auto before = ExtractFilesFromSections(sections);
     std::unique_ptr<MergeTreeCompactRewriter::KeyValueRollingFileWriter> compact_file_writer;
     if (rewrite_compact_file) {
-        compact_file_writer = CreateRollingRowWriter(output_level);
+        PAIMON_RETURN_NOT_OK(RestoreShreddingContextFromFiles(before));
+        PAIMON_ASSIGN_OR_RAISE(compact_file_writer, CreateRollingRowWriter(output_level));
     }
     // TODO(xinyu.lxy): produce changelog
     ScopeGuard write_guard([&]() -> void {
@@ -102,7 +104,6 @@ Result<CompactResult> ChangelogMergeTreeRewriter::RewriteOrProduceChangelog(
     if (compact_file_writer) {
         PAIMON_RETURN_NOT_OK(compact_file_writer->Close());
     }
-    auto before = ExtractFilesFromSections(sections);
     std::vector<std::shared_ptr<DataFileMeta>> after;
     if (compact_file_writer) {
         PAIMON_ASSIGN_OR_RAISE(after, compact_file_writer->GetResult());

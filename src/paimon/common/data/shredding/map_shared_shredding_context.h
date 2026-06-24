@@ -30,7 +30,7 @@ namespace paimon {
 /// values to support adaptive K sizing across files.
 ///
 /// - First file: K = K_max (no history).
-/// - Subsequent files: K = min(max(recent_max_row_widths), K_max).
+/// - Subsequent files: K = min(adaptive_width(recent_max_row_widths), K_max).
 class MapSharedShreddingContext {
  public:
     /// @param column_to_k_max Map from field name to its K_max (from options).
@@ -50,9 +50,12 @@ class MapSharedShreddingContext {
     std::vector<std::string> GetShreddingColumnNames() const;
 
  private:
-    static constexpr int32_t kWindowSize = 100;
+    static constexpr int32_t kWindowSize = 20;
+    static constexpr double kPercentileRatio = 0.90;
+    static constexpr int32_t kMaxCloseAbsoluteSlack = 4;
+    static constexpr double kMaxCloseRelativeRatio = 1.25;
 
-    static int32_t ComputeWindowMax(const std::vector<int32_t>& values);
+    static int32_t ComputeAdaptiveWidth(const std::vector<int32_t>& values);
 
     /// K_max per shared-shredding field, from options.
     std::map<std::string, int32_t> column_to_k_max_;

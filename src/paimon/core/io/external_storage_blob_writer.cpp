@@ -26,12 +26,8 @@
 #include "paimon/common/data/blob_descriptor.h"
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
-#include "paimon/common/utils/scope_guard.h"
+#include "paimon/core/io/blob_data_file_writer_factory.h"
 #include "paimon/core/io/data_file_path_factory.h"
-#include "paimon/core/io/data_file_writer.h"
-#include "paimon/format/blob/blob_writer_builder.h"
-#include "paimon/format/file_format.h"
-#include "paimon/format/file_format_factory.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/memory/memory_pool.h"
 
@@ -61,47 +57,22 @@ ExternalStorageBlobWriter::CreateFieldRollingWriter(FieldWriter* field_writer) {
     }
 
     auto single_field_schema = arrow::schema({field});
-    ::ArrowSchema arrow_schema;
-    ScopeGuard guard([&arrow_schema]() { ArrowSchemaRelease(&arrow_schema); });
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*single_field_schema, &arrow_schema));
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileFormat> format,
-                           FileFormatFactory::Get("blob", options_.ToMap()));
-    PAIMON_ASSIGN_OR_RAISE(
-        std::shared_ptr<WriterBuilder> writer_builder,
-        format->CreateWriterBuilder(&arrow_schema, options_.GetWriteBatchSize()));
-    writer_builder->WithMemoryPool(memory_pool_);
-
-    // Inject WriteConsumer to capture BlobDescriptors during writes
-    auto blob_writer_builder = std::dynamic_pointer_cast<blob::BlobWriterBuilder>(writer_builder);
-    if (!blob_writer_builder) {
-        return Status::Invalid(
-            "writer_builder cannot be casted to BlobWriterBuilder in ExternalStorageBlobWriter");
-    }
-    blob_writer_builder->WithWriteConsumer(
-        [field_writer](std::unique_ptr<BlobDescriptor> descriptor) -> bool {
-            field_writer->captured_descriptors.push_back(std::move(descriptor));
-            return true;  // Always flush for single row.
-        });
-
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*single_field_schema, &arrow_schema));
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FormatStatsExtractor> stats_extractor,
-                           format->CreateStatsExtractor(&arrow_schema));
-
-    std::vector<std::string> write_cols = {field_writer->field_name};
-    auto single_blob_file_writer_creator = [this, writer_builder, stats_extractor, write_cols]()
-        -> Result<std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>> {
-        auto writer = std::make_unique<DataFileWriter>(
-            /*compression=*/"none", std::function<Status(ArrowArray*, ArrowArray*)>(), schema_id_,
-            seq_num_counter_, FileSource::Append(), stats_extractor,
-            path_factory_->IsExternalPath(), write_cols, memory_pool_);
-        PAIMON_RETURN_NOT_OK(writer->Init(
-            options_.GetFileSystem(),
-            path_factory_->NewExternalStorageBlobPath(external_storage_path_), writer_builder));
-        return writer;
+    auto write_consumer = [field_writer](std::unique_ptr<BlobDescriptor> descriptor) -> bool {
+        field_writer->captured_descriptors.push_back(std::move(descriptor));
+        return true;  // Always flush for single row.
     };
 
-    return std::make_unique<BlobRollingWriter>(options_.GetBlobTargetFileSize(),
-                                               single_blob_file_writer_creator);
+    std::vector<std::string> write_cols = {field_writer->field_name};
+    std::shared_ptr<DataFilePathFactory> path_factory = path_factory_;
+    std::string external_storage_path = external_storage_path_;
+    auto writer_factory = std::make_shared<BlobDataFileWriterFactory>(
+        options_, schema_id_, single_field_schema, write_cols, seq_num_counter_, path_factory,
+        [path_factory, external_storage_path]() {
+            return path_factory->NewExternalStorageBlobPath(external_storage_path);
+        },
+        write_consumer, memory_pool_);
+
+    return std::make_unique<BlobRollingWriter>(options_.GetBlobTargetFileSize(), writer_factory);
 }
 
 Status ExternalStorageBlobWriter::InitializeFieldWritersIfNeeded() {

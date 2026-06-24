@@ -220,17 +220,24 @@ set(PAIMON_CORE_SRCS
     core/io/data_file_meta.cpp
     core/io/data_file_meta_serializer.cpp
     core/io/data_file_path_factory.cpp
+    core/io/append_data_file_writer_factory.cpp
+    core/io/blob_data_file_writer_factory.cpp
+    core/io/data_file_writer_factory.cpp
     core/io/data_file_writer.cpp
     core/io/field_mapping_reader.cpp
     core/io/complete_row_tracking_fields_reader.cpp
     core/io/file_index_evaluator.cpp
     core/io/key_value_data_file_record_reader.cpp
+    core/io/key_value_data_file_writer_factory.cpp
     core/io/key_value_data_file_writer.cpp
     core/io/key_value_in_memory_record_reader.cpp
     core/io/merged_key_value_record_reader.cpp
     core/io/key_value_meta_projection_consumer.cpp
     core/io/key_value_projection_consumer.cpp
     core/io/key_value_projection_reader.cpp
+    core/io/map_shared_shredding_core_utils.cpp
+    core/io/shredding_append_data_file_writer_factory.cpp
+    core/io/shredding_key_value_data_file_writer_factory.cpp
     core/io/external_storage_blob_writer.cpp
     core/io/multiple_blob_file_writer.cpp
     core/io/rolling_blob_file_writer.cpp
