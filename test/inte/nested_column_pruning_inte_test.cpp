@@ -336,7 +336,7 @@ TEST_P(NestedColumnPruningInteTest, PruneSameNestedFieldNameFromDifferentStructC
 }
 
 // Test: Querying only non-existent struct sub-fields should fail fast.
-TEST_P(NestedColumnPruningInteTest, QueryStructSubFieldsAllNonExistentReturnsNullStructColumn) {
+TEST_P(NestedColumnPruningInteTest, QueryStructSubFieldsAllNonExistent) {
     // Table schema: f0 (int32), f1 (struct{f1: int32, f2: utf8, f3: float64})
     auto struct_type = arrow::struct_({
         arrow::field("f1", arrow::int32()),
@@ -393,12 +393,11 @@ TEST_P(NestedColumnPruningInteTest, QueryStructSubFieldsAllNonExistentReturnsNul
     ReadContextBuilder read_context_builder(table_path_);
     read_context_builder.SetOptions(options).SetReadSchema(std::move(c_schema));
     ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
-    ASSERT_NOK_WITH_MSG(table_read->CreateReader(data_splits),
+    ASSERT_NOK_WITH_MSG(TableRead::Create(std::move(read_context)),
                         "does not support schema evolution inside struct");
 }
 
-// Test: Querying only non-existent struct sub-fields should fail fast.
+// Test: Querying a mix of existent and non-existent struct sub-fields should fail fast.
 TEST_P(NestedColumnPruningInteTest, QueryStructSubFieldsWithNonExistentField) {
     // Table schema: f0 (int32), f1 (struct{f1: int32, f2: utf8, f3: float64})
     auto struct_type = arrow::struct_({
@@ -457,8 +456,7 @@ TEST_P(NestedColumnPruningInteTest, QueryStructSubFieldsWithNonExistentField) {
     ReadContextBuilder read_context_builder(table_path_);
     read_context_builder.SetOptions(options).SetReadSchema(std::move(c_schema));
     ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
-    ASSERT_NOK_WITH_MSG(table_read->CreateReader(data_splits),
+    ASSERT_NOK_WITH_MSG(TableRead::Create(std::move(read_context)),
                         "does not support schema evolution inside struct");
 }
 
