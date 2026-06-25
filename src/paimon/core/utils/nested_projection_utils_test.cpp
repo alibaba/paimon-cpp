@@ -257,7 +257,6 @@ TEST(NestedProjectionUtilsTest, HasNestedSubfieldProjectionMissingTopLevelFieldR
 }
 
 // ============== GetMapSelectedKeys ==============
-
 TEST(NestedProjectionUtilsTest, GetMapSelectedKeysPresent) {
     auto metadata =
         arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"key1,key2,key3"});
@@ -311,11 +310,6 @@ TEST(NestedProjectionUtilsTest, GetMapSelectedKeysDuplicateKey) {
         arrow::field("m", arrow::map(arrow::utf8(), arrow::int32()), /*nullable=*/true, metadata);
     ASSERT_NOK_WITH_MSG(NestedProjectionUtils::GetMapSelectedKeys(field),
                         "Duplicate selected key 'a'");
-}
-
-TEST(NestedProjectionUtilsTest, GetMapSelectedKeysNullptr) {
-    ASSERT_OK_AND_ASSIGN(auto keys, NestedProjectionUtils::GetMapSelectedKeys(nullptr));
-    ASSERT_TRUE(keys.empty());
 }
 
 // ============== FilterMapArrayBySelectedKeys ==============

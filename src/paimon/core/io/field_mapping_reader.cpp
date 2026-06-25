@@ -123,12 +123,16 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::FilterMapSelectedKeysR
 
 Result<std::unique_ptr<FieldMappingReader>> FieldMappingReader::Create(
     int32_t field_count, std::unique_ptr<FileBatchReader>&& reader, const BinaryRow& partition,
-    std::unique_ptr<FieldMapping>&& mapping, const std::shared_ptr<MemoryPool>& pool) {
+    std::unique_ptr<FieldMapping>&& mapping,
+    const std::set<int32_t>& skip_map_selected_keys_filter_field_ids,
+    const std::shared_ptr<MemoryPool>& pool) {
     auto mapping_reader = std::unique_ptr<FieldMappingReader>(new FieldMappingReader(
         field_count, std::move(reader), partition, std::move(mapping), pool));
 
     mapping_reader->need_mapping_ = false;
     mapping_reader->need_casting_ = false;
+    mapping_reader->skip_map_selected_keys_filter_field_ids_ =
+        skip_map_selected_keys_filter_field_ids;
 
     if (mapping_reader->non_exist_field_info_ != std::nullopt ||
         mapping_reader->partition_info_ != std::nullopt) {
@@ -161,7 +165,9 @@ Result<std::unique_ptr<FieldMappingReader>> FieldMappingReader::Create(
             bool has_map_selected_keys,
             mapping_reader->HasMapSelectedKeysRecursively(
                 mapping_reader->non_partition_info_.non_partition_read_schema[i].ArrowField()));
-        if (has_map_selected_keys) {
+        if (has_map_selected_keys &&
+            mapping_reader->skip_map_selected_keys_filter_field_ids_.count(
+                mapping_reader->non_partition_info_.non_partition_read_schema[i].Id()) == 0) {
             mapping_reader->need_mapping_ = true;
         }
     }
@@ -399,14 +405,16 @@ Status FieldMappingReader::MappingFields(const std::shared_ptr<arrow::Array>& da
     assert(struct_array->fields().size() == idx_in_target_schema.size());
     for (size_t i = 0; i < idx_in_target_schema.size(); i++) {
         std::shared_ptr<arrow::Array> field_array = struct_array->field(i);
+        const DataField& read_field = read_fields_of_data_array[i];
 
         // Filter map entries by selected keys recursively (supports MAP nested in STRUCT).
-        PAIMON_ASSIGN_OR_RAISE(field_array,
-                               FilterMapSelectedKeysRecursively(
-                                   field_array, read_fields_of_data_array[i].ArrowField()));
+        if (skip_map_selected_keys_filter_field_ids_.count(read_field.Id()) == 0) {
+            PAIMON_ASSIGN_OR_RAISE(field_array, FilterMapSelectedKeysRecursively(
+                                                    field_array, read_field.ArrowField()));
+        }
 
         (*target_array)[idx_in_target_schema[i]] = std::move(field_array);
-        (*target_field_names)[idx_in_target_schema[i]] = read_fields_of_data_array[i].Name();
+        (*target_field_names)[idx_in_target_schema[i]] = read_field.Name();
     }
     return Status::OK();
 }

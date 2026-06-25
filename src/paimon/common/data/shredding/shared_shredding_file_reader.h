@@ -18,7 +18,9 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "arrow/api.h"
@@ -30,8 +32,20 @@ namespace paimon {
 
 class SharedShreddingFileReader : public FileBatchReader {
  public:
-    static Result<std::unique_ptr<SharedShreddingFileReader>> Create(
-        std::unique_ptr<FileBatchReader>&& reader, const std::shared_ptr<MemoryPool>& pool);
+    struct SharedShreddingContext {
+        SharedShreddingContext(const MapSharedShreddingFieldMeta& _meta,
+                               const std::vector<std::string>& _selected_keys,
+                               const std::shared_ptr<arrow::MapType>& _map_type)
+            : meta(_meta), selected_keys(_selected_keys), map_type(_map_type) {}
+        MapSharedShreddingFieldMeta meta;
+        std::vector<std::string> selected_keys;
+        std::shared_ptr<arrow::MapType> map_type;
+    };
+
+    SharedShreddingFileReader(
+        std::unique_ptr<FileBatchReader>&& reader,
+        std::map<std::string, SharedShreddingContext>&& shared_shredding_name_to_context,
+        const std::shared_ptr<MemoryPool>& pool);
 
     Result<std::unique_ptr<::ArrowSchema>> GetFileSchema() const override;
 
@@ -53,11 +67,6 @@ class SharedShreddingFileReader : public FileBatchReader {
     bool SupportPreciseBitmapSelection() const override;
 
  private:
-    SharedShreddingFileReader(
-        std::unique_ptr<FileBatchReader>&& reader,
-        const std::map<std::string, MapSharedShreddingFieldMeta>& shared_shredding_name_to_meta,
-        const std::shared_ptr<MemoryPool>& pool);
-
     Result<std::shared_ptr<arrow::Array>> RebuildLogicalMapArray(
         const std::shared_ptr<arrow::Field>& physical_field,
         const std::shared_ptr<arrow::StructArray>& physical_struct_array) const;
@@ -76,9 +85,7 @@ class SharedShreddingFileReader : public FileBatchReader {
  private:
     std::shared_ptr<arrow::MemoryPool> arrow_pool_;
     std::unique_ptr<FileBatchReader> reader_;
-    std::map<std::string, MapSharedShreddingFieldMeta> shared_shredding_name_to_meta_;
-    std::map<std::string, std::vector<std::string>> shared_shredding_name_to_selected_keys_;
-    std::map<std::string, std::shared_ptr<arrow::MapType>> shared_shredding_name_to_map_type_;
+    std::map<std::string, SharedShreddingContext> shared_shredding_name_to_context_;
 };
 
 }  // namespace paimon

@@ -68,8 +68,7 @@ class PAIMON_EXPORT NestedProjectionUtils {
         const std::shared_ptr<arrow::Schema>& read_schema);
 
     /// Parse the "paimon.map.selected-keys" metadata from an Arrow field.
-    /// Returns an empty vector if the field is null, has no metadata, or the metadata key
-    /// is absent.
+    /// Returns an empty vector if has no metadata, or the specific metadata key is absent.
     /// The metadata value is a comma-separated string, e.g. "key1,key2".
     /// Empty tokens are preserved ("" means selecting empty-string keys), and duplicate
     /// selected keys are rejected as invalid.

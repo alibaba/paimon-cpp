@@ -24,12 +24,15 @@
 #include <vector>
 
 #include "arrow/api.h"
+#include "arrow/c/bridge.h"
 #include "arrow/ipc/json_simple.h"
 #include "arrow/type.h"
 #include "gtest/gtest.h"
+#include "paimon/common/reader/reader_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
+#include "paimon/core/schema/schema_manager.h"
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/predicate/literal.h"
@@ -72,6 +75,77 @@ class WriteAndReadInteTest
         auto new_options = options;
         new_options.insert(jindo_options.begin(), jindo_options.end());
         return new_options;
+    }
+
+    Status WriteNextSchema(const std::vector<DataField>& fields, int32_t highest_field_id,
+                           const std::map<std::string, std::string>& options) const {
+        auto file_system = dir_->GetFileSystem();
+        std::string table_path = PathUtil::JoinPath(test_dir_, "foo.db/bar");
+        SchemaManager schema_manager(file_system, table_path);
+        PAIMON_ASSIGN_OR_RAISE(auto latest_schema_opt, schema_manager.Latest());
+        if (!latest_schema_opt) {
+            return Status::Invalid("table schema does not exist");
+        }
+        auto next_schema = std::make_shared<TableSchema>(*latest_schema_opt.value());
+        next_schema->id_ = latest_schema_opt.value()->Id() + 1;
+        next_schema->fields_ = fields;
+        next_schema->highest_field_id_ = highest_field_id;
+        next_schema->options_ = options;
+        PAIMON_ASSIGN_OR_RAISE(std::string schema_content, next_schema->ToJsonString());
+        std::string schema_path = PathUtil::JoinPath(schema_manager.SchemaDirectory(),
+                                                     "schema-" + std::to_string(next_schema->Id()));
+        return file_system->AtomicStore(schema_path, schema_content);
+    }
+
+    Result<bool> ReadAndCheckProjectedResult(const std::map<std::string, std::string>& options,
+                                             const std::vector<std::string>& read_fields,
+                                             const std::shared_ptr<arrow::DataType>& expected_type,
+                                             const std::string& expected_data) const {
+        std::string table_path = PathUtil::JoinPath(test_dir_, "foo.db/bar");
+        PAIMON_ASSIGN_OR_RAISE(auto plan, InnerScan(options));
+
+        ReadContextBuilder read_context_builder(table_path);
+        read_context_builder.SetOptions(options).SetReadFieldNames(read_fields);
+        PAIMON_ASSIGN_OR_RAISE(auto read_context, read_context_builder.Finish());
+        PAIMON_ASSIGN_OR_RAISE(auto table_read, TableRead::Create(std::move(read_context)));
+        PAIMON_ASSIGN_OR_RAISE(auto batch_reader, table_read->CreateReader(plan->Splits()));
+        PAIMON_ASSIGN_OR_RAISE(auto actual, ReadResultCollector::CollectResult(batch_reader.get()));
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+            auto expected, arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data));
+        return std::make_shared<arrow::ChunkedArray>(expected)->Equals(actual);
+    }
+
+    /// Read with a custom Arrow read schema (supports nested column pruning and
+    /// paimon.map.selected-keys metadata for shared-shredding partial key recall).
+    Result<bool> ReadAndCheckWithReadSchema(const std::map<std::string, std::string>& options,
+                                            const std::shared_ptr<arrow::Schema>& read_schema,
+                                            const std::shared_ptr<arrow::DataType>& expected_type,
+                                            const std::string& expected_data) const {
+        std::string table_path = PathUtil::JoinPath(test_dir_, "foo.db/bar");
+        PAIMON_ASSIGN_OR_RAISE(auto plan, InnerScan(options));
+
+        auto c_schema = std::make_unique<ArrowSchema>();
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*read_schema, c_schema.get()));
+        ReadContextBuilder read_context_builder(table_path);
+        read_context_builder.SetOptions(options).SetReadSchema(std::move(c_schema));
+        PAIMON_ASSIGN_OR_RAISE(auto read_context, read_context_builder.Finish());
+        PAIMON_ASSIGN_OR_RAISE(auto table_read, TableRead::Create(std::move(read_context)));
+        PAIMON_ASSIGN_OR_RAISE(auto batch_reader, table_read->CreateReader(plan->Splits()));
+        PAIMON_ASSIGN_OR_RAISE(auto actual, ReadResultCollector::CollectResult(batch_reader.get()));
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+            auto expected, arrow::ipc::internal::json::ArrayFromJSON(expected_type, expected_data));
+        return std::make_shared<arrow::ChunkedArray>(expected)->Equals(actual);
+    }
+
+    Result<std::shared_ptr<Plan>> InnerScan(
+        const std::map<std::string, std::string>& options) const {
+        std::string table_path = PathUtil::JoinPath(test_dir_, "foo.db/bar");
+        ScanContextBuilder scan_context_builder(table_path);
+        scan_context_builder.SetOptions(options).AddOption(Options::SCAN_MODE,
+                                                           StartupMode::LatestFull().ToString());
+        PAIMON_ASSIGN_OR_RAISE(auto scan_context, scan_context_builder.Finish());
+        PAIMON_ASSIGN_OR_RAISE(auto table_scan, TableScan::Create(std::move(scan_context)));
+        return table_scan->CreatePlan();
     }
 
  private:
@@ -1186,6 +1260,1009 @@ TEST_P(WriteAndReadInteTest, TestAppendWithParquetMetadataCache) {
     ASSERT_EQ(1, cache->SupplierCallCount());
     ASSERT_EQ(1, cache->Size());
     ASSERT_EQ(CacheKind::DATA_FILE_FOOTER, cache->LastKind());
+}
+
+TEST_P(WriteAndReadInteTest, TestAppendSharedShreddingMap) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+    };
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "2"},
+    };
+    if (file_system == "jindo") {
+        options = AddOptionsForJindo(options);
+    }
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(test_dir_, schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+
+    std::string data = R"([
+        [1, [["a", 10], ["b", 20]]],
+        [2, [["c", 30], ["a", 40], ["b", 50]]],
+        [3, null],
+        [4, [["d", 60], ["a", null], ["c", 70]]]
+    ])";
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                                /*expected_commit_messages=*/std::nullopt));
+
+    arrow::FieldVector fields_with_row_kind = fields;
+    fields_with_row_kind.insert(fields_with_row_kind.begin(),
+                                arrow::field("_VALUE_KIND", arrow::int8()));
+    auto data_type = arrow::struct_(fields_with_row_kind);
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    std::string expected_data = R"([
+        [0, 1, [["a", 10], ["b", 20]]],
+        [0, 2, [["a", 40], ["b", 50], ["c", 30]]],
+        [0, 3, null],
+        [0, 4, [["a", null], ["c", 70], ["d", 60]]]
+    ])";
+    ASSERT_OK_AND_ASSIGN(bool success,
+                         helper->ReadAndCheckResult(data_type, data_splits, expected_data));
+    ASSERT_TRUE(success);
+}
+
+TEST_P(WriteAndReadInteTest, TestSharedShreddingWithSchemaEvolution) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    auto map_type = arrow::map(arrow::utf8(), arrow::int64());
+    arrow::FieldVector fields_v0 = {
+        arrow::field("f0", map_type),
+        arrow::field("f1", map_type),
+        arrow::field("k1", arrow::utf8()),
+    };
+    std::map<std::string, std::string> options_v0 = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system},
+        {"fields.f0.map.storage-layout", "shared-shredding"},
+        {"fields.f0.map.shared-shredding.max-columns", "1"},
+        {"fields.f1.map.storage-layout", "shared-shredding"},
+        {"fields.f1.map.shared-shredding.max-columns", "1"},
+    };
+    if (file_system == "jindo") {
+        options_v0 = AddOptionsForJindo(options_v0);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(test_dir_, arrow::schema(fields_v0),
+                                            /*partition_keys=*/{}, /*primary_keys=*/{}, options_v0,
+                                            /*is_streaming_mode=*/false));
+
+    ASSERT_OK_AND_ASSIGN(auto batch_v0,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields_v0),
+                                                     R"([
+                [[["a", 10], ["z", 11]], [["b", 20]], "old-1"],
+                [[["a", 12]], [["b", 21], ["y", 22]], "old-2"]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_v0), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    arrow::FieldVector fields_v1 = {
+        arrow::field("f0", map_type),
+        arrow::field("f1", map_type),
+        arrow::field("k2", arrow::utf8()),
+        arrow::field("f2", map_type),
+    };
+    std::map<std::string, std::string> options_v1 = options_v0;
+    options_v1["fields.f2.map.storage-layout"] = "shared-shredding";
+    options_v1["fields.f2.map.shared-shredding.max-columns"] = "1";
+    std::vector<DataField> data_fields_v1 = {
+        DataField(0, fields_v1[0]),
+        DataField(1, fields_v1[1]),
+        DataField(2, fields_v1[2]),
+        DataField(3, fields_v1[3]),
+    };
+    ASSERT_OK(WriteNextSchema(data_fields_v1, /*highest_field_id=*/3, options_v1));
+
+    helper.reset();
+    ASSERT_OK_AND_ASSIGN(helper,
+                         TestHelper::Create(PathUtil::JoinPath(test_dir_, "foo.db/bar"), options_v1,
+                                            /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(auto batch_v1,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields_v1),
+                                                     R"([
+                [[["a", 30], ["z", 31]], [["b", 40]], "new-1", [["c", 50], ["x", 51]]],
+                [[["a", 32]], [["b", 41]], "new-2", [["c", 52]]]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_v1), /*commit_identifier=*/1,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    auto expected_type = arrow::struct_({
+        arrow::field("_VALUE_KIND", arrow::int8()),
+        arrow::field("f0", map_type),
+        arrow::field("f2", map_type),
+        arrow::field("k2", arrow::utf8()),
+    });
+    ASSERT_OK_AND_ASSIGN(bool success,
+                         ReadAndCheckProjectedResult(options_v1, {"f0", "f2", "k2"}, expected_type,
+                                                     R"([
+                [0, [["a", 10], ["z", 11]], null, "old-1"],
+                [0, [["a", 12]], null, "old-2"],
+                [0, [["a", 30], ["z", 31]], [["c", 50], ["x", 51]], "new-1"],
+                [0, [["a", 32]], [["c", 52]], "new-2"]
+            ])"));
+    ASSERT_TRUE(success);
+}
+
+// Verify storage-layout evolution: default->shared-shredding.
+TEST_P(WriteAndReadInteTest, TestMapStorageLayoutDefaultToSharedShredding) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+    };
+    std::map<std::string, std::string> options_v0 = {
+        {Options::MANIFEST_FORMAT, "avro"},  {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"}, {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system}, {"fields.tags.map.storage-layout", "default"},
+    };
+    if (file_system == "jindo") {
+        options_v0 = AddOptionsForJindo(options_v0);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(test_dir_, arrow::schema(fields),
+                                            /*partition_keys=*/{}, /*primary_keys=*/{}, options_v0,
+                                            /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(auto batch_v0,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([[1, [["a", 10], ["z", 11]]], [2, null]])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_v0), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    std::map<std::string, std::string> options_v1 = options_v0;
+    options_v1["fields.tags.map.storage-layout"] = "shared-shredding";
+    options_v1["fields.tags.map.shared-shredding.max-columns"] = "1";
+    ASSERT_OK(WriteNextSchema({DataField(0, fields[0]), DataField(1, fields[1])},
+                              /*highest_field_id=*/1, options_v1));
+    helper.reset();
+    ASSERT_OK_AND_ASSIGN(helper,
+                         TestHelper::Create(PathUtil::JoinPath(test_dir_, "foo.db/bar"), options_v1,
+                                            /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(auto batch_v1, TestHelper::MakeRecordBatch(
+                                            arrow::struct_(fields),
+                                            R"([[3, [["a", 30], ["z", 31]]], [4, [["a", 40]]]])",
+                                            /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_v1), /*commit_identifier=*/1,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    arrow::FieldVector expected_fields = fields;
+    expected_fields.insert(expected_fields.begin(), arrow::field("_VALUE_KIND", arrow::int8()));
+    ASSERT_OK_AND_ASSIGN(auto splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(bool success,
+                         helper->ReadAndCheckResult(arrow::struct_(expected_fields), splits,
+                                                    R"([
+                [0, 1, [["a", 10], ["z", 11]]],
+                [0, 2, null],
+                [0, 3, [["a", 30], ["z", 31]]],
+                [0, 4, [["a", 40]]]
+            ])"));
+    ASSERT_TRUE(success);
+}
+
+// Verify storage-layout evolution: shared-shredding->default.
+TEST_P(WriteAndReadInteTest, TestMapStorageLayoutSharedShreddingToDefault) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+    };
+    std::map<std::string, std::string> options_v0 = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "1"},
+    };
+    if (file_system == "jindo") {
+        options_v0 = AddOptionsForJindo(options_v0);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(test_dir_, arrow::schema(fields),
+                                            /*partition_keys=*/{}, /*primary_keys=*/{}, options_v0,
+                                            /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(auto batch_v0, TestHelper::MakeRecordBatch(
+                                            arrow::struct_(fields),
+                                            R"([[1, [["a", 10], ["z", 11]]], [2, [["a", 20]]]])",
+                                            /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_v0), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    std::map<std::string, std::string> options_v1 = options_v0;
+    options_v1["fields.tags.map.storage-layout"] = "default";
+    options_v1.erase("fields.tags.map.shared-shredding.max-columns");
+    ASSERT_OK(WriteNextSchema({DataField(0, fields[0]), DataField(1, fields[1])},
+                              /*highest_field_id=*/1, options_v1));
+    helper.reset();
+    ASSERT_OK_AND_ASSIGN(helper,
+                         TestHelper::Create(PathUtil::JoinPath(test_dir_, "foo.db/bar"), options_v1,
+                                            /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(auto batch_v1,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([[3, [["a", 30], ["z", 31]]], [4, null]])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_v1), /*commit_identifier=*/1,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    arrow::FieldVector expected_fields = fields;
+    expected_fields.insert(expected_fields.begin(), arrow::field("_VALUE_KIND", arrow::int8()));
+    ASSERT_OK_AND_ASSIGN(auto splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(bool success,
+                         helper->ReadAndCheckResult(arrow::struct_(expected_fields), splits,
+                                                    R"([
+                [0, 1, [["a", 10], ["z", 11]]],
+                [0, 2, [["a", 20]]],
+                [0, 3, [["a", 30], ["z", 31]]],
+                [0, 4, null]
+            ])"));
+    ASSERT_TRUE(success);
+}
+
+// Nested map values through both selected physical columns and overflow.
+TEST_P(WriteAndReadInteTest, TestSharedShreddingWithStructValue) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    auto value_type = arrow::struct_({
+        arrow::field("name", arrow::utf8()),
+        arrow::field("score", arrow::int32()),
+    });
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), value_type)),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "1"},
+    };
+    if (file_system == "jindo") {
+        options = AddOptionsForJindo(options);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(test_dir_, arrow::schema(fields),
+                                            /*partition_keys=*/{}, /*primary_keys=*/{}, options,
+                                            /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+                [1, [["a", ["alice", 10]], ["z", ["zoe", 11]]]],
+                [2, [["a", ["amy", null]]]],
+                [3, null]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    arrow::FieldVector expected_fields = fields;
+    expected_fields.insert(expected_fields.begin(), arrow::field("_VALUE_KIND", arrow::int8()));
+    ASSERT_OK_AND_ASSIGN(auto splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(bool success,
+                         helper->ReadAndCheckResult(arrow::struct_(expected_fields), splits,
+                                                    R"([
+                [0, 1, [["a", ["alice", 10]], ["z", ["zoe", 11]]]],
+                [0, 2, [["a", ["amy", null]]]],
+                [0, 3, null]
+            ])"));
+    ASSERT_TRUE(success);
+}
+
+// Keep ORC lazy dictionary decoding enabled across a default -> shared-shredding schema change.
+// The test inspects every user-visible batch directly, because ReadResultCollector would otherwise
+// decode dictionary arrays and hide a type mismatch between old and new files.
+TEST_P(WriteAndReadInteTest, TestOrcDictionaryLazyDecodingWithSharedShredding) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "orc") {
+        return;
+    }
+
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::utf8())),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},       {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system},       {"fields.tags.map.storage-layout", "default"},
+        {"orc.read.enable-lazy-decoding", "true"}, {"orc.dictionary-key-size-threshold", "1"},
+    };
+    if (file_system == "jindo") {
+        options = AddOptionsForJindo(options);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(test_dir_, arrow::schema(fields),
+                                            /*partition_keys=*/{}, /*primary_keys=*/{}, options,
+                                            /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(auto batch_v0,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+                [1, [["a", "red"], ["z", "blue"]]],
+                [2, [["a", "red"], ["z", "green"]]]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_v0), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    std::map<std::string, std::string> options_v1 = options;
+    options_v1["fields.tags.map.storage-layout"] = "shared-shredding";
+    options_v1["fields.tags.map.shared-shredding.max-columns"] = "1";
+    ASSERT_OK(WriteNextSchema({DataField(0, fields[0]), DataField(1, fields[1])},
+                              /*highest_field_id=*/1, options_v1));
+
+    helper.reset();
+    std::string table_path = PathUtil::JoinPath(test_dir_, "foo.db/bar");
+    ASSERT_OK_AND_ASSIGN(helper, TestHelper::Create(table_path, options_v1,
+                                                    /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(auto batch_v1,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+                [3, [["a", "red"], ["z", "yellow"]]],
+                [4, [["a", "red"]]]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_v1), /*commit_identifier=*/1,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    arrow::FieldVector expected_fields = fields;
+    expected_fields.insert(expected_fields.begin(), arrow::field("_VALUE_KIND", arrow::int8()));
+    ASSERT_OK_AND_ASSIGN(auto splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(bool success,
+                         helper->ReadAndCheckResult(arrow::struct_(expected_fields), splits,
+                                                    R"([
+                [0, 1, [["a", "red"], ["z", "blue"]]],
+                [0, 2, [["a", "red"], ["z", "green"]]],
+                [0, 3, [["a", "red"], ["z", "yellow"]]],
+                [0, 4, [["a", "red"]]]
+            ])"));
+    ASSERT_TRUE(success);
+}
+
+// Verify shared-shredding in the PK read path.
+TEST_P(WriteAndReadInteTest, TestPkSharedShreddingMap) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    arrow::FieldVector fields = {
+        arrow::field("pk", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "1"},
+        {Options::FILE_SYSTEM, file_system},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "1"},
+    };
+    if (file_system == "jindo") {
+        options = AddOptionsForJindo(options);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(test_dir_, arrow::schema(fields),
+                                            /*partition_keys=*/{}, /*primary_keys=*/{"pk"}, options,
+                                            /*is_streaming_mode=*/true));
+
+    ASSERT_OK_AND_ASSIGN(auto batch_0, TestHelper::MakeRecordBatch(
+                                           arrow::struct_(fields),
+                                           R"([[1, [["a", 10], ["z", 11]]], [2, [["b", 20]]]])",
+                                           /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_0), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto batch_1, TestHelper::MakeRecordBatch(
+                                           arrow::struct_(fields),
+                                           R"([[1, [["a", 100], ["z", 101]]], [3, [["c", 30]]]])",
+                                           /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_1), /*commit_identifier=*/1,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    arrow::FieldVector expected_fields = fields;
+    expected_fields.insert(expected_fields.begin(), arrow::field("_VALUE_KIND", arrow::int8()));
+    ASSERT_OK_AND_ASSIGN(auto splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(bool success,
+                         helper->ReadAndCheckResult(arrow::struct_(expected_fields), splits,
+                                                    R"([
+                [0, 1, [["a", 100], ["z", 101]]],
+                [0, 2, [["b", 20]]],
+                [0, 3, [["c", 30]]]
+            ])"));
+    ASSERT_TRUE(success);
+}
+
+TEST_P(WriteAndReadInteTest, TestSharedShreddingPartialKeyRecallWithOverflow) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    auto map_type = arrow::map(arrow::utf8(), arrow::int64());
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "2"},
+    };
+    if (file_system == "jindo") {
+        options = AddOptionsForJindo(options);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(test_dir_, arrow::schema(fields),
+                                            /*partition_keys=*/{}, /*primary_keys=*/{}, options,
+                                            /*is_streaming_mode=*/false));
+
+    // max-columns=2, so keys are allocated in insertion order:
+    // Row 1: {a:1, b:2, c:3, d:4} -> physical cols: a, b; overflow: c, d
+    // Row 2: {a:10, b:20}          -> physical cols: a, b; no overflow
+    // Row 3: null
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+                [1, [["a", 1], ["b", 2], ["c", 3], ["d", 4]]],
+                [2, [["a", 10], ["b", 20]]],
+                [3, null]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    // Sub-case 1: read only key "a" (in physical column)
+    {
+        auto selected_keys_meta =
+            arrow::KeyValueMetadata::Make({"paimon.map.selected-keys"}, {"a"});
+        auto read_schema = arrow::schema({
+            arrow::field("id", arrow::int32()),
+            arrow::field("tags", map_type)->WithMetadata(selected_keys_meta),
+        });
+        auto expected_type = arrow::struct_({
+            arrow::field("_VALUE_KIND", arrow::int8()),
+            arrow::field("id", arrow::int32()),
+            arrow::field("tags", map_type),
+        });
+        ASSERT_OK_AND_ASSIGN(bool success,
+                             ReadAndCheckWithReadSchema(options, read_schema, expected_type,
+                                                        R"([
+                    [0, 1, [["a", 1]]],
+                    [0, 2, [["a", 10]]],
+                    [0, 3, null]
+                ])"));
+        ASSERT_TRUE(success);
+    }
+
+    // Sub-case 2: read only key "c" (in overflow)
+    {
+        auto selected_keys_meta =
+            arrow::KeyValueMetadata::Make({"paimon.map.selected-keys"}, {"c"});
+        auto read_schema = arrow::schema({
+            arrow::field("id", arrow::int32()),
+            arrow::field("tags", map_type)->WithMetadata(selected_keys_meta),
+        });
+        auto expected_type = arrow::struct_({
+            arrow::field("_VALUE_KIND", arrow::int8()),
+            arrow::field("id", arrow::int32()),
+            arrow::field("tags", map_type),
+        });
+        ASSERT_OK_AND_ASSIGN(bool success,
+                             ReadAndCheckWithReadSchema(options, read_schema, expected_type,
+                                                        R"([
+                    [0, 1, [["c", 3]]],
+                    [0, 2, []],
+                    [0, 3, null]
+                ])"));
+        ASSERT_TRUE(success);
+    }
+
+    // Sub-case 3: read keys "c" and "a" (cross physical + overflow), order follows user request
+    {
+        auto selected_keys_meta =
+            arrow::KeyValueMetadata::Make({"paimon.map.selected-keys"}, {"c,a"});
+        auto read_schema = arrow::schema({
+            arrow::field("id", arrow::int32()),
+            arrow::field("tags", map_type)->WithMetadata(selected_keys_meta),
+        });
+        auto expected_type = arrow::struct_({
+            arrow::field("_VALUE_KIND", arrow::int8()),
+            arrow::field("id", arrow::int32()),
+            arrow::field("tags", map_type),
+        });
+        ASSERT_OK_AND_ASSIGN(bool success,
+                             ReadAndCheckWithReadSchema(options, read_schema, expected_type,
+                                                        R"([
+                    [0, 1, [["c", 3], ["a", 1]]],
+                    [0, 2, [["a", 10]]],
+                    [0, 3, null]
+                ])"));
+        ASSERT_TRUE(success);
+    }
+}
+
+TEST_P(WriteAndReadInteTest, TestSharedShreddingPartialKeyRecallWithNullOrMissingKey) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    auto map_type = arrow::map(arrow::utf8(), arrow::int64());
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "3"},
+    };
+    if (file_system == "jindo") {
+        options = AddOptionsForJindo(options);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(test_dir_, arrow::schema(fields),
+                                            /*partition_keys=*/{}, /*primary_keys=*/{}, options,
+                                            /*is_streaming_mode=*/false));
+
+    // Row 1: tags=null
+    // Row 2: tags={b:2} (no key "a")
+    // Row 3: tags={a:30, b:40}
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+                [1, null],
+                [2, [["b", 2]]],
+                [3, [["a", 30], ["b", 40]]]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    // Sub-case 1: row with null tags, request key "a" -> tags should be null
+    // Sub-case 2: row without key "a", request key "a" -> key "a" maps to null value
+    // Sub-case 3: row with key "a", request key "a" -> normal value
+    {
+        auto selected_keys_meta =
+            arrow::KeyValueMetadata::Make({"paimon.map.selected-keys"}, {"a"});
+        auto read_schema = arrow::schema({
+            arrow::field("id", arrow::int32()),
+            arrow::field("tags", map_type)->WithMetadata(selected_keys_meta),
+        });
+        auto expected_type = arrow::struct_({
+            arrow::field("_VALUE_KIND", arrow::int8()),
+            arrow::field("id", arrow::int32()),
+            arrow::field("tags", map_type),
+        });
+        ASSERT_OK_AND_ASSIGN(bool success,
+                             ReadAndCheckWithReadSchema(options, read_schema, expected_type,
+                                                        R"([
+                    [0, 1, null],
+                    [0, 2, []],
+                    [0, 3, [["a", 30]]]
+                ])"));
+        ASSERT_TRUE(success);
+    }
+
+    // Sub-case 4: request a key that was never written ("nonexistent") -> all rows have null value
+    {
+        auto selected_keys_meta =
+            arrow::KeyValueMetadata::Make({"paimon.map.selected-keys"}, {"nonexistent"});
+        auto read_schema = arrow::schema({
+            arrow::field("id", arrow::int32()),
+            arrow::field("tags", map_type)->WithMetadata(selected_keys_meta),
+        });
+        auto expected_type = arrow::struct_({
+            arrow::field("_VALUE_KIND", arrow::int8()),
+            arrow::field("id", arrow::int32()),
+            arrow::field("tags", map_type),
+        });
+        ASSERT_OK_AND_ASSIGN(bool success,
+                             ReadAndCheckWithReadSchema(options, read_schema, expected_type,
+                                                        R"([
+                    [0, 1, null],
+                    [0, 2, []],
+                    [0, 3, []]
+                ])"));
+        ASSERT_TRUE(success);
+    }
+}
+
+TEST_P(WriteAndReadInteTest, TestSharedShreddingPartialKeyRecallMultipleColumns) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    auto map_type = arrow::map(arrow::utf8(), arrow::int64());
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type),
+        arrow::field("metrics", map_type),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {"fields.metrics.map.storage-layout", "shared-shredding"},
+        {"fields.metrics.map.shared-shredding.max-columns", "3"},
+    };
+    if (file_system == "jindo") {
+        options = AddOptionsForJindo(options);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(test_dir_, arrow::schema(fields),
+                                            /*partition_keys=*/{}, /*primary_keys=*/{}, options,
+                                            /*is_streaming_mode=*/false));
+
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+                [1, [["a", 1], ["b", 2]], [["x", 100], ["y", 200]]],
+                [2, [["a", 10], ["c", 30]], [["x", 1000], ["z", 3000]]]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    // Sub-case 1: partial key recall on both columns independently
+    {
+        auto tags_meta = arrow::KeyValueMetadata::Make({"paimon.map.selected-keys"}, {"a"});
+        auto metrics_meta = arrow::KeyValueMetadata::Make({"paimon.map.selected-keys"}, {"x"});
+        auto read_schema = arrow::schema({
+            arrow::field("id", arrow::int32()),
+            arrow::field("tags", map_type)->WithMetadata(tags_meta),
+            arrow::field("metrics", map_type)->WithMetadata(metrics_meta),
+        });
+        auto expected_type = arrow::struct_({
+            arrow::field("_VALUE_KIND", arrow::int8()),
+            arrow::field("id", arrow::int32()),
+            arrow::field("tags", map_type),
+            arrow::field("metrics", map_type),
+        });
+        ASSERT_OK_AND_ASSIGN(bool success,
+                             ReadAndCheckWithReadSchema(options, read_schema, expected_type,
+                                                        R"([
+                    [0, 1, [["a", 1]], [["x", 100]]],
+                    [0, 2, [["a", 10]], [["x", 1000]]]
+                ])"));
+        ASSERT_TRUE(success);
+    }
+
+    // Sub-case 2: partial key recall on tags + full recall on metrics
+    {
+        auto tags_meta = arrow::KeyValueMetadata::Make({"paimon.map.selected-keys"}, {"a,b"});
+        auto read_schema = arrow::schema({
+            arrow::field("id", arrow::int32()),
+            arrow::field("tags", map_type)->WithMetadata(tags_meta),
+            arrow::field("metrics", map_type),
+        });
+        auto expected_type = arrow::struct_({
+            arrow::field("_VALUE_KIND", arrow::int8()),
+            arrow::field("id", arrow::int32()),
+            arrow::field("tags", map_type),
+            arrow::field("metrics", map_type),
+        });
+        ASSERT_OK_AND_ASSIGN(bool success,
+                             ReadAndCheckWithReadSchema(options, read_schema, expected_type,
+                                                        R"([
+                    [0, 1, [["a", 1], ["b", 2]], [["x", 100], ["y", 200]]],
+                    [0, 2, [["a", 10]], [["x", 1000], ["z", 3000]]]
+                ])"));
+        ASSERT_TRUE(success);
+    }
+}
+
+TEST_P(WriteAndReadInteTest, TestMapStorageLayoutDefaultToSharedShreddingPartialKeyRecall) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    auto map_type = arrow::map(arrow::utf8(), arrow::int64());
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type),
+    };
+    std::map<std::string, std::string> options_v0 = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system},
+        {"fields.tags.map.storage-layout", "default"},
+    };
+    if (file_system == "jindo") {
+        options_v0 = AddOptionsForJindo(options_v0);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(test_dir_, arrow::schema(fields),
+                                            /*partition_keys=*/{}, /*primary_keys=*/{}, options_v0,
+                                            /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(auto batch_v0,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+                [1, [["a", 10], ["b", 20]]],
+                [2, null]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_v0), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    std::map<std::string, std::string> options_v1 = options_v0;
+    options_v1["fields.tags.map.storage-layout"] = "shared-shredding";
+    options_v1["fields.tags.map.shared-shredding.max-columns"] = "1";
+    ASSERT_OK(WriteNextSchema({DataField(0, fields[0]), DataField(1, fields[1])},
+                              /*highest_field_id=*/1, options_v1));
+    helper.reset();
+    ASSERT_OK_AND_ASSIGN(helper,
+                         TestHelper::Create(PathUtil::JoinPath(test_dir_, "foo.db/bar"), options_v1,
+                                            /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(auto batch_v1,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+                [3, [["a", 30], ["z", 31]]],
+                [4, [["z", 41]]]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_v1), /*commit_identifier=*/1,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    auto selected_keys_meta =
+        arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"a"});
+    auto read_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type)->WithMetadata(selected_keys_meta),
+    });
+    auto expected_type = arrow::struct_({
+        arrow::field("_VALUE_KIND", arrow::int8()),
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type),
+    });
+    ASSERT_OK_AND_ASSIGN(bool success,
+                         ReadAndCheckWithReadSchema(options_v1, read_schema, expected_type,
+                                                    R"([
+                [0, 1, [["a", 10]]],
+                [0, 2, null],
+                [0, 3, [["a", 30]]],
+                [0, 4, []]
+            ])"));
+    ASSERT_TRUE(success);
+}
+
+TEST_P(WriteAndReadInteTest, TestMapStorageLayoutSharedShreddingToDefaultPartialKeyRecall) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    auto map_type = arrow::map(arrow::utf8(), arrow::int64());
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type),
+    };
+    std::map<std::string, std::string> options_v0 = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "1"},
+    };
+    if (file_system == "jindo") {
+        options_v0 = AddOptionsForJindo(options_v0);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(test_dir_, arrow::schema(fields),
+                                            /*partition_keys=*/{}, /*primary_keys=*/{}, options_v0,
+                                            /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(auto batch_v0,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+                [1, [["a", 10], ["z", 11]]],
+                [2, [["z", 21]]]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_v0), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    std::map<std::string, std::string> options_v1 = options_v0;
+    options_v1["fields.tags.map.storage-layout"] = "default";
+    options_v1.erase("fields.tags.map.shared-shredding.max-columns");
+    ASSERT_OK(WriteNextSchema({DataField(0, fields[0]), DataField(1, fields[1])},
+                              /*highest_field_id=*/1, options_v1));
+    helper.reset();
+    ASSERT_OK_AND_ASSIGN(helper,
+                         TestHelper::Create(PathUtil::JoinPath(test_dir_, "foo.db/bar"), options_v1,
+                                            /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(auto batch_v1,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+                [3, [["a", 30], ["z", 31]]],
+                [4, null]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_v1), /*commit_identifier=*/1,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    auto selected_keys_meta =
+        arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"a"});
+    auto read_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type)->WithMetadata(selected_keys_meta),
+    });
+    auto expected_type = arrow::struct_({
+        arrow::field("_VALUE_KIND", arrow::int8()),
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type),
+    });
+    ASSERT_OK_AND_ASSIGN(bool success,
+                         ReadAndCheckWithReadSchema(options_v1, read_schema, expected_type,
+                                                    R"([
+                [0, 1, [["a", 10]]],
+                [0, 2, []],
+                [0, 3, [["a", 30]]],
+                [0, 4, null]
+            ])"));
+    ASSERT_TRUE(success);
+}
+
+TEST_P(WriteAndReadInteTest, TestSharedShreddingDuplicateSelectedKeys) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    auto map_type = arrow::map(arrow::utf8(), arrow::int64());
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "1"},
+    };
+    if (file_system == "jindo") {
+        options = AddOptionsForJindo(options);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(test_dir_, arrow::schema(fields),
+                                            /*partition_keys=*/{}, /*primary_keys=*/{}, options,
+                                            /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([[1, [["a", 10], ["b", 20]]]])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    auto selected_keys_meta =
+        arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"a,a"});
+    auto read_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type)->WithMetadata(selected_keys_meta),
+    });
+    auto expected_type = arrow::struct_({
+        arrow::field("_VALUE_KIND", arrow::int8()),
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type),
+    });
+    ASSERT_NOK_WITH_MSG(ReadAndCheckWithReadSchema(options, read_schema, expected_type, "[]"),
+                        "Duplicate selected key 'a'");
+}
+
+TEST_P(WriteAndReadInteTest, TestSharedShreddingAllNullMapColumn) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    auto map_type = arrow::map(arrow::utf8(), arrow::int64());
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "1"},
+    };
+    if (file_system == "jindo") {
+        options = AddOptionsForJindo(options);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(test_dir_, arrow::schema(fields),
+                                            /*partition_keys=*/{}, /*primary_keys=*/{}, options,
+                                            /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+                [1, null],
+                [2, null],
+                [3, null]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    arrow::FieldVector expected_fields = fields;
+    expected_fields.insert(expected_fields.begin(), arrow::field("_VALUE_KIND", arrow::int8()));
+    ASSERT_OK_AND_ASSIGN(auto splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(bool success,
+                         helper->ReadAndCheckResult(arrow::struct_(expected_fields), splits,
+                                                    R"([
+                [0, 1, null],
+                [0, 2, null],
+                [0, 3, null]
+            ])"));
+    ASSERT_TRUE(success);
 }
 
 INSTANTIATE_TEST_SUITE_P(FileFormatAndFileSystem, WriteAndReadInteTest,

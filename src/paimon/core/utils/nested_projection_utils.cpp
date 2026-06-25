@@ -237,28 +237,20 @@ Result<bool> NestedProjectionUtils::HasNestedSubfieldProjection(
 }
 
 // Map selected-keys support
-
 Result<std::vector<std::string>> NestedProjectionUtils::GetMapSelectedKeys(
     const std::shared_ptr<arrow::Field>& field) {
     std::vector<std::string> result;
-    if (!field || !field->HasMetadata() || !field->metadata()) {
+    if (!field->HasMetadata() || !field->metadata()) {
         return result;
     }
     auto get_result = field->metadata()->Get(DataField::MAP_SELECTED_KEYS);
     if (!get_result.ok()) {
         return result;
     }
-    std::string value = get_result.ValueUnsafe();
-    if (value.empty()) {
-        // Metadata is explicitly present but empty: select the empty-string key.
-        result.push_back("");
-        return result;
-    }
-
-    auto tokens = StringUtils::Split(value, ",", /*ignore_empty=*/false);
+    auto tokens = StringUtils::Split(get_result.ValueUnsafe(), ",", /*ignore_empty=*/false);
     std::unordered_set<std::string> deduplicated;
     deduplicated.reserve(tokens.size());
-    for (auto& token : tokens) {
+    for (const auto& token : tokens) {
         if (!deduplicated.insert(token).second) {
             return Status::Invalid(fmt::format("Duplicate selected key '{}' in {} metadata", token,
                                                DataField::MAP_SELECTED_KEYS));
