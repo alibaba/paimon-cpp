@@ -97,8 +97,15 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         bool* need_prefetch) const override;
 
     Result<uint64_t> GetPreviousBatchGlobalRowId(uint64_t batch_row_id) const override {
+        if (row_mapping_.size() == 0) {
+            return Status::Invalid(
+                "Last batch is not read or last batch is empty, cannot get previous batch global "
+                "row id");
+        }
         if (batch_row_id >= row_mapping_.size()) {
-            return std::numeric_limits<uint64_t>::max();
+            return Status::Invalid(
+                fmt::format("batch_row_id {} is out of range, last batch row count is {}",
+                            batch_row_id, row_mapping_.size()));
         }
         return row_mapping_[batch_row_id];
     }

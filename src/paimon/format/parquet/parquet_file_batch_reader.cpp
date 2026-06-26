@@ -346,6 +346,7 @@ Result<BatchReader::ReadBatch> ParquetFileBatchReader::NextBatch() {
     try {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::RecordBatch> batch, reader_->Next());
         if (batch == nullptr) {
+            row_mapping_.clear();
             return BatchReader::MakeEofBatch();
         }
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,

@@ -564,7 +564,7 @@ Result<BatchReader::ReadBatchWithBitmap> PrefetchFileBatchReaderImpl::NextBatchW
                 assert(false);
                 return Status::Invalid("peek batch not suppose to be nullptr");
             }
-            // current_batch_global_row_ids_.clear();
+            current_batch_global_row_ids_.clear();
             return BatchReader::MakeEofBatchWithBitmap();
         }
         if (value_count == prefetch_queues_.size()) {
@@ -600,8 +600,15 @@ Result<std::unique_ptr<::ArrowSchema>> PrefetchFileBatchReaderImpl::GetFileSchem
 
 Result<uint64_t> PrefetchFileBatchReaderImpl::GetPreviousBatchGlobalRowId(
     uint64_t batch_row_id) const {
+    if (current_batch_global_row_ids_.size() == 0) {
+        return Status::Invalid(
+            "Last batch is not read or last batch is empty, cannot get previous batch global row "
+            "id");
+    }
     if (batch_row_id >= current_batch_global_row_ids_.size()) {
-        return std::numeric_limits<uint64_t>::max();
+        return Status::Invalid(
+            fmt::format("batch_row_id {} is out of range, last batch row count is {}", batch_row_id,
+                        current_batch_global_row_ids_.size()));
     }
     return current_batch_global_row_ids_[batch_row_id];
 }
