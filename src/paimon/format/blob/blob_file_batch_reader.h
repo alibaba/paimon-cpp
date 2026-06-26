@@ -99,7 +99,7 @@ class BlobFileBatchReader : public FileBatchReader {
 
     Result<uint64_t> GetPreviousBatchGlobalRowId(uint64_t batch_row_id) const override {
         if (all_blob_lengths_.size() != target_blob_lengths_.size()) {
-            return Status::Invalid(
+            return Status::NotImplemented(
                 "Cannot call GetPreviousBatchGlobalRowId in BlobFileBatchReader because, after "
                 "bitmap pushdown, rows in the array returned by NextBatch are no longer "
                 "contiguous.");
