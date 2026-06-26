@@ -184,8 +184,7 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         const std::shared_ptr<arrow::Schema>& read_schema,
         const std::shared_ptr<arrow::Schema>& file_schema);
 
-    Result<RowRanges> GetAllTargetRowRanges(
-        const std::vector<TargetRowGroup>& target_row_groups) const;
+    Result<RowRanges> GetAllTargetRowRanges(const std::vector<TargetRowGroup>& target_row_groups);
 
     // precondition: predicate supposed not be empty
     Result<std::vector<int32_t>> FilterRowGroupsByPredicate(

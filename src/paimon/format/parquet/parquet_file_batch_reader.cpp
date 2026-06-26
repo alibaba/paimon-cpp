@@ -534,7 +534,8 @@ Result<std::vector<int32_t>> ParquetFileBatchReader::ComputeNestedColumnIndices(
 }
 
 Result<RowRanges> ParquetFileBatchReader::GetAllTargetRowRanges(
-    const std::vector<TargetRowGroup>& target_row_groups) const {
+    const std::vector<TargetRowGroup>& target_row_groups) {
+    row_mapping_.clear();
     auto all_row_group_ranges = reader_->GetAllRowGroupRanges();
     RowRanges all_ranges;
     for (const auto& target_row_group : target_row_groups) {
