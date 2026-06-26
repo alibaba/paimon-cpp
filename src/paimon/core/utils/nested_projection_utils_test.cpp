@@ -41,16 +41,14 @@ static std::shared_ptr<arrow::Field> MakeField(const std::string& name,
 
 TEST(NestedProjectionUtilsTest, GetPaimonFieldIdPresent) {
     auto field = MakeField("col", arrow::int32(), 42);
-    ASSERT_EQ(NestedProjectionUtils::GetPaimonFieldId(field), 42);
+    ASSERT_OK_AND_ASSIGN(int32_t field_id, NestedProjectionUtils::GetPaimonFieldId(field));
+    ASSERT_EQ(field_id, 42);
 }
 
 TEST(NestedProjectionUtilsTest, GetPaimonFieldIdMissing) {
     auto field = arrow::field("col", arrow::int32());
-    ASSERT_EQ(NestedProjectionUtils::GetPaimonFieldId(field), -1);
-}
-
-TEST(NestedProjectionUtilsTest, GetPaimonFieldIdNullptr) {
-    ASSERT_EQ(NestedProjectionUtils::GetPaimonFieldId(nullptr), -1);
+    ASSERT_NOK_WITH_MSG(NestedProjectionUtils::GetPaimonFieldId(field),
+                        "do not exist metadata in field");
 }
 
 // ============== FindFieldByPaimonId ==============
@@ -58,18 +56,16 @@ TEST(NestedProjectionUtilsTest, GetPaimonFieldIdNullptr) {
 TEST(NestedProjectionUtilsTest, FindFieldByPaimonIdFound) {
     auto struct_type =
         arrow::struct_({MakeField("x", arrow::int32(), 1), MakeField("y", arrow::utf8(), 2)});
-    auto found = NestedProjectionUtils::FindFieldByPaimonId(struct_type, 2);
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Field> found,
+                         NestedProjectionUtils::FindFieldByPaimonId(struct_type, 2));
     ASSERT_NE(found, nullptr);
     ASSERT_EQ(found->name(), "y");
 }
 
 TEST(NestedProjectionUtilsTest, FindFieldByPaimonIdNotFound) {
     auto struct_type = arrow::struct_({MakeField("x", arrow::int32(), 1)});
-    ASSERT_EQ(NestedProjectionUtils::FindFieldByPaimonId(struct_type, 99), nullptr);
-}
-
-TEST(NestedProjectionUtilsTest, FindFieldByPaimonIdNonStruct) {
-    ASSERT_EQ(NestedProjectionUtils::FindFieldByPaimonId(arrow::int32(), 1), nullptr);
+    ASSERT_NOK_WITH_MSG(NestedProjectionUtils::FindFieldByPaimonId(struct_type, 99),
+                        "cannot find field 99");
 }
 
 // ============== PruneDataType ==============
@@ -113,7 +109,7 @@ TEST(NestedProjectionUtilsTest, PruneDataTypeStructAllFieldsPruned) {
     auto read_type = arrow::struct_({MakeField("y", arrow::int32(), 99)});
 
     ASSERT_NOK_WITH_MSG(NestedProjectionUtils::PruneDataType(read_type, data_type),
-                        "does not support schema evolution inside struct");
+                        "cannot find field 99 in struct type");
 }
 
 TEST(NestedProjectionUtilsTest, PruneDataTypeNestedStruct) {
@@ -257,7 +253,6 @@ TEST(NestedProjectionUtilsTest, HasNestedSubfieldProjectionMissingTopLevelFieldR
 }
 
 // ============== GetMapSelectedKeys ==============
-
 TEST(NestedProjectionUtilsTest, GetMapSelectedKeysPresent) {
     auto metadata =
         arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"key1,key2,key3"});
@@ -311,11 +306,6 @@ TEST(NestedProjectionUtilsTest, GetMapSelectedKeysDuplicateKey) {
         arrow::field("m", arrow::map(arrow::utf8(), arrow::int32()), /*nullable=*/true, metadata);
     ASSERT_NOK_WITH_MSG(NestedProjectionUtils::GetMapSelectedKeys(field),
                         "Duplicate selected key 'a'");
-}
-
-TEST(NestedProjectionUtilsTest, GetMapSelectedKeysNullptr) {
-    ASSERT_OK_AND_ASSIGN(auto keys, NestedProjectionUtils::GetMapSelectedKeys(nullptr));
-    ASSERT_TRUE(keys.empty());
 }
 
 // ============== FilterMapArrayBySelectedKeys ==============

@@ -43,29 +43,37 @@ std::shared_ptr<arrow::Field> NestedProjectionUtils::FindFieldByName(
     return nullptr;
 }
 
-int32_t NestedProjectionUtils::GetPaimonFieldId(const std::shared_ptr<arrow::Field>& field) {
-    if (!field || !field->HasMetadata() || !field->metadata()) {
-        return -1;
+Result<int32_t> NestedProjectionUtils::GetPaimonFieldId(
+    const std::shared_ptr<arrow::Field>& field) {
+    if (!field->HasMetadata() || !field->metadata()) {
+        return Status::Invalid(fmt::format(
+            "GetPaimonFieldId failed, do not exist metadata in field {}", field->name()));
     }
     auto result = field->metadata()->Get(DataField::FIELD_ID);
     if (!result.ok()) {
-        return -1;
+        return Status::Invalid(
+            fmt::format("GetPaimonFieldId failed, cannot find field_id in metadata in field {}",
+                        field->name()));
     }
     std::optional<int32_t> field_id = StringUtils::StringToValue<int32_t>(result.ValueUnsafe());
-    return field_id.value_or(-1);
+    if (!field_id) {
+        return Status::Invalid(
+            fmt::format("GetPaimonFieldId failed, cannot find convert field_id {} to int32",
+                        result.ValueUnsafe()));
+    }
+    return field_id.value();
 }
 
-std::shared_ptr<arrow::Field> NestedProjectionUtils::FindFieldByPaimonId(
+Result<std::shared_ptr<arrow::Field>> NestedProjectionUtils::FindFieldByPaimonId(
     const std::shared_ptr<arrow::DataType>& struct_type, int32_t field_id) {
-    if (!struct_type || struct_type->id() != arrow::Type::STRUCT) {
-        return nullptr;
-    }
     for (const auto& child : struct_type->fields()) {
-        if (GetPaimonFieldId(child) == field_id) {
+        PAIMON_ASSIGN_OR_RAISE(int32_t paimon_field_id, GetPaimonFieldId(child));
+        if (paimon_field_id == field_id) {
             return child;
         }
     }
-    return nullptr;
+    return Status::Invalid(
+        fmt::format("cannot find field {} in struct type {}", field_id, struct_type->ToString()));
 }
 
 Result<bool> NestedProjectionUtils::HasNestedSubfieldProjectionType(
@@ -145,21 +153,9 @@ Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::P
         case arrow::Type::STRUCT: {
             arrow::FieldVector pruned_fields;
             for (const auto& read_child : read_type->fields()) {
-                int32_t read_child_id = GetPaimonFieldId(read_child);
-                if (read_child_id < 0) {
-                    return Status::Invalid(fmt::format(
-                        "PruneDataType requires paimon.id for nested struct field '{}', but it "
-                        "is missing or invalid",
-                        read_child->name()));
-                }
-                std::shared_ptr<arrow::Field> data_child =
-                    FindFieldByPaimonId(data_type, read_child_id);
-                if (!data_child) {
-                    return Status::Invalid(fmt::format(
-                        "PruneDataType does not support schema evolution inside struct: nested "
-                        "field '{}' (id={}) does not exist in data type {}",
-                        read_child->name(), read_child_id, data_type->ToString()));
-                }
+                PAIMON_ASSIGN_OR_RAISE(int32_t read_child_id, GetPaimonFieldId(read_child));
+                PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> data_child,
+                                       FindFieldByPaimonId(data_type, read_child_id));
                 if (read_child->name() != data_child->name()) {
                     return Status::Invalid(fmt::format(
                         "PruneDataType does not support schema evolution inside struct: nested "
@@ -187,7 +183,6 @@ Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::P
             }
             return std::optional<std::shared_ptr<arrow::DataType>>(arrow::struct_(pruned_fields));
         }
-
         case arrow::Type::LIST: {
             // Keep behavior aligned with format readers: partial projection inside
             // LIST is unsupported and must fail fast.
@@ -196,7 +191,6 @@ Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::P
                             "vs target {}",
                             data_type->ToString(), read_type->ToString()));
         }
-
         case arrow::Type::MAP: {
             // Keep behavior aligned with format readers: partial projection inside
             // MAP is unsupported and must fail fast.
@@ -204,7 +198,6 @@ Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::P
                 "PruneDataType does not support partial projection inside map: src {} vs target {}",
                 data_type->ToString(), read_type->ToString()));
         }
-
         default:
             // Atomic type: return data_type as-is (type evolution is handled
             // separately by CastExecutor).
@@ -237,28 +230,20 @@ Result<bool> NestedProjectionUtils::HasNestedSubfieldProjection(
 }
 
 // Map selected-keys support
-
 Result<std::vector<std::string>> NestedProjectionUtils::GetMapSelectedKeys(
     const std::shared_ptr<arrow::Field>& field) {
     std::vector<std::string> result;
-    if (!field || !field->HasMetadata() || !field->metadata()) {
+    if (!field->HasMetadata() || !field->metadata()) {
         return result;
     }
     auto get_result = field->metadata()->Get(DataField::MAP_SELECTED_KEYS);
     if (!get_result.ok()) {
         return result;
     }
-    std::string value = get_result.ValueUnsafe();
-    if (value.empty()) {
-        // Metadata is explicitly present but empty: select the empty-string key.
-        result.push_back("");
-        return result;
-    }
-
-    auto tokens = StringUtils::Split(value, ",", /*ignore_empty=*/false);
+    auto tokens = StringUtils::Split(get_result.ValueUnsafe(), ",", /*ignore_empty=*/false);
     std::unordered_set<std::string> deduplicated;
     deduplicated.reserve(tokens.size());
-    for (auto& token : tokens) {
+    for (const auto& token : tokens) {
         if (!deduplicated.insert(token).second) {
             return Status::Invalid(fmt::format("Duplicate selected key '{}' in {} metadata", token,
                                                DataField::MAP_SELECTED_KEYS));

@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -48,7 +49,9 @@ class FieldMappingReader : public FileBatchReader {
  public:
     static Result<std::unique_ptr<FieldMappingReader>> Create(
         int32_t field_count, std::unique_ptr<FileBatchReader>&& reader, const BinaryRow& partition,
-        std::unique_ptr<FieldMapping>&& mapping, const std::shared_ptr<MemoryPool>& pool);
+        std::unique_ptr<FieldMapping>&& mapping,
+        std::set<int32_t>&& skip_map_selected_keys_filter_field_ids,
+        const std::shared_ptr<MemoryPool>& pool);
 
     Result<ReadBatch> NextBatch() override {
         return Status::Invalid(
@@ -124,6 +127,7 @@ class FieldMappingReader : public FileBatchReader {
     std::optional<PartitionInfo> partition_info_;
     NonPartitionInfo non_partition_info_;
     std::optional<NonExistFieldInfo> non_exist_field_info_;
+    std::set<int32_t> skip_map_selected_keys_filter_field_ids_;
 
     std::shared_ptr<arrow::Array> partition_array_;
     std::shared_ptr<arrow::Array> non_exist_array_;

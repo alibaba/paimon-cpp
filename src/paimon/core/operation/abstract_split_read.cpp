@@ -18,10 +18,15 @@
 
 #include <cassert>
 #include <cstddef>
+#include <map>
+#include <set>
 #include <utility>
 
 #include "arrow/type.h"
+#include "fmt/format.h"
 #include "paimon/common/data/blob_utils.h"
+#include "paimon/common/data/shredding/map_shared_shredding_file_reader.h"
+#include "paimon/common/data/shredding/map_shared_shredding_utils.h"
 #include "paimon/common/reader/delegating_prefetch_reader.h"
 #include "paimon/common/reader/predicate_batch_reader.h"
 #include "paimon/common/reader/prefetch_file_batch_reader_impl.h"
@@ -37,6 +42,7 @@
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/core/utils/field_mapping.h"
+#include "paimon/core/utils/nested_projection_utils.h"
 #include "paimon/format/file_format.h"
 #include "paimon/format/file_format_factory.h"
 #include "paimon/fs/file_system.h"
@@ -122,9 +128,8 @@ Result<std::unique_ptr<ReaderBuilder>> AbstractSplitRead::PrepareReaderBuilder(
 }
 
 Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFileBatchReader(
-    const std::shared_ptr<DataFileMeta>& file_meta, const std::string& data_file_path,
+    const std::string& file_format_identifier, const std::string& data_file_path,
     const ReaderBuilder* reader_builder) const {
-    PAIMON_ASSIGN_OR_RAISE(std::string file_format_identifier, file_meta->FileFormat());
     if (file_format_identifier == "lance") {
         // lance do not support stream build with input stream
         return reader_builder->Build(data_file_path);
@@ -187,13 +192,22 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingRe
     auto read_schema = DataField::ConvertDataFieldsToArrowSchema(
         field_mapping->non_partition_info.non_partition_data_schema);
 
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileBatchReader> file_reader,
-                           CreateFileBatchReader(file_meta, data_file_path, reader_builder));
+    PAIMON_ASSIGN_OR_RAISE(std::string file_format_identifier, file_meta->FileFormat());
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<FileBatchReader> file_reader,
+        CreateFileBatchReader(file_format_identifier, data_file_path, reader_builder));
+    std::set<int32_t> skip_map_selected_keys_filter_field_ids;
+    if (file_format_identifier != "blob") {
+        std::pair<std::unique_ptr<FileBatchReader>, std::set<int32_t>> shared_shredding_result;
+        PAIMON_ASSIGN_OR_RAISE(shared_shredding_result, ApplySharedShreddingReaderIfNeeded(
+                                                            std::move(file_reader), read_schema));
+        file_reader = std::move(shared_shredding_result.first);
+        skip_map_selected_keys_filter_field_ids = std::move(shared_shredding_result.second);
+    }
     if (NeedCompleteRowTrackingFields(options_.RowTrackingEnabled(), read_schema)) {
         file_reader = std::make_unique<CompleteRowTrackingFieldsBatchReader>(
             std::move(file_reader), file_meta->first_row_id, file_meta->max_sequence_number, pool_);
     }
-
     const auto& predicate = field_mapping->non_partition_info.non_partition_filter;
     auto all_data_schema = DataField::ConvertDataFieldsToArrowSchema(data_schema->Fields());
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileBatchReader> final_reader,
@@ -205,11 +219,66 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingRe
         return std::unique_ptr<FileBatchReader>();
     }
 
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FieldMappingReader> mapping_reader,
-                           FieldMappingReader::Create(field_mapping_builder->GetReadFieldCount(),
-                                                      std::move(final_reader), partition,
-                                                      std::move(field_mapping), pool_));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<FieldMappingReader> mapping_reader,
+        FieldMappingReader::Create(field_mapping_builder->GetReadFieldCount(),
+                                   std::move(final_reader), partition, std::move(field_mapping),
+                                   std::move(skip_map_selected_keys_filter_field_ids), pool_));
     return mapping_reader;
+}
+
+Result<std::pair<std::unique_ptr<FileBatchReader>, std::set<int32_t>>>
+AbstractSplitRead::ApplySharedShreddingReaderIfNeeded(
+    std::unique_ptr<FileBatchReader>&& file_reader,
+    const std::shared_ptr<arrow::Schema>& read_schema) const {
+    std::set<int32_t> handled_shared_shredding_field_ids;
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::ArrowSchema> file_schema,
+                           file_reader->GetFileSchema());
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> file_arrow_schema,
+                                      arrow::ImportSchema(file_schema.get()));
+    std::map<std::string, MapSharedShreddingFileReader::SharedShreddingContext>
+        shared_shredding_name_to_context;
+    for (const auto& read_field : read_schema->fields()) {
+        const auto& field_name = read_field->name();
+        auto file_field = file_arrow_schema->GetFieldByName(field_name);
+        if (!file_field) {
+            // may exists field _ROW_ID in read schema
+            continue;
+        }
+        std::shared_ptr<arrow::KeyValueMetadata> metadata =
+            std::const_pointer_cast<arrow::KeyValueMetadata>(file_field->metadata());
+        if (!MapSharedShreddingUtils::HasShreddingMetadata(metadata)) {
+            // not a map shared shredding field
+            continue;
+        }
+        // get meta
+        PAIMON_ASSIGN_OR_RAISE(MapSharedShreddingFieldMeta meta,
+                               MapSharedShreddingUtils::DeserializeMetadata(
+                                   metadata, MapSharedShreddingDefine::kDefaultDictCompression));
+        // get selected_keys
+        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> selected_keys,
+                               NestedProjectionUtils::GetMapSelectedKeys(read_field));
+        if (selected_keys.empty()) {
+            // select all keys
+            selected_keys.reserve(meta.name_to_id.size());
+            for (const auto& [key_name, _] : meta.name_to_id) {
+                selected_keys.push_back(key_name);
+            }
+        }
+        // get map type
+        auto map_type = arrow::internal::checked_pointer_cast<arrow::MapType>(read_field->type());
+        shared_shredding_name_to_context.emplace(
+            field_name,
+            MapSharedShreddingFileReader::SharedShreddingContext(meta, selected_keys, map_type));
+        PAIMON_ASSIGN_OR_RAISE(int32_t field_id,
+                               NestedProjectionUtils::GetPaimonFieldId(read_field));
+        handled_shared_shredding_field_ids.insert(field_id);
+    }
+    if (!shared_shredding_name_to_context.empty()) {
+        file_reader = std::make_unique<MapSharedShreddingFileReader>(
+            std::move(file_reader), std::move(shared_shredding_name_to_context), pool_);
+    }
+    return std::make_pair(std::move(file_reader), std::move(handled_shared_shredding_field_ids));
 }
 
 Result<std::vector<DataField>> AbstractSplitRead::ProjectFieldsForRowTrackingAndDataEvolution(

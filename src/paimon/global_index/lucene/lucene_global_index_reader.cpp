@@ -50,8 +50,8 @@ Result<std::shared_ptr<LuceneGlobalIndexReader>> LuceneGlobalIndexReader::Create
         DataInputStream data_input_stream(paimon_input);
         PAIMON_ASSIGN_OR_RAISE(int32_t version, data_input_stream.ReadValue<int32_t>());
         if (version != kVersion) {
-            return Status::Invalid(fmt::format("LuceneGlobalIndex not support version {}"),
-                                   kVersion);
+            return Status::Invalid(
+                fmt::format("LuceneGlobalIndex not support version {}", kVersion));
         }
         PAIMON_ASSIGN_OR_RAISE(int32_t num_files, data_input_stream.ReadValue<int32_t>());
         for (int32_t i = 0; i < num_files; i++) {

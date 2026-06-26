@@ -18,7 +18,9 @@
 
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "arrow/type_fwd.h"
@@ -96,7 +98,7 @@ class AbstractSplitRead : public SplitRead {
         const std::string& format_identifier) const;
 
     Result<std::unique_ptr<FileBatchReader>> CreateFileBatchReader(
-        const std::shared_ptr<DataFileMeta>& file_meta, const std::string& data_file_path,
+        const std::string& file_format_identifier, const std::string& data_file_path,
         const ReaderBuilder* reader_builder) const;
 
     // return nullptr if data file is skipped by index or dv
@@ -106,6 +108,10 @@ class AbstractSplitRead : public SplitRead {
         const FieldMappingBuilder* field_mapping_builder, DeletionVector::Factory dv_factory,
         const std::optional<std::vector<Range>>& row_ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
+
+    Result<std::pair<std::unique_ptr<FileBatchReader>, std::set<int32_t>>>
+    ApplySharedShreddingReaderIfNeeded(std::unique_ptr<FileBatchReader>&& file_reader,
+                                       const std::shared_ptr<arrow::Schema>& read_schema) const;
 
     static bool NeedCompleteRowTrackingFields(bool row_tracking_enabled,
                                               const std::shared_ptr<arrow::Schema>& read_schema);
