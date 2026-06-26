@@ -20,6 +20,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -45,6 +46,13 @@ class MapSharedShreddingUtils {
     MapSharedShreddingUtils() = delete;
     ~MapSharedShreddingUtils() = delete;
 
+    /// Returns the physical column indices for the given field name from the shredding meta.
+    /// @param meta The shredding field meta parsed from file footer.
+    /// @param name The field name to look up.
+    /// @return Vector of physical column indices assigned to this field,
+    ///         or Status::Invalid if the field name or field id is not found.
+    static Result<std::vector<int32_t>> GetPhysicalColumnIndices(
+        const MapSharedShreddingFieldMeta& meta, const std::string& name);
     // ---- Column detection ----
 
     /// Checks whether a given arrow field is MAP<STRING, T> (the type prerequisite for shredding).
@@ -80,6 +88,15 @@ class MapSharedShreddingUtils {
         const std::shared_ptr<arrow::Schema>& logical_schema,
         const std::map<std::string, int32_t>& field_to_num_columns);
 
+    /// Builds the physical Arrow type for one shredding MAP column with physical_col_ids.
+    /// @param value_type The value type of the original MAP.
+    /// @param physical_col_ids The set of physical column ids to include.
+    /// @param value_nullable Whether the MAP's value field is nullable.
+    /// @param include_overflow Whether to include __overflow column.
+    static std::shared_ptr<arrow::DataType> BuildSpecificPhysicalStructType(
+        const std::shared_ptr<arrow::DataType>& value_type,
+        const std::set<int32_t>& physical_col_ids, bool value_nullable, bool include_overflow);
+
     /// Builds field_to_num_columns map from DetectShreddingColumns result and CoreOptions.
     /// @param shredding_field_names Field names returned by DetectShreddingColumns.
     /// @param options CoreOptions containing per-column max-columns config.
@@ -107,6 +124,10 @@ class MapSharedShreddingUtils {
     /// Checks whether a KeyValueMetadata contains shredding MAP metadata.
     static bool HasShreddingMetadata(const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
 
+    /// Checks whether a field in MapSharedShreddingFieldMeta is a overflow field.
+    static Result<bool> IsOverflowField(const MapSharedShreddingFieldMeta& meta,
+                                        const std::string& name);
+
     // ---- Writer helpers ----
 
     /// Builds a MetadataFinalizer that serializes shredding metadata into per-field
@@ -131,6 +152,15 @@ class MapSharedShreddingUtils {
     static std::shared_ptr<arrow::DataType> BuildPhysicalStructType(
         const std::shared_ptr<arrow::DataType>& value_type, int32_t num_columns,
         bool value_nullable);
+
+    /// Builds the physical Arrow type for one shredding MAP column with sorted_cols.
+    /// @param value_type The value type of the original MAP.
+    /// @param sorted_cols The vector of physical column ids to include.
+    /// @param value_nullable Whether the MAP's value field is nullable.
+    /// @param include_overflow Whether to include __overflow column.
+    static std::shared_ptr<arrow::DataType> InnerBuildSpecificPhysicalStructType(
+        const std::shared_ptr<arrow::DataType>& value_type, const std::vector<int32_t>& sorted_cols,
+        bool value_nullable, bool include_overflow);
 };
 
 }  // namespace paimon

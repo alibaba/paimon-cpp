@@ -42,8 +42,6 @@ class MockFormatWriterBuilder : public WriterBuilder {
                                                 const std::string& compression) override;
 
  private:
-    Status Prepare();
-
     std::shared_ptr<MemoryPool> memory_pool_;
 };
 

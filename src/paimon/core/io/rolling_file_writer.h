@@ -17,13 +17,14 @@
 #pragma once
 
 #include <memory>
-#include <utility>
+#include <type_traits>
 #include <vector>
 
 #include "arrow/c/bridge.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/core/io/file_writer.h"
 #include "paimon/core/io/single_file_writer.h"
+#include "paimon/core/io/single_file_writer_factory.h"
 #include "paimon/core/key_value.h"
 #include "paimon/metrics.h"
 #include "paimon/record_batch.h"
@@ -34,11 +35,10 @@ namespace paimon {
 template <typename T, typename R>
 class RollingFileWriter : public FileWriter<T, std::vector<R>> {
  public:
-    RollingFileWriter(
-        int64_t target_file_size,
-        std::function<Result<std::unique_ptr<SingleFileWriter<T, R>>>()> create_file_writer)
+    RollingFileWriter(int64_t target_file_size,
+                      const std::shared_ptr<SingleFileWriterFactory<T, R>>& writer_factory)
         : target_file_size_(target_file_size),
-          create_file_writer(create_file_writer),
+          writer_factory_(writer_factory),
           metrics_(std::make_shared<MetricsImpl>()),
           logger_(Logger::GetLogger("RollingFileWriter")) {}
 
@@ -70,7 +70,7 @@ class RollingFileWriter : public FileWriter<T, std::vector<R>> {
     Status OpenCurrentWriter();
 
     int64_t target_file_size_ = 0;
-    std::function<Result<std::unique_ptr<SingleFileWriter<T, R>>>()> create_file_writer;
+    std::shared_ptr<SingleFileWriterFactory<T, R>> writer_factory_;
     std::shared_ptr<Metrics> metrics_;
 
     int64_t record_count_ = 0;
@@ -137,7 +137,7 @@ Result<std::vector<R>> RollingFileWriter<T, R>::GetResult() {
 
 template <typename T, typename R>
 Result<std::unique_ptr<SingleFileWriter<T, R>>> RollingFileWriter<T, R>::NewWriter() {
-    return create_file_writer();
+    return writer_factory_->CreateWriter();
 }
 
 template <typename T, typename R>

@@ -50,7 +50,6 @@ class RemoteLookupFileManager {
 
     static constexpr uint64_t kBufferSize = 1024 * 1024;
 
- private:
     int32_t level_threshold_;
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<DataFilePathFactory> path_factory_;

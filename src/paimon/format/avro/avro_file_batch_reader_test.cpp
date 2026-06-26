@@ -295,6 +295,38 @@ TEST_F(AvroFileBatchReaderTest, TestReadMapTypes) {
     ASSERT_TRUE(expected_array->Equals(result_array));
 }
 
+TEST_F(AvroFileBatchReaderTest, TestSetReadSchemaRejectNestedSubFieldProjection) {
+    std::string path = PathUtil::JoinPath(dir_->Str(), "nested_projection_unsupported.avro");
+
+    arrow::FieldVector write_fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::struct_({arrow::field("a", arrow::int32()),
+                                           arrow::field("b", arrow::utf8())}))};
+    auto write_type = arrow::struct_(write_fields);
+    auto write_array = arrow::ipc::internal::json::ArrayFromJSON(write_type, R"([
+            [1, [10, "x"]],
+            [2, [20, "y"]]
+        ])")
+                           .ValueOrDie();
+    WriteData(write_array, path, /*compression=*/"null");
+
+    ASSERT_OK_AND_ASSIGN(auto reader_builder,
+                         file_format_->CreateReaderBuilder(/*batch_size=*/1024));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(path));
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, reader_builder->Build(in));
+
+    arrow::FieldVector read_fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::struct_({arrow::field("a", arrow::int32())}))};
+    auto read_schema = arrow::schema(read_fields);
+    std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
+
+    ASSERT_NOK_WITH_MSG(batch_reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr,
+                                                    /*selection_bitmap=*/std::nullopt),
+                        "does not support nested sub-field projection");
+}
+
 TEST_F(AvroFileBatchReaderTest, TestGetPreviousBatchFirstRowNumber) {
     std::string path = paimon::test::GetDataDir() +
                        "/avro/append_simple.db/"
@@ -341,6 +373,55 @@ TEST_F(AvroFileBatchReaderTest, TestGetPreviousBatchFirstRowNumber) {
     ASSERT_OK_AND_ASSIGN(auto batch5, reader->NextBatch());
     ASSERT_EQ(4, reader->GetPreviousBatchFirstRowNumber().value());
     ASSERT_TRUE(BatchReader::IsEofBatch(batch5));
+}
+
+TEST_F(AvroFileBatchReaderTest, TestSetReadSchemaResetsReaderToFirstRow) {
+    std::string file_path = PathUtil::JoinPath(dir_->Str(), "file.avro");
+
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::int32()),
+    };
+    auto file_data_type = arrow::struct_(fields);
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(file_data_type, R"([
+            [1, 10],
+            [2, 20],
+            [3, 30],
+            [4, 40]
+        ])")
+                         .ValueOrDie();
+    WriteData(src_array, file_path, /*compression=*/"null");
+
+    ASSERT_OK_AND_ASSIGN(auto reader_builder, file_format_->CreateReaderBuilder(/*batch_size=*/2));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_path));
+    ASSERT_OK_AND_ASSIGN(auto reader, reader_builder->Build(in));
+
+    ASSERT_OK_AND_ASSIGN(auto first_batch, reader->NextBatch());
+    ASSERT_EQ(0, reader->GetPreviousBatchFirstRowNumber().value());
+    auto first_array =
+        arrow::ImportArray(first_batch.first.get(), first_batch.second.get()).ValueOrDie();
+    ASSERT_TRUE(first_array->Equals(src_array->Slice(0, 2))) << first_array->ToString();
+
+    auto read_schema = arrow::schema({arrow::field("f1", arrow::int32())});
+    std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
+    ASSERT_OK(reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr,
+                                    /*selection_bitmap=*/std::nullopt));
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
+              reader->GetPreviousBatchFirstRowNumber().value());
+
+    ASSERT_OK_AND_ASSIGN(auto projected_batch, reader->NextBatch());
+    ASSERT_EQ(0, reader->GetPreviousBatchFirstRowNumber().value());
+    auto projected_array =
+        arrow::ImportArray(projected_batch.first.get(), projected_batch.second.get()).ValueOrDie();
+    auto expected_projected_array = arrow::ipc::internal::json::ArrayFromJSON(
+                                        arrow::struct_({arrow::field("f1", arrow::int32())}),
+                                        R"([
+            [10],
+            [20]
+        ])")
+                                        .ValueOrDie();
+    ASSERT_TRUE(projected_array->Equals(expected_projected_array)) << projected_array->ToString();
 }
 
 TEST_F(AvroFileBatchReaderTest, TestGetNumberOfRows) {

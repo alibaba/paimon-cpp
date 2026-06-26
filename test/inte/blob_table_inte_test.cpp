@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <initializer_list>
@@ -41,8 +42,10 @@
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
 #include "paimon/common/data/blob_descriptor.h"
+#include "paimon/common/data/blob_utils.h"
 #include "paimon/common/data/blob_view_struct.h"
 #include "paimon/common/factories/io_hook.h"
+#include "paimon/common/reader/reader_utils.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/scope_guard.h"
@@ -75,6 +78,7 @@
 #include "paimon/testing/utils/test_helper.h"
 #include "paimon/testing/utils/testharness.h"
 #include "paimon/write_context.h"
+
 namespace paimon {
 class DataSplit;
 class RecordBatch;
@@ -167,6 +171,7 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
             }
         }
     }
+
     Status Commit(const std::string& table_path,
                   const std::vector<std::shared_ptr<CommitMessage>>& commit_msgs) const {
         // commit
@@ -176,6 +181,25 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStoreCommit> file_store_commit,
                                FileStoreCommit::Create(std::move(commit_context)));
         return file_store_commit->Commit(commit_msgs);
+    }
+
+    Status WriteNextSchema(const std::string& table_path, const std::vector<DataField>& fields,
+                           int32_t highest_field_id,
+                           const std::map<std::string, std::string>& options) const {
+        SchemaManager schema_manager(dir_->GetFileSystem(), table_path);
+        PAIMON_ASSIGN_OR_RAISE(auto latest_schema_opt, schema_manager.Latest());
+        if (!latest_schema_opt) {
+            return Status::Invalid("table schema does not exist");
+        }
+        auto next_schema = std::make_shared<TableSchema>(*latest_schema_opt.value());
+        next_schema->id_ = latest_schema_opt.value()->Id() + 1;
+        next_schema->fields_ = fields;
+        next_schema->highest_field_id_ = highest_field_id;
+        next_schema->options_ = options;
+        PAIMON_ASSIGN_OR_RAISE(std::string schema_content, next_schema->ToJsonString());
+        std::string schema_path = PathUtil::JoinPath(schema_manager.SchemaDirectory(),
+                                                     "schema-" + std::to_string(next_schema->Id()));
+        return dir_->GetFileSystem()->AtomicStore(schema_path, schema_content);
     }
 
     /// Scan table and return the plan (without reading data).
@@ -203,7 +227,7 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
                                  const std::map<std::string, std::string>& options = {}) const {
         auto splits = plan->Splits();
         ReadContextBuilder read_context_builder(table_path);
-        read_context_builder.SetReadSchema(read_schema).SetPredicate(predicate);
+        read_context_builder.SetReadFieldNames(read_schema).SetPredicate(predicate);
         if (!options.empty()) {
             read_context_builder.SetOptions(options);
         }
@@ -1198,10 +1222,9 @@ TEST_P(BlobTableInteTest, TestIOException) {
                 .ValueOrDie());
         auto commit_msgs1_result = WriteArray(table_path, {}, write_cols1, {src_array1});
         CHECK_HOOK_STATUS(commit_msgs1_result.status(), i);
-        SetFirstRowId(/*reset_first_row_id=*/0,
-                      const_cast<std::vector<std::shared_ptr<paimon::CommitMessage>>&>(
-                          commit_msgs1_result.value()));
-        CHECK_HOOK_STATUS(Commit(table_path, commit_msgs1_result.value()), i);
+        auto commit_msgs1 = std::move(commit_msgs1_result).value();
+        SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs1);
+        CHECK_HOOK_STATUS(Commit(table_path, commit_msgs1), i);
         write_run_complete = true;
         break;
     }
@@ -1521,7 +1544,7 @@ TEST_P(BlobTableInteTest, TestWithRowIdsForMultipleBlobFiles) {
                               /*row_ranges=*/{Range(1l, 1l), Range(5l, 5l)}));
     }
     {
-        // test ont read blob field
+        // test not read blob field
         auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields_[1]}), R"([
         ["aaa1"],
@@ -2262,6 +2285,253 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorMultiCommitAndShuffledReadSchema) {
         ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(expected_array));
         ASSERT_TRUE(resolved->Equals(expected_with_rk));
     }
+}
+
+// The shared-shredding map is read from one main data file while the blob payload is read from a
+// separate blob file with the same row-id range.
+TEST_P(BlobTableInteTest, TestSharedShreddingWithBlobDataEvolution) {
+    if (GetParam() != "parquet" && GetParam() != "orc") {
+        return;
+    }
+
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+        BlobUtils::ToArrowField("payload"),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "orc"},
+        {Options::FILE_FORMAT, GetParam()},
+        {Options::BUCKET, "-1"},
+        {Options::ROW_TRACKING_ENABLED, "true"},
+        {Options::DATA_EVOLUTION_ENABLED, "true"},
+        {Options::FILE_SYSTEM, "local"},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "1"},
+    };
+    CreateTable(fields, /*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+
+    auto map_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields[0], fields[1]}),
+                                                  R"([
+                [1, [["a", 10], ["z", 11]]],
+                [2, [["a", 20]]],
+                [3, null]
+            ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto map_msgs, WriteArray(table_path, {}, {"id", "tags"}, {map_array}));
+    ASSERT_OK(Commit(table_path, map_msgs));
+
+    auto blob_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields[0], fields[2]}),
+                                                  R"([
+                [1, "payload-1"],
+                [2, "payload-2"],
+                [3, "payload-3"]
+            ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto blob_msgs,
+                         WriteArray(table_path, {}, {"id", "payload"}, {blob_array}));
+    SetFirstRowId(0, blob_msgs);
+    ASSERT_OK(Commit(table_path, blob_msgs));
+
+    auto expected = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields),
+                                                  R"([
+                [1, [["a", 10], ["z", 11]], "payload-1"],
+                [2, [["a", 20]], "payload-2"],
+                [3, null, "payload-3"]
+            ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, arrow::schema(fields)->field_names(), expected));
+}
+
+// Two independent shared-shredding map columns are written into different main files.
+TEST_P(BlobTableInteTest, TestMultipleSharedShreddingMapsWithBlobDataEvolution) {
+    if (GetParam() != "parquet" && GetParam() != "orc") {
+        return;
+    }
+
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("f0", arrow::map(arrow::utf8(), arrow::int64())),
+        arrow::field("f1", arrow::map(arrow::utf8(), arrow::utf8())),
+        BlobUtils::ToArrowField("payload"),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "orc"},
+        {Options::FILE_FORMAT, GetParam()},
+        {Options::BUCKET, "-1"},
+        {Options::ROW_TRACKING_ENABLED, "true"},
+        {Options::DATA_EVOLUTION_ENABLED, "true"},
+        {Options::FILE_SYSTEM, "local"},
+        {"fields.f0.map.storage-layout", "shared-shredding"},
+        {"fields.f0.map.shared-shredding.max-columns", "1"},
+        {"fields.f1.map.storage-layout", "shared-shredding"},
+        {"fields.f1.map.shared-shredding.max-columns", "1"},
+    };
+    CreateTable(fields, /*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+
+    auto f0_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields[0], fields[1]}),
+                                                  R"([
+                [1, [["a", 10], ["z", 11]]],
+                [2, [["a", 20]]],
+                [3, null]
+            ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto f0_msgs, WriteArray(table_path, {}, {"id", "f0"}, {f0_array}));
+    ASSERT_OK(Commit(table_path, f0_msgs));
+
+    auto f1_blob_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields[2], fields[3]}),
+                                                  R"([
+                [[["b", "red"], ["y", "blue"]], "payload-1"],
+                [[["b", "green"]], "payload-2"],
+                [[], "payload-3"]
+            ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto f1_blob_msgs,
+                         WriteArray(table_path, {}, {"f1", "payload"}, {f1_blob_array}));
+    SetFirstRowId(0, f1_blob_msgs);
+    ASSERT_OK(Commit(table_path, f1_blob_msgs));
+
+    auto expected = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields),
+                                                  R"([
+                [1, [["a", 10], ["z", 11]], [["b", "red"], ["y", "blue"]], "payload-1"],
+                [2, [["a", 20]], [["b", "green"]], "payload-2"],
+                [3, null, [], "payload-3"]
+            ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, arrow::schema(fields)->field_names(), expected));
+}
+
+// A newer partial data file rewrites only the shared-shredding map for the same row-id range.
+TEST_P(BlobTableInteTest, TestSharedShreddingMapOverrideWithBlobDataEvolution) {
+    if (GetParam() != "parquet" && GetParam() != "orc") {
+        return;
+    }
+
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+        BlobUtils::ToArrowField("payload"),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "orc"},
+        {Options::FILE_FORMAT, GetParam()},
+        {Options::BUCKET, "-1"},
+        {Options::ROW_TRACKING_ENABLED, "true"},
+        {Options::DATA_EVOLUTION_ENABLED, "true"},
+        {Options::FILE_SYSTEM, "local"},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "1"},
+    };
+    CreateTable(fields, /*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+
+    auto old_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields),
+                                                  R"([
+                [1, [["a", 10], ["z", 11]], "payload-1"],
+                [2, [["a", 20]], "payload-2"],
+                [3, [["a", 30]], "payload-3"]
+            ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(
+        auto old_msgs,
+        WriteArray(table_path, {}, arrow::schema(fields)->field_names(), {old_array}));
+    ASSERT_OK(Commit(table_path, old_msgs));
+
+    auto new_map_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields[1]}),
+                                                  R"([
+                [[["a", 100], ["z", 101]]],
+                [null],
+                [[]]
+            ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto new_map_msgs, WriteArray(table_path, {}, {"tags"}, {new_map_array}));
+    SetFirstRowId(0, new_map_msgs);
+    ASSERT_OK(Commit(table_path, new_map_msgs));
+
+    auto expected = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields),
+                                                  R"([
+                [1, [["a", 100], ["z", 101]], "payload-1"],
+                [2, null, "payload-2"],
+                [3, [], "payload-3"]
+            ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, arrow::schema(fields)->field_names(), expected));
+}
+
+TEST_P(BlobTableInteTest, TestOrcMapStorageLayoutEvolutionWithBlobDataEvolution) {
+    if (GetParam() != "orc") {
+        return;
+    }
+
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::utf8())),
+        BlobUtils::ToArrowField("payload"),
+    };
+    std::map<std::string, std::string> options_v0 = {
+        {Options::MANIFEST_FORMAT, "orc"},
+        {Options::FILE_FORMAT, "orc"},
+        {Options::BUCKET, "-1"},
+        {Options::ROW_TRACKING_ENABLED, "true"},
+        {Options::DATA_EVOLUTION_ENABLED, "true"},
+        {Options::FILE_SYSTEM, "local"},
+        {"fields.tags.map.storage-layout", "default"},
+        {"orc.read.enable-lazy-decoding", "true"},
+        {"orc.dictionary-key-size-threshold", "1"},
+    };
+    CreateTable(fields, /*partition_keys=*/{}, options_v0);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+
+    auto array_v0 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields),
+                                                  R"([
+                [1, [["a", "red"], ["z", "blue"]], "payload-1"],
+                [2, [["a", "red"], ["z", "green"]], "payload-2"]
+            ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(
+        auto msgs_v0, WriteArray(table_path, {}, arrow::schema(fields)->field_names(), {array_v0}));
+    ASSERT_OK(Commit(table_path, msgs_v0));
+
+    std::map<std::string, std::string> options_v1 = options_v0;
+    options_v1["fields.tags.map.storage-layout"] = "shared-shredding";
+    options_v1["fields.tags.map.shared-shredding.max-columns"] = "1";
+    ASSERT_OK(WriteNextSchema(
+        table_path, {DataField(0, fields[0]), DataField(1, fields[1]), DataField(2, fields[2])},
+        /*highest_field_id=*/2, options_v1));
+
+    auto array_v1 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields),
+                                                  R"([
+                [3, [["a", "red"], ["z", "yellow"]], "payload-3"],
+                [4, [["a", "red"]], "payload-4"]
+            ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(
+        auto msgs_v1, WriteArray(table_path, {}, arrow::schema(fields)->field_names(), {array_v1}));
+    ASSERT_OK(Commit(table_path, msgs_v1));
+
+    auto expected = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields),
+                                                  R"([
+                [1, [["a", "red"], ["z", "blue"]], "payload-1"],
+                [2, [["a", "red"], ["z", "green"]], "payload-2"],
+                [3, [["a", "red"], ["z", "yellow"]], "payload-3"],
+                [4, [["a", "red"]], "payload-4"]
+            ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, arrow::schema(fields)->field_names(), expected));
 }
 
 TEST_P(BlobTableInteTest, TestDataEvolutionWithBlobDescriptorField) {

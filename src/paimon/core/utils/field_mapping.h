@@ -80,7 +80,7 @@ class FieldMappingBuilder {
 
     std::optional<NonExistFieldInfo> CreateNonExistFieldInfo(
         const std::vector<DataField>& data_fields) const;
-    ExistFieldInfo CreateExistFieldInfo(const std::vector<DataField>& data_fields) const;
+    Result<ExistFieldInfo> CreateExistFieldInfo(const std::vector<DataField>& data_fields) const;
 
     Result<NonPartitionInfo> CreateNonPartitionInfo(
         const std::vector<DataField>& data_fields, const ExistFieldInfo& exist_field_info,

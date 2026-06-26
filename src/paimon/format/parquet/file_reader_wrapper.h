@@ -115,6 +115,10 @@ class FileReaderWrapper {
 
     /// Prepare for immediate reading of the specified row groups and columns.
     /// Initializes the reader and starts pre-buffering I/O.
+    ///
+    /// Note: when the read schema has nested sub-field projection,
+    /// page-level filtering is disabled temporarily due to known offset
+    /// calculation issues for nested pages.
     Status PrepareForReading(const std::vector<TargetRowGroup>& target_row_groups,
                              const std::vector<int32_t>& column_indices);
 

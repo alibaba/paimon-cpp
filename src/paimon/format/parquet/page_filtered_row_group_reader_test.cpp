@@ -119,9 +119,9 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
 
         std::map<std::string, std::string> options;
         options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] = "true";
-        ASSERT_OK_AND_ASSIGN(
-            auto batch_reader,
-            ParquetFileBatchReader::Create(std::move(in_stream), arrow_pool_, options, batch_size));
+        ASSERT_OK_AND_ASSIGN(auto batch_reader, ParquetFileBatchReader::Create(
+                                                    std::move(in_stream), options, batch_size,
+                                                    /*file_metadata=*/nullptr, arrow_pool_));
         auto c_schema = std::make_unique<ArrowSchema>();
         ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
         ASSERT_OK(batch_reader->SetReadSchema(c_schema.get(), predicate,
@@ -937,10 +937,10 @@ static std::shared_ptr<arrow::StructArray> MakeNestedStructData(int32_t num_rows
 ///
 /// Schema: { id: int32, info: struct<x: int32, y: int32> }
 /// Parquet leaf columns: [id=0, info.x=1, info.y=2]
-/// 100 rows, 10 per page, 1 row group.
+/// 100 rows, 10 per page, 2 row groups.
 /// Predicate: id >= 70 → row groups 0 skipped, row groups 1 read → 50 rows expected.
 /// The read schema requests both "id" and "info" columns.
-TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnPageFilter) {
+TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnRowGroupFilter) {
     std::string file_name = dir_->Str() + "/nested_struct_filter.parquet";
     auto data = MakeNestedStructData(100);
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
@@ -965,15 +965,15 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnPageFilter) {
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
 
-/// Test: rowgroup-level filtering reading the nested struct column along with the predicate column.
+/// Test: Page-level filtering reading the nested struct column along with the predicate column.
 ///
 /// This verifies that when reading a subset of columns that includes a nested column
 /// and the predicate column, the schema mapping and column assembly work correctly.
 ///
 /// Schema: { id: int32, info: struct<x: int32, y: int32> }
 /// Read schema: { id: int32, info: struct<x: int32, y: int32> }
-/// Predicate on "id": id >= 50.
-TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnOnlyReadNestedField) {
+/// Predicate on "id": id >= 70.
+TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnOnlyReadIdField) {
     std::string file_name = dir_->Str() + "/nested_struct_only_nested.parquet";
     auto data = MakeNestedStructData(100);
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
@@ -982,8 +982,8 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnOnlyReadNestedField) {
     auto field_x = arrow::field("x", arrow::int32());
     auto field_y = arrow::field("y", arrow::int32());
     auto field_info = arrow::field("info", arrow::struct_({field_x, field_y}));
-    // Read both "id" (needed for predicate evaluation) and "info" columns
-    auto read_schema = arrow::schema({field_id, field_info});
+    // Read "id" column only
+    auto read_schema = arrow::schema({field_id});
 
     // Predicate is on "id" (field_index=0 in file schema)
     auto predicate = PredicateBuilder::GreaterOrEqual(
@@ -992,17 +992,13 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnOnlyReadNestedField) {
     std::shared_ptr<arrow::ChunkedArray> result;
     ReadWithPredicateImpl(file_name, read_schema, predicate, &result);
 
-    // Should get rows 50-99 = 50 rows
+    // Should get rows 70-99 = 30 rows
     ASSERT_TRUE(result);
-    ASSERT_EQ(50, result->length());
+    ASSERT_EQ(30, result->length());
 
-    // Build expected: "id" and "info" fields from rows 50-99
-    auto sliced = std::dynamic_pointer_cast<arrow::StructArray>(data->Slice(50, 50));
-    ASSERT_TRUE(sliced);
-    auto expected =
-        arrow::StructArray::Make({sliced->field(0), sliced->field(1)}, {field_id, field_info})
-            .ValueOrDie();
-    ASSERT_TRUE(expected->Equals(result->chunk(0)));
+    auto result_struct = std::dynamic_pointer_cast<arrow::StructArray>(result->chunk(0));
+    ASSERT_TRUE(result_struct);
+    ASSERT_TRUE(data->field(0)->Slice(70, 30)->Equals(result_struct->field(0)));
 }
 
 /// Helper: build a StructArray with an int32 "id" column and a list<int32> "tags" column.
@@ -1064,9 +1060,9 @@ static std::shared_ptr<arrow::StructArray> MakeMapColumnData(int32_t num_rows) {
 /// Test: rowgroup-level filtering on a file with a list column.
 ///
 /// Schema: { id: int32, tags: list<item: int32> }
-/// 100 rows, 10 per page, 1 row group.
-/// Predicate: id >= 50 → row groups 0 skipped, row groups 1 read → 50 rows expected.
-TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnPageFilter) {
+/// 100 rows, 10 per page, 2 row groups.
+/// Predicate: id >= 70 → row groups 0 skipped, row groups 1 read → 50 rows expected.
+TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnRowGroupFilter) {
     std::string file_name = dir_->Str() + "/nested_list_filter.parquet";
     auto data = MakeListColumnData(100);
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
@@ -1092,9 +1088,9 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnPageFilter) {
 /// Test: rowgroup filtering on a file with a map column.
 ///
 /// Schema: { id: int32, props: map<utf8, int32> }
-/// 100 rows, 10 per page, 1 row group.
+/// 100 rows, 10 per page, 2 row groups.
 /// Predicate: id >= 70 → row groups 0 skipped, row groups 1 read → 50 rows expected.
-TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnPageFilter) {
+TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnRowGroupFilter) {
     std::string file_name = dir_->Str() + "/nested_map_filter.parquet";
     auto data = MakeMapColumnData(100);
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);

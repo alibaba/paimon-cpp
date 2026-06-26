@@ -18,7 +18,6 @@
 
 #include <map>
 #include <string>
-#include <utility>
 
 #include "arrow/c/helpers.h"
 #include "paimon/common/utils/date_time_utils.h"
@@ -34,7 +33,7 @@ class MemoryPool;
 namespace paimon::test {
 MockFormatWriter::MockFormatWriter(const std::shared_ptr<OutputStream>& out,
                                    const std::shared_ptr<MemoryPool>& pool)
-    : FormatWriter(), out_(std::move(out)), pool_(pool) {}
+    : FormatWriter(), out_(out), pool_(pool) {}
 
 Status MockFormatWriter::AddBatch(ArrowArray* batch) {
     ArrowArrayRelease(batch);

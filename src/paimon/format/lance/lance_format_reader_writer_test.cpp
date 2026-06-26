@@ -247,6 +247,42 @@ TEST_F(LanceFileReaderWriterTest, TestNestedType) {
     }
 }
 
+TEST_F(LanceFileReaderWriterTest, TestRejectNestedSubFieldProjection) {
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::struct_({arrow::field("sub_f0", arrow::boolean()),
+                                           arrow::field("sub_f1", arrow::int64())}))};
+    auto schema = arrow::schema(fields);
+    auto array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+        [1, [true, 2]],
+        [2, [false, 3]]
+    ])")
+            .ValueOrDie());
+    auto src_chunk_array = std::make_shared<arrow::ChunkedArray>(arrow::ArrayVector({array}));
+
+    auto dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    std::string file_path = dir->Str() + "/test.lance";
+    WriteFile(file_path, src_chunk_array, schema);
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<LanceFileBatchReader> reader,
+                         LanceFileBatchReader::Create(file_path, /*batch_size=*/2,
+                                                      /*batch_readahead=*/2));
+
+    auto projected_fields = arrow::FieldVector{
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::struct_({arrow::field("sub_f0", arrow::boolean())})),
+    };
+    auto projected_schema = arrow::schema(projected_fields);
+    ArrowSchema c_read_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, &c_read_schema).ok());
+    ASSERT_NOK_WITH_MSG(
+        reader->SetReadSchema(&c_read_schema, /*predicate=*/nullptr,
+                              /*selection_bitmap=*/std::nullopt),
+        "SetReadSchema failed: lance reader does not support nested sub-field projection");
+}
+
 TEST_F(LanceFileReaderWriterTest, TestBulkData) {
     int64_t seed = DateTimeUtils::GetCurrentUTCTimeUs();
     std::srand(seed);

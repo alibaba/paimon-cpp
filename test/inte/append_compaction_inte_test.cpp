@@ -117,6 +117,7 @@ class AppendCompactionInteTest : public testing::Test,
             auto partition = BinaryRowGenerator::GenerateRow({10}, pool_.get());
             int32_t bucket = 1;
             auto abstract_write = dynamic_cast<AbstractFileStoreWrite*>(helper->write_.get());
+            ASSERT_NE(abstract_write, nullptr);
             ASSERT_OK_AND_ASSIGN(auto restore_files,
                                  abstract_write->ScanExistingFileMetas(partition, bucket));
             ASSERT_OK_AND_ASSIGN(

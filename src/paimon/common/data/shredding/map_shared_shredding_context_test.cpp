@@ -37,7 +37,7 @@ TEST(MapSharedShreddingContextTest, FirstFileUsesKMax) {
 
 TEST(MapSharedShreddingContextTest, AdaptKAfterOneFile) {
     // After reporting stats from one file, K should adapt to
-    // min(max_row_width, K_max).
+    // min(adaptive width, K_max).
     std::map<std::string, int32_t> field_to_k_max = {{"m", 10}};
     MapSharedShreddingContext context(field_to_k_max);
 
@@ -64,8 +64,8 @@ TEST(MapSharedShreddingContextTest, AdaptKCappedByKMax) {
     ASSERT_EQ(5, next_k.at("m"));
 }
 
-TEST(MapSharedShreddingContextTest, WindowMaxTracksLargest) {
-    // K should use the max of all recent max_row_widths within the window.
+TEST(MapSharedShreddingContextTest, WindowP90UsesMaxWhenSamplesAreClose) {
+    // Small sample windows still use max because max and P90 are close.
     std::map<std::string, int32_t> field_to_k_max = {{"m", 20}};
     MapSharedShreddingContext context(field_to_k_max);
 
@@ -73,9 +73,60 @@ TEST(MapSharedShreddingContextTest, WindowMaxTracksLargest) {
     context.ReportFileStats("m", 7);
     context.ReportFileStats("m", 5);
 
-    // max of {3, 7, 5} = 7, capped by K_max=20 → K=7.
     auto next_k = context.ComputeNextK();
     ASSERT_EQ(7, next_k.at("m"));
+}
+
+TEST(MapSharedShreddingContextTest, WindowP90IgnoresSingleFarOutlier) {
+    std::map<std::string, int32_t> field_to_k_max = {{"m", 2000}};
+    MapSharedShreddingContext context(field_to_k_max);
+
+    for (int32_t i = 0; i < 19; ++i) {
+        context.ReportFileStats("m", 3);
+    }
+    context.ReportFileStats("m", 1000);
+
+    auto next_k = context.ComputeNextK();
+    ASSERT_EQ(3, next_k.at("m"));
+}
+
+TEST(MapSharedShreddingContextTest, WindowP90UsesMaxWithinAbsoluteSlack) {
+    std::map<std::string, int32_t> field_to_k_max = {{"m", 20}};
+    MapSharedShreddingContext context(field_to_k_max);
+
+    for (int32_t i = 0; i < 19; ++i) {
+        context.ReportFileStats("m", 3);
+    }
+    context.ReportFileStats("m", 7);
+
+    auto next_k = context.ComputeNextK();
+    ASSERT_EQ(7, next_k.at("m"));
+}
+
+TEST(MapSharedShreddingContextTest, WindowP90UsesMaxWithinRelativeSlack) {
+    std::map<std::string, int32_t> field_to_k_max = {{"m", 200}};
+    MapSharedShreddingContext context(field_to_k_max);
+
+    for (int32_t i = 0; i < 19; ++i) {
+        context.ReportFileStats("m", 100);
+    }
+    context.ReportFileStats("m", 125);
+
+    auto next_k = context.ComputeNextK();
+    ASSERT_EQ(125, next_k.at("m"));
+}
+
+TEST(MapSharedShreddingContextTest, WindowP90IgnoresMaxBeyondBothSlacks) {
+    std::map<std::string, int32_t> field_to_k_max = {{"m", 200}};
+    MapSharedShreddingContext context(field_to_k_max);
+
+    for (int32_t i = 0; i < 19; ++i) {
+        context.ReportFileStats("m", 100);
+    }
+    context.ReportFileStats("m", 130);
+
+    auto next_k = context.ComputeNextK();
+    ASSERT_EQ(100, next_k.at("m"));
 }
 
 TEST(MapSharedShreddingContextTest, MultipleColumnsIndependent) {
@@ -101,8 +152,7 @@ TEST(MapSharedShreddingContextTest, MultipleColumnsIndependent) {
     context.ReportFileStats("attrs", 6);
 
     auto k3 = context.ComputeNextK();
-    // tags: max(4,8)=8, capped by 10 → 8
-    // attrs: max(2,6)=6, capped by 6 → 6
+    // tags and attrs are close sample windows, so adaptive width keeps max.
     ASSERT_EQ(8, k3.at("tags"));
     ASSERT_EQ(6, k3.at("attrs"));
 }
@@ -116,7 +166,7 @@ TEST(MapSharedShreddingContextTest, GetShreddingColumnNames) {
 }
 
 TEST(MapSharedShreddingContextTest, SlidingWindowEvictsOldEntries) {
-    // The window size is 100. After filling 100 entries, adding one more
+    // The window size is 20. After filling 20 entries, adding one more
     // should evict the oldest. Verify that the evicted value no longer
     // affects ComputeNextK.
     std::map<std::string, int32_t> field_to_k_max = {{"m", 256}};
@@ -125,19 +175,19 @@ TEST(MapSharedShreddingContextTest, SlidingWindowEvictsOldEntries) {
     // Insert a large value as the first entry.
     context.ReportFileStats("m", 200);
 
-    // Fill the remaining 99 slots with small values.
-    for (int i = 0; i < 99; ++i) {
+    // Fill the remaining 19 slots with small values.
+    for (int32_t i = 0; i < 19; ++i) {
         context.ReportFileStats("m", 3);
     }
 
-    // Window = [200, 3, 3, ..., 3] (100 entries). Max = 200.
+    // Window = [200, 3, 3, ..., 3] (20 entries). P90 = 3, max is a far outlier.
     auto k_before = context.ComputeNextK();
-    ASSERT_EQ(200, k_before.at("m"));
+    ASSERT_EQ(3, k_before.at("m"));
 
     // Push one more — evicts the 200.
     context.ReportFileStats("m", 5);
 
-    // Window = [3, 3, ..., 3, 5] (100 entries). Max = 5.
+    // Window = [3, 3, ..., 3, 5] (20 entries). Max is within the absolute slack.
     auto k_after = context.ComputeNextK();
     ASSERT_EQ(5, k_after.at("m"));
 }

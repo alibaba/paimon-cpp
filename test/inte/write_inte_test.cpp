@@ -277,6 +277,55 @@ class WriteInteTest : public testing::Test, public ::testing::WithParamInterface
         return array;
     }
 
+    SimpleStats GenerateBlobValueStats() const {
+        return BinaryRowGenerator::GenerateStats({NullType()}, {NullType()},
+                                                 std::vector<int64_t>({-1}), pool_.get());
+    }
+
+    Status CheckReadBlobs(const std::string& table_path,
+                          const std::map<std::string, std::string>& options,
+                          const std::vector<std::shared_ptr<Split>>& data_splits,
+                          const std::string& blob_field,
+                          const std::vector<std::shared_ptr<Blob>>& expected_blobs) const {
+        ReadContextBuilder read_context_builder(table_path);
+        read_context_builder.SetOptions(options).SetReadFieldNames({blob_field});
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
+                               read_context_builder.Finish());
+        PAIMON_ASSIGN_OR_RAISE(auto table_read, TableRead::Create(std::move(read_context)));
+        PAIMON_ASSIGN_OR_RAISE(auto batch_reader, table_read->CreateReader(data_splits));
+        PAIMON_ASSIGN_OR_RAISE(auto read_result,
+                               ReadResultCollector::CollectResult(batch_reader.get()));
+        if (read_result == nullptr) {
+            return Status::Invalid(fmt::format("No rows read for blob field {}", blob_field));
+        }
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto combined_array,
+                                          arrow::Concatenate(read_result->chunks()));
+        auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(combined_array);
+        if (struct_array == nullptr) {
+            return Status::Invalid(
+                fmt::format("Read result for {} is not a struct array", blob_field));
+        }
+        auto struct_type = std::dynamic_pointer_cast<arrow::StructType>(struct_array->type());
+        int blob_index = struct_type->GetFieldIndex(blob_field);
+        if (blob_index < 0) {
+            return Status::Invalid(
+                fmt::format("Blob field {} was not found in read result", blob_field));
+        }
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+            auto blob_struct_array,
+            arrow::StructArray::Make({struct_array->field(blob_index)},
+                                     {BlobUtils::ToArrowField(blob_field, false)}));
+        PAIMON_ASSIGN_OR_RAISE(
+            auto actual_blobs,
+            TestHelper::ToBlobs(std::static_pointer_cast<arrow::StructArray>(blob_struct_array)));
+        PAIMON_ASSIGN_OR_RAISE(bool blobs_equal, TestHelper::CheckBlobsEqual(
+                                                     actual_blobs, expected_blobs, file_system_));
+        if (!blobs_equal) {
+            return Status::Invalid(fmt::format("Read blobs for {} do not match", blob_field));
+        }
+        return Status::OK();
+    }
+
     void CheckCreationTime(const std::vector<std::shared_ptr<CommitMessage>>& commit_messages) {
         TimezoneGuard guard("Asia/Shanghai");
         for (const auto& msg : commit_messages) {
@@ -3770,20 +3819,26 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithBlobType) {
     ASSERT_OK_AND_ASSIGN(
         auto helper, TestHelper::Create(dir->Str(), schema, /*partition_keys=*/{},
                                         /*primary_keys=*/{}, options, /*is_streaming_mode=*/true));
+    std::string table_path = PathUtil::JoinPath(dir->Str(), "foo.db/bar");
     int64_t commit_identifier = 0;
 
     std::vector<PAIMON_UNIQUE_PTR<Bytes>> blob_descriptors;
+    std::vector<std::shared_ptr<Blob>> expected_blobs;
     std::string file1 = paimon::test::GetDataDir() + "/avro/data/avro_with_null";
     ASSERT_OK_AND_ASSIGN(auto blob1, Blob::FromPath(file1));
     blob_descriptors.emplace_back(blob1->ToDescriptor(pool_));
+    expected_blobs.emplace_back(std::shared_ptr<Blob>(std::move(blob1)));
 
     std::string file2 = paimon::test::GetDataDir() + "/xxhash.data";
     ASSERT_OK_AND_ASSIGN(auto blob2, Blob::FromPath(file2, /*offset=*/0, /*length=*/91));
     blob_descriptors.emplace_back(blob2->ToDescriptor(pool_));
+    expected_blobs.emplace_back(std::shared_ptr<Blob>(std::move(blob2)));
     ASSERT_OK_AND_ASSIGN(auto blob3, Blob::FromPath(file2, /*offset=*/92, /*length=*/85));
     blob_descriptors.emplace_back(blob3->ToDescriptor(pool_));
+    expected_blobs.emplace_back(std::shared_ptr<Blob>(std::move(blob3)));
     ASSERT_OK_AND_ASSIGN(auto blob4, Blob::FromPath(file2, /*offset=*/300, /*length=*/3000));
     blob_descriptors.emplace_back(blob4->ToDescriptor(pool_));
+    expected_blobs.emplace_back(std::shared_ptr<Blob>(std::move(blob4)));
 
     std::vector<std::vector<PAIMON_UNIQUE_PTR<Bytes>>> blob_fields;
     blob_fields.emplace_back(std::move(blob_descriptors));
@@ -3809,9 +3864,7 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithBlobType) {
     auto file_meta2 = std::make_shared<DataFileMeta>(
         "data-xxx.blob", /*file_size=*/764, /*row_count=*/3,
         /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
-        /*key_stats=*/SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats({NullType()}, {NullType()}, std::vector<int64_t>({0}),
-                                          pool_.get()),
+        /*key_stats=*/SimpleStats::EmptyStats(), GenerateBlobValueStats(),
         /*min_sequence_number=*/1, /*max_sequence_number=*/1, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -3821,9 +3874,7 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithBlobType) {
     auto file_meta3 = std::make_shared<DataFileMeta>(
         "data-xxx.blob", /*file_size=*/3023, /*row_count=*/1,
         /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
-        /*key_stats=*/SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats({NullType()}, {NullType()}, std::vector<int64_t>({0}),
-                                          pool_.get()),
+        /*key_stats=*/SimpleStats::EmptyStats(), GenerateBlobValueStats(),
         /*min_sequence_number=*/1, /*max_sequence_number=*/1, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -3855,6 +3906,7 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithBlobType) {
     for (size_t i = 0; i < expected_meta.size(); i++) {
         ASSERT_TRUE(data_split->DataFiles()[i]->TEST_Equal(*expected_meta[i]));
     }
+    ASSERT_OK(CheckReadBlobs(table_path, options, data_splits, "blob", expected_blobs));
 }
 
 TEST_P(WriteInteTest, TestAppendTableWithDateFieldAsPartitionField) {
@@ -4585,29 +4637,38 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithMultipleBlobFields) {
     ASSERT_OK_AND_ASSIGN(
         auto helper, TestHelper::Create(dir->Str(), schema, /*partition_keys=*/{},
                                         /*primary_keys=*/{}, options, /*is_streaming_mode=*/true));
+    std::string table_path = PathUtil::JoinPath(dir->Str(), "foo.db/bar");
     int64_t commit_identifier = 0;
 
     // Prepare blob descriptors for both blob fields
     std::vector<PAIMON_UNIQUE_PTR<Bytes>> blob1_descriptors;
     std::vector<PAIMON_UNIQUE_PTR<Bytes>> blob2_descriptors;
+    std::vector<std::shared_ptr<Blob>> expected_blob1s;
+    std::vector<std::shared_ptr<Blob>> expected_blob2s;
 
     std::string file1 = paimon::test::GetDataDir() + "/avro/data/avro_with_null";
     ASSERT_OK_AND_ASSIGN(auto blob1_a, Blob::FromPath(file1));
     blob1_descriptors.emplace_back(blob1_a->ToDescriptor(pool_));
+    expected_blob1s.emplace_back(std::shared_ptr<Blob>(std::move(blob1_a)));
 
     std::string file2 = paimon::test::GetDataDir() + "/xxhash.data";
     ASSERT_OK_AND_ASSIGN(auto blob1_b, Blob::FromPath(file2, /*offset=*/0, /*length=*/91));
     blob1_descriptors.emplace_back(blob1_b->ToDescriptor(pool_));
+    expected_blob1s.emplace_back(std::shared_ptr<Blob>(std::move(blob1_b)));
     ASSERT_OK_AND_ASSIGN(auto blob1_c, Blob::FromPath(file2, /*offset=*/92, /*length=*/85));
     blob1_descriptors.emplace_back(blob1_c->ToDescriptor(pool_));
+    expected_blob1s.emplace_back(std::shared_ptr<Blob>(std::move(blob1_c)));
 
     // blob2 field uses different data slices
     ASSERT_OK_AND_ASSIGN(auto blob2_a, Blob::FromPath(file2, /*offset=*/300, /*length=*/3000));
     blob2_descriptors.emplace_back(blob2_a->ToDescriptor(pool_));
+    expected_blob2s.emplace_back(std::shared_ptr<Blob>(std::move(blob2_a)));
     ASSERT_OK_AND_ASSIGN(auto blob2_b, Blob::FromPath(file2, /*offset=*/0, /*length=*/91));
     blob2_descriptors.emplace_back(blob2_b->ToDescriptor(pool_));
+    expected_blob2s.emplace_back(std::shared_ptr<Blob>(std::move(blob2_b)));
     ASSERT_OK_AND_ASSIGN(auto blob2_c, Blob::FromPath(file1));
     blob2_descriptors.emplace_back(blob2_c->ToDescriptor(pool_));
+    expected_blob2s.emplace_back(std::shared_ptr<Blob>(std::move(blob2_c)));
 
     std::vector<std::vector<PAIMON_UNIQUE_PTR<Bytes>>> blob_fields;
     blob_fields.emplace_back(std::move(blob1_descriptors));
@@ -4638,9 +4699,7 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithMultipleBlobFields) {
     auto expected_blob1 = std::make_shared<DataFileMeta>(
         "data-xxx.blob", /*file_size=*/0, /*row_count=*/3,
         /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
-        /*key_stats=*/SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats({NullType()}, {NullType()}, std::vector<int64_t>({0}),
-                                          pool_.get()),
+        /*key_stats=*/SimpleStats::EmptyStats(), GenerateBlobValueStats(),
         /*min_sequence_number=*/1, /*max_sequence_number=*/1, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(0, 0),
@@ -4652,9 +4711,7 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithMultipleBlobFields) {
     auto expected_blob2 = std::make_shared<DataFileMeta>(
         "data-xxx.blob", /*file_size=*/0, /*row_count=*/3,
         /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
-        /*key_stats=*/SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats({NullType()}, {NullType()}, std::vector<int64_t>({0}),
-                                          pool_.get()),
+        /*key_stats=*/SimpleStats::EmptyStats(), GenerateBlobValueStats(),
         /*min_sequence_number=*/1, /*max_sequence_number=*/1, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(0, 0),
@@ -4697,6 +4754,8 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithMultipleBlobFields) {
             }
         }
     }
+    ASSERT_OK(CheckReadBlobs(table_path, options, data_splits, "blob1", expected_blob1s));
+    ASSERT_OK(CheckReadBlobs(table_path, options, data_splits, "blob2", expected_blob2s));
 }
 
 TEST_P(WriteInteTest, TestRowTrackingPartitionGroupOnCommit) {

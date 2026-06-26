@@ -50,8 +50,8 @@ Result<std::shared_ptr<LuceneGlobalIndexReader>> LuceneGlobalIndexReader::Create
         DataInputStream data_input_stream(paimon_input);
         PAIMON_ASSIGN_OR_RAISE(int32_t version, data_input_stream.ReadValue<int32_t>());
         if (version != kVersion) {
-            return Status::Invalid(fmt::format("LuceneGlobalIndex not support version {}"),
-                                   kVersion);
+            return Status::Invalid(
+                fmt::format("LuceneGlobalIndex not support version {}", kVersion));
         }
         PAIMON_ASSIGN_OR_RAISE(int32_t num_files, data_input_stream.ReadValue<int32_t>());
         for (int32_t i = 0; i < num_files; i++) {
@@ -208,6 +208,17 @@ std::shared_ptr<GlobalIndexResult> LuceneGlobalIndexReader::SearchWithNoLimit(
 
 Result<std::shared_ptr<GlobalIndexResult>> LuceneGlobalIndexReader::VisitFullTextSearch(
     const std::shared_ptr<FullTextSearch>& full_text_search) {
+    if (!full_text_search) {
+        return Status::Invalid("VisitFullTextSearch: null FullTextSearch pointer");
+    }
+    if (full_text_search->min_score.has_value()) {
+        // The lucene backend does not support min_score pushdown. Fail loudly
+        // instead of silently ignoring the threshold and returning unfiltered
+        // results, which would be a correctness bug for the caller.
+        return Status::NotImplemented(
+            "lucene full-text search does not support min_score; "
+            "min_score pushdown is only available on the tantivy backend");
+    }
     try {
         Lucene::QueryPtr query;
         switch (full_text_search->search_type) {

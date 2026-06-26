@@ -142,6 +142,7 @@ set(PAIMON_COMMON_SRCS
     common/data/shredding/map_shared_shredding_context.cpp
     common/data/shredding/map_shared_shredding_batch_converter.cpp
     common/data/shredding/map_shared_shredding_column_allocator.cpp
+    common/data/shredding/map_shared_shredding_file_reader.cpp
     common/utils/delta_varint_compressor.cpp
     common/utils/fields_comparator.cpp
     common/utils/path_util.cpp
@@ -219,17 +220,24 @@ set(PAIMON_CORE_SRCS
     core/io/data_file_meta.cpp
     core/io/data_file_meta_serializer.cpp
     core/io/data_file_path_factory.cpp
+    core/io/append_data_file_writer_factory.cpp
+    core/io/blob_data_file_writer_factory.cpp
+    core/io/data_file_writer_factory.cpp
     core/io/data_file_writer.cpp
     core/io/field_mapping_reader.cpp
     core/io/complete_row_tracking_fields_reader.cpp
     core/io/file_index_evaluator.cpp
     core/io/key_value_data_file_record_reader.cpp
+    core/io/key_value_data_file_writer_factory.cpp
     core/io/key_value_data_file_writer.cpp
     core/io/key_value_in_memory_record_reader.cpp
     core/io/merged_key_value_record_reader.cpp
     core/io/key_value_meta_projection_consumer.cpp
     core/io/key_value_projection_consumer.cpp
     core/io/key_value_projection_reader.cpp
+    core/io/map_shared_shredding_core_utils.cpp
+    core/io/shredding_append_data_file_writer_factory.cpp
+    core/io/shredding_key_value_data_file_writer_factory.cpp
     core/io/external_storage_blob_writer.cpp
     core/io/multiple_blob_file_writer.cpp
     core/io/rolling_blob_file_writer.cpp
@@ -342,6 +350,7 @@ set(PAIMON_CORE_SRCS
     core/utils/blob_view_lookup.cpp
     core/utils/consumer_manager.cpp
     core/utils/field_mapping.cpp
+    core/utils/nested_projection_utils.cpp
     core/utils/file_store_path_factory.cpp
     core/utils/file_utils.cpp
     core/utils/manifest_meta_reader.cpp
@@ -541,6 +550,7 @@ if(PAIMON_BUILD_TESTS)
                     common/data/shredding/map_shared_shredding_column_allocator_test.cpp
                     common/data/shredding/map_shared_shredding_field_dict_test.cpp
                     common/data/shredding/map_shared_shredding_context_test.cpp
+                    common/data/shredding/map_shared_shredding_file_reader_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared
                     test_utils_static
@@ -735,6 +745,7 @@ if(PAIMON_BUILD_TESTS)
                     core/utils/consumer_manager_test.cpp
                     core/utils/file_store_path_factory_cache_test.cpp
                     core/utils/field_mapping_test.cpp
+                    core/utils/nested_projection_utils_test.cpp
                     core/utils/file_store_path_factory_test.cpp
                     core/utils/file_utils_test.cpp
                     core/utils/manifest_meta_reader_test.cpp

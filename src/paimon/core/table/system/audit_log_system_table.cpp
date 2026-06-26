@@ -284,7 +284,7 @@ Result<std::unique_ptr<TableRead>> AuditLogSystemTable::NewChangelogRead(
     PAIMON_ASSIGN_OR_RAISE(StringMap read_options, ReadOptions());
     PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(read_options));
     builder.SetOptions(read_options)
-        .SetReadSchema(base_read_schema->field_names())
+        .SetReadFieldNames(base_read_schema->field_names())
         .WithBranch(core_options.GetBranch())
         .WithMemoryPool(context->GetMemoryPool())
         .WithExecutor(context->GetExecutor())

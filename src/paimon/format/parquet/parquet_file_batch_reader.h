@@ -52,6 +52,9 @@ namespace io {
 class RandomAccessFile;
 }  // namespace io
 }  // namespace arrow
+namespace parquet {
+class FileMetaData;
+}  // namespace parquet
 namespace paimon {
 class Metrics;
 class Predicate;
@@ -64,8 +67,13 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
  public:
     static Result<std::unique_ptr<ParquetFileBatchReader>> Create(
         std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
+        const std::map<std::string, std::string>& options, int32_t batch_size,
+        std::shared_ptr<::parquet::FileMetaData> file_metadata,
+        const std::shared_ptr<arrow::MemoryPool>& pool);
+
+    static Result<::parquet::ReaderProperties> CreateReaderProperties(
         const std::shared_ptr<arrow::MemoryPool>& pool,
-        const std::map<std::string, std::string>& options, int32_t batch_size);
+        const std::map<std::string, std::string>& options);
 
     // For timestamp type, we return the schema stored in file, e.g., second in parquet file will
     // store as milli.
@@ -129,10 +137,6 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
                            const std::map<std::string, std::string>& options,
                            const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
 
-    static Result<::parquet::ReaderProperties> CreateReaderProperties(
-        const std::shared_ptr<arrow::MemoryPool>& pool,
-        const std::map<std::string, std::string>& options);
-
     static Result<::parquet::ArrowReaderProperties> CreateArrowReaderProperties(
         const std::shared_ptr<arrow::MemoryPool>& pool,
         const std::map<std::string, std::string>& options, int32_t batch_size);
@@ -157,6 +161,24 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     Result<TargetRowGroups> FilterPagesByBitmap(const RoaringBitmap32& bitmap,
                                                 int32_t row_group_idx, uint64_t rg_start_row,
                                                 int64_t rg_row_count) const;
+    /// Recursively collect leaf column indices for the sub-fields in read_type
+    /// that match file_type by paimon field ID. Unmatched sub-fields in file_type
+    /// have their leaf indices skipped. Partial projection inside LIST/MAP is
+    /// not supported and will return Invalid.
+    static Status CollectLeafIndices(const std::shared_ptr<arrow::DataType>& read_type,
+                                     const std::shared_ptr<arrow::DataType>& file_type,
+                                     int32_t* leaf_index, std::vector<int32_t>* indices);
+
+    /// Skip over all leaf column indices of the given file_type without collecting.
+    static void SkipLeafIndices(const std::shared_ptr<arrow::DataType>& file_type,
+                                int32_t* leaf_index);
+
+    /// Compute leaf column indices by recursively matching read_schema against
+    /// file_schema using paimon field IDs. STRUCT supports sub-field projection
+    /// (unmatched sub-fields are skipped). LIST/MAP require exact type match.
+    static Result<std::vector<int32_t>> ComputeNestedColumnIndices(
+        const std::shared_ptr<arrow::Schema>& read_schema,
+        const std::shared_ptr<arrow::Schema>& file_schema);
 
     // precondition: predicate supposed not be empty
     Result<TargetRowGroups> FilterRowGroupsByPredicate(

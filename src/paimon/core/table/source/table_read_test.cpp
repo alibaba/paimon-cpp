@@ -41,7 +41,7 @@ TEST(TableReadTest, TestReadWithInvalidContext) {
     {
         // read with non-exist field
         ReadContextBuilder context_builder(path);
-        context_builder.SetReadSchema({"f0", "f1", "non-exist"});
+        context_builder.SetReadFieldNames({"f0", "f1", "non-exist"});
         ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
         ASSERT_NOK_WITH_MSG(TableRead::Create(std::move(read_context)),
                             "Get field non-exist failed: not exist in table schema");
@@ -72,7 +72,7 @@ TEST(TableReadTest, TestReadWithInvalidContext) {
         auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f3",
                                                  FieldType::DOUBLE, Literal(15.0));
         ReadContextBuilder context_builder(path);
-        context_builder.SetReadSchema({"f3", "f0", "f1"});
+        context_builder.SetReadFieldNames({"f3", "f0", "f1"});
         context_builder.SetPredicate(predicate);
         ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
         ASSERT_NOK_WITH_MSG(
@@ -92,7 +92,7 @@ TEST(TableReadTest, TestReadWithInvalidContext) {
     {
         // schema with duplicate field f3
         ReadContextBuilder context_builder(path);
-        context_builder.SetReadSchema({"f3", "f1", "f3"});
+        context_builder.SetReadFieldNames({"f3", "f1", "f3"});
         ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
         ASSERT_NOK_WITH_MSG(TableRead::Create(std::move(read_context)),
                             "validate schema failed: read schema has duplicate field f3");
@@ -102,7 +102,7 @@ TEST(TableReadTest, TestReadWithInvalidContext) {
 TEST(TableReadTest, TestReadWithSpecifiedInvalidSchema) {
     std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
     ReadContextBuilder context_builder(path);
-    context_builder.SetReadSchema({"field_no_exist"});
+    context_builder.SetReadFieldNames({"field_no_exist"});
     ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
     ASSERT_NOK_WITH_MSG(TableRead::Create(std::move(read_context)),
                         "Get field field_no_exist failed: not exist in table schema");
@@ -112,7 +112,7 @@ TEST(TableReadTest, TestCreateKeyValueTableRead) {
     std::string path = paimon::test::GetDataDir() +
                        "/orc/pk_table_with_dv_cardinality.db/pk_table_with_dv_cardinality/";
     ReadContextBuilder context_builder(path);
-    context_builder.SetReadSchema({"f0", "f1", "f2", "f3"});
+    context_builder.SetReadFieldNames({"f0", "f1", "f2", "f3"});
     context_builder.AddOption("read.batch-size", "2");
     context_builder.AddOption("orc.read.enable-lazy-decoding", "true");
     ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
@@ -124,7 +124,7 @@ TEST(TableReadTest, TestCreateKeyValueTableRead) {
 TEST(TableReadTest, TestCreateAppendOnlyTableRead) {
     std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
     ReadContextBuilder context_builder(path);
-    context_builder.SetReadSchema({"f0", "f1", "f2", "f3"});
+    context_builder.SetReadFieldNames({"f0", "f1", "f2", "f3"});
     context_builder.AddOption("read.batch-size", "2");
     context_builder.AddOption("orc.read.enable-lazy-decoding", "true");
     ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
@@ -136,7 +136,7 @@ TEST(TableReadTest, TestCreateAppendOnlyTableRead) {
 TEST(TableReadTest, TestMergeOptions) {
     std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
     ReadContextBuilder context_builder(path);
-    context_builder.SetReadSchema({"f0", "f1", "f2", "f3"});
+    context_builder.SetReadFieldNames({"f0", "f1", "f2", "f3"});
     context_builder.AddOption("read.batch-size", "2");
     context_builder.AddOption("orc.read.enable-lazy-decoding", "true");
     context_builder.AddOption("bucket", "10");

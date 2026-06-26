@@ -19,6 +19,7 @@
 #include "arrow/array/array_base.h"
 #include "arrow/array/array_nested.h"
 #include "arrow/util/compression.h"
+#include "fmt/format.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/string_utils.h"
 
