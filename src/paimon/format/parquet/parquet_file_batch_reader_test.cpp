@@ -243,20 +243,6 @@ static std::shared_ptr<arrow::StructArray> MakeSequentialIntData(int32_t num_row
     return arrow::StructArray::Make({val_array}, {field}).ValueOrDie();
 }
 
-static Result<std::shared_ptr<arrow::StructArray>> CollectOneBatch(ParquetFileBatchReader* reader) {
-    PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatch batch, reader->NextBatch());
-    if (BatchReader::IsEofBatch(batch)) {
-        return std::shared_ptr<arrow::StructArray>(nullptr);
-    }
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> result_array,
-                                      arrow::ImportArray(batch.first.get(), batch.second.get()));
-    auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(result_array);
-    if (!struct_array) {
-        return Status::Invalid("CollectOneBatch expected StructArray");
-    }
-    return struct_array;
-}
-
 TEST_F(ParquetFileBatchReaderTest, TestParquetMetadataCacheReusesSerializedFooter) {
     WriteArray(file_path_, struct_array_, schema_, /*write_batch_size=*/struct_array_->length(),
                /*enable_dictionary=*/false,
@@ -1063,9 +1049,10 @@ TEST_F(ParquetFileBatchReaderTest, TestRowMappingSimple) {
 
     uint64_t global_row_id = 0;
     ASSERT_NOK(parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
-    ASSERT_OK_AND_ASSIGN(auto batch1, CollectOneBatch(parquet_batch_reader.get()));
+    ASSERT_OK_AND_ASSIGN(auto batch1, paimon::test::ReadResultCollector::CollectResultOneBatch(
+                                          parquet_batch_reader.get()));
     auto expected_batch1 = src_array->Slice(1, 2);
-    ASSERT_TRUE(batch1->Equals(expected_batch1)) << batch1->ToString();
+    ASSERT_TRUE(batch1->chunk(0)->Equals(expected_batch1)) << batch1->ToString();
     ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
     ASSERT_EQ(global_row_id, 1);
     ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(1));
@@ -1074,28 +1061,31 @@ TEST_F(ParquetFileBatchReaderTest, TestRowMappingSimple) {
     ASSERT_NOK(parquet_batch_reader->GetPreviousBatchGlobalRowId(2));
 
     // Not adjacent pages
-    ASSERT_OK_AND_ASSIGN(auto batch2, CollectOneBatch(parquet_batch_reader.get()));
+    ASSERT_OK_AND_ASSIGN(auto batch2, paimon::test::ReadResultCollector::CollectResultOneBatch(
+                                          parquet_batch_reader.get()));
     auto expected_batch2 = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
 [3],
 [5]
     ])")
             .ValueOrDie());
-    ASSERT_TRUE(batch2->Equals(expected_batch2)) << batch2->ToString();
+    ASSERT_TRUE(batch2->chunk(0)->Equals(expected_batch2)) << batch2->ToString();
     ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
     ASSERT_EQ(global_row_id, 3);
     ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(1));
     ASSERT_EQ(global_row_id, 5);
 
     // Only one record read
-    ASSERT_OK_AND_ASSIGN(auto batch3, CollectOneBatch(parquet_batch_reader.get()));
+    ASSERT_OK_AND_ASSIGN(auto batch3, paimon::test::ReadResultCollector::CollectResultOneBatch(
+                                          parquet_batch_reader.get()));
     auto expected_batch3 = src_array->Slice(6, 1);
-    ASSERT_TRUE(batch3->Equals(expected_batch3)) << batch3->ToString();
+    ASSERT_TRUE(batch3->chunk(0)->Equals(expected_batch3)) << batch3->ToString();
     ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
     ASSERT_EQ(global_row_id, 6);
     ASSERT_NOK(parquet_batch_reader->GetPreviousBatchGlobalRowId(1));
 
-    ASSERT_OK_AND_ASSIGN(auto eof_batch, CollectOneBatch(parquet_batch_reader.get()));
+    ASSERT_OK_AND_ASSIGN(auto eof_batch, paimon::test::ReadResultCollector::CollectResultOneBatch(
+                                             parquet_batch_reader.get()));
     ASSERT_EQ(nullptr, eof_batch);
     // previous batch is eof, return invalid.
     ASSERT_NOK(parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
@@ -1127,13 +1117,15 @@ TEST_F(ParquetFileBatchReaderTest, TestRowMappingFullyAndPartially) {
 
     uint64_t global_row_id = 0;
     ASSERT_NOK(parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
-    ASSERT_OK_AND_ASSIGN(auto batch1, CollectOneBatch(parquet_batch_reader.get()));
+    ASSERT_OK_AND_ASSIGN(auto batch1, paimon::test::ReadResultCollector::CollectResultOneBatch(
+                                          parquet_batch_reader.get()));
     ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
     ASSERT_EQ(global_row_id, 3);
     ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(2));
     ASSERT_EQ(global_row_id, 5);
 
-    ASSERT_OK_AND_ASSIGN(auto batch2, CollectOneBatch(parquet_batch_reader.get()));
+    ASSERT_OK_AND_ASSIGN(auto batch2, paimon::test::ReadResultCollector::CollectResultOneBatch(
+                                          parquet_batch_reader.get()));
     ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
     ASSERT_EQ(global_row_id, 6);
     ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(1));
@@ -1162,13 +1154,15 @@ TEST_F(ParquetFileBatchReaderTest, TestRowMappingSetReadSchemaTwice) {
 
     uint64_t global_row_id = 0;
     ASSERT_NOK(parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
-    ASSERT_OK_AND_ASSIGN(auto batch1, CollectOneBatch(parquet_batch_reader.get()));
+    ASSERT_OK_AND_ASSIGN(auto batch1, paimon::test::ReadResultCollector::CollectResultOneBatch(
+                                          parquet_batch_reader.get()));
     ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
     ASSERT_EQ(global_row_id, 1);
     ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(1));
     ASSERT_EQ(global_row_id, 2);
 
-    ASSERT_OK_AND_ASSIGN(auto batch2, CollectOneBatch(parquet_batch_reader.get()));
+    ASSERT_OK_AND_ASSIGN(auto batch2, paimon::test::ReadResultCollector::CollectResultOneBatch(
+                                          parquet_batch_reader.get()));
     ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
     ASSERT_EQ(global_row_id, 3);
     ASSERT_NOK(parquet_batch_reader->GetPreviousBatchGlobalRowId(1));
@@ -1179,11 +1173,12 @@ TEST_F(ParquetFileBatchReaderTest, TestRowMappingSetReadSchemaTwice) {
                                                         FieldType::INT, Literal(3), Literal(5))}));
 
     std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
-    auto arrow_status = arrow::ExportSchema(*arrow_schema, c_schema.get());
+    ASSERT_TRUE(arrow::ExportSchema(*arrow_schema, c_schema.get()).ok());
     ASSERT_OK(
         parquet_batch_reader->SetReadSchema(c_schema.get(), /*predicate=*/predicate, std::nullopt));
     ASSERT_NOK(parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
-    ASSERT_OK_AND_ASSIGN(auto batch3, CollectOneBatch(parquet_batch_reader.get()));
+    ASSERT_OK_AND_ASSIGN(auto batch3, paimon::test::ReadResultCollector::CollectResultOneBatch(
+                                          parquet_batch_reader.get()));
     ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
     ASSERT_EQ(global_row_id, 3);
     ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(2));
