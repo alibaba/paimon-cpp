@@ -16,6 +16,7 @@
 
 #include "paimon/format/orc/orc_file_batch_reader.h"
 
+#include <limits>
 #include <list>
 #include <map>
 #include <memory>

@@ -17,8 +17,10 @@
 
 #include "fmt/format.h"
 #include "paimon/common/utils/path_util.h"
+#include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/mergetree/lookup/file_position.h"
 #include "paimon/core/mergetree/lookup/positioned_key_value.h"
+
 namespace paimon {
 
 RemoteLookupFileManager::RemoteLookupFileManager(
@@ -103,6 +105,15 @@ Status RemoteLookupFileManager::CopyRemoteToLocal(const std::string& remote_path
 Status RemoteLookupFileManager::CopyFromInputToOutput(
     std::unique_ptr<InputStream>&& input_stream,
     std::unique_ptr<OutputStream>&& output_stream) const {
+    ScopeGuard input_close_guard([&input_stream]() -> void {
+        Status s = input_stream->Close();
+        (void)s;
+    });
+    ScopeGuard output_close_guard([&output_stream]() -> void {
+        Status s = output_stream->Close();
+        (void)s;
+    });
+
     auto buffer = std::make_shared<Bytes>(kBufferSize, pool_.get());
     PAIMON_ASSIGN_OR_RAISE(int64_t total_length, input_stream->Length());
     PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(total_length, "input stream length"));
@@ -128,8 +139,12 @@ Status RemoteLookupFileManager::CopyFromInputToOutput(
         write_size += current_read_size;
     }
     PAIMON_RETURN_NOT_OK(output_stream->Flush());
-    PAIMON_RETURN_NOT_OK(output_stream->Close());
-    PAIMON_RETURN_NOT_OK(input_stream->Close());
+    Status output_close_status = output_stream->Close();
+    output_close_guard.Release();
+    PAIMON_RETURN_NOT_OK(output_close_status);
+    Status input_close_status = input_stream->Close();
+    input_close_guard.Release();
+    PAIMON_RETURN_NOT_OK(input_close_status);
     return Status::OK();
 }
 template Result<std::shared_ptr<DataFileMeta>>

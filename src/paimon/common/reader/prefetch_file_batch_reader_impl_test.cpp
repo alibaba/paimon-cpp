@@ -17,6 +17,7 @@
 #include "paimon/common/reader/prefetch_file_batch_reader_impl.h"
 
 #include <atomic>
+#include <limits>
 #include <set>
 
 #include "arrow/compute/api.h"
