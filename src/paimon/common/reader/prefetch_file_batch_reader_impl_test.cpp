@@ -934,7 +934,7 @@ TEST_P(PrefetchFileBatchReaderImplTest, TestRowMapping) {
                               /*batch_size=*/10, /*prefetch_max_parallel_num=*/3, cache_mode);
     uint64_t global_row_id = 0;
     ASSERT_NOK(reader->GetPreviousBatchGlobalRowId(0));
-    ASSERT_OK_AND_ASSIGN(auto batch,
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> batch,
                          paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
     ASSERT_OK_AND_ASSIGN(global_row_id, reader->GetPreviousBatchGlobalRowId(0));
     ASSERT_EQ(global_row_id, 20);

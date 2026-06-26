@@ -165,7 +165,7 @@ class ReadResultCollector {
         }
         auto& [c_array, c_schema] = batch;
         assert(c_array->length > 0);
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto result_array,
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> result_array,
                                           arrow::ImportArray(c_array.get(), c_schema.get()));
         PAIMON_ASSIGN_OR_RAISE(
             auto converted_array,
@@ -173,7 +173,7 @@ class ReadResultCollector {
         if (max_data_processing_time_in_us > 0) {
             usleep(std::rand() % max_data_processing_time_in_us);
         }
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto chunk_array,
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::ChunkedArray> chunk_array,
                                           arrow::ChunkedArray::Make({converted_array}));
         return chunk_array;
     }
