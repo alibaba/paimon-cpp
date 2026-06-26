@@ -20,7 +20,6 @@
 
 #include "arrow/api.h"
 #include "arrow/util/type_fwd.h"
-#include "fmt/format.h"
 #include "paimon/result.h"
 
 namespace paimon {

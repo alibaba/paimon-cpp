@@ -78,6 +78,7 @@
 #include "paimon/testing/utils/test_helper.h"
 #include "paimon/testing/utils/testharness.h"
 #include "paimon/write_context.h"
+
 namespace paimon {
 class DataSplit;
 class RecordBatch;
@@ -1221,10 +1222,9 @@ TEST_P(BlobTableInteTest, TestIOException) {
                 .ValueOrDie());
         auto commit_msgs1_result = WriteArray(table_path, {}, write_cols1, {src_array1});
         CHECK_HOOK_STATUS(commit_msgs1_result.status(), i);
-        SetFirstRowId(/*reset_first_row_id=*/0,
-                      const_cast<std::vector<std::shared_ptr<paimon::CommitMessage>>&>(
-                          commit_msgs1_result.value()));
-        CHECK_HOOK_STATUS(Commit(table_path, commit_msgs1_result.value()), i);
+        auto commit_msgs1 = std::move(commit_msgs1_result).value();
+        SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs1);
+        CHECK_HOOK_STATUS(Commit(table_path, commit_msgs1), i);
         write_run_complete = true;
         break;
     }
@@ -1544,7 +1544,7 @@ TEST_P(BlobTableInteTest, TestWithRowIdsForMultipleBlobFiles) {
                               /*row_ranges=*/{Range(1l, 1l), Range(5l, 5l)}));
     }
     {
-        // test ont read blob field
+        // test not read blob field
         auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields_[1]}), R"([
         ["aaa1"],

@@ -53,7 +53,9 @@
 #include "paimon/testing/utils/io_exception_helper.h"
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/testharness.h"
+
 namespace paimon::test {
+
 class LookupMergeTreeCompactRewriterTest : public ::testing::TestWithParam<std::string> {
  public:
     void SetUp() override {

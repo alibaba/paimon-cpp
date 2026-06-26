@@ -208,7 +208,10 @@ std::shared_ptr<GlobalIndexResult> LuceneGlobalIndexReader::SearchWithNoLimit(
 
 Result<std::shared_ptr<GlobalIndexResult>> LuceneGlobalIndexReader::VisitFullTextSearch(
     const std::shared_ptr<FullTextSearch>& full_text_search) {
-    if (full_text_search && full_text_search->min_score.has_value()) {
+    if (!full_text_search) {
+        return Status::Invalid("VisitFullTextSearch: null FullTextSearch pointer");
+    }
+    if (full_text_search->min_score.has_value()) {
         // The lucene backend does not support min_score pushdown. Fail loudly
         // instead of silently ignoring the threshold and returning unfiltered
         // results, which would be a correctness bug for the caller.

@@ -55,7 +55,8 @@ class PAIMON_EXPORT MemoryPool {
     ///
     /// @param size Number of bytes to allocate.
     /// @param alignment Memory alignment requirement (0 for default alignment).
-    /// @return Pointer to allocated memory, or nullptr on failure.
+    /// @return Pointer to allocated memory.
+    /// @throws std::bad_alloc if the allocation fails.
     virtual void* Malloc(uint64_t size, uint64_t alignment = 0) = 0;
 
     /// Reallocate memory to a new size.

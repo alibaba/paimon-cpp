@@ -23,9 +23,6 @@
 #include "paimon/visibility.h"
 
 namespace paimon {
-class MemoryPool;
-
-PAIMON_EXPORT std::unique_ptr<arrow::MemoryPool> GetArrowPool(MemoryPool& pool);
 
 PAIMON_EXPORT std::unique_ptr<arrow::MemoryPool> GetArrowPool(
     const std::shared_ptr<MemoryPool>& pool);
