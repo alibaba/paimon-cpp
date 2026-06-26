@@ -474,7 +474,8 @@ TEST_F(MapSharedShreddingFileReaderTest, TestListValue) {
         [4, [[1, 0], [8], [9, 10], [[2, [null]]]]]
     ])")
             .ValueOrDie();
-    auto reader = CreateReader(physical_array, physical_schema, /*selected_keys=*/"a,c");
+    auto reader = CreateReader(physical_array, physical_schema,
+                               /*selected_keys=*/"a,c");  // NOLINT(whitespace/comma)
 
     auto read_metadata = std::make_shared<arrow::KeyValueMetadata>();
     read_metadata->Append("paimon.map.selected-keys", "a,c");
