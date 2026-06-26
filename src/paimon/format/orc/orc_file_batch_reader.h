@@ -62,7 +62,7 @@ class OrcFileBatchReader : public PrefetchFileBatchReader {
     // OrcFileBatchReader. Therefore, we need to hold BatchReader when using output ArrowArray.
     Result<ReadBatch> NextBatch() override;
 
-    Result<uint64_t> GetGlobalRowId(uint64_t batch_row_id) const override {
+    Result<uint64_t> GetPreviousBatchGlobalRowId(uint64_t batch_row_id) const override {
         return reader_->GetRowNumber() + batch_row_id;
     }
 

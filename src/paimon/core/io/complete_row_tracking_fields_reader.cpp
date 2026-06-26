@@ -91,7 +91,8 @@ CompleteRowTrackingFieldsBatchReader::NextBatchWithBitmap() {
                 return Status::Invalid(
                     "unexpected: read _ROW_ID special field, but first row id is null in meta");
             }
-            PAIMON_ASSIGN_OR_RAISE(uint64_t global_row_id, reader_->GetGlobalRowId(idx_in_array));
+            PAIMON_ASSIGN_OR_RAISE(uint64_t global_row_id,
+                                   reader_->GetPreviousBatchGlobalRowId(idx_in_array));
             return first_row_id_.value() + global_row_id;
         };
         PAIMON_RETURN_NOT_OK(ConvertRowTrackingField(src_struct_array->length(), /*init_value=*/0,

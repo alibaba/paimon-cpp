@@ -82,8 +82,8 @@ class ApplyDeletionVectorBatchReader : public FileBatchReader {
         return Status::Invalid("ApplyDeletionVectorBatchReader does not support SetReadSchema");
     }
 
-    Result<uint64_t> GetGlobalRowId(uint64_t batch_row_id) const override {
-        return reader_->GetGlobalRowId(batch_row_id);
+    Result<uint64_t> GetPreviousBatchGlobalRowId(uint64_t batch_row_id) const override {
+        return reader_->GetPreviousBatchGlobalRowId(batch_row_id);
     }
 
     Result<uint64_t> GetNumberOfRows() const override {
@@ -98,7 +98,7 @@ class ApplyDeletionVectorBatchReader : public FileBatchReader {
     Result<RoaringBitmap32> Filter(int32_t batch_size) const {
         RoaringBitmap32 is_valid;
         for (int32_t i = 0; i < batch_size; ++i) {
-            PAIMON_ASSIGN_OR_RAISE(uint64_t global_row_id, reader_->GetGlobalRowId(i));
+            PAIMON_ASSIGN_OR_RAISE(uint64_t global_row_id, reader_->GetPreviousBatchGlobalRowId(i));
             PAIMON_ASSIGN_OR_RAISE(bool is_deleted, deletion_vector_->IsDeleted(global_row_id));
             if (!is_deleted) {
                 is_valid.Add(i);

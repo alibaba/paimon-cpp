@@ -45,7 +45,7 @@ class AvroFileBatchReader : public FileBatchReader {
     Status SetReadSchema(::ArrowSchema* read_schema, const std::shared_ptr<Predicate>& predicate,
                          const std::optional<RoaringBitmap32>& selection_bitmap) override;
 
-    Result<uint64_t> GetGlobalRowId(uint64_t batch_row_id) const override {
+    Result<uint64_t> GetPreviousBatchGlobalRowId(uint64_t batch_row_id) const override {
         return previous_first_row_ + batch_row_id;
     }
 

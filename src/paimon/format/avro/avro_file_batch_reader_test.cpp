@@ -327,7 +327,7 @@ TEST_F(AvroFileBatchReaderTest, TestSetReadSchemaRejectNestedSubFieldProjection)
                         "does not support nested sub-field projection");
 }
 
-TEST_F(AvroFileBatchReaderTest, TestGetGlobalRowId) {
+TEST_F(AvroFileBatchReaderTest, TestGetPreviousBatchGlobalRowId) {
     std::string path = paimon::test::GetDataDir() +
                        "/avro/append_simple.db/"
                        "append_simple/bucket-0/"
@@ -352,25 +352,25 @@ TEST_F(AvroFileBatchReaderTest, TestGetGlobalRowId) {
 
     ASSERT_OK_AND_ASSIGN(auto num_rows, reader->GetNumberOfRows());
     ASSERT_EQ(4, num_rows);
-    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetGlobalRowId(0).value());
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchGlobalRowId(0).value());
     ASSERT_OK_AND_ASSIGN(auto batch1, reader->NextBatch());
     ArrowArrayRelease(batch1.first.get());
     ArrowSchemaRelease(batch1.second.get());
-    ASSERT_EQ(0, reader->GetGlobalRowId(0).value());
+    ASSERT_EQ(0, reader->GetPreviousBatchGlobalRowId(0).value());
     ASSERT_OK_AND_ASSIGN(auto batch2, reader->NextBatch());
-    ASSERT_EQ(1, reader->GetGlobalRowId(0).value());
+    ASSERT_EQ(1, reader->GetPreviousBatchGlobalRowId(0).value());
     ArrowArrayRelease(batch2.first.get());
     ArrowSchemaRelease(batch2.second.get());
     ASSERT_OK_AND_ASSIGN(auto batch3, reader->NextBatch());
-    ASSERT_EQ(2, reader->GetGlobalRowId(0).value());
+    ASSERT_EQ(2, reader->GetPreviousBatchGlobalRowId(0).value());
     ArrowArrayRelease(batch3.first.get());
     ArrowSchemaRelease(batch3.second.get());
     ASSERT_OK_AND_ASSIGN(auto batch4, reader->NextBatch());
-    ASSERT_EQ(3, reader->GetGlobalRowId(0).value());
+    ASSERT_EQ(3, reader->GetPreviousBatchGlobalRowId(0).value());
     ArrowArrayRelease(batch4.first.get());
     ArrowSchemaRelease(batch4.second.get());
     ASSERT_OK_AND_ASSIGN(auto batch5, reader->NextBatch());
-    ASSERT_EQ(4, reader->GetGlobalRowId(0).value());
+    ASSERT_EQ(4, reader->GetPreviousBatchGlobalRowId(0).value());
     ASSERT_TRUE(BatchReader::IsEofBatch(batch5));
 }
 
@@ -396,7 +396,7 @@ TEST_F(AvroFileBatchReaderTest, TestSetReadSchemaResetsReaderToFirstRow) {
     ASSERT_OK_AND_ASSIGN(auto reader, reader_builder->Build(in));
 
     ASSERT_OK_AND_ASSIGN(auto first_batch, reader->NextBatch());
-    ASSERT_EQ(0, reader->GetGlobalRowId(0).value());
+    ASSERT_EQ(0, reader->GetPreviousBatchGlobalRowId(0).value());
     auto first_array =
         arrow::ImportArray(first_batch.first.get(), first_batch.second.get()).ValueOrDie();
     ASSERT_TRUE(first_array->Equals(src_array->Slice(0, 2))) << first_array->ToString();
@@ -406,10 +406,10 @@ TEST_F(AvroFileBatchReaderTest, TestSetReadSchemaResetsReaderToFirstRow) {
     ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
     ASSERT_OK(reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr,
                                     /*selection_bitmap=*/std::nullopt));
-    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetGlobalRowId(0).value());
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchGlobalRowId(0).value());
 
     ASSERT_OK_AND_ASSIGN(auto projected_batch, reader->NextBatch());
-    ASSERT_EQ(0, reader->GetGlobalRowId(0).value());
+    ASSERT_EQ(0, reader->GetPreviousBatchGlobalRowId(0).value());
     auto projected_array =
         arrow::ImportArray(projected_batch.first.get(), projected_batch.second.get()).ValueOrDie();
     auto expected_projected_array = arrow::ipc::internal::json::ArrayFromJSON(

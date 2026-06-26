@@ -54,8 +54,8 @@ class DelegatingPrefetchReader : public FileBatchReader {
         return prefetch_reader_->SetReadSchema(read_schema, predicate, selection_bitmap);
     }
 
-    Result<uint64_t> GetGlobalRowId(uint64_t batch_row_id) const override {
-        return GetReader()->GetGlobalRowId(batch_row_id);
+    Result<uint64_t> GetPreviousBatchGlobalRowId(uint64_t batch_row_id) const override {
+        return GetReader()->GetPreviousBatchGlobalRowId(batch_row_id);
     }
 
     Result<uint64_t> GetNumberOfRows() const override {

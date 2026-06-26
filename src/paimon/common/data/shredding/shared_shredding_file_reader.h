@@ -46,7 +46,7 @@ class SharedShreddingFileReader : public FileBatchReader {
 
     void Close() override;
 
-    Result<uint64_t> GetGlobalRowId(uint64_t batch_row_id) const override;
+    Result<uint64_t> GetPreviousBatchGlobalRowId(uint64_t batch_row_id) const override;
 
     Result<uint64_t> GetNumberOfRows() const override;
 

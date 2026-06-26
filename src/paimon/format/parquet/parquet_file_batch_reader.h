@@ -96,7 +96,7 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     Result<std::vector<std::pair<uint64_t, uint64_t>>> GenReadRanges(
         bool* need_prefetch) const override;
 
-    Result<uint64_t> GetGlobalRowId(uint64_t batch_row_id) const override {
+    Result<uint64_t> GetPreviousBatchGlobalRowId(uint64_t batch_row_id) const override {
         if (batch_row_id >= row_mapping_.size()) {
             return std::numeric_limits<uint64_t>::max();
         }

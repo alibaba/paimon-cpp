@@ -475,7 +475,7 @@ TEST_F(ParquetFileBatchReaderTest, TestNextBatchSimple) {
         auto parquet_batch_reader =
             PrepareParquetFileBatchReader(file_name, schema_, /*predicate=*/nullptr,
                                           /*selection_bitmap=*/std::nullopt, batch_size);
-        ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(),
+        ASSERT_EQ(parquet_batch_reader->GetPreviousBatchGlobalRowId(0).value(),
                   std::numeric_limits<uint64_t>::max());
         ASSERT_OK_AND_ASSIGN(auto result_array, paimon::test::ReadResultCollector::CollectResult(
                                                     parquet_batch_reader.get()));
@@ -839,19 +839,19 @@ TEST_F(ParquetFileBatchReaderTest, TestReadNoField) {
         PrepareParquetFileBatchReader(file_name, read_schema, /*predicate=*/nullptr,
                                       /*selection_bitmap=*/std::nullopt, /*batch_size=*/2);
     // read 2 rows
-    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(),
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchGlobalRowId(0).value(),
               std::numeric_limits<uint64_t>::max());
     ASSERT_OK_AND_ASSIGN(auto batch1, parquet_batch_reader->NextBatch());
-    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(), 0);
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchGlobalRowId(0).value(), 0);
     //  read 2 rows
     ASSERT_OK_AND_ASSIGN(auto batch2, parquet_batch_reader->NextBatch());
-    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(), 2);
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchGlobalRowId(0).value(), 2);
     // read 2 rows
     ASSERT_OK_AND_ASSIGN(auto batch3, parquet_batch_reader->NextBatch());
-    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(), 4);
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchGlobalRowId(0).value(), 4);
     // read rows with eof
     ASSERT_OK_AND_ASSIGN(auto batch4, parquet_batch_reader->NextBatch());
-    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(), 4);
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchGlobalRowId(0).value(), 4);
     ASSERT_TRUE(BatchReader::IsEofBatch(batch4));
     parquet_batch_reader->Close();
 
@@ -1060,14 +1060,14 @@ TEST_F(ParquetFileBatchReaderTest, TestRowMapping) {
     auto parquet_batch_reader = PrepareParquetFileBatchReader(
         file_path_, arrow_schema, /*predicate=*/predicate, std::nullopt, /*batch_size=*/2);
 
-    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(),
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchGlobalRowId(0).value(),
               std::numeric_limits<uint64_t>::max());
 
     ASSERT_OK_AND_ASSIGN(auto batch1, CollectOneBatch(parquet_batch_reader.get()));
     auto expected_batch1 = src_array->Slice(1, 2);
     ASSERT_TRUE(batch1->Equals(expected_batch1)) << batch1->ToString();
-    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(), 1);
-    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(1).value(), 2);
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchGlobalRowId(0).value(), 1);
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchGlobalRowId(1).value(), 2);
 
     // Not adjacent pages
     ASSERT_OK_AND_ASSIGN(auto batch2, CollectOneBatch(parquet_batch_reader.get()));
@@ -1078,22 +1078,22 @@ TEST_F(ParquetFileBatchReaderTest, TestRowMapping) {
     ])")
             .ValueOrDie());
     ASSERT_TRUE(batch2->Equals(expected_batch2)) << batch2->ToString();
-    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(), 3);
-    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(1).value(), 5);
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchGlobalRowId(0).value(), 3);
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchGlobalRowId(1).value(), 5);
 
     // Only one record read
     ASSERT_OK_AND_ASSIGN(auto batch3, CollectOneBatch(parquet_batch_reader.get()));
     auto expected_batch3 = src_array->Slice(6, 1);
     ASSERT_TRUE(batch3->Equals(expected_batch3)) << batch3->ToString();
-    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(), 6);
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchGlobalRowId(0).value(), 6);
     // out of bound, return max value
-    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(1).value(),
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchGlobalRowId(1).value(),
               std::numeric_limits<uint64_t>::max());
 
     ASSERT_OK_AND_ASSIGN(auto eof_batch, CollectOneBatch(parquet_batch_reader.get()));
     ASSERT_EQ(nullptr, eof_batch);
     // previous batch is eof, return last none-eof batch's row id
-    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(), 6);
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchGlobalRowId(0).value(), 6);
 }
 
 }  // namespace paimon::parquet::test
