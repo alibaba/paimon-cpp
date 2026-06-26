@@ -1041,10 +1041,10 @@ TEST_F(ParquetFileBatchReaderTest, TestAddMetadataPerFieldMetadata) {
     ASSERT_TRUE(data->Equals(*result_array->chunk(0))) << result_array->ToString();
 }
 
-TEST_F(ParquetFileBatchReaderTest, TestRowMapping) {
+TEST_F(ParquetFileBatchReaderTest, TestRowMappingSimple) {
     arrow::FieldVector fields = {arrow::field("f0", arrow::int32())};
     auto src_array = MakeSequentialIntData(12);
-    // data in file rowGroup0:[0, 1, 2, 3, 4, 5] | rowGroup1:[6, 7, 8, 9, 10, 11]
+    // data in file rowGroup0:[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
     // one row per page
     auto arrow_schema = arrow::schema(fields);
     WriteArray(file_path_, src_array, arrow_schema, /*write_batch_size=*/1,
@@ -1099,6 +1099,45 @@ TEST_F(ParquetFileBatchReaderTest, TestRowMapping) {
     ASSERT_EQ(nullptr, eof_batch);
     // previous batch is eof, return invalid.
     ASSERT_NOK(parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
+}
+
+TEST_F(ParquetFileBatchReaderTest, TestRowMappingFullyAndPartially) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32())};
+    auto src_array = MakeSequentialIntData(12);
+    // data in file RowGroup0:[0, 1, 2] | RowGroup1:[3, 4, 5] | RowGroup2:[6, 7, 8] | RowGroup3:[9,
+    // 10, 11] one row per page
+    auto arrow_schema = arrow::schema(fields);
+    WriteArray(file_path_, src_array, arrow_schema, /*write_batch_size=*/1,
+               /*enable_dictionary=*/true, /*max_row_group_length=*/3, /*max_page_size=*/1);
+
+    // 3<=f0<=5 || f0==6 || f0==8
+    // RowGroup 1 is fully matched, RowGroup 2 is partially matched, RowGroup 0 and RowGroup 3 are
+    // not matched.
+    ASSERT_OK_AND_ASSIGN(
+        auto predicate,
+        PredicateBuilder::Or({PredicateBuilder::Between(/*field_index=*/0, /*field_name=*/"f0",
+                                                        FieldType::INT, Literal(3), Literal(5)),
+                              PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0",
+                                                      FieldType::INT, Literal(6)),
+                              PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0",
+                                                      FieldType::INT, Literal(8))}));
+
+    auto parquet_batch_reader = PrepareParquetFileBatchReader(
+        file_path_, arrow_schema, /*predicate=*/predicate, std::nullopt, /*batch_size=*/3);
+
+    uint64_t global_row_id = 0;
+    ASSERT_NOK(parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
+    ASSERT_OK_AND_ASSIGN(auto batch1, CollectOneBatch(parquet_batch_reader.get()));
+    ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
+    ASSERT_EQ(global_row_id, 3);
+    ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(2));
+    ASSERT_EQ(global_row_id, 5);
+
+    ASSERT_OK_AND_ASSIGN(auto batch2, CollectOneBatch(parquet_batch_reader.get()));
+    ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
+    ASSERT_EQ(global_row_id, 6);
+    ASSERT_OK_AND_ASSIGN(global_row_id, parquet_batch_reader->GetPreviousBatchGlobalRowId(1));
+    ASSERT_EQ(global_row_id, 8);
 }
 
 }  // namespace paimon::parquet::test

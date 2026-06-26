@@ -217,7 +217,9 @@ Status ParquetFileBatchReader::SetReadSchema(
                 target_row_groups.emplace_back(
                     /*rg_index=*/rg_id,
                     /*is_partially_matched=*/false,
-                    /*ranges=*/RowRanges(Range(0, reader_->GetAllRowGroupRanges()[rg_id].second)));
+                    /*ranges=*/
+                    RowRanges(Range(0, reader_->GetAllRowGroupRanges()[rg_id].second -
+                                           reader_->GetAllRowGroupRanges()[rg_id].first - 1)));
             }
         }
         PAIMON_ASSIGN_OR_RAISE(all_row_ranges_, GetAllTargetRowRanges(target_row_groups));
