@@ -82,7 +82,8 @@ class MapSharedShreddingBatchConverter {
         std::unique_ptr<MapSharedShreddingColumnAllocator> allocator;
 
         ColumnContext(const std::string& field_name, int32_t num_columns,
-                      std::unique_ptr<MapSharedShreddingColumnAllocator>&& allocator);
+                      std::unique_ptr<MapSharedShreddingColumnAllocator>&& allocator)
+            : field_name(field_name), num_columns(num_columns), allocator(std::move(allocator)) {}
     };
 
     /// Constructs a converter.

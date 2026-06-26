@@ -60,39 +60,33 @@ Result<std::unique_ptr<MapSharedShreddingColumnAllocator>> CreateMapSharedShredd
 
 }  // namespace
 
-MapSharedShreddingBatchConverter::ColumnContext::ColumnContext(
-    const std::string& field_name, int32_t num_columns,
-    std::unique_ptr<MapSharedShreddingColumnAllocator>&& allocator)
-    : field_name(field_name), num_columns(num_columns), allocator(std::move(allocator)) {}
-
 Result<std::shared_ptr<MapSharedShreddingBatchConverter>> MapSharedShreddingBatchConverter::Create(
     const std::shared_ptr<arrow::Schema>& logical_schema,
     const std::shared_ptr<MapSharedShreddingContext>& context, const CoreOptions& options,
     const std::shared_ptr<MemoryPool>& pool) {
-    std::map<std::string, int32_t> field_to_k = context->ComputeNextK();
+    std::map<std::string, int32_t> field_to_num_columns = context->ComputeNextK();
     std::shared_ptr<arrow::Schema> physical_schema =
-        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, field_to_k);
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, field_to_num_columns);
     std::vector<ColumnContext> contexts;
     std::vector<std::string> shredding_field_names;
-    contexts.reserve(field_to_k.size());
-    shredding_field_names.reserve(field_to_k.size());
+    contexts.reserve(field_to_num_columns.size());
+    shredding_field_names.reserve(field_to_num_columns.size());
     // Iterate in schema field order (not map order) so that shredding_field_names_
     // matches the order in which shredding columns appear in the schema.
     // This is critical for the sequential matching logic in Convert().
     for (int32_t i = 0; i < logical_schema->num_fields(); ++i) {
         const std::string& name = logical_schema->field(i)->name();
-        auto k_it = field_to_k.find(name);
-        if (k_it == field_to_k.end()) {
-            continue;
+        auto it = field_to_num_columns.find(name);
+        if (it != field_to_num_columns.end()) {
+            int32_t num_columns = it->second;
+            PAIMON_ASSIGN_OR_RAISE(MapSharedShreddingColumnPlacementPolicy placement_policy,
+                                   options.GetMapSharedShreddingColumnPlacementPolicy(name));
+            PAIMON_ASSIGN_OR_RAISE(
+                std::unique_ptr<MapSharedShreddingColumnAllocator> allocator,
+                CreateMapSharedShreddingColumnAllocator(num_columns, placement_policy));
+            contexts.emplace_back(name, num_columns, std::move(allocator));
+            shredding_field_names.push_back(name);
         }
-        int32_t num_columns = k_it->second;
-        PAIMON_ASSIGN_OR_RAISE(MapSharedShreddingColumnPlacementPolicy placement_policy,
-                               options.GetMapSharedShreddingColumnPlacementPolicy(name));
-        PAIMON_ASSIGN_OR_RAISE(
-            std::unique_ptr<MapSharedShreddingColumnAllocator> allocator,
-            CreateMapSharedShreddingColumnAllocator(num_columns, placement_policy));
-        contexts.emplace_back(name, num_columns, std::move(allocator));
-        shredding_field_names.push_back(name);
     }
     return std::shared_ptr<MapSharedShreddingBatchConverter>(
         new MapSharedShreddingBatchConverter(logical_schema, physical_schema, std::move(contexts),
