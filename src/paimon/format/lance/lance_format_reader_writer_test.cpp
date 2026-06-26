@@ -478,27 +478,26 @@ TEST_F(LanceFileReaderWriterTest, TestPreviousBatchFirstRowNumber) {
     ASSERT_OK_AND_ASSIGN(
         std::unique_ptr<LanceFileBatchReader> reader,
         LanceFileBatchReader::Create(file_path, /*batch_size=*/4, /*batch_readahead=*/2));
-    ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
-              reader->GetPreviousBatchFirstRowNumber().value());
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchGlobalRowId(0).value());
 
     // first batch row 0-3
     ASSERT_OK_AND_ASSIGN(auto read_batch, reader->NextBatch());
     ASSERT_OK_AND_ASSIGN(auto read_array,
                          paimon::test::ReadResultCollector::GetArray(std::move(read_batch)));
     ASSERT_TRUE(read_array->Equals(array->Slice(0, 4)));
-    ASSERT_EQ(0, reader->GetPreviousBatchFirstRowNumber().value());
+    ASSERT_EQ(0, reader->GetPreviousBatchGlobalRowId(0).value());
 
     // second batch 4-5
     ASSERT_OK_AND_ASSIGN(read_batch, reader->NextBatch());
     ASSERT_OK_AND_ASSIGN(read_array,
                          paimon::test::ReadResultCollector::GetArray(std::move(read_batch)));
     ASSERT_TRUE(read_array->Equals(array->Slice(4, 2)));
-    ASSERT_EQ(4, reader->GetPreviousBatchFirstRowNumber().value());
+    ASSERT_EQ(4, reader->GetPreviousBatchGlobalRowId(0).value());
 
     // eof
     ASSERT_OK_AND_ASSIGN(read_batch, reader->NextBatch());
     ASSERT_TRUE(BatchReader::IsEofBatch(read_batch));
-    ASSERT_EQ(6, reader->GetPreviousBatchFirstRowNumber().value());
+    ASSERT_EQ(6, reader->GetPreviousBatchGlobalRowId(0).value());
 
     // test with bitmap pushdown
     ArrowSchema c_read_schema;
@@ -506,8 +505,8 @@ TEST_F(LanceFileReaderWriterTest, TestPreviousBatchFirstRowNumber) {
     ASSERT_OK(reader->SetReadSchema(&c_read_schema, /*predicate=*/nullptr,
                                     /*selection_bitmap=*/RoaringBitmap32::From({0, 3})));
     ASSERT_NOK_WITH_MSG(
-        reader->GetPreviousBatchFirstRowNumber(),
-        "Cannot call GetPreviousBatchFirstRowNumber in LanceFileBatchReader because, after bitmap "
+        reader->GetPreviousBatchGlobalRowId(0),
+        "Cannot call GetPreviousBatchGlobalRowId in LanceFileBatchReader because, after bitmap "
         "pushdown, rows in the array returned by NextBatch are no longer contiguous.");
 }
 }  // namespace paimon::lance::test

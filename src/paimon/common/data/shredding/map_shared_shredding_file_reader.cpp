@@ -391,8 +391,9 @@ void MapSharedShreddingFileReader::Close() {
     reader_->Close();
 }
 
-Result<uint64_t> MapSharedShreddingFileReader::GetPreviousBatchFirstRowNumber() const {
-    return reader_->GetPreviousBatchFirstRowNumber();
+Result<uint64_t> MapSharedShreddingFileReader::GetPreviousBatchGlobalRowId(
+    uint64_t batch_row_id) const {
+    return reader_->GetPreviousBatchGlobalRowId(batch_row_id);
 }
 
 Result<uint64_t> MapSharedShreddingFileReader::GetNumberOfRows() const {

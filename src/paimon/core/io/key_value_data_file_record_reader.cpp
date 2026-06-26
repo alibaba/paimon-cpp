@@ -81,15 +81,15 @@ Result<KeyValue> KeyValueDataFileRecordReader::Iterator::Next() {
 
 Result<std::pair<int64_t, KeyValue>> KeyValueDataFileRecordReader::Iterator::NextWithFilePos() {
     PAIMON_ASSIGN_OR_RAISE(KeyValue kv, Next());
-    return std::make_pair(previous_batch_first_row_number_ + cursor_ - 1, std::move(kv));
+    PAIMON_ASSIGN_OR_RAISE(uint64_t global_row_id,
+                           reader_->reader_->GetPreviousBatchGlobalRowId(cursor_ - 1));
+    return std::make_pair(static_cast<int64_t>(global_row_id), std::move(kv));
 }
 
 Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueDataFileRecordReader::NextBatch() {
     Reset();
     PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatchWithBitmap batch_with_bitmap,
                            reader_->NextBatchWithBitmap());
-    PAIMON_ASSIGN_OR_RAISE(int64_t previous_batch_first_row_number,
-                           reader_->GetPreviousBatchFirstRowNumber());
     if (BatchReader::IsEofBatch(batch_with_bitmap)) {
         // reader eof, just return
         return std::unique_ptr<KeyValueRecordReader::Iterator>();
@@ -140,8 +140,7 @@ Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueDataFileRecordRe
     key_ctx_ = std::make_shared<ColumnarBatchContext>(key_fields, pool_);
     value_ctx_ = std::make_shared<ColumnarBatchContext>(value_fields, pool_);
     ArrowUtils::TraverseArray(data_batch);
-    return std::make_unique<KeyValueDataFileRecordReader::Iterator>(
-        this, previous_batch_first_row_number);
+    return std::make_unique<KeyValueDataFileRecordReader::Iterator>(this);
 }
 
 void KeyValueDataFileRecordReader::Reset() {
