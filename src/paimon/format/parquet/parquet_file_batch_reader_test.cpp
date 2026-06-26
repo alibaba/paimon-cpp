@@ -168,12 +168,15 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
 
     void WriteArray(const std::string& file_path, const std::shared_ptr<arrow::Array>& src_array,
                     const std::shared_ptr<arrow::Schema>& arrow_schema, int64_t write_batch_size,
-                    bool enable_dictionary, int64_t max_row_group_length) const {
+                    bool enable_dictionary, int64_t max_row_group_length,
+                    int64_t max_page_size = 1024 * 1024 * 1024) const {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
                              fs_->Create(file_path, /*overwrite=*/true));
         ::parquet::WriterProperties::Builder builder;
         builder.write_batch_size(write_batch_size);
         builder.max_row_group_length(max_row_group_length);
+        builder.data_pagesize(max_page_size);
+        builder.enable_write_page_index();
         enable_dictionary ? builder.enable_dictionary() : builder.disable_dictionary();
         auto writer_properties = builder.build();
         ASSERT_OK_AND_ASSIGN(auto format_writer, ParquetFormatWriter::Create(
@@ -228,6 +231,31 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
     std::shared_ptr<arrow::Schema> schema_;
     std::shared_ptr<arrow::StructArray> struct_array_;
 };
+
+static std::shared_ptr<arrow::StructArray> MakeSequentialIntData(int32_t num_rows) {
+    arrow::Int32Builder val_builder;
+    EXPECT_TRUE(val_builder.Reserve(num_rows).ok());
+    for (int32_t i = 0; i < num_rows; ++i) {
+        val_builder.UnsafeAppend(i);
+    }
+    auto val_array = val_builder.Finish().ValueOrDie();
+    auto field = arrow::field("f0", arrow::int32());
+    return arrow::StructArray::Make({val_array}, {field}).ValueOrDie();
+}
+
+static Result<std::shared_ptr<arrow::StructArray>> CollectOneBatch(ParquetFileBatchReader* reader) {
+    PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatch batch, reader->NextBatch());
+    if (BatchReader::IsEofBatch(batch)) {
+        return std::shared_ptr<arrow::StructArray>(nullptr);
+    }
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> result_array,
+                                      arrow::ImportArray(batch.first.get(), batch.second.get()));
+    auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(result_array);
+    if (!struct_array) {
+        return Status::Invalid("CollectOneBatch expected StructArray");
+    }
+    return struct_array;
+}
 
 TEST_F(ParquetFileBatchReaderTest, TestParquetMetadataCacheReusesSerializedFooter) {
     WriteArray(file_path_, struct_array_, schema_, /*write_batch_size=*/struct_array_->length(),
@@ -447,11 +475,10 @@ TEST_F(ParquetFileBatchReaderTest, TestNextBatchSimple) {
         auto parquet_batch_reader =
             PrepareParquetFileBatchReader(file_name, schema_, /*predicate=*/nullptr,
                                           /*selection_bitmap=*/std::nullopt, batch_size);
-        ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber().value(),
+        ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(),
                   std::numeric_limits<uint64_t>::max());
         ASSERT_OK_AND_ASSIGN(auto result_array, paimon::test::ReadResultCollector::CollectResult(
                                                     parquet_batch_reader.get()));
-        ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber().value(), 6);
         parquet_batch_reader->Close();
         auto expected_array = std::make_shared<arrow::ChunkedArray>(struct_array_);
         ASSERT_TRUE(result_array->Equals(expected_array));
@@ -812,19 +839,19 @@ TEST_F(ParquetFileBatchReaderTest, TestReadNoField) {
         PrepareParquetFileBatchReader(file_name, read_schema, /*predicate=*/nullptr,
                                       /*selection_bitmap=*/std::nullopt, /*batch_size=*/2);
     // read 2 rows
-    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber().value(),
+    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(),
               std::numeric_limits<uint64_t>::max());
     ASSERT_OK_AND_ASSIGN(auto batch1, parquet_batch_reader->NextBatch());
-    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber().value(), 0);
+    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(), 0);
     //  read 2 rows
     ASSERT_OK_AND_ASSIGN(auto batch2, parquet_batch_reader->NextBatch());
-    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber().value(), 2);
+    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(), 2);
     // read 2 rows
     ASSERT_OK_AND_ASSIGN(auto batch3, parquet_batch_reader->NextBatch());
-    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber().value(), 4);
+    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(), 4);
     // read rows with eof
     ASSERT_OK_AND_ASSIGN(auto batch4, parquet_batch_reader->NextBatch());
-    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber().value(), 6);
+    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(), 4);
     ASSERT_TRUE(BatchReader::IsEofBatch(batch4));
     parquet_batch_reader->Close();
 
@@ -1011,6 +1038,62 @@ TEST_F(ParquetFileBatchReaderTest, TestAddMetadataPerFieldMetadata) {
                                                 parquet_batch_reader.get()));
     ASSERT_EQ(result_array->num_chunks(), 1);
     ASSERT_TRUE(data->Equals(*result_array->chunk(0))) << result_array->ToString();
+}
+
+TEST_F(ParquetFileBatchReaderTest, TestRowMapping) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32())};
+    auto src_array = MakeSequentialIntData(12);
+    // data in file rowGroup0:[0, 1, 2, 3, 4, 5] | rowGroup1:[6, 7, 8, 9, 10, 11]
+    // one row per page
+    auto arrow_schema = arrow::schema(fields);
+    WriteArray(file_path_, src_array, arrow_schema, /*write_batch_size=*/1,
+               /*enable_dictionary=*/true, /*max_row_group_length=*/12, /*max_page_size=*/1);
+
+    // 1<=f0<=3 || 5<=f0<=6
+    ASSERT_OK_AND_ASSIGN(
+        auto predicate,
+        PredicateBuilder::Or({PredicateBuilder::Between(/*field_index=*/0, /*field_name=*/"f0",
+                                                        FieldType::INT, Literal(1), Literal(3)),
+                              PredicateBuilder::Between(/*field_index=*/0, /*field_name=*/"f0",
+                                                        FieldType::INT, Literal(5), Literal(6))}));
+
+    auto parquet_batch_reader = PrepareParquetFileBatchReader(
+        file_path_, arrow_schema, /*predicate=*/predicate, std::nullopt, /*batch_size=*/2);
+
+    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(),
+              std::numeric_limits<uint64_t>::max());
+
+    ASSERT_OK_AND_ASSIGN(auto batch1, CollectOneBatch(parquet_batch_reader.get()));
+    auto expected_batch1 = src_array->Slice(1, 2);
+    ASSERT_TRUE(batch1->Equals(expected_batch1)) << batch1->ToString();
+    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(), 1);
+    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(1).value(), 2);
+
+    // Not adjacent pages
+    ASSERT_OK_AND_ASSIGN(auto batch2, CollectOneBatch(parquet_batch_reader.get()));
+    auto expected_batch2 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+[3],
+[5]
+    ])")
+            .ValueOrDie());
+    ASSERT_TRUE(batch2->Equals(expected_batch2)) << batch2->ToString();
+    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(), 3);
+    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(1).value(), 5);
+
+    // Only one record read
+    ASSERT_OK_AND_ASSIGN(auto batch3, CollectOneBatch(parquet_batch_reader.get()));
+    auto expected_batch3 = src_array->Slice(6, 1);
+    ASSERT_TRUE(batch3->Equals(expected_batch3)) << batch3->ToString();
+    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(), 6);
+    // out of bound, return max value
+    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(1).value(),
+              std::numeric_limits<uint64_t>::max());
+
+    ASSERT_OK_AND_ASSIGN(auto eof_batch, CollectOneBatch(parquet_batch_reader.get()));
+    ASSERT_EQ(nullptr, eof_batch);
+    // previous batch is eof, return last none-eof batch's row id
+    ASSERT_EQ(parquet_batch_reader->GetGlobalRowId(0).value(), 6);
 }
 
 }  // namespace paimon::parquet::test

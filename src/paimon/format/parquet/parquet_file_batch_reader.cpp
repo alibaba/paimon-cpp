@@ -39,6 +39,7 @@
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/options_utils.h"
+#include "paimon/common/utils/scope_guard.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/schema/arrow_schema_validator.h"
 #include "paimon/core/utils/nested_projection_utils.h"
@@ -213,11 +214,13 @@ Status ParquetFileBatchReader::SetReadSchema(
                 target_row_groups.emplace_back(/*rg_index=*/rg_id, /*is_partially_matched=*/true,
                                                /*ranges=*/it->second);
             } else {
-                target_row_groups.emplace_back(/*rg_index=*/rg_id,
-                                               /*is_partially_matched=*/false,
-                                               /*ranges=*/RowRanges());
+                target_row_groups.emplace_back(
+                    /*rg_index=*/rg_id,
+                    /*is_partially_matched=*/false,
+                    /*ranges=*/RowRanges(Range(0, reader_->GetAllRowGroupRanges()[rg_id].second)));
             }
         }
+        PAIMON_ASSIGN_OR_RAISE(all_row_ranges_, GetAllTargetRowRanges(target_row_groups));
         PAIMON_RETURN_NOT_OK(reader_->PrepareForReadingLazy(target_row_groups, column_indices));
     }
     PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetFileBatchReader::SetReadSchema")
@@ -361,6 +364,7 @@ Result<BatchReader::ReadBatch> ParquetFileBatchReader::NextBatch() {
                 "equal with read schema {}",
                 array->type()->ToString(), read_data_type_->ToString()));
         }
+        PAIMON_RETURN_NOT_OK(GenerateRowMapping(array->length()));
         std::unique_ptr<ArrowArray> c_array = std::make_unique<ArrowArray>();
         std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, c_array.get(), c_schema.get()));
@@ -526,4 +530,52 @@ Result<std::vector<int32_t>> ParquetFileBatchReader::ComputeNestedColumnIndices(
     return indices;
 }
 
+Result<RowRanges> ParquetFileBatchReader::GetAllTargetRowRanges(
+    const std::vector<TargetRowGroup>& target_row_groups) const {
+    auto all_row_group_ranges = reader_->GetAllRowGroupRanges();
+    RowRanges all_ranges;
+    for (const auto& target_row_group : target_row_groups) {
+        for (const auto& range : target_row_group.row_ranges.GetRanges()) {
+            all_ranges.Add(
+                Range(range.from + all_row_group_ranges[target_row_group.row_group_index].first,
+                      range.to + all_row_group_ranges[target_row_group.row_group_index].first));
+        }
+    }
+    return all_ranges;
+}
+
+Status ParquetFileBatchReader::GenerateRowMapping(int64_t batch_length) {
+    const std::vector<Range>& all_ranges = all_row_ranges_.GetRanges();
+    PAIMON_ASSIGN_OR_RAISE(int64_t batch_start_row, reader_->GetPreviousBatchFirstRowNumber());
+
+    auto cur_range_it =
+        std::upper_bound(all_ranges.begin(), all_ranges.end(), batch_start_row,
+                         [](int64_t value, const Range& r) { return value < r.from; });
+    if (cur_range_it == all_ranges.begin()) {
+        return Status::Invalid("No range found!");
+    }
+    --cur_range_it;
+    if (batch_start_row < cur_range_it->from || batch_start_row > cur_range_it->to) {
+        return Status::Invalid(
+            fmt::format("Batch start row {} is not in the current range [{}, {}]!", batch_start_row,
+                        cur_range_it->from, cur_range_it->to));
+    }
+
+    std::vector<uint64_t> row_mapping;
+    row_mapping.reserve(batch_length);
+    int64_t global_row = batch_start_row;
+    for (int64_t i = 0; i < batch_length; ++i) {
+        if (global_row > cur_range_it->to) {
+            ++cur_range_it;
+            if (cur_range_it == all_ranges.end()) {
+                return Status::Invalid("Batch length exceeds the total row ranges!");
+            }
+            global_row = cur_range_it->from;
+        }
+        row_mapping.push_back(global_row);
+        global_row++;
+    }
+    row_mapping_ = std::move(row_mapping);
+    return Status::OK();
+}
 }  // namespace paimon::parquet

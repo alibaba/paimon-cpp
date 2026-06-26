@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <fmt/format.h>
+
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -94,9 +96,11 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     Result<std::vector<std::pair<uint64_t, uint64_t>>> GenReadRanges(
         bool* need_prefetch) const override;
 
-    Result<uint64_t> GetPreviousBatchFirstRowNumber() const override {
-        assert(reader_);
-        return reader_->GetPreviousBatchFirstRowNumber();
+    Result<uint64_t> GetGlobalRowId(uint64_t batch_row_id) const override {
+        if (batch_row_id >= row_mapping_.size()) {
+            return std::numeric_limits<uint64_t>::max();
+        }
+        return row_mapping_[batch_row_id];
     }
 
     Result<uint64_t> GetNumberOfRows() const override {
@@ -173,6 +177,9 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         const std::shared_ptr<arrow::Schema>& read_schema,
         const std::shared_ptr<arrow::Schema>& file_schema);
 
+    Result<RowRanges> GetAllTargetRowRanges(
+        const std::vector<TargetRowGroup>& target_row_groups) const;
+
     // precondition: predicate supposed not be empty
     Result<std::vector<int32_t>> FilterRowGroupsByPredicate(
         const std::shared_ptr<Predicate>& predicate,
@@ -189,6 +196,8 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
                                const std::map<std::string, int32_t>& column_name_to_index,
                                const std::vector<int32_t>& src_row_groups);
 
+    Status GenerateRowMapping(int64_t batch_length);
+
  private:
     std::map<std::string, std::string> options_;
     // hold the lifecycle of arrow memory pool.
@@ -204,6 +213,9 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
 
     uint64_t read_rows_ = 0;
     uint64_t read_batch_count_ = 0;
+
+    RowRanges all_row_ranges_;
+    std::vector<uint64_t> row_mapping_;
 };
 
 }  // namespace paimon::parquet

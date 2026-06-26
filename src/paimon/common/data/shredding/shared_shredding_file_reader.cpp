@@ -469,8 +469,8 @@ void SharedShreddingFileReader::Close() {
     reader_->Close();
 }
 
-Result<uint64_t> SharedShreddingFileReader::GetPreviousBatchFirstRowNumber() const {
-    return reader_->GetPreviousBatchFirstRowNumber();
+Result<uint64_t> SharedShreddingFileReader::GetGlobalRowId(uint64_t batch_row_id) const {
+    return reader_->GetGlobalRowId(batch_row_id);
 }
 
 Result<uint64_t> SharedShreddingFileReader::GetNumberOfRows() const {

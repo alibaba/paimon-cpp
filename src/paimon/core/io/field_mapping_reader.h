@@ -74,8 +74,8 @@ class FieldMappingReader : public FileBatchReader {
         return Status::Invalid("FieldMappingReader does not support SetReadSchema");
     }
 
-    Result<uint64_t> GetPreviousBatchFirstRowNumber() const override {
-        return reader_->GetPreviousBatchFirstRowNumber();
+    Result<uint64_t> GetGlobalRowId(uint64_t batch_row_id) const override {
+        return reader_->GetGlobalRowId(batch_row_id);
     }
 
     Result<uint64_t> GetNumberOfRows() const override {

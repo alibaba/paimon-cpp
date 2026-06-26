@@ -149,8 +149,8 @@ class MockFileBatchReader : public PrefetchFileBatchReader {
         return metrics;
     }
 
-    Result<uint64_t> GetPreviousBatchFirstRowNumber() const override {
-        return previous_batch_first_row_num_;
+    Result<uint64_t> GetGlobalRowId(uint64_t batch_row_id) const override {
+        return previous_batch_first_row_num_ + batch_row_id;
     }
 
     Result<uint64_t> GetNumberOfRows() const override {
