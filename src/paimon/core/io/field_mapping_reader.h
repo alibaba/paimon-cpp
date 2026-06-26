@@ -50,7 +50,7 @@ class FieldMappingReader : public FileBatchReader {
     static Result<std::unique_ptr<FieldMappingReader>> Create(
         int32_t field_count, std::unique_ptr<FileBatchReader>&& reader, const BinaryRow& partition,
         std::unique_ptr<FieldMapping>&& mapping,
-        const std::set<int32_t>& skip_map_selected_keys_filter_field_ids,
+        std::set<int32_t>&& skip_map_selected_keys_filter_field_ids,
         const std::shared_ptr<MemoryPool>& pool);
 
     Result<ReadBatch> NextBatch() override {

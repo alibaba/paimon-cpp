@@ -25,8 +25,8 @@
 #include "arrow/type.h"
 #include "fmt/format.h"
 #include "paimon/common/data/blob_utils.h"
+#include "paimon/common/data/shredding/map_shared_shredding_file_reader.h"
 #include "paimon/common/data/shredding/map_shared_shredding_utils.h"
-#include "paimon/common/data/shredding/shared_shredding_file_reader.h"
 #include "paimon/common/reader/delegating_prefetch_reader.h"
 #include "paimon/common/reader/predicate_batch_reader.h"
 #include "paimon/common/reader/prefetch_file_batch_reader_impl.h"
@@ -196,11 +196,13 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingRe
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<FileBatchReader> file_reader,
         CreateFileBatchReader(file_format_identifier, data_file_path, reader_builder));
-    std::pair<std::unique_ptr<FileBatchReader>, std::set<int32_t>> shared_shredding_result;
+    std::set<int32_t> skip_map_selected_keys_filter_field_ids;
     if (file_format_identifier != "blob") {
+        std::pair<std::unique_ptr<FileBatchReader>, std::set<int32_t>> shared_shredding_result;
         PAIMON_ASSIGN_OR_RAISE(shared_shredding_result, ApplySharedShreddingReaderIfNeeded(
                                                             std::move(file_reader), read_schema));
         file_reader = std::move(shared_shredding_result.first);
+        skip_map_selected_keys_filter_field_ids = std::move(shared_shredding_result.second);
     }
     if (NeedCompleteRowTrackingFields(options_.RowTrackingEnabled(), read_schema)) {
         file_reader = std::make_unique<CompleteRowTrackingFieldsBatchReader>(
@@ -221,7 +223,7 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingRe
         std::unique_ptr<FieldMappingReader> mapping_reader,
         FieldMappingReader::Create(field_mapping_builder->GetReadFieldCount(),
                                    std::move(final_reader), partition, std::move(field_mapping),
-                                   shared_shredding_result.second, pool_));
+                                   std::move(skip_map_selected_keys_filter_field_ids), pool_));
     return mapping_reader;
 }
 
@@ -234,12 +236,13 @@ AbstractSplitRead::ApplySharedShreddingReaderIfNeeded(
                            file_reader->GetFileSchema());
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> file_arrow_schema,
                                       arrow::ImportSchema(file_schema.get()));
-    std::map<std::string, SharedShreddingFileReader::SharedShreddingContext>
+    std::map<std::string, MapSharedShreddingFileReader::SharedShreddingContext>
         shared_shredding_name_to_context;
     for (const auto& read_field : read_schema->fields()) {
         const auto& field_name = read_field->name();
         auto file_field = file_arrow_schema->GetFieldByName(field_name);
         if (!file_field) {
+            // may exists field _ROW_ID in read schema
             continue;
         }
         std::shared_ptr<arrow::KeyValueMetadata> metadata =
@@ -266,14 +269,13 @@ AbstractSplitRead::ApplySharedShreddingReaderIfNeeded(
         auto map_type = arrow::internal::checked_pointer_cast<arrow::MapType>(read_field->type());
         shared_shredding_name_to_context.emplace(
             field_name,
-            SharedShreddingFileReader::SharedShreddingContext(meta, selected_keys, map_type));
-        int32_t field_id = NestedProjectionUtils::GetPaimonFieldId(read_field);
-        if (field_id >= 0) {
-            handled_shared_shredding_field_ids.insert(field_id);
-        }
+            MapSharedShreddingFileReader::SharedShreddingContext(meta, selected_keys, map_type));
+        PAIMON_ASSIGN_OR_RAISE(int32_t field_id,
+                               NestedProjectionUtils::GetPaimonFieldId(read_field));
+        handled_shared_shredding_field_ids.insert(field_id);
     }
     if (!shared_shredding_name_to_context.empty()) {
-        file_reader = std::make_unique<SharedShreddingFileReader>(
+        file_reader = std::make_unique<MapSharedShreddingFileReader>(
             std::move(file_reader), std::move(shared_shredding_name_to_context), pool_);
     }
     return std::make_pair(std::move(file_reader), std::move(handled_shared_shredding_field_ids));

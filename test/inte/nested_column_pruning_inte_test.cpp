@@ -1640,7 +1640,16 @@ TEST_P(NestedColumnPruningInteTest, PruneListStructSubFields) {
     ASSERT_NOK_WITH_MSG(create_reader_result, "partial projection inside list");
 }
 
+std::vector<std::string> GetTestValuesForNestedColumnPruningInteTest() {
+    std::vector<std::string> values;
+    values.emplace_back("parquet");
+#ifdef PAIMON_ENABLE_ORC
+    values.emplace_back("orc");
+#endif
+    return values;
+}
+
 INSTANTIATE_TEST_SUITE_P(FileFormats, NestedColumnPruningInteTest,
-                         ::testing::Values("parquet", "orc"));
+                         ::testing::ValuesIn(GetTestValuesForNestedColumnPruningInteTest()));
 
 }  // namespace paimon::test

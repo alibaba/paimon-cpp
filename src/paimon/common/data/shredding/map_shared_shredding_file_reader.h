@@ -30,7 +30,7 @@
 
 namespace paimon {
 
-class SharedShreddingFileReader : public FileBatchReader {
+class MapSharedShreddingFileReader : public FileBatchReader {
  public:
     struct SharedShreddingContext {
         SharedShreddingContext(const MapSharedShreddingFieldMeta& _meta,
@@ -42,7 +42,7 @@ class SharedShreddingFileReader : public FileBatchReader {
         std::shared_ptr<arrow::MapType> map_type;
     };
 
-    SharedShreddingFileReader(
+    MapSharedShreddingFileReader(
         std::unique_ptr<FileBatchReader>&& reader,
         std::map<std::string, SharedShreddingContext>&& shared_shredding_name_to_context,
         const std::shared_ptr<MemoryPool>& pool);

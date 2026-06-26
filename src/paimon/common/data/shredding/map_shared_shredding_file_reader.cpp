@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/common/data/shredding/shared_shredding_file_reader.h"
+#include "paimon/common/data/shredding/map_shared_shredding_file_reader.h"
 
 #include <optional>
 #include <set>
@@ -31,16 +31,16 @@
 #include "paimon/core/casting/casting_utils.h"
 
 namespace paimon {
-SharedShreddingFileReader::SharedShreddingFileReader(
+MapSharedShreddingFileReader::MapSharedShreddingFileReader(
     std::unique_ptr<FileBatchReader>&& reader,
-    std::map<std::string, SharedShreddingFileReader::SharedShreddingContext>&&
+    std::map<std::string, MapSharedShreddingFileReader::SharedShreddingContext>&&
         shared_shredding_name_to_context,
     const std::shared_ptr<MemoryPool>& pool)
     : arrow_pool_(GetArrowPool(pool)),
       reader_(std::move(reader)),
       shared_shredding_name_to_context_(std::move(shared_shredding_name_to_context)) {}
 
-Result<std::unique_ptr<::ArrowSchema>> SharedShreddingFileReader::GetFileSchema() const {
+Result<std::unique_ptr<::ArrowSchema>> MapSharedShreddingFileReader::GetFileSchema() const {
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::ArrowSchema> physical_schema,
                            reader_->GetFileSchema());
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> physical_arrow_schema,
@@ -63,7 +63,7 @@ Result<std::unique_ptr<::ArrowSchema>> SharedShreddingFileReader::GetFileSchema(
     return c_logical_schema;
 }
 
-Result<std::shared_ptr<arrow::Field>> SharedShreddingFileReader::ToLogicalMapField(
+Result<std::shared_ptr<arrow::Field>> MapSharedShreddingFileReader::ToLogicalMapField(
     const std::shared_ptr<arrow::Field>& physical_field) {
     auto physical_type = std::dynamic_pointer_cast<arrow::StructType>(physical_field->type());
     if (!physical_type) {
@@ -91,11 +91,12 @@ Result<std::shared_ptr<arrow::Field>> SharedShreddingFileReader::ToLogicalMapFie
         physical_field->nullable());
 }
 
-Status SharedShreddingFileReader::SetReadSchema(
+Status MapSharedShreddingFileReader::SetReadSchema(
     ::ArrowSchema* read_schema, const std::shared_ptr<Predicate>& predicate,
     const std::optional<RoaringBitmap32>& selection_bitmap) {
     if (!read_schema) {
-        return Status::Invalid("invalid read schema in SharedShreddingFileReader, cannot be null");
+        return Status::Invalid(
+            "invalid read schema in MapSharedShreddingFileReader, cannot be null");
     }
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> logical_read_schema,
                                       arrow::ImportSchema(read_schema));
@@ -107,7 +108,7 @@ Status SharedShreddingFileReader::SetReadSchema(
         }
     }
     if (shared_shredding_names.empty()) {
-        // suppose not fall into SharedShreddingFileReader
+        // suppose not fall into MapSharedShreddingFileReader
         return Status::Invalid("do not exist shared shredding columns in read schema");
     }
     arrow::FieldVector resolved_fields = logical_read_schema->fields();
@@ -157,12 +158,12 @@ Status SharedShreddingFileReader::SetReadSchema(
     return reader_->SetReadSchema(c_resolved_schema.get(), predicate, selection_bitmap);
 }
 
-Result<BatchReader::ReadBatch> SharedShreddingFileReader::NextBatch() {
+Result<BatchReader::ReadBatch> MapSharedShreddingFileReader::NextBatch() {
     return Status::Invalid(
-        "paimon inner reader SharedShreddingFileReader should use NextBatchWithBitmap");
+        "paimon inner reader MapSharedShreddingFileReader should use NextBatchWithBitmap");
 }
 
-Result<BatchReader::ReadBatchWithBitmap> SharedShreddingFileReader::NextBatchWithBitmap() {
+Result<BatchReader::ReadBatchWithBitmap> MapSharedShreddingFileReader::NextBatchWithBitmap() {
     PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatchWithBitmap batch_with_bitmap,
                            reader_->NextBatchWithBitmap());
     if (BatchReader::IsEofBatch(batch_with_bitmap)) {
@@ -175,7 +176,7 @@ Result<BatchReader::ReadBatchWithBitmap> SharedShreddingFileReader::NextBatchWit
                                       arrow::ImportArray(c_array.get(), c_schema.get()));
     auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(arrow_array);
     if (!struct_array) {
-        return Status::Invalid("cannot cast batch to StructArray in SharedShreddingFileReader");
+        return Status::Invalid("cannot cast batch to StructArray in MapSharedShreddingFileReader");
     }
 
     arrow::ArrayVector resolved_arrays = struct_array->fields();
@@ -208,7 +209,7 @@ Result<BatchReader::ReadBatchWithBitmap> SharedShreddingFileReader::NextBatchWit
     return batch_with_bitmap;
 }
 
-Result<std::shared_ptr<arrow::Array>> SharedShreddingFileReader::RebuildLogicalMapArray(
+Result<std::shared_ptr<arrow::Array>> MapSharedShreddingFileReader::RebuildLogicalMapArray(
     const std::shared_ptr<arrow::Field>& physical_field,
     const std::shared_ptr<arrow::StructArray>& physical_struct_array) const {
     std::string shredding_field_name = physical_field->name();
@@ -349,7 +350,7 @@ Result<std::shared_ptr<arrow::Array>> SharedShreddingFileReader::RebuildLogicalM
     return map_array;
 }
 
-std::vector<std::pair<std::string, int32_t>> SharedShreddingFileReader::ResolveSelectedKeyIds(
+std::vector<std::pair<std::string, int32_t>> MapSharedShreddingFileReader::ResolveSelectedKeyIds(
     const MapSharedShreddingFieldMeta& meta, const std::vector<std::string>& selected_keys) {
     std::vector<std::pair<std::string, int32_t>> selected_key_ids;
     selected_key_ids.reserve(selected_keys.size());
@@ -363,7 +364,7 @@ std::vector<std::pair<std::string, int32_t>> SharedShreddingFileReader::ResolveS
     return selected_key_ids;
 }
 
-void SharedShreddingFileReader::CollectPhysicalColumns(
+void MapSharedShreddingFileReader::CollectPhysicalColumns(
     const std::shared_ptr<arrow::StructArray>& physical_struct_array,
     std::map<std::string, std::shared_ptr<arrow::Array>>* physical_column_name_to_array,
     std::shared_ptr<arrow::MapArray>* overflow_array) {
@@ -382,23 +383,23 @@ void SharedShreddingFileReader::CollectPhysicalColumns(
     }
 }
 
-std::shared_ptr<Metrics> SharedShreddingFileReader::GetReaderMetrics() const {
+std::shared_ptr<Metrics> MapSharedShreddingFileReader::GetReaderMetrics() const {
     return reader_->GetReaderMetrics();
 }
 
-void SharedShreddingFileReader::Close() {
+void MapSharedShreddingFileReader::Close() {
     reader_->Close();
 }
 
-Result<uint64_t> SharedShreddingFileReader::GetPreviousBatchFirstRowNumber() const {
+Result<uint64_t> MapSharedShreddingFileReader::GetPreviousBatchFirstRowNumber() const {
     return reader_->GetPreviousBatchFirstRowNumber();
 }
 
-Result<uint64_t> SharedShreddingFileReader::GetNumberOfRows() const {
+Result<uint64_t> MapSharedShreddingFileReader::GetNumberOfRows() const {
     return reader_->GetNumberOfRows();
 }
 
-bool SharedShreddingFileReader::SupportPreciseBitmapSelection() const {
+bool MapSharedShreddingFileReader::SupportPreciseBitmapSelection() const {
     return reader_->SupportPreciseBitmapSelection();
 }
 

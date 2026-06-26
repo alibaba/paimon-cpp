@@ -124,7 +124,7 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::FilterMapSelectedKeysR
 Result<std::unique_ptr<FieldMappingReader>> FieldMappingReader::Create(
     int32_t field_count, std::unique_ptr<FileBatchReader>&& reader, const BinaryRow& partition,
     std::unique_ptr<FieldMapping>&& mapping,
-    const std::set<int32_t>& skip_map_selected_keys_filter_field_ids,
+    std::set<int32_t>&& skip_map_selected_keys_filter_field_ids,
     const std::shared_ptr<MemoryPool>& pool) {
     auto mapping_reader = std::unique_ptr<FieldMappingReader>(new FieldMappingReader(
         field_count, std::move(reader), partition, std::move(mapping), pool));
@@ -132,7 +132,7 @@ Result<std::unique_ptr<FieldMappingReader>> FieldMappingReader::Create(
     mapping_reader->need_mapping_ = false;
     mapping_reader->need_casting_ = false;
     mapping_reader->skip_map_selected_keys_filter_field_ids_ =
-        skip_map_selected_keys_filter_field_ids;
+        std::move(skip_map_selected_keys_filter_field_ids);
 
     if (mapping_reader->non_exist_field_info_ != std::nullopt ||
         mapping_reader->partition_info_ != std::nullopt) {

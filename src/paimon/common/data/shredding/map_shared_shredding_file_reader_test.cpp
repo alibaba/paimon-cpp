@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/common/data/shredding/shared_shredding_file_reader.h"
+#include "paimon/common/data/shredding/map_shared_shredding_file_reader.h"
 
 #include <map>
 #include <memory>
@@ -47,7 +47,7 @@
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
-class SharedShreddingFileReaderTest : public ::testing::Test {
+class MapSharedShreddingFileReaderTest : public ::testing::Test {
  public:
     void SetUp() override {
         pool_ = GetDefaultPool();
@@ -94,22 +94,21 @@ class SharedShreddingFileReaderTest : public ::testing::Test {
             .ValueOrDie();
     }
 
-    std::unique_ptr<SharedShreddingFileReader> WrapReader(
+    std::unique_ptr<MapSharedShreddingFileReader> WrapReader(
         std::unique_ptr<FileBatchReader>&& reader,
         const std::optional<std::string>& selected_keys_str = std::nullopt) const {
         EXPECT_OK_AND_ASSIGN(auto c_file_schema, reader->GetFileSchema());
         auto file_schema = arrow::ImportSchema(c_file_schema.get()).ValueOrDie();
-        std::map<std::string, SharedShreddingFileReader::SharedShreddingContext>
+        std::map<std::string, MapSharedShreddingFileReader::SharedShreddingContext>
             shared_shredding_name_to_context;
         for (const auto& field : file_schema->fields()) {
-            auto metadata =
-                std::const_pointer_cast<arrow::KeyValueMetadata>(field->metadata());
+            auto metadata = std::const_pointer_cast<arrow::KeyValueMetadata>(field->metadata());
             if (!MapSharedShreddingUtils::HasShreddingMetadata(metadata)) {
                 continue;
             }
-            EXPECT_OK_AND_ASSIGN(
-                auto meta, MapSharedShreddingUtils::DeserializeMetadata(
-                               metadata, MapSharedShreddingDefine::kDefaultDictCompression));
+            EXPECT_OK_AND_ASSIGN(auto meta,
+                                 MapSharedShreddingUtils::DeserializeMetadata(
+                                     metadata, MapSharedShreddingDefine::kDefaultDictCompression));
             auto physical_type =
                 arrow::internal::checked_pointer_cast<arrow::StructType>(field->type());
             std::shared_ptr<arrow::Field> item_field;
@@ -121,9 +120,8 @@ class SharedShreddingFileReaderTest : public ::testing::Test {
                 }
             }
             EXPECT_TRUE(item_field);
-            auto map_type = arrow::internal::checked_pointer_cast<arrow::MapType>(
-                arrow::map(arrow::utf8(),
-                           arrow::field("value", item_field->type(), item_field->nullable())));
+            auto map_type = arrow::internal::checked_pointer_cast<arrow::MapType>(arrow::map(
+                arrow::utf8(), arrow::field("value", item_field->type(), item_field->nullable())));
             std::vector<std::string> selected_keys;
             if (selected_keys_str.has_value()) {
                 selected_keys = StringUtils::Split(selected_keys_str.value(), ",",
@@ -135,14 +133,14 @@ class SharedShreddingFileReaderTest : public ::testing::Test {
                 }
             }
             shared_shredding_name_to_context.emplace(
-                field->name(), SharedShreddingFileReader::SharedShreddingContext(
+                field->name(), MapSharedShreddingFileReader::SharedShreddingContext(
                                    meta, selected_keys, map_type));
         }
-        return std::make_unique<SharedShreddingFileReader>(
+        return std::make_unique<MapSharedShreddingFileReader>(
             std::move(reader), std::move(shared_shredding_name_to_context), pool_);
     }
 
-    std::unique_ptr<SharedShreddingFileReader> CreateReader(
+    std::unique_ptr<MapSharedShreddingFileReader> CreateReader(
         std::shared_ptr<arrow::Array> physical_array = nullptr,
         std::shared_ptr<arrow::Schema> physical_schema = nullptr,
         const std::optional<std::string>& selected_keys = std::nullopt) const {
@@ -243,7 +241,7 @@ class SharedShreddingFileReaderTest : public ::testing::Test {
     };
 };
 
-TEST_F(SharedShreddingFileReaderTest, TestGetFileSchemaReturnsLogicalMapSchema) {
+TEST_F(MapSharedShreddingFileReaderTest, TestGetFileSchemaReturnsLogicalMapSchema) {
     auto reader = CreateReader();
 
     ASSERT_OK_AND_ASSIGN(auto c_schema, reader->GetFileSchema());
@@ -256,7 +254,7 @@ TEST_F(SharedShreddingFileReaderTest, TestGetFileSchemaReturnsLogicalMapSchema) 
     ASSERT_FALSE(schema->field(1)->HasMetadata());
 }
 
-TEST_F(SharedShreddingFileReaderTest, TestAllExistSelectedKeysWithoutOverflow) {
+TEST_F(MapSharedShreddingFileReaderTest, TestAllExistSelectedKeysWithoutOverflow) {
     auto reader = CreateReader(/*physical_array=*/nullptr, /*physical_schema=*/nullptr,
                                /*selected_keys=*/"b");
     auto read_schema = ExportSchema(ReadSchema("b"));
@@ -277,7 +275,7 @@ TEST_F(SharedShreddingFileReaderTest, TestAllExistSelectedKeysWithoutOverflow) {
     AssertChunkedArrayEquals(expected, actual);
 }
 
-TEST_F(SharedShreddingFileReaderTest, TestAllExistSelectedKeysWithOverflow) {
+TEST_F(MapSharedShreddingFileReaderTest, TestAllExistSelectedKeysWithOverflow) {
     auto reader = CreateReader(/*physical_array=*/nullptr, /*physical_schema=*/nullptr,
                                /*selected_keys=*/"a,c");
     auto read_schema = ExportSchema(ReadSchema("a,c"));
@@ -298,7 +296,7 @@ TEST_F(SharedShreddingFileReaderTest, TestAllExistSelectedKeysWithOverflow) {
     AssertChunkedArrayEquals(expected, actual);
 }
 
-TEST_F(SharedShreddingFileReaderTest, TestPartialExistSelectedKeys) {
+TEST_F(MapSharedShreddingFileReaderTest, TestPartialExistSelectedKeys) {
     auto reader = CreateReader(/*physical_array=*/nullptr, /*physical_schema=*/nullptr,
                                /*selected_keys=*/"a,c,missing");
     auto read_schema = ExportSchema(ReadSchema("a,c,missing"));
@@ -320,7 +318,7 @@ TEST_F(SharedShreddingFileReaderTest, TestPartialExistSelectedKeys) {
     AssertChunkedArrayEquals(expected, actual);
 }
 
-TEST_F(SharedShreddingFileReaderTest, TestMissingSelectedKeysReadsWholeMap) {
+TEST_F(MapSharedShreddingFileReaderTest, TestMissingSelectedKeysReadsWholeMap) {
     auto reader = CreateReader();
     auto read_schema = ExportSchema(ReadSchema(std::nullopt));
     ASSERT_OK(reader->SetReadSchema(read_schema.get(), /*predicate=*/nullptr,
@@ -340,7 +338,7 @@ TEST_F(SharedShreddingFileReaderTest, TestMissingSelectedKeysReadsWholeMap) {
     AssertChunkedArrayEquals(expected, actual);
 }
 
-TEST_F(SharedShreddingFileReaderTest, TestSpecialSelectedKeys) {
+TEST_F(MapSharedShreddingFileReaderTest, TestSpecialSelectedKeys) {
     MapSharedShreddingFieldMeta meta;
     meta.name_to_id = {{"", 0}, {"     ", 1}, {".", 2}, {"a", 3}};
     meta.field_to_columns = {{0, {0}}, {1, {1}}, {2, {0}}, {3, {1}}};
@@ -392,7 +390,7 @@ TEST_F(SharedShreddingFileReaderTest, TestSpecialSelectedKeys) {
     ])");
 }
 
-TEST_F(SharedShreddingFileReaderTest, TestUnknownSelectedKeyReturnsEmptyMap) {
+TEST_F(MapSharedShreddingFileReaderTest, TestUnknownSelectedKeyReturnsEmptyMap) {
     auto reader = CreateReader(/*physical_array=*/nullptr, /*physical_schema=*/nullptr,
                                /*selected_keys=*/"missing");
     auto read_schema = ExportSchema(ReadSchema("missing"));
@@ -414,7 +412,7 @@ TEST_F(SharedShreddingFileReaderTest, TestUnknownSelectedKeyReturnsEmptyMap) {
     AssertChunkedArrayEquals(expected, actual);
 }
 
-TEST_F(SharedShreddingFileReaderTest, TestInvalidNullFieldMappingField) {
+TEST_F(MapSharedShreddingFileReaderTest, TestInvalidNullFieldMappingField) {
     auto physical_schema = PhysicalSchemaWithMetadata();
     std::string json = R"([
         [1, [null, 10, null, null]]
@@ -430,7 +428,7 @@ TEST_F(SharedShreddingFileReaderTest, TestInvalidNullFieldMappingField) {
                         "__field_mapping cannot be null");
 }
 
-TEST_F(SharedShreddingFileReaderTest, TestInvalidNullFieldMappingFieldElement) {
+TEST_F(MapSharedShreddingFileReaderTest, TestInvalidNullFieldMappingFieldElement) {
     auto physical_schema = PhysicalSchemaWithMetadata();
     std::string json = R"([
         [1, [[0, null], 10, null, null]]
@@ -446,7 +444,7 @@ TEST_F(SharedShreddingFileReaderTest, TestInvalidNullFieldMappingFieldElement) {
                         "__field_mapping element cannot be null");
 }
 
-TEST_F(SharedShreddingFileReaderTest, TestListValue) {
+TEST_F(MapSharedShreddingFileReaderTest, TestListValue) {
     std::shared_ptr<arrow::Schema> logical_schema = arrow::schema({
         arrow::field("id", arrow::int32()),
         arrow::field("tags", arrow::map(arrow::utf8(), arrow::list(arrow::int32()))),
@@ -500,7 +498,7 @@ TEST_F(SharedShreddingFileReaderTest, TestListValue) {
     AssertChunkedArrayEquals(expected, actual);
 }
 
-TEST_F(SharedShreddingFileReaderTest, TestOrcDictionaryEncodedStringValue) {
+TEST_F(MapSharedShreddingFileReaderTest, TestOrcDictionaryEncodedStringValue) {
     std::shared_ptr<arrow::Schema> logical_schema = arrow::schema({
         arrow::field("id", arrow::int32()),
         arrow::field("tags", arrow::map(arrow::utf8(), arrow::utf8())),
@@ -560,7 +558,7 @@ TEST_F(SharedShreddingFileReaderTest, TestOrcDictionaryEncodedStringValue) {
     AssertChunkedArrayEquals(expected, actual);
 }
 
-TEST_F(SharedShreddingFileReaderTest, TestReadsRealFormatFile) {
+TEST_F(MapSharedShreddingFileReaderTest, TestReadsRealFormatFile) {
     // TODO(lisizhuo.lsz): support other format
     auto options = options_;
     std::string format = "orc";
