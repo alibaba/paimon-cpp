@@ -2021,12 +2021,9 @@ TEST_P(WriteAndReadInteTest, TestMapStorageLayoutDefaultToSharedShreddingPartial
         arrow::field("tags", map_type),
     };
     std::map<std::string, std::string> options_v0 = {
-        {Options::MANIFEST_FORMAT, "avro"},
-        {Options::FILE_FORMAT, file_format},
-        {Options::TARGET_FILE_SIZE, "1024"},
-        {Options::BUCKET, "-1"},
-        {Options::FILE_SYSTEM, file_system},
-        {"fields.tags.map.storage-layout", "default"},
+        {Options::MANIFEST_FORMAT, "avro"},  {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"}, {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system}, {"fields.tags.map.storage-layout", "default"},
     };
     if (file_system == "jindo") {
         options_v0 = AddOptionsForJindo(options_v0);
@@ -2064,8 +2061,7 @@ TEST_P(WriteAndReadInteTest, TestMapStorageLayoutDefaultToSharedShreddingPartial
     ASSERT_OK(helper->WriteAndCommit(std::move(batch_v1), /*commit_identifier=*/1,
                                      /*expected_commit_messages=*/std::nullopt));
 
-    auto selected_keys_meta =
-        arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"a"});
+    auto selected_keys_meta = arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"a"});
     auto read_schema = arrow::schema({
         arrow::field("id", arrow::int32()),
         arrow::field("tags", map_type)->WithMetadata(selected_keys_meta),
@@ -2142,8 +2138,7 @@ TEST_P(WriteAndReadInteTest, TestMapStorageLayoutSharedShreddingToDefaultPartial
     ASSERT_OK(helper->WriteAndCommit(std::move(batch_v1), /*commit_identifier=*/1,
                                      /*expected_commit_messages=*/std::nullopt));
 
-    auto selected_keys_meta =
-        arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"a"});
+    auto selected_keys_meta = arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"a"});
     auto read_schema = arrow::schema({
         arrow::field("id", arrow::int32()),
         arrow::field("tags", map_type)->WithMetadata(selected_keys_meta),
@@ -2191,10 +2186,9 @@ TEST_P(WriteAndReadInteTest, TestSharedShreddingDuplicateSelectedKeys) {
                          TestHelper::Create(test_dir_, arrow::schema(fields),
                                             /*partition_keys=*/{}, /*primary_keys=*/{}, options,
                                             /*is_streaming_mode=*/false));
-    ASSERT_OK_AND_ASSIGN(auto batch,
-                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
-                                                     R"([[1, [["a", 10], ["b", 20]]]])",
-                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK_AND_ASSIGN(auto batch, TestHelper::MakeRecordBatch(
+                                         arrow::struct_(fields), R"([[1, [["a", 10], ["b", 20]]]])",
+                                         /*partition_map=*/{}, /*bucket=*/0, {}));
     ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
                                      /*expected_commit_messages=*/std::nullopt));
 
