@@ -70,8 +70,8 @@ class MapSharedShreddingFileReaderTest : public ::testing::Test {
     std::shared_ptr<arrow::Schema> PhysicalSchemaWithMetadata(
         const MapSharedShreddingFieldMeta& meta) const {
         std::map<std::string, int32_t> field_to_num_columns = {{"tags", 2}};
-        EXPECT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                       logical_schema_, field_to_num_columns));
+        auto physical_schema =
+            MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema_, field_to_num_columns);
         auto metadata = std::make_shared<arrow::KeyValueMetadata>();
         EXPECT_OK(MapSharedShreddingUtils::SerializeMetadata(
             meta, MapSharedShreddingDefine::kDefaultDictCompression, metadata.get()));
@@ -237,6 +237,7 @@ class MapSharedShreddingFileReaderTest : public ::testing::Test {
         {Options::MANIFEST_FORMAT, "mock_format"},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "2"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     };
 };
@@ -457,8 +458,8 @@ TEST_F(MapSharedShreddingFileReaderTest, TestListValue) {
     meta.max_row_width = 3;
 
     std::map<std::string, int32_t> field_to_num_columns = {{"tags", 2}};
-    ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                   logical_schema, field_to_num_columns));
+    auto physical_schema =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, field_to_num_columns);
     auto metadata = std::make_shared<arrow::KeyValueMetadata>();
     ASSERT_OK(MapSharedShreddingUtils::SerializeMetadata(
         meta, MapSharedShreddingDefine::kDefaultDictCompression, metadata.get()));

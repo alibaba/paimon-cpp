@@ -565,6 +565,8 @@ Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
         }
         // Validate max-columns config
         PAIMON_RETURN_NOT_OK(options.GetMapSharedShreddingMaxColumns(field_name));
+        // Validate placement policy config
+        PAIMON_RETURN_NOT_OK(options.GetMapSharedShreddingColumnPlacementPolicy(field_name));
     }
     return Status::OK();
 }

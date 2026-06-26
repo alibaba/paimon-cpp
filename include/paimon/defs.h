@@ -379,6 +379,12 @@ struct PAIMON_EXPORT Options {
     /// map.storage-layout = shared-shredding. Rows with more fields than K_max spill to
     /// __overflow. Default value is 256. Each column can have its own max-columns setting.
     static const char MAP_SHARED_SHREDDING_MAX_COLUMNS[];
+    /// "map.shared-shredding.column-placement-policy" - Suffix for per-column shared-shredding
+    /// physical column placement policy.
+    /// Used as `fields.<column>.map.shared-shredding.column-placement-policy`.
+    /// Values: "plain", "sequential" and "lru". Default value is "plain".
+    /// Only effective when map.storage-layout = shared-shredding.
+    static const char MAP_SHARED_SHREDDING_COLUMN_PLACEMENT_POLICY[];
 
     /// "blob-as-descriptor" - Read blob field using blob descriptor rather than blob
     /// bytes. Default value is "false".

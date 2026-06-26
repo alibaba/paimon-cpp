@@ -894,6 +894,7 @@ TEST_F(AppendOnlyWriterTest, TestSharedShreddingMapRejectsAvroFormatOnCommit) {
         {Options::MANIFEST_FORMAT, "avro"},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -929,6 +930,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapFieldContent) {
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -969,9 +971,8 @@ TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapFieldContent) {
 
     // Check shared-shredding map metadata: a=0, b=1, c=2; K=3, max_row_width=3, no overflow.
     std::map<std::string, int32_t> column_to_k = {{"tags", 3}};
-    ASSERT_OK_AND_ASSIGN(
-        auto expected_physical_schema,
-        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, column_to_k));
+    auto expected_physical_schema =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, column_to_k);
 
     MapSharedShreddingFieldMeta expected_meta;
     expected_meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}};
@@ -1001,6 +1002,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapAllEmptyFirstFile) {
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -1032,8 +1034,8 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapAllEmptyFirstFile) {
         path_factory->ToPath(inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
     std::map<std::string, int32_t> first_file_k = {{"tags", 3}};
-    ASSERT_OK_AND_ASSIGN(auto first_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                logical_schema, first_file_k));
+    auto first_schema =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, first_file_k);
     MapSharedShreddingFieldMeta empty_meta;
     empty_meta.num_columns = 3;
     empty_meta.max_row_width = 0;
@@ -1058,6 +1060,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapAllNullThenAllEmptyF
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -1087,8 +1090,8 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapAllNullThenAllEmptyF
         path_factory->ToPath(null_inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
     std::map<std::string, int32_t> first_file_k = {{"tags", 3}};
-    ASSERT_OK_AND_ASSIGN(auto first_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                logical_schema, first_file_k));
+    auto first_schema =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, first_file_k);
     MapSharedShreddingFieldMeta empty_meta;
     empty_meta.num_columns = 3;
     empty_meta.max_row_width = 0;
@@ -1119,8 +1122,8 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapAllNullThenAllEmptyF
     // Previous file observed max_row_width=0, but the next file must still keep at least one
     // physical value column so shared-shredding never produces a K=0 schema.
     std::map<std::string, int32_t> second_file_k = {{"tags", 1}};
-    ASSERT_OK_AND_ASSIGN(auto second_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                 logical_schema, second_file_k));
+    auto second_schema =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, second_file_k);
     empty_meta.num_columns = 1;
     CheckShreddingFileSchema(empty_file_path, format, second_schema, /*field_index=*/1, empty_meta,
                              options.GetFileCompression());
@@ -1177,6 +1180,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapWithOverflow) {
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "2"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -1212,9 +1216,8 @@ TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapWithOverflow) {
         path_factory->ToPath(inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
     std::map<std::string, int32_t> column_to_k = {{"tags", 2}};
-    ASSERT_OK_AND_ASSIGN(
-        auto expected_physical_schema,
-        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, column_to_k));
+    auto expected_physical_schema =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, column_to_k);
     std::string compression = options.GetFileCompression();
 
     // Verify metadata: a=0,b=1,c=2,d=3,e=4,f=5; K=2, max_row_width=4
@@ -1241,6 +1244,72 @@ TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapWithOverflow) {
     CheckFileContent(data_file_path, format, expected_array);
 }
 
+TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapWithLruPlacement) {
+    std::string format = GetFormat();
+    auto options = CreateOptions({
+        {Options::FILE_FORMAT, format},
+        {Options::MANIFEST_FORMAT, format},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "lru"},
+        {Options::WRITE_ONLY, "true"},
+    });
+
+    auto logical_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+    });
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = CreatePathFactory(dir->Str(), format, options);
+
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         CreateAppendOnlyWriter(options, /*schema_id=*/0, logical_schema,
+                                                /*write_cols=*/std::nullopt,
+                                                /*max_sequence_number=*/-1, path_factory,
+                                                compact_manager_, memory_pool_));
+
+    auto batch = CreateBatch(logical_schema, R"([
+        [1, [["a", 10], ["b", 20], ["c", 30]]],
+        [2, [["a", 40], ["b", 50]]],
+        [3, [["d", 60]]],
+        [4, [["a", 70], ["b", 80], ["c", 90], ["d", 100]]]
+    ])");
+    ASSERT_OK(writer->Write(std::move(batch)));
+    ASSERT_OK_AND_ASSIGN(CommitIncrement inc, writer->PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_OK(writer->Close());
+
+    ASSERT_EQ(1, inc.GetNewFilesIncrement().NewFiles().size());
+    std::string data_file_path =
+        path_factory->ToPath(inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
+
+    std::map<std::string, int32_t> column_to_k = {{"tags", 3}};
+    auto expected_physical_schema =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, column_to_k);
+
+    MapSharedShreddingFieldMeta expected_meta;
+    expected_meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}, {"d", 3}};
+    expected_meta.field_to_columns = {{0, {0}}, {1, {1}}, {2, {2}}, {3, {2}}};
+    expected_meta.overflow_field_set = {2};
+    expected_meta.num_columns = 3;
+    expected_meta.max_row_width = 4;
+    CheckShreddingFileSchema(data_file_path, format, expected_physical_schema, /*field_index=*/1,
+                             expected_meta, options.GetFileCompression());
+
+    auto physical_type = arrow::struct_(expected_physical_schema->fields());
+    std::shared_ptr<arrow::ChunkedArray> expected_array;
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(physical_type, {R"([
+        [1, [[0, 1, 2],  10,  20,  30, null]],
+        [2, [[0, 1, -1], 40,  50, null, null]],
+        [3, [[-1, -1, 3], null, null, 60, null]],
+        [4, [[0, 1, 3],  70,  80, 100, [[2, 90]]]]
+    ])"},
+                                                                 &expected_array)
+                    .ok());
+    CheckFileContent(data_file_path, format, expected_array);
+}
+
 TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFiles) {
     std::string format = GetFormat();
     auto options = CreateOptions({
@@ -1248,6 +1317,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "10"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -1280,8 +1350,8 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
 
     // File 1 should have K=10 (first file uses K_max).
     std::map<std::string, int32_t> column_to_k_file1 = {{"tags", 10}};
-    ASSERT_OK_AND_ASSIGN(auto phys_schema1, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                logical_schema, column_to_k_file1));
+    auto phys_schema1 =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, column_to_k_file1);
     // Verify file1 physical schema has 10 columns.
     auto struct_type1 = std::static_pointer_cast<arrow::StructType>(phys_schema1->field(1)->type());
     ASSERT_EQ(12, struct_type1->num_fields());  // mapping + 10 cols + overflow
@@ -1309,8 +1379,8 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
 
     // File 2 should have K=3 (adapted from file1's max_row_width=3).
     std::map<std::string, int32_t> column_to_k_file2 = {{"tags", 3}};
-    ASSERT_OK_AND_ASSIGN(auto phys_schema2, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                logical_schema, column_to_k_file2));
+    auto phys_schema2 =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, column_to_k_file2);
     auto struct_type2 = std::static_pointer_cast<arrow::StructType>(phys_schema2->field(1)->type());
     ASSERT_EQ(5, struct_type2->num_fields());  // mapping + 3 cols + overflow
 
@@ -1348,8 +1418,8 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
 
     // File 3 should have K=5 (window max grew from file2's max_row_width=5).
     std::map<std::string, int32_t> column_to_k_file3 = {{"tags", 5}};
-    ASSERT_OK_AND_ASSIGN(auto phys_schema3, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                logical_schema, column_to_k_file3));
+    auto phys_schema3 =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, column_to_k_file3);
     auto struct_type3 = std::static_pointer_cast<arrow::StructType>(phys_schema3->field(1)->type());
     ASSERT_EQ(7, struct_type3->num_fields());  // mapping + 5 cols + overflow
 
@@ -1381,6 +1451,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapUsesInitialContextFo
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "10"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -1411,8 +1482,8 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapUsesInitialContextFo
         path_factory->ToPath(inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
     std::map<std::string, int32_t> column_to_k = {{"tags", 2}};
-    ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                   logical_schema, column_to_k));
+    auto physical_schema =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, column_to_k);
     MapSharedShreddingFieldMeta expected_meta;
     expected_meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}};
     expected_meta.field_to_columns = {{0, {0}}, {1, {1}}};
@@ -1442,8 +1513,10 @@ TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsWithKA
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "8"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {"fields.attrs.map.storage-layout", "shared-shredding"},
         {"fields.attrs.map.shared-shredding.max-columns", "4"},
+        {"fields.attrs.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -1479,8 +1552,8 @@ TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsWithKA
 
     // Verify file1: tags K=8, attrs K=4 (first file uses K_max).
     std::map<std::string, int32_t> col_to_k_file1 = {{"tags", 8}, {"attrs", 4}};
-    ASSERT_OK_AND_ASSIGN(auto phys_schema1, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                logical_schema, col_to_k_file1));
+    auto phys_schema1 =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, col_to_k_file1);
 
     MapSharedShreddingFieldMeta meta1_tags;
     meta1_tags.name_to_id = {{"a", 0}, {"b", 1}};
@@ -1511,8 +1584,8 @@ TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsWithKA
         path_factory->ToPath(inc2.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
     std::map<std::string, int32_t> col_to_k_file2 = {{"tags", 2}, {"attrs", 1}};
-    ASSERT_OK_AND_ASSIGN(auto phys_schema2, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                logical_schema, col_to_k_file2));
+    auto phys_schema2 =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, col_to_k_file2);
 
     MapSharedShreddingFieldMeta meta2_tags;
     meta2_tags.name_to_id = {{"c", 0}, {"d", 1}, {"e", 2}};
@@ -1545,8 +1618,8 @@ TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsWithKA
         path_factory->ToPath(inc3.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
     std::map<std::string, int32_t> col_to_k_file3 = {{"tags", 3}, {"attrs", 3}};
-    ASSERT_OK_AND_ASSIGN(auto phys_schema3, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                logical_schema, col_to_k_file3));
+    auto phys_schema3 =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, col_to_k_file3);
 
     MapSharedShreddingFieldMeta meta3_tags;
     meta3_tags.name_to_id = {{"f", 0}, {"g", 1}};
@@ -1575,6 +1648,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapDataFileMetaInfo) {
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -1627,8 +1701,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapDataFileMetaInfo) {
     // Verify the written file has correct shared-shredding map content.
     std::string file_path = path_factory->ToPath(actual_meta->file_name);
     std::map<std::string, int32_t> col_to_k = {{"tags", 3}};
-    ASSERT_OK_AND_ASSIGN(auto phys_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                               logical_schema, col_to_k));
+    auto phys_schema = MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, col_to_k);
     auto physical_type = arrow::struct_(phys_schema->fields());
 
     std::shared_ptr<arrow::ChunkedArray> expected_array;
@@ -1654,6 +1727,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapWithBlobSeparation) 
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -1714,9 +1788,8 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapWithBlobSeparation) 
         arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
     });
     std::map<std::string, int32_t> col_to_k = {{"tags", 3}};
-    ASSERT_OK_AND_ASSIGN(
-        auto expected_physical_schema,
-        MapSharedShreddingUtils::LogicalToPhysicalSchema(main_logical_schema, col_to_k));
+    auto expected_physical_schema =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(main_logical_schema, col_to_k);
 
     MapSharedShreddingFieldMeta expected_meta;
     expected_meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}};

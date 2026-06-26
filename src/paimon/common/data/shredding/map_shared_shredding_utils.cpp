@@ -125,7 +125,7 @@ std::shared_ptr<arrow::DataType> MapSharedShreddingUtils::InnerBuildSpecificPhys
     return arrow::struct_(std::move(struct_fields));
 }
 
-Result<std::shared_ptr<arrow::Schema>> MapSharedShreddingUtils::LogicalToPhysicalSchema(
+std::shared_ptr<arrow::Schema> MapSharedShreddingUtils::LogicalToPhysicalSchema(
     const std::shared_ptr<arrow::Schema>& logical_schema,
     const std::map<std::string, int32_t>& field_to_num_columns) {
     arrow::FieldVector physical_fields;

@@ -383,6 +383,7 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMapDataFileMetaInfo) {
                              {Options::FILE_FORMAT, "orc"},
                              {"fields.tags.map.storage-layout", "shared-shredding"},
                              {"fields.tags.map.shared-shredding.max-columns", "3"},
+                             {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
                              {Options::WRITE_ONLY, "true"},
                          }));
 
@@ -447,8 +448,8 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMapDataFileMetaInfo) {
                          options.GetFileSystem()->GetFileStatus(expected_data_file_path));
 
     std::map<std::string, int32_t> column_to_k = {{"tags", 3}};
-    ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                   write_schema, column_to_k));
+    auto physical_schema =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(write_schema, column_to_k);
     auto physical_type = arrow::struct_(physical_schema->fields());
 
     std::shared_ptr<arrow::ChunkedArray> expected_array;
@@ -491,8 +492,10 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation)
                              {Options::FILE_FORMAT, "orc"},
                              {"fields.tags.map.storage-layout", "shared-shredding"},
                              {"fields.tags.map.shared-shredding.max-columns", "8"},
+                             {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
                              {"fields.attrs.map.storage-layout", "shared-shredding"},
                              {"fields.attrs.map.shared-shredding.max-columns", "4"},
+                             {"fields.attrs.map.shared-shredding.column-placement-policy", "plain"},
                              {Options::WRITE_ONLY, "true"},
                          }));
 
@@ -538,8 +541,8 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation)
         path_factory->ToPath(commit_increment1.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
     std::map<std::string, int32_t> column_to_k_file1 = {{"tags", 8}, {"attrs", 4}};
-    ASSERT_OK_AND_ASSIGN(auto physical_schema1, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                    write_schema, column_to_k_file1));
+    auto physical_schema1 =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(write_schema, column_to_k_file1);
     MapSharedShreddingFieldMeta tags_meta1;
     tags_meta1.name_to_id = {{"a", 0}, {"b", 1}};
     tags_meta1.field_to_columns = {{0, {0}}, {1, {1}}};
@@ -566,8 +569,8 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation)
         path_factory->ToPath(commit_increment2.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
     std::map<std::string, int32_t> column_to_k_file2 = {{"tags", 2}, {"attrs", 1}};
-    ASSERT_OK_AND_ASSIGN(auto physical_schema2, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                    write_schema, column_to_k_file2));
+    auto physical_schema2 =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(write_schema, column_to_k_file2);
     MapSharedShreddingFieldMeta tags_meta2;
     tags_meta2.name_to_id = {{"c", 0}, {"d", 1}, {"e", 2}};
     tags_meta2.field_to_columns = {{0, {0}}, {1, {1}}};
@@ -596,8 +599,8 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation)
         path_factory->ToPath(commit_increment3.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
     std::map<std::string, int32_t> column_to_k_file3 = {{"tags", 3}, {"attrs", 3}};
-    ASSERT_OK_AND_ASSIGN(auto physical_schema3, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                    write_schema, column_to_k_file3));
+    auto physical_schema3 =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(write_schema, column_to_k_file3);
     MapSharedShreddingFieldMeta tags_meta3;
     tags_meta3.name_to_id = {{"f", 0}, {"g", 1}};
     tags_meta3.field_to_columns = {{0, {0}}, {1, {1}}};

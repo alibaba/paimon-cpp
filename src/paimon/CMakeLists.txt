@@ -142,6 +142,7 @@ set(PAIMON_COMMON_SRCS
     common/data/shredding/map_shared_shredding_context.cpp
     common/data/shredding/map_shared_shredding_batch_converter.cpp
     common/data/shredding/map_shared_shredding_column_allocator.cpp
+    common/data/shredding/lru_map_shared_shredding_column_allocator.cpp
     common/data/shredding/map_shared_shredding_file_reader.cpp
     common/utils/delta_varint_compressor.cpp
     common/utils/fields_comparator.cpp
@@ -547,7 +548,9 @@ if(PAIMON_BUILD_TESTS)
                     common/utils/generic_lru_cache_test.cpp
                     common/data/shredding/map_shared_shredding_utils_test.cpp
                     common/data/shredding/map_shared_shredding_batch_converter_test.cpp
-                    common/data/shredding/map_shared_shredding_column_allocator_test.cpp
+                    common/data/shredding/lru_map_shared_shredding_column_allocator_test.cpp
+                    common/data/shredding/plain_map_shared_shredding_column_allocator_test.cpp
+                    common/data/shredding/sequential_map_shared_shredding_column_allocator_test.cpp
                     common/data/shredding/map_shared_shredding_field_dict_test.cpp
                     common/data/shredding/map_shared_shredding_context_test.cpp
                     common/data/shredding/map_shared_shredding_file_reader_test.cpp

@@ -16,11 +16,9 @@
 
 #pragma once
 
-#include <algorithm>
 #include <cstdint>
 #include <map>
 #include <set>
-#include <utility>
 #include <vector>
 
 namespace paimon {
@@ -35,21 +33,16 @@ struct RowAllocation {
     std::vector<int32_t> overflow_fields;
 };
 
-/// Allocates MAP field ids to K physical columns on a per-row basis,
+/// Allocates shared-shredding MAP field ids to K physical columns on a per-row basis,
 /// and accumulates field-level metadata (field_to_columns, overflow_field_set, max_row_width).
-///
-/// This is a trivial implementation: each row simply assigns columns 0..min(N,K)-1
-/// in order, with no LRU eviction.
-/// TODO(jinli.zjw): support LRU
 class MapSharedShreddingColumnAllocator {
  public:
-    /// @param num_columns Number of physical columns K for this shared-shredding MAP column.
-    explicit MapSharedShreddingColumnAllocator(int32_t num_columns);
+    virtual ~MapSharedShreddingColumnAllocator() = default;
 
     /// Allocates physical columns for one row's field ids.
-    /// @param field_ids The field ids present in this row (order matters for fake impl).
+    /// @param field_ids Field ids present in this row.
     /// @return Allocation result with column assignments and overflow list.
-    RowAllocation AllocateRow(const std::vector<int32_t>& field_ids);
+    virtual RowAllocation AllocateRow(const std::vector<int32_t>& field_ids) = 0;
 
     /// Returns accumulated field_id -> set of column indices (for MapSharedShreddingFileMeta).
     const std::map<int32_t, std::set<int32_t>>& GetFieldToColumns() const;
@@ -60,12 +53,18 @@ class MapSharedShreddingColumnAllocator {
     /// Returns the maximum row width observed so far.
     int32_t GetMaxRowWidth() const;
 
-    /// Returns the number of physical columns K.
-    int32_t GetNumColumns() const;
+ protected:
+    /// @param num_columns Number of physical columns K for this shared-shredding MAP column.
+    explicit MapSharedShreddingColumnAllocator(int32_t num_columns);
 
- private:
+    /// Commits a planned row allocation and updates accumulated metadata.
+    /// @param allocation Allocation materialized for the current row.
+    /// @param field_ids Field ids after allocator-specific preparation.
+    void CommitRow(const RowAllocation& allocation, const std::vector<int32_t>& field_ids);
+
     int32_t num_columns_;
 
+ private:
     // ---- Accumulated field-level metadata ----
     std::map<int32_t, std::set<int32_t>> field_to_columns_;
     std::set<int32_t> overflow_field_set_;
