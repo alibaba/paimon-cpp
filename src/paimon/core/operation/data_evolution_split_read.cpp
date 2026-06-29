@@ -289,14 +289,13 @@ Result<std::unordered_set<BlobViewStruct>> DataEvolutionSplitRead::ExtractBlobVi
 Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::InnerCreateReader(
     const std::shared_ptr<DataSplit>& data_split,
     const std::optional<std::vector<Range>>& row_ranges) const {
-    auto split_impl = dynamic_cast<DataSplitImpl*>(data_split.get());
-    if (split_impl == nullptr) {
+    auto split_impl = std::dynamic_pointer_cast<DataSplitImpl>(data_split);
+    if (!split_impl) {
         return Status::Invalid("unexpected error, split cast to impl failed");
     }
     assert(raw_read_schema_->num_fields() > 0);
-    PAIMON_ASSIGN_OR_RAISE(
-        std::shared_ptr<DataFilePathFactory> data_file_path_factory,
-        path_factory_->CreateDataFilePathFactory(split_impl->Partition(), split_impl->Bucket()));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
+                           CreateDataFilePathFactory(split_impl));
     auto metas = split_impl->DataFiles();
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::vector<std::shared_ptr<DataFileMeta>>> split_by_row_id,
                            MergeRangesAndSort(std::move(metas)));

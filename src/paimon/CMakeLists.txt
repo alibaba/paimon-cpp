@@ -220,6 +220,7 @@ set(PAIMON_CORE_SRCS
     core/io/data_file_meta_first_row_id_legacy_serializer.cpp
     core/io/data_file_meta.cpp
     core/io/data_file_meta_serializer.cpp
+    core/io/chain_data_file_path_factory.cpp
     core/io/data_file_path_factory.cpp
     core/io/append_data_file_writer_factory.cpp
     core/io/blob_data_file_writer_factory.cpp
@@ -735,6 +736,7 @@ if(PAIMON_BUILD_TESTS)
                     core/table/source/table_read_test.cpp
                     core/table/source/append_count_reader_test.cpp
                     core/table/source/pk_count_reader_test.cpp
+                    core/table/source/chain_data_split_test.cpp
                     core/table/source/data_split_test.cpp
                     core/table/source/deletion_file_test.cpp
                     core/table/source/split_generator_test.cpp

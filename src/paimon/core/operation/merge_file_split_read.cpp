@@ -141,9 +141,8 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateReader(
     if (!data_split->BeforeFiles().empty()) {
         return Status::Invalid("this read cannot accept split with before files.");
     }
-    PAIMON_ASSIGN_OR_RAISE(
-        std::shared_ptr<DataFilePathFactory> data_file_path_factory,
-        path_factory_->CreateDataFilePathFactory(data_split->Partition(), data_split->Bucket()));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
+                           CreateDataFilePathFactory(data_split));
     std::unique_ptr<BatchReader> batch_reader;
     if (data_split->IsStreaming() || data_split->Bucket() == BucketModeDefine::POSTPONE_BUCKET) {
         PAIMON_ASSIGN_OR_RAISE(

@@ -33,6 +33,7 @@
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/object_utils.h"
+#include "paimon/core/io/chain_data_file_path_factory.h"
 #include "paimon/core/io/complete_row_tracking_fields_reader.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/io/data_file_path_factory.h"
@@ -40,6 +41,7 @@
 #include "paimon/core/operation/internal_read_context.h"
 #include "paimon/core/partition/partition_info.h"
 #include "paimon/core/schema/table_schema.h"
+#include "paimon/core/table/source/chain_data_split_impl.h"
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/core/utils/field_mapping.h"
 #include "paimon/core/utils/nested_projection_utils.h"
@@ -114,6 +116,21 @@ Result<std::unique_ptr<BatchReader>> AbstractSplitRead::ApplyPredicateFilterIfNe
         return std::move(reader);
     }
     return PredicateBatchReader::Create(std::move(reader), predicate, pool_);
+}
+
+Result<std::shared_ptr<DataFilePathFactory>> AbstractSplitRead::CreateDataFilePathFactory(
+    const std::shared_ptr<DataSplitImpl>& data_split) const {
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<DataFilePathFactory> base_factory,
+        path_factory_->CreateDataFilePathFactory(data_split->Partition(), data_split->Bucket()));
+
+    auto chain_split = std::dynamic_pointer_cast<ChainDataSplitImpl>(data_split);
+    if (!chain_split) {
+        return base_factory;
+    }
+
+    return std::make_shared<ChainDataFilePathFactory>(base_factory,
+                                                      chain_split->FileBucketPathMapping());
 }
 
 Result<std::unique_ptr<ReaderBuilder>> AbstractSplitRead::PrepareReaderBuilder(

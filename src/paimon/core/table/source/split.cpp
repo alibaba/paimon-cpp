@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <unordered_map>
 #include <utility>
 
 #include "fmt/format.h"
@@ -22,7 +23,9 @@
 #include "paimon/common/memory/memory_segment_utils.h"
 #include "paimon/common/utils/serialization_utils.h"
 #include "paimon/core/global_index/indexed_split_impl.h"
+#include "paimon/core/io/data_file_meta_first_row_id_legacy_serializer.h"
 #include "paimon/core/io/data_file_meta_serializer.h"
+#include "paimon/core/table/source/chain_data_split_impl.h"
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/core/table/source/deletion_file.h"
 #include "paimon/core/table/source/fallback_data_split.h"
@@ -37,6 +40,65 @@
 namespace paimon {
 struct DataFileMeta;
 namespace {
+Result<std::vector<std::shared_ptr<DataFileMeta>>> ReadVersion7DataFileMetaList(
+    DataInputStream* in, const std::shared_ptr<MemoryPool>& pool) {
+    PAIMON_ASSIGN_OR_RAISE(int32_t size, in->ReadValue<int32_t>());
+    if (size < 0) {
+        return Status::Invalid(fmt::format("invalid data file meta list size: {}", size));
+    }
+
+    DataFileMetaFirstRowIdLegacySerializer legacy_serializer(pool);
+    DataFileMetaSerializer current_serializer(pool);
+    std::vector<std::shared_ptr<DataFileMeta>> result;
+    result.reserve(size);
+    for (int32_t i = 0; i < size; ++i) {
+        PAIMON_ASSIGN_OR_RAISE(int32_t row_size, in->ReadValue<int32_t>());
+        if (row_size < BinaryRow::CalculateFixPartSizeInBytes(19)) {
+            return Status::Invalid(
+                fmt::format("invalid version 7 data file meta row size: {}", row_size));
+        }
+        std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes(row_size, pool.get());
+        PAIMON_RETURN_NOT_OK(in->ReadBytes(bytes.get()));
+
+        MemorySegment segment = MemorySegment::Wrap(bytes);
+        int64_t file_name_offset_and_size =
+            segment.GetValue<int64_t>(BinaryRow::CalculateBitSetWidthInBytes(/*arity=*/19));
+        if ((file_name_offset_and_size & BinarySection::HIGHEST_FIRST_BIT) != 0) {
+            return Status::Invalid(
+                "cannot determine version 7 data file meta format from inline file name");
+        }
+        int32_t variable_part_offset = static_cast<int32_t>(file_name_offset_and_size >> 32);
+
+        int32_t arity = 0;
+        const ObjectSerializer<std::shared_ptr<DataFileMeta>>* serializer = nullptr;
+        if (variable_part_offset == BinaryRow::CalculateFixPartSizeInBytes(/*arity=*/19)) {
+            arity = 19;
+            serializer = &legacy_serializer;
+        } else if (variable_part_offset == BinaryRow::CalculateFixPartSizeInBytes(/*arity=*/20)) {
+            arity = 20;
+            serializer = &current_serializer;
+        } else {
+            return Status::Invalid(fmt::format(
+                "invalid version 7 data file meta variable part offset: {}", variable_part_offset));
+        }
+
+        BinaryRow row(arity);
+        row.PointTo(segment, /*offset=*/0, row_size);
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFileMeta> meta, serializer->FromRow(row));
+        result.emplace_back(std::move(meta));
+    }
+    return result;
+}
+
+Result<std::vector<std::shared_ptr<DataFileMeta>>> ReadDataFileMetaList(
+    int32_t version, const ObjectSerializer<std::shared_ptr<DataFileMeta>>* data_file_serializer,
+    DataInputStream* in, const std::shared_ptr<MemoryPool>& pool) {
+    if (version == 7) {
+        return ReadVersion7DataFileMetaList(in, pool);
+    }
+    return data_file_serializer->DeserializeList(in);
+}
+
 Status WriteDataSplit(const std::shared_ptr<DataSplitImpl>& data_split_impl,
                       MemorySegmentOutputStream* out, const std::shared_ptr<MemoryPool>& pool) {
     out->WriteValue<int64_t>(DataSplitImpl::MAGIC);
@@ -98,13 +160,15 @@ Result<std::shared_ptr<DataSplitImpl>> ReadDataSplitWithoutMagicNumber(
         std::unique_ptr<ObjectSerializer<std::shared_ptr<DataFileMeta>>> data_file_serializer,
         DataSplitImpl::GetFileMetaSerializer(version, pool));
     std::vector<std::shared_ptr<DataFileMeta>> before_files;
-    PAIMON_ASSIGN_OR_RAISE(before_files, data_file_serializer->DeserializeList(in));
+    PAIMON_ASSIGN_OR_RAISE(before_files,
+                           ReadDataFileMetaList(version, data_file_serializer.get(), in, pool));
     // compatible for deletion file
     std::vector<std::optional<DeletionFile>> before_deletion_files;
     PAIMON_ASSIGN_OR_RAISE(before_deletion_files, DeletionFile::DeserializeList(in, version));
 
     std::vector<std::shared_ptr<DataFileMeta>> data_files;
-    PAIMON_ASSIGN_OR_RAISE(data_files, data_file_serializer->DeserializeList(in));
+    PAIMON_ASSIGN_OR_RAISE(data_files,
+                           ReadDataFileMetaList(version, data_file_serializer.get(), in, pool));
     // compatible for deletion file
     std::vector<std::optional<DeletionFile>> data_deletion_files;
     PAIMON_ASSIGN_OR_RAISE(data_deletion_files, DeletionFile::DeserializeList(in, version));
@@ -127,6 +191,44 @@ Result<std::shared_ptr<DataSplitImpl>> ReadDataSplitWithoutMagicNumber(
         builder.WithDataDeletionFiles(data_deletion_files);
     }
     return builder.Build();
+}
+
+Result<std::unordered_map<std::string, std::string>> ReadStringMap(DataInputStream* in) {
+    PAIMON_ASSIGN_OR_RAISE(int32_t size, in->ReadValue<int32_t>());
+    if (size < 0) {
+        return Status::Invalid(fmt::format("invalid string map size: {}", size));
+    }
+
+    std::unordered_map<std::string, std::string> result;
+    result.reserve(size);
+    for (int32_t i = 0; i < size; ++i) {
+        PAIMON_ASSIGN_OR_RAISE(std::string key, in->ReadString());
+        PAIMON_ASSIGN_OR_RAISE(std::string value, in->ReadString());
+        result.emplace(std::move(key), std::move(value));
+    }
+    return result;
+}
+
+Result<std::shared_ptr<ChainDataSplitImpl>> ReadChainDataSplitTail(
+    const std::shared_ptr<DataSplitImpl>& base_split, DataInputStream* in,
+    const std::shared_ptr<MemoryPool>& pool) {
+    PAIMON_ASSIGN_OR_RAISE(bool all_snapshot_split, in->ReadValue<bool>());
+    PAIMON_ASSIGN_OR_RAISE(BinaryRow read_partition,
+                           SerializationUtils::DeserializeBinaryRow(in, pool.get()));
+    PAIMON_ASSIGN_OR_RAISE(auto file_bucket_path_mapping, ReadStringMap(in));
+    PAIMON_ASSIGN_OR_RAISE(auto file_branch_mapping, ReadStringMap(in));
+
+    PAIMON_ASSIGN_OR_RAISE(int64_t pos, in->GetPos());
+    PAIMON_ASSIGN_OR_RAISE(int64_t stream_length, in->Length());
+    if (pos != stream_length) {
+        return Status::Invalid(fmt::format(
+            "invalid ChainDataSplit byte stream, remaining {} bytes after deserializing",
+            stream_length - pos));
+    }
+
+    return std::make_shared<ChainDataSplitImpl>(base_split, all_snapshot_split, read_partition,
+                                                std::move(file_bucket_path_mapping),
+                                                std::move(file_branch_mapping));
 }
 
 }  // namespace
@@ -224,13 +326,23 @@ Result<std::shared_ptr<Split>> Split::Deserialize(const char* buffer, size_t len
         PAIMON_ASSIGN_OR_RAISE(int64_t stream_length, in.Length());
         if (pos == stream_length) {
             return data_split;
+        } else if (data_split->BucketPath() == ChainDataSplitImpl::VIRTUAL_BUCKET_PATH) {
+            auto chain_split = ReadChainDataSplitTail(data_split, &in, pool);
+            if (!chain_split.ok()) {
+                return Status::Invalid(fmt::format("invalid ChainDataSplit byte stream: {}",
+                                                   chain_split.status().ToString()));
+            }
+            return std::static_pointer_cast<Split>(chain_split.value());
         } else if (pos == stream_length - 1) {
             PAIMON_ASSIGN_OR_RAISE(bool is_fallback, in.ReadValue<bool>());
             return std::make_shared<FallbackDataSplit>(data_split, is_fallback);
         } else {
-            return Status::Invalid(fmt::format(
-                "invalid data split byte stream, remaining {} bytes after deserializing",
-                stream_length - pos));
+            auto chain_split = ReadChainDataSplitTail(data_split, &in, pool);
+            if (!chain_split.ok()) {
+                return Status::Invalid(fmt::format("invalid ChainDataSplit byte stream: {}",
+                                                   chain_split.status().ToString()));
+            }
+            return std::static_pointer_cast<Split>(chain_split.value());
         }
     }
     return Status::Invalid("invalid split, must be DataSplit or IndexedSplit");

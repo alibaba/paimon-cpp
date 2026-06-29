@@ -70,7 +70,7 @@ class DataFilePathFactory : public PathFactory {
     }
 
     std::string ToPath(const std::string& file_name) const override;
-    std::string ToPath(const std::shared_ptr<DataFileMeta>& file_meta) const;
+    virtual std::string ToPath(const std::shared_ptr<DataFileMeta>& file_meta) const;
 
     const std::string& GetUUID() const {
         return uuid_;

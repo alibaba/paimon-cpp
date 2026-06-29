@@ -76,6 +76,9 @@ class AbstractSplitRead : public SplitRead {
     Result<std::unique_ptr<BatchReader>> ApplyPredicateFilterIfNeeded(
         std::unique_ptr<BatchReader>&& reader, const std::shared_ptr<Predicate>& predicate) const;
 
+    Result<std::shared_ptr<DataFilePathFactory>> CreateDataFilePathFactory(
+        const std::shared_ptr<DataSplitImpl>& data_split) const;
+
  protected:
     // return nullptr if file is skipped by index or dv
     virtual Result<std::unique_ptr<FileBatchReader>> ApplyIndexAndDvReaderIfNeeded(
