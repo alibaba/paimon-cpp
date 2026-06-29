@@ -42,8 +42,8 @@ Status DeletionFileWriter::Write(const std::string& key,
     }
     DataOutputStream output_stream(out_);
     PAIMON_ASSIGN_OR_RAISE(int32_t length, deletion_vector->SerializeTo(pool_, &output_stream));
-    dv_metas_.insert(key, DeletionVectorMeta(key, static_cast<int32_t>(start), length,
-                                             deletion_vector->GetCardinality()));
+    dv_metas_.insert_or_assign(key, DeletionVectorMeta(key, static_cast<int32_t>(start), length,
+                                                       deletion_vector->GetCardinality()));
     return Status::OK();
 }
 

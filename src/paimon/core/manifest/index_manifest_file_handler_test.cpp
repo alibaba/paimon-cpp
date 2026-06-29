@@ -74,6 +74,25 @@ class IndexManifestFileHandlerTest : public testing::Test {
                                             /*external_path=*/std::nullopt));
     }
 
+    static IndexManifestEntry MakeDvEntry(const FileKind& kind, const BinaryRow& partition,
+                                          int32_t bucket, const std::string& file_name,
+                                          const std::vector<std::string>& data_file_names,
+                                          int64_t row_count) {
+        LinkedHashMap<std::string, DeletionVectorMeta> dv_ranges;
+        int32_t offset = 0;
+        for (const auto& data_file_name : data_file_names) {
+            dv_ranges.insert(data_file_name,
+                             DeletionVectorMeta(data_file_name, offset, /*length=*/10,
+                                                /*cardinality=*/std::nullopt));
+            offset += 10;
+        }
+        return IndexManifestEntry(
+            kind, partition, bucket,
+            std::make_shared<IndexFileMeta>(DeletionVectorsIndexFile::DELETION_VECTORS_INDEX,
+                                            file_name, /*file_size=*/row_count * 10, row_count,
+                                            dv_ranges, /*external_path=*/std::nullopt));
+    }
+
     std::shared_ptr<MemoryPool> pool_;
     std::unique_ptr<UniqueTestDirectory> dir_;
 };
@@ -154,13 +173,56 @@ TEST_F(IndexManifestFileHandlerTest, BucketedCombinerUsesPartitionBucketAndIndex
     ASSERT_TRUE(found_bucket1);
 }
 
+TEST_F(IndexManifestFileHandlerTest, BucketedCombinerOverwritesDuplicateAddedEntries) {
+    ASSERT_OK_AND_ASSIGN(auto index_manifest_file, CreateManifestFile(/*bucket_mode=*/2));
+
+    auto partition = BinaryRowGenerator::GenerateRow({10}, pool_.get());
+    std::vector<IndexManifestEntry> new_entries = {
+        MakeEntry(FileKind::Add(), partition, /*bucket=*/0,
+                  DeletionVectorsIndexFile::DELETION_VECTORS_INDEX, "dv-0-old", 10),
+        MakeEntry(FileKind::Add(), partition, /*bucket=*/0,
+                  DeletionVectorsIndexFile::DELETION_VECTORS_INDEX, "dv-0-new", 20)};
+
+    ASSERT_OK_AND_ASSIGN(std::string current_manifest,
+                         IndexManifestFileHandler::Write(
+                             /*previous_index_manifest=*/std::nullopt, new_entries,
+                             /*bucket_mode=*/2, index_manifest_file.get()));
+
+    std::vector<IndexManifestEntry> written_entries;
+    ASSERT_OK(index_manifest_file->Read(current_manifest, /*filter=*/nullptr, &written_entries));
+    ASSERT_EQ(written_entries.size(), 1);
+    ASSERT_EQ(written_entries[0].index_file->FileName(), "dv-0-new");
+    ASSERT_EQ(written_entries[0].index_file->RowCount(), 20);
+}
+
+TEST_F(IndexManifestFileHandlerTest, GlobalCombinerOverwritesDuplicateAddedEntries) {
+    ASSERT_OK_AND_ASSIGN(auto index_manifest_file, CreateManifestFile(/*bucket_mode=*/4));
+
+    auto partition = BinaryRow::EmptyRow();
+    std::vector<IndexManifestEntry> new_entries = {
+        MakeEntry(FileKind::Add(), partition, /*bucket=*/0, /*index_type=*/"BTREE", "global-0",
+                  10),
+        MakeEntry(FileKind::Add(), partition, /*bucket=*/0, /*index_type=*/"BTREE", "global-0",
+                  20)};
+
+    ASSERT_OK_AND_ASSIGN(std::string current_manifest,
+                         IndexManifestFileHandler::Write(
+                             /*previous_index_manifest=*/std::nullopt, new_entries,
+                             /*bucket_mode=*/4, index_manifest_file.get()));
+
+    std::vector<IndexManifestEntry> written_entries;
+    ASSERT_OK(index_manifest_file->Read(current_manifest, /*filter=*/nullptr, &written_entries));
+    ASSERT_EQ(written_entries.size(), 1);
+    ASSERT_EQ(written_entries[0].index_file->FileName(), "global-0");
+    ASSERT_EQ(written_entries[0].index_file->RowCount(), 20);
+}
+
 TEST_F(IndexManifestFileHandlerTest, DvWithBucketUnawareModeReturnsNotImplemented) {
     ASSERT_OK_AND_ASSIGN(auto index_manifest_file, CreateManifestFile(/*bucket_mode=*/-1));
 
     auto partition = BinaryRow::EmptyRow();
     std::vector<IndexManifestEntry> new_entries = {
-        MakeEntry(FileKind::Add(), partition, /*bucket=*/0,
-                  DeletionVectorsIndexFile::DELETION_VECTORS_INDEX, "dv-0", 1)};
+        MakeDvEntry(FileKind::Add(), partition, /*bucket=*/0, "dv-0", {"data-0.orc"}, 1)};
 
     ASSERT_NOK_WITH_MSG(IndexManifestFileHandler::Write(
                             /*previous_index_manifest=*/std::nullopt, new_entries,

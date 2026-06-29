@@ -736,6 +736,7 @@ if(PAIMON_BUILD_TESTS)
                     core/table/source/data_split_test.cpp
                     core/table/source/deletion_file_test.cpp
                     core/table/source/split_generator_test.cpp
+                    core/table/source/snapshot/snapshot_reader_test.cpp
                     core/table/source/startup_mode_test.cpp
                     core/table/source/table_scan_test.cpp
                     core/table/system/system_table_test.cpp

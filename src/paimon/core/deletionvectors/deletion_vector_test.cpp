@@ -193,6 +193,18 @@ TEST(DeletionVectorTest, CreateDeletionFileMap) {
     ASSERT_EQ(deletion_file_map.at("file-0.orc"), deletion_file_0);
     ASSERT_EQ(deletion_file_map.count("file-1.orc"), 0);
     ASSERT_EQ(deletion_file_map.at("file-2.orc"), deletion_file_2);
+
+    DeletionFile deletion_file_0_new("dv-0-new", /*offset=*/50, /*length=*/60,
+                                     /*cardinality=*/7);
+    std::vector<std::shared_ptr<DataFileMeta>> duplicate_data_files = {
+        CreateDataFileMeta("file-0.orc"), CreateDataFileMeta("file-0.orc")};
+    std::vector<std::optional<DeletionFile>> duplicate_deletion_files = {deletion_file_0,
+                                                                         deletion_file_0_new};
+
+    auto duplicate_deletion_file_map =
+        DeletionVector::CreateDeletionFileMap(duplicate_data_files, duplicate_deletion_files);
+    ASSERT_EQ(duplicate_deletion_file_map.size(), 1);
+    ASSERT_EQ(duplicate_deletion_file_map.at("file-0.orc"), deletion_file_0_new);
 }
 
 }  // namespace paimon::test
