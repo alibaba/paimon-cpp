@@ -74,9 +74,9 @@ class SnapshotReaderTest : public testing::Test {
                 /*external_paths=*/{}, /*global_index_external_path=*/std::nullopt,
                 /*index_file_in_data_file_dir=*/false, pool_));
         auto path_factories = std::make_shared<IndexFilePathFactories>(path_factory);
-        return std::make_unique<IndexFileHandler>(
-            std::make_shared<LocalFileSystem>(), std::unique_ptr<IndexManifestFile>(),
-            path_factories, /*dv_bitmap64=*/false, pool_);
+        return std::make_unique<IndexFileHandler>(std::make_shared<LocalFileSystem>(),
+                                                  std::unique_ptr<IndexManifestFile>(),
+                                                  path_factories, /*dv_bitmap64=*/false, pool_);
     }
 
     std::shared_ptr<MemoryPool> pool_;
@@ -87,8 +87,7 @@ TEST_F(SnapshotReaderTest, GetDeletionFilesOverwritesDuplicateDataFileName) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<IndexFileHandler> index_file_handler,
                          CreateIndexFileHandler());
     SnapshotReader snapshot_reader(/*scan=*/nullptr, /*path_factory=*/nullptr,
-                                   /*split_generator=*/nullptr,
-                                   std::move(index_file_handler));
+                                   /*split_generator=*/nullptr, std::move(index_file_handler));
 
     const std::string data_file_name = "data-0.orc";
     std::vector<std::shared_ptr<DataFileMeta>> data_files = {CreateDataFileMeta(data_file_name)};

@@ -200,8 +200,7 @@ TEST_F(IndexManifestFileHandlerTest, GlobalCombinerOverwritesDuplicateAddedEntri
 
     auto partition = BinaryRow::EmptyRow();
     std::vector<IndexManifestEntry> new_entries = {
-        MakeEntry(FileKind::Add(), partition, /*bucket=*/0, /*index_type=*/"BTREE", "global-0",
-                  10),
+        MakeEntry(FileKind::Add(), partition, /*bucket=*/0, /*index_type=*/"BTREE", "global-0", 10),
         MakeEntry(FileKind::Add(), partition, /*bucket=*/0, /*index_type=*/"BTREE", "global-0",
                   20)};
 
