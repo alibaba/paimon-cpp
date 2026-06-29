@@ -254,7 +254,7 @@ TEST_P(BlobFileBatchReaderTest, EmptyFile) {
     ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, std::nullopt));
     ASSERT_OK_AND_ASSIGN(auto number_of_rows, reader->GetNumberOfRows());
     ASSERT_EQ(0, number_of_rows);
-    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFileRowId(0).value());
+    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
     ASSERT_OK_AND_ASSIGN(auto batch, reader->NextBatch());
     ASSERT_TRUE(BatchReader::IsEofBatch(batch));
 }
