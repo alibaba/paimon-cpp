@@ -80,8 +80,8 @@ class ApplyBitmapIndexBatchReader : public FileBatchReader {
         return Status::Invalid("ApplyBitmapIndexBatchReader does not support SetReadSchema");
     }
 
-    Result<uint64_t> GetPreviousBatchGlobalRowId(uint64_t batch_row_id) const override {
-        return reader_->GetPreviousBatchGlobalRowId(batch_row_id);
+    Result<uint64_t> GetPreviousBatchFileRowId(uint64_t batch_row_id) const override {
+        return reader_->GetPreviousBatchFileRowId(batch_row_id);
     }
 
     Result<uint64_t> GetNumberOfRows() const override {
@@ -96,7 +96,7 @@ class ApplyBitmapIndexBatchReader : public FileBatchReader {
     Result<RoaringBitmap32> Filter(int32_t batch_size) const {
         RoaringBitmap32 is_valid;
         for (int32_t i = 0; i < batch_size; ++i) {
-            PAIMON_ASSIGN_OR_RAISE(uint64_t global_row_id, reader_->GetPreviousBatchGlobalRowId(i));
+            PAIMON_ASSIGN_OR_RAISE(uint64_t global_row_id, reader_->GetPreviousBatchFileRowId(i));
             if (bitmap_.Contains(global_row_id)) {
                 is_valid.Add(i);
             }

@@ -169,21 +169,21 @@ TEST_F(BlobFileBatchReaderTest, TestRowNumbers) {
     ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, std::nullopt));
     ASSERT_OK_AND_ASSIGN(auto number_of_rows, reader->GetNumberOfRows());
     ASSERT_EQ(3, number_of_rows);
-    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchGlobalRowId(0).value());
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFileRowId(0).value());
     ASSERT_OK_AND_ASSIGN(auto batch1, reader->NextBatch());
     ArrowArrayRelease(batch1.first.get());
     ArrowSchemaRelease(batch1.second.get());
-    ASSERT_EQ(0, reader->GetPreviousBatchGlobalRowId(0).value());
+    ASSERT_EQ(0, reader->GetPreviousBatchFileRowId(0).value());
     ASSERT_OK_AND_ASSIGN(auto batch2, reader->NextBatch());
-    ASSERT_EQ(1, reader->GetPreviousBatchGlobalRowId(0).value());
+    ASSERT_EQ(1, reader->GetPreviousBatchFileRowId(0).value());
     ArrowArrayRelease(batch2.first.get());
     ArrowSchemaRelease(batch2.second.get());
     ASSERT_OK_AND_ASSIGN(auto batch3, reader->NextBatch());
-    ASSERT_EQ(2, reader->GetPreviousBatchGlobalRowId(0).value());
+    ASSERT_EQ(2, reader->GetPreviousBatchFileRowId(0).value());
     ArrowArrayRelease(batch3.first.get());
     ArrowSchemaRelease(batch3.second.get());
     ASSERT_OK_AND_ASSIGN(auto batch4, reader->NextBatch());
-    ASSERT_EQ(3, reader->GetPreviousBatchGlobalRowId(0).value());
+    ASSERT_EQ(3, reader->GetPreviousBatchFileRowId(0).value());
     ASSERT_TRUE(BatchReader::IsEofBatch(batch4));
 }
 
@@ -254,7 +254,7 @@ TEST_P(BlobFileBatchReaderTest, EmptyFile) {
     ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, std::nullopt));
     ASSERT_OK_AND_ASSIGN(auto number_of_rows, reader->GetNumberOfRows());
     ASSERT_EQ(0, number_of_rows);
-    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchGlobalRowId(0).value());
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFileRowId(0).value());
     ASSERT_OK_AND_ASSIGN(auto batch, reader->NextBatch());
     ASSERT_TRUE(BatchReader::IsEofBatch(batch));
 }

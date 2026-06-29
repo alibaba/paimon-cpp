@@ -432,7 +432,7 @@ Status PrefetchFileBatchReaderImpl::HandleReadResult(
         global_row_ids.reserve(c_array->length);
         for (int64_t i = 0; i < c_array->length; ++i) {
             PAIMON_ASSIGN_OR_RAISE(uint64_t global_row_id,
-                                   readers_[reader_idx]->GetPreviousBatchGlobalRowId(i));
+                                   readers_[reader_idx]->GetPreviousBatchFileRowId(i));
             global_row_ids.push_back(global_row_id);
         }
         if (global_row_ids.empty()) {
@@ -598,7 +598,7 @@ Result<std::unique_ptr<::ArrowSchema>> PrefetchFileBatchReaderImpl::GetFileSchem
     return readers_[0]->GetFileSchema();
 }
 
-Result<uint64_t> PrefetchFileBatchReaderImpl::GetPreviousBatchGlobalRowId(
+Result<uint64_t> PrefetchFileBatchReaderImpl::GetPreviousBatchFileRowId(
     uint64_t batch_row_id) const {
     if (current_batch_global_row_ids_.size() == 0) {
         return Status::Invalid(
