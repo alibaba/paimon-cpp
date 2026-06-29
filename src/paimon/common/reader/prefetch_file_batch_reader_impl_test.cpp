@@ -637,9 +637,7 @@ TEST_F(PrefetchFileBatchReaderImplTest, TestPartialReaderSuccessRead) {
     ASSERT_OK_AND_ASSIGN(auto batch_with_bitmap, reader->NextBatchWithBitmap());
     auto& [batch, bitmap] = batch_with_bitmap;
     ASSERT_EQ(batch.first->length, bitmap.Cardinality());
-    uint64_t file_row_id = 0;
-    ASSERT_OK_AND_ASSIGN(file_row_id, reader->GetPreviousBatchFileRowId(0));
-    ASSERT_EQ(file_row_id, 0);
+    ASSERT_EQ(reader->GetPreviousBatchFileRowId(0).value(), 0);
     ASSERT_OK_AND_ASSIGN(auto array, ReadResultCollector::GetArray(std::move(batch)));
     result_array_vector.push_back(array);
     ASSERT_OK(prefetch_reader->GetReadStatus());
@@ -933,21 +931,18 @@ TEST_P(PrefetchFileBatchReaderImplTest, TestRowMapping) {
         PreparePrefetchReader(file_format, schema.get(), predicate,
                               /*selection_bitmap=*/std::nullopt,
                               /*batch_size=*/10, /*prefetch_max_parallel_num=*/3, cache_mode);
-    uint64_t file_row_id = 0;
     ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> batch,
                          paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
-    ASSERT_OK_AND_ASSIGN(file_row_id, reader->GetPreviousBatchFileRowId(0));
-    ASSERT_EQ(file_row_id, 20);
-    ASSERT_OK_AND_ASSIGN(file_row_id, reader->GetPreviousBatchFileRowId(5));
-    ASSERT_EQ(file_row_id, 25);
+    for (uint64_t i = 0; i < 10; i++) {
+        ASSERT_EQ(reader->GetPreviousBatchFileRowId(i).value(), 20 + i);
+    }
 
     ASSERT_OK_AND_ASSIGN(batch,
                          paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
-    ASSERT_OK_AND_ASSIGN(file_row_id, reader->GetPreviousBatchFileRowId(0));
-    ASSERT_EQ(file_row_id, 70);
-    ASSERT_OK_AND_ASSIGN(file_row_id, reader->GetPreviousBatchFileRowId(5));
-    ASSERT_EQ(file_row_id, 75);
+    for (uint64_t i = 0; i < 10; i++) {
+        ASSERT_EQ(reader->GetPreviousBatchFileRowId(i).value(), 70 + i);
+    }
 
     // Set read schema again
     std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
@@ -959,12 +954,14 @@ TEST_P(PrefetchFileBatchReaderImplTest, TestRowMapping) {
     ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
     ASSERT_OK_AND_ASSIGN(batch,
                          paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
-    ASSERT_OK_AND_ASSIGN(file_row_id, reader->GetPreviousBatchFileRowId(0));
-    ASSERT_EQ(file_row_id, 30);
+    for (uint64_t i = 0; i < 10; i++) {
+        ASSERT_EQ(reader->GetPreviousBatchFileRowId(i).value(), 30 + i);
+    }
     ASSERT_OK_AND_ASSIGN(batch,
                          paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
-    ASSERT_OK_AND_ASSIGN(file_row_id, reader->GetPreviousBatchFileRowId(5));
-    ASSERT_EQ(file_row_id, 45);
+    for (uint64_t i = 0; i < 10; i++) {
+        ASSERT_EQ(reader->GetPreviousBatchFileRowId(i).value(), 40 + i);
+    }
 }
 
 }  // namespace paimon::test

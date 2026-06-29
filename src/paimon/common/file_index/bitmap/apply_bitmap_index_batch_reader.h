@@ -100,12 +100,11 @@ class ApplyBitmapIndexBatchReader : public FileBatchReader {
 
         for (int32_t i = 0; i < batch_size; ++i) {
             PAIMON_ASSIGN_OR_RAISE(uint64_t file_row_id, reader_->GetPreviousBatchFileRowId(i));
-            while (bitmap_iter != bitmap_end &&
-                   static_cast<uint64_t>(*bitmap_iter) < file_row_id) {
+            while (bitmap_iter != bitmap_end && static_cast<uint64_t>(*bitmap_iter) < file_row_id) {
                 ++bitmap_iter;
             }
             if (bitmap_iter == bitmap_end) {
-                break; 
+                break;
             }
             if (static_cast<uint64_t>(*bitmap_iter) == file_row_id) {
                 result.Add(i);
