@@ -732,6 +732,7 @@ TEST_F(PrefetchFileBatchReaderImplTest, TestCallNextBatchAfterReadingEof) {
     ASSERT_OK_AND_ASSIGN(auto result_array,
                          ReadResultCollector::CollectResult(
                              reader.get(), /*max simulated data processing time*/ 100));
+    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
     auto expected_array = std::make_shared<arrow::ChunkedArray>(data_array);
     ASSERT_TRUE(result_array->Equals(expected_array));
 
