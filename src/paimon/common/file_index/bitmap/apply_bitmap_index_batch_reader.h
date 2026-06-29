@@ -96,12 +96,10 @@ class ApplyBitmapIndexBatchReader : public FileBatchReader {
     Result<RoaringBitmap32> Filter(int32_t batch_size) const {
         RoaringBitmap32 is_valid;
         for (int32_t i = 0; i < batch_size; ++i) {
-            PAIMON_ASSIGN_OR_RAISE(uint64_t global_row_id, reader_->GetPreviousBatchFileRowId(i));
-            if (bitmap_.Contains(global_row_id)) {
-                is_valid.Add(i);
-            }
+            PAIMON_ASSIGN_OR_RAISE(uint64_t file_row_id, reader_->GetPreviousBatchFileRowId(i));
+            is_valid.Add(i);
         }
-        return is_valid;
+        return RoaringBitmap32::And(bitmap_, is_valid);
     }
 
  private:
