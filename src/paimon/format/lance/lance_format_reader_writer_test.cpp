@@ -478,7 +478,7 @@ TEST_F(LanceFileReaderWriterTest, TestPreviousBatchFirstRowNumber) {
     ASSERT_OK_AND_ASSIGN(
         std::unique_ptr<LanceFileBatchReader> reader,
         LanceFileBatchReader::Create(file_path, /*batch_size=*/4, /*batch_readahead=*/2));
-    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFileRowId(0).value());
+    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
 
     // first batch row 0-3
     ASSERT_OK_AND_ASSIGN(auto read_batch, reader->NextBatch());

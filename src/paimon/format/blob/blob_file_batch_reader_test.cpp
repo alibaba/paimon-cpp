@@ -169,7 +169,7 @@ TEST_F(BlobFileBatchReaderTest, TestRowNumbers) {
     ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, std::nullopt));
     ASSERT_OK_AND_ASSIGN(auto number_of_rows, reader->GetNumberOfRows());
     ASSERT_EQ(3, number_of_rows);
-    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFileRowId(0).value());
+    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
     ASSERT_OK_AND_ASSIGN(auto batch1, reader->NextBatch());
     ArrowArrayRelease(batch1.first.get());
     ArrowSchemaRelease(batch1.second.get());
@@ -183,7 +183,7 @@ TEST_F(BlobFileBatchReaderTest, TestRowNumbers) {
     ArrowArrayRelease(batch3.first.get());
     ArrowSchemaRelease(batch3.second.get());
     ASSERT_OK_AND_ASSIGN(auto batch4, reader->NextBatch());
-    ASSERT_EQ(3, reader->GetPreviousBatchFileRowId(0).value());
+    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
     ASSERT_TRUE(BatchReader::IsEofBatch(batch4));
 }
 
