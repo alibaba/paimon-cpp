@@ -23,7 +23,12 @@
 
 namespace paimon {
 
-/// Allocator that keeps cross-row column state and evicts least-recently-used columns.
+/// Allocator that keeps current column assignments across rows and evicts least-recently-used
+/// columns.
+///
+/// Keys that are still assigned to physical columns keep those columns when they appear again.
+/// New keys, including keys that were previously evicted, use empty columns first; if no empty
+/// column is available, the allocator replaces the least-recently-used physical column.
 class LruMapSharedShreddingColumnAllocator : public MapSharedShreddingColumnAllocator {
  public:
     /// @param num_columns Number of available physical columns.

@@ -20,11 +20,12 @@ namespace paimon {
 
 /// Specifies how shared-shredding MAP fields choose physical columns.
 enum class MapSharedShreddingColumnPlacementPolicy {
-    /// Keep input field order and place fields into columns 0..K-1.
+    /// Keep the key order from each input MAP row and place the first K keys into columns 0..K-1.
     PLAIN = 0,
-    /// Sort field IDs and place fields into columns 0..K-1.
+    /// Use a stable key order before placing the first K keys into columns 0..K-1.
     SEQUENTIAL = 1,
-    /// Choose empty columns first, then the least-recently-used physical column.
+    /// Reuse columns for recently seen keys when possible; otherwise choose an empty column first,
+    /// then the least-recently-used physical column.
     LRU = 2
 };
 

@@ -31,18 +31,11 @@ int32_t LruMapSharedShreddingColumnAllocator::SelectColumn(
     const std::vector<int32_t>& planned_col_to_field) const {
     int32_t selected_col = candidates.front();
     int64_t selected_last_used = std::numeric_limits<int64_t>::max();
-    bool selected_empty = false;
     for (int32_t col : candidates) {
-        bool is_empty = planned_col_to_field[col] == -1;
-        if (is_empty) {
-            if (!selected_empty || col < selected_col) {
-                selected_empty = true;
-                selected_col = col;
-            }
-            continue;
+        if (planned_col_to_field[col] == -1) {
+            return col;
         }
-        if (!selected_empty && (last_used_[col] < selected_last_used ||
-                                (last_used_[col] == selected_last_used && col < selected_col))) {
+        if (last_used_[col] < selected_last_used) {
             selected_col = col;
             selected_last_used = last_used_[col];
         }

@@ -445,6 +445,13 @@ TEST_F(MapSharedShreddingBatchConverterTest, SequentialPlacementUsesSmallestColu
                         .ValueOrDie();
 
     AssertArrayEquals(expected, actual);
+
+    MapSharedShreddingFieldMeta expected_meta;
+    expected_meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}};
+    expected_meta.field_to_columns = {{0, {0}}, {1, {1}}, {2, {2}}};
+    expected_meta.num_columns = 3;
+    expected_meta.max_row_width = 3;
+    ASSERT_EQ(expected_meta, converter->BuildFieldMeta("tags").value());
 }
 
 TEST_F(MapSharedShreddingBatchConverterTest, LruPlacementPreservesResidentColumns) {
