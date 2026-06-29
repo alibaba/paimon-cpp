@@ -104,12 +104,6 @@ void RowRanges::Add(const Range& range) {
     ranges_.insert(it, merged);
 }
 
-void RowRanges::Union(const RowRanges& other) {
-    for (const auto& range : other.ranges_) {
-        Add(range);
-    }
-}
-
 std::optional<int64_t> RowRanges::MapFilteredIndexToOriginalRow(int64_t filtered_index) const {
     int64_t accumulated = 0;
     for (const auto& range : ranges_) {

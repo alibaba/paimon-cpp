@@ -19,7 +19,6 @@
 #include <algorithm>
 #include <chrono>
 #include <future>
-#include <iostream>
 #include <thread>
 
 #include "arrow/array/array_base.h"

@@ -49,6 +49,9 @@ class LanceFileBatchReader : public FileBatchReader {
                 "bitmap pushdown, rows in the array returned by NextBatch are no longer "
                 "contiguous.");
         }
+        if (previous_batch_first_row_num_ == std::numeric_limits<uint64_t>::max()) {
+            return Status::Invalid("No batch has been read yet");
+        }
         return previous_batch_first_row_num_ + batch_row_id;
     }
 

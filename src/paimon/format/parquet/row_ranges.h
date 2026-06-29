@@ -92,8 +92,6 @@ class RowRanges {
     /// Adds a range to the end of the list, maintaining sorted disjoint ranges.
     void Add(const Range& range);
 
-    void Union(const RowRanges& other);
-
     /// Maps a filtered-result index to the original row index within the row group.
     /// For example, if RowRanges = {[10,19], [50,59]}, then:
     ///   MapFilteredIndexToOriginalRow(0)  = 10  (first row of first range)
@@ -111,7 +109,7 @@ class RowRanges {
 struct TargetRowGroup {
     int32_t row_group_index{-1};
     bool is_partially_matched{false};
-    // page-filtered row ranges, only valid if is_partially_matched is true.
+
     RowRanges row_ranges;
     // Whether this row group has been excluded by ApplyReadRanges.
     // When true, this row group is logically skipped during iteration
