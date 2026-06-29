@@ -19,11 +19,14 @@
 #include <string>
 #include <vector>
 
+#include "arrow/api.h"
 #include "arrow/c/bridge.h"
 #include "gtest/gtest.h"
 #include "paimon/commit_context.h"
 #include "paimon/common/data/binary_row.h"
+#include "paimon/common/data/shredding/map_shared_shredding_utils.h"
 #include "paimon/common/factories/io_hook.h"
+#include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/append/bucketed_append_compact_manager.h"
 #include "paimon/core/io/data_file_meta.h"
@@ -34,6 +37,7 @@
 #include "paimon/executor.h"
 #include "paimon/file_store_commit.h"
 #include "paimon/file_store_write.h"
+#include "paimon/format/file_format_factory.h"
 #include "paimon/result.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/data_generator.h"
@@ -243,6 +247,118 @@ TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompaction) {
                              helper->ReadAndCheckResult(data_type, {split}, iter->second));
         ASSERT_TRUE(success);
     }
+}
+
+TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompactionWithMapSharedShredding) {
+    auto file_format = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto map_type = arrow::map(arrow::utf8(), arrow::int64());
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type),
+    };
+    auto schema = arrow::schema(fields);
+
+    std::map<std::string, std::string> options = {
+        {Options::FILE_FORMAT, file_format},
+        {Options::BUCKET, "1"},
+        {Options::BUCKET_KEY, "id"},
+        {Options::FILE_SYSTEM, "local"},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "64"},
+    };
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(dir->Str(), schema, /*partition_keys=*/{},
+                                                         /*primary_keys=*/{}, options,
+                                                         /*is_streaming_mode=*/true));
+
+    ASSERT_OK_AND_ASSIGN(auto batch_0,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+        [1, [["a", 10], ["b", 20]]],
+        [2, [["c", 30]]]
+    ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    int64_t commit_identifier = 0;
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_0), commit_identifier++,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto batch_1,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+        [3, [["a", 40], ["d", 50]]],
+        [4, null]
+    ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_1), commit_identifier++,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto batch_2,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+        [5, [["e", 60], ["f", 70], ["g", 80], ["h", 90]]]
+    ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_2), commit_identifier++,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK(helper->write_->Compact(/*partition=*/{}, /*bucket=*/0,
+                                      /*full_compaction=*/true));
+    ASSERT_OK_AND_ASSIGN(
+        std::vector<std::shared_ptr<CommitMessage>> commit_messages,
+        helper->write_->PrepareCommit(/*wait_compaction=*/true, commit_identifier));
+    ASSERT_FALSE(commit_messages.empty());
+    ASSERT_OK(helper->commit_->Commit(commit_messages, commit_identifier));
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot, helper->LatestSnapshot());
+    ASSERT_TRUE(snapshot);
+    ASSERT_EQ(Snapshot::CommitKind::Compact(), snapshot.value().GetCommitKind());
+
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_EQ(data_splits.size(), 1);
+    {
+        // check adaptive k
+        auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(data_splits[0]);
+        ASSERT_TRUE(data_split);
+        ASSERT_EQ(data_split->DataFiles().size(), 1);
+        auto compact_file = data_split->DataFiles()[0];
+        std::string compact_file_path =
+            PathUtil::JoinPath(data_split->BucketPath(), compact_file->file_name);
+        ASSERT_OK_AND_ASSIGN(auto unique_input_stream,
+                             dir->GetFileSystem()->Open(compact_file_path));
+        std::shared_ptr<InputStream> input_stream(std::move(unique_input_stream));
+        ASSERT_OK_AND_ASSIGN(auto file_format_obj, FileFormatFactory::Get(file_format, options));
+        ASSERT_OK_AND_ASSIGN(auto reader_builder, file_format_obj->CreateReaderBuilder(10));
+        ASSERT_OK_AND_ASSIGN(auto reader, reader_builder->Build(input_stream));
+        ASSERT_OK_AND_ASSIGN(auto c_file_schema, reader->GetFileSchema());
+        auto file_schema = arrow::ImportSchema(c_file_schema.get()).ValueOrDie();
+        auto tags_field = file_schema->GetFieldByName("tags");
+        ASSERT_TRUE(tags_field);
+        ASSERT_TRUE(tags_field->metadata());
+        ASSERT_OK_AND_ASSIGN(
+            auto tags_meta,
+            MapSharedShreddingUtils::DeserializeMetadata(
+                tags_field->metadata()->Copy(), MapSharedShreddingDefine::kDefaultDictCompression));
+        ASSERT_EQ(4, tags_meta.num_columns);
+        ASSERT_EQ(4, tags_meta.max_row_width);
+    }
+    arrow::FieldVector fields_with_row_kind = fields;
+    fields_with_row_kind.insert(fields_with_row_kind.begin(),
+                                arrow::field("_VALUE_KIND", arrow::int8()));
+    auto data_type = arrow::struct_(fields_with_row_kind);
+    ASSERT_OK_AND_ASSIGN(bool success, helper->ReadAndCheckResult(data_type, data_splits,
+                                                                  R"([
+        [0, 1, [["a", 10], ["b", 20]]],
+        [0, 2, [["c", 30]]],
+        [0, 3, [["a", 40], ["d", 50]]],
+        [0, 4, null],
+        [0, 5, [["e", 60], ["f", 70], ["g", 80], ["h", 90]]]
+    ])"));
+    ASSERT_TRUE(success);
 }
 
 TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompactionWithDv) {

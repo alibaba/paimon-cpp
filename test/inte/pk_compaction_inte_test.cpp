@@ -42,11 +42,15 @@
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/predicate/literal.h"
+#include "paimon/predicate/predicate_builder.h"
 #include "paimon/read_context.h"
 #include "paimon/record_batch.h"
 #include "paimon/result.h"
+#include "paimon/scan_context.h"
 #include "paimon/status.h"
 #include "paimon/table/source/table_read.h"
+#include "paimon/table/source/table_scan.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/data_generator.h"
 #include "paimon/testing/utils/io_exception_helper.h"
@@ -224,13 +228,23 @@ class PkCompactionInteTest : public ::testing::Test,
 
     void ScanAndVerify(const std::string& table_path, const arrow::FieldVector& fields,
                        const std::map<std::pair<std::string, int32_t>, std::string>&
-                           expected_data_per_partition_bucket) {
+                           expected_data_per_partition_bucket,
+                       const std::shared_ptr<Predicate>& predicate = nullptr) {
         std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"}};
         ASSERT_OK_AND_ASSIGN(auto helper,
                              TestHelper::Create(table_path, options, /*is_streaming_mode=*/false));
-        ASSERT_OK_AND_ASSIGN(
-            std::vector<std::shared_ptr<Split>> data_splits,
-            helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+        ScanContextBuilder scan_context_builder(table_path);
+        scan_context_builder.WithStreamingMode(false).SetOptions(options).AddOption(
+            Options::SCAN_MODE, StartupMode::LatestFull().ToString());
+        if (predicate) {
+            scan_context_builder.SetPredicate(predicate);
+        }
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> scan_context,
+                             scan_context_builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> table_scan,
+                             TableScan::Create(std::move(scan_context)));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> result_plan, table_scan->CreatePlan());
+        std::vector<std::shared_ptr<Split>> data_splits = result_plan->Splits();
 
         arrow::FieldVector fields_with_row_kind = fields;
         fields_with_row_kind.insert(fields_with_row_kind.begin(),
@@ -253,8 +267,31 @@ class PkCompactionInteTest : public ::testing::Test,
             auto iter = expected_data_per_partition_bucket.find(key);
             ASSERT_TRUE(iter != expected_data_per_partition_bucket.end())
                 << "Unexpected partition=" << key.first << " bucket=" << key.second;
-            ASSERT_OK_AND_ASSIGN(bool success,
-                                 helper->ReadAndCheckResult(data_type, splits, iter->second));
+            ReadContextBuilder read_context_builder(table_path);
+            read_context_builder.SetOptions(options);
+            if (predicate) {
+                read_context_builder.SetPredicate(predicate);
+            }
+            ASSERT_OK_AND_ASSIGN(std::unique_ptr<ReadContext> read_context,
+                                 read_context_builder.Finish());
+            ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableRead> table_read,
+                                 TableRead::Create(std::move(read_context)));
+            ASSERT_OK_AND_ASSIGN(std::unique_ptr<BatchReader> batch_reader,
+                                 table_read->CreateReader(splits));
+            ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> read_result,
+                                 ReadResultCollector::CollectResult(batch_reader.get()));
+            auto expected_array =
+                arrow::ipc::internal::json::ArrayFromJSON(data_type, iter->second).ValueOrDie();
+            auto expected_chunk_array = std::make_shared<arrow::ChunkedArray>(expected_array);
+
+            bool success = expected_chunk_array->Equals(read_result);
+            if (!success) {
+                std::cout << "[expected_data_type]" << expected_chunk_array->type()->ToString()
+                          << std::endl;
+                std::cout << "[actual_data_type]" << read_result->type()->ToString() << std::endl;
+                std::cout << "[expected]:" << expected_chunk_array->ToString() << std::endl;
+                std::cout << "[actual]: " << read_result->ToString() << std::endl;
+            }
             ASSERT_TRUE(success);
         }
     }
@@ -317,6 +354,190 @@ class PkCompactionInteTest : public ::testing::Test,
     std::unique_ptr<UniqueTestDirectory> dir_;
     arrow::FieldVector fields_;
 };
+
+// Verify shared-shredding MAP can be read correctly after PK full compaction.
+TEST_P(PkCompactionInteTest, TestKeyValueTableFullCompactionWithMapSharedShredding) {
+    auto file_format = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    auto map_type = arrow::map(arrow::utf8(), arrow::int64());
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type),
+    };
+    std::vector<std::string> primary_keys = {"id"};
+    std::vector<std::string> partition_keys = {};
+    std::map<std::string, std::string> options = {
+        {Options::FILE_FORMAT, file_format},
+        {Options::BUCKET, "1"},
+        {Options::BUCKET_KEY, "id"},
+        {Options::FILE_SYSTEM, "local"},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "2"},
+    };
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(dir_->Str(), arrow::schema(fields), partition_keys,
+                                            primary_keys, options, /*is_streaming_mode=*/true));
+
+    int64_t commit_identifier = 0;
+    ASSERT_OK_AND_ASSIGN(auto batch_0,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+        [1, [["a", 10], ["b", 20]]],
+        [2, [["c", 30]]]
+    ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_0), commit_identifier++,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto batch_1,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+        [1, [["a", 100], ["d", 400]]],
+        [3, [["e", 50]]]
+    ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_1), commit_identifier++,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK(helper->write_->Compact(/*partition=*/{}, /*bucket=*/0,
+                                      /*full_compaction=*/true));
+    ASSERT_OK_AND_ASSIGN(
+        std::vector<std::shared_ptr<CommitMessage>> commit_messages,
+        helper->write_->PrepareCommit(/*wait_compaction=*/true, commit_identifier));
+    ASSERT_FALSE(commit_messages.empty());
+    ASSERT_OK(helper->commit_->Commit(commit_messages, commit_identifier));
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot, helper->LatestSnapshot());
+    ASSERT_TRUE(snapshot);
+    ASSERT_EQ(Snapshot::CommitKind::Compact(), snapshot.value().GetCommitKind());
+
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    arrow::FieldVector fields_with_row_kind = fields;
+    fields_with_row_kind.insert(fields_with_row_kind.begin(),
+                                arrow::field("_VALUE_KIND", arrow::int8()));
+    auto data_type = arrow::struct_(fields_with_row_kind);
+    ASSERT_OK_AND_ASSIGN(bool success, helper->ReadAndCheckResult(data_type, data_splits,
+                                                                  R"([
+        [0, 1, [["a", 100], ["d", 400]]],
+        [0, 2, [["c", 30]]],
+        [0, 3, [["e", 50]]]
+    ])"));
+    ASSERT_TRUE(success);
+}
+
+TEST_P(PkCompactionInteTest, TestKeyValueTableDvCompactionWithMapSharedShredding) {
+    auto file_format = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    auto map_type = arrow::map(arrow::utf8(), arrow::int64());
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type),
+        arrow::field("padding", arrow::utf8()),
+    };
+    std::vector<std::string> primary_keys = {"id"};
+    std::vector<std::string> partition_keys = {};
+    std::map<std::string, std::string> options = {
+        {Options::FILE_FORMAT, file_format},
+        {Options::BUCKET, "1"},
+        {Options::BUCKET_KEY, "id"},
+        {Options::FILE_SYSTEM, "local"},
+        {Options::FILE_COMPRESSION, "none"},
+        {Options::DELETION_VECTORS_ENABLED, "true"},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "2"},
+        {"parquet.page.size", "1"},
+        {"parquet.enable-dictionary", "false"},
+        {"parquet.write.enable-page-index", "true"},
+        {"parquet.write.max-row-group-length", "1"},
+        {"parquet.read.enable-page-index-filter", "true"},
+        {"orc.stripe.size", "1"},
+        {"orc.row.index.stride", "1"},
+    };
+    CreateTable(fields, partition_keys, primary_keys, options);
+    std::string table_path = TablePath();
+    auto data_type = arrow::struct_(fields);
+    int64_t commit_id = 0;
+    std::string padding(2048, 'X');
+
+    {
+        // clang-format off
+        std::string json_data = R"([
+[1, [["a", 10], ["b", 20]], ")" + padding + R"("],
+[2, [["c", 30]], ")" + padding + R"("],
+[3, [["d", 40]], ")" + padding + R"("],
+[4, null, ")" + padding + R"("],
+[6, [["j", 60], ["k", 70]], ")" + padding + R"("],
+[7, [["l", 80], ["m", 90], ["n", 100]], ")" + padding + R"("],
+[8, [["o", 110]], ")" + padding + R"("]
+])";
+        // clang-format on
+        auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, json_data).ValueOrDie();
+        ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
+    }
+
+    ASSERT_OK_AND_ASSIGN(
+        auto upgrade_msgs,
+        CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
+    ASSERT_FALSE(HasDeletionVectorIndexFiles(upgrade_msgs))
+        << "Initial full compact should not produce DV index files";
+
+    {
+        auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
+            [1, [["a", 100], ["e", 500]], "u1"],
+            [5, [["h", 80]], "u5"]
+        ])")
+                         .ValueOrDie();
+        ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
+    }
+
+    {
+        auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
+            [2, [["c", 300], ["f", 600], ["g", 700]], "u2"],
+            [5, [["h", 800], ["i", 900]], "u5-new"]
+        ])")
+                         .ValueOrDie();
+        ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
+    }
+
+    ASSERT_OK_AND_ASSIGN(
+        auto dv_compact_msgs,
+        CompactAndCommit(table_path, {}, 0, /*full_compaction=*/false, commit_id++));
+    ASSERT_TRUE(HasDeletionVectorIndexFiles(dv_compact_msgs))
+        << "Non-full compact should produce DV index files";
+
+    std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+    // clang-format off
+    expected_data[std::make_pair("", 0)] = R"([
+[0, 3, [["d", 40]], ")" + padding + R"("],
+[0, 4, null, ")" + padding + R"("],
+[0, 6, [["j", 60], ["k", 70]], ")" + padding + R"("],
+[0, 7, [["l", 80], ["m", 90], ["n", 100]], ")" + padding + R"("],
+[0, 8, [["o", 110]], ")" + padding + R"("],
+[0, 1, [["a", 100], ["e", 500]], "u1"],
+[0, 2, [["c", 300], ["f", 600], ["g", 700]], "u2"],
+[0, 5, [["h", 800], ["i", 900]], "u5-new"]
+])";
+    // clang-format on
+    ScanAndVerify(table_path, fields, expected_data);
+
+    // read with predicate and dv bitmap
+    auto predicate = PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"id",
+                                                   FieldType::INT, Literal(6));
+    std::map<std::pair<std::string, int32_t>, std::string> expected_predicate_data;
+    // clang-format off
+    expected_predicate_data[std::make_pair("", 0)] = R"([
+[0, 7, [["l", 80], ["m", 90], ["n", 100]], ")" + padding + R"("],
+[0, 8, [["o", 110]], ")" + padding + R"("]
+])";
+    // clang-format on
+    ScanAndVerify(table_path, fields, expected_predicate_data, predicate);
+}
 
 // Test: deduplicate merge engine with deletion vectors enabled.
 // Verifies that a non-full compact produces DV index files when level-0 files
@@ -1995,13 +2216,21 @@ TEST_F(PkCompactionInteTest, TestDeduplicateWithDvInAllLevels) {
         ASSERT_OK_AND_ASSIGN(auto compact_msgs,
                              CompactAndCommit(table_path, {{"f1", "10"}}, 0,
                                               /*full_compaction=*/false, commit_id++));
-        ASSERT_TRUE(HasDeletionVectorIndexFiles(compact_msgs))
-            << "Non-full compact #1 must produce DV for Alice/Bob in L5";
+        ASSERT_TRUE(HasDeletionVectorIndexFiles(compact_msgs));
+
+        std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+        expected_data[std::make_pair("f1=10/", 0)] = R"([
+            [0, "Carol", 10, 0, 3.0, ")" + padding + R"("],
+            [0, "Dave",  10, 0, 4.0, ")" + padding + R"("],
+            [0, "Eve",   10, 0, 5.0, ")" + padding + R"("],
+            [0, "Alice", 10, 0, 10.0, "v2a"],
+            [0, "Bob",   10, 0, 20.0, "v2b"]
+        ])";
+        ScanAndVerify(table_path, fields, expected_data);
     }
 
     // Step 3: Write batch_3 (overlap Bob/Carol) → non-full compact.
-    // L0 merges to a lower intermediate level; DV marks Bob in the intermediate file
-    // from Step 2, and Carol in L5.
+    // DV marks Carol in L5.
     {
         auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
             ["Bob",   10, 0, 200.0, "v3b"],
@@ -2013,8 +2242,16 @@ TEST_F(PkCompactionInteTest, TestDeduplicateWithDvInAllLevels) {
         ASSERT_OK_AND_ASSIGN(auto compact_msgs,
                              CompactAndCommit(table_path, {{"f1", "10"}}, 0,
                                               /*full_compaction=*/false, commit_id++));
-        ASSERT_TRUE(HasDeletionVectorIndexFiles(compact_msgs))
-            << "Non-full compact #2 must produce DV for Bob (intermediate) and Carol (L5)";
+        ASSERT_TRUE(HasDeletionVectorIndexFiles(compact_msgs));
+        std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+        expected_data[std::make_pair("f1=10/", 0)] = R"([
+            [0, "Dave",  10, 0, 4.0, ")" + padding + R"("],
+            [0, "Eve",   10, 0, 5.0, ")" + padding + R"("],
+            [0, "Alice", 10, 0, 10.0, "v2a"],
+            [0, "Bob",   10, 0, 200.0, "v3b"],
+            [0, "Carol", 10, 0, 300.0, "v3c"]
+        ])";
+        ScanAndVerify(table_path, fields, expected_data);
     }
 
     // Step 4: Write batch_4 (overlap Carol/Dave) → non-full compact.
@@ -2030,8 +2267,16 @@ TEST_F(PkCompactionInteTest, TestDeduplicateWithDvInAllLevels) {
         ASSERT_OK_AND_ASSIGN(auto compact_msgs,
                              CompactAndCommit(table_path, {{"f1", "10"}}, 0,
                                               /*full_compaction=*/false, commit_id++));
-        ASSERT_TRUE(HasDeletionVectorIndexFiles(compact_msgs))
-            << "Non-full compact #3 must produce DV for Carol (intermediate) and Dave (L5)";
+        ASSERT_TRUE(HasDeletionVectorIndexFiles(compact_msgs));
+        std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+        expected_data[std::make_pair("f1=10/", 0)] = R"([
+            [0, "Eve",   10, 0, 5.0, ")" + padding + R"("],
+            [0, "Alice", 10, 0, 10.0, "v2a"],
+            [0, "Bob",   10, 0, 200.0, "v3b"],
+            [0, "Carol", 10, 0, 3000.0, "v4c"],
+            [0, "Dave",  10, 0, 4000.0, "v4d"]
+        ])";
+        ScanAndVerify(table_path, fields, expected_data);
     }
 
     // Step 5: Write batch_5 (overlap Dave/Eve) → leave at L0 (no compact).
@@ -2045,11 +2290,11 @@ TEST_F(PkCompactionInteTest, TestDeduplicateWithDvInAllLevels) {
         ASSERT_OK(WriteAndCommit(table_path, {{"f1", "10"}}, 0, array, commit_id++));
         std::map<std::pair<std::string, int32_t>, std::string> expected_data;
         expected_data[std::make_pair("f1=10/", 0)] = R"([
+            [0, "Eve",   10, 0, 5.0, ")" + padding + R"("],
             [0, "Alice", 10, 0, 10.0, "v2a"],
             [0, "Bob",   10, 0, 200.0, "v3b"],
             [0, "Carol", 10, 0, 3000.0, "v4c"],
-            [0, "Dave",  10, 0, 40000.0, "v5d"],
-            [0, "Eve",   10, 0, 50000.0, "v5e"]
+            [0, "Dave",  10, 0, 4000.0, "v4d"]
         ])";
         ScanAndVerify(table_path, fields, expected_data);
     }
@@ -2058,9 +2303,7 @@ TEST_F(PkCompactionInteTest, TestDeduplicateWithDvInAllLevels) {
         ASSERT_OK_AND_ASSIGN(
             auto final_compact_msgs,
             CompactAndCommit(table_path, {{"f1", "10"}}, 0, /*full_compaction=*/true, commit_id++));
-    }
-    // Step 7: ScanAndVerify after full compact (globally sorted, all data in L5).
-    {
+        // Step 7: ScanAndVerify after full compact (globally sorted, all data in L5).
         std::map<std::pair<std::string, int32_t>, std::string> expected_data;
         expected_data[std::make_pair("f1=10/", 0)] = R"([
             [0, "Alice", 10, 0, 10.0, "v2a"],
