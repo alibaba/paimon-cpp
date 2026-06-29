@@ -58,11 +58,13 @@ class TargetRowGroup {
         return row_ranges;
     }
 
-    static TargetRowGroups MakeSerialRowGroups(int32_t num_row_groups) {
+    static TargetRowGroups MakeSerialRowGroups(
+        const std::vector<std::pair<uint64_t, uint64_t>>& ranges) {
         TargetRowGroups target_row_groups;
-        target_row_groups.reserve(num_row_groups);
-        for (int32_t i = 0; i < num_row_groups; ++i) {
-            target_row_groups.emplace_back(i);
+        target_row_groups.reserve(ranges.size());
+        for (size_t i = 0; i < ranges.size(); ++i) {
+            target_row_groups.emplace_back(
+                i, false, RowRanges(Range(0, ranges[i].second - ranges[i].first - 1)));
         }
         return target_row_groups;
     }
@@ -79,7 +81,7 @@ class TargetRowGroup {
  private:
     int32_t row_group_index{-1};
     bool is_partially_matched{false};
-    // page-filtered row ranges, only valid if is_partially_matched is true.
+    // Local row ranges
     RowRanges row_ranges;
     // Whether this row group has been excluded by ApplyReadRanges.
     // When true, this row group is logically skipped during iteration

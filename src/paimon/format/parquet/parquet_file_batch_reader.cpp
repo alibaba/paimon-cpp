@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <iostream>
 #include <unordered_map>
 
 #include "arrow/acero/options.h"
@@ -159,7 +160,7 @@ Status ParquetFileBatchReader::SetReadSchema(
         }
 
         TargetRowGroups target_row_groups =
-            TargetRowGroup::MakeSerialRowGroups(reader_->GetNumberOfRowGroups());
+            TargetRowGroup::MakeSerialRowGroups(reader_->GetAllRowGroupRanges());
         PAIMON_ASSIGN_OR_RAISE(
             bool enable_page_index_filter,
             OptionsUtils::GetValueFromMap<bool>(options_, PARQUET_READ_ENABLE_PAGE_INDEX_FILTER,
@@ -261,7 +262,7 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByPredicate(
             return Status::Invalid("cannot cast to ParquetFileFragment in ParquetFileBatchReader");
         }
         for (auto rg_index : parquet_fragment->row_groups()) {
-            target_row_groups.emplace_back(rg_index);
+            target_row_groups.emplace_back(src_row_groups[rg_index]);
         }
     }
     return target_row_groups;
@@ -293,13 +294,17 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByBitmap(
         if (!enable_page_filtered) {
             // For nested schema, we cannot apply page-level filtering, so we directly add the whole
             // row group if bitmap matches.
-            target_row_groups.emplace_back(row_group_idx);
+            target_row_groups.emplace_back(row_group);
             continue;
         }
         auto page_ranges = BitmapToRowRanges(bitmap, start_row_idx, end_row_idx);
-        target_row_groups.emplace_back(/*row_group_idx=*/row_group_idx,
-                                       /*is_partially_matched=*/true,
-                                       /*row_ranges=*/page_ranges);
+        if (page_ranges.RowCount() < rg_row_count) {
+            target_row_groups.emplace_back(/*row_group_idx=*/row_group_idx,
+                                           /*is_partially_matched=*/true,
+                                           /*row_ranges=*/page_ranges);
+        } else {
+            target_row_groups.emplace_back(row_group);
+        }
     }
     return target_row_groups;
 }
@@ -387,7 +392,7 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByPageIndex(
             if (intersection.RowCount() < rg_row_count) {
                 target_row_groups.emplace_back(row_group_idx, true, intersection);
             } else {
-                target_row_groups.emplace_back(row_group_idx);
+                target_row_groups.emplace_back(row_group);
             }
         }
     }
@@ -590,10 +595,10 @@ Result<RowRanges> ParquetFileBatchReader::GetAllTargetRowRanges(
     auto all_row_group_ranges = reader_->GetAllRowGroupRanges();
     RowRanges all_ranges;
     for (const auto& target_row_group : target_row_groups) {
+        auto row_group_idx = target_row_group.GetRowGroupIndex();
         for (const auto& range : target_row_group.GetRowRanges().GetRanges()) {
-            all_ranges.Add(
-                Range(range.from + all_row_group_ranges[target_row_group.GetRowGroupIndex()].first,
-                      range.to + all_row_group_ranges[target_row_group.GetRowGroupIndex()].first));
+            all_ranges.Add(Range(all_row_group_ranges[row_group_idx].first + range.from,
+                                 all_row_group_ranges[row_group_idx].first + range.to));
         }
     }
     return all_ranges;
@@ -607,7 +612,11 @@ Status ParquetFileBatchReader::GenerateRowMapping(int64_t batch_length) {
         std::upper_bound(all_ranges.begin(), all_ranges.end(), batch_start_row,
                          [](int64_t value, const Range& r) { return value < r.from; });
     if (cur_range_it == all_ranges.begin()) {
-        return Status::Invalid("No range found!");
+        std::stringstream s;
+        for (auto range : all_ranges) {
+            s << "range: [" << range.from << ", " << range.to << "]" << std::endl;
+        }
+        return Status::Invalid(fmt::format("No range found! {} {}", s.str(), all_ranges.size()));
     }
     --cur_range_it;
     if (batch_start_row < cur_range_it->from || batch_start_row > cur_range_it->to) {

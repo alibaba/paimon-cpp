@@ -145,9 +145,9 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
         std::map<std::string, std::string> options;
         options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] =
             enable_page_level_filter ? "true" : "false";
-        ASSERT_OK_AND_ASSIGN(
-            auto batch_reader,
-            ParquetFileBatchReader::Create(std::move(in_stream), options, batch_size, nullptr,arrow_pool_));
+        ASSERT_OK_AND_ASSIGN(auto batch_reader,
+                             ParquetFileBatchReader::Create(std::move(in_stream), options,
+                                                            batch_size, nullptr, arrow_pool_));
         auto c_schema = std::make_unique<ArrowSchema>();
         ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
         ASSERT_OK(batch_reader->SetReadSchema(c_schema.get(), predicate, bitmap));

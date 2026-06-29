@@ -1146,7 +1146,8 @@ TEST_F(ParquetFileBatchReaderTest, TestRowMappingSimple) {
                                                         FieldType::INT, Literal(5), Literal(6))}));
 
     auto parquet_batch_reader = PrepareParquetFileBatchReader(
-        file_path_, arrow_schema, /*predicate=*/predicate, std::nullopt, /*batch_size=*/2);
+        file_path_, arrow_schema, /*predicate=*/predicate, std::nullopt, /*batch_size=*/2,
+        /*enable_page_level_filter=*/true);
 
     uint64_t global_row_id = 0;
     ASSERT_NOK(parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
@@ -1218,7 +1219,8 @@ TEST_F(ParquetFileBatchReaderTest, TestRowMappingFullyAndPartially) {
                                                       FieldType::INT, Literal(8))}));
 
     auto parquet_batch_reader = PrepareParquetFileBatchReader(
-        file_path_, arrow_schema, /*predicate=*/predicate, std::nullopt, /*batch_size=*/3);
+        file_path_, arrow_schema, /*predicate=*/predicate, std::nullopt, /*batch_size=*/3,
+        /*enable_page_level_filter=*/true);
 
     uint64_t global_row_id = 0;
     ASSERT_NOK(parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
@@ -1257,7 +1259,8 @@ TEST_F(ParquetFileBatchReaderTest, TestRowMappingSetReadSchemaTwice) {
                                                         FieldType::INT, Literal(6), Literal(7))}));
 
     auto parquet_batch_reader = PrepareParquetFileBatchReader(
-        file_path_, arrow_schema, /*predicate=*/predicate, std::nullopt, /*batch_size=*/3);
+        file_path_, arrow_schema, /*predicate=*/predicate, std::nullopt, /*batch_size=*/3,
+        /*enable_page_level_filter=*/true);
 
     uint64_t global_row_id = 0;
     ASSERT_NOK(parquet_batch_reader->GetPreviousBatchGlobalRowId(0));
