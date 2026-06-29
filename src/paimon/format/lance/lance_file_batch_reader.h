@@ -41,13 +41,16 @@ class LanceFileBatchReader : public FileBatchReader {
 
     Result<ReadBatch> NextBatch() override;
 
-    Result<uint64_t> GetPreviousBatchGlobalRowId(uint64_t batch_row_id) const override {
+    Result<uint64_t> GetPreviousBatchFileRowId(uint64_t batch_row_id) const override {
         if (!read_row_ids_.empty() && read_row_ids_.size() != num_rows_) {
             // TODO(xinyu.lxy): support function
             return Status::NotImplemented(
-                "Cannot call GetPreviousBatchGlobalRowId in LanceFileBatchReader because, after "
+                "Cannot call GetPreviousBatchFileRowId in LanceFileBatchReader because, after "
                 "bitmap pushdown, rows in the array returned by NextBatch are no longer "
                 "contiguous.");
+        }
+        if (previous_batch_first_row_num_ == std::numeric_limits<uint64_t>::max()) {
+            return Status::Invalid("No batch has been read yet");
         }
         return previous_batch_first_row_num_ + batch_row_id;
     }

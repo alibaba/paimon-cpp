@@ -92,8 +92,6 @@ class RowRanges {
     /// Adds a range to the end of the list, maintaining sorted disjoint ranges.
     void Add(const Range& range);
 
-    void Union(const RowRanges& other);
-
     /// Maps a filtered-result index to the original row index within the row group.
     /// For example, if RowRanges = {[10,19], [50,59]}, then:
     ///   MapFilteredIndexToOriginalRow(0)  = 10  (first row of first range)

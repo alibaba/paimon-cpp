@@ -183,7 +183,6 @@ Status ParquetFileBatchReader::SetReadSchema(
         // pages for row groups that the bitmap already excluded.
         // If no predicate is provided, skip page-level filtering, row_group_row_ranges will be
         // empty
-        std::map<int32_t, RowRanges> row_group_row_ranges;
         if (predicate && !target_row_groups.empty()) {
             PAIMON_ASSIGN_OR_RAISE(
                 bool enable_page_index_filter,
@@ -216,7 +215,7 @@ Status ParquetFileBatchReader::SetReadSchema(
         metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_AFTER_FILTER,
                              target_row_groups.size());
 
-        PAIMON_ASSIGN_OR_RAISE(all_row_ranges_, GetAllTargetRowRanges(target_row_groups));
+        PAIMON_RETURN_NOT_OK(UpdateAllTargetRowranges(target_row_groups));
         PAIMON_RETURN_NOT_OK(reader_->PrepareForReadingLazy(target_row_groups, column_indices));
     }
     PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetFileBatchReader::SetReadSchema")
@@ -589,7 +588,7 @@ Result<std::vector<int32_t>> ParquetFileBatchReader::ComputeNestedColumnIndices(
     return indices;
 }
 
-Result<RowRanges> ParquetFileBatchReader::GetAllTargetRowRanges(
+Status ParquetFileBatchReader::UpdateAllTargetRowranges(
     const std::vector<TargetRowGroup>& target_row_groups) {
     row_mapping_.clear();
     auto all_row_group_ranges = reader_->GetAllRowGroupRanges();
@@ -601,7 +600,8 @@ Result<RowRanges> ParquetFileBatchReader::GetAllTargetRowRanges(
                                  all_row_group_ranges[row_group_idx].first + range.to));
         }
     }
-    return all_ranges;
+    all_row_ranges_ = std::move(all_ranges);
+    return Status::OK();
 }
 
 Status ParquetFileBatchReader::GenerateRowMapping(int64_t batch_length) {

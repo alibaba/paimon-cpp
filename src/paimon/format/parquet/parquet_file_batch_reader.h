@@ -97,7 +97,7 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     Result<std::vector<std::pair<uint64_t, uint64_t>>> GenReadRanges(
         bool* need_prefetch) const override;
 
-    Result<uint64_t> GetPreviousBatchGlobalRowId(uint64_t batch_row_id) const override {
+    Result<uint64_t> GetPreviousBatchFileRowId(uint64_t batch_row_id) const override {
         if (row_mapping_.size() == 0) {
             return Status::Invalid(
                 "Last batch is not read or last batch is empty, cannot get previous batch global "
@@ -191,7 +191,7 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         const std::shared_ptr<arrow::Schema>& read_schema,
         const std::shared_ptr<arrow::Schema>& file_schema);
 
-    Result<RowRanges> GetAllTargetRowRanges(const std::vector<TargetRowGroup>& target_row_groups);
+    Status UpdateAllTargetRowranges(const std::vector<TargetRowGroup>& target_row_groups);
 
     // precondition: predicate supposed not be empty
     Result<TargetRowGroups> FilterRowGroupsByPredicate(

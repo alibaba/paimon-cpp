@@ -82,7 +82,7 @@ Result<KeyValue> KeyValueDataFileRecordReader::Iterator::Next() {
 Result<std::pair<int64_t, KeyValue>> KeyValueDataFileRecordReader::Iterator::NextWithFilePos() {
     PAIMON_ASSIGN_OR_RAISE(KeyValue kv, Next());
     PAIMON_ASSIGN_OR_RAISE(uint64_t global_row_id,
-                           reader_->reader_->GetPreviousBatchGlobalRowId(cursor_ - 1));
+                           reader_->reader_->GetPreviousBatchFileRowId(cursor_ - 1));
     return std::make_pair(static_cast<int64_t>(global_row_id), std::move(kv));
 }
 

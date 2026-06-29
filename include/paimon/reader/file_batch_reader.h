@@ -47,7 +47,7 @@ class PAIMON_EXPORT FileBatchReader : public BatchReader {
     using BatchReader::NextBatchWithBitmap;
 
     /// Get the global row number of the row in the previously read batch.
-    virtual Result<uint64_t> GetPreviousBatchGlobalRowId(uint64_t batch_row_id) const = 0;
+    virtual Result<uint64_t> GetPreviousBatchFileRowId(uint64_t batch_row_id) const = 0;
 
     /// Get the number of rows in the file.
     virtual Result<uint64_t> GetNumberOfRows() const = 0;

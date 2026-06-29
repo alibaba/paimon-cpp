@@ -133,7 +133,7 @@ class ReadResultCollector {
 
     static Result<std::shared_ptr<arrow::ChunkedArray>> CollectResultOneBatch(
         BatchReader* batch_reader) {
-        return CollectResultOneBatch(batch_reader, /*max simulated data processing time*/ 0);
+        return CollectResultOneBatch(batch_reader, /*max_simulated_data_processing_time*/ 0);
     }
 
     static Result<std::shared_ptr<arrow::ChunkedArray>> CollectResultOneBatch(
