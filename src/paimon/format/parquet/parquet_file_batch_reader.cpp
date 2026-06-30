@@ -215,9 +215,7 @@ Status ParquetFileBatchReader::SetReadSchema(
                                                /*ranges=*/it->second);
             } else {
                 target_row_groups.emplace_back(
-                    /*rg_index=*/rg_id,
-                    /*is_partially_matched=*/false,
-                    /*ranges=*/
+                    /*rg_index=*/rg_id, /*is_partially_matched=*/false, /*ranges=*/
                     RowRanges(Range(0, reader_->GetAllRowGroupRanges()[rg_id].second -
                                            reader_->GetAllRowGroupRanges()[rg_id].first - 1)));
             }
