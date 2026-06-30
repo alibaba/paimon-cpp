@@ -98,9 +98,13 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
 
     Result<uint64_t> GetPreviousBatchFileRowId(uint64_t batch_row_id) const override {
         if (row_mapping_.size() == 0) {
-            return Status::Invalid(
-                "Last batch is not read or last batch is empty, cannot get previous batch global "
-                "row id");
+            PAIMON_ASSIGN_OR_RAISE(uint64_t previous_first_row,
+                                   reader_->GetPreviousBatchFirstRowNumber());
+            if (previous_first_row == std::numeric_limits<uint64_t>::max()) {
+                return Status::Invalid("No batch has been read yet.");
+            } else {
+                return Status::Invalid("Last batch was EOF.");
+            }
         }
         if (batch_row_id >= row_mapping_.size()) {
             return Status::Invalid(
