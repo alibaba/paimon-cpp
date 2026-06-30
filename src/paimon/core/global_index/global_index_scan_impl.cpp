@@ -128,27 +128,48 @@ Result<std::shared_ptr<GlobalIndexEvaluator>> GlobalIndexScanImpl::GetOrCreateIn
 Result<std::vector<std::shared_ptr<GlobalIndexReader>>> GlobalIndexScanImpl::CreateReaders(
     int32_t field_id, const std::optional<RowRangeIndex>& row_range_index) const {
     PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema_->GetField(field_id));
-    return CreateReaders(field, row_range_index);
+    return CreateReaders(field, /*index_type=*/std::nullopt, row_range_index);
 }
 
 Result<std::vector<std::shared_ptr<GlobalIndexReader>>> GlobalIndexScanImpl::CreateReaders(
     const std::string& field_name, const std::optional<RowRangeIndex>& row_range_index) const {
     PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema_->GetField(field_name));
-    return CreateReaders(field, row_range_index);
+    return CreateReaders(field, /*index_type=*/std::nullopt, row_range_index);
+}
+
+Result<std::shared_ptr<GlobalIndexReader>> GlobalIndexScanImpl::CreateReader(
+    const std::string& field_name, const std::string& index_type,
+    const std::optional<RowRangeIndex>& row_range_index) const {
+    PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema_->GetField(field_name));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::vector<std::shared_ptr<GlobalIndexReader>> readers,
+        CreateReaders(field, std::optional<std::string>(index_type), row_range_index));
+    if (readers.empty()) {
+        return std::shared_ptr<GlobalIndexReader>();
+    }
+    if (readers.size() != 1) {
+        return Status::Invalid(
+            fmt::format("invalid global index reader size, expected 1, actual {}", readers.size()));
+    }
+    return readers[0];
 }
 
 Result<std::vector<std::shared_ptr<GlobalIndexReader>>> GlobalIndexScanImpl::CreateReaders(
-    const DataField& field, const std::optional<RowRangeIndex>& row_range_index) const {
+    const DataField& field, const std::optional<std::string>& index_type,
+    const std::optional<RowRangeIndex>& row_range_index) const {
     auto field_iter = index_metas_.find(field.Id());
     if (field_iter == index_metas_.end()) {
         return std::vector<std::shared_ptr<GlobalIndexReader>>();
     }
     const auto& index_type_to_metas = field_iter->second;
     std::vector<std::shared_ptr<GlobalIndexReader>> readers;
-    readers.reserve(index_type_to_metas.size());
-    for (const auto& [index_type, range_to_metas] : index_type_to_metas) {
+    readers.reserve(index_type ? 1 : index_type_to_metas.size());
+    for (const auto& [current_index_type, range_to_metas] : index_type_to_metas) {
+        if (index_type && current_index_type != index_type.value()) {
+            continue;
+        }
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<GlobalIndexer> indexer,
-                               GlobalIndexerFactory::Get(index_type, options_.ToMap()));
+                               GlobalIndexerFactory::Get(current_index_type, options_.ToMap()));
         if (!indexer) {
             continue;
         }
