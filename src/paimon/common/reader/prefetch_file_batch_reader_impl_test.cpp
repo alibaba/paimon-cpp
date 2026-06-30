@@ -933,13 +933,13 @@ TEST_P(PrefetchFileBatchReaderImplTest, TestRowMapping) {
                               /*batch_size=*/10, /*prefetch_max_parallel_num=*/3, cache_mode);
     ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> batch,
-                         paimon::test::ReadResultCollector::CollectResult(reader.get(), 0, 1));
+                         paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
     for (uint64_t i = 0; i < 10; i++) {
         ASSERT_EQ(reader->GetPreviousBatchFileRowId(i).value(), 20 + i);
     }
 
     ASSERT_OK_AND_ASSIGN(batch,
-                         paimon::test::ReadResultCollector::CollectResult(reader.get(), 0, 1));
+                         paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
     for (uint64_t i = 0; i < 10; i++) {
         ASSERT_EQ(reader->GetPreviousBatchFileRowId(i).value(), 70 + i);
     }
@@ -953,12 +953,12 @@ TEST_P(PrefetchFileBatchReaderImplTest, TestRowMapping) {
 
     ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
     ASSERT_OK_AND_ASSIGN(batch,
-                         paimon::test::ReadResultCollector::CollectResult(reader.get(), 0, 1));
+                         paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
     for (uint64_t i = 0; i < 10; i++) {
         ASSERT_EQ(reader->GetPreviousBatchFileRowId(i).value(), 30 + i);
     }
     ASSERT_OK_AND_ASSIGN(batch,
-                         paimon::test::ReadResultCollector::CollectResult(reader.get(), 0, 1));
+                         paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
     for (uint64_t i = 0; i < 10; i++) {
         ASSERT_EQ(reader->GetPreviousBatchFileRowId(i).value(), 40 + i);
     }
