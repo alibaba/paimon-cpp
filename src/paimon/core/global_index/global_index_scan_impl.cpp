@@ -147,9 +147,9 @@ Result<std::shared_ptr<GlobalIndexReader>> GlobalIndexScanImpl::CreateReader(
     const std::string& field_name, const std::string& index_type,
     const std::optional<RowRangeIndex>& row_range_index) const {
     PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema_->GetField(field_name));
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<GlobalIndexReader>> readers,
-                           CreateReaders(field, std::optional<std::string>(index_type),
-                                         row_range_index));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::vector<std::shared_ptr<GlobalIndexReader>> readers,
+        CreateReaders(field, std::optional<std::string>(index_type), row_range_index));
     if (readers.empty()) {
         return std::shared_ptr<GlobalIndexReader>();
     }
