@@ -439,26 +439,35 @@ Status PrefetchFileBatchReaderImpl::HandleReadResult(
             return Status::OK();
         }
         auto [slice_begin, slice_end] = ComputeBatchSliceByReadRange(global_row_ids, read_range);
-        if (slice_begin >= slice_end) {
-            readers_pos_[reader_idx]->store(read_range.second);
+        // slice_begin should always be 0, records before read_range.first have been consumed or
+        // filtered out.
+        if (slice_begin != 0) {
+            return Status::Invalid(fmt::format("Slice begin is {}, which is not 0.", slice_begin));
+        }
+
+        if (0 == slice_end) {
+            // fully out of range, data before first_row_number has been filtered out
+            readers_pos_[reader_idx]->store(global_row_ids[0]);
             ReaderUtils::ReleaseReadBatch(std::move(read_batch));
             return Status::OK();
-        } else if (slice_begin > 0 || slice_end < c_array->length) {
+        } else if (slice_end < c_array->length) {
+            // partially out of range, data before read_range.second has been effectively consumed
             readers_pos_[reader_idx]->store(read_range.second);
             PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> src_array,
                                               arrow::ImportArray(c_array.get(), c_schema.get()));
-            auto array = src_array->Slice(slice_begin, slice_end - slice_begin);
+            auto array = src_array->Slice(0, slice_end);
             PAIMON_RETURN_NOT_OK_FROM_ARROW(
                 arrow::ExportArray(*array, c_array.get(), c_schema.get()));
             RoaringBitmap32 sliced_bitmap;
-            for (auto iter = bitmap.EqualOrLarger(slice_begin);
-                 iter != bitmap.End() && *iter < slice_end; ++iter) {
-                sliced_bitmap.Add(*iter - slice_begin);
+            for (auto iter = bitmap.Begin(); iter != bitmap.End() && *iter < slice_end; ++iter) {
+                sliced_bitmap.Add(*iter);
             }
             bitmap = std::move(sliced_bitmap);
-            global_row_ids = std::vector<uint64_t>(global_row_ids.begin() + slice_begin,
-                                                   global_row_ids.begin() + slice_end);
+            global_row_ids =
+                std::vector<uint64_t>(global_row_ids.begin(), global_row_ids.begin() + slice_end);
         } else {
+            // all within the range, data before readers_[reader_idx]->GetNextRowToRead() has been
+            // effectively consumed
             readers_pos_[reader_idx]->store(readers_[reader_idx]->GetNextRowToRead());
         }
         if (bitmap.IsEmpty()) {
