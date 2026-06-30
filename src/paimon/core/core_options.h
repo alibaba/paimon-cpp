@@ -30,6 +30,7 @@
 #include "paimon/core/options/external_path_strategy.h"
 #include "paimon/core/options/lookup_compact_mode.h"
 #include "paimon/core/options/lookup_strategy.h"
+#include "paimon/core/options/map_shared_shredding_column_placement_policy.h"
 #include "paimon/core/options/map_storage_layout.h"
 #include "paimon/core/options/merge_engine.h"
 #include "paimon/core/options/sort_engine.h"
@@ -123,6 +124,8 @@ class PAIMON_EXPORT CoreOptions {
 
     Result<MapStorageLayout> GetMapStorageLayout(const std::string& field_name) const;
     Result<int32_t> GetMapSharedShreddingMaxColumns(const std::string& field_name) const;
+    Result<MapSharedShreddingColumnPlacementPolicy> GetMapSharedShreddingColumnPlacementPolicy(
+        const std::string& field_name) const;
 
     bool DeletionVectorsEnabled() const;
     bool DeletionVectorsBitmap64() const;

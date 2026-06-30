@@ -17,7 +17,6 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
 #include <map>
 #include <memory>
 #include <unordered_map>
@@ -36,6 +35,7 @@ struct ArrowArray;
 
 namespace paimon {
 
+class CoreOptions;
 class MapSharedShreddingContext;
 
 /// Converts logical batches containing MAP<STRING, T> columns into physical batches
@@ -46,42 +46,20 @@ class MapSharedShreddingContext;
 /// Each shared-shredding column has its own FieldDict and ColumnAllocator.
 class MapSharedShreddingBatchConverter {
  public:
-    /// Per-column context for one shared-shredding MAP column.
-    struct ColumnContext {
-        std::string field_name;
-        int32_t num_columns;  // K
-        MapSharedShreddingFieldDict dict;
-        MapSharedShreddingColumnAllocator allocator;
-
-        ColumnContext(const std::string& _field_name, int32_t _num_columns)
-            : field_name(_field_name), num_columns(_num_columns), allocator(_num_columns) {}
-    };
-
-    struct ConverterBundle {
-        std::shared_ptr<MapSharedShreddingBatchConverter> converter;
-        std::shared_ptr<arrow::Schema> physical_schema;
-    };
-
-    /// Creates a converter + physical schema for one file write cycle.
+    /// Creates a converter for one file write cycle.
     /// Computes per-file K from context, builds physical schema, and constructs the converter.
     /// @param logical_schema The original schema with MAP<STRING, T> columns.
     /// @param context The cross-file shared context for K adaptation.
+    /// @param options CoreOptions used to read each column's placement policy.
     /// @param pool Paimon memory pool for Arrow allocations.
-    /// @return A struct containing the converter and physical schema.
-    static Result<ConverterBundle> CreateConverter(
+    /// @return The converter.
+    static Result<std::shared_ptr<MapSharedShreddingBatchConverter>> Create(
         const std::shared_ptr<arrow::Schema>& logical_schema,
-        const std::shared_ptr<MapSharedShreddingContext>& context,
+        const std::shared_ptr<MapSharedShreddingContext>& context, const CoreOptions& options,
         const std::shared_ptr<MemoryPool>& pool);
 
-    /// Constructs a converter.
-    /// @param logical_schema The original schema with MAP<STRING, T> columns.
-    /// @param physical_schema The physical schema (MAP columns replaced with STRUCT).
-    /// @param field_to_num_columns Map from field name to K.
-    /// @param pool Paimon memory pool for Arrow allocations.
-    MapSharedShreddingBatchConverter(const std::shared_ptr<arrow::Schema>& logical_schema,
-                                     const std::shared_ptr<arrow::Schema>& physical_schema,
-                                     const std::map<std::string, int32_t>& field_to_num_columns,
-                                     const std::shared_ptr<MemoryPool>& pool);
+    /// Returns the physical schema produced for this converter.
+    const std::shared_ptr<arrow::Schema>& GetPhysicalSchema() const;
 
     /// Converts a logical batch to a physical batch.
     /// @param logical_batch Input ArrowArray (C ABI) with logical schema. Consumed on success.
@@ -96,6 +74,30 @@ class MapSharedShreddingBatchConverter {
     const std::vector<std::string>& GetShreddingColumnNames() const;
 
  private:
+    /// Per-column context for one shared-shredding MAP column.
+    struct ColumnContext {
+        std::string field_name;
+        int32_t num_columns;  // K
+        MapSharedShreddingFieldDict dict;
+        std::unique_ptr<MapSharedShreddingColumnAllocator> allocator;
+
+        ColumnContext(const std::string& field_name, int32_t num_columns,
+                      std::unique_ptr<MapSharedShreddingColumnAllocator>&& allocator)
+            : field_name(field_name), num_columns(num_columns), allocator(std::move(allocator)) {}
+    };
+
+    /// Constructs a converter.
+    /// @param logical_schema The original schema with MAP<STRING, T> columns.
+    /// @param physical_schema The physical schema (MAP columns replaced with STRUCT).
+    /// @param contexts Per-shredding-column conversion contexts.
+    /// @param shredding_field_names Shared-shredding field names in schema order.
+    /// @param pool Paimon memory pool for Arrow allocations.
+    MapSharedShreddingBatchConverter(const std::shared_ptr<arrow::Schema>& logical_schema,
+                                     const std::shared_ptr<arrow::Schema>& physical_schema,
+                                     std::vector<ColumnContext>&& contexts,
+                                     std::vector<std::string>&& shredding_field_names,
+                                     const std::shared_ptr<MemoryPool>& pool);
+
     /// Converts one MAP<STRING, T> column to physical STRUCT for all rows.
     /// @param physical_struct_type The physical struct type from physical_schema for this column.
     Result<std::shared_ptr<arrow::Array>> ConvertOneColumn(

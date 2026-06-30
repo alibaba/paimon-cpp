@@ -937,6 +937,21 @@ TEST(SchemaValidationTest, TestMapStorageLayout) {
         ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
                             "options map.shared-shredding.max-columns must > 0");
     }
+    // Invalid: shared-shredding with invalid placement policy
+    {
+        arrow::FieldVector fields = {f0, f1, f2};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {
+            {Options::BUCKET, "2"},
+            {Options::BUCKET_KEY, "f0"},
+            {"fields.f2.map.storage-layout", "shared-shredding"},
+            {"fields.f2.map.shared-shredding.column-placement-policy", "invalid"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "invalid map.shared-shredding.column-placement-policy: invalid");
+    }
 }
 
 }  // namespace paimon::test

@@ -93,6 +93,8 @@ const char Options::DATA_EVOLUTION_ENABLED[] = "data-evolution.enabled";
 const char Options::PARTITION_GENERATE_LEGACY_NAME[] = "partition.legacy-name";
 const char Options::MAP_STORAGE_LAYOUT[] = "map.storage-layout";
 const char Options::MAP_SHARED_SHREDDING_MAX_COLUMNS[] = "map.shared-shredding.max-columns";
+const char Options::MAP_SHARED_SHREDDING_COLUMN_PLACEMENT_POLICY[] =
+    "map.shared-shredding.column-placement-policy";
 const char Options::BLOB_AS_DESCRIPTOR[] = "blob-as-descriptor";
 const char Options::BLOB_FIELD[] = "blob-field";
 const char Options::BLOB_DESCRIPTOR_FIELD[] = "blob-descriptor-field";
