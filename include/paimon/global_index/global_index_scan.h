@@ -97,6 +97,22 @@ class PAIMON_EXPORT GlobalIndexScan {
         const std::string& field_name,
         const std::optional<RowRangeIndex>& row_range_index) const = 0;
 
+    /// Creates a `GlobalIndexReader` for a specific field with a specific index type.
+    /// @param field_name       Name of the indexed column.
+    /// @param index_type       Name of index type.
+    /// @param row_range_index  Optional row range that limits the scan to a sub-range of row ids.
+    ///                         If not provided, the entire row range is considered.
+    /// @return A `Result` that is:
+    ///         - Successful with a reader(with global row id) if the index exists and loads
+    ///         correctly;
+    ///         - Successful with nullptr if no index was built for the given field with the given
+    ///         index type;
+    ///         - Error returns when loading fails (e.g., file corruption, I/O error,
+    ///           unsupported format).
+    virtual Result<std::shared_ptr<GlobalIndexReader>> CreateReader(
+        const std::string& field_name, const std::string& index_type,
+        const std::optional<RowRangeIndex>& row_range_index) const = 0;
+
     /// Creates several `GlobalIndexReader`s for a specific field (looked up by id),
     /// @param field_id         Field id of the indexed column.
     /// @param row_range_index  Optional row range that limits the scan to a sub-range of row ids.
