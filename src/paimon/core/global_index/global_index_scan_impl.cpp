@@ -153,6 +153,10 @@ Result<std::shared_ptr<GlobalIndexReader>> GlobalIndexScanImpl::CreateReader(
     if (readers.empty()) {
         return std::shared_ptr<GlobalIndexReader>();
     }
+    if (readers.size() != 1) {
+        return Status::Invalid(
+            fmt::format("invalid global index reader size, expected 1, actual {}", readers.size()));
+    }
     return readers[0];
 }
 
