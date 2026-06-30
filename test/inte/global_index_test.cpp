@@ -2661,6 +2661,33 @@ TEST_P(GlobalIndexTest, TestBTreeAndBitmapCoexist) {
     ASSERT_OK_AND_ASSIGN(auto index_readers, global_index_scan->CreateReaders("f0", std::nullopt));
     ASSERT_EQ(index_readers.size(), 2u);
 
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexReader> btree_reader,
+                         global_index_scan->CreateReader("f0", "btree", std::nullopt));
+    ASSERT_TRUE(btree_reader);
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexResult> btree_result,
+                         btree_reader->VisitEqual(Literal(FieldType::STRING, "Bob", 3)));
+    ASSERT_TRUE(btree_result);
+    ASSERT_EQ(btree_result->ToString(), "{1,2}");
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexResult> btree_less_than_result,
+                         btree_reader->VisitLessThan(Literal(FieldType::STRING, "Emily", 5)));
+    ASSERT_TRUE(btree_less_than_result);
+    ASSERT_EQ(btree_less_than_result->ToString(), "{0,1,2}");
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexReader> bitmap_reader,
+                         global_index_scan->CreateReader("f0", "bitmap", std::nullopt));
+    ASSERT_TRUE(bitmap_reader);
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexResult> bitmap_result,
+                         bitmap_reader->VisitEqual(Literal(FieldType::STRING, "Bob", 3)));
+    ASSERT_TRUE(bitmap_result);
+    ASSERT_EQ(bitmap_result->ToString(), "{1,2}");
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexResult> bitmap_less_than_result,
+                         bitmap_reader->VisitLessThan(Literal(FieldType::STRING, "Emily", 5)));
+    ASSERT_FALSE(bitmap_less_than_result);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexReader> missing_reader,
+                         global_index_scan->CreateReader("f0", "lucene", std::nullopt));
+    ASSERT_FALSE(missing_reader);
+
     // Each reader individually should return the same result for Equal("Bob")
     for (const auto& index_reader : index_readers) {
         ASSERT_OK_AND_ASSIGN(auto result,
