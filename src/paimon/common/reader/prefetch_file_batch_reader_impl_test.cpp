@@ -969,7 +969,7 @@ TEST_P(PrefetchFileBatchReaderImplTest, TestRowMapping) {
         ASSERT_EQ(reader->GetPreviousBatchFileRowId(i).value(), 70 + i);
     }
 
-    // Set read schema again
+    // Set read schema again to test row mapping
     std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
     ASSERT_TRUE(arrow::ExportSchema(*schema, c_schema.get()).ok());
     predicate = PredicateBuilder::Between(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
