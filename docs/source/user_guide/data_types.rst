@@ -38,23 +38,28 @@ and `Arrow DataTypes <https://arrow.apache.org/docs/format/Columnar.html#data-ty
    * - ``CHAR``
 
        ``CHAR(n)``
-     - Not Supported
+     - Utf8
      - Data type of a fixed-length character string.
 
        The type can be declared using ``CHAR(n)`` where n is the number of code
        points. n must have a value between 1 and 2,147,483,647 (both inclusive).
        If no length is specified, n is equal to 1.
 
+       **Note:** Apache Arrow has no fixed-length string type, so the declared
+       length ``n`` is not enforced; values are mapped to a variable-length ``Utf8``.
+
    * - ``VARCHAR``
 
        ``VARCHAR(n)``
 
-     - Not Supported
+     - Utf8
      - Data type of a variable-length character string.
 
        The type can be declared using ``VARCHAR(n)`` where n is the maximum
        number of code points. n must have a value between 1 and 2,147,483,647
        (both inclusive). If no length is specified, n is equal to 1.
+
+       **Note:** The declared maximum length ``n`` is not enforced.
 
    * - ``STRING``
      - Utf8
@@ -63,22 +68,27 @@ and `Arrow DataTypes <https://arrow.apache.org/docs/format/Columnar.html#data-ty
    * - ``BINARY``
 
        ``BINARY(n)``
-     - Not Supported
+     - Binary
      - Data type of a fixed-length binary string (=a sequence of bytes).
 
        The type can be declared using ``BINARY(n)`` where n is the number of
        bytes. n must have a value between 1 and 2,147,483,647 (both inclusive).
        If no length is specified, n is equal to 1.
 
+       **Note:** Apache Arrow has no fixed-length binary type here, so the declared
+       length ``n`` is not enforced; values are mapped to a variable-length ``Binary``.
+
    * - ``VARBINARY``
 
        ``VARBINARY(n)``
-     - Not Supported
+     - Binary
      - Data type of a variable-length binary string (=a sequence of bytes).
 
        The type can be declared using ``VARBINARY(n)`` where n is the maximum
        number of bytes. n must have a value between 1 and 2,147,483,647
        (both inclusive). If no length is specified, n is equal to 1.
+
+       **Note:** The declared maximum length ``n`` is not enforced.
 
    * - ``BYTES``
      - Binary
