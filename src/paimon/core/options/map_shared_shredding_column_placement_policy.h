@@ -41,9 +41,10 @@ enum class MapSharedShreddingColumnPlacementPolicy {
     /// Use this when hot keys are likely to appear repeatedly across nearby rows and should stay
     /// in physical columns when possible.
     /// Example:
-    ///   K=3, existing columns [0:a, 1:b, 2:d]
-    ///   row [d, c, a, b] -> ordered [a, b, c, d]
-    ///   columns [a, b, d], overflow [c]
+    ///   K=3
+    ///   row [a, b, d]    -> ordered [a, b, d]    -> columns [a, b, d], overflow []
+    ///   recently used columns are now [a, b, d]
+    ///   row [d, c, a, b] -> ordered [a, b, c, d] -> columns [a, b, d], overflow [c]
     /// If a key has already been evicted, it is treated like a new key when it appears again.
     LRU = 2
 };
