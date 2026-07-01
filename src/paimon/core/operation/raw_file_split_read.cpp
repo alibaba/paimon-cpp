@@ -79,13 +79,18 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
 Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
     const BinaryRow& partition, int32_t bucket,
     const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
+    DeletionVector::Factory dv_factory) {
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
+                           path_factory_->CreateDataFilePathFactory(partition, bucket));
+    return CreateReader(partition, bucket, data_files, dv_factory, data_file_path_factory);
+}
+
+Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
+    const BinaryRow& partition, int32_t bucket,
+    const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
     DeletionVector::Factory dv_factory,
     std::shared_ptr<DataFilePathFactory> data_file_path_factory) {
     const auto& predicate = context_->GetPredicate();
-    if (!data_file_path_factory) {
-        PAIMON_ASSIGN_OR_RAISE(data_file_path_factory,
-                               path_factory_->CreateDataFilePathFactory(partition, bucket));
-    }
 
     PAIMON_ASSIGN_OR_RAISE(
         std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers,
