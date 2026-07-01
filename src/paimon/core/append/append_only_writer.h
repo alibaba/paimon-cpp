@@ -42,7 +42,6 @@ class Schema;
 namespace paimon {
 
 class CommitIncrement;
-class ExternalStorageBlobWriter;
 class MapSharedShreddingContext;
 class RecordBatch;
 template <typename T, typename R>
@@ -133,7 +132,6 @@ class AppendOnlyWriter : public BatchWriter {
 
     std::shared_ptr<CompactDeletionFile> compact_deletion_file_;
     std::unique_ptr<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>> writer_;
-    std::unique_ptr<ExternalStorageBlobWriter> external_storage_writer_;
     std::set<std::string> inline_descriptor_fields_;
     std::set<std::string> inline_view_fields_;
 

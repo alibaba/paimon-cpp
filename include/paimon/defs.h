@@ -403,17 +403,6 @@ struct PAIMON_EXPORT Options {
     /// serialized BlobViewStruct bytes inline in data files and resolve from upstream tables at
     /// read time. No default value.
     static const char BLOB_VIEW_FIELD[];
-    /// "blob-external-storage-field" - Comma-separated BLOB field names (must be a subset of
-    /// blob-descriptor-field ) whose raw data will be written to external storage at write time.
-    /// The external storage path is configured via blob-external-storage-path. Orphan file cleanup
-    /// is not applied to that path. No default value.
-    static const char BLOB_EXTERNAL_STORAGE_FIELD[];
-    /// "blob-external-storage-path" - The external storage path where raw BLOB data from fields
-    /// configured by 'blob-external-storage-field' is written at write time. Orphan file cleanup is
-    /// not applied to this path. No default value.
-    /// @note: this option differs from the Java paimon and will be deprecated once
-    /// RestCatalog is supported.
-    static const char BLOB_EXTERNAL_STORAGE_PATH[];
     /// "blob-view-upstream-warehouse" - Since the catalog capabilities are partially missing, when
     /// Blob View is enabled, cpp paimon cannot automatically obtain the upstream table warehouse
     /// path and requires manual configuration by the user. No default value.
