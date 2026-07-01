@@ -20,6 +20,7 @@
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <map>
 #include <sstream>
 #include <utility>
@@ -465,6 +466,12 @@ Result<std::shared_ptr<arrow::DataType>> TokenParser::ParseTypeWithNullability(b
 Result<std::shared_ptr<arrow::DataType>> TokenParser::ParseTypeByKeyword(bool* is_blob) {
     PAIMON_RETURN_NOT_OK(NextToken(TokenType::KEYWORD));
     switch (TokenAsKeyword()) {
+        case Keyword::CHAR:
+        case Keyword::VARCHAR:
+            return ParseStringType<arrow::StringType>();
+        case Keyword::BINARY:
+        case Keyword::VARBINARY:
+            return ParseStringType<arrow::BinaryType>();
         case Keyword::BYTES:
             return arrow::binary();
         case Keyword::BLOB: {
@@ -508,9 +515,14 @@ Result<int32_t> TokenParser::ParseStringLength() {
     if (HasNextToken({TokenType::BEGIN_PARAMETER})) {
         PAIMON_RETURN_NOT_OK(NextToken(TokenType::BEGIN_PARAMETER));
         PAIMON_RETURN_NOT_OK(NextToken(TokenType::LITERAL_INT));
-        auto length = TokenAsInt();
+        int64_t length = std::stoll(GetToken().value);
+        if (length < 1 || length > std::numeric_limits<int32_t>::max()) {
+            return Status::Invalid(
+                fmt::format("length must be between 1 and {} (both inclusive), but was {}",
+                            std::numeric_limits<int32_t>::max(), length));
+        }
         PAIMON_RETURN_NOT_OK(NextToken(TokenType::END_PARAMETER));
-        return length;
+        return static_cast<int32_t>(length);
     }
     // implicit length
     return -1;
