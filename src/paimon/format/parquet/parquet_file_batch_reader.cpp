@@ -220,7 +220,7 @@ Status ParquetFileBatchReader::SetReadSchema(
                                            reader_->GetAllRowGroupRanges()[rg_id].first - 1)));
             }
         }
-        PAIMON_RETURN_NOT_OK(UpdateAllTargetRowranges(target_row_groups));
+        PAIMON_RETURN_NOT_OK(UpdateAllTargetRowRanges(target_row_groups));
         PAIMON_RETURN_NOT_OK(reader_->PrepareForReadingLazy(target_row_groups, column_indices));
     }
     PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetFileBatchReader::SetReadSchema")
@@ -531,7 +531,7 @@ Result<std::vector<int32_t>> ParquetFileBatchReader::ComputeNestedColumnIndices(
     return indices;
 }
 
-Status ParquetFileBatchReader::UpdateAllTargetRowranges(
+Status ParquetFileBatchReader::UpdateAllTargetRowRanges(
     const std::vector<TargetRowGroup>& target_row_groups) {
     row_mapping_.clear();
     auto all_row_group_ranges = reader_->GetAllRowGroupRanges();

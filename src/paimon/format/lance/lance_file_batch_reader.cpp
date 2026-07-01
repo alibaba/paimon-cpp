@@ -128,6 +128,7 @@ Result<BatchReader::ReadBatch> LanceFileBatchReader::NextBatch() {
                                   error_message_.data(), error_message_.size());
     PAIMON_RETURN_NOT_OK(LanceToPaimonStatus(err_code, error_message_));
     if (is_eof) {
+        previous_batch_row_count_ = 0;
         return BatchReader::MakeEofBatch();
     }
     previous_batch_row_count_ = c_array->length;

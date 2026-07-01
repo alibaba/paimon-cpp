@@ -188,7 +188,7 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         const std::shared_ptr<arrow::Schema>& read_schema,
         const std::shared_ptr<arrow::Schema>& file_schema);
 
-    Status UpdateAllTargetRowranges(const std::vector<TargetRowGroup>& target_row_groups);
+    Status UpdateAllTargetRowRanges(const std::vector<TargetRowGroup>& target_row_groups);
 
     // precondition: predicate supposed not be empty
     Result<std::vector<int32_t>> FilterRowGroupsByPredicate(
