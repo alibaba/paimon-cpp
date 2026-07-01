@@ -111,6 +111,16 @@ TEST(DataTypeJsonParserTest, ParseTypeAtomicTypeSuccess) {
         {"TIMESTAMP_LTZ(9)", arrow::timestamp(arrow::TimeUnit::NANO, timezone)},
         {"BYTES", arrow::binary()},
         {"STRING", arrow::utf8()},
+        {"CHAR", arrow::utf8()},
+        {"CHAR(10)", arrow::utf8()},
+        {"VARCHAR", arrow::utf8()},
+        {"VARCHAR(10)", arrow::utf8()},
+        {"BINARY", arrow::binary()},
+        {"BINARY(10)", arrow::binary()},
+        {"VARBINARY", arrow::binary()},
+        {"VARBINARY(10)", arrow::binary()},
+        {"CHAR(1)", arrow::utf8()},
+        {"VARCHAR(2147483647)", arrow::utf8()},
     };
 
     for (const auto& test_case : test_cases) {
@@ -130,6 +140,12 @@ TEST(DataTypeJsonParserTest, ParseTypeAtomicTypeSuccess) {
         rapidjson::Document invalid_doc;
         rapidjson::Value value("VARCHAR(test)", invalid_doc.GetAllocator());
         ASSERT_NOK(DataTypeJsonParser::ParseType("field_name", value));
+    }
+    for (const char* invalid_type : {"VARCHAR(0)", "VARBINARY(0)", "VARCHAR(2147483648)"}) {
+        rapidjson::Document invalid_doc;
+        rapidjson::Value value(invalid_type, invalid_doc.GetAllocator());
+        ASSERT_NOK_WITH_MSG(DataTypeJsonParser::ParseType("field_name", value),
+                            "length must be between 1 and 2147483647");
     }
     {
         rapidjson::Document invalid_doc;

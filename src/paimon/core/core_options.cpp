@@ -1213,6 +1213,24 @@ Result<int32_t> CoreOptions::GetMapSharedShreddingMaxColumns(const std::string& 
     return max_columns;
 }
 
+Result<MapSharedShreddingColumnPlacementPolicy>
+CoreOptions::GetMapSharedShreddingColumnPlacementPolicy(const std::string& field_name) const {
+    std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
+                      std::string(Options::MAP_SHARED_SHREDDING_COLUMN_PLACEMENT_POLICY);
+    PAIMON_ASSIGN_OR_RAISE(std::string policy_str, OptionsUtils::GetValueFromMap<std::string>(
+                                                       impl_->raw_options, key, "lru"));
+    std::string lower = StringUtils::ToLowerCase(policy_str);
+    if (lower == "plain") {
+        return MapSharedShreddingColumnPlacementPolicy::PLAIN;
+    } else if (lower == "sequential") {
+        return MapSharedShreddingColumnPlacementPolicy::SEQUENTIAL;
+    } else if (lower == "lru") {
+        return MapSharedShreddingColumnPlacementPolicy::LRU;
+    }
+    return Status::Invalid(
+        fmt::format("invalid map.shared-shredding.column-placement-policy: {}", policy_str));
+}
+
 bool CoreOptions::DeletionVectorsEnabled() const {
     return impl_->deletion_vectors_enabled;
 }

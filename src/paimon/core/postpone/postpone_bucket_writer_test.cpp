@@ -322,9 +322,11 @@ TEST_F(PostponeBucketWriterTest, TestSharedShreddingMap) {
                                  arrow::field("tags", arrow::map(arrow::utf8(), arrow::int32()))};
     ASSERT_OK_AND_ASSIGN(
         CoreOptions options,
-        CoreOptions::FromMap({{Options::FILE_FORMAT, file_format},
-                              {"fields.tags.map.storage-layout", "shared-shredding"},
-                              {"fields.tags.map.shared-shredding.max-columns", "3"}}));
+        CoreOptions::FromMap(
+            {{Options::FILE_FORMAT, file_format},
+             {"fields.tags.map.storage-layout", "shared-shredding"},
+             {"fields.tags.map.shared-shredding.max-columns", "3"},
+             {"fields.tags.map.shared-shredding.column-placement-policy", "plain"}}));
 
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
@@ -364,8 +366,8 @@ TEST_F(PostponeBucketWriterTest, TestSharedShreddingMap) {
     arrow::FieldVector write_fields = {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
                                        arrow::field("_VALUE_KIND", arrow::int8())};
     write_fields.insert(write_fields.end(), fields.begin(), fields.end());
-    ASSERT_OK_AND_ASSIGN(auto expected_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                   arrow::schema(write_fields), {{"tags", 3}}));
+    auto expected_schema = MapSharedShreddingUtils::LogicalToPhysicalSchema(
+        arrow::schema(write_fields), {{"tags", 3}});
 
     MapSharedShreddingFieldMeta expected_meta;
     expected_meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}};

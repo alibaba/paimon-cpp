@@ -49,6 +49,9 @@
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/test_helper.h"
 #include "paimon/testing/utils/testharness.h"
+#include "rapidjson/document.h"
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/writer.h"
 
 namespace paimon::test {
 // This is a sdk end-to-end test demo that supports write, commit, scan, and read operations.
@@ -90,6 +93,38 @@ class WriteAndReadInteTest
         std::string schema_path = PathUtil::JoinPath(schema_manager.SchemaDirectory(),
                                                      "schema-" + std::to_string(next_schema->Id()));
         return file_system->AtomicStore(schema_path, schema_content);
+    }
+
+    Status WriteNextSchemaWithRawFieldTypes(const std::string& fields_json,
+                                            int32_t highest_field_id) const {
+        auto file_system = dir_->GetFileSystem();
+        std::string table_path = PathUtil::JoinPath(test_dir_, "foo.db/bar");
+        SchemaManager schema_manager(file_system, table_path);
+        PAIMON_ASSIGN_OR_RAISE(auto latest_schema_opt, schema_manager.Latest());
+        if (!latest_schema_opt) {
+            return Status::Invalid("table schema does not exist");
+        }
+        auto next_schema = std::make_shared<TableSchema>(*latest_schema_opt.value());
+        next_schema->id_ = latest_schema_opt.value()->Id() + 1;
+        next_schema->highest_field_id_ = highest_field_id;
+        PAIMON_ASSIGN_OR_RAISE(std::string schema_content, next_schema->ToJsonString());
+
+        rapidjson::Document schema_doc;
+        schema_doc.Parse(schema_content.c_str());
+        rapidjson::Document fields_doc;
+        fields_doc.Parse(fields_json.c_str());
+        if (schema_doc.HasParseError() || fields_doc.HasParseError() ||
+            !schema_doc.HasMember("fields")) {
+            return Status::Invalid("failed to assemble schema json with raw field types");
+        }
+        schema_doc["fields"].CopyFrom(fields_doc, schema_doc.GetAllocator());
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        schema_doc.Accept(writer);
+
+        std::string schema_path = PathUtil::JoinPath(schema_manager.SchemaDirectory(),
+                                                     "schema-" + std::to_string(next_schema->Id()));
+        return file_system->AtomicStore(schema_path, std::string(buffer.GetString()));
     }
 
     Result<bool> ReadAndCheckProjectedResult(const std::map<std::string, std::string>& options,
@@ -924,6 +959,66 @@ TEST_P(WriteAndReadInteTest, TestWriteSamePartitionTwiceWithAllBasicTypesForPk) 
             [0, true, 1, 100, 10000, 100000, "hello", 1, 30, "pk1"],
             [0, true, 1, 100, 10000, 100000, "hello", 1, 20, "pk2"],
             [0, true, 1, 100, 10000, 100000, "hello", 1, 40, "pk3"]
+    ])";
+    ASSERT_OK_AND_ASSIGN(bool success,
+                         helper->ReadAndCheckResult(data_type, data_splits, expected_data));
+    ASSERT_TRUE(success);
+}
+
+TEST_P(WriteAndReadInteTest, TestCharVarcharBinaryVarbinaryTypes) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+    arrow::FieldVector fields = {
+        arrow::field("c", arrow::utf8()),
+        arrow::field("vc", arrow::utf8()),
+        arrow::field("b", arrow::binary()),
+        arrow::field("vb", arrow::binary()),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},  {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"}, {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system},
+    };
+    if (file_system == "jindo") {
+        options = AddOptionsForJindo(options);
+    }
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(test_dir_, arrow::schema(fields), /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+
+    ASSERT_OK(WriteNextSchemaWithRawFieldTypes(R"json([
+        { "id" : 0, "name" : "c", "type" : "CHAR(10)" },
+        { "id" : 1, "name" : "vc", "type" : "VARCHAR(20)" },
+        { "id" : 2, "name" : "b", "type" : "BINARY(10)" },
+        { "id" : 3, "name" : "vb", "type" : "VARBINARY(20)" }
+    ])json",
+                                               /*highest_field_id=*/3));
+    helper.reset();
+    ASSERT_OK_AND_ASSIGN(helper,
+                         TestHelper::Create(PathUtil::JoinPath(test_dir_, "foo.db/bar"), options,
+                                            /*is_streaming_mode=*/false));
+
+    std::string data = R"([
+        ["alice", "hello world", "abc", "xyz123"],
+        [null, null, null, null]
+    ])";
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    arrow::FieldVector fields_with_row_kind = fields;
+    fields_with_row_kind.insert(fields_with_row_kind.begin(),
+                                arrow::field("_VALUE_KIND", arrow::int8()));
+    auto data_type = arrow::struct_(fields_with_row_kind);
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    std::string expected_data = R"([
+        [0, "alice", "hello world", "abc", "xyz123"],
+        [0, null, null, null, null]
     ])";
     ASSERT_OK_AND_ASSIGN(bool success,
                          helper->ReadAndCheckResult(data_type, data_splits, expected_data));

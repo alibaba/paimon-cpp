@@ -45,15 +45,13 @@ ShreddingKeyValueDataFileWriterFactory::ShreddingKeyValueDataFileWriterFactory(
 
 Result<std::unique_ptr<SingleFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>>
 ShreddingKeyValueDataFileWriterFactory::CreateWriter() const {
-    PAIMON_ASSIGN_OR_RAISE(MapSharedShreddingBatchConverter::ConverterBundle bundle,
-                           MapSharedShreddingBatchConverter::CreateConverter(
-                               write_schema_, shredding_context_, pool_));
-    if (!bundle.converter || !bundle.physical_schema) {
-        return Status::Invalid(
-            "Shared-shredding key-value writer requires a converter and physical schema.");
+    if (!shredding_context_) {
+        return Status::Invalid("Shared-shredding key-value writer requires a shredding context.");
     }
-    std::shared_ptr<arrow::Schema> file_schema = bundle.physical_schema;
-    auto converter = bundle.converter;
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<MapSharedShreddingBatchConverter> converter,
+                           MapSharedShreddingBatchConverter::Create(
+                               write_schema_, shredding_context_, options_, pool_));
+    std::shared_ptr<arrow::Schema> file_schema = converter->GetPhysicalSchema();
     std::function<Status(KeyValueBatch&&, ::ArrowArray*)> batch_converter =
         [converter](KeyValueBatch key_value_batch, ::ArrowArray* array) -> Status {
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::ArrowArray> physical,
@@ -72,7 +70,7 @@ ShreddingKeyValueDataFileWriterFactory::CreateWriter() const {
     PAIMON_RETURN_NOT_OK(
         writer->Init(options_.GetFileSystem(), path_factory_->NewPath(), resources.writer_builder));
     writer->SetMetadataFinalizer(MapSharedShreddingUtils::BuildMetadataFinalizer(
-        bundle.converter, MapSharedShreddingDefine::kDefaultDictCompression, shredding_context_,
+        converter, MapSharedShreddingDefine::kDefaultDictCompression, shredding_context_,
         file_schema));
     return std::unique_ptr<SingleFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>(
         std::move(writer));

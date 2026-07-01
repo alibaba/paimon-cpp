@@ -317,6 +317,7 @@ TEST_F(KeyValueFileStoreWriteTest, TestSharedShreddingMapRestoreInitializesNextW
         {"file.format", "parquet"},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "10"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {"write-only", "true"},
         {"bucket", "1"},
         {"enable-pk-commit-in-inte-test", ""},
@@ -351,9 +352,8 @@ TEST_F(KeyValueFileStoreWriteTest, TestSharedShreddingMapRestoreInitializesNextW
         ReadDataFileSchema(table_path, OnlyNewFile(second_commit_msgs), options);
     auto second_meta = ShreddingMeta(second_file_schema, /*field_index=*/3);
 
-    ASSERT_OK_AND_ASSIGN(
-        auto expected_second_schema,
-        MapSharedShreddingUtils::LogicalToPhysicalSchema(write_schema, {{"tags", 2}}));
+    auto expected_second_schema =
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(write_schema, {{"tags", 2}});
     ASSERT_TRUE(second_file_schema->Equals(*expected_second_schema, /*check_metadata=*/false));
     ASSERT_EQ(2, second_meta.num_columns);
     ASSERT_EQ(3, second_meta.max_row_width);
