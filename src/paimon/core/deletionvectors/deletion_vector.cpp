@@ -70,7 +70,7 @@ std::unordered_map<std::string, DeletionFile> DeletionVector::CreateDeletionFile
     assert(deletion_files.size() == data_files.size());
     for (size_t i = 0; i < deletion_files.size(); i++) {
         if (deletion_files[i] != std::nullopt) {
-            deletion_file_map.emplace(data_files[i]->file_name, deletion_files[i].value());
+            deletion_file_map.insert_or_assign(data_files[i]->file_name, deletion_files[i].value());
         }
     }
     return deletion_file_map;
