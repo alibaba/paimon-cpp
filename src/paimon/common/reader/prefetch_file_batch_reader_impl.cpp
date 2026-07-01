@@ -458,7 +458,6 @@ Status PrefetchFileBatchReaderImpl::HandleReadResult(
             auto array = src_array->Slice(0, slice_end);
             PAIMON_RETURN_NOT_OK_FROM_ARROW(
                 arrow::ExportArray(*array, c_array.get(), c_schema.get()));
-            RoaringBitmap32 sliced_bitmap;
             bitmap.RemoveRange(slice_end, src_array->length());
             global_row_ids =
                 std::vector<uint64_t>(global_row_ids.begin(), global_row_ids.begin() + slice_end);
