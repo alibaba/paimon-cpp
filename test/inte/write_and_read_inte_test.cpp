@@ -58,10 +58,10 @@
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/test_helper.h"
 #include "paimon/testing/utils/testharness.h"
+#include "paimon/write_context.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
-#include "paimon/write_context.h"
 
 namespace paimon::test {
 // This is a sdk end-to-end test demo that supports write, commit, scan, and read operations.
