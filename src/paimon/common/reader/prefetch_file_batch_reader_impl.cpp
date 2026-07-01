@@ -459,10 +459,7 @@ Status PrefetchFileBatchReaderImpl::HandleReadResult(
             PAIMON_RETURN_NOT_OK_FROM_ARROW(
                 arrow::ExportArray(*array, c_array.get(), c_schema.get()));
             RoaringBitmap32 sliced_bitmap;
-            for (auto iter = bitmap.Begin(); iter != bitmap.End() && *iter < slice_end; ++iter) {
-                sliced_bitmap.Add(*iter);
-            }
-            bitmap = std::move(sliced_bitmap);
+            bitmap.RemoveRange(slice_end, src_array->length());
             global_row_ids =
                 std::vector<uint64_t>(global_row_ids.begin(), global_row_ids.begin() + slice_end);
         } else {
@@ -608,7 +605,7 @@ Result<std::unique_ptr<::ArrowSchema>> PrefetchFileBatchReaderImpl::GetFileSchem
 
 Result<uint64_t> PrefetchFileBatchReaderImpl::GetPreviousBatchFileRowId(
     uint64_t batch_row_id) const {
-    if (current_batch_global_row_ids_.size() == 0) {
+    if (current_batch_global_row_ids_.empty()) {
         return Status::Invalid(
             "Last batch is not read or last batch is empty, cannot get previous batch global row "
             "id");

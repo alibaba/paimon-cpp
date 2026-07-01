@@ -97,7 +97,7 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         bool* need_prefetch) const override;
 
     Result<uint64_t> GetPreviousBatchFileRowId(uint64_t batch_row_id) const override {
-        if (row_mapping_.size() == 0) {
+        if (row_mapping_.empty()) {
             PAIMON_ASSIGN_OR_RAISE(uint64_t previous_first_row,
                                    reader_->GetPreviousBatchFirstRowNumber());
             if (previous_first_row == std::numeric_limits<uint64_t>::max()) {
