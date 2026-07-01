@@ -403,6 +403,95 @@ TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompactionWithMap
     }
 }
 
+TEST_P(AppendCompactionInteTest,
+       TestOrcAppendTableFullCompactionWithMapSharedShreddingStringValue) {
+    auto file_format = GetParam();
+    if (file_format != "orc") {
+        return;
+    }
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto map_type = arrow::map(arrow::utf8(), arrow::utf8());
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", map_type),
+    };
+    auto schema = arrow::schema(fields);
+
+    std::map<std::string, std::string> options = {
+        {Options::FILE_FORMAT, "orc"},
+        {Options::BUCKET, "1"},
+        {Options::BUCKET_KEY, "id"},
+        {Options::FILE_SYSTEM, "local"},
+        {"orc.read.enable-lazy-decoding", "true"},
+        {"orc.dictionary-key-size-threshold", "1"},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "1"},
+    };
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(dir->Str(), schema, /*partition_keys=*/{},
+                                                         /*primary_keys=*/{}, options,
+                                                         /*is_streaming_mode=*/true));
+
+    int64_t commit_identifier = 0;
+    ASSERT_OK_AND_ASSIGN(auto batch_0,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+        [1, [["a", "shared"], ["b", "hot"]]],
+        [2, [["c", "shared"]]]
+    ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_0), commit_identifier++,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto batch_1,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+        [3, [["a", "shared"], ["d", "hot"]]],
+        [4, null]
+    ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_1), commit_identifier++,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto batch_2,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+        [5, [["e", "shared"], ["f", "hot"], ["g", "shared"]]]
+    ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_2), commit_identifier++,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK(helper->write_->Compact(/*partition=*/{}, /*bucket=*/0,
+                                      /*full_compaction=*/true));
+    ASSERT_OK_AND_ASSIGN(
+        std::vector<std::shared_ptr<CommitMessage>> commit_messages,
+        helper->write_->PrepareCommit(/*wait_compaction=*/true, commit_identifier));
+    ASSERT_FALSE(commit_messages.empty());
+    ASSERT_OK(helper->commit_->Commit(commit_messages, commit_identifier));
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot, helper->LatestSnapshot());
+    ASSERT_TRUE(snapshot);
+    ASSERT_EQ(Snapshot::CommitKind::Compact(), snapshot.value().GetCommitKind());
+
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_EQ(data_splits.size(), 1);
+    arrow::FieldVector fields_with_row_kind = fields;
+    fields_with_row_kind.insert(fields_with_row_kind.begin(),
+                                arrow::field("_VALUE_KIND", arrow::int8()));
+    auto data_type = arrow::struct_(fields_with_row_kind);
+    ASSERT_OK_AND_ASSIGN(bool success, helper->ReadAndCheckResult(data_type, data_splits,
+                                                                  R"([
+        [0, 1, [["a", "shared"], ["b", "hot"]]],
+        [0, 2, [["c", "shared"]]],
+        [0, 3, [["a", "shared"], ["d", "hot"]]],
+        [0, 4, null],
+        [0, 5, [["e", "shared"], ["f", "hot"], ["g", "shared"]]]
+    ])"));
+    ASSERT_TRUE(success);
+}
+
 TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompactionWithDv) {
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);

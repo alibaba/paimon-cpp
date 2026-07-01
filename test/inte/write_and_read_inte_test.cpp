@@ -2116,6 +2116,109 @@ TEST_P(WriteAndReadInteTest, TestMapStorageLayoutSharedShreddingToDefault) {
     ASSERT_TRUE(success);
 }
 
+TEST_P(WriteAndReadInteTest, TestAppendMapStorageLayoutSharedShreddingToDefaultCompaction) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format != "parquet" && file_format != "orc") {
+        return;
+    }
+
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+    };
+    std::map<std::string, std::string> options_v0 = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "1"},
+        {Options::BUCKET_KEY, "id"},
+        {Options::FILE_SYSTEM, file_system},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "1"},
+    };
+    if (file_system == "jindo") {
+        options_v0 = AddOptionsForJindo(options_v0);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(test_dir_, arrow::schema(fields),
+                                            /*partition_keys=*/{}, /*primary_keys=*/{}, options_v0,
+                                            /*is_streaming_mode=*/true));
+    std::string table_path = PathUtil::JoinPath(test_dir_, "foo.db/bar");
+    int64_t commit_identifier = 0;
+
+    ASSERT_OK_AND_ASSIGN(auto batch_v0_file1,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+                [1, [["a", 10], ["b", 11]]],
+                [2, [["c", 20]]]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_v0_file1), commit_identifier++,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto batch_v0_file2,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+                [3, [["d", 30], ["e", 31]]]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_v0_file2), commit_identifier++,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    std::map<std::string, std::string> options_v1 = options_v0;
+    options_v1["fields.tags.map.storage-layout"] = "default";
+    options_v1.erase("fields.tags.map.shared-shredding.max-columns");
+    ASSERT_OK(WriteNextSchema({DataField(0, fields[0]), DataField(1, fields[1])},
+                              /*highest_field_id=*/1, options_v1));
+
+    helper.reset();
+    ASSERT_OK_AND_ASSIGN(helper, TestHelper::Create(table_path, options_v1,
+                                                    /*is_streaming_mode=*/true));
+    ASSERT_OK_AND_ASSIGN(auto batch_v1_file3,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+                [4, [["a", 40], ["f", 41]]],
+                [5, null]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch_v1_file3), commit_identifier++,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    WriteContextBuilder write_context_builder(table_path, "commit_user");
+    ASSERT_OK_AND_ASSIGN(
+        auto write_context,
+        write_context_builder.SetOptions(options_v1).WithStreamingMode(true).Finish());
+    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
+    ASSERT_OK(file_store_write->Compact(/*partition=*/{}, /*bucket=*/0,
+                                        /*full_compaction=*/true));
+    ASSERT_OK_AND_ASSIGN(auto compact_messages, file_store_write->PrepareCommit(
+                                                    /*wait_compaction=*/true, commit_identifier));
+    ASSERT_FALSE(compact_messages.empty());
+
+    CommitContextBuilder commit_context_builder(table_path, "commit_user");
+    ASSERT_OK_AND_ASSIGN(auto commit_context,
+                         commit_context_builder.SetOptions(options_v1).Finish());
+    ASSERT_OK_AND_ASSIGN(auto file_store_commit,
+                         FileStoreCommit::Create(std::move(commit_context)));
+    ASSERT_OK(file_store_commit->Commit(compact_messages, commit_identifier));
+
+    arrow::FieldVector expected_fields = fields;
+    expected_fields.insert(expected_fields.begin(), arrow::field("_VALUE_KIND", arrow::int8()));
+    ASSERT_OK_AND_ASSIGN(auto splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_EQ(1, splits.size());
+    ASSERT_OK_AND_ASSIGN(bool success,
+                         helper->ReadAndCheckResult(arrow::struct_(expected_fields), splits,
+                                                    R"([
+                [0, 1, [["a", 10], ["b", 11]]],
+                [0, 2, [["c", 20]]],
+                [0, 3, [["d", 30], ["e", 31]]],
+                [0, 4, [["a", 40], ["f", 41]]],
+                [0, 5, null]
+            ])"));
+    ASSERT_TRUE(success);
+}
+
 // Nested map values through both selected physical columns and overflow.
 TEST_P(WriteAndReadInteTest, TestSharedShreddingWithStructValue) {
     auto [file_format, file_system] = GetParam();
