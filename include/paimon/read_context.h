@@ -106,7 +106,7 @@ class PAIMON_EXPORT ReadContext {
     uint32_t GetRowToBatchThreadNumber() const {
         return row_to_batch_thread_number_;
     }
-    const std::optional<std::string>& GetSpecificTableSchema() {
+    const std::optional<std::string>& GetSpecificTableSchema() const {
         return table_schema_;
     }
     std::shared_ptr<MemoryPool> GetMemoryPool() const {

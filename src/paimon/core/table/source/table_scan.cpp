@@ -194,13 +194,20 @@ Result<std::unique_ptr<TableScan>> NewDataTableScan(const std::shared_ptr<ScanCo
         CoreOptions tmp_options,
         CoreOptions::FromMap(context->GetOptions(), context->GetSpecificFileSystem(), {}));
     std::string branch = BranchManager::NormalizeBranch(tmp_options.GetBranch());
-    SchemaManager schema_manager(tmp_options.GetFileSystem(), context->GetPath(), branch);
-    PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_table_schema,
-                           schema_manager.Latest());
-    if (latest_table_schema == std::nullopt) {
-        return Status::Invalid("not found latest schema");
+    std::shared_ptr<TableSchema> table_schema;
+    const auto& specific_table_schema = context->GetSpecificTableSchema();
+    if (branch == BranchManager::DEFAULT_MAIN_BRANCH && specific_table_schema) {
+        PAIMON_ASSIGN_OR_RAISE(table_schema,
+                               TableSchema::CreateFromJson(specific_table_schema.value()));
+    } else {
+        SchemaManager schema_manager(tmp_options.GetFileSystem(), context->GetPath(), branch);
+        PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_table_schema,
+                               schema_manager.Latest());
+        if (latest_table_schema == std::nullopt) {
+            return Status::Invalid("not found latest schema");
+        }
+        table_schema = latest_table_schema.value();
     }
-    const auto& table_schema = latest_table_schema.value();
     // merge options
     auto options = table_schema->Options();
     for (const auto& [key, value] : context->GetOptions()) {

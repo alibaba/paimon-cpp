@@ -396,6 +396,73 @@ TEST_P(ScanInteTest, TestScanAppendWithSnapshot3) {
     CheckResult(expected_data_splits, result_data_splits);
 }
 
+TEST_P(ScanInteTest, TestScanAppendWithSpecificTableSchema) {
+    std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
+
+    auto check_result = [&](const std::optional<std::string>& specific_table_schema) {
+        ScanContextBuilder context_builder(table_path);
+        context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "3");
+        if (specific_table_schema) {
+            context_builder.SetTableSchema(specific_table_schema.value());
+        }
+        ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
+        ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+        ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
+
+        ASSERT_EQ(result_plan->SnapshotId().value(), 3);
+
+        auto result_data_splits = CollectDataSplits(result_plan);
+        DataSplitImpl::Builder builder1(
+            BinaryRowGenerator::GenerateRow({10}, pool_.get()),
+            /*bucket=*/0, /*bucket_path=*/
+            paimon::test::GetDataDir() + "orc/append_09.db/append_09/f1=10/bucket-0",
+            {meta_snapshot1_partition10_bucket0_});
+        auto expected_data_split1 =
+            std::dynamic_pointer_cast<DataSplitImpl>(builder1.WithTotalBuckets(2)
+                                                         .WithSnapshot(3)
+                                                         .IsStreaming(false)
+                                                         .RawConvertible(true)
+                                                         .Build()
+                                                         .value());
+
+        DataSplitImpl::Builder builder2(
+            BinaryRowGenerator::GenerateRow({10}, pool_.get()), /*bucket=*/1, /*bucket_path=*/
+            paimon::test::GetDataDir() + "orc/append_09.db/append_09/f1=10/bucket-1",
+            {meta_snapshot1_partition10_bucket1_, meta_snapshot2_partition10_bucket1_,
+             meta_snapshot3_partition10_bucket1_});
+        auto expected_data_split2 =
+            std::dynamic_pointer_cast<DataSplitImpl>(builder2.WithTotalBuckets(2)
+                                                         .WithSnapshot(3)
+                                                         .IsStreaming(false)
+                                                         .RawConvertible(true)
+                                                         .Build()
+                                                         .value());
+
+        DataSplitImpl::Builder builder3(
+            BinaryRowGenerator::GenerateRow({20}, pool_.get()), /*bucket=*/0, /*bucket_path=*/
+            paimon::test::GetDataDir() + "orc/append_09.db/append_09/f1=20/bucket-0",
+            {meta_snapshot1_partition20_bucket0_, meta_snapshot2_partition20_bucket0_});
+        auto expected_data_split3 =
+            std::dynamic_pointer_cast<DataSplitImpl>(builder3.WithTotalBuckets(2)
+                                                         .WithSnapshot(3)
+                                                         .IsStreaming(false)
+                                                         .RawConvertible(true)
+                                                         .Build()
+                                                         .value());
+
+        std::vector<std::shared_ptr<DataSplitImpl>> expected_data_splits = {
+            expected_data_split1, expected_data_split2, expected_data_split3};
+        CheckResult(expected_data_splits, result_data_splits);
+    };
+
+    check_result(std::nullopt);
+
+    auto fs = std::make_shared<LocalFileSystem>();
+    std::string schema_str;
+    ASSERT_OK(fs->ReadFile(table_path + "/schema/schema-0", &schema_str));
+    check_result(std::optional<std::string>(schema_str));
+}
+
 TEST_P(ScanInteTest, TestScanInvalidSnapshot) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
     ScanContextBuilder context_builder(table_path);
