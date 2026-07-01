@@ -312,11 +312,7 @@ TEST_F(PrefetchFileBatchReaderImplTest, TestSimple) {
         auto expected_array = std::make_shared<arrow::ChunkedArray>(data_array);
         ASSERT_TRUE(array_and_row_ids.first->Equals(expected_array));
         auto row_ids = array_and_row_ids.second;
-        std::stringstream ss;
-        for (auto row_id : row_ids) {
-            ss << "row_id: " << row_id << std::endl;
-        }
-        ASSERT_EQ(row_ids[row_ids.size() - 1], 100) << "vector " << ss.str();
+        ASSERT_EQ(row_ids[row_ids.size() - 1], 100);
     }
 }
 
