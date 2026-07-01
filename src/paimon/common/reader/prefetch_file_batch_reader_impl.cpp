@@ -446,7 +446,7 @@ Status PrefetchFileBatchReaderImpl::HandleReadResult(
         }
 
         if (0 == slice_end) {
-            // fully out of range, data before first_row_number has been filtered out
+            // fully out of range, data before global_row_ids has been filtered out
             readers_pos_[reader_idx]->store(global_row_ids[0]);
             ReaderUtils::ReleaseReadBatch(std::move(read_batch));
             return Status::OK();
