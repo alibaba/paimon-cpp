@@ -26,6 +26,7 @@
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/shredding/map_shared_shredding_utils.h"
 #include "paimon/common/factories/io_hook.h"
+#include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/append/bucketed_append_compact_manager.h"
@@ -38,10 +39,13 @@
 #include "paimon/file_store_commit.h"
 #include "paimon/file_store_write.h"
 #include "paimon/format/file_format_factory.h"
+#include "paimon/read_context.h"
 #include "paimon/result.h"
+#include "paimon/table/source/table_read.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/data_generator.h"
 #include "paimon/testing/utils/io_exception_helper.h"
+#include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/test_helper.h"
 #include "paimon/testing/utils/testharness.h"
 #include "paimon/write_context.h"
@@ -346,19 +350,57 @@ TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompactionWithMap
         ASSERT_EQ(4, tags_meta.num_columns);
         ASSERT_EQ(4, tags_meta.max_row_width);
     }
-    arrow::FieldVector fields_with_row_kind = fields;
-    fields_with_row_kind.insert(fields_with_row_kind.begin(),
-                                arrow::field("_VALUE_KIND", arrow::int8()));
-    auto data_type = arrow::struct_(fields_with_row_kind);
-    ASSERT_OK_AND_ASSIGN(bool success, helper->ReadAndCheckResult(data_type, data_splits,
-                                                                  R"([
+    {
+        // recall all fields
+        arrow::FieldVector fields_with_row_kind = fields;
+        fields_with_row_kind.insert(fields_with_row_kind.begin(),
+                                    arrow::field("_VALUE_KIND", arrow::int8()));
+        auto data_type = arrow::struct_(fields_with_row_kind);
+        ASSERT_OK_AND_ASSIGN(bool success, helper->ReadAndCheckResult(data_type, data_splits,
+                                                                      R"([
         [0, 1, [["a", 10], ["b", 20]]],
         [0, 2, [["c", 30]]],
         [0, 3, [["a", 40], ["d", 50]]],
         [0, 4, null],
         [0, 5, [["e", 60], ["f", 70], ["g", 80], ["h", 90]]]
     ])"));
-    ASSERT_TRUE(success);
+        ASSERT_TRUE(success);
+    }
+    {
+        // recall only "a,f" sub-key in map
+        auto selected_keys_meta =
+            arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"a,f"});
+        auto read_schema = arrow::schema({
+            arrow::field("id", arrow::int32()),
+            arrow::field("tags", map_type)->WithMetadata(selected_keys_meta),
+        });
+        auto c_schema = std::make_unique<ArrowSchema>();
+        ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
+
+        ReadContextBuilder read_context_builder(PathUtil::JoinPath(dir->Str(), "foo.db/bar"));
+        read_context_builder.SetOptions(options).SetReadSchema(std::move(c_schema));
+        ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+        ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+        ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_splits));
+        ASSERT_OK_AND_ASSIGN(auto actual, ReadResultCollector::CollectResult(batch_reader.get()));
+
+        auto expected_type = arrow::struct_({
+            arrow::field("_VALUE_KIND", arrow::int8()),
+            arrow::field("id", arrow::int32()),
+            arrow::field("tags", map_type),
+        });
+        auto expected = arrow::ipc::internal::json::ArrayFromJSON(expected_type, R"([
+        [0, 1, [["a", 10]]],
+        [0, 2, []],
+        [0, 3, [["a", 40]]],
+        [0, 4, null],
+        [0, 5, [["f", 70]]]
+    ])")
+                            .ValueOrDie();
+        auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected);
+        ASSERT_TRUE(expected_chunked->Equals(actual))
+            << "actual=" << actual->ToString() << "\nexpected=" << expected_chunked->ToString();
+    }
 }
 
 TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompactionWithDv) {

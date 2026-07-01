@@ -1172,8 +1172,6 @@ TEST_P(NestedColumnPruningInteTest, NestedStructMapSelectedKeysWithPredicate) {
     ASSERT_OK_AND_ASSIGN(
         auto helper, TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
                                         /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
-    (void)helper;
-
     WriteContextBuilder write_context_builder(table_path_, "commit_user_1");
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context,
                          write_context_builder.SetOptions(options).Finish());
