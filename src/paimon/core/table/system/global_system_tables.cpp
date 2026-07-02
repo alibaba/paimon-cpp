@@ -34,11 +34,21 @@
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/core_options.h"
 #include "paimon/defs.h"
+#include "paimon/core/io/data_file_meta.h"
+#include "paimon/core/manifest/file_entry.h"
+#include "paimon/core/manifest/file_kind.h"
+#include "paimon/core/manifest/manifest_entry.h"
+#include "paimon/core/manifest/manifest_file.h"
+#include "paimon/core/manifest/manifest_file_meta.h"
+#include "paimon/core/manifest/manifest_list.h"
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/core/utils/branch_manager.h"
+#include "paimon/core/utils/field_mapping.h"
+#include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/core/utils/snapshot_manager.h"
+#include "paimon/data/timestamp.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/status.h"
 
@@ -85,6 +95,111 @@ const std::vector<GlobalSystemTableRegistryEntry>& GlobalSystemTableRegistry() {
 
 VariantType StringValue(const std::string& value) {
     return BinaryString::FromString(value, GetDefaultPool().get());
+}
+
+// Aggregated file-level statistics for a table or partition.
+struct FileStats {
+    int64_t record_count = 0;
+    int64_t file_size_in_bytes = 0;
+    int64_t file_count = 0;
+    int64_t last_file_creation_time_millis = 0;
+};
+
+// Read the latest snapshot's data files and aggregate statistics.
+// Returns an empty map if no snapshot or no data files exist.
+Result<std::map<std::string, FileStats>> AggregateFileStats(
+    const std::shared_ptr<FileSystem>& fs, const std::string& table_path,
+    const std::map<std::string, std::string>& options) {
+    std::map<std::string, FileStats> result;
+
+    SnapshotManager snapshot_manager(fs, table_path,
+                                     BranchManager::DEFAULT_MAIN_BRANCH);
+    PAIMON_ASSIGN_OR_RAISE(std::optional<Snapshot> snapshot,
+                           snapshot_manager.LatestSnapshot());
+    if (!snapshot) {
+        return result;
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options,
+                           CoreOptions::FromMap(options));
+
+    // Use SchemaManager to load the latest schema for field/partition info
+    SchemaManager schema_mgr(fs, table_path, BranchManager::DEFAULT_MAIN_BRANCH);
+    auto latest_schema_result = schema_mgr.Latest();
+    if (!latest_schema_result.ok() || !latest_schema_result.value()) {
+        return result;
+    }
+    auto table_schema = *latest_schema_result.value();
+
+    auto pool = GetDefaultPool();
+
+    std::shared_ptr<arrow::Schema> arrow_schema =
+        DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> external_paths,
+                           core_options.CreateExternalPaths());
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> global_index_external_path,
+                           core_options.CreateGlobalIndexExternalPath());
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<FileStorePathFactory> path_factory,
+        FileStorePathFactory::Create(
+            table_path, arrow_schema, table_schema->PartitionKeys(),
+            core_options.GetPartitionDefaultName(),
+            core_options.GetFileFormat()->Identifier(),
+            core_options.DataFilePrefix(),
+            core_options.LegacyPartitionNameEnabled(), external_paths,
+            global_index_external_path, core_options.IndexFileInDataFileDir(), pool));
+
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<ManifestList> manifest_list,
+        ManifestList::Create(fs, core_options.GetManifestFormat(),
+                             core_options.GetManifestCompression(), path_factory, pool));
+
+    std::vector<ManifestFileMeta> manifests;
+    PAIMON_RETURN_NOT_OK(
+        manifest_list->ReadDataManifests(*snapshot, &manifests));
+
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<arrow::Schema> partition_schema,
+        FieldMapping::GetPartitionSchema(arrow_schema, table_schema->PartitionKeys()));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<ManifestFile> manifest_file,
+        ManifestFile::Create(fs, core_options.GetManifestFormat(),
+                             core_options.GetManifestCompression(), path_factory,
+                             core_options.GetManifestTargetFileSize(), pool,
+                             core_options, partition_schema));
+
+    std::vector<ManifestEntry> entries;
+    for (const auto& manifest : manifests) {
+        PAIMON_RETURN_NOT_OK(
+            manifest_file->Read(manifest.FileName(), /*filter=*/nullptr, &entries));
+    }
+
+    std::vector<ManifestEntry> merged_entries;
+    PAIMON_RETURN_NOT_OK(FileEntry::MergeEntries(entries, &merged_entries));
+
+    for (const auto& entry : merged_entries) {
+        if (!(entry.Kind() == FileKind::Add())) {
+            continue;
+        }
+        const auto& file = entry.File();
+
+        // Use empty string key for unpartitioned tables
+        std::string partition_key;
+        if (entry.Partition().GetFieldCount() > 0) {
+            partition_key = "partitioned";
+        }
+
+        auto& stats = result[partition_key];
+        stats.record_count += file->row_count;
+        stats.file_size_in_bytes += file->file_size;
+        stats.file_count++;
+        int64_t creation_millis = file->creation_time.GetMillisecond();
+        if (creation_millis > stats.last_file_creation_time_millis) {
+            stats.last_file_creation_time_millis = creation_millis;
+        }
+    }
+
+    return result;
 }
 
 }  // namespace
@@ -278,24 +393,30 @@ Result<std::vector<GenericRow>> TablesSystemTable::BuildRows() const {
                                 ? VariantType(NullType())
                                 : VariantType(StringValue(primary_keys_str)));
 
-            // Try to get stats from latest snapshot
+            // Get table path and aggregate file stats from manifest entries
             PAIMON_ASSIGN_OR_RAISE(std::string table_path,
                                    context_.catalog->GetTableLocation(id));
-            SnapshotManager snapshot_manager(context_.fs, table_path,
-                                             BranchManager::DEFAULT_MAIN_BRANCH);
-            auto snapshot_result = snapshot_manager.LatestSnapshot();
-            if (snapshot_result.ok() && snapshot_result.value()) {
-                const auto& snapshot = *snapshot_result.value();
-                auto total_count = snapshot.TotalRecordCount();
-                row.SetField(5, total_count ? VariantType(total_count.value())
-                                            : VariantType(NullType()));
-                // TODO(suxiaogang223): Populate file_size_in_bytes, file_count, and
-                // last_file_creation_time by reading manifest entries. This requires
-                // the manifest reading infrastructure from the files/manifests system
-                // tables PR (codex/system-table-files-manifests-pr4).
-                row.SetField(6, NullType());
-                row.SetField(7, NullType());
-                row.SetField(8, NullType());
+
+            auto file_stats_result =
+                AggregateFileStats(context_.fs, table_path, data_schema->Options());
+            if (file_stats_result.ok()) {
+                auto& all_stats = file_stats_result.value();
+                int64_t total_record = 0, total_size = 0, total_files = 0,
+                        max_creation = 0;
+                for (const auto& [key, stats] : all_stats) {
+                    total_record += stats.record_count;
+                    total_size += stats.file_size_in_bytes;
+                    total_files += stats.file_count;
+                    if (stats.last_file_creation_time_millis > max_creation) {
+                        max_creation = stats.last_file_creation_time_millis;
+                    }
+                }
+                row.SetField(5, VariantType(total_record));
+                row.SetField(6, VariantType(total_size));
+                row.SetField(7, VariantType(total_files));
+                row.SetField(8, max_creation > 0
+                                    ? VariantType(Timestamp::FromEpochMillis(max_creation))
+                                    : VariantType(NullType()));
             } else {
                 row.SetField(5, NullType());
                 row.SetField(6, NullType());
