@@ -304,18 +304,18 @@ TEST_P(GlobalIndexTest, TestWriteLuminaIndexWithMismatchedDimension) {
                                                          {"lumina.encoding.type", "rawf32"},
                                                          {"lumina.search.parallel_number", "10"}};
 
-    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
-                                                  {Options::FILE_FORMAT, file_format_},
-                                                  {Options::FILE_SYSTEM, "local"},
-                                                  {Options::ROW_TRACKING_ENABLED, "true"},
-                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "orc"},         {Options::FILE_FORMAT, file_format_},
+        {Options::FILE_SYSTEM, "local"},           {Options::ROW_TRACKING_ENABLED, "true"},
+        {Options::DATA_EVOLUTION_ENABLED, "true"}, {Options::READ_BATCH_SIZE, "1"}};
 
     CreateTable(/*partition_keys=*/{}, schema, options);
     std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
 
     std::vector<std::string> write_cols = schema->field_names();
     auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
-        ["a", [0.0, 0.0, 0.0, 0.0]]
+        ["a", [0.0, 0.0, 0.0]],
+        ["b", [0.0, 0.0, 0.0, 0.0]]
     ])")
                          .ValueOrDie();
 
@@ -324,7 +324,7 @@ TEST_P(GlobalIndexTest, TestWriteLuminaIndexWithMismatchedDimension) {
 
     ASSERT_NOK_WITH_MSG(
         WriteIndex(table_path, /*partition_filters=*/{}, "f1", "lumina",
-                   /*options=*/lumina_options, Range(0, 0)),
+                   /*options=*/lumina_options, Range(0, 1)),
         "invalid input array in LuminaIndexWriter, length of field array [1] multiplied "
         "dimension [3] must match length of field value array [4]");
 }
