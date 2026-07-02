@@ -162,13 +162,16 @@ TEST(DefaultExecutorTest, TestAddTaskFromMultipleThreads) {
         });
     }
 
-    while (ready_submitter_count.load() < kSubmitterCount) {
-        std::this_thread::yield();
+    for (int32_t retry = 0; retry < 100 && ready_submitter_count.load() < kSubmitterCount;
+         ++retry) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+    const int32_t ready_submitter_count_before_start = ready_submitter_count.load();
     start_signal.set_value();
     for (auto& submitter : submitters) {
         submitter.join();
     }
+    ASSERT_EQ(kSubmitterCount, ready_submitter_count_before_start);
     Wait(task_futures);
 
     ASSERT_EQ(kTotalTaskCount, executed_count.load());
