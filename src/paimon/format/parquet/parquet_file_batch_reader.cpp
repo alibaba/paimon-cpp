@@ -308,6 +308,32 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByBitmap(
     return target_row_groups;
 }
 
+RowRanges CoarseRowRanges(const RowRanges& row_range)
+{
+    if(row_range.IsEmpty())
+    {
+        return RowRanges();
+    }
+
+    RowRanges coarse_row_ranges;
+    const int64_t max_hole_size = 1024;
+    const auto &ranges = row_range.GetRanges();
+    auto cur_it = ranges.begin();
+    uint64_t coarse_begin = cur_it->from;
+    uint64_t coarse_end = cur_it->to;
+    for(++cur_it; cur_it != ranges.end(); ++cur_it)
+    {
+        if(cur_it->from - coarse_end - 1 > max_hole_size)
+        {
+            coarse_row_ranges.Add(Range(coarse_begin, coarse_end));
+            coarse_begin = cur_it->from;
+        }
+        coarse_end = cur_it->to;
+    }
+    coarse_row_ranges.Add(Range(coarse_begin, coarse_end));
+    return coarse_row_ranges;
+}
+
 RowRanges ParquetFileBatchReader::BitmapToRowRanges(const RoaringBitmap32& bitmap,
                                                     uint64_t start_row, uint64_t end_row) {
     RowRanges row_ranges;
@@ -342,7 +368,7 @@ RowRanges ParquetFileBatchReader::BitmapToRowRanges(const RoaringBitmap32& bitma
     }
 
     row_ranges.Add(RowRanges::Range(range_start - start_row, range_end - start_row));
-    return row_ranges;
+    return CoarseRowRanges(row_ranges);
 }
 
 // Uses page-level column index statistics to filter row groups and store per-row-group
