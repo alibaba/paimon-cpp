@@ -16,6 +16,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <limits>
 #include <map>
 #include <memory>
@@ -397,7 +398,11 @@ TEST_P(ScanInteTest, TestScanAppendWithSnapshot3) {
 }
 
 TEST_P(ScanInteTest, TestScanAppendWithSpecificTableSchema) {
-    std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
+    std::string data_dir = paimon::test::GetDataDir();
+    if (!std::filesystem::exists(data_dir + "orc/append_09.db/append_09/schema/schema-0")) {
+        data_dir = "../" + data_dir;
+    }
+    std::string table_path = data_dir + "orc/append_09.db/append_09";
 
     auto check_result = [&](const std::optional<std::string>& specific_table_schema) {
         ScanContextBuilder context_builder(table_path);
@@ -412,11 +417,10 @@ TEST_P(ScanInteTest, TestScanAppendWithSpecificTableSchema) {
         ASSERT_EQ(result_plan->SnapshotId().value(), 3);
 
         auto result_data_splits = CollectDataSplits(result_plan);
-        DataSplitImpl::Builder builder1(
-            BinaryRowGenerator::GenerateRow({10}, pool_.get()),
-            /*bucket=*/0, /*bucket_path=*/
-            paimon::test::GetDataDir() + "orc/append_09.db/append_09/f1=10/bucket-0",
-            {meta_snapshot1_partition10_bucket0_});
+        DataSplitImpl::Builder builder1(BinaryRowGenerator::GenerateRow({10}, pool_.get()),
+                                        /*bucket=*/0, /*bucket_path=*/
+                                        data_dir + "orc/append_09.db/append_09/f1=10/bucket-0",
+                                        {meta_snapshot1_partition10_bucket0_});
         auto expected_data_split1 =
             std::dynamic_pointer_cast<DataSplitImpl>(builder1.WithTotalBuckets(2)
                                                          .WithSnapshot(3)
@@ -427,7 +431,7 @@ TEST_P(ScanInteTest, TestScanAppendWithSpecificTableSchema) {
 
         DataSplitImpl::Builder builder2(
             BinaryRowGenerator::GenerateRow({10}, pool_.get()), /*bucket=*/1, /*bucket_path=*/
-            paimon::test::GetDataDir() + "orc/append_09.db/append_09/f1=10/bucket-1",
+            data_dir + "orc/append_09.db/append_09/f1=10/bucket-1",
             {meta_snapshot1_partition10_bucket1_, meta_snapshot2_partition10_bucket1_,
              meta_snapshot3_partition10_bucket1_});
         auto expected_data_split2 =
@@ -440,7 +444,7 @@ TEST_P(ScanInteTest, TestScanAppendWithSpecificTableSchema) {
 
         DataSplitImpl::Builder builder3(
             BinaryRowGenerator::GenerateRow({20}, pool_.get()), /*bucket=*/0, /*bucket_path=*/
-            paimon::test::GetDataDir() + "orc/append_09.db/append_09/f1=20/bucket-0",
+            data_dir + "orc/append_09.db/append_09/f1=20/bucket-0",
             {meta_snapshot1_partition20_bucket0_, meta_snapshot2_partition20_bucket0_});
         auto expected_data_split3 =
             std::dynamic_pointer_cast<DataSplitImpl>(builder3.WithTotalBuckets(2)

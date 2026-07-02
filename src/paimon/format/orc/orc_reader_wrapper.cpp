@@ -49,6 +49,7 @@ Status OrcReaderWrapper::SetReadSchema(const std::shared_ptr<arrow::DataType>& t
     try {
         row_reader_ = reader_->createRowReader(row_reader_options);
         target_type_ = target_type;
+        next_row_ = 0;
     } catch (const std::exception& e) {
         return Status::Invalid(
             fmt::format("orc file batch reader create row reader failed for file {}, with {} error",

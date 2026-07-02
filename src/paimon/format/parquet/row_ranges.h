@@ -109,7 +109,7 @@ class RowRanges {
 struct TargetRowGroup {
     int32_t row_group_index{-1};
     bool is_partially_matched{false};
-    // page-filtered row ranges, only valid if is_partially_matched is true.
+
     RowRanges row_ranges;
     // Whether this row group has been excluded by ApplyReadRanges.
     // When true, this row group is logically skipped during iteration

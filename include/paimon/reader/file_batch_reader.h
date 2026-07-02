@@ -46,8 +46,14 @@ class PAIMON_EXPORT FileBatchReader : public BatchReader {
     using BatchReader::NextBatch;
     using BatchReader::NextBatchWithBitmap;
 
-    /// Get the row number of the first row in the previously read batch.
-    virtual Result<uint64_t> GetPreviousBatchFirstRowNumber() const = 0;
+    /// Get the file-level row ID for a given batch-relative row index
+    /// in the previously read batch.
+    ///
+    /// @param batch_row_id  Zero-based index within the current batch.
+    /// @return The corresponding file-level row ID, or Status::Invalid
+    ///         if no batch has been read yet, the last batch was EOF,
+    ///         or batch_row_id is out of range.
+    virtual Result<uint64_t> GetPreviousBatchFileRowId(uint64_t batch_row_id) const = 0;
 
     /// Get the number of rows in the file.
     virtual Result<uint64_t> GetNumberOfRows() const = 0;
