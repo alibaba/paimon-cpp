@@ -42,12 +42,14 @@ AppendDataFileWriterFactory::AppendDataFileWriterFactory(
 
 Result<std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>>
 AppendDataFileWriterFactory::CreateWriter() const {
+    std::shared_ptr<LongCounter> seq_num_counter =
+        options_.DataEvolutionEnabled() ? std::make_shared<LongCounter>(0) : seq_num_counter_;
     PAIMON_ASSIGN_OR_RAISE(WriterResources resources,
                            CreateWriterResources(*options_.GetFileFormat(), write_schema_,
                                                  /*create_stats_extractor=*/true));
     auto writer = std::make_unique<DataFileWriter>(
         options_.GetFileCompression(), std::function<Status(::ArrowArray*, ::ArrowArray*)>(),
-        schema_id_, seq_num_counter_, file_source_, resources.stats_extractor,
+        schema_id_, seq_num_counter, file_source_, resources.stats_extractor,
         path_factory_->IsExternalPath(), write_cols_, pool_);
     PAIMON_RETURN_NOT_OK(
         writer->Init(options_.GetFileSystem(), path_factory_->NewPath(), resources.writer_builder));

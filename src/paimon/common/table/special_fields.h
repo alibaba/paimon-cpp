@@ -22,6 +22,7 @@
 
 #include "arrow/type_fwd.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/string_utils.h"
 #include "paimon/utils/special_field_ids.h"
 
 namespace paimon {
@@ -61,6 +62,15 @@ struct SpecialFields {
         static const DataField data_field =
             DataField(SpecialFieldIds::INDEX_SCORE, arrow::field("_INDEX_SCORE", arrow::float32()));
         return data_field;
+    }
+
+    static bool IsSystemField(const std::string& field_name) {
+        if (StringUtils::StartsWith(field_name, KEY_FIELD_PREFIX)) {
+            return true;
+        }
+        return field_name == SequenceNumber().Name() || field_name == ValueKind().Name() ||
+               field_name == RowKind().Name() || field_name == RowId().Name() ||
+               field_name == IndexScore().Name();
     }
 
     static bool IsSpecialFieldName(const std::string& field_name) {

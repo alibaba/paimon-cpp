@@ -230,7 +230,6 @@ TEST(OrphanFilesCleanerTest, TestTableWithChangelog) {
   "commitIdentifier" : 9223372036854775807,
   "commitKind" : "APPEND",
   "timeMillis" : 1721615035363,
-  "logOffsets" : { },
   "totalRecordCount" : 11,
   "deltaRecordCount" : 1,
   "changelogRecordCount" : 0
@@ -263,7 +262,6 @@ TEST(OrphanFilesCleanerTest, TestTableWithIndexManifest) {
   "commitIdentifier" : 9223372036854775807,
   "commitKind" : "APPEND",
   "timeMillis" : 1721615035363,
-  "logOffsets" : { },
   "totalRecordCount" : 11,
   "deltaRecordCount" : 1,
   "changelogRecordCount" : 0

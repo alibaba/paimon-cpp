@@ -288,6 +288,17 @@ set(PAIMON_CORE_SRCS
     core/operation/abstract_split_read.cpp
     core/operation/append_only_file_store_scan.cpp
     core/operation/append_only_file_store_write.cpp
+    core/operation/metrics/commit_metrics.cpp
+    core/operation/commit/conflict_detection.cpp
+    core/operation/commit/commit_scanner.cpp
+    core/operation/commit/commit_changes_provider.cpp
+    core/operation/commit/compacted_changelog_path_resolver.cpp
+    core/operation/commit/overwrite_changes_provider.cpp
+    core/operation/commit/row_id_column_conflict_checker.cpp
+    core/operation/commit/manifest_entry_changes.cpp
+    core/operation/commit/row_tracking_commit_utils.cpp
+    core/operation/commit/sequence_snapshot_properties.cpp
+    core/operation/commit/retry_waiter.cpp
     core/operation/commit_context.cpp
     core/operation/expire_snapshots.cpp
     core/operation/file_store_commit.cpp
@@ -320,6 +331,7 @@ set(PAIMON_CORE_SRCS
     core/stats/simple_stats.cpp
     core/stats/simple_stats_evolution.cpp
     core/table/table.cpp
+    core/table/bucket_mode.cpp
     core/table/sink/commit_message.cpp
     core/table/sink/commit_message_impl.cpp
     core/table/sink/commit_message_serializer.cpp
@@ -696,13 +708,24 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/spill_reader_writer_test.cpp
                     core/migrate/file_meta_utils_test.cpp
                     core/operation/metrics/compaction_metrics_test.cpp
+                    core/operation/metrics/commit_stats_test.cpp
                     core/operation/data_evolution_file_store_scan_test.cpp
                     core/operation/data_evolution_split_read_test.cpp
+                    core/operation/commit/compacted_changelog_path_resolver_test.cpp
+                    core/operation/commit/commit_changes_provider_test.cpp
+                    core/operation/commit/commit_scanner_test.cpp
+                    core/operation/commit/conflict_detection_test.cpp
+                    core/operation/commit/manifest_entry_changes_test.cpp
+                    core/operation/commit/overwrite_changes_provider_test.cpp
+                    core/operation/commit/row_id_column_conflict_checker_test.cpp
+                    core/operation/commit/row_tracking_commit_utils_test.cpp
+                    core/operation/commit/retry_waiter_test.cpp
                     core/operation/key_value_file_store_write_test.cpp
                     core/operation/internal_read_context_test.cpp
                     core/operation/abstract_split_read_test.cpp
                     core/operation/append_only_file_store_write_test.cpp
                     core/operation/commit_metrics_test.cpp
+                    core/operation/commit_context_test.cpp
                     core/operation/expire_snapshots_test.cpp
                     core/operation/file_store_commit_impl_test.cpp
                     core/operation/file_store_commit_test.cpp
@@ -731,6 +754,7 @@ if(PAIMON_BUILD_TESTS)
                     core/stats/simple_stats_collector_test.cpp
                     core/stats/simple_stats_test.cpp
                     core/table/table_test.cpp
+                    core/table/bucket_mode_test.cpp
                     core/table/sink/commit_message_test.cpp
                     core/table/sink/commit_message_impl_test.cpp
                     core/table/source/fallback_data_split_test.cpp

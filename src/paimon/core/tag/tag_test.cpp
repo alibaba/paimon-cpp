@@ -31,6 +31,10 @@ class TagTest : public testing::Test {
         std::string replaced_str = StringUtils::Replace(str, " ", "");
         replaced_str = StringUtils::Replace(replaced_str, "\t", "");
         replaced_str = StringUtils::Replace(replaced_str, "\n", "");
+        // logOffsets was removed from snapshot json; normalize legacy fixtures.
+        replaced_str = StringUtils::Replace(replaced_str, "\"logOffsets\":{},", "");
+        replaced_str = StringUtils::Replace(replaced_str, ",\"logOffsets\":{}", "");
+        replaced_str = StringUtils::Replace(replaced_str, "\"logOffsets\":{}", "");
         if (serialized) {
             replaced_str = StringUtils::Replace(replaced_str, ".0", ".000000000");
         }
@@ -39,7 +43,6 @@ class TagTest : public testing::Test {
 };
 
 TEST_F(TagTest, TestSimple) {
-    const std::map<int32_t, int64_t> log_offset = {{25, 30}};
     const std::map<std::string, std::string> properties = {{"key1", "value1"}, {"key2", "value2"}};
     const auto tag_create_time = std::vector<int64_t>({2026, 1, 2, 3, 4, 5, 6});
     const Tag tag(
@@ -48,7 +51,7 @@ TEST_F(TagTest, TestSimple) {
         /*changelog_manifest_list=*/"changelog_manifest_list", 30,
         /*index_manifest=*/"index_manifest",
         /*commit_user=*/"commit_user_01", /*commit_identifier=*/20,
-        /*commit_kind=*/Snapshot::CommitKind::Compact(), /*time_millis=*/1234, log_offset,
+        /*commit_kind=*/Snapshot::CommitKind::Compact(), /*time_millis=*/1234,
         /*total_record_count=*/35,
         /*delta_record_count=*/40, /*changelog_record_count=*/45, /*watermark=*/50,
         /*statistics=*/"statistic_test", properties, /*next_row_id=*/0,
@@ -67,9 +70,8 @@ TEST_F(TagTest, TestSimple) {
     ASSERT_EQ(20, tag.CommitIdentifier());
     ASSERT_EQ(Snapshot::CommitKind::Compact(), tag.GetCommitKind());
     ASSERT_EQ(1234, tag.TimeMillis());
-    ASSERT_EQ(log_offset, tag.LogOffsets().value());
-    ASSERT_EQ(35, tag.TotalRecordCount().value());
-    ASSERT_EQ(40, tag.DeltaRecordCount().value());
+    ASSERT_EQ(35, tag.TotalRecordCount());
+    ASSERT_EQ(40, tag.DeltaRecordCount());
     ASSERT_EQ(45, tag.ChangelogRecordCount().value());
     ASSERT_EQ(50, tag.Watermark().value());
     ASSERT_EQ("statistic_test", tag.Statistics().value());
@@ -98,9 +100,8 @@ TEST_F(TagTest, TestFromPath) {
     ASSERT_EQ(9223372036854775807ll, tag.CommitIdentifier());
     ASSERT_EQ(Snapshot::CommitKind::Append(), tag.GetCommitKind());
     ASSERT_EQ(1721614343270ll, tag.TimeMillis());
-    ASSERT_EQ((std::map<int32_t, int64_t>()), tag.LogOffsets().value());
-    ASSERT_EQ(5, tag.TotalRecordCount().value());
-    ASSERT_EQ(5, tag.DeltaRecordCount().value());
+    ASSERT_EQ(5, tag.TotalRecordCount());
+    ASSERT_EQ(5, tag.DeltaRecordCount());
     ASSERT_EQ(0, tag.ChangelogRecordCount().value());
     ASSERT_EQ(std::nullopt, tag.Watermark());
     ASSERT_EQ(std::nullopt, tag.Statistics());
@@ -124,7 +125,6 @@ TEST_F(TagTest, TestJsonizable) {
         "commitIdentifier" : 9223372036854775807,
         "commitKind" : "OVERWRITE",
         "timeMillis" : 1711692199281,
-        "logOffsets" : { },
         "totalRecordCount" : 3,
         "deltaRecordCount" : 3,
         "changelogRecordCount" : 0,
@@ -144,7 +144,6 @@ TEST_F(TagTest, TestJsonizable) {
         /*commit_user=*/"0e4d92f7-53b0-40d6-a7c0-102bf3801e6a",
         /*commit_identifier=*/9223372036854775807ll,
         /*commit_kind=*/Snapshot::CommitKind::Overwrite(), /*time_millis=*/1711692199281ll,
-        /*log_offsets=*/std::map<int32_t, int64_t>(),
         /*total_record_count=*/3, /*delta_record_count=*/3, /*changelog_record_count=*/0,
         /*watermark=*/std::nullopt, /*statistics=*/std::nullopt, /*properties=*/std::nullopt,
         /*next_row_id=*/std::nullopt,
@@ -192,10 +191,6 @@ TEST_F(TagTest, TestSerializeAndDeserialize) {
           "commitIdentifier" : 12,
           "commitKind" : "APPEND",
           "timeMillis" : 1749724197266,
-          "logOffsets" : {
-              "0" : 1,
-              "1" : 3
-          },
           "totalRecordCount" : 1024,
           "deltaRecordCount" : 4096,
           "watermark" : 1749724196266,
@@ -223,10 +218,6 @@ TEST_F(TagTest, TestSerializeAndDeserialize) {
           "commitIdentifier" : 12,
           "commitKind" : "APPEND",
           "timeMillis" : 1749724197266,
-          "logOffsets" : {
-              "0" : 1,
-              "1" : 3
-          },
           "totalRecordCount" : 1024,
           "deltaRecordCount" : 4096,
           "watermark" : 1749724196266,

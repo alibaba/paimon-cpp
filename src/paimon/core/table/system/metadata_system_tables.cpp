@@ -512,8 +512,8 @@ Result<std::shared_ptr<arrow::Schema>> SnapshotsSystemTable::ArrowSchema() const
         arrow::field("base_manifest_list", arrow::utf8(), /*nullable=*/false),
         arrow::field("delta_manifest_list", arrow::utf8(), /*nullable=*/false),
         arrow::field("changelog_manifest_list", arrow::utf8(), /*nullable=*/true),
-        arrow::field("total_record_count", arrow::int64(), /*nullable=*/true),
-        arrow::field("delta_record_count", arrow::int64(), /*nullable=*/true),
+        arrow::field("total_record_count", arrow::int64(), /*nullable=*/false),
+        arrow::field("delta_record_count", arrow::int64(), /*nullable=*/false),
         arrow::field("changelog_record_count", arrow::int64(), /*nullable=*/true),
         arrow::field("watermark", arrow::int64(), /*nullable=*/true),
         arrow::field("next_row_id", arrow::int64(), /*nullable=*/true),
@@ -542,8 +542,8 @@ Result<std::vector<GenericRow>> SnapshotsSystemTable::BuildRows() const {
         row.SetField(6, StringValue(snapshot.BaseManifestList()));
         row.SetField(7, StringValue(snapshot.DeltaManifestList()));
         row.SetField(8, OptionalStringValue(snapshot.ChangelogManifestList()));
-        row.SetField(9, OptionalInt64Value(snapshot.TotalRecordCount()));
-        row.SetField(10, OptionalInt64Value(snapshot.DeltaRecordCount()));
+        row.SetField(9, snapshot.TotalRecordCount());
+        row.SetField(10, snapshot.DeltaRecordCount());
         row.SetField(11, OptionalInt64Value(snapshot.ChangelogRecordCount()));
         row.SetField(12, OptionalInt64Value(snapshot.Watermark()));
         row.SetField(13, OptionalInt64Value(snapshot.NextRowId()));
@@ -625,7 +625,7 @@ Result<std::shared_ptr<arrow::Schema>> TagsSystemTable::ArrowSchema() const {
         arrow::field("schema_id", arrow::int64(), /*nullable=*/false),
         arrow::field("commit_time", arrow::timestamp(arrow::TimeUnit::MILLI),
                      /*nullable=*/false),
-        arrow::field("record_count", arrow::int64(), /*nullable=*/true),
+        arrow::field("record_count", arrow::int64(), /*nullable=*/false),
         arrow::field("create_time", arrow::timestamp(arrow::TimeUnit::MILLI),
                      /*nullable=*/true),
         arrow::field("time_retained", arrow::utf8(), /*nullable=*/true),
@@ -650,7 +650,7 @@ Result<std::vector<GenericRow>> TagsSystemTable::BuildRows() const {
         PAIMON_ASSIGN_OR_RAISE(VariantType commit_time,
                                LocalTimestampMillisValue(tag.TimeMillis()));
         row.SetField(3, commit_time);
-        row.SetField(4, OptionalInt64Value(tag.TotalRecordCount()));
+        row.SetField(4, tag.TotalRecordCount());
         row.SetField(5, OptionalTimestampMillisValue(tag_create_time));
         row.SetField(6, OptionalStringValue(OptionalDoubleToString(tag.TagTimeRetained())));
         rows.push_back(std::move(row));

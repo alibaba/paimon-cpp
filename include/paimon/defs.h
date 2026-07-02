@@ -235,6 +235,16 @@ struct PAIMON_EXPORT Options {
     /// "commit.max-retries" - Maximum number of retries when commit failed. Default value is 10.
     static const char COMMIT_MAX_RETRIES[];
 
+    /// "commit.min-retry-wait" - Min retry wait time when commit failed. Default value is 10ms.
+    static const char COMMIT_MIN_RETRY_WAIT[];
+
+    /// "commit.max-retry-wait" - Max retry wait time when commit failed. Default value is 10s.
+    static const char COMMIT_MAX_RETRY_WAIT[];
+
+    /// "commit.discard-duplicate-files" - Whether to discard duplicate files in commit.
+    /// Default value is "false".
+    static const char COMMIT_DISCARD_DUPLICATE_FILES[];
+
     /// "compaction.max-size-amplification-percent" - The size amplification is defined as the
     /// amount (in percentage) of additional storage needed to store a single byte of data in the
     /// merge tree for changelog mode table. Default value is 200.
@@ -269,6 +279,15 @@ struct PAIMON_EXPORT Options {
     /// "compaction.force-up-level-0" - If set to true, compaction strategy will always include all
     /// level 0 files in candidates. Default value is false.
     static const char COMPACTION_FORCE_UP_LEVEL_0[];
+
+    /// "overwrite-upgrade" - Whether to try upgrading the data files after overwriting a
+    /// primary key table. Default value is true.
+    static const char OVERWRITE_UPGRADE[];
+
+    /// "dynamic-partition-overwrite" - Whether only overwrite dynamic partition when
+    /// overwriting a partitioned table with dynamic partition columns. Works only when
+    /// the table has partition keys. Default value is true.
+    static const char DYNAMIC_PARTITION_OVERWRITE[];
 
     /// "lookup-compact.max-interval" - The max interval for a gentle mode lookup compaction to be
     /// triggered. For every interval, a forced lookup compaction will be performed to flush L0
@@ -453,6 +472,12 @@ struct PAIMON_EXPORT Options {
     /// "write-only" - If set to "true", compactions and snapshot expiration will be skipped. This
     /// option is used along with dedicated compact jobs. Default value is "false".
     static const char WRITE_ONLY[];
+    /// "bucket-append-ordered" - Whether append writes in fixed bucket mode are ordered. This
+    /// option is used by commit conflict checks. Default value is "false".
+    static const char BUCKET_APPEND_ORDERED[];
+    /// "write.sequence-number-init-mode" - Specify how to initialize the next sequence number for
+    /// primary key table writers. Values can be: "scan", "snapshot". Default value is "scan".
+    static const char WRITE_SEQUENCE_NUMBER_INIT_MODE[];
     /// "compaction.min.file-num" - For file set [f_0,...,f_N], the minimum file number to trigger a
     /// compaction for append-only table. Default value is 5.
     static const char COMPACTION_MIN_FILE_NUM[];
