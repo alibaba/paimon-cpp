@@ -283,9 +283,8 @@ Result<std::shared_ptr<Schema>> FileSystemCatalog::LoadTableSchema(
         context.fs = fs_;
         context.warehouse = warehouse_;
         context.catalog_options = catalog_options_;
-        PAIMON_ASSIGN_OR_RAISE(
-            std::shared_ptr<SystemTable> system_table,
-            GlobalSystemTableLoader::Load(identifier.GetTableName(), context));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<SystemTable> system_table,
+                               GlobalSystemTableLoader::Load(identifier.GetTableName(), context));
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> arrow_schema,
                                system_table->ArrowSchema());
         return std::make_shared<SystemTableSchema>(std::move(arrow_schema));

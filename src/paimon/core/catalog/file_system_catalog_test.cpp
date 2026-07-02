@@ -616,8 +616,7 @@ TEST(FileSystemCatalogTest, TestInvalidList) {
     ASSERT_TRUE(std::find(sys_tables.begin(), sys_tables.end(), "all_table_options") !=
                 sys_tables.end());
     ASSERT_TRUE(std::find(sys_tables.begin(), sys_tables.end(), "tables") != sys_tables.end());
-    ASSERT_TRUE(std::find(sys_tables.begin(), sys_tables.end(), "partitions") !=
-                sys_tables.end());
+    ASSERT_TRUE(std::find(sys_tables.begin(), sys_tables.end(), "partitions") != sys_tables.end());
 }
 
 TEST(FileSystemCatalogTest, TestValidateTableSchema) {

@@ -51,11 +51,11 @@
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/core/table/source/deletion_file.h"
 #include "paimon/core/table/source/fallback_data_split.h"
+#include "paimon/core/table/system/global_system_tables.h"
 #include "paimon/core/tag/tag.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/defs.h"
-#include "paimon/core/table/system/global_system_tables.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/memory_pool.h"
@@ -3728,9 +3728,8 @@ TEST_P(ReadInteTest, TestSpecificFs) {
 namespace {
 
 Result<SystemTableReadResult> ReadGlobalSystemTable(
-    const std::string& table_name, Catalog* catalog,
-    const std::shared_ptr<FileSystem>& fs, const std::string& warehouse,
-    const std::map<std::string, std::string>& options) {
+    const std::string& table_name, Catalog* catalog, const std::shared_ptr<FileSystem>& fs,
+    const std::string& warehouse, const std::map<std::string, std::string>& options) {
     GlobalSystemTableContext ctx;
     ctx.catalog = catalog;
     ctx.fs = fs;
@@ -3951,8 +3950,8 @@ TEST(SystemTableReadInteTest, TestReadGlobalPartitions) {
 
     // Unpartitioned tables are skipped by sys.partitions → empty result.
     // CollectResult returns null shared_ptr when result is empty.
-    ASSERT_OK_AND_ASSIGN(auto part_result,
-                         ReadGlobalSystemTable("partitions", catalog.get(), fs, warehouse, options));
+    ASSERT_OK_AND_ASSIGN(auto part_result, ReadGlobalSystemTable("partitions", catalog.get(), fs,
+                                                                 warehouse, options));
     ASSERT_FALSE(part_result.array) << "expected null array for empty partitions result";
 }
 

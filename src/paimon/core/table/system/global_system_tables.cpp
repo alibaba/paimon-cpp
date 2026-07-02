@@ -31,10 +31,9 @@
 #include "paimon/common/data/binary_string.h"
 #include "paimon/common/data/generic_row.h"
 #include "paimon/common/utils/binary_row_partition_computer.h"
-#include "paimon/common/utils/string_utils.h"
 #include "paimon/common/utils/path_util.h"
+#include "paimon/common/utils/string_utils.h"
 #include "paimon/core/core_options.h"
-#include "paimon/defs.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/manifest/file_entry.h"
 #include "paimon/core/manifest/file_kind.h"
@@ -50,6 +49,7 @@
 #include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/core/utils/snapshot_manager.h"
 #include "paimon/data/timestamp.h"
+#include "paimon/defs.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/status.h"
 
@@ -113,16 +113,13 @@ Result<std::map<std::string, FileStats>> AggregateFileStats(
     const std::map<std::string, std::string>& options) {
     std::map<std::string, FileStats> result;
 
-    SnapshotManager snapshot_manager(fs, table_path,
-                                     BranchManager::DEFAULT_MAIN_BRANCH);
-    PAIMON_ASSIGN_OR_RAISE(std::optional<Snapshot> snapshot,
-                           snapshot_manager.LatestSnapshot());
+    SnapshotManager snapshot_manager(fs, table_path, BranchManager::DEFAULT_MAIN_BRANCH);
+    PAIMON_ASSIGN_OR_RAISE(std::optional<Snapshot> snapshot, snapshot_manager.LatestSnapshot());
     if (!snapshot) {
         return result;
     }
 
-    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options,
-                           CoreOptions::FromMap(options));
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(options));
 
     // Use SchemaManager to load the latest schema for field/partition info
     SchemaManager schema_mgr(fs, table_path, BranchManager::DEFAULT_MAIN_BRANCH);
@@ -144,31 +141,27 @@ Result<std::map<std::string, FileStats>> AggregateFileStats(
         std::shared_ptr<FileStorePathFactory> path_factory,
         FileStorePathFactory::Create(
             table_path, arrow_schema, table_schema->PartitionKeys(),
-            core_options.GetPartitionDefaultName(),
-            core_options.GetFileFormat()->Identifier(),
-            core_options.DataFilePrefix(),
-            core_options.LegacyPartitionNameEnabled(), external_paths,
-            global_index_external_path, core_options.IndexFileInDataFileDir(), pool));
+            core_options.GetPartitionDefaultName(), core_options.GetFileFormat()->Identifier(),
+            core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
+            external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
+            pool));
 
-    PAIMON_ASSIGN_OR_RAISE(
-        std::unique_ptr<ManifestList> manifest_list,
-        ManifestList::Create(fs, core_options.GetManifestFormat(),
-                             core_options.GetManifestCompression(), path_factory,
-                             core_options.GetCache(), pool));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ManifestList> manifest_list,
+                           ManifestList::Create(fs, core_options.GetManifestFormat(),
+                                                core_options.GetManifestCompression(), path_factory,
+                                                core_options.GetCache(), pool));
 
     std::vector<ManifestFileMeta> manifests;
-    PAIMON_RETURN_NOT_OK(
-        manifest_list->ReadDataManifests(*snapshot, &manifests));
+    PAIMON_RETURN_NOT_OK(manifest_list->ReadDataManifests(*snapshot, &manifests));
 
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<arrow::Schema> partition_schema,
         FieldMapping::GetPartitionSchema(arrow_schema, table_schema->PartitionKeys()));
-    PAIMON_ASSIGN_OR_RAISE(
-        std::unique_ptr<ManifestFile> manifest_file,
-        ManifestFile::Create(fs, core_options.GetManifestFormat(),
-                             core_options.GetManifestCompression(), path_factory,
-                             core_options.GetManifestTargetFileSize(), pool,
-                             core_options, partition_schema));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ManifestFile> manifest_file,
+                           ManifestFile::Create(fs, core_options.GetManifestFormat(),
+                                                core_options.GetManifestCompression(), path_factory,
+                                                core_options.GetManifestTargetFileSize(), pool,
+                                                core_options, partition_schema));
 
     std::vector<ManifestEntry> entries;
     for (const auto& manifest : manifests) {
@@ -188,12 +181,10 @@ Result<std::map<std::string, FileStats>> AggregateFileStats(
         // Convert partition BinaryRow to string representation
         std::string partition_key;
         if (entry.Partition().GetFieldCount() > 0) {
-            PAIMON_ASSIGN_OR_RAISE(
-                partition_key,
-                BinaryRowPartitionComputer::PartToSimpleString(
-                    partition_schema, entry.Partition(), ",",
-                    /*max_length=*/255,
-                    /*legacy_partition_name_enabled=*/false));
+            PAIMON_ASSIGN_OR_RAISE(partition_key, BinaryRowPartitionComputer::PartToSimpleString(
+                                                      partition_schema, entry.Partition(), ",",
+                                                      /*max_length=*/255,
+                                                      /*legacy_partition_name_enabled=*/false));
             partition_key = "{" + partition_key + "}";
         }
 
@@ -301,11 +292,9 @@ Result<std::vector<GenericRow>> AllTableOptionsSystemTable::BuildRows() const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     std::vector<GenericRow> rows;
 
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> databases,
-                           context_.catalog->ListDatabases());
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> databases, context_.catalog->ListDatabases());
     for (const auto& db : databases) {
-        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> tables,
-                               context_.catalog->ListTables(db));
+        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> tables, context_.catalog->ListTables(db));
         for (const auto& table : tables) {
             Identifier id(db, table);
             auto schema_result = context_.catalog->LoadTableSchema(id);
@@ -351,8 +340,8 @@ Result<std::shared_ptr<arrow::Schema>> TablesSystemTable::ArrowSchema() const {
         arrow::field("record_count", arrow::int64(), /*nullable=*/true),
         arrow::field("file_size_in_bytes", arrow::int64(), /*nullable=*/true),
         arrow::field("file_count", arrow::int64(), /*nullable=*/true),
-        arrow::field("last_file_creation_time",
-                     arrow::timestamp(arrow::TimeUnit::MILLI), /*nullable=*/true),
+        arrow::field("last_file_creation_time", arrow::timestamp(arrow::TimeUnit::MILLI),
+                     /*nullable=*/true),
     });
 }
 
@@ -360,11 +349,9 @@ Result<std::vector<GenericRow>> TablesSystemTable::BuildRows() const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     std::vector<GenericRow> rows;
 
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> databases,
-                           context_.catalog->ListDatabases());
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> databases, context_.catalog->ListDatabases());
     for (const auto& db : databases) {
-        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> tables,
-                               context_.catalog->ListTables(db));
+        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> tables, context_.catalog->ListTables(db));
         for (const auto& table : tables) {
             Identifier id(db, table);
             auto schema_result = context_.catalog->LoadTableSchema(id);
@@ -397,20 +384,17 @@ Result<std::vector<GenericRow>> TablesSystemTable::BuildRows() const {
             row.SetField(1, StringValue(table));
             row.SetField(2, StringValue(table_type_str));
             row.SetField(3, partitioned);
-            row.SetField(4, primary_keys_str.empty()
-                                ? VariantType(NullType())
-                                : VariantType(StringValue(primary_keys_str)));
+            row.SetField(4, primary_keys_str.empty() ? VariantType(NullType())
+                                                     : VariantType(StringValue(primary_keys_str)));
 
             // Get table path and aggregate file stats from manifest entries
-            PAIMON_ASSIGN_OR_RAISE(std::string table_path,
-                                   context_.catalog->GetTableLocation(id));
+            PAIMON_ASSIGN_OR_RAISE(std::string table_path, context_.catalog->GetTableLocation(id));
 
             auto file_stats_result =
                 AggregateFileStats(context_.fs, table_path, data_schema->Options());
             if (file_stats_result.ok()) {
                 auto& all_stats = file_stats_result.value();
-                int64_t total_record = 0, total_size = 0, total_files = 0,
-                        max_creation = 0;
+                int64_t total_record = 0, total_size = 0, total_files = 0, max_creation = 0;
                 for (const auto& [key, stats] : all_stats) {
                     total_record += stats.record_count;
                     total_size += stats.file_size_in_bytes;
@@ -457,8 +441,8 @@ Result<std::shared_ptr<arrow::Schema>> PartitionsSystemTable::ArrowSchema() cons
         arrow::field("record_count", arrow::int64(), /*nullable=*/true),
         arrow::field("file_size_in_bytes", arrow::int64(), /*nullable=*/true),
         arrow::field("file_count", arrow::int64(), /*nullable=*/true),
-        arrow::field("last_update_time",
-                     arrow::timestamp(arrow::TimeUnit::MILLI), /*nullable=*/true),
+        arrow::field("last_update_time", arrow::timestamp(arrow::TimeUnit::MILLI),
+                     /*nullable=*/true),
     });
 }
 
@@ -466,11 +450,9 @@ Result<std::vector<GenericRow>> PartitionsSystemTable::BuildRows() const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     std::vector<GenericRow> rows;
 
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> databases,
-                           context_.catalog->ListDatabases());
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> databases, context_.catalog->ListDatabases());
     for (const auto& db : databases) {
-        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> tables,
-                               context_.catalog->ListTables(db));
+        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> tables, context_.catalog->ListTables(db));
         for (const auto& table : tables) {
             Identifier id(db, table);
             auto schema_result = context_.catalog->LoadTableSchema(id);
@@ -509,9 +491,8 @@ Result<std::vector<GenericRow>> PartitionsSystemTable::BuildRows() const {
                 GenericRow row(schema->num_fields());
                 row.SetField(0, StringValue(db));
                 row.SetField(1, StringValue(table));
-                row.SetField(2, partition_key.empty()
-                                    ? VariantType(NullType())
-                                    : VariantType(StringValue(partition_key)));
+                row.SetField(2, partition_key.empty() ? VariantType(NullType())
+                                                      : VariantType(StringValue(partition_key)));
                 row.SetField(3, VariantType(stats.record_count));
                 row.SetField(4, VariantType(stats.file_size_in_bytes));
                 row.SetField(5, VariantType(stats.file_count));

@@ -39,7 +39,7 @@ class Logger;
 class FileSystemCatalog : public Catalog {
  public:
     FileSystemCatalog(const std::shared_ptr<FileSystem>& fs, const std::string& warehouse,
-                       const std::map<std::string, std::string>& catalog_options = {});
+                      const std::map<std::string, std::string>& catalog_options = {});
 
     Status CreateDatabase(const std::string& db_name,
                           const std::map<std::string, std::string>& options,

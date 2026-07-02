@@ -108,8 +108,8 @@ class GlobalSystemTableLoader {
  public:
     static bool IsSupported(const std::string& table_name);
 
-    static Result<std::shared_ptr<SystemTable>> Load(
-        const std::string& table_name, const GlobalSystemTableContext& context);
+    static Result<std::shared_ptr<SystemTable>> Load(const std::string& table_name,
+                                                     const GlobalSystemTableContext& context);
 
     static std::vector<std::string> GetSupportedTableNames();
 };
