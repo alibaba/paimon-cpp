@@ -30,6 +30,7 @@
 #include "paimon/catalog/identifier.h"
 #include "paimon/common/data/binary_string.h"
 #include "paimon/common/data/generic_row.h"
+#include "paimon/common/utils/binary_row_partition_computer.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/core_options.h"
@@ -152,7 +153,8 @@ Result<std::map<std::string, FileStats>> AggregateFileStats(
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<ManifestList> manifest_list,
         ManifestList::Create(fs, core_options.GetManifestFormat(),
-                             core_options.GetManifestCompression(), path_factory, pool));
+                             core_options.GetManifestCompression(), path_factory,
+                             core_options.GetCache(), pool));
 
     std::vector<ManifestFileMeta> manifests;
     PAIMON_RETURN_NOT_OK(
@@ -183,10 +185,16 @@ Result<std::map<std::string, FileStats>> AggregateFileStats(
         }
         const auto& file = entry.File();
 
-        // Use empty string key for unpartitioned tables
+        // Convert partition BinaryRow to string representation
         std::string partition_key;
         if (entry.Partition().GetFieldCount() > 0) {
-            partition_key = "partitioned";
+            PAIMON_ASSIGN_OR_RAISE(
+                partition_key,
+                BinaryRowPartitionComputer::PartToSimpleString(
+                    partition_schema, entry.Partition(), ",",
+                    /*max_length=*/255,
+                    /*legacy_partition_name_enabled=*/false));
+            partition_key = "{" + partition_key + "}";
         }
 
         auto& stats = result[partition_key];
@@ -458,17 +466,63 @@ Result<std::vector<GenericRow>> PartitionsSystemTable::BuildRows() const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     std::vector<GenericRow> rows;
 
-    // TODO(suxiaogang223): Implement partition-level aggregation using
-    // manifest entry reading (similar to FilesSystemTable::BuildRows()
-    // but grouped by partition). For now, return empty result set.
-    //
-    // The implementation should:
-    // 1. Enumerate all databases and tables
-    // 2. For each partitioned table, read latest snapshot's manifest entries
-    // 3. Group DataFileMeta entries by entry.Partition()
-    // 4. Aggregate: sum(file_size), sum(record_count), count files,
-    //    max(creation_time)
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> databases,
+                           context_.catalog->ListDatabases());
+    for (const auto& db : databases) {
+        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> tables,
+                               context_.catalog->ListTables(db));
+        for (const auto& table : tables) {
+            Identifier id(db, table);
+            auto schema_result = context_.catalog->LoadTableSchema(id);
+            if (!schema_result.ok()) {
+                continue;
+            }
+            auto schema_ptr = schema_result.value();
+            auto data_schema = std::dynamic_pointer_cast<DataSchema>(schema_ptr);
+            if (!data_schema) {
+                continue;
+            }
 
+            // Only emit rows for partitioned tables
+            if (data_schema->PartitionKeys().empty()) {
+                continue;
+            }
+
+            // Get table path and aggregate file stats by partition
+            auto table_path_result = context_.catalog->GetTableLocation(id);
+            if (!table_path_result.ok()) {
+                continue;
+            }
+            std::string table_path = table_path_result.value();
+
+            auto file_stats_result =
+                AggregateFileStats(context_.fs, table_path, data_schema->Options());
+            if (!file_stats_result.ok()) {
+                continue;
+            }
+
+            auto& stats_map = file_stats_result.value();
+            for (const auto& [partition_key, stats] : stats_map) {
+                if (stats.file_count == 0) {
+                    continue;
+                }
+                GenericRow row(schema->num_fields());
+                row.SetField(0, std::string_view(db));
+                row.SetField(1, std::string_view(table));
+                row.SetField(2, partition_key.empty()
+                                    ? VariantType(NullType())
+                                    : VariantType(StringValue(partition_key)));
+                row.SetField(3, VariantType(stats.record_count));
+                row.SetField(4, VariantType(stats.file_size_in_bytes));
+                row.SetField(5, VariantType(stats.file_count));
+                row.SetField(6, stats.last_file_creation_time_millis > 0
+                                    ? VariantType(Timestamp::FromEpochMillis(
+                                          stats.last_file_creation_time_millis))
+                                    : VariantType(NullType()));
+                rows.push_back(std::move(row));
+            }
+        }
+    }
     return rows;
 }
 
