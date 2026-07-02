@@ -20,6 +20,7 @@
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/arrow/status_utils.h"
+#include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/global_index/global_index_file_manager.h"
 #include "paimon/core/io/data_increment.h"
@@ -214,6 +215,11 @@ Result<std::shared_ptr<CommitMessage>> GlobalIndexWriteTask::WriteIndex(
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<GlobalIndexWriter> global_index_writer,
         CreateGlobalIndexWriter(index_type, field, index_file_manager, core_options, pool));
+
+    ScopeGuard guard([&]() {
+        global_index_writer.reset();
+        batch_reader.reset();
+    });
 
     // read from data split and write to index writer
     PAIMON_ASSIGN_OR_RAISE(
