@@ -157,7 +157,7 @@ Status BlobFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
     target_type_ = arrow::struct_(arrow_schema->fields());
     current_pos_ = 0;
     previous_batch_first_row_number_ = std::numeric_limits<uint64_t>::max();
-
+    previous_batch_row_count_ = 0;
     return Status::OK();
 }
 
@@ -292,6 +292,7 @@ Result<BatchReader::ReadBatch> BlobFileBatchReader::NextBatch() {
     }
     if (current_pos_ >= target_blob_lengths_.size()) {
         PAIMON_ASSIGN_OR_RAISE(previous_batch_first_row_number_, GetNumberOfRows());
+        previous_batch_row_count_ = 0;
         return BatchReader::MakeEofBatch();
     }
     int32_t left_rows = target_blob_lengths_.size() - current_pos_;
@@ -303,6 +304,7 @@ Result<BatchReader::ReadBatch> BlobFileBatchReader::NextBatch() {
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*blob_array, c_array.get(), c_schema.get()));
     previous_batch_first_row_number_ = target_blob_row_indexes_[current_pos_];
     current_pos_ += rows_to_read;
+    previous_batch_row_count_ = c_array->length;
     return make_pair(std::move(c_array), std::move(c_schema));
 }
 
