@@ -319,10 +319,10 @@ Result<std::vector<GenericRow>> AllTableOptionsSystemTable::BuildRows() const {
             }
             for (const auto& [key, value] : data_schema->Options()) {
                 GenericRow row(schema->num_fields());
-                row.SetField(0, std::string_view(db));
-                row.SetField(1, std::string_view(table));
-                row.SetField(2, std::string_view(key));
-                row.SetField(3, std::string_view(value));
+                row.SetField(0, StringValue(db));
+                row.SetField(1, StringValue(table));
+                row.SetField(2, StringValue(key));
+                row.SetField(3, StringValue(value));
                 rows.push_back(std::move(row));
             }
         }
@@ -393,8 +393,8 @@ Result<std::vector<GenericRow>> TablesSystemTable::BuildRows() const {
             }
 
             GenericRow row(schema->num_fields());
-            row.SetField(0, std::string_view(db));
-            row.SetField(1, std::string_view(table));
+            row.SetField(0, StringValue(db));
+            row.SetField(1, StringValue(table));
             row.SetField(2, StringValue(table_type_str));
             row.SetField(3, partitioned);
             row.SetField(4, primary_keys_str.empty()
@@ -507,8 +507,8 @@ Result<std::vector<GenericRow>> PartitionsSystemTable::BuildRows() const {
                     continue;
                 }
                 GenericRow row(schema->num_fields());
-                row.SetField(0, std::string_view(db));
-                row.SetField(1, std::string_view(table));
+                row.SetField(0, StringValue(db));
+                row.SetField(1, StringValue(table));
                 row.SetField(2, partition_key.empty()
                                     ? VariantType(NullType())
                                     : VariantType(StringValue(partition_key)));
