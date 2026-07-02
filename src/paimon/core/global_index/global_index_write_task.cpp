@@ -204,16 +204,16 @@ Result<std::shared_ptr<CommitMessage>> GlobalIndexWriteTask::WriteIndex(
         std::shared_ptr<GlobalIndexFileManager> index_file_manager,
         CreateGlobalIndexFileManager(table_path, table_schema, core_options, pool));
 
+    // create batch reader
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<BatchReader> batch_reader,
+        CreateBatchReader(table_path, field_name, indexed_split, core_options, pool));
+
     // create global index writer
     PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema->GetField(field_name));
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<GlobalIndexWriter> global_index_writer,
         CreateGlobalIndexWriter(index_type, field, index_file_manager, core_options, pool));
-
-    // create batch reader
-    PAIMON_ASSIGN_OR_RAISE(
-        std::unique_ptr<BatchReader> batch_reader,
-        CreateBatchReader(table_path, field_name, indexed_split, core_options, pool));
 
     // read from data split and write to index writer
     PAIMON_ASSIGN_OR_RAISE(
