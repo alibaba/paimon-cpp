@@ -153,6 +153,7 @@ PrefetchFileBatchReaderImpl::~PrefetchFileBatchReaderImpl() {
 Status PrefetchFileBatchReaderImpl::SetReadSchema(
     ::ArrowSchema* read_schema, const std::shared_ptr<Predicate>& predicate,
     const std::optional<RoaringBitmap32>& selection_bitmap) {
+    PAIMON_RETURN_NOT_OK(CleanUp());
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> schema,
                                       arrow::ImportSchema(read_schema));
     for (const auto& reader : readers_) {
@@ -162,11 +163,15 @@ Status PrefetchFileBatchReaderImpl::SetReadSchema(
     }
     selection_bitmap_ = selection_bitmap;
     predicate_ = predicate;
-    return RefreshReadRanges();
+    return RefreshReadRangesAfterCleanUp();
 }
 
 Status PrefetchFileBatchReaderImpl::RefreshReadRanges() {
     PAIMON_RETURN_NOT_OK(CleanUp());
+    return RefreshReadRangesAfterCleanUp();
+}
+
+Status PrefetchFileBatchReaderImpl::RefreshReadRangesAfterCleanUp() {
     bool need_prefetch;
     PAIMON_ASSIGN_OR_RAISE(auto read_ranges, readers_[0]->GenReadRanges(&need_prefetch));
 
@@ -279,6 +284,7 @@ Status PrefetchFileBatchReaderImpl::CleanUp() {
     read_ranges_.clear();
     read_ranges_in_group_.clear();
     current_batch_global_row_ids_.clear();
+    read_ranges_freshed_ = false;
     clean_prefetch_queue();
     for (size_t i = 0; i < readers_pos_.size(); i++) {
         readers_pos_[i]->store(0);
