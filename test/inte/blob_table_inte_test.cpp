@@ -1691,7 +1691,7 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorField) {
     if (GetParam() == "lance") {
         return;
     }
-    // Two blob fields configured via BLOB_DESCRIPTOR_FIELD, no external storage.
+    // Two blob fields configured via BLOB_DESCRIPTOR_FIELD and stored inline as descriptors.
     arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
                                  BlobUtils::ToArrowField("b0", true),
                                  BlobUtils::ToArrowField("b1", true)};
@@ -1720,7 +1720,7 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorField) {
                          WriteArray(table_path, {}, schema->field_names(), {desc_array}));
     ASSERT_OK(Commit(table_path, commit_msgs));
 
-    // Scan and verify DataFileMeta: no external storage -> write_cols should be nullopt
+    // Scan and verify DataFileMeta: all blob fields are inline descriptors, so write_cols is unset.
     ASSERT_OK_AND_ASSIGN(auto plan, ScanTable(table_path));
     VerifyDataFileMetas(plan, /*expected_file_count=*/1, /*expected_row_counts=*/{3},
                         /*expected_min_seqs=*/{1}, /*expected_max_seqs=*/{1},
@@ -1747,8 +1747,8 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorFieldPartialInline) {
     if (GetParam() == "lance") {
         return;
     }
-    // 4 blob fields: b0,b1 are descriptor (inline), b2,b3 are regular blob (written to .blob
-    // files). No external storage.
+    // 4 blob fields: b0,b1 are inline descriptors; b2,b3 are regular blob fields written to
+    // .blob files.
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("b0", true),
         BlobUtils::ToArrowField("b1", true), BlobUtils::ToArrowField("b2", true),
@@ -2308,9 +2308,8 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorFieldWriteRawBytesDirectly) {
     if (GetParam() == "lance") {
         return;
     }
-    // Similar to TestBlobDescriptorFieldWithoutExternalStorage but writes raw bytes directly
-    // without converting to descriptor first. The writer should auto-detect that the data
-    // is NOT a descriptor (no magic header) and handle it accordingly.
+    // Similar to TestBlobDescriptorField but writes raw bytes directly without converting to
+    // descriptor first. Descriptor fields reject values without the descriptor magic header.
     arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
                                  BlobUtils::ToArrowField("b0", true),
                                  BlobUtils::ToArrowField("b1", true)};
@@ -2963,8 +2962,7 @@ TEST_P(BlobTableInteTest, TestReadBlobDescriptorFieldFromJava) {
         return;
     }
     std::string table_path =
-        GetDataDir() + "/" + file_format +
-        "/blob_desc_field_with_external_path.db/blob_desc_field_with_external_path";
+        GetDataDir() + "/" + file_format + "/blob_desc_field.db/blob_desc_field";
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("b0", true),
         BlobUtils::ToArrowField("b1", true), BlobUtils::ToArrowField("b2", true),
