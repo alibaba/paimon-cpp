@@ -294,6 +294,41 @@ TEST_P(GlobalIndexTest, TestWriteLuminaIndex) {
     ASSERT_TRUE(expected_commit_message->TEST_Equal(*index_commit_msg_impl));
 }
 
+TEST_P(GlobalIndexTest, TestWriteLuminaIndexWithMismatchedDimension) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::utf8()),
+                                 arrow::field("f1", arrow::list(arrow::float32()))};
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> lumina_options = {{"lumina.index.dimension", "3"},
+                                                         {"lumina.index.type", "bruteforce"},
+                                                         {"lumina.distance.metric", "l2"},
+                                                         {"lumina.encoding.type", "rawf32"},
+                                                         {"lumina.search.parallel_number", "10"}};
+
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "orc"},         {Options::FILE_FORMAT, file_format_},
+        {Options::FILE_SYSTEM, "local"},           {Options::ROW_TRACKING_ENABLED, "true"},
+        {Options::DATA_EVOLUTION_ENABLED, "true"}, {Options::READ_BATCH_SIZE, "1"}};
+
+    CreateTable(/*partition_keys=*/{}, schema, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+
+    std::vector<std::string> write_cols = schema->field_names();
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+        ["a", [0.0, 0.0, 0.0]],
+        ["b", [0.0, 0.0, 0.0, 0.0]]
+    ])")
+                         .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+
+    ASSERT_NOK_WITH_MSG(
+        WriteIndex(table_path, /*partition_filters=*/{}, "f1", "lumina",
+                   /*options=*/lumina_options, Range(0, 1)),
+        "invalid input array in LuminaIndexWriter, length of field array [1] multiplied "
+        "dimension [3] must match length of field value array [4]");
+}
+
 TEST_P(GlobalIndexTest, TestWriteIndex) {
     CreateTable();
     std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
