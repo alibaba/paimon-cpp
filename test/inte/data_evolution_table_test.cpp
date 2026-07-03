@@ -17,6 +17,7 @@
 #include "gtest/gtest.h"
 #include "paimon/common/factories/io_hook.h"
 #include "paimon/common/table/special_fields.h"
+#include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/scope_guard.h"
@@ -46,9 +47,10 @@ class DataEvolutionTableTest : public ::testing::Test,
         dir_.reset();
     }
 
-    void CreateTable(const std::vector<std::string>& partition_keys,
+    void CreateTable(const arrow::FieldVector& fields,
+                     const std::vector<std::string>& partition_keys,
                      const std::map<std::string, std::string>& options) const {
-        auto schema = arrow::schema(fields_);
+        auto schema = arrow::schema(fields);
         ::ArrowSchema c_schema;
         ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
 
@@ -57,6 +59,11 @@ class DataEvolutionTableTest : public ::testing::Test,
         ASSERT_OK(catalog->CreateTable(Identifier("foo", "bar"), &c_schema, partition_keys,
                                        /*primary_keys=*/{}, options,
                                        /*ignore_if_exists=*/false));
+    }
+
+    void CreateTable(const std::vector<std::string>& partition_keys,
+                     const std::map<std::string, std::string>& options) const {
+        CreateTable(fields_, partition_keys, options);
     }
 
     void CreateTable(const std::vector<std::string>& partition_keys) const {
@@ -508,6 +515,149 @@ TEST_P(DataEvolutionTableTest, TestOnlySomeColumns) {
         ASSERT_OK(ScanAndRead(table_path, {"f0", "f1", "f2", "_ROW_ID", "_SEQUENCE_NUMBER"},
                               expected_row_tracking_array));
     }
+}
+
+TEST_P(DataEvolutionTableTest, TestMultipleSharedShreddingMapsPartialOverwrite) {
+    if (GetParam() != "parquet" && GetParam() != "orc") {
+        return;
+    }
+
+    auto map_type = arrow::map(arrow::utf8(), arrow::int64());
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("map1", map_type),
+        arrow::field("map2", map_type),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "orc"},
+        {Options::FILE_FORMAT, GetParam()},
+        {Options::FILE_SYSTEM, "local"},
+        {Options::ROW_TRACKING_ENABLED, "true"},
+        {Options::DATA_EVOLUTION_ENABLED, "true"},
+        {"fields.map1.map.storage-layout", "shared-shredding"},
+        {"fields.map1.map.shared-shredding.max-columns", "1"},
+        {"fields.map2.map.storage-layout", "shared-shredding"},
+        {"fields.map2.map.shared-shredding.max-columns", "1"},
+    };
+    CreateTable(fields, /*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    auto schema = arrow::schema(fields);
+
+    std::vector<std::string> write_cols0 = {"id", "map1"};
+    auto src_array0 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields[0], fields[1]}), R"([
+        [1, [["a", 10], ["b", 20]]],
+        [11, [["a", 11], ["b", 21]]]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs0, WriteArray(table_path, write_cols0, src_array0));
+    ASSERT_OK(Commit(table_path, commit_msgs0));
+
+    std::vector<std::string> write_cols1 = {"id", "map2"};
+    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields[0], fields[2]}), R"([
+        [2, [["c", 30], ["d", 40]]],
+        [12, [["c", 31], ["d", 41]]]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs1, WriteArray(table_path, write_cols1, src_array1));
+    SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs1);
+    ASSERT_OK(Commit(table_path, commit_msgs1));
+
+    std::vector<std::string> write_cols2 = {"map1"};
+    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields[1]}), R"([
+        [[["b", 200], ["a", 100]]],
+        [[["b", 201], ["a", 101]]]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs2, WriteArray(table_path, write_cols2, src_array2));
+    SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs2);
+    ASSERT_OK(Commit(table_path, commit_msgs2));
+
+    // Read all columns and merge values from all partial files.
+    auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+        [2, [["a", 100], ["b", 200]], [["c", 30], ["d", 40]]],
+        [12, [["a", 101], ["b", 201]], [["c", 31], ["d", 41]]]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_array));
+
+    // Read a subset of columns and recall only the requested shared-shredding MAP column.
+    auto expected_column_pruned_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields[0], fields[2]}), R"([
+        [2, [["c", 30], ["d", 40]]],
+        [12, [["c", 31], ["d", 41]]]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, {"id", "map2"}, expected_column_pruned_array));
+
+    // Read selected keys from both shared-shredding MAP columns after partial overwrite merge.
+    {
+        auto map1_selected_keys =
+            arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"b"});
+        auto map2_selected_keys =
+            arrow::KeyValueMetadata::Make({DataField::MAP_SELECTED_KEYS}, {"d"});
+        auto read_schema = arrow::schema({
+            fields[0],
+            fields[1]->WithMetadata(map1_selected_keys),
+            fields[2]->WithMetadata(map2_selected_keys),
+        });
+        auto c_schema = std::make_unique<ArrowSchema>();
+        ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
+
+        ScanContextBuilder scan_context_builder(table_path);
+        ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
+        ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+        ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
+
+        ReadContextBuilder read_context_builder(table_path);
+        read_context_builder.SetReadSchema(std::move(c_schema));
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ReadContext> read_context,
+                             read_context_builder.Finish());
+        ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+        ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(result_plan->Splits()));
+        ASSERT_OK_AND_ASSIGN(auto actual, ReadResultCollector::CollectResult(batch_reader.get()));
+
+        auto expected_type = arrow::struct_({
+            SpecialFields::ValueKind().field_,
+            fields[0],
+            fields[1],
+            fields[2],
+        });
+        auto expected = arrow::ipc::internal::json::ArrayFromJSON(expected_type, R"([
+            [0, 2, [["b", 200]], [["d", 40]]],
+            [0, 12, [["b", 201]], [["d", 41]]]
+        ])")
+                            .ValueOrDie();
+        auto expected_chunked = std::make_shared<arrow::ChunkedArray>(expected);
+        ASSERT_TRUE(expected_chunked->Equals(actual))
+            << "actual=" << actual->ToString() << "\nexpected=" << expected_chunked->ToString();
+    }
+
+    // Read a subset of rows after merging values from all partial files.
+    auto expected_partial_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+        [12, [["a", 101], ["b", 201]], [["c", 31], ["d", 41]]]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_partial_array,
+                          /*predicate=*/nullptr,
+                          /*row_ranges=*/{Range(1l, 1l)}));
+
+    // Read row tracking fields and verify the latest partial overwrite sequence number.
+    auto expected_row_tracking_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(
+            arrow::struct_({fields[0], fields[1], fields[2], SpecialFields::RowId().field_,
+                            SpecialFields::SequenceNumber().field_}),
+            R"([
+        [2, [["a", 100], ["b", 200]], [["c", 30], ["d", 40]], 0, 3],
+        [12, [["a", 101], ["b", 201]], [["c", 31], ["d", 41]], 1, 3]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, {"id", "map1", "map2", "_ROW_ID", "_SEQUENCE_NUMBER"},
+                          expected_row_tracking_array));
 }
 
 TEST_P(DataEvolutionTableTest, TestNullValues) {

@@ -910,6 +910,26 @@ TEST(SchemaValidationTest, TestMapStorageLayout) {
         ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
                             "not MAP<STRING, T>");
     }
+    // Invalid: nested MAP paths are not shared-shredding columns; only top-level columns are
+    // addressable by fields.<column>.map.storage-layout.
+    {
+        auto payload = arrow::field(
+            "payload",
+            arrow::struct_({arrow::field("attrs", arrow::map(arrow::utf8(), arrow::int64()))}));
+        arrow::FieldVector fields = {f0, f1, payload};
+        auto schema = arrow::schema(fields);
+        std::map<std::string, std::string> options = {
+            {Options::BUCKET, "2"},
+            {Options::BUCKET_KEY, "f0"},
+            {"fields.payload.attrs.map.storage-layout", "shared-shredding"}};
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{"f0", "f1"}, options));
+        ASSERT_NOK_WITH_MSG(
+            SchemaValidation::ValidateTableSchema(*table_schema),
+            "Column 'payload.attrs' is configured with map.storage-layout but does not exist in "
+            "table schema.");
+    }
     // Valid: default layout on a MAP column
     {
         arrow::FieldVector fields = {f0, f1, f2};
