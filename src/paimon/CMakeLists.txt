@@ -239,7 +239,6 @@ set(PAIMON_CORE_SRCS
     core/io/map_shared_shredding_core_utils.cpp
     core/io/shredding_append_data_file_writer_factory.cpp
     core/io/shredding_key_value_data_file_writer_factory.cpp
-    core/io/external_storage_blob_writer.cpp
     core/io/multiple_blob_file_writer.cpp
     core/io/rolling_blob_file_writer.cpp
     core/manifest/file_kind.cpp
@@ -634,7 +633,6 @@ if(PAIMON_BUILD_TESTS)
                     core/io/file_index_evaluator_test.cpp
                     core/io/single_file_writer_test.cpp
                     core/io/rolling_blob_file_writer_test.cpp
-                    core/io/external_storage_blob_writer_test.cpp
                     core/global_index/indexed_split_test.cpp
                     core/manifest/file_source_test.cpp
                     core/manifest/file_kind_test.cpp

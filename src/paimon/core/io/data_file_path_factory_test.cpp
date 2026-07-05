@@ -57,20 +57,6 @@ TEST_F(DataFilePathFactoryTest, TestNewPath) {
     ASSERT_EQ(factory_.NewPathFromName("index-file"), "/tmp/index-file");
 }
 
-TEST_F(DataFilePathFactoryTest, TestNewExternalStorageBlobPath) {
-    std::string blob_path1 = factory_.NewExternalStorageBlobPath("/tmp/external_blob");
-    std::string blob_path2 = factory_.NewExternalStorageBlobPath("/tmp/external_blob");
-
-    // Paths are unique (counter increments)
-    ASSERT_NE(blob_path1, blob_path2);
-    // Both start with the external storage path joined with the data file prefix
-    ASSERT_TRUE(StringUtils::StartsWith(blob_path1, "/tmp/external_blob/data-"));
-    ASSERT_TRUE(StringUtils::StartsWith(blob_path2, "/tmp/external_blob/data-"));
-    // Both end with .blob extension
-    ASSERT_TRUE(StringUtils::EndsWith(blob_path1, ".blob"));
-    ASSERT_TRUE(StringUtils::EndsWith(blob_path2, ".blob"));
-}
-
 TEST_F(DataFilePathFactoryTest, TestNewPathWithDataFilePrefixAndExternalPath) {
     DataFilePathFactory factory;
     ASSERT_OK_AND_ASSIGN(

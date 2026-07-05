@@ -28,9 +28,7 @@
   "options" : {
     "bucket" : "-1",
     "row-tracking.enabled" : "true",
-    "blob-external-storage-path" : "external_blob",
     "target-file-size" : "700",
-    "blob-external-storage-field" : "b1",
     "data-evolution.enabled" : "true",
     "file-system" : "local",
     "manifest.format" : "orc",
