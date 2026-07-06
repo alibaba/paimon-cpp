@@ -168,10 +168,6 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
 
     static RowRanges BitmapToRowRanges(const RoaringBitmap32& bitmap, uint64_t start_row,
                                        uint64_t end_row);
-
-    Result<TargetRowGroups> FilterPagesByBitmap(const RoaringBitmap32& bitmap,
-                                                int32_t row_group_idx, uint64_t rg_start_row,
-                                                int64_t rg_row_count) const;
     /// Recursively collect leaf column indices for the sub-fields in read_type
     /// that match file_type by paimon field ID. Unmatched sub-fields in file_type
     /// have their leaf indices skipped. Partial projection inside LIST/MAP is

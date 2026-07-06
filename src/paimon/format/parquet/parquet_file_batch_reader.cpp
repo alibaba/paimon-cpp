@@ -190,10 +190,6 @@ Status ParquetFileBatchReader::SetReadSchema(
         // If no predicate is provided, skip page-level filtering, row_group_row_ranges will be
         // empty
         if (predicate && !target_row_groups.empty()) {
-            PAIMON_ASSIGN_OR_RAISE(
-                bool enable_page_index_filter,
-                OptionsUtils::GetValueFromMap<bool>(options_, PARQUET_READ_ENABLE_PAGE_INDEX_FILTER,
-                                                    DEFAULT_PARQUET_READ_ENABLE_PAGE_INDEX_FILTER));
             // walkaround: page index filter does not support nested fields for now, skip page index
             // filter if there is any nested field in the schema
             if (enable_page_index_filter && !has_nested_field) {
@@ -315,6 +311,8 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterPagesByBitmap(
         }
         RowRanges row_ranges = row_group.GetRowRanges();
         auto rg_start_row = reader_->GetAllRowGroupRanges()[row_group_idx].first;
+        auto rg_end_row = reader_->GetAllRowGroupRanges()[row_group_idx].second;
+        auto rg_row_count = rg_end_row - rg_start_row;
         for(const auto col_index : column_indices)
         {
             auto column_page_index_reader = rg_page_index_reader->GetOffsetIndex(col_index);
@@ -326,7 +324,7 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterPagesByBitmap(
             for (uint64_t page_idx = 0; page_idx < locations.size(); ++page_idx) {
                 // hafl open interval [first_row, last_row)
                 auto first_row = locations[page_idx].first_row_index;
-                auto last_row = page_idx + 1 < locations.size() ? locations[page_idx + 1].first_row_index : row_ranges.RowCount();
+                auto last_row = page_idx + 1 < locations.size() ? locations[page_idx + 1].first_row_index : rg_row_count;
 
                 if(!bitmap.ContainsAny(rg_start_row + first_row, rg_start_row + last_row)) {
                     continue;
