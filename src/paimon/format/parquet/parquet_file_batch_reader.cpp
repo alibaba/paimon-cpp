@@ -176,8 +176,14 @@ Status ParquetFileBatchReader::SetReadSchema(
             // bitmap pushdown if there is any nested field in the schema
             PAIMON_ASSIGN_OR_RAISE(
                 target_row_groups,
-                FilterRowGroupsByBitmap(selection_bitmap.value(), target_row_groups,
-                                        !has_nested_field && enable_page_index_filter));
+                FilterRowGroupsByBitmap(selection_bitmap.value(), target_row_groups)
+            );
+            if(!has_nested_field && enable_page_index_filter) {
+                PAIMON_ASSIGN_OR_RAISE(
+                    target_row_groups,
+                    FilterPagesByBitmap(selection_bitmap.value(), target_row_groups, column_indices)
+                );
+            }
         }
         // Apply page-level filtering after bitmap pruning so we don't read page index
         // pages for row groups that the bitmap already excluded.
@@ -268,13 +274,11 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByPredicate(
 }
 
 Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByBitmap(
-    const RoaringBitmap32& bitmap, const TargetRowGroups& src_row_groups,
-    bool enable_page_filtered) const {
+    const RoaringBitmap32& bitmap, const TargetRowGroups& src_row_groups) const {
     if (bitmap.IsEmpty()) {
         return Status::Invalid("cannot push down an empty bitmap to ParquetFileBatchReader");
     }
 
-    auto meta_data = reader_->GetFileReader()->parquet_reader()->metadata();
     const auto& all_row_group_ranges = reader_->GetAllRowGroupRanges();
 
     TargetRowGroups target_row_groups;
@@ -284,26 +288,58 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByBitmap(
             return Status::Invalid(
                 fmt::format("src row group {} not in row group meta", row_group_idx));
         }
+        // half open interval [start_row_idx, end_row_idx)
         const auto& [start_row_idx, end_row_idx] = all_row_group_ranges[row_group_idx];
         if (!bitmap.ContainsAny(start_row_idx, end_row_idx)) {
             continue;
         }
+        target_row_groups.emplace_back(row_group);
+    }
+    return target_row_groups;
+}
 
-        int64_t rg_row_count = meta_data->RowGroup(row_group_idx)->num_rows();
-        if (!enable_page_filtered) {
-            // For nested schema, we cannot apply page-level filtering, so we directly add the whole
-            // row group if bitmap matches.
+Result<TargetRowGroups> ParquetFileBatchReader::FilterPagesByBitmap(
+    const RoaringBitmap32& bitmap, const TargetRowGroups& src_row_groups, std::vector<int32_t> &column_indices) const {
+    auto page_index_reader = reader_->GetPageIndexReader();
+    if (!page_index_reader) {
+        return src_row_groups;
+    }
+
+    TargetRowGroups target_row_groups;
+    for (const auto& row_group : src_row_groups) {
+        int32_t row_group_idx = row_group.GetRowGroupIndex();
+        auto rg_page_index_reader = page_index_reader->RowGroup(row_group_idx);
+        if (!rg_page_index_reader) {
             target_row_groups.emplace_back(row_group);
             continue;
         }
-        auto page_ranges = BitmapToRowRanges(bitmap, start_row_idx, end_row_idx);
-        if (page_ranges.RowCount() < rg_row_count) {
-            target_row_groups.emplace_back(/*row_group_idx=*/row_group_idx,
-                                           /*is_partially_matched=*/true,
-                                           /*row_ranges=*/page_ranges);
-        } else {
-            target_row_groups.emplace_back(row_group);
+        RowRanges row_ranges = row_group.GetRowRanges();
+        auto rg_start_row = reader_->GetAllRowGroupRanges()[row_group_idx].first;
+        for(const auto col_index : column_indices)
+        {
+            auto column_page_index_reader = rg_page_index_reader->GetOffsetIndex(col_index);
+            if (!column_page_index_reader) {
+                continue;
+            }
+            auto locations = column_page_index_reader->page_locations();
+            RowRanges page_row_ranges;
+            for (uint64_t page_idx = 0; page_idx < locations.size(); ++page_idx) {
+                // hafl open interval [first_row, last_row)
+                auto first_row = locations[page_idx].first_row_index;
+                auto last_row = page_idx + 1 < locations.size() ? locations[page_idx + 1].first_row_index : row_ranges.RowCount();
+
+                if(!bitmap.ContainsAny(rg_start_row + first_row, rg_start_row + last_row)) {
+                    continue;
+                }
+                // closed interval [range_start_row, range_end_row]
+                auto range_start_row = bitmap.NextValue(rg_start_row + first_row).value();
+                auto range_end_row = bitmap.PreviousValue(rg_start_row + last_row).value();
+                page_row_ranges.Add(Range(range_start_row - rg_start_row, range_end_row - rg_start_row));
+            }
+            row_ranges = RowRanges::Intersection(row_ranges, page_row_ranges);
         }
+        target_row_groups.emplace_back(row_group_idx, true, row_ranges);
+
     }
     return target_row_groups;
 }
