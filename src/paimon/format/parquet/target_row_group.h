@@ -29,33 +29,33 @@ class TargetRowGroup;
 using TargetRowGroups = std::vector<TargetRowGroup>;
 class TargetRowGroup {
  public:
-    explicit TargetRowGroup(int32_t rg_index) : row_group_index(rg_index) {}
+    explicit TargetRowGroup(int32_t rg_index) : row_group_index_(rg_index) {}
     TargetRowGroup(int32_t rg_index, bool is_partially_matched, RowRanges ranges)
-        : row_group_index(rg_index),
-          is_partially_matched(is_partially_matched),
-          row_ranges(std::move(ranges)) {}
+        : row_group_index_(rg_index),
+          is_partially_matched_(is_partially_matched),
+          row_ranges_(std::move(ranges)) {}
 
     TargetRowGroup(const TargetRowGroup& other) = default;
     TargetRowGroup& operator=(const TargetRowGroup& other) = default;
 
     bool IsExcludedByReadRange() const {
-        return excluded_by_read_range;
+        return excluded_by_read_range_;
     }
 
     void SetExcludedByReadRange(bool excluded) {
-        excluded_by_read_range = excluded;
+        excluded_by_read_range_ = excluded;
     }
 
     int32_t GetRowGroupIndex() const {
-        return row_group_index;
+        return row_group_index_;
     }
 
     bool IsPartiallyMatched() const {
-        return is_partially_matched;
+        return is_partially_matched_;
     }
 
     const RowRanges& GetRowRanges() const {
-        return row_ranges;
+        return row_ranges_;
     }
 
     static TargetRowGroups MakeSerialRowGroups(
@@ -63,6 +63,9 @@ class TargetRowGroup {
         TargetRowGroups target_row_groups;
         target_row_groups.reserve(ranges.size());
         for (size_t i = 0; i < ranges.size(); ++i) {
+            if (ranges[i].first >= ranges[i].second) {
+                continue;
+            }
             target_row_groups.emplace_back(
                 i, false, RowRanges(Range(0, ranges[i].second - ranges[i].first - 1)));
         }
@@ -79,14 +82,14 @@ class TargetRowGroup {
     }
 
  private:
-    int32_t row_group_index{-1};
-    bool is_partially_matched{false};
+    int32_t row_group_index_{-1};
+    bool is_partially_matched_{false};
     // Local row ranges
-    RowRanges row_ranges;
+    RowRanges row_ranges_;
     // Whether this row group has been excluded by ApplyReadRanges.
     // When true, this row group is logically skipped during iteration
     // but retained so that a subsequent wider ApplyReadRanges can restore it.
-    bool excluded_by_read_range{false};
+    bool excluded_by_read_range_{false};
 };
 
 }  // namespace paimon::parquet

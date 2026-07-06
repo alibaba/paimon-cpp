@@ -792,8 +792,7 @@ TEST_F(ParquetFileBatchReaderTest, TestBitmapPagePushDownWithMultiRowGroups) {
         std::shared_ptr<arrow::ChunkedArray> result_array,
         paimon::test::ReadResultCollector::CollectResult(parquet_batch_reader.get()));
 
-    auto expected_array =
-        arrow::ChunkedArray(src_array->Slice(3, 3));
+    auto expected_array = arrow::ChunkedArray(src_array->Slice(3, 3));
     ASSERT_TRUE(result_array->Equals(expected_array)) << result_array->ToString();
 }
 

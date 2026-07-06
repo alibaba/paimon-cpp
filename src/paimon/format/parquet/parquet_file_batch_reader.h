@@ -166,8 +166,6 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         }
     }
 
-    static RowRanges BitmapToRowRanges(const RoaringBitmap32& bitmap, uint64_t start_row,
-                                       uint64_t end_row);
     /// Recursively collect leaf column indices for the sub-fields in read_type
     /// that match file_type by paimon field ID. Unmatched sub-fields in file_type
     /// have their leaf indices skipped. Partial projection inside LIST/MAP is
@@ -198,7 +196,9 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     Result<TargetRowGroups> FilterRowGroupsByBitmap(const RoaringBitmap32& bitmap,
                                                     const TargetRowGroups& src_row_groups) const;
 
-    Result<TargetRowGroups> FilterPagesByBitmap(const RoaringBitmap32& bitmap, const TargetRowGroups& src_row_groups, std::vector<int32_t> &column_indices) const;
+    Result<TargetRowGroups> FilterPagesByBitmap(const RoaringBitmap32& bitmap,
+                                                const TargetRowGroups& src_row_groups,
+                                                const std::vector<int32_t>& column_indices) const;
     // Apply page-level filtering using column index.
     // Returns (filtered row groups, per-row-group RowRanges for partial matches).
     Result<TargetRowGroups> FilterRowGroupsByPageIndex(

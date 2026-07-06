@@ -18,7 +18,6 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <iostream>
 #include <unordered_map>
 
 #include "arrow/acero/options.h"
@@ -172,17 +171,15 @@ Status ParquetFileBatchReader::SetReadSchema(
                 FilterRowGroupsByPredicate(predicate, file_schema, target_row_groups));
         }
         if (selection_bitmap) {
-            // walkaround: page index filter does not support nested fields for now, skip page index
+            // workaround: page index filter does not support nested fields for now, skip page index
             // bitmap pushdown if there is any nested field in the schema
             PAIMON_ASSIGN_OR_RAISE(
                 target_row_groups,
-                FilterRowGroupsByBitmap(selection_bitmap.value(), target_row_groups)
-            );
-            if(!has_nested_field && enable_page_index_filter) {
-                PAIMON_ASSIGN_OR_RAISE(
-                    target_row_groups,
-                    FilterPagesByBitmap(selection_bitmap.value(), target_row_groups, column_indices)
-                );
+                FilterRowGroupsByBitmap(selection_bitmap.value(), target_row_groups));
+            if (!has_nested_field && enable_page_index_filter) {
+                PAIMON_ASSIGN_OR_RAISE(target_row_groups,
+                                       FilterPagesByBitmap(selection_bitmap.value(),
+                                                           target_row_groups, column_indices));
             }
         }
         // Apply page-level filtering after bitmap pruning so we don't read page index
@@ -295,7 +292,8 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByBitmap(
 }
 
 Result<TargetRowGroups> ParquetFileBatchReader::FilterPagesByBitmap(
-    const RoaringBitmap32& bitmap, const TargetRowGroups& src_row_groups, std::vector<int32_t> &column_indices) const {
+    const RoaringBitmap32& bitmap, const TargetRowGroups& src_row_groups,
+    const std::vector<int32_t>& column_indices) const {
     auto page_index_reader = reader_->GetPageIndexReader();
     if (!page_index_reader) {
         return src_row_groups;
@@ -313,8 +311,7 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterPagesByBitmap(
         auto rg_start_row = reader_->GetAllRowGroupRanges()[row_group_idx].first;
         auto rg_end_row = reader_->GetAllRowGroupRanges()[row_group_idx].second;
         auto rg_row_count = rg_end_row - rg_start_row;
-        for(const auto col_index : column_indices)
-        {
+        for (const auto col_index : column_indices) {
             auto column_page_index_reader = rg_page_index_reader->GetOffsetIndex(col_index);
             if (!column_page_index_reader) {
                 continue;
@@ -322,61 +319,29 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterPagesByBitmap(
             auto locations = column_page_index_reader->page_locations();
             RowRanges page_row_ranges;
             for (uint64_t page_idx = 0; page_idx < locations.size(); ++page_idx) {
-                // hafl open interval [first_row, last_row)
+                // half open interval [first_row, last_row)
                 auto first_row = locations[page_idx].first_row_index;
-                auto last_row = page_idx + 1 < locations.size() ? locations[page_idx + 1].first_row_index : rg_row_count;
+                auto last_row = page_idx + 1 < locations.size()
+                                    ? locations[page_idx + 1].first_row_index
+                                    : rg_row_count;
 
-                if(!bitmap.ContainsAny(rg_start_row + first_row, rg_start_row + last_row)) {
+                if (!bitmap.ContainsAny(rg_start_row + first_row, rg_start_row + last_row)) {
                     continue;
                 }
                 // closed interval [range_start_row, range_end_row]
-                auto range_start_row = bitmap.NextValue(rg_start_row + first_row).value();
-                auto range_end_row = bitmap.PreviousValue(rg_start_row + last_row).value();
-                page_row_ranges.Add(Range(range_start_row - rg_start_row, range_end_row - rg_start_row));
+                auto range_start_row = bitmap.NextValue(rg_start_row + first_row);
+                auto range_end_row = bitmap.PreviousValue(rg_start_row + last_row);
+                if (!range_start_row.has_value() || !range_end_row.has_value()) {
+                    continue;
+                }
+                page_row_ranges.Add(Range(range_start_row.value() - rg_start_row,
+                                          range_end_row.value() - rg_start_row));
             }
             row_ranges = RowRanges::Intersection(row_ranges, page_row_ranges);
         }
         target_row_groups.emplace_back(row_group_idx, true, row_ranges);
-
     }
     return target_row_groups;
-}
-
-RowRanges ParquetFileBatchReader::BitmapToRowRanges(const RoaringBitmap32& bitmap,
-                                                    uint64_t start_row, uint64_t end_row) {
-    RowRanges row_ranges;
-
-    if (bitmap.IsEmpty() || start_row >= end_row) {
-        return row_ranges;
-    }
-
-    auto it = bitmap.EqualOrLarger(static_cast<int32_t>(start_row));
-    auto end = bitmap.End();
-
-    if (it == end || static_cast<uint64_t>(*it) >= end_row) {
-        return row_ranges;
-    }
-
-    int64_t range_start = *it;
-    int64_t range_end = *it;
-
-    for (++it; it != end; ++it) {
-        int32_t current = *it;
-        if (static_cast<uint64_t>(current) >= end_row) {
-            break;
-        }
-
-        if (current == range_end + 1) {
-            range_end = current;
-        } else {
-            row_ranges.Add(RowRanges::Range(range_start - start_row, range_end - start_row));
-            range_start = current;
-            range_end = current;
-        }
-    }
-
-    row_ranges.Add(RowRanges::Range(range_start - start_row, range_end - start_row));
-    return row_ranges;
 }
 
 // Uses page-level column index statistics to filter row groups and store per-row-group
@@ -647,9 +612,6 @@ Status ParquetFileBatchReader::GenerateRowMapping(int64_t batch_length) {
                          [](int64_t value, const Range& r) { return value < r.from; });
     if (cur_range_it == all_ranges.begin()) {
         std::stringstream s;
-        for (auto range : all_ranges) {
-            s << "range: [" << range.from << ", " << range.to << "]" << std::endl;
-        }
         return Status::Invalid(fmt::format("No range found! {} {}", s.str(), all_ranges.size()));
     }
     --cur_range_it;
