@@ -166,7 +166,6 @@ Status OrcFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
                                options_, &target_column_ids));
 
     target_column_ids_ = target_column_ids;
-    previous_batch_row_count_ = 0;
     PAIMON_RETURN_NOT_OK(reader_->SetReadSchema(target_type, row_reader_options));
     return Status::OK();
 }
@@ -180,13 +179,7 @@ Result<std::vector<std::pair<uint64_t, uint64_t>>> OrcFileBatchReader::PreBuffer
 }
 
 Result<BatchReader::ReadBatch> OrcFileBatchReader::NextBatch() {
-    PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatch batch, reader_->Next());
-    if (BatchReader::IsEofBatch(batch)) {
-        previous_batch_row_count_ = 0;
-    } else {
-        previous_batch_row_count_ = batch.first->length;
-    }
-    return batch;
+    return reader_->Next();
 }
 
 std::shared_ptr<Metrics> OrcFileBatchReader::GetReaderMetrics() const {

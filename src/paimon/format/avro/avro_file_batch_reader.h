@@ -45,20 +45,8 @@ class AvroFileBatchReader : public FileBatchReader {
     Status SetReadSchema(::ArrowSchema* read_schema, const std::shared_ptr<Predicate>& predicate,
                          const std::optional<RoaringBitmap32>& selection_bitmap) override;
 
-    Result<uint64_t> GetPreviousBatchFileRowId(uint64_t batch_row_id) const override {
-        if (previous_batch_row_count_ == 0) {
-            if (previous_first_row_ == std::numeric_limits<uint64_t>::max()) {
-                return Status::Invalid("No batch has been read yet.");
-            } else {
-                return Status::Invalid("Last batch was EOF.");
-            }
-        }
-        if (batch_row_id >= previous_batch_row_count_) {
-            return Status::Invalid(
-                fmt::format("batch_row_id {} is out of range, last batch row count is {}",
-                            batch_row_id, previous_batch_row_count_));
-        }
-        return previous_first_row_ + batch_row_id;
+    Result<uint64_t> GetPreviousBatchFirstRowNumber() const override {
+        return previous_first_row_;
     }
 
     Result<uint64_t> GetNumberOfRows() const override;
@@ -102,7 +90,6 @@ class AvroFileBatchReader : public FileBatchReader {
     std::optional<std::set<size_t>> read_fields_projection_;
     uint64_t previous_first_row_ = std::numeric_limits<uint64_t>::max();
     uint64_t next_row_to_read_ = std::numeric_limits<uint64_t>::max();
-    uint64_t previous_batch_row_count_ = 0;
     mutable std::optional<uint64_t> total_rows_ = std::nullopt;
     const int32_t batch_size_;
     bool close_ = false;

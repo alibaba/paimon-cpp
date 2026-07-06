@@ -76,7 +76,7 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
                          const std::optional<RoaringBitmap32>& selection_bitmap) override;
 
     Status SeekToRow(uint64_t row_number) override;
-    Result<uint64_t> GetPreviousBatchFileRowId(uint64_t batch_row_id) const override;
+    Result<uint64_t> GetPreviousBatchFirstRowNumber() const override;
     Result<uint64_t> GetNumberOfRows() const override;
     uint64_t GetNextRowToRead() const override;
     void Close() override;
@@ -105,7 +105,7 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
     struct PrefetchBatch {
         std::pair<uint64_t, uint64_t> read_range;
         BatchReader::ReadBatchWithBitmap batch;
-        std::vector<uint64_t> global_row_ids;
+        uint64_t previous_batch_first_row_num;
     };
 
     PrefetchFileBatchReaderImpl(
@@ -160,7 +160,7 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
     std::unique_ptr<std::thread> background_thread_;
     Status read_status_;
     std::atomic<bool> is_shutdown_ = false;
-    std::vector<uint64_t> current_batch_global_row_ids_;
+    uint64_t previous_batch_first_row_num_ = std::numeric_limits<uint64_t>::max();
     bool need_prefetch_ = false;
     bool read_ranges_freshed_ = false;
     const uint32_t prefetch_queue_capacity_;

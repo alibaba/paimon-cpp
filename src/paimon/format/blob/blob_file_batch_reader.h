@@ -24,7 +24,6 @@
 
 #include "arrow/memory_pool.h"
 #include "arrow/type.h"
-#include "fmt/format.h"
 #include "paimon/common/data/blob_defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/memory/bytes.h"
@@ -98,26 +97,14 @@ class BlobFileBatchReader : public FileBatchReader {
 
     Result<ReadBatch> NextBatch() override;
 
-    Result<uint64_t> GetPreviousBatchFileRowId(uint64_t batch_row_id) const override {
+    Result<uint64_t> GetPreviousBatchFirstRowNumber() const override {
         if (all_blob_lengths_.size() != target_blob_lengths_.size()) {
-            return Status::NotImplemented(
-                "Cannot call GetPreviousBatchFileRowId in BlobFileBatchReader because, after "
+            return Status::Invalid(
+                "Cannot call GetPreviousBatchFirstRowNumber in BlobFileBatchReader because, after "
                 "bitmap pushdown, rows in the array returned by NextBatch are no longer "
                 "contiguous.");
         }
-        if (previous_batch_row_count_ == 0) {
-            if (previous_batch_first_row_number_ == std::numeric_limits<uint64_t>::max()) {
-                return Status::Invalid("No batch has been read yet.");
-            } else {
-                return Status::Invalid("Last batch was EOF.");
-            }
-        }
-        if (batch_row_id >= previous_batch_row_count_) {
-            return Status::Invalid(
-                fmt::format("batch_row_id {} is out of range, last batch row count is {}",
-                            batch_row_id, previous_batch_row_count_));
-        }
-        return previous_batch_first_row_number_ + batch_row_id;
+        return previous_batch_first_row_number_;
     }
 
     Result<uint64_t> GetNumberOfRows() const override {
@@ -187,7 +174,6 @@ class BlobFileBatchReader : public FileBatchReader {
 
     size_t current_pos_ = 0;
     uint64_t previous_batch_first_row_number_ = std::numeric_limits<uint64_t>::max();
-    uint64_t previous_batch_row_count_ = 0;
     bool closed_ = false;
 };
 

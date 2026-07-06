@@ -17,6 +17,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 
@@ -34,6 +35,8 @@ class CoreOptions;
 ///   - descriptor_fields: stored as BlobDescriptor bytes inline in the main data file.
 ///   - view_fields: stored as BlobViewStruct bytes inline in the main data file.
 ///   - inline_fields: descriptor_fields ∪ view_fields. These stay in the main data file.
+///   - external_storage_fields: subset of descriptor_fields whose raw data is written to an
+///     external storage path (the descriptor still goes into the main data file).
 ///   - blob_file_fields: BLOB fields that are NOT inline. These go into separate .blob files.
 class BlobFileContext {
  public:
@@ -45,6 +48,9 @@ class BlobFileContext {
 
     /// Returns true if there are any BLOB fields that need a .blob file writer.
     bool RequireBlobFileWriter() const;
+
+    /// Returns true if there are any external storage fields that need an external writer.
+    bool RequireExternalStorageWriter() const;
 
     const std::set<std::string>& GetDescriptorFields() const {
         return descriptor_fields_;
@@ -58,18 +64,31 @@ class BlobFileContext {
         return inline_fields_;
     }
 
+    const std::set<std::string>& GetExternalStorageFields() const {
+        return external_storage_fields_;
+    }
+
     const std::set<std::string>& GetBlobFileFields() const {
         return blob_file_fields_;
     }
 
+    const std::optional<std::string>& GetExternalStoragePath() const {
+        return external_storage_path_;
+    }
+
  private:
     BlobFileContext(std::set<std::string> descriptor_fields, std::set<std::string> view_fields,
-                    std::set<std::string> inline_fields, std::set<std::string> blob_file_fields);
+                    std::set<std::string> inline_fields,
+                    std::set<std::string> external_storage_fields,
+                    std::set<std::string> blob_file_fields,
+                    std::optional<std::string> external_storage_path);
 
     std::set<std::string> descriptor_fields_;
     std::set<std::string> view_fields_;
     std::set<std::string> inline_fields_;
+    std::set<std::string> external_storage_fields_;
     std::set<std::string> blob_file_fields_;
+    std::optional<std::string> external_storage_path_;
 };
 
 }  // namespace paimon

@@ -86,14 +86,15 @@ CompleteRowTrackingFieldsBatchReader::NextBatchWithBitmap() {
     std::string row_id_field_name = SpecialFields::RowId().Name();
     if (read_schema_->GetFieldIndex(row_id_field_name) != -1) {
         row_id_array = src_struct_array->GetFieldByName(row_id_field_name);
-        auto row_id_convert_func = [this](int32_t idx_in_array) -> Result<int64_t> {
+        PAIMON_ASSIGN_OR_RAISE(uint64_t previous_batch_first_row_number,
+                               reader_->GetPreviousBatchFirstRowNumber());
+        auto row_id_convert_func = [previous_batch_first_row_number,
+                                    this](int32_t idx_in_array) -> Result<int64_t> {
             if (first_row_id_ == std::nullopt) {
                 return Status::Invalid(
                     "unexpected: read _ROW_ID special field, but first row id is null in meta");
             }
-            PAIMON_ASSIGN_OR_RAISE(uint64_t file_row_id,
-                                   reader_->GetPreviousBatchFileRowId(idx_in_array));
-            return first_row_id_.value() + file_row_id;
+            return first_row_id_.value() + previous_batch_first_row_number + idx_in_array;
         };
         PAIMON_RETURN_NOT_OK(ConvertRowTrackingField(src_struct_array->length(), /*init_value=*/0,
                                                      row_id_convert_func, &row_id_array));

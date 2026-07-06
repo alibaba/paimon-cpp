@@ -156,11 +156,8 @@ class MockFileBatchReader : public PrefetchFileBatchReader {
         return metrics;
     }
 
-    Result<uint64_t> GetPreviousBatchFileRowId(uint64_t batch_row_id) const override {
-        if (previous_batch_first_row_num_ == std::numeric_limits<uint64_t>::max()) {
-            return Status::Invalid("No batch has been read yet");
-        }
-        return previous_batch_first_row_num_ + batch_row_id;
+    Result<uint64_t> GetPreviousBatchFirstRowNumber() const override {
+        return ToReaderRowNumber(previous_batch_first_row_num_);
     }
 
     Result<uint64_t> GetNumberOfRows() const override {
@@ -194,7 +191,7 @@ class MockFileBatchReader : public PrefetchFileBatchReader {
     int32_t batch_size_ = 0;
     int32_t current_pos_ = 0;
     int32_t read_end_pos_ = 0;
-    uint64_t previous_batch_first_row_num_ = std::numeric_limits<uint64_t>::max();
+    int32_t previous_batch_first_row_num_ = -1;
     Status next_batch_status_;
     bool enable_randomize_batch_size_ = true;
     std::vector<std::pair<uint64_t, uint64_t>> read_ranges_;

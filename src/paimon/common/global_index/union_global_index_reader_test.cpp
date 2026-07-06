@@ -61,10 +61,6 @@ class FakeReader : public GlobalIndexReader {
         has_scored_result_ = true;
     }
 
-    void SetThreadSafe(bool thread_safe) {
-        thread_safe_ = thread_safe;
-    }
-
     /// Counts how many times any Visit* method was invoked. Useful to assert all readers
     /// are exercised by UnionGlobalIndexReader.
     int InvocationCount() const {
@@ -151,7 +147,7 @@ class FakeReader : public GlobalIndexReader {
     }
 
     bool IsThreadSafe() const override {
-        return thread_safe_;
+        return true;
     }
 
     std::string GetIndexType() const override {
@@ -180,7 +176,6 @@ class FakeReader : public GlobalIndexReader {
     std::vector<int64_t> scored_row_ids_;
     std::vector<float> scored_scores_;
     bool has_scored_result_ = false;
-    bool thread_safe_ = true;
     std::atomic<int32_t> invocation_count_{0};
 };
 
@@ -520,24 +515,12 @@ TEST_F(UnionGlobalIndexReaderTest, TestVisitVectorSearchErrorPropagation) {
     ASSERT_NOK_WITH_MSG(union_reader.VisitVectorSearch(nullptr), "vector search failure");
 }
 
-TEST_F(UnionGlobalIndexReaderTest, TestIsThreadSafeReturnsTrueWhenAllReadersAreSafe) {
-    auto reader1 = std::make_shared<FakeReader>();
-    auto reader2 = std::make_shared<FakeReader>();
-
-    std::vector<std::shared_ptr<GlobalIndexReader>> readers = {reader1, reader2};
+TEST_F(UnionGlobalIndexReaderTest, TestIsThreadSafeAlwaysFalse) {
+    auto reader = std::make_shared<FakeReader>();
+    std::vector<std::shared_ptr<GlobalIndexReader>> readers = {reader};
     UnionGlobalIndexReader union_reader(std::move(readers), nullptr);
 
-    ASSERT_TRUE(union_reader.IsThreadSafe());
-}
-
-TEST_F(UnionGlobalIndexReaderTest, TestIsThreadSafeReturnsFalseWhenAnyReaderIsNotSafe) {
-    auto reader1 = std::make_shared<FakeReader>();
-    auto reader2 = std::make_shared<FakeReader>();
-    reader2->SetThreadSafe(false);
-
-    std::vector<std::shared_ptr<GlobalIndexReader>> readers = {reader1, reader2};
-    UnionGlobalIndexReader union_reader(std::move(readers), nullptr);
-
+    // UnionGlobalIndexReader is not thread-safe regardless of inner readers
     ASSERT_FALSE(union_reader.IsThreadSafe());
 }
 

@@ -120,8 +120,8 @@ Result<std::vector<std::optional<DeletionFile>>> SnapshotReader::GetDeletionFile
         if (dv_metas != std::nullopt) {
             for (const auto& dv_meta_iter : dv_metas.value()) {
                 const auto& dv_meta = dv_meta_iter.second;
-                data_file_to_index_file_meta.insert_or_assign(dv_meta.GetDataFileName(),
-                                                              index_file_meta);
+                data_file_to_index_file_meta.insert(
+                    std::make_pair(dv_meta.GetDataFileName(), index_file_meta));
             }
         }
     }

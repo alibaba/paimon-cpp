@@ -123,63 +123,6 @@ TEST(DefaultExecutorTest, TestAddTaskAfterShutdownNowIgnored) {
     ASSERT_EQ(executed_count.load(), 0);
 }
 
-TEST(DefaultExecutorTest, TestAddTaskFromMultipleThreads) {
-    ASSERT_OK_AND_ASSIGN(auto executor, CreateDefaultExecutor(/*thread_count=*/4));
-
-    constexpr int32_t kSubmitterCount = 8;
-    constexpr int32_t kTaskCountPerSubmitter = 64;
-    constexpr int32_t kTotalTaskCount = kSubmitterCount * kTaskCountPerSubmitter;
-
-    std::vector<std::atomic<int32_t>> executed_slots(kTotalTaskCount);
-    for (auto& executed_slot : executed_slots) {
-        executed_slot.store(0);
-    }
-    std::vector<std::promise<void>> task_promises(kTotalTaskCount);
-    std::vector<std::future<void>> task_futures;
-    task_futures.reserve(kTotalTaskCount);
-    for (auto& task_promise : task_promises) {
-        task_futures.push_back(task_promise.get_future());
-    }
-    std::atomic<int32_t> ready_submitter_count = 0;
-    std::atomic<int32_t> executed_count = 0;
-    std::promise<void> start_signal;
-    std::shared_future<void> start_future = start_signal.get_future().share();
-    std::vector<std::thread> submitters;
-    submitters.reserve(kSubmitterCount);
-
-    for (int32_t submitter_index = 0; submitter_index < kSubmitterCount; ++submitter_index) {
-        submitters.emplace_back([&, submitter_index]() {
-            ++ready_submitter_count;
-            start_future.wait();
-            for (int32_t task_index = 0; task_index < kTaskCountPerSubmitter; ++task_index) {
-                const int32_t slot_index = submitter_index * kTaskCountPerSubmitter + task_index;
-                executor->Add([&, slot_index]() {
-                    ++executed_slots[slot_index];
-                    ++executed_count;
-                    task_promises[slot_index].set_value();
-                });
-            }
-        });
-    }
-
-    for (int32_t retry = 0; retry < 100 && ready_submitter_count.load() < kSubmitterCount;
-         ++retry) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-    const int32_t ready_submitter_count_before_start = ready_submitter_count.load();
-    start_signal.set_value();
-    for (auto& submitter : submitters) {
-        submitter.join();
-    }
-    ASSERT_EQ(kSubmitterCount, ready_submitter_count_before_start);
-    Wait(task_futures);
-
-    ASSERT_EQ(kTotalTaskCount, executed_count.load());
-    for (const auto& executed_slot : executed_slots) {
-        ASSERT_EQ(1, executed_slot.load());
-    }
-}
-
 TEST(DefaultExecutorTest, TestCreateWithZeroThreadCount) {
     ASSERT_NOK_WITH_MSG(CreateDefaultExecutor(/*thread_count=*/0),
                         "default executor thread count should be greater than 0");

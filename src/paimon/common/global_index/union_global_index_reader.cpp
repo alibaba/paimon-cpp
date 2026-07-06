@@ -182,15 +182,6 @@ Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::Union(ReaderA
     return merged_result;
 }
 
-bool UnionGlobalIndexReader::IsThreadSafe() const {
-    for (const auto& reader : readers_) {
-        if (!reader->IsThreadSafe()) {
-            return false;
-        }
-    }
-    return true;
-}
-
 template <typename R>
 std::vector<R> UnionGlobalIndexReader::ExecuteAllReaders(
     const std::function<R(const std::shared_ptr<GlobalIndexReader>&)>& action) {
@@ -208,7 +199,7 @@ std::vector<R> UnionGlobalIndexReader::ExecuteAllReaders(
     futures.reserve(readers_.size());
     for (const auto& reader : readers_) {
         futures.push_back(
-            Via(executor_.get(), [&action, reader]() -> R { return action(reader); }));
+            Via(executor_.get(), [&action, &reader]() -> R { return action(reader); }));
     }
     return CollectAll(futures);
 }

@@ -58,7 +58,9 @@ class UnionGlobalIndexReader : public GlobalIndexReader {
     Result<std::shared_ptr<GlobalIndexResult>> VisitFullTextSearch(
         const std::shared_ptr<FullTextSearch>& full_text_search) override;
 
-    bool IsThreadSafe() const override;
+    bool IsThreadSafe() const override {
+        return false;
+    }
 
     std::string GetIndexType() const override {
         return "union";

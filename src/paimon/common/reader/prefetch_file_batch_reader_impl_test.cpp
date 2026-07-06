@@ -251,28 +251,6 @@ class PrefetchFileBatchReaderImplTest : public ::testing::Test,
     std::shared_ptr<Executor> executor_;
 };
 
-static Result<std::pair<std::shared_ptr<arrow::ChunkedArray>, std::vector<uint64_t>>>
-CollectResultAndRowIds(FileBatchReader* reader) {
-    arrow::ArrayVector result_array_vector;
-    std::vector<uint64_t> row_ids;
-    while (true) {
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::ChunkedArray> batch,
-                               paimon::test::ReadResultCollector::CollectResultOneBatch(reader));
-        if (batch == nullptr) {
-            break;
-        }
-        PAIMON_ASSIGN_OR_RAISE(uint64_t file_row_id,
-                               reader->GetPreviousBatchFileRowId(batch->chunk(0)->length() - 1));
-        row_ids.push_back(file_row_id);
-        result_array_vector.push_back(batch->chunk(0));
-    }
-    if (result_array_vector.empty()) {
-        return std::make_pair(std::shared_ptr<arrow::ChunkedArray>(), row_ids);
-    }
-    auto result_array = std::make_shared<arrow::ChunkedArray>(result_array_vector);
-    return std::make_pair(result_array, row_ids);
-}
-
 std::vector<TestParam> PrepareTestParam() {
     std::vector<TestParam> values = {
         TestParam{"parquet", PrefetchCacheMode::ALWAYS},
@@ -306,13 +284,14 @@ TEST_F(PrefetchFileBatchReaderImplTest, TestSimple) {
                 /*enable_adaptive_prefetch_strategy=*/false, executor_,
                 /*initialize_read_ranges=*/true, /*prefetch_cache_mode=*/PrefetchCacheMode::ALWAYS,
                 CacheConfig(), GetDefaultPool()));
-        ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
-        ASSERT_OK_AND_ASSIGN(auto array_and_row_ids, CollectResultAndRowIds(reader.get()));
-
+        ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
+                  reader->GetPreviousBatchFirstRowNumber().value());
+        ASSERT_OK_AND_ASSIGN(auto result_array,
+                             ReadResultCollector::CollectResult(
+                                 reader.get(), /*max simulated data processing time*/ 100));
+        ASSERT_EQ(reader->GetPreviousBatchFirstRowNumber().value(), 101);
         auto expected_array = std::make_shared<arrow::ChunkedArray>(data_array);
-        ASSERT_TRUE(array_and_row_ids.first->Equals(expected_array));
-        auto row_ids = array_and_row_ids.second;
-        ASSERT_EQ(row_ids[row_ids.size() - 1], 100);
+        ASSERT_TRUE(result_array->Equals(expected_array));
     }
 }
 
@@ -628,12 +607,14 @@ TEST_F(PrefetchFileBatchReaderImplTest, TestReadWithLargeBatchSize) {
             prefetch_max_parallel_num * 2, /*enable_adaptive_prefetch_strategy=*/false, executor_,
             /*initialize_read_ranges=*/true, /*prefetch_cache_mode=*/PrefetchCacheMode::ALWAYS,
             CacheConfig(), GetDefaultPool()));
-    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
-    ASSERT_OK_AND_ASSIGN(auto array_and_row_ids, CollectResultAndRowIds(reader.get()));
-    auto row_ids = array_and_row_ids.second;
-    ASSERT_EQ(row_ids[row_ids.size() - 1], 100);
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
+              reader->GetPreviousBatchFirstRowNumber().value());
+    ASSERT_OK_AND_ASSIGN(auto result_array,
+                         ReadResultCollector::CollectResult(
+                             reader.get(), /*max simulated data processing time*/ 100));
+    ASSERT_EQ(reader->GetPreviousBatchFirstRowNumber().value(), 101);
     auto expected_array = std::make_shared<arrow::ChunkedArray>(data_array);
-    ASSERT_TRUE(array_and_row_ids.first->Equals(expected_array));
+    ASSERT_TRUE(result_array->Equals(expected_array));
 }
 
 TEST_F(PrefetchFileBatchReaderImplTest, TestPartialReaderSuccessRead) {
@@ -655,11 +636,12 @@ TEST_F(PrefetchFileBatchReaderImplTest, TestPartialReaderSuccessRead) {
     }
 
     arrow::ArrayVector result_array_vector;
-    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
+              reader->GetPreviousBatchFirstRowNumber().value());
     ASSERT_OK_AND_ASSIGN(auto batch_with_bitmap, reader->NextBatchWithBitmap());
     auto& [batch, bitmap] = batch_with_bitmap;
     ASSERT_EQ(batch.first->length, bitmap.Cardinality());
-    ASSERT_EQ(reader->GetPreviousBatchFileRowId(0).value(), 0);
+    ASSERT_EQ(reader->GetPreviousBatchFirstRowNumber().value(), 0);
     ASSERT_OK_AND_ASSIGN(auto array, ReadResultCollector::GetArray(std::move(batch)));
     result_array_vector.push_back(array);
     ASSERT_OK(prefetch_reader->GetReadStatus());
@@ -700,9 +682,11 @@ TEST_F(PrefetchFileBatchReaderImplTest, TestAllReaderFailedWithIOError) {
             ->SetNextBatchStatus(Status::IOError("mock error"));
     }
 
-    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
+              reader->GetPreviousBatchFirstRowNumber().value());
     auto batch_result = reader->NextBatchWithBitmap();
-    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
+              reader->GetPreviousBatchFirstRowNumber().value());
     ASSERT_FALSE(batch_result.ok());
     ASSERT_TRUE(batch_result.status().IsIOError());
     ASSERT_FALSE(prefetch_reader->is_shutdown_);
@@ -711,7 +695,8 @@ TEST_F(PrefetchFileBatchReaderImplTest, TestAllReaderFailedWithIOError) {
 
     // call NextBatch again, will still return error status
     auto batch_result2 = reader->NextBatchWithBitmap();
-    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
+              reader->GetPreviousBatchFirstRowNumber().value());
     ASSERT_FALSE(batch_result2.ok());
     ASSERT_TRUE(batch_result2.status().IsIOError());
 }
@@ -728,11 +713,13 @@ TEST_F(PrefetchFileBatchReaderImplTest, TestPrefetchWithEmptyData) {
             prefetch_max_parallel_num * 2, /*enable_adaptive_prefetch_strategy=*/false, executor_,
             /*initialize_read_ranges=*/true, /*prefetch_cache_mode=*/PrefetchCacheMode::ALWAYS,
             CacheConfig(), GetDefaultPool()));
-    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
-    ASSERT_OK_AND_ASSIGN(auto array_and_row_ids, CollectResultAndRowIds(reader.get()));
-    auto row_ids = array_and_row_ids.second;
-    ASSERT_EQ(row_ids.size(), 0);
-    ASSERT_FALSE(array_and_row_ids.first);
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
+              reader->GetPreviousBatchFirstRowNumber().value());
+    ASSERT_OK_AND_ASSIGN(auto result_array,
+                         ReadResultCollector::CollectResult(
+                             reader.get(), /*max simulated data processing time*/ 100));
+    ASSERT_EQ(reader->GetPreviousBatchFirstRowNumber().value(), 0);
+    ASSERT_FALSE(result_array);
 }
 
 TEST_F(PrefetchFileBatchReaderImplTest, TestCallNextBatchAfterReadingEof) {
@@ -747,16 +734,17 @@ TEST_F(PrefetchFileBatchReaderImplTest, TestCallNextBatchAfterReadingEof) {
             prefetch_max_parallel_num * 2, /*enable_adaptive_prefetch_strategy=*/false, executor_,
             /*initialize_read_ranges=*/true, /*prefetch_cache_mode=*/PrefetchCacheMode::ALWAYS,
             CacheConfig(), GetDefaultPool()));
-    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
-    ASSERT_OK_AND_ASSIGN(auto array_and_row_ids, CollectResultAndRowIds(reader.get()));
-    auto row_ids = array_and_row_ids.second;
-    ASSERT_EQ(row_ids[row_ids.size() - 1], 9);
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
+              reader->GetPreviousBatchFirstRowNumber().value());
+    ASSERT_OK_AND_ASSIGN(auto result_array,
+                         ReadResultCollector::CollectResult(
+                             reader.get(), /*max simulated data processing time*/ 100));
+    ASSERT_EQ(reader->GetPreviousBatchFirstRowNumber().value(), 10);
     auto expected_array = std::make_shared<arrow::ChunkedArray>(data_array);
-    ASSERT_TRUE(array_and_row_ids.first->Equals(expected_array));
+    ASSERT_TRUE(result_array->Equals(expected_array));
 
     // continue to call NextBatch() after reading eof
     ASSERT_OK_AND_ASSIGN(auto batch_with_bitmap, reader->NextBatchWithBitmap());
-    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
     ASSERT_TRUE(BatchReader::IsEofBatch(batch_with_bitmap));
 }
 
@@ -839,7 +827,6 @@ TEST_F(PrefetchFileBatchReaderImplTest, TestInvalidCase) {
 TEST_P(PrefetchFileBatchReaderImplTest, TestPrefetchWithPredicatePushdownWithCompleteFiltering) {
     auto [file_format, cache_mode] = GetParam();
     auto data_array = PrepareArray(90);
-    int32_t batch_size = 10;
     PrepareTestData(file_format, data_array, /*stripe_row_count=*/30, /*row_index_stride=*/30);
     auto schema = arrow::schema(fields_);
     ASSERT_OK_AND_ASSIGN(auto predicate,
@@ -850,19 +837,22 @@ TEST_P(PrefetchFileBatchReaderImplTest, TestPrefetchWithPredicatePushdownWithCom
                                                            FieldType::BIGINT, Literal(70l)),
                          }));
 
-    auto reader = PreparePrefetchReader(file_format, schema.get(), predicate,
-                                        /*selection_bitmap=*/std::nullopt,
-                                        /*batch_size=*/batch_size, /*prefetch_max_parallel_num=*/3,
-                                        cache_mode);
-    ASSERT_OK_AND_ASSIGN(auto array_and_row_ids, CollectResultAndRowIds(reader.get()));
+    auto reader =
+        PreparePrefetchReader(file_format, schema.get(), predicate,
+                              /*selection_bitmap=*/std::nullopt,
+                              /*batch_size=*/10, /*prefetch_max_parallel_num=*/3, cache_mode);
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
+              reader->GetPreviousBatchFirstRowNumber().value());
+    ASSERT_OK_AND_ASSIGN(auto result_array,
+                         ReadResultCollector::CollectResult(
+                             reader.get(), /*max simulated data processing time*/ 100));
+    ASSERT_EQ(reader->GetPreviousBatchFirstRowNumber().value(), 90);
 
     arrow::ArrayVector expected_array_vector;
-    std::vector<uint64_t> expected_row_ids = {9, 19, 29, 69, 79, 89};
     expected_array_vector.push_back(data_array->Slice(0, 30));
     expected_array_vector.push_back(data_array->Slice(60, 30));
     auto expected_array = std::make_shared<arrow::ChunkedArray>(expected_array_vector);
-    ASSERT_TRUE(expected_array->Equals(array_and_row_ids.first));
-    ASSERT_EQ(expected_row_ids, array_and_row_ids.second);
+    ASSERT_TRUE(CheckEqual(expected_array, result_array));
 }
 
 /// There are three stripes: [0,30), [30,60), [60,90). Each stripe has 3 row groups.
@@ -872,7 +862,6 @@ TEST_P(PrefetchFileBatchReaderImplTest,
        TestPrefetchWithOrcPredicatePushdownWithRowGroupGranularity) {
     auto [file_format, cache_mode] = GetParam();
     auto data_array = PrepareArray(90);
-    int32_t batch_size = 10;
     PrepareTestData(file_format, data_array, /*stripe_row_count=*/30, /*row_index_stride=*/10);
 
     auto schema = arrow::schema(fields_);
@@ -884,21 +873,23 @@ TEST_P(PrefetchFileBatchReaderImplTest,
                                                            FieldType::BIGINT, Literal(70l)),
                          }));
 
-    auto reader = PreparePrefetchReader(file_format, schema.get(), predicate,
-                                        /*selection_bitmap=*/std::nullopt,
-                                        /*batch_size=*/batch_size, /*prefetch_max_parallel_num=*/3,
-                                        cache_mode);
+    auto reader =
+        PreparePrefetchReader(file_format, schema.get(), predicate,
+                              /*selection_bitmap=*/std::nullopt,
+                              /*batch_size=*/10, /*prefetch_max_parallel_num=*/3, cache_mode);
     ASSERT_OK(reader->RefreshReadRanges());
-    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
-    ASSERT_OK_AND_ASSIGN(auto array_and_row_ids, CollectResultAndRowIds(reader.get()));
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
+              reader->GetPreviousBatchFirstRowNumber().value());
+    ASSERT_OK_AND_ASSIGN(auto result_array,
+                         ReadResultCollector::CollectResult(
+                             reader.get(), /*max simulated data processing time*/ 100));
+    ASSERT_EQ(reader->GetPreviousBatchFirstRowNumber().value(), 90);
 
     arrow::ArrayVector expected_array_vector;
-    std::vector<uint64_t> expected_row_ids = {9, 19, 79, 89};
     expected_array_vector.push_back(data_array->Slice(0, 20));
     expected_array_vector.push_back(data_array->Slice(70, 20));
     auto expected_array = std::make_shared<arrow::ChunkedArray>(expected_array_vector);
-    ASSERT_TRUE(expected_array->Equals(array_and_row_ids.first));
-    ASSERT_EQ(expected_row_ids, array_and_row_ids.second);
+    ASSERT_TRUE(CheckEqual(expected_array, result_array));
 }
 
 TEST_F(PrefetchFileBatchReaderImplTest, TestPrefetchWithBitmap) {
@@ -930,57 +921,6 @@ TEST_F(PrefetchFileBatchReaderImplTest, TestPrefetchWithBitmap) {
                          ReadResultCollector::GetArray(std::move(expected_batch)));
     auto expected_chunk_array = std::make_shared<arrow::ChunkedArray>(expected_array);
     ASSERT_TRUE(result_chunk_array->Equals(expected_chunk_array));
-}
-
-TEST_P(PrefetchFileBatchReaderImplTest, TestRowMapping) {
-    auto [file_format, cache_mode] = GetParam();
-    auto data_array = PrepareArray(90);
-    PrepareTestData(file_format, data_array, /*stripe_row_count=*/30, /*row_index_stride=*/10);
-    auto schema = arrow::schema(fields_);
-    ASSERT_OK_AND_ASSIGN(
-        auto predicate,
-        PredicateBuilder::Or({
-            PredicateBuilder::Between(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
-                                      Literal(20l), Literal(29l)),
-            PredicateBuilder::Between(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
-                                      Literal(70l), Literal(79l)),
-        }));
-
-    auto reader =
-        PreparePrefetchReader(file_format, schema.get(), predicate,
-                              /*selection_bitmap=*/std::nullopt,
-                              /*batch_size=*/10, /*prefetch_max_parallel_num=*/3, cache_mode);
-    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> batch,
-                         paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
-    for (uint64_t i = 0; i < 10; i++) {
-        ASSERT_EQ(reader->GetPreviousBatchFileRowId(i).value(), 20 + i);
-    }
-
-    ASSERT_OK_AND_ASSIGN(batch,
-                         paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
-    for (uint64_t i = 0; i < 10; i++) {
-        ASSERT_EQ(reader->GetPreviousBatchFileRowId(i).value(), 70 + i);
-    }
-
-    // Set read schema again
-    std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
-    ASSERT_TRUE(arrow::ExportSchema(*schema, c_schema.get()).ok());
-    predicate = PredicateBuilder::Between(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
-                                          Literal(30l), Literal(49l));
-    ASSERT_OK(reader->SetReadSchema(c_schema.get(), predicate, std::nullopt));
-
-    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
-    ASSERT_OK_AND_ASSIGN(batch,
-                         paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
-    for (uint64_t i = 0; i < 10; i++) {
-        ASSERT_EQ(reader->GetPreviousBatchFileRowId(i).value(), 30 + i);
-    }
-    ASSERT_OK_AND_ASSIGN(batch,
-                         paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
-    for (uint64_t i = 0; i < 10; i++) {
-        ASSERT_EQ(reader->GetPreviousBatchFileRowId(i).value(), 40 + i);
-    }
 }
 
 }  // namespace paimon::test

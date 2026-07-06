@@ -95,39 +95,6 @@ TEST(DeletionFileWriterTest, GetResultWithoutCloseShouldFail) {
     ASSERT_NOK_WITH_MSG(writer->GetResult(), "Deletion file result length -1 out of int32 range");
 }
 
-TEST(DeletionFileWriterTest, WriteOverwritesDuplicateDataFileName) {
-    auto dir = UniqueTestDirectory::Create();
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileSystem> fs,
-                         FileSystemFactory::Get("local", dir->Str(), {}));
-    auto path_factory = std::make_shared<MockIndexPathFactory>(dir->Str());
-    auto pool = GetDefaultPool();
-
-    ASSERT_OK_AND_ASSIGN(auto writer, DeletionFileWriter::Create(path_factory, fs, pool));
-
-    RoaringBitmap32 roaring_1;
-    roaring_1.Add(1);
-    auto dv_1 = std::make_shared<BitmapDeletionVector>(roaring_1);
-
-    RoaringBitmap32 roaring_2;
-    roaring_2.Add(2);
-    roaring_2.Add(3);
-    auto dv_2 = std::make_shared<BitmapDeletionVector>(roaring_2);
-
-    ASSERT_OK(writer->Write("data-file-1", dv_1));
-    ASSERT_OK(writer->Write("data-file-1", dv_2));
-    ASSERT_OK(writer->Close());
-
-    ASSERT_OK_AND_ASSIGN(auto meta, writer->GetResult());
-    const auto& dv_ranges = meta->DvRanges();
-    ASSERT_TRUE(dv_ranges.has_value());
-    ASSERT_EQ(dv_ranges->size(), 1);
-
-    auto iter = dv_ranges->find("data-file-1");
-    ASSERT_NE(iter, dv_ranges->end());
-    ASSERT_GT(iter->second.GetOffset(), 1);
-    ASSERT_EQ(iter->second.GetCardinality(), std::optional<int64_t>(2));
-}
-
 TEST(DeletionFileWriterTest, ExternalPathInResult) {
     auto dir = UniqueTestDirectory::Create();
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileSystem> fs,

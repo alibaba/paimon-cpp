@@ -59,13 +59,19 @@ class BlobWriterBuilder : public SpecificFSWriterBuilder {
         return this;
     }
 
+    /// Sets a write consumer that will be called after each blob row is written.
+    BlobWriterBuilder* WithWriteConsumer(BlobFormatWriter::WriteConsumer consumer) {
+        write_consumer_ = std::move(consumer);
+        return this;
+    }
+
     Result<std::unique_ptr<FormatWriter>> Build(const std::shared_ptr<OutputStream>& out,
                                                 const std::string& compression) override {
         assert(out);
         if (fs_ == nullptr) {
             return Status::Invalid("File system is nullptr. Please call WithFileSystem() first.");
         }
-        return BlobFormatWriter::Create(out, data_type_, fs_, pool_);
+        return BlobFormatWriter::Create(out, data_type_, write_consumer_, fs_, pool_);
     }
 
  private:
@@ -73,6 +79,7 @@ class BlobWriterBuilder : public SpecificFSWriterBuilder {
     std::shared_ptr<arrow::DataType> data_type_;
     std::map<std::string, std::string> options_;
     std::shared_ptr<FileSystem> fs_;
+    BlobFormatWriter::WriteConsumer write_consumer_;
 };
 
 }  // namespace paimon::blob

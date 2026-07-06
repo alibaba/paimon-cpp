@@ -382,6 +382,7 @@ struct CoreOptions::Impl {
     std::vector<std::string> blob_fields;
     std::vector<std::string> blob_descriptor_fields;
     std::vector<std::string> blob_view_fields;
+    std::vector<std::string> blob_external_storage_fields;
 
     std::string partition_default_name = "__DEFAULT_PARTITION__";
     StartupMode startup_mode = StartupMode::Default();
@@ -394,6 +395,7 @@ struct CoreOptions::Impl {
     std::optional<std::string> field_default_func;
     std::optional<std::string> scan_fallback_branch;
     std::optional<std::string> data_file_external_paths;
+    std::optional<std::string> blob_external_storage_path;
     std::optional<std::string> blob_view_upstream_warehouse;
 
     std::map<std::string, std::string> raw_options;
@@ -562,6 +564,13 @@ struct CoreOptions::Impl {
         // Parse blob-view-upstream-warehouse - warehouse path for configured blob view fields
         PAIMON_RETURN_NOT_OK(
             parser.Parse(Options::BLOB_VIEW_UPSTREAM_WAREHOUSE, &blob_view_upstream_warehouse));
+        // Parse blob-external-storage-field - descriptor BLOB fields written to external storage
+        PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
+            Options::BLOB_EXTERNAL_STORAGE_FIELD, Options::FIELDS_SEPARATOR,
+            &blob_external_storage_fields, /*need_trim=*/true));
+        // Parse blob-external-storage-path - external storage path for configured BLOB fields
+        PAIMON_RETURN_NOT_OK(
+            parser.Parse(Options::BLOB_EXTERNAL_STORAGE_PATH, &blob_external_storage_path));
         return Status::OK();
     }
 
@@ -1481,6 +1490,14 @@ std::vector<std::string> CoreOptions::GetBlobInlineFields() const {
     blob_inline_fields.insert(blob_inline_fields.end(), impl_->blob_view_fields.begin(),
                               impl_->blob_view_fields.end());
     return blob_inline_fields;
+}
+
+const std::vector<std::string>& CoreOptions::GetBlobExternalStorageFields() const {
+    return impl_->blob_external_storage_fields;
+}
+
+std::optional<std::string> CoreOptions::GetBlobExternalStoragePath() const {
+    return impl_->blob_external_storage_path;
 }
 
 int64_t CoreOptions::GetLookupCacheFileRetentionMs() const {

@@ -96,7 +96,7 @@ Status LanceFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
         PAIMON_RETURN_NOT_OK(LanceToPaimonStatus(err_code, error_message_));
         stream_reader_ = nullptr;
         previous_batch_first_row_num_ = std::numeric_limits<uint64_t>::max();
-        previous_batch_row_count_ = 0;
+        last_batch_row_num_ = 0;
     }
     return Status::OK();
 }
@@ -119,7 +119,7 @@ Result<BatchReader::ReadBatch> LanceFileBatchReader::NextBatch() {
         // first read
         previous_batch_first_row_num_ = 0;
     } else {
-        previous_batch_first_row_num_ += previous_batch_row_count_;
+        previous_batch_first_row_num_ += last_batch_row_num_;
     }
     auto c_array = std::make_unique<ArrowArray>();
     auto c_schema = std::make_unique<ArrowSchema>();
@@ -128,10 +128,9 @@ Result<BatchReader::ReadBatch> LanceFileBatchReader::NextBatch() {
                                   error_message_.data(), error_message_.size());
     PAIMON_RETURN_NOT_OK(LanceToPaimonStatus(err_code, error_message_));
     if (is_eof) {
-        previous_batch_row_count_ = 0;
         return BatchReader::MakeEofBatch();
     }
-    previous_batch_row_count_ = c_array->length;
+    last_batch_row_num_ = c_array->length;
     return std::make_pair(std::move(c_array), std::move(c_schema));
 }
 
