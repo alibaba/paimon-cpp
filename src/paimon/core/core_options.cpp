@@ -401,6 +401,7 @@ struct CoreOptions::Impl {
     int32_t bucket = -1;
 
     int32_t manifest_merge_min_count = 30;
+    int32_t scan_manifest_entry_cache_max_snapshots = 0;
     int32_t read_batch_size = 1024;
     int32_t write_batch_size = 1024;
     int32_t local_sort_max_num_file_handles = 128;
@@ -708,6 +709,13 @@ struct CoreOptions::Impl {
         }
         // Parse scan.mode - scanning behavior of the source, default "default"
         PAIMON_RETURN_NOT_OK(parser.ParseStartupMode(&startup_mode));
+        // Parse scan.manifest-entry-cache.max-snapshots - cached snapshots per bucket.
+        PAIMON_RETURN_NOT_OK(parser.Parse(Options::SCAN_MANIFEST_ENTRY_CACHE_MAX_SNAPSHOTS,
+                                          &scan_manifest_entry_cache_max_snapshots));
+        if (scan_manifest_entry_cache_max_snapshots < 0) {
+            return Status::Invalid(fmt::format("{} must be non-negative",
+                                               Options::SCAN_MANIFEST_ENTRY_CACHE_MAX_SNAPSHOTS));
+        }
         // Parse scan.fallback-branch - fallback branch when partition not found
         PAIMON_RETURN_NOT_OK(parser.Parse(Options::SCAN_FALLBACK_BRANCH, &scan_fallback_branch));
         // Parse branch - branch name, default "main"
@@ -959,6 +967,11 @@ std::optional<int64_t> CoreOptions::GetScanSnapshotId() const {
 std::optional<int64_t> CoreOptions::GetScanTimestampMillis() const {
     return impl_->scan_timestamp_millis;
 }
+
+int32_t CoreOptions::GetScanManifestEntryCacheMaxSnapshots() const {
+    return impl_->scan_manifest_entry_cache_max_snapshots;
+}
+
 int64_t CoreOptions::GetManifestTargetFileSize() const {
     return impl_->manifest_target_file_size;
 }

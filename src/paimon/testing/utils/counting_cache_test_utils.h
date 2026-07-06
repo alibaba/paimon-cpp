@@ -47,12 +47,14 @@ class CountingRoutingCache : public Cache {
             supplier) override {
         ++get_count_;
         last_kind_ = key->GetKind();
+        ++get_count_by_kind_[key->GetKind()];
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Cache> cache, GetCache(key));
         return cache->Get(
             key,
             [this, supplier = std::move(supplier)](const std::shared_ptr<CacheKey>& supplier_key)
                 -> Result<std::shared_ptr<CacheValue>> {
                 ++supplier_call_count_;
+                ++supplier_call_count_by_kind_[supplier_key->GetKind()];
                 return supplier(supplier_key);
             });
     }
@@ -88,8 +90,16 @@ class CountingRoutingCache : public Cache {
         return get_count_;
     }
 
+    int64_t GetCount(CacheKind kind) const {
+        return GetCount(get_count_by_kind_, kind);
+    }
+
     int64_t SupplierCallCount() const {
         return supplier_call_count_;
+    }
+
+    int64_t SupplierCallCount(CacheKind kind) const {
+        return GetCount(supplier_call_count_by_kind_, kind);
     }
 
     CacheKind LastKind() const {
@@ -97,6 +107,14 @@ class CountingRoutingCache : public Cache {
     }
 
  private:
+    static int64_t GetCount(const std::map<CacheKind, int64_t>& counts, CacheKind kind) {
+        auto iter = counts.find(kind);
+        if (iter == counts.end()) {
+            return 0;
+        }
+        return iter->second;
+    }
+
     Result<std::shared_ptr<Cache>> GetCache(const std::shared_ptr<CacheKey>& key) const {
         auto iter = caches_.find(key->GetKind());
         if (iter == caches_.end()) {
@@ -106,6 +124,8 @@ class CountingRoutingCache : public Cache {
     }
 
     std::map<CacheKind, std::shared_ptr<Cache>> caches_;
+    std::map<CacheKind, int64_t> get_count_by_kind_;
+    std::map<CacheKind, int64_t> supplier_call_count_by_kind_;
     int64_t get_count_ = 0;
     int64_t supplier_call_count_ = 0;
     CacheKind last_kind_ = CacheKind::DEFAULT;

@@ -304,6 +304,7 @@ set(PAIMON_CORE_SRCS
     core/operation/raw_file_split_read.cpp
     core/operation/read_context.cpp
     core/operation/scan_context.cpp
+    core/manifest/snapshot_live_manifest_entries.cpp
     core/operation/write_context.cpp
     core/operation/write_restore.cpp
     core/postpone/postpone_bucket_writer.cpp

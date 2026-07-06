@@ -55,6 +55,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(8 * 1024 * 1024L, core_options.GetManifestTargetFileSize());
     ASSERT_EQ(16 * 1024 * 1024L, core_options.GetManifestFullCompactionThresholdSize());
     ASSERT_EQ(30, core_options.GetManifestMergeMinCount());
+    ASSERT_EQ(0, core_options.GetScanManifestEntryCacheMaxSnapshots());
     ASSERT_EQ(nullptr, core_options.GetCache());
     ASSERT_EQ(128 * 1024 * 1024L, core_options.GetSourceSplitTargetSize());
     ASSERT_EQ(4 * 1024 * 1024L, core_options.GetSourceSplitOpenFileCost());
@@ -184,6 +185,7 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::COMMIT_MAX_RETRIES, "20"},
         {Options::SCAN_SNAPSHOT_ID, "5"},
         {Options::SCAN_MODE, "from-snapshot-full"},
+        {Options::SCAN_MANIFEST_ENTRY_CACHE_MAX_SNAPSHOTS, "7"},
         {Options::SNAPSHOT_NUM_RETAINED_MIN, "15"},
         {Options::SNAPSHOT_NUM_RETAINED_MAX, "30"},
         {Options::SNAPSHOT_EXPIRE_LIMIT, "20"},
@@ -304,6 +306,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(120 * 1000, core_options.GetCommitTimeout());
     ASSERT_EQ(20, core_options.GetCommitMaxRetries());
     ASSERT_EQ(5, core_options.GetScanSnapshotId().value_or(-1));
+    ASSERT_EQ(7, core_options.GetScanManifestEntryCacheMaxSnapshots());
     ExpireConfig expire_config = core_options.GetExpireConfig();
     ASSERT_EQ(15, expire_config.GetSnapshotRetainMin());
     ASSERT_EQ(30, expire_config.GetSnapshotRetainMax());
@@ -429,6 +432,9 @@ TEST(CoreOptionsTest, TestInvalidCase) {
                         "invalid lookup mode: invalid");
     ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::LOOKUP_COMPACT_MAX_INTERVAL, "invalid"}}),
                         "Invalid Config [lookup-compact.max-interval: invalid]");
+    ASSERT_NOK_WITH_MSG(
+        CoreOptions::FromMap({{Options::SCAN_MANIFEST_ENTRY_CACHE_MAX_SNAPSHOTS, "-1"}}),
+        "scan.manifest-entry-cache.max-snapshots must be non-negative");
     ASSERT_NOK_WITH_MSG(
         CoreOptions::FromMap({{Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO, "1.1"}}),
         "The high priority pool ratio should in the range [0, 1), while input is 1.1");

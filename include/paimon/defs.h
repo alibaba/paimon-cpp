@@ -166,6 +166,11 @@ struct PAIMON_EXPORT Options {
     /// "latest-full", "latest", "from-snapshot", "from-snapshot-full". Default value is "default".
     static const char SCAN_MODE[];
 
+    /// "scan.manifest-entry-cache.max-snapshots" - Maximum number of snapshot live manifest entry
+    /// results retained per table, branch, and bucket. Setting it to 0 disables manifest entry
+    /// cache. Default value is 0.
+    static const char SCAN_MANIFEST_ENTRY_CACHE_MAX_SNAPSHOTS[];
+
     /// "read.batch-size" - Read batch size for any file format if it supports.
     /// The default value is 1024.
     static const char READ_BATCH_SIZE[];

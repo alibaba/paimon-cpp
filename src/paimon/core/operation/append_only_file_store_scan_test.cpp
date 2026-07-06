@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -25,6 +26,7 @@
 #include "gtest/gtest.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
+#include "paimon/common/io/cache/lru_cache.h"
 #include "paimon/core/manifest/partition_entry.h"
 #include "paimon/core/operation/metrics/scan_metrics.h"
 #include "paimon/core/schema/schema_manager.h"
@@ -174,5 +176,73 @@ TEST(AppendOnlyFileStoreScanTest, TestScanDurationMetric) {
     ASSERT_LE(stats.min, stats.p99);
     ASSERT_LE(stats.p50, stats.p99);
     ASSERT_LE(stats.p99, stats.max);
+}
+
+namespace {
+
+std::shared_ptr<FileStoreScan> BuildScan(const std::string& table_path,
+                                         const std::shared_ptr<Cache>& cache,
+                                         const std::optional<int32_t>& bucket = std::nullopt) {
+    ScanContextBuilder context_builder(table_path);
+    context_builder.AddOption(Options::FILE_FORMAT, "orc")
+        .AddOption(Options::MANIFEST_FORMAT, "orc")
+        .AddOption(Options::SCAN_MANIFEST_ENTRY_CACHE_MAX_SNAPSHOTS, "8")
+        .WithCache(cache);
+    if (bucket) {
+        context_builder.SetBucketFilter(bucket.value());
+    }
+    EXPECT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    EXPECT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+    auto typed_table_scan = dynamic_cast<AbstractTableScan*>(table_scan.get());
+    EXPECT_TRUE(typed_table_scan);
+    return typed_table_scan->snapshot_reader_->scan_;
+}
+
+}  // namespace
+
+TEST(AppendOnlyFileStoreScanTest, TestSnapshotLiveManifestCachePath) {
+    TimezoneGuard guard("Asia/Shanghai");
+    std::string table_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09/";
+    auto cache = std::make_shared<LruCache>(/*max_weight=*/16 * 1024 * 1024);
+
+    // First scan on snapshot 5: cache miss, entries rebuilt from all manifests.
+    auto scan_first = BuildScan(table_path, cache, /*bucket=*/0);
+    ASSERT_OK_AND_ASSIGN(Snapshot snapshot_5,
+                         scan_first->GetSnapshotManager()->LoadSnapshot(/*snapshot_id=*/5));
+    scan_first->WithSnapshot(snapshot_5);
+    ASSERT_OK_AND_ASSIGN(auto plan_first, scan_first->CreatePlan());
+    size_t first_size = plan_first->Files().size();
+
+    // Second scan on the same snapshot should read the same bucket live entries from cache.
+    auto scan_second = BuildScan(table_path, cache, /*bucket=*/0);
+    scan_second->WithSnapshot(snapshot_5);
+    ASSERT_OK_AND_ASSIGN(auto plan_second, scan_second->CreatePlan());
+    ASSERT_EQ(first_size, plan_second->Files().size());
+}
+
+TEST(AppendOnlyFileStoreScanTest, TestSnapshotLiveManifestCacheRebuildOnMiss) {
+    TimezoneGuard guard("Asia/Shanghai");
+    std::string table_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09/";
+    auto cache = std::make_shared<LruCache>(/*max_weight=*/16 * 1024 * 1024);
+
+    // Seed the cache with an earlier snapshot.
+    auto scan_base = BuildScan(table_path, cache, /*bucket=*/0);
+    ASSERT_OK_AND_ASSIGN(Snapshot snapshot_3,
+                         scan_base->GetSnapshotManager()->LoadSnapshot(/*snapshot_id=*/3));
+    scan_base->WithSnapshot(snapshot_3);
+    ASSERT_OK_AND_ASSIGN(auto plan_base, scan_base->CreatePlan());
+    (void)plan_base;
+
+    // Advance to a newer snapshot: cache miss rebuilds the target snapshot bucket.
+    auto scan_next = BuildScan(table_path, cache, /*bucket=*/0);
+    ASSERT_OK_AND_ASSIGN(Snapshot snapshot_5,
+                         scan_next->GetSnapshotManager()->LoadSnapshot(/*snapshot_id=*/5));
+    scan_next->WithSnapshot(snapshot_5);
+    ASSERT_OK_AND_ASSIGN(auto plan_next, scan_next->CreatePlan());
+
+    auto scan_expected = BuildScan(table_path, /*cache=*/nullptr, /*bucket=*/0);
+    scan_expected->WithSnapshot(snapshot_5);
+    ASSERT_OK_AND_ASSIGN(auto plan_expected, scan_expected->CreatePlan());
+    ASSERT_EQ(plan_expected->Files().size(), plan_next->Files().size());
 }
 }  // namespace paimon::test
