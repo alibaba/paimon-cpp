@@ -199,6 +199,22 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     Result<TargetRowGroups> FilterPagesByBitmap(const RoaringBitmap32& bitmap,
                                                 const TargetRowGroups& src_row_groups,
                                                 const std::vector<int32_t>& column_indices) const;
+
+    // Apply page-level bitmap filtering to a single row group across all
+    // requested columns. Intersects the row group's existing ranges with the
+    // per-column page ranges derived from the bitmap.
+    TargetRowGroup FilterRowGroupPagesByBitmap(const RoaringBitmap32& bitmap,
+                                               const TargetRowGroup& row_group,
+                                               const std::vector<int32_t>& column_indices,
+                                               ::parquet::PageIndexReader& page_index_reader) const;
+
+    // Compute the set of row ranges within a single column's pages that
+    // overlap with the given bitmap. For each page, the bitmap is queried to
+    // find the precise [first, last] matching rows.
+    static RowRanges ComputeColumnPageRanges(
+        const RoaringBitmap32& bitmap, const std::vector<::parquet::PageLocation>& page_locations,
+        uint64_t rg_start_row, uint64_t rg_row_count);
+
     // Apply page-level filtering using column index.
     // Returns (filtered row groups, per-row-group RowRanges for partial matches).
     Result<TargetRowGroups> FilterRowGroupsByPageIndex(

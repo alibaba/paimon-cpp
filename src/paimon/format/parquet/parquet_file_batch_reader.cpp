@@ -300,48 +300,65 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterPagesByBitmap(
     }
 
     TargetRowGroups target_row_groups;
+    target_row_groups.reserve(src_row_groups.size());
     for (const auto& row_group : src_row_groups) {
-        int32_t row_group_idx = row_group.GetRowGroupIndex();
-        auto rg_page_index_reader = page_index_reader->RowGroup(row_group_idx);
-        if (!rg_page_index_reader) {
-            target_row_groups.emplace_back(row_group);
-            continue;
-        }
-        RowRanges row_ranges = row_group.GetRowRanges();
-        auto rg_start_row = reader_->GetAllRowGroupRanges()[row_group_idx].first;
-        auto rg_end_row = reader_->GetAllRowGroupRanges()[row_group_idx].second;
-        auto rg_row_count = rg_end_row - rg_start_row;
-        for (const auto col_index : column_indices) {
-            auto column_page_index_reader = rg_page_index_reader->GetOffsetIndex(col_index);
-            if (!column_page_index_reader) {
-                continue;
-            }
-            auto locations = column_page_index_reader->page_locations();
-            RowRanges page_row_ranges;
-            for (uint64_t page_idx = 0; page_idx < locations.size(); ++page_idx) {
-                // half open interval [first_row, last_row)
-                auto first_row = locations[page_idx].first_row_index;
-                auto last_row = page_idx + 1 < locations.size()
-                                    ? locations[page_idx + 1].first_row_index
-                                    : rg_row_count;
-
-                if (!bitmap.ContainsAny(rg_start_row + first_row, rg_start_row + last_row)) {
-                    continue;
-                }
-                // closed interval [range_start_row, range_end_row]
-                auto range_start_row = bitmap.NextValue(rg_start_row + first_row);
-                auto range_end_row = bitmap.PreviousValue(rg_start_row + last_row);
-                if (!range_start_row.has_value() || !range_end_row.has_value()) {
-                    continue;
-                }
-                page_row_ranges.Add(Range(range_start_row.value() - rg_start_row,
-                                          range_end_row.value() - rg_start_row));
-            }
-            row_ranges = RowRanges::Intersection(row_ranges, page_row_ranges);
-        }
-        target_row_groups.emplace_back(row_group_idx, true, row_ranges);
+        target_row_groups.emplace_back(
+            FilterRowGroupPagesByBitmap(bitmap, row_group, column_indices, *page_index_reader));
     }
     return target_row_groups;
+}
+
+TargetRowGroup ParquetFileBatchReader::FilterRowGroupPagesByBitmap(
+    const RoaringBitmap32& bitmap, const TargetRowGroup& row_group,
+    const std::vector<int32_t>& column_indices,
+    ::parquet::PageIndexReader& page_index_reader) const {
+    int32_t row_group_idx = row_group.GetRowGroupIndex();
+    auto rg_page_index_reader = page_index_reader.RowGroup(row_group_idx);
+    if (!rg_page_index_reader) {
+        return row_group;
+    }
+
+    const auto& all_row_group_ranges = reader_->GetAllRowGroupRanges();
+    uint64_t rg_start_row = all_row_group_ranges[row_group_idx].first;
+    uint64_t rg_row_count = all_row_group_ranges[row_group_idx].second - rg_start_row;
+
+    RowRanges row_ranges = row_group.GetRowRanges();
+    for (int32_t col_index : column_indices) {
+        auto offset_index = rg_page_index_reader->GetOffsetIndex(col_index);
+        if (!offset_index) {
+            continue;
+        }
+        auto page_ranges = ComputeColumnPageRanges(bitmap, offset_index->page_locations(),
+                                                   rg_start_row, rg_row_count);
+        row_ranges = RowRanges::Intersection(row_ranges, page_ranges);
+    }
+    return TargetRowGroup(row_group_idx, true, std::move(row_ranges));
+}
+
+RowRanges ParquetFileBatchReader::ComputeColumnPageRanges(
+    const RoaringBitmap32& bitmap, const std::vector<::parquet::PageLocation>& page_locations,
+    uint64_t rg_start_row, uint64_t rg_row_count) {
+    RowRanges page_row_ranges;
+    for (size_t page_idx = 0; page_idx < page_locations.size(); ++page_idx) {
+        // half open interval [first_row, last_row)
+        auto first_row = page_locations[page_idx].first_row_index;
+        auto last_row = page_idx + 1 < page_locations.size()
+                            ? page_locations[page_idx + 1].first_row_index
+                            : rg_row_count;
+
+        if (!bitmap.ContainsAny(rg_start_row + first_row, rg_start_row + last_row)) {
+            continue;
+        }
+        // closed interval [range_start_row, range_end_row]
+        auto range_start_row = bitmap.NextValue(rg_start_row + first_row);
+        auto range_end_row = bitmap.PreviousValue(rg_start_row + last_row);
+        if (!range_start_row.has_value() || !range_end_row.has_value()) {
+            continue;
+        }
+        page_row_ranges.Add(
+            Range(range_start_row.value() - rg_start_row, range_end_row.value() - rg_start_row));
+    }
+    return page_row_ranges;
 }
 
 // Uses page-level column index statistics to filter row groups and store per-row-group
