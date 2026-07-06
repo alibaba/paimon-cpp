@@ -1484,4 +1484,42 @@ TEST_F(PageFilteredRowGroupReaderTest, BitmapMixedWithPredicate) {
     }
 }
 
+/// Test: read parquet with scattered bitmap
+///
+/// 200 rows, 50 rows per page, 100 rows per row group → 2 row groups.
+/// Bitmap: [20,30), [35, 40), [125, 126), [130, 131), [150, 200)
+/// Expected: 75 rows ([20, 40) + [125, 131) + [150, 200).
+TEST_F(PageFilteredRowGroupReaderTest, ScatteredBitmapTest) {
+    std::string file_name = dir_->Str() + "/scattered_bitmap.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/50, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(20, 30);
+    bitmap.AddRange(35, 40);
+    bitmap.Add(125);
+    bitmap.Add(130);
+    bitmap.AddRange(150, 200);
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(76, result->length());
+
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    for (int32_t i = 0; i < 20; ++i) {
+        ASSERT_EQ(20 + i, val_arr->Value(i));
+    }
+    for (int32_t i = 0; i < 6; ++i) {
+        ASSERT_EQ(125 + i, val_arr->Value(20 + i));
+    }
+    for (int32_t i = 0; i < 50; ++i) {
+        ASSERT_EQ(150 + i, val_arr->Value(26 + i));
+    }
+}
+
 }  // namespace paimon::parquet::test
