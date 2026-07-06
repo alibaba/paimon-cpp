@@ -214,7 +214,25 @@ Status ParquetFileBatchReader::SetReadSchema(
         metrics_->SetCounter(ParquetMetrics::READ_ROW_GROUPS_AFTER_FILTER,
                              target_row_groups.size());
 
+<<<<<<< HEAD
         PAIMON_RETURN_NOT_OK(UpdateAllTargetRowranges(target_row_groups));
+=======
+        // Build TargetRowGroup list with page-filter info in one shot.
+        std::vector<TargetRowGroup> target_row_groups;
+        for (int32_t rg_id : row_groups) {
+            auto it = row_group_row_ranges.find(rg_id);
+            if (it != row_group_row_ranges.end()) {
+                target_row_groups.emplace_back(/*rg_index=*/rg_id, /*is_partially_matched=*/true,
+                                               /*ranges=*/it->second);
+            } else {
+                target_row_groups.emplace_back(
+                    /*rg_index=*/rg_id, /*is_partially_matched=*/false, /*ranges=*/
+                    RowRanges(Range(0, reader_->GetAllRowGroupRanges()[rg_id].second -
+                                           reader_->GetAllRowGroupRanges()[rg_id].first - 1)));
+            }
+        }
+        PAIMON_RETURN_NOT_OK(UpdateAllTargetRowRanges(target_row_groups));
+>>>>>>> main
         PAIMON_RETURN_NOT_OK(reader_->PrepareForReadingLazy(target_row_groups, column_indices));
     }
     PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetFileBatchReader::SetReadSchema")
@@ -604,7 +622,7 @@ Result<std::vector<int32_t>> ParquetFileBatchReader::ComputeNestedColumnIndices(
     return indices;
 }
 
-Status ParquetFileBatchReader::UpdateAllTargetRowranges(
+Status ParquetFileBatchReader::UpdateAllTargetRowRanges(
     const std::vector<TargetRowGroup>& target_row_groups) {
     row_mapping_.clear();
     auto all_row_group_ranges = reader_->GetAllRowGroupRanges();

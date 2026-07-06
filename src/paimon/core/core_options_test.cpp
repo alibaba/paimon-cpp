@@ -91,6 +91,8 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_FALSE(core_options.FieldCollectAggDistinct("f1").value());
     ASSERT_EQ(MapStorageLayout::DEFAULT, core_options.GetMapStorageLayout("any_col").value());
     ASSERT_EQ(256, core_options.GetMapSharedShreddingMaxColumns("any_col").value());
+    ASSERT_EQ(MapSharedShreddingColumnPlacementPolicy::LRU,
+              core_options.GetMapSharedShreddingColumnPlacementPolicy("any_col").value());
     ASSERT_FALSE(core_options.DeletionVectorsEnabled());
     ASSERT_FALSE(core_options.DeletionVectorsBitmap64());
     ASSERT_EQ(2 * 1024 * 1024, core_options.DeletionVectorTargetFileSize());
@@ -120,9 +122,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_TRUE(core_options.GetBlobDescriptorFields().empty());
     ASSERT_TRUE(core_options.GetBlobViewFields().empty());
     ASSERT_TRUE(core_options.GetBlobInlineFields().empty());
-    ASSERT_TRUE(core_options.GetBlobExternalStorageFields().empty());
     ASSERT_EQ(std::nullopt, core_options.GetBlobViewUpstreamWarehouse());
-    ASSERT_EQ(std::nullopt, core_options.GetBlobExternalStoragePath());
     ASSERT_TRUE(core_options.LegacyPartitionNameEnabled());
     ASSERT_TRUE(core_options.GlobalIndexEnabled());
     ASSERT_EQ(std::nullopt, core_options.GetGlobalIndexExternalPath());
@@ -225,8 +225,6 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::BLOB_FIELD, "blob1,blob2"},
         {Options::BLOB_DESCRIPTOR_FIELD, "blob3,blob4"},
         {Options::BLOB_VIEW_FIELD, "blob5"},
-        {Options::BLOB_EXTERNAL_STORAGE_FIELD, "blob3,blob4"},
-        {Options::BLOB_EXTERNAL_STORAGE_PATH, "FILE:///tmp/blob_external_storage/"},
         {Options::BLOB_VIEW_UPSTREAM_WAREHOUSE, "FILE:///tmp/blob_view_upstream_warehouse/"},
         {Options::PARTITION_GENERATE_LEGACY_NAME, "false"},
         {Options::GLOBAL_INDEX_ENABLED, "false"},
@@ -267,7 +265,8 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::KEY_VALUE_SEQUENCE_NUMBER_ENABLED, "true"},
         {Options::BUCKET_FUNCTION_TYPE, "mod"},
         {"fields.metrics.map.storage-layout", "shared-shredding"},
-        {"fields.metrics.map.shared-shredding.max-columns", "128"}};
+        {"fields.metrics.map.shared-shredding.max-columns", "128"},
+        {"fields.metrics.map.shared-shredding.column-placement-policy", "lru"}};
 
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
     auto fs = core_options.GetFileSystem();
@@ -364,10 +363,6 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(core_options.GetBlobViewFields(), std::vector<std::string>({"blob5"}));
     ASSERT_EQ(core_options.GetBlobInlineFields(),
               std::vector<std::string>({"blob3", "blob4", "blob5"}));
-    ASSERT_EQ(core_options.GetBlobExternalStorageFields(),
-              std::vector<std::string>({"blob3", "blob4"}));
-    ASSERT_EQ(core_options.GetBlobExternalStoragePath(),
-              std::optional<std::string>("FILE:///tmp/blob_external_storage/"));
     ASSERT_EQ(core_options.GetBlobViewUpstreamWarehouse(),
               std::optional<std::string>("FILE:///tmp/blob_view_upstream_warehouse/"));
     ASSERT_FALSE(core_options.LegacyPartitionNameEnabled());
@@ -413,6 +408,8 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(MapStorageLayout::SHARED_SHREDDING,
               core_options.GetMapStorageLayout("metrics").value());
     ASSERT_EQ(128, core_options.GetMapSharedShreddingMaxColumns("metrics").value());
+    ASSERT_EQ(MapSharedShreddingColumnPlacementPolicy::LRU,
+              core_options.GetMapSharedShreddingColumnPlacementPolicy("metrics").value());
 }
 
 TEST(CoreOptionsTest, TestInvalidCase) {
@@ -930,10 +927,14 @@ TEST(CoreOptionsTest, TestMapStorageLayout) {
         ASSERT_EQ(MapStorageLayout::SHARED_SHREDDING,
                   options.GetMapStorageLayout("ext_map").value());
         ASSERT_EQ(64, options.GetMapSharedShreddingMaxColumns("ext_map").value());
+        ASSERT_EQ(MapSharedShreddingColumnPlacementPolicy::LRU,
+                  options.GetMapSharedShreddingColumnPlacementPolicy("ext_map").value());
         ASSERT_EQ(MapStorageLayout::DEFAULT, options.GetMapStorageLayout("normal_map").value());
         // Unconfigured column falls back to default
         ASSERT_EQ(MapStorageLayout::DEFAULT, options.GetMapStorageLayout("other").value());
         ASSERT_EQ(256, options.GetMapSharedShreddingMaxColumns("other").value());
+        ASSERT_EQ(MapSharedShreddingColumnPlacementPolicy::LRU,
+                  options.GetMapSharedShreddingColumnPlacementPolicy("other").value());
     }
     // Test case-insensitive layout value
     {
@@ -964,6 +965,39 @@ TEST(CoreOptionsTest, TestMapStorageLayout) {
             CoreOptions::FromMap({{"fields.col.map.shared-shredding.max-columns", "-1"}}));
         ASSERT_NOK_WITH_MSG(options.GetMapSharedShreddingMaxColumns("col"),
                             "options map.shared-shredding.max-columns must > 0");
+    }
+    // Test placement policy values
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap(
+                {{"fields.col.map.shared-shredding.column-placement-policy", "PLAIN"}}));
+        ASSERT_EQ(MapSharedShreddingColumnPlacementPolicy::PLAIN,
+                  options.GetMapSharedShreddingColumnPlacementPolicy("col").value());
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap(
+                {{"fields.col.map.shared-shredding.column-placement-policy", "sequential"}}));
+        ASSERT_EQ(MapSharedShreddingColumnPlacementPolicy::SEQUENTIAL,
+                  options.GetMapSharedShreddingColumnPlacementPolicy("col").value());
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap(
+                {{"fields.col.map.shared-shredding.column-placement-policy", "LRU"}}));
+        ASSERT_EQ(MapSharedShreddingColumnPlacementPolicy::LRU,
+                  options.GetMapSharedShreddingColumnPlacementPolicy("col").value());
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap(
+                {{"fields.col.map.shared-shredding.column-placement-policy", "invalid"}}));
+        ASSERT_NOK_WITH_MSG(options.GetMapSharedShreddingColumnPlacementPolicy("col"),
+                            "invalid map.shared-shredding.column-placement-policy: invalid");
     }
 }
 

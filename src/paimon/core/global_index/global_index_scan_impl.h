@@ -18,6 +18,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -47,6 +48,10 @@ class GlobalIndexScanImpl : public GlobalIndexScan {
         const std::string& field_name,
         const std::optional<RowRangeIndex>& row_range_index) const override;
 
+    Result<std::shared_ptr<GlobalIndexReader>> CreateReader(
+        const std::string& field_name, const std::string& index_type,
+        const std::optional<RowRangeIndex>& row_range_index) const override;
+
     Result<std::vector<std::shared_ptr<GlobalIndexReader>>> CreateReaders(
         int32_t field_id, const std::optional<RowRangeIndex>& row_range_index) const override;
 
@@ -65,7 +70,8 @@ class GlobalIndexScanImpl : public GlobalIndexScan {
     Result<std::shared_ptr<GlobalIndexEvaluator>> GetOrCreateIndexEvaluator();
 
     Result<std::vector<std::shared_ptr<GlobalIndexReader>>> CreateReaders(
-        const DataField& field, const std::optional<RowRangeIndex>& row_range_index) const;
+        const DataField& field, const std::optional<std::string>& index_type,
+        const std::optional<RowRangeIndex>& row_range_index) const;
 
     std::vector<GlobalIndexIOMeta> ToGlobalIndexIOMetas(
         const std::vector<std::shared_ptr<IndexFileMeta>>& metas) const;

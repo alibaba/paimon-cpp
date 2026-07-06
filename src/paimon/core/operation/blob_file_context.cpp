@@ -27,15 +27,11 @@ namespace paimon {
 BlobFileContext::BlobFileContext(std::set<std::string> descriptor_fields,
                                  std::set<std::string> view_fields,
                                  std::set<std::string> inline_fields,
-                                 std::set<std::string> external_storage_fields,
-                                 std::set<std::string> blob_file_fields,
-                                 std::optional<std::string> external_storage_path)
+                                 std::set<std::string> blob_file_fields)
     : descriptor_fields_(std::move(descriptor_fields)),
       view_fields_(std::move(view_fields)),
       inline_fields_(std::move(inline_fields)),
-      external_storage_fields_(std::move(external_storage_fields)),
-      blob_file_fields_(std::move(blob_file_fields)),
-      external_storage_path_(std::move(external_storage_path)) {}
+      blob_file_fields_(std::move(blob_file_fields)) {}
 
 std::unique_ptr<BlobFileContext> BlobFileContext::Create(
     const std::shared_ptr<arrow::Schema>& schema, const CoreOptions& options) {
@@ -78,17 +74,6 @@ std::unique_ptr<BlobFileContext> BlobFileContext::Create(
         }
     }
 
-    // Populate external storage fields
-    std::set<std::string> external_storage_fields;
-    for (const auto& name : options.GetBlobExternalStorageFields()) {
-        if (schema_blob_fields.count(name) > 0) {
-            external_storage_fields.insert(name);
-        }
-    }
-
-    // Populate external storage path
-    std::optional<std::string> external_storage_path = options.GetBlobExternalStoragePath();
-
     // Determine blob_file_fields: schema BLOB fields that are NOT inline
     std::set<std::string> blob_file_fields;
     for (const auto& name : schema_blob_fields) {
@@ -99,16 +84,11 @@ std::unique_ptr<BlobFileContext> BlobFileContext::Create(
 
     return std::unique_ptr<BlobFileContext>(
         new BlobFileContext(std::move(descriptor_fields), std::move(view_fields),
-                            std::move(inline_fields), std::move(external_storage_fields),
-                            std::move(blob_file_fields), std::move(external_storage_path)));
+                            std::move(inline_fields), std::move(blob_file_fields)));
 }
 
 bool BlobFileContext::RequireBlobFileWriter() const {
     return !blob_file_fields_.empty();
-}
-
-bool BlobFileContext::RequireExternalStorageWriter() const {
-    return !external_storage_fields_.empty();
 }
 
 }  // namespace paimon

@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "arrow/c/bridge.h"
+#include "fmt/format.h"
 #include "lance_lib/lance_api.h"
 #include "paimon/metrics.h"
 #include "paimon/reader/file_batch_reader.h"
@@ -49,8 +50,17 @@ class LanceFileBatchReader : public FileBatchReader {
                 "bitmap pushdown, rows in the array returned by NextBatch are no longer "
                 "contiguous.");
         }
-        if (previous_batch_first_row_num_ == std::numeric_limits<uint64_t>::max()) {
-            return Status::Invalid("No batch has been read yet");
+        if (previous_batch_row_count_ == 0) {
+            if (previous_batch_first_row_num_ == std::numeric_limits<uint64_t>::max()) {
+                return Status::Invalid("No batch has been read yet.");
+            } else {
+                return Status::Invalid("Last batch was EOF.");
+            }
+        }
+        if (batch_row_id >= previous_batch_row_count_) {
+            return Status::Invalid(
+                fmt::format("batch_row_id {} is out of range, last batch row count is {}",
+                            batch_row_id, previous_batch_row_count_));
         }
         return previous_batch_first_row_num_ + batch_row_id;
     }
@@ -84,7 +94,7 @@ class LanceFileBatchReader : public FileBatchReader {
     uint64_t num_rows_ = 0;
     // only validate when there is no bitmap pushdown
     uint64_t previous_batch_first_row_num_ = std::numeric_limits<uint64_t>::max();
-    uint64_t last_batch_row_num_ = 0;
+    uint64_t previous_batch_row_count_ = 0;
     mutable std::string error_message_;
     LanceFileReader* file_reader_ = nullptr;
     LanceReaderAdapter* stream_reader_ = nullptr;

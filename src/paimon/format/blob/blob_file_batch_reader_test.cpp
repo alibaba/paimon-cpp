@@ -183,7 +183,7 @@ TEST_F(BlobFileBatchReaderTest, TestRowNumbers) {
     ArrowArrayRelease(batch3.first.get());
     ArrowSchemaRelease(batch3.second.get());
     ASSERT_OK_AND_ASSIGN(auto batch4, reader->NextBatch());
-    ASSERT_EQ(3, reader->GetPreviousBatchFileRowId(0).value());
+    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
     ASSERT_TRUE(BatchReader::IsEofBatch(batch4));
 }
 
@@ -235,8 +235,7 @@ TEST_P(BlobFileBatchReaderTest, EmptyFile) {
     std::shared_ptr<arrow::Field> blob_field = BlobUtils::ToArrowField("blob_col");
     auto struct_type = arrow::struct_({blob_field});
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<BlobFormatWriter> writer,
-                         BlobFormatWriter::Create(output_stream, struct_type,
-                                                  /*write_consumer=*/nullptr, file_system, pool_));
+                         BlobFormatWriter::Create(output_stream, struct_type, file_system, pool_));
 
     ASSERT_OK(writer->Flush());
     ASSERT_OK(writer->Finish());

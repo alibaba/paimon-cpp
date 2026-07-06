@@ -294,6 +294,41 @@ TEST_P(GlobalIndexTest, TestWriteLuminaIndex) {
     ASSERT_TRUE(expected_commit_message->TEST_Equal(*index_commit_msg_impl));
 }
 
+TEST_P(GlobalIndexTest, TestWriteLuminaIndexWithMismatchedDimension) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::utf8()),
+                                 arrow::field("f1", arrow::list(arrow::float32()))};
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> lumina_options = {{"lumina.index.dimension", "3"},
+                                                         {"lumina.index.type", "bruteforce"},
+                                                         {"lumina.distance.metric", "l2"},
+                                                         {"lumina.encoding.type", "rawf32"},
+                                                         {"lumina.search.parallel_number", "10"}};
+
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "orc"},         {Options::FILE_FORMAT, file_format_},
+        {Options::FILE_SYSTEM, "local"},           {Options::ROW_TRACKING_ENABLED, "true"},
+        {Options::DATA_EVOLUTION_ENABLED, "true"}, {Options::READ_BATCH_SIZE, "1"}};
+
+    CreateTable(/*partition_keys=*/{}, schema, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+
+    std::vector<std::string> write_cols = schema->field_names();
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+        ["a", [0.0, 0.0, 0.0]],
+        ["b", [0.0, 0.0, 0.0, 0.0]]
+    ])")
+                         .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+
+    ASSERT_NOK_WITH_MSG(
+        WriteIndex(table_path, /*partition_filters=*/{}, "f1", "lumina",
+                   /*options=*/lumina_options, Range(0, 1)),
+        "invalid input array in LuminaIndexWriter, length of field array [1] multiplied "
+        "dimension [3] must match length of field value array [4]");
+}
+
 TEST_P(GlobalIndexTest, TestWriteIndex) {
     CreateTable();
     std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
@@ -2660,6 +2695,33 @@ TEST_P(GlobalIndexTest, TestBTreeAndBitmapCoexist) {
     // Two index types on f0 -> 2 readers
     ASSERT_OK_AND_ASSIGN(auto index_readers, global_index_scan->CreateReaders("f0", std::nullopt));
     ASSERT_EQ(index_readers.size(), 2u);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexReader> btree_reader,
+                         global_index_scan->CreateReader("f0", "btree", std::nullopt));
+    ASSERT_TRUE(btree_reader);
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexResult> btree_result,
+                         btree_reader->VisitEqual(Literal(FieldType::STRING, "Bob", 3)));
+    ASSERT_TRUE(btree_result);
+    ASSERT_EQ(btree_result->ToString(), "{1,2}");
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexResult> btree_less_than_result,
+                         btree_reader->VisitLessThan(Literal(FieldType::STRING, "Emily", 5)));
+    ASSERT_TRUE(btree_less_than_result);
+    ASSERT_EQ(btree_less_than_result->ToString(), "{0,1,2}");
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexReader> bitmap_reader,
+                         global_index_scan->CreateReader("f0", "bitmap", std::nullopt));
+    ASSERT_TRUE(bitmap_reader);
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexResult> bitmap_result,
+                         bitmap_reader->VisitEqual(Literal(FieldType::STRING, "Bob", 3)));
+    ASSERT_TRUE(bitmap_result);
+    ASSERT_EQ(bitmap_result->ToString(), "{1,2}");
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexResult> bitmap_less_than_result,
+                         bitmap_reader->VisitLessThan(Literal(FieldType::STRING, "Emily", 5)));
+    ASSERT_FALSE(bitmap_less_than_result);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexReader> missing_reader,
+                         global_index_scan->CreateReader("f0", "lucene", std::nullopt));
+    ASSERT_FALSE(missing_reader);
 
     // Each reader individually should return the same result for Equal("Bob")
     for (const auto& index_reader : index_readers) {

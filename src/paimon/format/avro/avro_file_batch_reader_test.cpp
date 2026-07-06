@@ -352,7 +352,7 @@ TEST_F(AvroFileBatchReaderTest, TestGetPreviousBatchFileRowId) {
 
     ASSERT_OK_AND_ASSIGN(auto num_rows, reader->GetNumberOfRows());
     ASSERT_EQ(4, num_rows);
-    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFileRowId(0).value());
+    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
     ASSERT_OK_AND_ASSIGN(auto batch1, reader->NextBatch());
     ArrowArrayRelease(batch1.first.get());
     ArrowSchemaRelease(batch1.second.get());
@@ -370,7 +370,7 @@ TEST_F(AvroFileBatchReaderTest, TestGetPreviousBatchFileRowId) {
     ArrowArrayRelease(batch4.first.get());
     ArrowSchemaRelease(batch4.second.get());
     ASSERT_OK_AND_ASSIGN(auto batch5, reader->NextBatch());
-    ASSERT_EQ(4, reader->GetPreviousBatchFileRowId(0).value());
+    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
     ASSERT_TRUE(BatchReader::IsEofBatch(batch5));
 }
 
@@ -406,7 +406,7 @@ TEST_F(AvroFileBatchReaderTest, TestSetReadSchemaResetsReaderToFirstRow) {
     ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
     ASSERT_OK(reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr,
                                     /*selection_bitmap=*/std::nullopt));
-    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFileRowId(0).value());
+    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
 
     ASSERT_OK_AND_ASSIGN(auto projected_batch, reader->NextBatch());
     ASSERT_EQ(0, reader->GetPreviousBatchFileRowId(0).value());

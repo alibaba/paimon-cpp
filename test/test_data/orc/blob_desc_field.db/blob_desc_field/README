@@ -4,16 +4,13 @@ target-file-size: 700
 row-tracking.enabled: true
 data-evolution.enabled: true
 blob-descriptor-field: b0,b1
-blob-external-storage-field: b1
-blob-external-storage-path: <table>/external_blob (absolute path at generation time)
 
 b0: descriptor field, inline in main file, source .bin files in raw_blob/
-b1: descriptor field, repacked to external storage in external_blob/
+b1: descriptor field whose descriptor points to external_blob/
 b2: regular blob, written to .blob files
 b3: regular blob, written to .blob files
 
-Note: b0 is passed as descriptor via Blob.fromLocal(); b1/b2/b3 are raw bytes.
-Paimon auto-converts b1 to descriptor internally.
+Note: this fixture keeps historical descriptor URIs pointing at raw_blob/ and external_blob/.
 
 Msgs:
 snapshot-1

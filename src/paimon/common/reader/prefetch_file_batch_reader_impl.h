@@ -129,6 +129,7 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
     static std::vector<std::vector<std::pair<uint64_t, uint64_t>>> DispatchReadRanges(
         const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges, size_t reader_count);
 
+    Status RefreshReadRangesAfterCleanUp();
     Result<std::pair<uint64_t, uint64_t>> EofRange() const;
     std::optional<std::pair<uint64_t, uint64_t>> GetCurrentReadRange(size_t reader_idx) const;
     Status EnsureReaderPosition(size_t reader_idx,
