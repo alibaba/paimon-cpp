@@ -17,6 +17,7 @@
 #include "paimon/table/source/table_scan.h"
 
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
@@ -95,19 +96,35 @@ class TableScanImpl {
             ManifestFile::Create(fs, manifest_file_format, core_options.GetManifestCompression(),
                                  path_factory, core_options.GetManifestTargetFileSize(),
                                  memory_pool, core_options, partition_schema));
+        std::unique_ptr<FileStoreScan> scan;
         if (table_schema->PrimaryKeys().empty()) {
             if (core_options.DataEvolutionEnabled()) {
-                return DataEvolutionFileStoreScan::Create(
-                    snapshot_manager, schema_manager, manifest_list, manifest_file, table_schema,
-                    arrow_schema, context->GetScanFilters(), core_options, executor, memory_pool);
+                PAIMON_ASSIGN_OR_RAISE(
+                    scan, DataEvolutionFileStoreScan::Create(
+                              snapshot_manager, schema_manager, manifest_list, manifest_file,
+                              table_schema, arrow_schema, context->GetScanFilters(), core_options,
+                              executor, memory_pool));
+            } else {
+                PAIMON_ASSIGN_OR_RAISE(
+                    scan, AppendOnlyFileStoreScan::Create(
+                              snapshot_manager, schema_manager, manifest_list, manifest_file,
+                              table_schema, arrow_schema, context->GetScanFilters(), core_options,
+                              executor, memory_pool));
             }
-            return AppendOnlyFileStoreScan::Create(
-                snapshot_manager, schema_manager, manifest_list, manifest_file, table_schema,
-                arrow_schema, context->GetScanFilters(), core_options, executor, memory_pool);
+        } else {
+            PAIMON_ASSIGN_OR_RAISE(
+                scan, KeyValueFileStoreScan::Create(snapshot_manager, schema_manager, manifest_list,
+                                                    manifest_file, table_schema, arrow_schema,
+                                                    context->GetScanFilters(), core_options,
+                                                    executor, memory_pool));
         }
-        return KeyValueFileStoreScan::Create(
-            snapshot_manager, schema_manager, manifest_list, manifest_file, table_schema,
-            arrow_schema, context->GetScanFilters(), core_options, executor, memory_pool);
+        return WithTablePath(std::move(scan), context);
+    }
+
+    static std::unique_ptr<FileStoreScan> WithTablePath(std::unique_ptr<FileStoreScan>&& scan,
+                                                        const ScanContext* context) {
+        scan->WithTablePath(context->GetPath());
+        return std::move(scan);
     }
 
     static Result<std::unique_ptr<SplitGenerator>> CreateSplitGenerator(

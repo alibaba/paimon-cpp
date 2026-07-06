@@ -381,6 +381,23 @@ TEST_F(LruCacheTest, TestForKindSetsKeyKind) {
     ASSERT_EQ(CacheKind::MANIFEST, put_key->GetKind());
 }
 
+TEST_F(LruCacheTest, TestForSnapshotLiveManifestEntries) {
+    auto main_key = CacheKey::ForSnapshotLiveManifestEntries("table_path", "main", 0);
+    auto same_key = CacheKey::ForSnapshotLiveManifestEntries("table_path", "main", 0);
+    auto branch_key = CacheKey::ForSnapshotLiveManifestEntries("table_path", "dev", 0);
+    auto table_key = CacheKey::ForSnapshotLiveManifestEntries("other_table_path", "main", 0);
+    auto bucket_key = CacheKey::ForSnapshotLiveManifestEntries("table_path", "main", 1);
+    auto hash_in_path_key = CacheKey::ForSnapshotLiveManifestEntries("table#path", "main", 0);
+    auto hash_in_branch_key = CacheKey::ForSnapshotLiveManifestEntries("table", "path#main", 0);
+
+    ASSERT_EQ(CacheKind::SNAPSHOT_LIVE_MANIFEST, main_key->GetKind());
+    ASSERT_TRUE(CacheKeyEqual()(main_key, same_key));
+    ASSERT_FALSE(CacheKeyEqual()(main_key, branch_key));
+    ASSERT_FALSE(CacheKeyEqual()(main_key, table_key));
+    ASSERT_FALSE(CacheKeyEqual()(main_key, bucket_key));
+    ASSERT_FALSE(CacheKeyEqual()(hash_in_path_key, hash_in_branch_key));
+}
+
 /// Verifies that multiple evictions happen when a single large entry is inserted.
 TEST_F(LruCacheTest, TestMultipleEvictions) {
     LruCache cache(300);

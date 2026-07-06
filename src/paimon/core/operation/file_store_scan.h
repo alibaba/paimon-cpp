@@ -21,7 +21,6 @@
 #include <functional>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <string>
 #include <utility>
@@ -41,6 +40,7 @@
 #include "paimon/core/manifest/manifest_file_meta.h"
 #include "paimon/core/manifest/manifest_list.h"
 #include "paimon/core/manifest/partition_entry.h"
+#include "paimon/core/manifest/snapshot_live_manifest_entries.h"
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/core/table/source/scan_mode.h"
@@ -57,6 +57,7 @@ class Schema;
 }  // namespace arrow
 
 namespace paimon {
+class CacheKey;
 class Executor;
 class FileKind;
 class ManifestFile;
@@ -117,6 +118,11 @@ class FileStoreScan {
 
     FileStoreScan* WithRowRangeIndex(const RowRangeIndex& row_range_index) {
         row_range_index_ = row_range_index;
+        return this;
+    }
+
+    FileStoreScan* WithTablePath(const std::string& table_path) {
+        table_path_ = table_path;
         return this;
     }
 
@@ -237,6 +243,26 @@ class FileStoreScan {
     Status ReadManifestEntries(const std::vector<ManifestFileMeta>& manifest_metas,
                                std::vector<ManifestEntry>* manifest_entries) const;
 
+    Status ReadManifestEntriesWithCache(const Snapshot& snapshot,
+                                        const std::vector<ManifestFileMeta>& bucket_manifest_metas,
+                                        int32_t bucket,
+                                        std::vector<ManifestEntry>* manifest_entries) const;
+    std::shared_ptr<CacheKey> SnapshotLiveManifestEntriesCacheKey(int32_t bucket) const;
+    Result<SnapshotLiveManifestEntries> LoadSnapshotLiveManifestEntries(int32_t bucket) const;
+    Status StoreSnapshotLiveManifestEntries(int32_t bucket,
+                                            const SnapshotLiveManifestEntries& entries) const;
+
+    Status ReadAndMergeBucketFileEntries(const std::vector<ManifestFileMeta>& manifest_metas,
+                                         int32_t bucket,
+                                         std::vector<ManifestEntry>* merged_entries) const;
+
+    /// Merge raw manifest entries into the set of currently-live files. Entries are deduplicated
+    /// by identifier (matching Add cancels a prior or following Delete), and lingering Delete
+    /// entries are dropped so the caller receives Add-only output, matching the semantics of
+    /// `ReadAndMergeFileEntries`.
+    static Status MergeLiveEntries(const std::vector<ManifestEntry>& unmerged_entries,
+                                   std::vector<ManifestEntry>* live_entries);
+
     Status ReadAndMergeFileEntries(const std::vector<ManifestFileMeta>& manifest_metas,
                                    std::vector<ManifestEntry>* merged_entries) const;
 
@@ -244,7 +270,10 @@ class FileStoreScan {
                                      std::vector<ManifestEntry>* manifest_entries) const;
 
     Status ReadFileEntries(const std::vector<ManifestFileMeta>& manifest_metas,
-                           std::vector<ManifestEntry>* manifest_entries) const;
+                           std::vector<ManifestEntry>* manifest_entries,
+                           bool apply_scan_filter) const;
+
+    bool MayContainBucket(const ManifestFileMeta& manifest, int32_t bucket) const;
 
     Result<bool> FilterManifestFileMeta(const ManifestFileMeta& manifest) const;
 
@@ -252,6 +281,8 @@ class FileStoreScan {
 
     Status ReadManifestFileMeta(const ManifestFileMeta& manifest,
                                 std::vector<ManifestEntry>* entries) const;
+
+    Result<bool> FilterManifestEntry(const ManifestEntry& entry) const;
 
  protected:
     std::shared_ptr<MemoryPool> pool_;
@@ -265,7 +296,6 @@ class FileStoreScan {
     CoreOptions core_options_;
 
  private:
-    mutable std::mutex lock_;
     bool only_read_real_buckets_ = false;
     std::shared_ptr<SnapshotManager> snapshot_manager_;
     std::shared_ptr<ManifestList> manifest_list_;
@@ -277,5 +307,6 @@ class FileStoreScan {
     std::function<bool(int32_t)> level_filter_;
     std::optional<Snapshot> specified_snapshot_;
     std::shared_ptr<Metrics> metrics_;
+    std::string table_path_;
 };
 }  // namespace paimon
