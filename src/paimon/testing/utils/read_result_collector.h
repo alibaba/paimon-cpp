@@ -67,47 +67,16 @@ class ReadResultCollector {
         }
         return results;
     }
-
-    static Result<std::shared_ptr<arrow::ChunkedArray>> CollectResult(BatchReader* batch_reader) {
-        return CollectResult(batch_reader, /*max simulated data processing time*/ 0);
-    }
-
-    // will convert dictionary array to string array for comparing results
     static Result<std::shared_ptr<arrow::ChunkedArray>> CollectResult(
         BatchReader* batch_reader, int64_t max_data_processing_time_in_us) {
         arrow::ArrayVector result_array_vector;
         int64_t seed = DateTimeUtils::GetCurrentUTCTimeUs();
         std::srand(seed);
         while (true) {
-            // Prioritize calling NextBatch. If it fails (paimon inner reader e.g.,
-            // PrefetchBatchReader, ApplyBitmapIndexBatchReader...), call NextBatchWithBitmap.
-            auto batch_result = batch_reader->NextBatch();
-            BatchReader::ReadBatch batch;
-            if (!batch_result.ok()) {
-                if (batch_result.status().ToString().find("should use NextBatchWithBitmap") !=
-                    std::string::npos) {
-                    PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatchWithBitmap batch_with_bitmap,
-                                           batch_reader->NextBatchWithBitmap());
-                    if (BatchReader::IsEofBatch(batch_with_bitmap)) {
-                        break;
-                    }
-                    assert(!batch_with_bitmap.second.IsEmpty());
-                    PAIMON_ASSIGN_OR_RAISE(
-                        batch, ReaderUtils::ApplyBitmapToReadBatch(std::move(batch_with_bitmap),
-                                                                   arrow::default_memory_pool()));
-                } else {
-                    return batch_result.status();
-                }
-            } else {
-                batch = std::move(batch_result).value();
-                if (BatchReader::IsEofBatch(batch)) {
-                    break;
-                }
+            PAIMON_ASSIGN_OR_RAISE(auto result_array, ReadOneBatch(batch_reader));
+            if (result_array == nullptr) {
+                break;
             }
-            auto& [c_array, c_schema] = batch;
-            assert(c_array->length > 0);
-            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto result_array,
-                                              arrow::ImportArray(c_array.get(), c_schema.get()));
             result_array_vector.push_back(result_array);
             if (max_data_processing_time_in_us > 0) {
                 usleep(std::rand() % max_data_processing_time_in_us);
@@ -128,6 +97,35 @@ class ReadResultCollector {
         }
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto chunk_array,
                                           arrow::ChunkedArray::Make(converted_array_vector));
+        return chunk_array;
+    }
+
+    static Result<std::shared_ptr<arrow::ChunkedArray>> CollectResult(BatchReader* batch_reader) {
+        return CollectResult(batch_reader, /*max_data_processing_time_in_us=*/0);
+    }
+
+    static Result<std::shared_ptr<arrow::ChunkedArray>> CollectResultOneBatch(
+        BatchReader* batch_reader) {
+        return CollectResultOneBatch(batch_reader, /*max_data_processing_time_in_us=*/0);
+    }
+
+    static Result<std::shared_ptr<arrow::ChunkedArray>> CollectResultOneBatch(
+        BatchReader* batch_reader, int64_t max_data_processing_time_in_us) {
+        int64_t seed = DateTimeUtils::GetCurrentUTCTimeUs();
+        std::srand(seed);
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> result_array,
+                               ReadOneBatch(batch_reader));
+        if (result_array == nullptr) {
+            return std::shared_ptr<arrow::ChunkedArray>();
+        }
+        PAIMON_ASSIGN_OR_RAISE(
+            auto converted_array,
+            DictArrayConverter::ConvertDictArray(result_array, arrow::default_memory_pool()));
+        if (max_data_processing_time_in_us > 0) {
+            usleep(std::rand() % max_data_processing_time_in_us);
+        }
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::ChunkedArray> chunk_array,
+                                          arrow::ChunkedArray::Make({converted_array}));
         return chunk_array;
     }
 
@@ -164,6 +162,40 @@ class ReadResultCollector {
             auto sorted_batch,
             arrow::compute::Take(arrow::Datum(array), arrow::Datum(sorted_indices)));
         return sorted_batch.chunked_array();
+    }
+
+ private:
+    static Result<std::shared_ptr<arrow::Array>> ReadOneBatch(BatchReader* batch_reader) {
+        // Prioritize calling NextBatch. If it fails (paimon inner reader e.g.,
+        // PrefetchBatchReader, ApplyBitmapIndexBatchReader...), call NextBatchWithBitmap.
+        auto batch_result = batch_reader->NextBatch();
+        BatchReader::ReadBatch batch;
+        if (!batch_result.ok()) {
+            if (batch_result.status().ToString().find("should use NextBatchWithBitmap") !=
+                std::string::npos) {
+                PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatchWithBitmap batch_with_bitmap,
+                                       batch_reader->NextBatchWithBitmap());
+                if (BatchReader::IsEofBatch(batch_with_bitmap)) {
+                    return std::shared_ptr<arrow::Array>();
+                }
+                assert(!batch_with_bitmap.second.IsEmpty());
+                PAIMON_ASSIGN_OR_RAISE(
+                    batch, ReaderUtils::ApplyBitmapToReadBatch(std::move(batch_with_bitmap),
+                                                               arrow::default_memory_pool()));
+            } else {
+                return batch_result.status();
+            }
+        } else {
+            batch = std::move(batch_result).value();
+            if (BatchReader::IsEofBatch(batch)) {
+                return std::shared_ptr<arrow::Array>();
+            }
+        }
+        auto& [c_array, c_schema] = batch;
+        assert(c_array->length > 0);
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto result_array,
+                                          arrow::ImportArray(c_array.get(), c_schema.get()));
+        return result_array;
     }
 };
 }  // namespace paimon::test

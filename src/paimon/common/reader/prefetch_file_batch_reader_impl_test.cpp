@@ -923,4 +923,51 @@ TEST_F(PrefetchFileBatchReaderImplTest, TestPrefetchWithBitmap) {
     ASSERT_TRUE(result_chunk_array->Equals(expected_chunk_array));
 }
 
+TEST_P(PrefetchFileBatchReaderImplTest, TestRowMapping) {
+    auto [file_format, cache_mode] = GetParam();
+    auto data_array = PrepareArray(90);
+    PrepareTestData(file_format, data_array, /*stripe_row_count=*/30, /*row_index_stride=*/10);
+    auto schema = arrow::schema(fields_);
+    ASSERT_OK_AND_ASSIGN(
+        auto predicate,
+        PredicateBuilder::Or({
+            PredicateBuilder::Between(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
+                                      Literal(20l), Literal(29l)),
+            PredicateBuilder::Between(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
+                                      Literal(70l), Literal(79l)),
+        }));
+
+    auto reader =
+        PreparePrefetchReader(file_format, schema.get(), predicate,
+                              /*selection_bitmap=*/std::nullopt,
+                              /*batch_size=*/10, /*prefetch_max_parallel_num=*/3, cache_mode);
+    ASSERT_EQ(reader->GetPreviousBatchFirstRowNumber().value(),
+              std::numeric_limits<uint64_t>::max());
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> batch,
+                         paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
+    ASSERT_EQ(reader->GetPreviousBatchFirstRowNumber().value(), 20);
+    ASSERT_TRUE(batch->Equals(arrow::ChunkedArray({data_array->Slice(20, 10)})));
+    ASSERT_OK_AND_ASSIGN(batch,
+                         paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
+    ASSERT_EQ(reader->GetPreviousBatchFirstRowNumber().value(), 70);
+    ASSERT_TRUE(batch->Equals(arrow::ChunkedArray({data_array->Slice(70, 10)})));
+    // Set read schema again
+    std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(*schema, c_schema.get()).ok());
+    predicate = PredicateBuilder::Between(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
+                                          Literal(30l), Literal(49l));
+    ASSERT_OK(reader->SetReadSchema(c_schema.get(), predicate, std::nullopt));
+
+    ASSERT_EQ(reader->GetPreviousBatchFirstRowNumber().value(),
+              std::numeric_limits<uint64_t>::max());
+    ASSERT_OK_AND_ASSIGN(batch,
+                         paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
+    ASSERT_EQ(reader->GetPreviousBatchFirstRowNumber().value(), 30);
+    ASSERT_TRUE(batch->Equals(arrow::ChunkedArray({data_array->Slice(30, 10)})));
+    ASSERT_OK_AND_ASSIGN(batch,
+                         paimon::test::ReadResultCollector::CollectResultOneBatch(reader.get()));
+    ASSERT_EQ(reader->GetPreviousBatchFirstRowNumber().value(), 40);
+    ASSERT_TRUE(batch->Equals(arrow::ChunkedArray({data_array->Slice(40, 10)})));
+}
+
 }  // namespace paimon::test
