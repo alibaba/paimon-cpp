@@ -1488,6 +1488,7 @@ TEST_F(PageFilteredRowGroupReaderTest, BitmapMixedWithPredicate) {
 ///
 /// 200 rows, 50 rows per page, 100 rows per row group → 2 row groups.
 /// Bitmap: [20,30), [35, 40), [125, 126), [130, 131), [150, 200)
+/// To test if unneeded row at the start and end of pages are filtered out.
 /// Expected: 75 rows ([20, 40) + [125, 131) + [150, 200).
 TEST_F(PageFilteredRowGroupReaderTest, ScatteredBitmapTest) {
     std::string file_name = dir_->Str() + "/scattered_bitmap.parquet";
