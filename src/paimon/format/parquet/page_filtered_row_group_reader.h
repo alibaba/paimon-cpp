@@ -28,6 +28,7 @@
 #include "arrow/type.h"
 #include "paimon/format/parquet/row_ranges.h"
 #include "paimon/result.h"
+#include "parquet/arrow/reader.h"
 #include "parquet/column_reader.h"
 #include "parquet/file_reader.h"
 #include "parquet/page_index.h"
@@ -44,6 +45,7 @@ class PageFilteredRowGroupReader {
     ~PageFilteredRowGroupReader() = delete;
 
     /// Read a row group with page-level filtering.
+    /// @param arrow_file_reader The Arrow FileReader for ColumnReader tree creation
     /// @param parquet_reader The underlying ParquetFileReader
     /// @param target_row_group Target row group with index and row ranges
     /// @param column_indices Leaf column indices to read
@@ -56,6 +58,7 @@ class PageFilteredRowGroupReader {
     /// @param max_chunksize Per-batch row cap for the returned reader.
     /// @return A RecordBatchReader streaming the filtered rows.
     static Result<std::unique_ptr<arrow::RecordBatchReader>> ReadFilteredRowGroup(
+        ::parquet::arrow::FileReader* arrow_file_reader,
         ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
         const std::vector<int32_t>& column_indices,
         const std::shared_ptr<arrow::Schema>& arrow_schema,
@@ -86,30 +89,30 @@ class PageFilteredRowGroupReader {
                                    const std::vector<::arrow::io::ReadRange>& page_ranges,
                                    std::shared_ptr<::arrow::MemoryPool> pool);
 
-    /// Execute the skip/read pattern on a RecordReader based on RowRanges.
-    static Status ExecuteSkipReadPattern(
-        const std::shared_ptr<::parquet::internal::RecordReader>& record_reader,
-        const RowRanges& ranges, int64_t total_row_count, int32_t row_group_index,
-        int32_t column_index);
+    /// Execute the skip/read pattern on a ColumnReader based on RowRanges.
+    static Status ExecuteSkipReadPattern(::parquet::arrow::ColumnReader* column_reader,
+                                         const RowRanges& ranges, int64_t total_row_count,
+                                         int32_t row_group_index, int32_t field_index);
 
     /// Create a data_page_filter callback for a column based on RowRanges + OffsetIndex.
     static std::function<bool(const ::parquet::DataPageStats&)> MakePageFilter(
         const RowRanges& row_ranges, const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
         int64_t row_group_row_count);
 
-    /// Read a single column using skip/read pattern driven by RowRanges.
-    static Result<std::shared_ptr<arrow::ChunkedArray>> ReadFilteredColumn(
-        const std::shared_ptr<::parquet::RowGroupReader>& row_group_reader,
-        ::parquet::ParquetFileReader* parquet_reader,
-        const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
-        int32_t row_group_index, int32_t column_index, const RowRanges& row_ranges,
-        const std::shared_ptr<arrow::Field>& field, int64_t row_group_row_count,
-        std::shared_ptr<::arrow::MemoryPool> pool);
-
     /// Compute compressed RowRanges after data_page_filter skips non-matching pages.
     static std::pair<RowRanges, int64_t> ComputeCompressedRowRanges(
         const RowRanges& original_ranges,
         const std::shared_ptr<::parquet::OffsetIndex>& offset_index, int64_t row_group_row_count);
+
+    /// Read a field (flat or nested) using ColumnReader tree.
+    /// For flat columns: sets data_page_filter + uses compressed RowRanges (I/O + decode skipping).
+    /// For nested fields: decode-level skipping only via SkipRecords/ReadRecords.
+    static Result<std::shared_ptr<arrow::ChunkedArray>> ReadFilteredField(
+        ::parquet::arrow::FileReader* arrow_file_reader,
+        const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
+        int32_t row_group_index, int32_t field_index,
+        const std::vector<int32_t>& column_indices, const RowRanges& row_ranges,
+        int64_t row_group_row_count, std::shared_ptr<::arrow::MemoryPool> pool);
 };
 
 }  // namespace paimon::parquet

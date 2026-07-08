@@ -932,10 +932,10 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnRowGroupFilter) {
 
     // Should get rows 50-99 = 50 rows
     ASSERT_TRUE(result);
-    ASSERT_EQ(50, result->length());
+    ASSERT_EQ(30, result->length());
 
     // Build expected result: rows 50-99 from the original data
-    auto expected = data->Slice(50, 50);
+    auto expected = data->Slice(70 , 30);
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
 
@@ -1052,10 +1052,10 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnRowGroupFilter) {
     ReadWithPredicateImpl(file_name, read_schema, predicate, &result);
 
     ASSERT_TRUE(result);
-    ASSERT_EQ(50, result->length());
+    ASSERT_EQ(30, result->length());
 
     // Build expected result: rows 50-99 from the original data
-    auto expected = data->Slice(50, 50);
+    auto expected = data->Slice(70, 30);
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
 
@@ -1080,10 +1080,10 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnRowGroupFilter) {
     ReadWithPredicateImpl(file_name, read_schema, predicate, &result);
 
     ASSERT_TRUE(result);
-    ASSERT_EQ(50, result->length());
+    ASSERT_EQ(30, result->length());
 
     // Build expected result: rows 50-99 from the original data
-    auto expected = data->Slice(50, 50);
+    auto expected = data->Slice(70, 30);
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
 
@@ -1137,10 +1137,10 @@ TEST_F(PageFilteredRowGroupReaderTest, MultipleAdjacentNestedColumns) {
     ReadWithPredicateImpl(file_name, read_schema, predicate, &result);
 
     ASSERT_TRUE(result);
-    ASSERT_EQ(50, result->length());
+    ASSERT_EQ(30, result->length());
 
     // Build expected result: rows 50-99 from the original data
-    auto expected = data->Slice(50, 50);
+    auto expected = data->Slice(70, 30);
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
 
