@@ -431,9 +431,10 @@ diff --git a/cpp/cmake_modules/BuildUtils.cmake b/cpp/cmake_modules/BuildUtils.c
 diff --git a/cpp/src/arrow/io/interfaces.h b/cpp/src/arrow/io/interfaces.h
 --- a/cpp/src/arrow/io/interfaces.h
 +++ b/cpp/src/arrow/io/interfaces.h
-@@ -211,7 +211,7 @@
+@@ -210,5 +210,5 @@
    /// \brief Advance or skip stream indicated number of bytes
    /// \param[in] nbytes the number to move forward
    /// \return Status
 -  Status Advance(int64_t nbytes);
 +  virtual Status Advance(int64_t nbytes);
+ 
