@@ -47,6 +47,7 @@
 #include "paimon/core/table/source/data_table_batch_scan.h"
 #include "paimon/core/table/source/data_table_stream_scan.h"
 #include "paimon/core/table/source/merge_tree_split_generator.h"
+#include "paimon/core/table/source/read_optimized_scan_options.h"
 #include "paimon/core/table/source/snapshot/snapshot_reader.h"
 #include "paimon/core/table/source/split_generator.h"
 #include "paimon/core/table/system/system_table.h"
@@ -225,9 +226,15 @@ Result<std::unique_ptr<TableScan>> NewDataTableScan(const std::shared_ptr<ScanCo
         }
         table_schema = latest_table_schema.value();
     }
+    const auto read_optimized_iter = context->GetOptions().find(kReadOptimizedScanOption);
+    const bool read_optimized =
+        read_optimized_iter != context->GetOptions().end() && read_optimized_iter->second == "true";
     // merge options
     auto options = table_schema->Options();
     for (const auto& [key, value] : context->GetOptions()) {
+        if (key == kReadOptimizedScanOption) {
+            continue;
+        }
         options[key] = value;
     }
     PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options,
@@ -280,12 +287,16 @@ Result<std::unique_ptr<TableScan>> NewDataTableScan(const std::shared_ptr<ScanCo
                                                                  context->GetMemoryPool()));
     auto snapshot_reader = std::make_shared<SnapshotReader>(
         file_store_scan, path_factory, std::move(split_generator), std::move(index_file_handler));
+    const bool pk_table = !table_schema->PrimaryKeys().empty();
+    if (read_optimized && pk_table && context->IsStreamingMode()) {
+        return Status::NotImplemented(
+            "read-optimized system table does not support streaming scan for primary key table");
+    }
     if (context->IsStreamingMode()) {
         return std::make_unique<DataTableStreamScan>(core_options, snapshot_reader);
     }
-    auto batch_scan =
-        std::make_unique<DataTableBatchScan>(/*pk_table=*/!table_schema->PrimaryKeys().empty(),
-                                             core_options, snapshot_reader, context->GetLimit());
+    auto batch_scan = std::make_unique<DataTableBatchScan>(
+        /*pk_table=*/pk_table, core_options, snapshot_reader, read_optimized, context->GetLimit());
     if (!core_options.DataEvolutionEnabled()) {
         return batch_scan;
     }
