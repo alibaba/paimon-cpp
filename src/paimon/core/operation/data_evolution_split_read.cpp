@@ -94,9 +94,7 @@ Status DataEvolutionSplitRead::BlobBunch::Add(const std::shared_ptr<DataFileMeta
             }
         }
         if (!files_.empty()) {
-            if (file->schema_id != files_[0]->schema_id) {
-                return Status::Invalid("All files in a blob bunch should have the same schema id.");
-            }
+            // Paimon Java does not check the schema id for blob files in a bunch.
             if (file->write_cols != files_[0]->write_cols) {
                 return Status::Invalid(
                     "All files in a blob bunch should have the same write columns.");

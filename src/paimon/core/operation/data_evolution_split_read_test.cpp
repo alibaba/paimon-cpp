@@ -83,13 +83,13 @@ class DataEvolutionSplitReadTest : public ::testing::Test {
 
     std::shared_ptr<DataFileMeta> CreateBlobFile(
         const std::string& file_name, int64_t first_row_id, int64_t row_count,
-        int64_t max_sequence_number,
-        const std::optional<std::vector<std::string>>& write_cols) const {
+        int64_t max_sequence_number, const std::optional<std::vector<std::string>>& write_cols,
+        int64_t schema_id = 0) const {
         return DataFileMeta::ForAppend(file_name + ".blob", /*file_size=*/row_count,
                                        /*row_count=*/row_count,
                                        /*row_stats=*/SimpleStats::EmptyStats(),
-                                       /*min_sequence_number=*/0, max_sequence_number,
-                                       /*schema_id=*/0, FileSource::Append(),
+                                       /*min_sequence_number=*/0, max_sequence_number, schema_id,
+                                       FileSource::Append(),
                                        /*value_stats_cols=*/std::nullopt,
                                        /*external_path=*/std::nullopt, first_row_id, write_cols)
             .value();
@@ -245,6 +245,28 @@ TEST_F(DataEvolutionSplitReadTest, TestAddBlobFileWithDifferentWriteCols) {
     // Adding file with different write columns should return bad status
     ASSERT_NOK_WITH_MSG(blob_bunch->Add(blob_tail),
                         "All files in a blob bunch should have the same write columns.");
+}
+
+TEST_F(DataEvolutionSplitReadTest, TestAddBlobFilesWithDifferentSchemaId) {
+    // A blob field written under schema 0 for the first rows and under schema 1 for the
+    // following rows (after schema evolution that adds/drops OTHER columns) must still be
+    // groupable into a single bunch: a blob column's on-disk layout is schema-independent.
+    // Same write cols, contiguous row ids, different schema id -> both added OK.
+    auto blob_entry =
+        CreateBlobFile("blob1", /*first_row_id=*/0, /*row_count=*/100,
+                       /*max_sequence_number=*/1,
+                       /*write_cols=*/std::optional<std::vector<std::string>>({"blob_col"}),
+                       /*schema_id=*/0);
+    auto blob_tail =
+        CreateBlobFile("blob2", /*first_row_id=*/100, /*row_count=*/200,
+                       /*max_sequence_number=*/1,
+                       /*write_cols=*/std::optional<std::vector<std::string>>({"blob_col"}),
+                       /*schema_id=*/1);
+    auto blob_bunch = std::make_shared<DataEvolutionSplitRead::BlobBunch>(
+        INT64_MAX, /*has_row_ids_selection=*/false);
+    ASSERT_OK(blob_bunch->Add(blob_entry));
+    ASSERT_OK(blob_bunch->Add(blob_tail));
+    ASSERT_EQ(blob_bunch->Files().size(), 2);
 }
 
 TEST_F(DataEvolutionSplitReadTest, TestRowIdSelectionWithOverlap) {

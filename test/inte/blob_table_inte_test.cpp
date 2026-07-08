@@ -173,6 +173,20 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
         }
     }
 
+    void KeepOnlyBlobFiles(std::vector<std::shared_ptr<CommitMessage>>& commit_msgs) const {
+        for (auto& commit_msg : commit_msgs) {
+            auto commit_msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(commit_msg);
+            ASSERT_TRUE(commit_msg_impl);
+            auto& files = commit_msg_impl->data_increment_.new_files_;
+            files.erase(std::remove_if(files.begin(), files.end(),
+                                       [](const auto& file) {
+                                           return !BlobUtils::IsBlobFile(file->file_name);
+                                       }),
+                        files.end());
+            ASSERT_EQ(files.size(), 1);
+        }
+    }
+
     Status Commit(const std::string& table_path,
                   const std::vector<std::shared_ptr<CommitMessage>>& commit_msgs) const {
         // commit
@@ -1105,6 +1119,93 @@ TEST_P(BlobTableInteTest, TestMultipleAppendsDifferentFirstRowIds) {
         ASSERT_OK(ScanAndRead(table_path, {"f0", "f1", "f2", "_ROW_ID", "_SEQUENCE_NUMBER"},
                               expected_row_tracking_array));
     }
+}
+
+TEST_P(BlobTableInteTest, TestBlobBunchSpanningSchemaIds) {
+    // Regression test: a blob field whose contiguous files were written under different schema
+    // ids (an ALTER TABLE happens between two appends) must still be groupable into a single
+    // blob bunch.
+    //
+    // BlobBunch::Add only reaches the per-bunch schema/write-cols check when a second blob file is
+    // *strictly contiguous* with the previous one (first_row_id == expected_next_first_row_id_);
+    // the same-first-row-id and overlapping cases return early. Two 1-row f1 blobs at [0,0] and
+    // [1,1] are contiguous, but their ranges do not overlap, so on their own MergeOverlappingRanges
+    // would split them into different need_merge_files groups and each would form a singleton bunch
+    // (never hitting the check). We therefore write the non-blob columns f0/f2 as one file spanning
+    // both rows [0,1]; that file overlaps both f1 blobs and bridges them into a single group, where
+    // the two contiguous f1 blobs (schema 0 then schema 1) are added to the same bunch.
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(/*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    auto schema = arrow::schema(fields_);
+
+    // First commit under schema 0. The non-blob columns f0/f2 are written as one file spanning
+    // both rows [0,1] -- this is the file that bridges the two f1 blobs into one group. The f1
+    // blob covers only row 0 -> [0,0], schema_id 0.
+    std::vector<std::string> write_cols_base = {"f0", "f2"};
+    auto base_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields_[0], fields_[2]}), R"([
+        [1, "b"],
+        [2, "d"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs_base,
+                         WriteArray(table_path, {}, write_cols_base, {base_array}));
+    SetFirstRowId(0, commit_msgs_base);
+
+    // A write cannot contain only blob fields, so include f0 as the required main field and remove
+    // that generated main file from the commit message. This models a field-only blob evolution
+    // output while keeping the writer path realistic.
+    std::vector<std::string> write_cols_f1a = {"f0", "f1"};
+    auto f1a_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields_[0], fields_[1]}), R"([
+        [1, "a"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs_f1a,
+                         WriteArray(table_path, {}, write_cols_f1a, {f1a_array}));
+    KeepOnlyBlobFiles(commit_msgs_f1a);
+    SetFirstRowId(0, commit_msgs_f1a);
+
+    std::vector<std::shared_ptr<CommitMessage>> total_msgs;
+    total_msgs.insert(total_msgs.end(), commit_msgs_base.begin(), commit_msgs_base.end());
+    total_msgs.insert(total_msgs.end(), commit_msgs_f1a.begin(), commit_msgs_f1a.end());
+    ASSERT_OK(Commit(table_path, total_msgs));
+
+    // ALTER TABLE ADD COLUMN f3 -> schema 1. Files written afterwards carry schema_id 1.
+    ASSERT_OK(
+        WriteNextSchema(table_path,
+                        {DataField(0, fields_[0]), DataField(1, fields_[1]),
+                         DataField(2, fields_[2]), DataField(3, arrow::field("f3", arrow::utf8()))},
+                        /*highest_field_id=*/3, options));
+
+    // Second commit under schema 1: the f1 blob for row 1 -> [1,1], schema_id 1. It is strictly
+    // contiguous with the schema_id 0 f1 blob above ([0,0]), so both land in the same blob bunch.
+    std::vector<std::string> write_cols_f1b = {"f0", "f1"};
+    auto f1b_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields_[0], fields_[1]}), R"([
+        [2, "c"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs_f1b,
+                         WriteArray(table_path, {}, write_cols_f1b, {f1b_array}));
+    KeepOnlyBlobFiles(commit_msgs_f1b);
+    SetFirstRowId(1, commit_msgs_f1b);
+    ASSERT_OK(Commit(table_path, commit_msgs_f1b));
+
+    // Without the fix the read fails with
+    // "All files in a blob bunch should have the same schema id."; with it both rows read.
+    auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+        [1, "a", "b"],
+        [2, "c", "d"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_array));
 }
 
 TEST_P(BlobTableInteTest, TestMoreDataWithDataEvolution) {
