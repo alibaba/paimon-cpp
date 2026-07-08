@@ -437,4 +437,269 @@ diff --git a/cpp/src/arrow/io/interfaces.h b/cpp/src/arrow/io/interfaces.h
    /// \return Status
 -  Status Advance(int64_t nbytes);
 +  virtual Status Advance(int64_t nbytes);
- 
+
+--- a/cpp/src/parquet/arrow/reader.cc
++++ b/cpp/src/parquet/arrow/reader.cc
+@@ -254,6 +254,11 @@
+     return GetColumn(i, AllRowGroupsFactory(), out);
+   }
+
++  ::arrow::Status GetColumn(
++      int i, const std::vector<int>& column_indices,
++      FileColumnIteratorFactory iterator_factory,
++      std::unique_ptr<ColumnReader>* out) override;
++
+   Status GetSchema(std::shared_ptr<::arrow::Schema>* out) override {
+     return FromParquetSchema(reader_->metadata()->schema(), reader_properties_,
+                              reader_->metadata()->key_value_metadata(), out);
+@@ -493,10 +498,33 @@
+
+   ::arrow::Status BuildArray(int64_t length_upper_bound,
+                              std::shared_ptr<::arrow::ChunkedArray>* out) final {
++    if (!out_) {
++      BEGIN_PARQUET_CATCH_EXCEPTIONS
++      RETURN_NOT_OK(
++          TransferColumnData(record_reader_.get(), field_, descr_, ctx_->pool, &out_));
++      END_PARQUET_CATCH_EXCEPTIONS
++    }
+     *out = out_;
+     return Status::OK();
+   }
+
++  ::arrow::Status BeginRead(int64_t total_row_count) final {
++    BEGIN_PARQUET_CATCH_EXCEPTIONS
++    out_ = nullptr;
++    record_reader_->Reset();
++    record_reader_->Reserve(total_row_count);
++    return Status::OK();
++    END_PARQUET_CATCH_EXCEPTIONS
++  }
++
++  int64_t SkipRecords(int64_t num_records) final {
++    return record_reader_->SkipRecords(num_records);
++  }
++
++  int64_t ReadRecords(int64_t num_records) final {
++    return record_reader_->ReadRecords(num_records);
++  }
++
+   const std::shared_ptr<Field> field() override { return field_; }
+
+  private:
+@@ -532,6 +560,18 @@
+     return storage_reader_->LoadBatch(number_of_records);
+   }
+
++  ::arrow::Status BeginRead(int64_t total_row_count) final {
++    return storage_reader_->BeginRead(total_row_count);
++  }
++
++  int64_t SkipRecords(int64_t num_records) final {
++    return storage_reader_->SkipRecords(num_records);
++  }
++
++  int64_t ReadRecords(int64_t num_records) final {
++    return storage_reader_->ReadRecords(num_records);
++  }
++
+   Status BuildArray(int64_t length_upper_bound,
+                     std::shared_ptr<ChunkedArray>* out) override {
+     std::shared_ptr<ChunkedArray> storage;
+@@ -576,6 +616,18 @@
+     return item_reader_->LoadBatch(number_of_records);
+   }
+
++  ::arrow::Status BeginRead(int64_t total_row_count) final {
++    return item_reader_->BeginRead(total_row_count);
++  }
++
++  int64_t SkipRecords(int64_t num_records) final {
++    return item_reader_->SkipRecords(num_records);
++  }
++
++  int64_t ReadRecords(int64_t num_records) final {
++    return item_reader_->ReadRecords(num_records);
++  }
++
+   virtual ::arrow::Result<std::shared_ptr<ChunkedArray>> AssembleArray(
+       std::shared_ptr<ArrayData> data) {
+     if (field_->type()->id() == ::arrow::Type::MAP) {
+@@ -709,6 +761,30 @@
+     }
+     return Status::OK();
+   }
++
++  ::arrow::Status BeginRead(int64_t total_row_count) override {
++    for (const std::unique_ptr<ColumnReaderImpl>& reader : children_) {
++      RETURN_NOT_OK(reader->BeginRead(total_row_count));
++    }
++    return Status::OK();
++  }
++
++  int64_t SkipRecords(int64_t num_records) override {
++    int64_t skipped = 0;
++    for (const std::unique_ptr<ColumnReaderImpl>& reader : children_) {
++      skipped = reader->SkipRecords(num_records);
++    }
++    return skipped;
++  }
++
++  int64_t ReadRecords(int64_t num_records) override {
++    int64_t read = 0;
++    for (const std::unique_ptr<ColumnReaderImpl>& reader : children_) {
++      read = reader->ReadRecords(num_records);
++    }
++    return read;
++  }
++
+   Status BuildArray(int64_t length_upper_bound,
+                     std::shared_ptr<ChunkedArray>* out) override;
+   Status GetDefLevels(const int16_t** data, int64_t* length) override;
+@@ -1228,6 +1304,23 @@
+   std::unique_ptr<ColumnReaderImpl> result;
+   RETURN_NOT_OK(GetReader(manifest_.schema_fields[i], ctx, &result));
+   *out = std::move(result);
++  return Status::OK();
++}
++
++::arrow::Status FileReaderImpl::GetColumn(
++    int i, const std::vector<int>& column_indices,
++    FileColumnIteratorFactory iterator_factory,
++    std::unique_ptr<ColumnReader>* out) {
++  RETURN_NOT_OK(BoundsCheckColumn(i));
++  auto ctx = std::make_shared<ReaderContext>();
++  ctx->reader = reader_.get();
++  ctx->pool = pool_;
++  ctx->iterator_factory = iterator_factory;
++  ctx->filter_leaves = true;
++  ctx->included_leaves = VectorToSharedSet(column_indices);
++  std::unique_ptr<ColumnReaderImpl> result;
++  RETURN_NOT_OK(GetReader(manifest_.schema_fields[i], ctx, &result));
++  *out = std::move(result);
+   return Status::OK();
+ }
+
+--- a/cpp/src/parquet/arrow/reader.h
++++ b/cpp/src/parquet/arrow/reader.h
+@@ -48,9 +48,13 @@
+
+ class ColumnChunkReader;
+ class ColumnReader;
++class FileColumnIterator;
+ struct SchemaManifest;
+ class RowGroupReader;
+
++using FileColumnIteratorFactory =
++    std::function<FileColumnIterator*(int, ParquetFileReader*)>;
++
+ /// \brief Arrow read adapter class for deserializing Parquet files as Arrow row batches.
+ ///
+ /// This interfaces caters for different use cases and thus provides different
+@@ -136,6 +140,27 @@
+   // The indicated column index is relative to the schema
+   virtual ::arrow::Status GetColumn(int i, std::unique_ptr<ColumnReader>* out) = 0;
+
++  /// \brief Return a ColumnReader with a custom FileColumnIteratorFactory
++  /// and leaf column filtering.
++  ///
++  /// This allows callers to customize page reading behavior (e.g., setting
++  /// data_page_filter for page-level skipping) and to select only specific
++  /// leaf columns within a nested field. The factory is called once per leaf
++  /// column included in column_indices.
++  ///
++  /// \param i top-level field index (same as GetColumn(int i, ...))
++  /// \param column_indices leaf column indices to include (enables sub-column
++  ///        projection within nested types)
++  /// \param iterator_factory factory to create FileColumnIterator per leaf
++  /// \param[out] out the ColumnReader (may be nullptr if all leaves are pruned)
++  virtual ::arrow::Status GetColumn(
++      int i, const std::vector<int>& column_indices,
++      FileColumnIteratorFactory iterator_factory,
++      std::unique_ptr<ColumnReader>* out) {
++    return ::arrow::Status::NotImplemented(
++        "GetColumn with factory not implemented");
++  }
++
+   /// \brief Return arrow schema for all the columns.
+   virtual ::arrow::Status GetSchema(std::shared_ptr<::arrow::Schema>* out) = 0;
+
+@@ -316,6 +341,29 @@
+   // the data available in the file.
+   virtual ::arrow::Status NextBatch(int64_t batch_size,
+                                     std::shared_ptr<::arrow::ChunkedArray>* out) = 0;
++
++  /// \brief Prepare for filtered reading. Resets internal state and
++  /// pre-allocates buffers. Must be called before SkipRecords/ReadRecords.
++  virtual ::arrow::Status BeginRead(int64_t total_row_count) {
++    return ::arrow::Status::NotImplemented("BeginRead not implemented");
++  }
++
++  /// \brief Skip num_records top-level records.
++  /// Returns the actual number of records skipped.
++  virtual int64_t SkipRecords(int64_t num_records) { return 0; }
++
++  /// \brief Read num_records top-level records into internal buffers.
++  /// Returns the actual number of records read.
++  virtual int64_t ReadRecords(int64_t num_records) { return 0; }
++
++  /// \brief Build the Arrow array from previously loaded data.
++  /// For leaf readers, calls TransferColumnData if not already done.
++  /// For nested readers, assembles the nested array from child arrays.
++  virtual ::arrow::Status BuildArray(
++      int64_t length_upper_bound,
++      std::shared_ptr<::arrow::ChunkedArray>* out) {
++    return ::arrow::Status::NotImplemented("BuildArray not implemented");
++  }
+ };
+
+ /// \brief Experimental helper class for bindings (like Python) that struggle
+--- a/cpp/src/parquet/arrow/reader_internal.h
++++ b/cpp/src/parquet/arrow/reader_internal.h
+@@ -26,6 +26,7 @@
+ #include <utility>
+ #include <vector>
+
++#include "parquet/arrow/reader.h"
+ #include "parquet/arrow/schema.h"
+ #include "parquet/column_reader.h"
+ #include "parquet/file_reader.h"
+@@ -70,6 +71,13 @@
+
+   virtual ~FileColumnIterator() {}
+
++  /// \brief Set a data_page_filter that will be applied to every PageReader
++  /// created by NextChunk(). This enables I/O-level page skipping.
++  void set_data_page_filter(
++      std::function<bool(const ::parquet::DataPageStats&)> filter) {
++    data_page_filter_ = std::move(filter);
++  }
++
+   std::unique_ptr<::parquet::PageReader> NextChunk() {
+     if (row_groups_.empty()) {
+       return nullptr;
+@@ -77,7 +85,11 @@
+
+     auto row_group_reader = reader_->RowGroup(row_groups_.front());
+     row_groups_.pop_front();
+-    return row_group_reader->GetColumnPageReader(column_index_);
++    auto page_reader = row_group_reader->GetColumnPageReader(column_index_);
++    if (page_reader && data_page_filter_) {
++      page_reader->set_data_page_filter(data_page_filter_);
++    }
++    return page_reader;
+   }
+
+   const SchemaDescriptor* schema() const { return schema_; }
+@@ -93,11 +105,9 @@
+   ParquetFileReader* reader_;
+   const SchemaDescriptor* schema_;
+   std::deque<int> row_groups_;
++  std::function<bool(const ::parquet::DataPageStats&)> data_page_filter_;
+ };
+
+-using FileColumnIteratorFactory =
+-    std::function<FileColumnIterator*(int, ParquetFileReader*)>;
+-
+ Status TransferColumnData(::parquet::internal::RecordReader* reader,
+                           const std::shared_ptr<::arrow::Field>& value_field,
+                           const ColumnDescriptor* descr, ::arrow::MemoryPool* pool,
