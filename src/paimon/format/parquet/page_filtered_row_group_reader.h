@@ -46,10 +46,8 @@ class PageFilteredRowGroupReader {
 
     /// Read a row group with page-level filtering.
     /// @param arrow_file_reader The Arrow FileReader for ColumnReader tree creation
-    /// @param parquet_reader The underlying ParquetFileReader
     /// @param target_row_group Target row group with index and row ranges
     /// @param column_indices Leaf column indices to read
-    /// @param arrow_schema The target Arrow schema for output columns
     /// @param pool Memory pool
     /// @param cache_options Cache options for PreBuffer
     /// @param pre_buffered If true, assumes PreBuffer was already called externally
@@ -58,13 +56,10 @@ class PageFilteredRowGroupReader {
     /// @param max_chunksize Per-batch row cap for the returned reader.
     /// @return A RecordBatchReader streaming the filtered rows.
     static Result<std::unique_ptr<arrow::RecordBatchReader>> ReadFilteredRowGroup(
-        ::parquet::arrow::FileReader* arrow_file_reader,
-        ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
-        const std::vector<int32_t>& column_indices,
-        const std::shared_ptr<arrow::Schema>& arrow_schema,
-        const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
-        const std::vector<::arrow::io::ReadRange>& page_ranges, int64_t max_chunksize,
-        std::shared_ptr<::arrow::MemoryPool> pool);
+        ::parquet::arrow::FileReader* arrow_file_reader, const TargetRowGroup& target_row_group,
+        const std::vector<int32_t>& column_indices, const ::arrow::io::CacheOptions& cache_options,
+        bool pre_buffered, const std::vector<::arrow::io::ReadRange>& page_ranges,
+        int64_t max_chunksize, std::shared_ptr<::arrow::MemoryPool> pool);
 
     /// Compute the byte ranges of pages that overlap with the given RowRanges.
     /// Uses OffsetIndex to determine per-page file offsets and sizes.
@@ -110,9 +105,12 @@ class PageFilteredRowGroupReader {
     static Result<std::shared_ptr<arrow::ChunkedArray>> ReadFilteredField(
         ::parquet::arrow::FileReader* arrow_file_reader,
         const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
-        int32_t row_group_index, int32_t field_index,
-        const std::vector<int32_t>& column_indices, const RowRanges& row_ranges,
-        int64_t row_group_row_count, std::shared_ptr<::arrow::MemoryPool> pool);
+        int32_t row_group_index, int32_t field_index, const std::vector<int32_t>& column_indices,
+        const RowRanges& row_ranges, int64_t row_group_row_count,
+        std::shared_ptr<::arrow::MemoryPool> pool);
+
+    static Result<std::shared_ptr<arrow::Schema>> BuildPageFilteredSchema(
+        ::parquet::arrow::FileReader* file_reader, const std::vector<int32_t>& column_indices);
 };
 
 }  // namespace paimon::parquet

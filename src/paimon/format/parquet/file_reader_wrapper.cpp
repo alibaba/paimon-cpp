@@ -232,13 +232,11 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::NextPageFiltered(
             file_reader_->parquet_reader(), target_rg, target_column_indices_);
         bool pre_buffered = !prebuffered_ranges_.empty();
         int64_t max_chunksize = batch_size_ > 0 ? batch_size_ : std::numeric_limits<int64_t>::max();
-        PAIMON_ASSIGN_OR_RAISE(
-            current_page_filtered_reader_,
-            PageFilteredRowGroupReader::ReadFilteredRowGroup(
-                file_reader_.get(), file_reader_->parquet_reader(), target_rg,
-                target_column_indices_, page_filtered_read_schema_,
-                file_reader_->properties().cache_options(),
-                pre_buffered, page_ranges, max_chunksize, pool_));
+        PAIMON_ASSIGN_OR_RAISE(current_page_filtered_reader_,
+                               PageFilteredRowGroupReader::ReadFilteredRowGroup(
+                                   file_reader_.get(), target_rg, target_column_indices_,
+                                   file_reader_->properties().cache_options(), pre_buffered,
+                                   page_ranges, max_chunksize, pool_));
         current_filtered_row_ranges_ = target_rg.row_ranges;
         current_filtered_rg_start_ = all_row_group_ranges_[rg_id].first;
         filtered_global_offset_ = 0;
@@ -341,26 +339,6 @@ Status FileReaderWrapper::PrepareForReadingLazy(
     return Status::OK();
 }
 
-Status FileReaderWrapper::BuildPageFilteredSchema(const std::vector<int32_t>& column_indices) {
-    if (page_filtered_read_schema_) {
-        return Status::OK();
-    }
-    // Use SchemaManifest to build schema with proper nested field structure.
-    // GetFieldIndices maps leaf column indices to top-level field indices,
-    // correctly handling nested types (List, Struct, Map).
-    const auto& manifest = file_reader_->manifest();
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-        std::vector<int> field_indices,
-        manifest.GetFieldIndices(
-            std::vector<int>(column_indices.begin(), column_indices.end())));
-    std::vector<std::shared_ptr<arrow::Field>> fields;
-    for (int field_idx : field_indices) {
-        fields.push_back(manifest.schema_fields[field_idx].field);
-    }
-    page_filtered_read_schema_ = arrow::schema(fields);
-    return Status::OK();
-}
-
 std::vector<::arrow::io::ReadRange> FileReaderWrapper::CollectPreBufferRanges(
     const std::vector<int32_t>& column_indices) {
     std::vector<::arrow::io::ReadRange> ranges;
@@ -409,7 +387,6 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
     try {
         target_row_groups_ = target_row_groups;
         target_column_indices_ = column_indices;
-        page_filtered_read_schema_.reset();
 
         // Partition into fully-matched and page-filtered row groups, skipping excluded ones.
         std::vector<int32_t> fully_matched_row_groups;
@@ -425,9 +402,6 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
         }
 
         bool has_partially_matched = fully_matched_row_groups.size() != active_count;
-        if (has_partially_matched) {
-            PAIMON_RETURN_NOT_OK(BuildPageFilteredSchema(column_indices));
-        }
 
         WaitForPendingPreBuffer();
 
