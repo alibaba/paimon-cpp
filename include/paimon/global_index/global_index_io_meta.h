@@ -16,8 +16,11 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
+#include <vector>
 
 #include "paimon/memory/bytes.h"
 #include "paimon/utils/range.h"
@@ -27,7 +30,15 @@ namespace paimon {
 struct PAIMON_EXPORT GlobalIndexIOMeta {
     GlobalIndexIOMeta(const std::string& _file_path, int64_t _file_size,
                       const std::shared_ptr<Bytes>& _metadata)
-        : file_path(_file_path), file_size(_file_size), metadata(_metadata) {}
+        : GlobalIndexIOMeta(_file_path, _file_size, _metadata, std::nullopt) {}
+
+    GlobalIndexIOMeta(const std::string& _file_path, int64_t _file_size,
+                      const std::shared_ptr<Bytes>& _metadata,
+                      const std::optional<std::vector<int32_t>>& _extra_field_ids)
+        : file_path(_file_path),
+          file_size(_file_size),
+          metadata(_metadata),
+          extra_field_ids(_extra_field_ids) {}
 
     std::string file_path;
     int64_t file_size;
@@ -35,6 +46,8 @@ struct PAIMON_EXPORT GlobalIndexIOMeta {
     /// secondary index structures or inline index bytes.
     /// May be null if no additional metadata is available.
     std::shared_ptr<Bytes> metadata;
+    /// Optional table field ids materialized together with the indexed field.
+    std::optional<std::vector<int32_t>> extra_field_ids;
 };
 
 }  // namespace paimon
