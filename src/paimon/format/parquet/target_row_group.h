@@ -67,7 +67,7 @@ class TargetRowGroup {
                 continue;
             }
             target_row_groups.emplace_back(
-                i, false, RowRanges(Range(0, ranges[i].second - ranges[i].first - 1)));
+                static_cast<int32_t>(i), false, RowRanges(Range(0, ranges[i].second - ranges[i].first - 1)));
         }
         return target_row_groups;
     }

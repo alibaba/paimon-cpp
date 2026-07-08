@@ -138,7 +138,7 @@ class PAIMON_EXPORT RoaringBitmap32 {
     Iterator EqualOrLarger(int32_t key) const;
     /// @return the first value which is equal or larger than x
     std::optional<int32_t> NextValue(int32_t x) const;
-    /// @return the first value which is smaller than x
+    /// @return the largest value which is smaller than x
     std::optional<int32_t> PreviousValue(int32_t x) const;
 
     /// Computes the intersection between two bitmaps and returns new bitmap.

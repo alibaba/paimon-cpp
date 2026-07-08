@@ -187,7 +187,7 @@ Status ParquetFileBatchReader::SetReadSchema(
         // If no predicate is provided, skip page-level filtering, row_group_row_ranges will be
         // empty
         if (predicate && !target_row_groups.empty()) {
-            // walkaround: page index filter does not support nested fields for now, skip page index
+            // workaround: page index filter does not support nested fields for now, skip page index
             // filter if there is any nested field in the schema
             if (enable_page_index_filter && !has_nested_field) {
                 // Build column name to index map for page-level filtering.
@@ -628,8 +628,7 @@ Status ParquetFileBatchReader::GenerateRowMapping(int64_t batch_length) {
         std::upper_bound(all_ranges.begin(), all_ranges.end(), batch_start_row,
                          [](int64_t value, const Range& r) { return value < r.from; });
     if (cur_range_it == all_ranges.begin()) {
-        std::stringstream s;
-        return Status::Invalid(fmt::format("No range found! {} {}", s.str(), all_ranges.size()));
+        return Status::Invalid("No range found!");
     }
     --cur_range_it;
     if (batch_start_row < cur_range_it->from || batch_start_row > cur_range_it->to) {
