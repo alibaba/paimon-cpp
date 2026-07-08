@@ -115,7 +115,8 @@ class BTreeCompatibilityTest : public ::testing::Test {
         PAIMON_ASSIGN_OR_RAISE(auto file_status, fs_->GetFileStatus(bin_path));
         auto file_size = file_status->GetLen();
 
-        GlobalIndexIOMeta io_meta(bin_path, file_size, meta_bytes);
+        GlobalIndexIOMeta io_meta(bin_path, file_size, meta_bytes,
+                                  /*extra_field_ids=*/std::nullopt);
         std::vector<GlobalIndexIOMeta> metas = {io_meta};
 
         auto schema = arrow::schema({arrow::field("testField", arrow_type)});

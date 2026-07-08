@@ -29,10 +29,6 @@ namespace paimon {
 /// Metadata describing a single file entry in a global index.
 struct PAIMON_EXPORT GlobalIndexIOMeta {
     GlobalIndexIOMeta(const std::string& _file_path, int64_t _file_size,
-                      const std::shared_ptr<Bytes>& _metadata)
-        : GlobalIndexIOMeta(_file_path, _file_size, _metadata, std::nullopt) {}
-
-    GlobalIndexIOMeta(const std::string& _file_path, int64_t _file_size,
                       const std::shared_ptr<Bytes>& _metadata,
                       const std::optional<std::vector<int32_t>>& _extra_field_ids)
         : file_path(_file_path),

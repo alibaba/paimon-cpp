@@ -895,7 +895,7 @@ Result<std::vector<GlobalIndexIOMeta>> LuminaIndexWriter::Finish() {
     PAIMON_RETURN_NOT_OK(RapidJsonUtil::ToJsonString(lumina_options_, &options_json));
     auto meta_bytes = std::make_shared<Bytes>(options_json, pool_->GetPaimonPool().get());
     GlobalIndexIOMeta meta(file_manager_->ToPath(index_file_name), file_size,
-                           /*metadata=*/meta_bytes);
+                           /*metadata=*/meta_bytes, /*extra_field_ids=*/std::nullopt);
     return std::vector<GlobalIndexIOMeta>({meta});
 }
 

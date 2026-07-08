@@ -1703,7 +1703,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, CreateReaderWithMultiFieldSchema) {
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
 
-    GlobalIndexIOMeta meta("fake_path", 100, nullptr);
+    GlobalIndexIOMeta meta("fake_path", 100, nullptr, /*extra_field_ids=*/std::nullopt);
     std::vector<GlobalIndexIOMeta> metas = {meta};
 
     ASSERT_NOK_WITH_MSG(indexer->CreateReader(c_schema.get(), file_reader, metas, pool_),
