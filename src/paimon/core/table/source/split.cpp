@@ -327,22 +327,16 @@ Result<std::shared_ptr<Split>> Split::Deserialize(const char* buffer, size_t len
         if (pos == stream_length) {
             return data_split;
         } else if (data_split->BucketPath() == ChainDataSplitImpl::VIRTUAL_BUCKET_PATH) {
-            auto chain_split = ReadChainDataSplitTail(data_split, pool, &in);
-            if (!chain_split.ok()) {
-                return Status::Invalid(fmt::format("invalid ChainDataSplit byte stream: {}",
-                                                   chain_split.status().ToString()));
-            }
-            return std::static_pointer_cast<Split>(chain_split.value());
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ChainDataSplitImpl> chain_split,
+                                   ReadChainDataSplitTail(data_split, pool, &in));
+            return std::static_pointer_cast<Split>(chain_split);
         } else if (pos == stream_length - 1) {
             PAIMON_ASSIGN_OR_RAISE(bool is_fallback, in.ReadValue<bool>());
             return std::make_shared<FallbackDataSplit>(data_split, is_fallback);
         } else {
-            auto chain_split = ReadChainDataSplitTail(data_split, pool, &in);
-            if (!chain_split.ok()) {
-                return Status::Invalid(fmt::format("invalid ChainDataSplit byte stream: {}",
-                                                   chain_split.status().ToString()));
-            }
-            return std::static_pointer_cast<Split>(chain_split.value());
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ChainDataSplitImpl> chain_split,
+                                   ReadChainDataSplitTail(data_split, pool, &in));
+            return std::static_pointer_cast<Split>(chain_split);
         }
     }
     return Status::Invalid("invalid split, must be DataSplit or IndexedSplit");
