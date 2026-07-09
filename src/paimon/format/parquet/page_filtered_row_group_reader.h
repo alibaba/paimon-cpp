@@ -107,9 +107,6 @@ class PageFilteredRowGroupReader {
         int32_t row_group_index, int32_t field_index, const std::vector<int32_t>& column_indices,
         const RowRanges& row_ranges, int64_t row_group_row_count,
         std::shared_ptr<::arrow::MemoryPool> pool);
-
-    static Result<std::shared_ptr<arrow::Schema>> BuildPageFilteredSchema(
-        ::parquet::arrow::FileReader* file_reader, const std::vector<int32_t>& column_indices);
 };
 
 }  // namespace paimon::parquet

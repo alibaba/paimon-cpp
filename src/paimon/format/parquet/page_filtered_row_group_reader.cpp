@@ -226,16 +226,8 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
     bool pre_buffered, const std::vector<::arrow::io::ReadRange>& page_ranges,
     int64_t max_chunksize, std::shared_ptr<::arrow::MemoryPool> pool) {
     auto parquet_reader = arrow_file_reader->parquet_reader();
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> arrow_schema,
-                           BuildPageFilteredSchema(arrow_file_reader, column_indices));
     const auto& row_ranges = target_row_group.row_ranges;
     int32_t row_group_index = target_row_group.row_group_index;
-
-    if (row_ranges.IsEmpty()) {
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Table> empty_table,
-                                          arrow::Table::MakeEmpty(arrow_schema, pool.get()));
-        return std::make_unique<TableRecordBatchReader>(std::move(empty_table), max_chunksize);
-    }
 
     int64_t expected_rows = row_ranges.RowCount();
 
@@ -279,7 +271,18 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
         columns.push_back(std::move(chunked_array));
     }
 
-    auto table = arrow::Table::Make(arrow_schema, std::move(columns), expected_rows);
+    // Build schema from actual column types (not SchemaManifest's full field).
+    // This handles sub-column projection: when filter_leaves prunes some children,
+    // the ChunkedArray type is the projected type (e.g. struct<x> instead of struct<x,y>),
+    // which may differ from the full field in SchemaManifest.
+    std::vector<std::shared_ptr<arrow::Field>> result_fields;
+    for (size_t i = 0; i < columns.size(); ++i) {
+        const auto& field_name = manifest.schema_fields[field_indices[i]].field->name();
+        result_fields.push_back(arrow::field(field_name, columns[i]->type()));
+    }
+    auto result_schema = arrow::schema(result_fields);
+
+    auto table = arrow::Table::Make(result_schema, std::move(columns), expected_rows);
     return std::make_unique<TableRecordBatchReader>(std::move(table), max_chunksize);
 }
 
@@ -349,22 +352,6 @@ std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRange
     }
 
     return ranges;
-}
-
-Result<std::shared_ptr<arrow::Schema>> PageFilteredRowGroupReader::BuildPageFilteredSchema(
-    ::parquet::arrow::FileReader* file_reader, const std::vector<int32_t>& column_indices) {
-    // Use SchemaManifest to build schema with proper nested field structure.
-    // GetFieldIndices maps leaf column indices to top-level field indices,
-    // correctly handling nested types (List, Struct, Map).
-    const auto& manifest = file_reader->manifest();
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-        std::vector<int> field_indices,
-        manifest.GetFieldIndices(std::vector<int>(column_indices.begin(), column_indices.end())));
-    std::vector<std::shared_ptr<arrow::Field>> fields;
-    for (int field_idx : field_indices) {
-        fields.push_back(manifest.schema_fields[field_idx].field);
-    }
-    return arrow::schema(fields);
 }
 
 }  // namespace paimon::parquet
