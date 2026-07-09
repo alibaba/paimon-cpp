@@ -21,6 +21,7 @@
 #include "arrow/api.h"
 #include "gtest/gtest.h"
 #include "paimon/common/data/blob_utils.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 
 namespace paimon::test {
@@ -61,6 +62,19 @@ TEST(DataTypeTest, DataTypeToString) {
         std::shared_ptr<arrow::Field> blob_field = BlobUtils::ToArrowField("f2_blob", false);
         DataType blob_type(blob_field->type(), blob_field->nullable(), blob_field->metadata());
         ASSERT_EQ(blob_type.DataTypeToString(blob_field->type()), "BLOB");
+    }
+    {
+        std::shared_ptr<arrow::Field> variant_field = VariantTypeUtils::ToArrowField("f3_variant");
+        DataType variant_type(variant_field->type(), variant_field->nullable(),
+                              variant_field->metadata());
+        ASSERT_EQ(variant_type.DataTypeToString(variant_field->type()), "VARIANT");
+        // A variant field is a scalar VARIANT type, not a ROW type.
+        auto created = DataType::Create(variant_field->type(), variant_field->nullable(),
+                                        variant_field->metadata());
+        rapidjson::Document doc;
+        auto json_value = created->ToJson(&doc.GetAllocator());
+        ASSERT_TRUE(json_value.IsString());
+        ASSERT_EQ(std::string(json_value.GetString()), "VARIANT");
     }
     ASSERT_EQ(dummy_data_type.DataTypeToString(arrow::date32()), "DATE");
 

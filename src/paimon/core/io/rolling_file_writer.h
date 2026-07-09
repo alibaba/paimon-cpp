@@ -154,8 +154,10 @@ Status RollingFileWriter<T, R>::CloseCurrentWriter() {
     if (current_writer_ == nullptr) {
         return Status::OK();
     }
-    std::shared_ptr<Metrics> current_metrics = current_writer_->GetMetrics();
     PAIMON_RETURN_NOT_OK(current_writer_->Close());
+    // Read the metrics after Close(): writers that create their inner writer lazily (e.g.
+    // inferred shredding) only expose metrics once closed.
+    std::shared_ptr<Metrics> current_metrics = current_writer_->GetMetrics();
     PAIMON_ASSIGN_OR_RAISE(auto abort_executor, current_writer_->GetAbortExecutor());
     closed_writers_.push_back(abort_executor);
     PAIMON_ASSIGN_OR_RAISE(R result, current_writer_->GetResult());

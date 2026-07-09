@@ -21,6 +21,7 @@
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
 #include "paimon/common/data/shredding/map_shared_shredding_utils.h"
+#include "paimon/common/data/shredding/shredding_write_plan_factories.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/io/key_value_data_file_writer_factory.h"
@@ -152,11 +153,12 @@ MergeTreeCompactRewriter::CreateRollingRowWriter(int32_t level) {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
                            CreateDataFilePathFactory(format->Identifier()));
     std::shared_ptr<SingleFileWriterFactory<KeyValueBatch, std::shared_ptr<DataFileMeta>>> factory;
-    if (shredding_context_) {
+    if (auto plan_factory = ShreddingWritePlanFactories::SelectActive(options_, write_schema_,
+                                                                      shredding_context_, pool_)) {
         factory = std::make_shared<ShreddingKeyValueDataFileWriterFactory>(
             options_, schema_id_, write_schema_, level, FileSource::Compact(),
             trimmed_primary_keys_, data_file_path_factory, /*create_stats_extractor=*/true,
-            shredding_context_, pool_);
+            plan_factory, pool_);
     } else {
         factory = std::make_shared<KeyValueDataFileWriterFactory>(
             options_, schema_id_, write_schema_, level, FileSource::Compact(),

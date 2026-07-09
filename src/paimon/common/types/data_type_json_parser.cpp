@@ -28,6 +28,7 @@
 
 #include "fmt/format.h"
 #include "paimon/common/data/blob_utils.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/rapidjson_util.h"
@@ -80,9 +81,16 @@ struct Token {
     std::string value;
 };
 
+// Extension type attributes of a parsed atomic type. BLOB and VARIANT parse to plain arrow
+// types (large_binary / struct) and need field-level metadata markers applied by the caller.
+struct AtomicTypeAttributes {
+    bool is_blob = false;
+    bool is_variant = false;
+};
+
 // nullptr is returned in the case of parsing failed
 Result<std::shared_ptr<arrow::DataType>> ParseAtomicType(const std::string& str, bool* nullable,
-                                                         bool* is_blob);
+                                                         AtomicTypeAttributes* attributes);
 std::vector<Token> Tokenize(const std::string& chars);
 bool IsWhitespace(char character);
 bool IsDelimiter(char character);
@@ -136,6 +144,7 @@ enum class Keyword : int32_t {
     MAP,
     ROW,
     BLOB,
+    VARIANT,
     // NULL is keyword in c++
     NULL_,
     RAW,
@@ -184,6 +193,7 @@ const std::map<std::string, Keyword>& Keywords() {
         {"MAP", Keyword::MAP},
         {"ROW", Keyword::ROW},
         {"BLOB", Keyword::BLOB},
+        {"VARIANT", Keyword::VARIANT},
         {"NULL", Keyword::NULL_},
         {"RAW", Keyword::RAW},
         {"LEGACY", Keyword::LEGACY},
@@ -196,7 +206,8 @@ class TokenParser {
     TokenParser(const std::string& input_string, const std::vector<Token>& tokens)
         : input_string_(input_string), tokens_(tokens) {}
 
-    Result<std::shared_ptr<arrow::DataType>> ParseTokens(bool* nullable, bool* is_blob);
+    Result<std::shared_ptr<arrow::DataType>> ParseTokens(bool* nullable,
+                                                         AtomicTypeAttributes* attributes);
 
  private:
     inline const Token& GetToken() const {
@@ -225,9 +236,9 @@ class TokenParser {
     bool HasNextToken(const std::vector<TokenType>& types) const;
     bool HasNextToken(const std::vector<Keyword>& keywords) const;
     Result<bool> ParseNullability();
-    Result<std::shared_ptr<arrow::DataType>> ParseTypeWithNullability(bool* nullable,
-                                                                      bool* is_blob);
-    Result<std::shared_ptr<arrow::DataType>> ParseTypeByKeyword(bool* is_blob);
+    Result<std::shared_ptr<arrow::DataType>> ParseTypeWithNullability(
+        bool* nullable, AtomicTypeAttributes* attributes);
+    Result<std::shared_ptr<arrow::DataType>> ParseTypeByKeyword(AtomicTypeAttributes* attributes);
     Result<int32_t> ParseStringLength();
     template <typename T>
     Result<std::shared_ptr<arrow::DataType>> ParseStringType();
@@ -245,11 +256,11 @@ class TokenParser {
 };
 
 Result<std::shared_ptr<arrow::DataType>> ParseAtomicType(const std::string& str, bool* nullable,
-                                                         bool* is_blob) {
+                                                         AtomicTypeAttributes* attributes) {
     try {
         std::vector<Token> tokens = Tokenize(str);
         TokenParser converter(str, tokens);
-        return converter.ParseTokens(nullable, is_blob);
+        return converter.ParseTokens(nullable, attributes);
     } catch (...) {
         return Status::Invalid("parse atomic type failed.");
     }
@@ -371,9 +382,10 @@ int32_t ConsumeIdentifier(const std::string& chars, int32_t cursor, std::ostring
     return cursor - 1;
 }
 
-Result<std::shared_ptr<arrow::DataType>> TokenParser::ParseTokens(bool* nullable, bool* is_blob) {
+Result<std::shared_ptr<arrow::DataType>> TokenParser::ParseTokens(
+    bool* nullable, AtomicTypeAttributes* attributes) {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::DataType> type,
-                           ParseTypeWithNullability(nullable, is_blob));
+                           ParseTypeWithNullability(nullable, attributes));
     if (HasRemainingTokens()) {
         PAIMON_RETURN_NOT_OK(NextToken());
         return Status::Invalid(fmt::format("Unexpected token: {}", GetToken().value));
@@ -452,9 +464,10 @@ Result<bool> TokenParser::ParseNullability() {
     return true;
 }
 
-Result<std::shared_ptr<arrow::DataType>> TokenParser::ParseTypeWithNullability(bool* nullable,
-                                                                               bool* is_blob) {
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::DataType> data_type, ParseTypeByKeyword(is_blob));
+Result<std::shared_ptr<arrow::DataType>> TokenParser::ParseTypeWithNullability(
+    bool* nullable, AtomicTypeAttributes* attributes) {
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::DataType> data_type,
+                           ParseTypeByKeyword(attributes));
     PAIMON_ASSIGN_OR_RAISE(*nullable, ParseNullability());
     // special case: suffix notation for ARRAY types
     if (HasNextToken({Keyword::ARRAY}) || HasNextToken({Keyword::MULTISET})) {
@@ -463,7 +476,8 @@ Result<std::shared_ptr<arrow::DataType>> TokenParser::ParseTypeWithNullability(b
     return data_type;
 }
 
-Result<std::shared_ptr<arrow::DataType>> TokenParser::ParseTypeByKeyword(bool* is_blob) {
+Result<std::shared_ptr<arrow::DataType>> TokenParser::ParseTypeByKeyword(
+    AtomicTypeAttributes* attributes) {
     PAIMON_RETURN_NOT_OK(NextToken(TokenType::KEYWORD));
     switch (TokenAsKeyword()) {
         case Keyword::CHAR:
@@ -475,8 +489,12 @@ Result<std::shared_ptr<arrow::DataType>> TokenParser::ParseTypeByKeyword(bool* i
         case Keyword::BYTES:
             return arrow::binary();
         case Keyword::BLOB: {
-            *is_blob = true;
+            attributes->is_blob = true;
             return arrow::large_binary();
+        }
+        case Keyword::VARIANT: {
+            attributes->is_variant = true;
+            return VariantTypeUtils::UnshreddedStructType();
         }
         case Keyword::STRING:
             return arrow::utf8();
@@ -612,11 +630,13 @@ Result<std::shared_ptr<arrow::Field>> DataTypeJsonParser::ParseType(
 Result<std::shared_ptr<arrow::Field>> DataTypeJsonParser::ParseAtomicTypeField(
     const std::string& name, const rapidjson::Value& type_json_value) {
     bool nullable = true;
-    bool is_blob = false;
+    AtomicTypeAttributes attributes;
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::DataType> type,
-                           ParseAtomicType(type_json_value.GetString(), &nullable, &is_blob));
-    if (is_blob) {
+                           ParseAtomicType(type_json_value.GetString(), &nullable, &attributes));
+    if (attributes.is_blob) {
         return BlobUtils::ToArrowField(name, nullable);
+    } else if (attributes.is_variant) {
+        return VariantTypeUtils::ToArrowField(name, nullable);
     } else {
         return arrow::field(name, type, nullable);
     }

@@ -21,6 +21,9 @@
 
 #include "arrow/type.h"
 #include "gtest/gtest.h"
+#include "paimon/common/data/variant/variant_access_utils.h"
+#include "paimon/common/data/variant/variant_defs.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/testing/utils/testharness.h"
@@ -267,6 +270,47 @@ TEST(ArrowSchemaValidatorTest, ValidateDataTypeWithFieldId) {
         ASSERT_NOK_WITH_MSG(ArrowSchemaValidator::ValidateDataTypeWithFieldId(
                                 struct_type, /*key_value_metadata=*/nullptr, &field_id_set),
                             "Unknown or unsupported arrow type: large_string");
+    }
+}
+
+TEST(ArrowSchemaValidatorTest, ValidateVariantField) {
+    // A variant field validates as a leaf: its fixed child ids 0/1 do not join the global field
+    // id uniqueness check, even when top-level fields use ids 0/1.
+    {
+        std::vector<DataField> fields = {DataField(0, arrow::field("f0", arrow::utf8())),
+                                         DataField(1, VariantTypeUtils::ToArrowField("v1")),
+                                         DataField(2, VariantTypeUtils::ToArrowField("v2"))};
+        auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(fields);
+        ASSERT_OK(ArrowSchemaValidator::ValidateSchemaWithFieldId(*arrow_schema))
+            << ArrowSchemaValidator::ValidateSchemaWithFieldId(*arrow_schema).ToString();
+    }
+    // A variant-access projection (variant marker + description-carrying children) validates
+    // as a leaf instead of being shape-checked.
+    {
+        auto age_child =
+            arrow::field("0", arrow::int64(), true,
+                         arrow::KeyValueMetadata::Make(
+                             {DataField::DESCRIPTION},
+                             {VariantAccessUtils::BuildVariantMetadata("$.age", true, "UTC")}));
+        std::unordered_map<std::string, std::string> metadata = {
+            {VariantDefs::kExtensionTypeKey, VariantDefs::kExtensionTypeValue}};
+        auto access_field = arrow::field("v", arrow::struct_({age_child}), true,
+                                         std::make_shared<arrow::KeyValueMetadata>(metadata));
+        auto arrow_schema = arrow::schema({access_field});
+        ASSERT_OK(ArrowSchemaValidator::ValidateSchema(*arrow_schema))
+            << ArrowSchemaValidator::ValidateSchema(*arrow_schema).ToString();
+    }
+    // A variant-marked struct with the wrong physical shape is rejected.
+    {
+        std::unordered_map<std::string, std::string> metadata = {
+            {VariantDefs::kExtensionTypeKey, VariantDefs::kExtensionTypeValue}};
+        auto bad_variant =
+            arrow::field("v",
+                         arrow::struct_({arrow::field("value", arrow::binary(), true),
+                                         arrow::field("metadata", arrow::binary(), true)}),
+                         true, std::make_shared<arrow::KeyValueMetadata>(metadata));
+        auto arrow_schema = arrow::schema({bad_variant});
+        ASSERT_NOK(ArrowSchemaValidator::ValidateSchema(*arrow_schema));
     }
 }
 

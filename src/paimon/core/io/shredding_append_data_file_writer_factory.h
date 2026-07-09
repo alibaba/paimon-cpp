@@ -21,15 +21,18 @@
 #include <string>
 #include <vector>
 
+#include "paimon/common/data/shredding/shredding_write_plan_factory.h"
 #include "paimon/core/io/append_data_file_writer_factory.h"
 
 namespace paimon {
 
 class DataFilePathFactory;
 class LongCounter;
-class MapSharedShreddingContext;
 class MemoryPool;
 
+/// Creates append data file writers that rewrite logical batches into a physical (shredded)
+/// layout as planned by a `ShreddingWritePlanFactory` (MAP shared-shredding or VARIANT
+/// shredding, configured or inferred).
 class ShreddingAppendDataFileWriterFactory : public AppendDataFileWriterFactory {
  public:
     ShreddingAppendDataFileWriterFactory(
@@ -38,14 +41,17 @@ class ShreddingAppendDataFileWriterFactory : public AppendDataFileWriterFactory 
         const std::optional<std::vector<std::string>>& write_cols,
         const std::shared_ptr<LongCounter>& seq_num_counter, FileSource file_source,
         const std::shared_ptr<DataFilePathFactory>& path_factory,
-        const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
+        const std::shared_ptr<ShreddingWritePlanFactory>& plan_factory,
         const std::shared_ptr<MemoryPool>& pool);
 
     Result<std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>>
     CreateWriter() const override;
 
  private:
-    std::shared_ptr<MapSharedShreddingContext> shredding_context_;
+    Result<std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>>
+    CreateShreddedWriter(const std::shared_ptr<ShreddingBatchConverter>& converter) const;
+
+    std::shared_ptr<ShreddingWritePlanFactory> plan_factory_;
 };
 
 }  // namespace paimon

@@ -1274,6 +1274,42 @@ Result<bool> CoreOptions::FieldCollectAggDistinct(const std::string& field_name)
     return distinct;
 }
 
+std::optional<std::string> CoreOptions::GetVariantShreddingSchema() const {
+    auto it = impl_->raw_options.find(Options::VARIANT_SHREDDING_SCHEMA);
+    if (it == impl_->raw_options.end()) {
+        it = impl_->raw_options.find(Options::PARQUET_VARIANT_SHREDDING_SCHEMA);
+    }
+    if (it == impl_->raw_options.end() || it->second.empty()) {
+        return std::nullopt;
+    }
+    return it->second;
+}
+
+Result<bool> CoreOptions::VariantInferShreddingSchemaEnabled() const {
+    return OptionsUtils::GetValueFromMap<bool>(impl_->raw_options,
+                                               Options::VARIANT_INFER_SHREDDING_SCHEMA, false);
+}
+
+Result<int32_t> CoreOptions::GetVariantShreddingMaxSchemaWidth() const {
+    return OptionsUtils::GetValueFromMap<int32_t>(impl_->raw_options,
+                                                  Options::VARIANT_SHREDDING_MAX_SCHEMA_WIDTH, 300);
+}
+
+Result<int32_t> CoreOptions::GetVariantShreddingMaxSchemaDepth() const {
+    return OptionsUtils::GetValueFromMap<int32_t>(impl_->raw_options,
+                                                  Options::VARIANT_SHREDDING_MAX_SCHEMA_DEPTH, 50);
+}
+
+Result<double> CoreOptions::GetVariantShreddingMinFieldCardinalityRatio() const {
+    return OptionsUtils::GetValueFromMap<double>(
+        impl_->raw_options, Options::VARIANT_SHREDDING_MIN_FIELD_CARDINALITY_RATIO, 0.1);
+}
+
+Result<int32_t> CoreOptions::GetVariantShreddingMaxInferBufferRow() const {
+    return OptionsUtils::GetValueFromMap<int32_t>(
+        impl_->raw_options, Options::VARIANT_SHREDDING_MAX_INFER_BUFFER_ROW, 4096);
+}
+
 Result<MapStorageLayout> CoreOptions::GetMapStorageLayout(const std::string& field_name) const {
     std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
                       std::string(Options::MAP_STORAGE_LAYOUT);

@@ -30,6 +30,7 @@
 #include "arrow/scalar.h"
 #include "arrow/util/checked_cast.h"
 #include "fmt/format.h"
+#include "paimon/common/data/shredding/shredding_write_plan_factories.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
@@ -261,11 +262,12 @@ PostponeBucketWriter::PrepareMinMaxKey(
 std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>
 PostponeBucketWriter::CreateRollingRowWriter() const {
     std::shared_ptr<SingleFileWriterFactory<KeyValueBatch, std::shared_ptr<DataFileMeta>>> factory;
-    if (shredding_context_) {
+    if (auto plan_factory = ShreddingWritePlanFactories::SelectActive(options_, write_schema_,
+                                                                      shredding_context_, pool_)) {
         factory = std::make_shared<ShreddingKeyValueDataFileWriterFactory>(
             options_, schema_id_, write_schema_, /*level=*/0, FileSource::Append(),
-            trimmed_primary_keys_, path_factory_, /*create_stats_extractor=*/false,
-            shredding_context_, pool_);
+            trimmed_primary_keys_, path_factory_, /*create_stats_extractor=*/false, plan_factory,
+            pool_);
     } else {
         factory = std::make_shared<KeyValueDataFileWriterFactory>(
             options_, schema_id_, write_schema_, /*level=*/0, FileSource::Append(),

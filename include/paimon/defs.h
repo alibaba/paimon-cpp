@@ -46,6 +46,7 @@ enum class FieldType {
     MAP = 14,
     STRUCT = 15,
     BLOB = 16,
+    VARIANT = 17,
     UNKNOWN = 128,
 };
 
@@ -413,6 +414,28 @@ struct PAIMON_EXPORT Options {
     /// Values: "plain", "sequential" and "lru". Default value is "lru".
     /// Only effective when map.storage-layout = shared-shredding.
     static const char MAP_SHARED_SHREDDING_COLUMN_PLACEMENT_POLICY[];
+
+    /// "variant.shreddingSchema" - The Variant shredding schema for writing: a ROW type JSON
+    /// whose fields map variant column names to their shredding types. No default value.
+    static const char VARIANT_SHREDDING_SCHEMA[];
+    /// "parquet.variant.shreddingSchema" - Fallback key of "variant.shreddingSchema".
+    static const char PARQUET_VARIANT_SHREDDING_SCHEMA[];
+    /// "variant.inferShreddingSchema" - Whether to automatically infer the shredding schema when
+    /// writing Variant columns. Default value is "false".
+    static const char VARIANT_INFER_SHREDDING_SCHEMA[];
+    /// "variant.shredding.maxSchemaWidth" - Maximum number of shredded fields allowed in an
+    /// inferred schema. Default value is 300.
+    static const char VARIANT_SHREDDING_MAX_SCHEMA_WIDTH[];
+    /// "variant.shredding.maxSchemaDepth" - Maximum traversal depth in Variant values during
+    /// schema inference. Default value is 50.
+    static const char VARIANT_SHREDDING_MAX_SCHEMA_DEPTH[];
+    /// "variant.shredding.minFieldCardinalityRatio" - Minimum fraction of rows that must contain
+    /// a field for it to be shredded. Fields below this threshold stay in the un-shredded
+    /// Variant binary. Default value is 0.1.
+    static const char VARIANT_SHREDDING_MIN_FIELD_CARDINALITY_RATIO[];
+    /// "variant.shredding.maxInferBufferRow" - Maximum number of rows to buffer for schema
+    /// inference. Default value is 4096.
+    static const char VARIANT_SHREDDING_MAX_INFER_BUFFER_ROW[];
 
     /// "blob-as-descriptor" - Read blob field using blob descriptor rather than blob
     /// bytes. Default value is "false".

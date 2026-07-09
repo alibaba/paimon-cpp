@@ -28,6 +28,8 @@
 #include "arrow/array/concatenate.h"
 #include "arrow/type.h"
 #include "fmt/format.h"
+#include "paimon/common/data/variant/variant_access_utils.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/status.h"
 
@@ -81,6 +83,11 @@ Result<bool> NestedProjectionUtils::HasNestedSubfieldProjectionType(
     const std::shared_ptr<arrow::DataType>& read_type) {
     switch (file_type->id()) {
         case arrow::Type::STRUCT: {
+            if (VariantAccessUtils::IsVariantAccessType(read_type)) {
+                // A variant-access projection is resolved by the variant read plans, not by
+                // nested subfield projection.
+                return false;
+            }
             if (read_type->id() != arrow::Type::STRUCT) {
                 return Status::Invalid(fmt::format(
                     "HasNestedSubfieldProjectionType requires same nested type kind, but file "
@@ -151,6 +158,12 @@ Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::P
 
     switch (read_type->id()) {
         case arrow::Type::STRUCT: {
+            if (VariantAccessUtils::IsVariantAccessType(read_type) &&
+                VariantTypeUtils::IsUnshreddedVariantType(data_type)) {
+                // A variant-access projection replaces the variant column type; pass it through
+                // so the read path extracts the described paths.
+                return std::optional<std::shared_ptr<arrow::DataType>>(read_type);
+            }
             arrow::FieldVector pruned_fields;
             for (const auto& read_child : read_type->fields()) {
                 PAIMON_ASSIGN_OR_RAISE(int32_t read_child_id, GetPaimonFieldId(read_child));
