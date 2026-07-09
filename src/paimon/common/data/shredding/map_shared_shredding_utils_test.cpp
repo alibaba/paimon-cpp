@@ -88,8 +88,8 @@ TEST(MapSharedShreddingUtilsTest, LogicalToPhysicalSchemaBasic) {
     });
 
     std::map<std::string, int32_t> field_to_num_columns = {{"tags", 4}};
-    auto physical_schema =
-        MapSharedShreddingUtils::LogicalToPhysicalSchema(schema, field_to_num_columns);
+    ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                   schema, field_to_num_columns));
 
     // Build expected schema for comparison
     auto expected_struct = arrow::struct_({
@@ -116,8 +116,8 @@ TEST(MapSharedShreddingUtilsTest, LogicalToPhysicalSchemaNestedValue) {
     auto schema = arrow::schema({arrow::field("data", map_type)});
 
     std::map<std::string, int32_t> field_to_num_columns = {{"data", 2}};
-    auto physical_schema =
-        MapSharedShreddingUtils::LogicalToPhysicalSchema(schema, field_to_num_columns);
+    ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                   schema, field_to_num_columns));
 
     auto expected_struct = arrow::struct_({
         arrow::field("__field_mapping", arrow::list(arrow::int32()), true),
@@ -135,7 +135,8 @@ TEST(MapSharedShreddingUtilsTest, LogicalToPhysicalSchemaNullable) {
     auto schema_nullable = arrow::schema({arrow::field("m", nullable_map)});
     std::map<std::string, int32_t> col_map = {{"m", 2}};
 
-    auto physical = MapSharedShreddingUtils::LogicalToPhysicalSchema(schema_nullable, col_map);
+    ASSERT_OK_AND_ASSIGN(
+        auto physical, MapSharedShreddingUtils::LogicalToPhysicalSchema(schema_nullable, col_map));
     auto struct_type = physical->field(0)->type();
     ASSERT_TRUE(struct_type->field(0)->nullable());
     ASSERT_TRUE(struct_type->field(1)->nullable());
@@ -145,7 +146,8 @@ TEST(MapSharedShreddingUtilsTest, LogicalToPhysicalSchemaNullable) {
     auto non_nullable_map = arrow::map(arrow::utf8(), arrow::field("item", arrow::int64(), false));
     auto schema_non_nullable = arrow::schema({arrow::field("m", non_nullable_map)});
 
-    auto physical2 = MapSharedShreddingUtils::LogicalToPhysicalSchema(schema_non_nullable, col_map);
+    ASSERT_OK_AND_ASSIGN(auto physical2, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                             schema_non_nullable, col_map));
     auto struct_type2 = physical2->field(0)->type();
     ASSERT_FALSE(struct_type2->field(1)->nullable());
     ASSERT_FALSE(struct_type2->field(2)->nullable());
@@ -159,7 +161,8 @@ TEST(MapSharedShreddingUtilsTest, LogicalToPhysicalSchemaPreservesFieldMetadata)
     auto schema = arrow::schema({arrow::field("m", map_type, false, metadata)});
     std::map<std::string, int32_t> col_map = {{"m", 2}};
 
-    auto physical_schema = MapSharedShreddingUtils::LogicalToPhysicalSchema(schema, col_map);
+    ASSERT_OK_AND_ASSIGN(auto physical_schema,
+                         MapSharedShreddingUtils::LogicalToPhysicalSchema(schema, col_map));
 
     ASSERT_FALSE(physical_schema->field(0)->nullable());
     ASSERT_TRUE(physical_schema->field(0)->metadata()->Equals(*metadata));
@@ -172,7 +175,8 @@ TEST(MapSharedShreddingUtilsTest, LogicalToPhysicalSchemaNoShreddingColumns) {
     });
 
     std::map<std::string, int32_t> empty_map;
-    auto physical_schema = MapSharedShreddingUtils::LogicalToPhysicalSchema(schema, empty_map);
+    ASSERT_OK_AND_ASSIGN(auto physical_schema,
+                         MapSharedShreddingUtils::LogicalToPhysicalSchema(schema, empty_map));
     ASSERT_TRUE(physical_schema->Equals(schema));
 }
 

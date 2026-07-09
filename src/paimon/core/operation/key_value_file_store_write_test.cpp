@@ -352,8 +352,9 @@ TEST_F(KeyValueFileStoreWriteTest, TestSharedShreddingMapRestoreInitializesNextW
         ReadDataFileSchema(table_path, OnlyNewFile(second_commit_msgs), options);
     auto second_meta = ShreddingMeta(second_file_schema, /*field_index=*/3);
 
-    auto expected_second_schema =
-        MapSharedShreddingUtils::LogicalToPhysicalSchema(write_schema, {{"tags", 2}});
+    ASSERT_OK_AND_ASSIGN(
+        auto expected_second_schema,
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(write_schema, {{"tags", 2}}));
     ASSERT_TRUE(second_file_schema->Equals(*expected_second_schema, /*check_metadata=*/false));
     ASSERT_EQ(2, second_meta.num_columns);
     ASSERT_EQ(3, second_meta.max_row_width);

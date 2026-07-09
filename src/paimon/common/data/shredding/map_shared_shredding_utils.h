@@ -26,6 +26,7 @@
 
 #include "arrow/type.h"
 #include "paimon/common/data/shredding/map_shredding_defs.h"
+#include "paimon/data/shredding/map_shared_shredding_schema_utils.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 
@@ -68,7 +69,7 @@ class MapSharedShreddingUtils {
     /// @param field_to_num_columns Map from field name to its physical column count K.
     ///        Each shredding column can have its own width.
     /// @return The physical schema for file writing.
-    static std::shared_ptr<arrow::Schema> LogicalToPhysicalSchema(
+    static Result<std::shared_ptr<arrow::Schema>> LogicalToPhysicalSchema(
         const std::shared_ptr<arrow::Schema>& logical_schema,
         const std::map<std::string, int32_t>& field_to_num_columns);
 
@@ -82,6 +83,14 @@ class MapSharedShreddingUtils {
         const std::set<int32_t>& physical_col_ids, bool value_nullable, bool include_overflow);
 
     // ---- Metadata serialization ----
+
+    /// Serializes shredding metadata and appends entries to an existing KeyValueMetadata.
+    /// @param field_meta The field-level shredding metadata to serialize.
+    /// @param compression Compression codec name for field_dict compression.
+    /// @param[out] metadata The KeyValueMetadata to append entries to.
+    static Status SerializeMetadata(const MapSharedShreddingFieldMeta& field_meta,
+                                    const std::string& compression,
+                                    arrow::KeyValueMetadata* metadata);
 
     /// Deserializes shredding metadata from file footer KeyValueMetadata (per field).
     /// @param metadata The KeyValueMetadata from file footer.
@@ -138,14 +147,6 @@ class MapSharedShreddingUtils {
     /// @return Map from field name to its configured maximum physical width.
     static Result<std::map<std::string, int32_t>> BuildColumnToNumColumns(
         const std::vector<std::string>& shredding_field_names, const CoreOptions& options);
-
-    /// Serializes shredding metadata and appends entries to an existing KeyValueMetadata.
-    /// @param field_meta The field-level shredding metadata to serialize.
-    /// @param compression Compression codec name for field_dict compression.
-    /// @param[out] metadata The KeyValueMetadata to append entries to.
-    static Status SerializeMetadata(const MapSharedShreddingFieldMeta& field_meta,
-                                    const std::string& compression,
-                                    arrow::KeyValueMetadata* metadata);
 
     /// Builds the physical Arrow type for one shredding MAP column.
     /// @param value_type The value type of the original MAP.

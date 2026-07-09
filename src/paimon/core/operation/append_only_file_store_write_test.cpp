@@ -322,8 +322,9 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingMapRestoreInitializesNex
         ReadDataFileSchema(table_path, OnlyNewFile(second_commit_msgs), options);
     auto second_meta = ShreddingMeta(second_file_schema, /*field_index=*/1);
 
-    auto expected_second_schema =
-        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, {{"tags", 2}});
+    ASSERT_OK_AND_ASSIGN(
+        auto expected_second_schema,
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, {{"tags", 2}}));
     ASSERT_TRUE(second_file_schema->Equals(*expected_second_schema, /*check_metadata=*/false));
     ASSERT_EQ(2, second_meta.num_columns);
     ASSERT_EQ(3, second_meta.max_row_width);
@@ -366,8 +367,8 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingRestoreIgnoresAvroFileWi
         ReadDataFileSchema(table_path, OnlyNewFile(second_commit_msgs), shredding_options);
     auto second_meta = ShreddingMeta(second_file_schema, /*field_index=*/1);
 
-    auto expected_schema =
-        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, {{"tags", 10}});
+    ASSERT_OK_AND_ASSIGN(auto expected_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                   logical_schema, {{"tags", 10}}));
     ASSERT_TRUE(second_file_schema->Equals(*expected_schema, /*check_metadata=*/false));
     ASSERT_EQ(10, second_meta.num_columns);
     ASSERT_EQ(3, second_meta.max_row_width);
@@ -427,8 +428,8 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingRestoreMultipleMapColumn
     auto tags_meta = ShreddingMeta(full_file_schema, /*field_index=*/1);
     auto attrs_meta = ShreddingMeta(full_file_schema, /*field_index=*/2);
 
-    auto expected_schema = MapSharedShreddingUtils::LogicalToPhysicalSchema(
-        logical_schema, {{"tags", 2}, {"attrs", 4}});
+    ASSERT_OK_AND_ASSIGN(auto expected_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                   logical_schema, {{"tags", 2}, {"attrs", 4}}));
     ASSERT_TRUE(full_file_schema->Equals(*expected_schema, /*check_metadata=*/false));
     ASSERT_EQ(2, tags_meta.num_columns);
     ASSERT_EQ(3, tags_meta.max_row_width);
@@ -479,8 +480,8 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingRestoreUsesDefaultForMis
     auto tags_meta = ShreddingMeta(full_file_schema, /*field_index=*/1);
     auto attrs_meta = ShreddingMeta(full_file_schema, /*field_index=*/2);
 
-    auto expected_schema = MapSharedShreddingUtils::LogicalToPhysicalSchema(
-        logical_schema, {{"tags", 2}, {"attrs", 10}});
+    ASSERT_OK_AND_ASSIGN(auto expected_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                   logical_schema, {{"tags", 2}, {"attrs", 10}}));
     ASSERT_TRUE(full_file_schema->Equals(*expected_schema, /*check_metadata=*/false));
     ASSERT_EQ(2, tags_meta.num_columns);
     ASSERT_EQ(3, tags_meta.max_row_width);

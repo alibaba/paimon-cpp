@@ -139,6 +139,7 @@ set(PAIMON_COMMON_SRCS
     common/utils/crc32c.cpp
     common/utils/decimal_utils.cpp
     common/data/shredding/map_shared_shredding_utils.cpp
+    common/data/shredding/map_shared_shredding_schema_utils.cpp
     common/data/shredding/map_shared_shredding_context.cpp
     common/data/shredding/map_shared_shredding_batch_converter.cpp
     common/data/shredding/map_shared_shredding_column_allocator.cpp
@@ -547,6 +548,7 @@ if(PAIMON_BUILD_TESTS)
                     common/utils/threadsafe_queue_test.cpp
                     common/utils/generic_lru_cache_test.cpp
                     common/data/shredding/map_shared_shredding_utils_test.cpp
+                    common/data/shredding/map_shared_shredding_schema_utils_test.cpp
                     common/data/shredding/map_shared_shredding_batch_converter_test.cpp
                     common/data/shredding/lru_map_shared_shredding_column_allocator_test.cpp
                     common/data/shredding/plain_map_shared_shredding_column_allocator_test.cpp

@@ -366,8 +366,8 @@ TEST_F(PostponeBucketWriterTest, TestSharedShreddingMap) {
     arrow::FieldVector write_fields = {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
                                        arrow::field("_VALUE_KIND", arrow::int8())};
     write_fields.insert(write_fields.end(), fields.begin(), fields.end());
-    auto expected_schema = MapSharedShreddingUtils::LogicalToPhysicalSchema(
-        arrow::schema(write_fields), {{"tags", 3}});
+    ASSERT_OK_AND_ASSIGN(auto expected_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                   arrow::schema(write_fields), {{"tags", 3}}));
 
     MapSharedShreddingFieldMeta expected_meta;
     expected_meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}};

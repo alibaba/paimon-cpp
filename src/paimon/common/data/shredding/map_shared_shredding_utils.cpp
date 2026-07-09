@@ -125,7 +125,7 @@ std::shared_ptr<arrow::DataType> MapSharedShreddingUtils::InnerBuildSpecificPhys
     return arrow::struct_(std::move(struct_fields));
 }
 
-std::shared_ptr<arrow::Schema> MapSharedShreddingUtils::LogicalToPhysicalSchema(
+Result<std::shared_ptr<arrow::Schema>> MapSharedShreddingUtils::LogicalToPhysicalSchema(
     const std::shared_ptr<arrow::Schema>& logical_schema,
     const std::map<std::string, int32_t>& field_to_num_columns) {
     arrow::FieldVector physical_fields;
@@ -135,6 +135,11 @@ std::shared_ptr<arrow::Schema> MapSharedShreddingUtils::LogicalToPhysicalSchema(
         const auto& field = logical_schema->field(i);
         auto it = field_to_num_columns.find(field->name());
         if (it != field_to_num_columns.end()) {
+            if (field->type()->id() != arrow::Type::MAP) {
+                return Status::Invalid(
+                    fmt::format("Field '{}' is expected to be MAP type, but got '{}'.",
+                                field->name(), field->type()->name()));
+            }
             auto map_type = std::static_pointer_cast<arrow::MapType>(field->type());
             auto value_type = map_type->item_type();
             bool value_nullable = map_type->item_field()->nullable();
