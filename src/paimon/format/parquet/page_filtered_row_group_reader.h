@@ -20,6 +20,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <set>
 #include <vector>
 
 #include "arrow/io/caching.h"
@@ -71,6 +72,20 @@ class PageFilteredRowGroupReader {
     /// Falls back to entire column chunk range if OffsetIndex is unavailable.
     static std::vector<::arrow::io::ReadRange> ComputePageRanges(
         ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
+        const std::vector<int32_t>& column_indices);
+
+    /// Recursively build a projected Arrow field from a SchemaField, including only
+    /// leaf columns that are in column_indices. Returns nullptr if no leaves are
+    /// included. This enables sub-column projection (e.g., reading only struct<x>
+    /// from a struct<x, y> field).
+    static std::shared_ptr<arrow::Field> BuildProjectedField(
+        const ::parquet::arrow::SchemaField& schema_field, const std::set<int32_t>& column_indices);
+
+    /// Build the projected Arrow schema for page-filtered reading. Groups leaf
+    /// column indices into top-level fields via SchemaManifest, then projects
+    /// each field to include only requested sub-columns.
+    static Result<std::shared_ptr<arrow::Schema>> BuildProjectedSchema(
+        ::parquet::arrow::FileReader* arrow_file_reader,
         const std::vector<int32_t>& column_indices);
 
  private:

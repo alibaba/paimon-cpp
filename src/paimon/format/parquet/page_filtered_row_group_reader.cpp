@@ -95,6 +95,84 @@ bool HasRepeatedDescendant(const ::parquet::arrow::SchemaField& field) {
 
 }  // namespace
 
+std::shared_ptr<arrow::Field> PageFilteredRowGroupReader::BuildProjectedField(
+    const ::parquet::arrow::SchemaField& schema_field, const std::set<int32_t>& column_indices) {
+    if (schema_field.is_leaf()) {
+        if (column_indices.count(schema_field.column_index) > 0) {
+            return schema_field.field;
+        }
+        return nullptr;
+    }
+
+    auto type = schema_field.field->type();
+    auto type_id = type->id();
+
+    if (type_id == ::arrow::Type::STRUCT) {
+        std::vector<std::shared_ptr<arrow::Field>> child_fields;
+        for (const auto& child : schema_field.children) {
+            auto projected = BuildProjectedField(child, column_indices);
+            if (projected) {
+                child_fields.push_back(projected);
+            }
+        }
+        if (child_fields.empty()) return nullptr;
+        return arrow::field(schema_field.field->name(), arrow::struct_(child_fields),
+                            schema_field.field->nullable());
+    }
+
+    if (type_id == ::arrow::Type::LIST || type_id == ::arrow::Type::LARGE_LIST ||
+        type_id == ::arrow::Type::FIXED_SIZE_LIST || type_id == ::arrow::Type::MAP) {
+        if (schema_field.children.empty()) return nullptr;
+        auto projected_child = BuildProjectedField(schema_field.children[0], column_indices);
+        if (!projected_child) return nullptr;
+        auto child_type = projected_child->type();
+        if (type_id == ::arrow::Type::LIST) {
+            return arrow::field(schema_field.field->name(), arrow::list(child_type),
+                                schema_field.field->nullable());
+        }
+        if (type_id == ::arrow::Type::LARGE_LIST) {
+            return arrow::field(schema_field.field->name(), arrow::large_list(child_type),
+                                schema_field.field->nullable());
+        }
+        if (type_id == ::arrow::Type::FIXED_SIZE_LIST) {
+            auto& fsl_type = static_cast<const arrow::FixedSizeListType&>(*type);
+            return arrow::field(schema_field.field->name(),
+                                arrow::fixed_size_list(child_type, fsl_type.list_size()),
+                                schema_field.field->nullable());
+        }
+        if (type_id == ::arrow::Type::MAP) {
+            if (child_type->id() == ::arrow::Type::STRUCT && child_type->num_fields() == 2) {
+                return arrow::field(
+                    schema_field.field->name(),
+                    arrow::map(child_type->field(0)->type(), child_type->field(1)->type()),
+                    schema_field.field->nullable());
+            }
+            return arrow::field(schema_field.field->name(), arrow::list(child_type),
+                                schema_field.field->nullable());
+        }
+    }
+
+    return nullptr;
+}
+
+Result<std::shared_ptr<arrow::Schema>> PageFilteredRowGroupReader::BuildProjectedSchema(
+    ::parquet::arrow::FileReader* arrow_file_reader, const std::vector<int32_t>& column_indices) {
+    const auto& manifest = arrow_file_reader->manifest();
+    std::vector<int> col_indices_vec(column_indices.begin(), column_indices.end());
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::vector<int> field_indices,
+                                      manifest.GetFieldIndices(col_indices_vec));
+
+    std::set<int32_t> col_set(column_indices.begin(), column_indices.end());
+    std::vector<std::shared_ptr<arrow::Field>> fields;
+    for (int field_idx : field_indices) {
+        auto projected = BuildProjectedField(manifest.schema_fields[field_idx], col_set);
+        if (projected) {
+            fields.push_back(projected);
+        }
+    }
+    return arrow::schema(std::move(fields));
+}
+
 std::pair<int64_t, int64_t> PageFilteredRowGroupReader::GetPageRowRange(
     const std::vector<::parquet::PageLocation>& page_locations, int32_t page_idx,
     int64_t row_group_row_count) {
@@ -282,14 +360,21 @@ PageFilteredRowGroupReader::ReadAndAssembleField(
         // === Struct Assembly (mimicking StructReader::BuildArray) ===
         std::vector<std::shared_ptr<::arrow::ArrayData>> child_data;
         std::shared_ptr<::parquet::internal::RecordReader> def_level_reader;
+        std::set<int32_t> col_set(column_indices.begin(), column_indices.end());
 
         for (const auto& child : schema_field.children) {
+            // Sub-column projection: skip children whose leaf columns are not requested.
+            auto projected_child_field = BuildProjectedField(child, col_set);
+            if (!projected_child_field) {
+                continue;
+            }
+
             PAIMON_ASSIGN_OR_RAISE(
                 auto child_result,
                 ReadAndAssembleField(child, parquet_reader, row_group_reader, rg_page_index_reader,
-                                     row_group_index, column_indices, row_ranges, child.field,
-                                     row_group_row_count, expected_rows, pool,
-                                     /*is_top_level=*/false));
+                                     row_group_index, column_indices, row_ranges,
+                                     projected_child_field, row_group_row_count, expected_rows,
+                                     pool, /*is_top_level=*/false));
 
             if (!def_level_reader) {
                 def_level_reader = child_result.second;
@@ -353,10 +438,17 @@ PageFilteredRowGroupReader::ReadAndAssembleField(
         // === List/Map Assembly (mimicking ListReader::BuildArray) ===
         // Map is stored as list<struct<key, value>> in Parquet, so use List assembly.
         const auto& child = schema_field.children[0];
+        std::set<int32_t> col_set(column_indices.begin(), column_indices.end());
+        auto projected_child_field = BuildProjectedField(child, col_set);
+        if (!projected_child_field) {
+            return Status::Invalid(fmt::format(
+                "PageFilteredRowGroupReader: no leaf columns requested for list/map field '{}'",
+                field->name()));
+        }
         PAIMON_ASSIGN_OR_RAISE(
             auto child_result,
             ReadAndAssembleField(child, parquet_reader, row_group_reader, rg_page_index_reader,
-                                 row_group_index, column_indices, row_ranges, child.field,
+                                 row_group_index, column_indices, row_ranges, projected_child_field,
                                  row_group_row_count, expected_rows, pool,
                                  /*is_top_level=*/false));
 

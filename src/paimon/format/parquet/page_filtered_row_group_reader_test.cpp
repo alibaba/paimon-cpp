@@ -923,8 +923,8 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnRowGroupFilter) {
 
     auto id_array = MakeIdColumn(100);
     auto info_array = MakeNestedStructData(100);
-    auto data = arrow::StructArray::Make({id_array, info_array}, {field_id, field_info})
-                    .ValueOrDie();
+    auto data =
+        arrow::StructArray::Make({id_array, info_array}, {field_id, field_info}).ValueOrDie();
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
 
     auto read_schema = arrow::schema({field_id, field_info});
@@ -962,8 +962,8 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnOnlyReadIdField) {
 
     auto id_array = MakeIdColumn(100);
     auto info_array = MakeNestedStructData(100);
-    auto data = arrow::StructArray::Make({id_array, info_array}, {field_id, field_info})
-                    .ValueOrDie();
+    auto data =
+        arrow::StructArray::Make({id_array, info_array}, {field_id, field_info}).ValueOrDie();
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
 
     // Read "id" column only
@@ -1026,8 +1026,8 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnRowGroupFilter) {
 
     auto id_array = MakeIdColumn(100);
     auto tags_array = MakeListColumnData(100);
-    auto data = arrow::StructArray::Make({id_array, tags_array}, {field_id, field_tags})
-                    .ValueOrDie();
+    auto data =
+        arrow::StructArray::Make({id_array, tags_array}, {field_id, field_tags}).ValueOrDie();
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
 
     auto read_schema = arrow::schema({field_id, field_tags});
@@ -1059,8 +1059,8 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnRowGroupFilter) {
 
     auto id_array = MakeIdColumn(100);
     auto props_array = MakeMapColumnData(100);
-    auto data = arrow::StructArray::Make({id_array, props_array}, {field_id, field_props})
-                    .ValueOrDie();
+    auto data =
+        arrow::StructArray::Make({id_array, props_array}, {field_id, field_props}).ValueOrDie();
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
 
     auto read_schema = arrow::schema({field_id, field_props});
@@ -1155,11 +1155,11 @@ TEST_F(PageFilteredRowGroupReaderTest, MultipleNestedColumns) {
 
     // predicate: id in [15, 29] or id in [80, 99]
     ASSERT_OK_AND_ASSIGN(
-        auto predicate,
-        PredicateBuilder::Or({PredicateBuilder::Between(/*field_index=*/0, /*field_name=*/"id",
-                                                        FieldType::INT, Literal(15), Literal(29)),
-                              PredicateBuilder::Between(/*field_index=*/0, /*field_name=*/"id",
-                                                        FieldType::INT, Literal(80), Literal(99))}));
+        auto predicate, PredicateBuilder::Or(
+                            {PredicateBuilder::Between(/*field_index=*/0, /*field_name=*/"id",
+                                                       FieldType::INT, Literal(15), Literal(29)),
+                             PredicateBuilder::Between(/*field_index=*/0, /*field_name=*/"id",
+                                                       FieldType::INT, Literal(80), Literal(99))}));
 
     std::shared_ptr<arrow::ChunkedArray> result;
     ReadWithPredicateImpl(file_name, read_schema, predicate, &result,
