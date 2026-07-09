@@ -354,7 +354,7 @@ TEST_F(TantivyEquivalenceTest, BenchmarkBuildAndQuery) {
     // -------- Lucene: write + open + queries --------
     auto lroot = paimon::test::UniqueTestDirectory::Create();
     std::map<std::string, std::string> lopt = {{"lucene-fts.write.tmp.directory", lroot->Str()}};
-    GlobalIndexIOMeta lmeta{"", 0, nullptr, std::nullopt};
+    GlobalIndexIOMeta lmeta{"", 0, nullptr};
     auto lwrite_ms =
         time_ms([&] { lmeta = WriteOne("lucene-fts", data_type, lopt, array, lroot->Str()); });
     auto lreader = OpenOne("lucene-fts", data_type, lopt, lmeta, lroot->Str());
@@ -371,7 +371,7 @@ TEST_F(TantivyEquivalenceTest, BenchmarkBuildAndQuery) {
 
     // -------- Tantivy: write + open + queries --------
     auto troot = paimon::test::UniqueTestDirectory::Create();
-    GlobalIndexIOMeta tmeta{"", 0, nullptr, std::nullopt};
+    GlobalIndexIOMeta tmeta{"", 0, nullptr};
     auto twrite_ms =
         time_ms([&] { tmeta = WriteOne("tantivy-fulltext", data_type, {}, array, troot->Str()); });
     auto treader = OpenOne("tantivy-fulltext", data_type, {}, tmeta, troot->Str());

@@ -107,8 +107,7 @@ class JavaCompatTest : public ::testing::Test {
         std::string metadata_json = "{}";
         auto meta_bytes = std::make_shared<Bytes>(metadata_json, pool_.get());
 
-        GlobalIndexIOMeta io_meta(archive_path, file_size, meta_bytes,
-                                  /*extra_field_ids=*/std::nullopt);
+        GlobalIndexIOMeta io_meta(archive_path, file_size, meta_bytes);
 
         std::map<std::string, std::string> options;
         auto global_index = std::make_shared<TantivyGlobalIndex>(options);
@@ -431,8 +430,7 @@ TEST_F(JavaCompatTest, CppWriteDefaultTokenizerForJavaCrossRead) {
     ASSERT_OK_AND_ASSIGN(auto file_status, fs_->GetFileStatus(archive_path));
     int64_t file_size = file_status->GetLen();
     auto meta_bytes = std::make_shared<Bytes>(std::string("{}"), pool_.get());
-    GlobalIndexIOMeta io_meta(archive_path, file_size, meta_bytes,
-                              /*extra_field_ids=*/std::nullopt);
+    GlobalIndexIOMeta io_meta(archive_path, file_size, meta_bytes);
     auto reader_factory =
         std::make_shared<TantivyGlobalIndex>(std::map<std::string, std::string>{});
     auto reader_path_factory = std::make_shared<FixturePathFactory>(out_dir);

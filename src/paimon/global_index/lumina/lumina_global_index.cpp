@@ -18,6 +18,7 @@
 
 #include <cstring>
 #include <numeric>
+#include <type_traits>
 #include <unordered_set>
 #include <utility>
 
@@ -136,16 +137,17 @@ Status ValidateTagArrowType(const LuminaTagField& tag_field,
         value_type = list_type->value_type();
     }
 
+    // Lumina currently downcasts range tag values to 32-bit precision internally.
+    // Reject Arrow int64/double inputs to avoid silent precision loss.
     bool compatible = false;
     switch (tag_field.value_type) {
         case LuminaTagField::ValueType::INT64:
-            compatible =
-                value_type->id() == arrow::Type::INT8 || value_type->id() == arrow::Type::INT16 ||
-                value_type->id() == arrow::Type::INT32 || value_type->id() == arrow::Type::INT64;
+            compatible = value_type->id() == arrow::Type::INT8 ||
+                         value_type->id() == arrow::Type::INT16 ||
+                         value_type->id() == arrow::Type::INT32;
             break;
         case LuminaTagField::ValueType::DOUBLE:
-            compatible =
-                value_type->id() == arrow::Type::FLOAT || value_type->id() == arrow::Type::DOUBLE;
+            compatible = value_type->id() == arrow::Type::FLOAT;
             break;
         case LuminaTagField::ValueType::STRING:
             compatible = value_type->id() == arrow::Type::STRING;
@@ -159,71 +161,64 @@ Status ValidateTagArrowType(const LuminaTagField& tag_field,
     return Status::OK();
 }
 
-Status AppendInt64Value(const std::shared_ptr<arrow::Array>& array, int64_t index,
-                        std::vector<int64_t>* values) {
-    if (array->IsNull(index)) {
-        return Status::OK();
-    }
-    switch (array->type_id()) {
-        case arrow::Type::INT8:
-            values->push_back(std::dynamic_pointer_cast<arrow::Int8Array>(array)->Value(index));
-            break;
-        case arrow::Type::INT16:
-            values->push_back(std::dynamic_pointer_cast<arrow::Int16Array>(array)->Value(index));
-            break;
-        case arrow::Type::INT32:
-            values->push_back(std::dynamic_pointer_cast<arrow::Int32Array>(array)->Value(index));
-            break;
-        case arrow::Type::INT64:
-            values->push_back(std::dynamic_pointer_cast<arrow::Int64Array>(array)->Value(index));
-            break;
-        default:
-            return Status::Invalid(fmt::format(
-                "lumina int64 tag field has unsupported arrow type {}", array->type()->ToString()));
-    }
-    return Status::OK();
+template <typename ValueType, typename ArrayType>
+void AppendPrimitiveTagValue(const std::shared_ptr<arrow::Array>& array, int64_t index,
+                             std::vector<ValueType>* values) {
+    values->push_back(
+        static_cast<ValueType>(static_cast<const ArrayType*>(array.get())->Value(index)));
 }
 
-Status AppendDoubleValue(const std::shared_ptr<arrow::Array>& array, int64_t index,
-                         std::vector<double>* values) {
+template <typename ValueType>
+Status AppendTagValue(const std::shared_ptr<arrow::Array>& array, int64_t index,
+                      std::vector<ValueType>* values) {
     if (array->IsNull(index)) {
         return Status::OK();
     }
-    switch (array->type_id()) {
-        case arrow::Type::FLOAT:
-            values->push_back(std::dynamic_pointer_cast<arrow::FloatArray>(array)->Value(index));
-            break;
-        case arrow::Type::DOUBLE:
-            values->push_back(std::dynamic_pointer_cast<arrow::DoubleArray>(array)->Value(index));
-            break;
-        default:
+
+    if constexpr (std::is_same_v<ValueType, int64_t>) {
+        switch (array->type_id()) {
+            case arrow::Type::INT8:
+                AppendPrimitiveTagValue<ValueType, arrow::Int8Array>(array, index, values);
+                break;
+            case arrow::Type::INT16:
+                AppendPrimitiveTagValue<ValueType, arrow::Int16Array>(array, index, values);
+                break;
+            case arrow::Type::INT32:
+                AppendPrimitiveTagValue<ValueType, arrow::Int32Array>(array, index, values);
+                break;
+            default:
+                return Status::Invalid(
+                    fmt::format("lumina integer tag field has unsupported arrow type {}",
+                                array->type()->ToString()));
+        }
+    } else if constexpr (std::is_same_v<ValueType, double>) {
+        switch (array->type_id()) {
+            case arrow::Type::FLOAT:
+                AppendPrimitiveTagValue<ValueType, arrow::FloatArray>(array, index, values);
+                break;
+            default:
+                return Status::Invalid(
+                    fmt::format("lumina floating tag field has unsupported arrow type {}",
+                                array->type()->ToString()));
+        }
+    } else if constexpr (std::is_same_v<ValueType, std::string>) {
+        if (array->type_id() != arrow::Type::STRING) {
             return Status::Invalid(
-                fmt::format("lumina double tag field has unsupported arrow type {}",
+                fmt::format("lumina string tag field has unsupported arrow type {}",
                             array->type()->ToString()));
+        }
+        auto string_array = static_cast<const arrow::StringArray*>(array.get());
+        auto view = string_array->GetView(index);
+        values->emplace_back(view.data(), view.size());
+    } else {
+        return Status::Invalid("lumina tag field has unsupported value type");
     }
-    return Status::OK();
-}
-
-Status AppendStringValue(const std::shared_ptr<arrow::Array>& array, int64_t index,
-                         std::vector<std::string>* values) {
-    if (array->IsNull(index)) {
-        return Status::OK();
-    }
-    auto string_array = std::dynamic_pointer_cast<arrow::StringArray>(array);
-    CHECK_NOT_NULL(string_array,
-                   fmt::format("lumina string tag field has unsupported arrow type {}",
-                               array->type()->ToString()));
-    auto view = string_array->GetView(index);
-    values->emplace_back(view.data(), view.size());
     return Status::OK();
 }
 
 template <typename ValueType>
 Status ExtractTagValues(const std::shared_ptr<arrow::Array>& field_array, int64_t segment_start,
-                        int64_t segment_len,
-                        Status (*append_value)(const std::shared_ptr<arrow::Array>&, int64_t,
-                                               std::vector<ValueType>*),
-                        std::vector<std::vector<ValueType>>* values) {
+                        int64_t segment_len, std::vector<std::vector<ValueType>>* values) {
     values->resize(segment_len);
     auto list_array = std::dynamic_pointer_cast<arrow::ListArray>(field_array);
     if (list_array) {
@@ -238,14 +233,14 @@ Status ExtractTagValues(const std::shared_ptr<arrow::Array>& field_array, int64_
             auto& row_values = (*values)[i];
             row_values.reserve(value_end - value_start);
             for (int64_t value_index = value_start; value_index < value_end; value_index++) {
-                PAIMON_RETURN_NOT_OK(append_value(child_values, value_index, &row_values));
+                PAIMON_RETURN_NOT_OK(AppendTagValue(child_values, value_index, &row_values));
             }
         }
         return Status::OK();
     }
 
     for (int64_t i = 0; i < segment_len; i++) {
-        PAIMON_RETURN_NOT_OK(append_value(field_array, segment_start + i, &(*values)[i]));
+        PAIMON_RETURN_NOT_OK(AppendTagValue(field_array, segment_start + i, &(*values)[i]));
     }
     return Status::OK();
 }
@@ -261,12 +256,8 @@ Result<TagValue> LiteralToTagValue(const Literal& literal) {
             return TagValue(static_cast<int64_t>(literal.GetValue<int16_t>()));
         case FieldType::INT:
             return TagValue(static_cast<int64_t>(literal.GetValue<int32_t>()));
-        case FieldType::BIGINT:
-            return TagValue(literal.GetValue<int64_t>());
         case FieldType::FLOAT:
             return TagValue(static_cast<double>(literal.GetValue<float>()));
-        case FieldType::DOUBLE:
-            return TagValue(literal.GetValue<double>());
         case FieldType::STRING:
             return TagValue(literal.GetValue<std::string>());
         default:
@@ -293,8 +284,7 @@ Result<TagValues> LiteralsToTagValues(const std::vector<Literal>& literals) {
     switch (literals[0].GetType()) {
         case FieldType::TINYINT:
         case FieldType::SMALLINT:
-        case FieldType::INT:
-        case FieldType::BIGINT: {
+        case FieldType::INT: {
             std::vector<int64_t> values;
             values.reserve(literals.size());
             for (const auto& literal : literals) {
@@ -306,8 +296,7 @@ Result<TagValues> LiteralsToTagValues(const std::vector<Literal>& literals) {
             }
             return TagValues(std::move(values));
         }
-        case FieldType::FLOAT:
-        case FieldType::DOUBLE: {
+        case FieldType::FLOAT: {
             std::vector<double> values;
             values.reserve(literals.size());
             for (const auto& literal : literals) {
@@ -355,22 +344,22 @@ Result<std::vector<TagDimensionData>> LuminaIndexWriter::ExtractTagDataForSegmen
         switch (tag_field.value_type) {
             case LuminaTagField::ValueType::INT64: {
                 std::vector<std::vector<int64_t>> values;
-                PAIMON_RETURN_NOT_OK(ExtractTagValues<int64_t>(
-                    field_array, segment_start, segment_len, AppendInt64Value, &values));
+                PAIMON_RETURN_NOT_OK(
+                    ExtractTagValues<int64_t>(field_array, segment_start, segment_len, &values));
                 tag_dimension_data.values = std::move(values);
                 break;
             }
             case LuminaTagField::ValueType::DOUBLE: {
                 std::vector<std::vector<double>> values;
-                PAIMON_RETURN_NOT_OK(ExtractTagValues<double>(
-                    field_array, segment_start, segment_len, AppendDoubleValue, &values));
+                PAIMON_RETURN_NOT_OK(
+                    ExtractTagValues<double>(field_array, segment_start, segment_len, &values));
                 tag_dimension_data.values = std::move(values);
                 break;
             }
             case LuminaTagField::ValueType::STRING: {
                 std::vector<std::vector<std::string>> values;
-                PAIMON_RETURN_NOT_OK(ExtractTagValues<std::string>(
-                    field_array, segment_start, segment_len, AppendStringValue, &values));
+                PAIMON_RETURN_NOT_OK(ExtractTagValues<std::string>(field_array, segment_start,
+                                                                   segment_len, &values));
                 tag_dimension_data.values = std::move(values);
                 break;
             }
@@ -696,18 +685,18 @@ class LuminaDataset : public ::lumina::api::Dataset {
         }
         auto& value_array = array_vec_[cursor_];
         int64_t value_array_length = value_array->length();
-        int64_t element_count = value_array_length / dimension_;
+        int64_t batch_element_count = value_array_length / dimension_;
         const float* value_ptr = value_array->raw_values();
         vector_buffer.resize(value_array_length);
         memcpy(vector_buffer.data(), value_ptr, sizeof(float) * value_array_length);
-        id_buffer.resize(element_count);
+        id_buffer.resize(batch_element_count);
         std::iota(id_buffer.begin(), id_buffer.end(),
                   static_cast<::lumina::core::vector_id_t>(start_ids_[cursor_]));
 
         // release the array when copy to vector_buffer
         value_array.reset();
         cursor_++;
-        return ::lumina::core::Result<uint64_t>::Ok(static_cast<uint64_t>(element_count));
+        return ::lumina::core::Result<uint64_t>::Ok(static_cast<uint64_t>(batch_element_count));
     }
 
  private:
@@ -745,18 +734,18 @@ class LuminaDatasetWithTag : public ::lumina::extensions::experimental::DatasetW
         }
         auto& value_array = array_vec_[cursor_];
         int64_t value_array_length = value_array->length();
-        int64_t element_count = value_array_length / dimension_;
+        int64_t batch_element_count = value_array_length / dimension_;
         const float* value_ptr = value_array->raw_values();
         vector_buffer.resize(value_array_length);
         memcpy(vector_buffer.data(), value_ptr, sizeof(float) * value_array_length);
-        id_buffer.resize(element_count);
+        id_buffer.resize(batch_element_count);
         std::iota(id_buffer.begin(), id_buffer.end(),
                   static_cast<::lumina::core::vector_id_t>(start_ids_[cursor_]));
         tag_dimensions_data = std::move(tag_data_vec_[cursor_]);
 
         value_array.reset();
         cursor_++;
-        return ::lumina::core::Result<uint64_t>::Ok(static_cast<uint64_t>(element_count));
+        return ::lumina::core::Result<uint64_t>::Ok(static_cast<uint64_t>(batch_element_count));
     }
 
  private:
@@ -835,17 +824,14 @@ Status LuminaIndexWriter::AddBatch(::ArrowArray* arrow_array,
                     "multiplied dimension [{}] must match length of field value array [{}]",
                     segment_len, dimension_, sliced_values->length()));
             }
-            std::vector<TagDimensionData> tag_data;
             if (!tag_fields_.empty()) {
-                PAIMON_ASSIGN_OR_RAISE(
-                    tag_data, ExtractTagDataForSegment(struct_array, tag_fields_, segment_start,
-                                                       segment_len));
+                PAIMON_ASSIGN_OR_RAISE(std::vector<TagDimensionData> tag_data,
+                                       ExtractTagDataForSegment(struct_array, tag_fields_,
+                                                                segment_start, segment_len));
+                tag_data_vec_.push_back(std::move(tag_data));
             }
             array_vec_.push_back(std::move(sliced_values));
             array_start_ids_.push_back(count_ + segment_start);
-            if (!tag_fields_.empty()) {
-                tag_data_vec_.push_back(std::move(tag_data));
-            }
             indexed_count_ += segment_len;
             segment_start = -1;
         }
@@ -895,7 +881,7 @@ Result<std::vector<GlobalIndexIOMeta>> LuminaIndexWriter::Finish() {
     PAIMON_RETURN_NOT_OK(RapidJsonUtil::ToJsonString(lumina_options_, &options_json));
     auto meta_bytes = std::make_shared<Bytes>(options_json, pool_->GetPaimonPool().get());
     GlobalIndexIOMeta meta(file_manager_->ToPath(index_file_name), file_size,
-                           /*metadata=*/meta_bytes, /*extra_field_ids=*/std::nullopt);
+                           /*metadata=*/meta_bytes);
     return std::vector<GlobalIndexIOMeta>({meta});
 }
 

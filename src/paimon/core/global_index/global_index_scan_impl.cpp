@@ -223,7 +223,7 @@ GlobalIndexIOMeta GlobalIndexScanImpl::ToGlobalIndexIOMeta(
     assert(index_meta->GetGlobalIndexMeta());
     const auto& global_index_meta = index_meta->GetGlobalIndexMeta().value();
     return {index_file_manager_->ToPath(index_meta), index_meta->FileSize(),
-            global_index_meta.index_meta, global_index_meta.extra_field_ids};
+            global_index_meta.index_meta};
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexScanImpl::Scan(

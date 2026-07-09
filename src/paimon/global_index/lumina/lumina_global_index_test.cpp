@@ -310,7 +310,7 @@ TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithMixedTagPredicates) {
 
     std::shared_ptr<arrow::DataType> tag_data_type = arrow::struct_(
         {arrow::field("f0", arrow::list(arrow::float32())), arrow::field("color", arrow::utf8()),
-         arrow::field("price", arrow::float64())});
+         arrow::field("price", arrow::float32())});
     std::shared_ptr<arrow::Array> tag_array =
         arrow::ipc::internal::json::ArrayFromJSON(tag_data_type,
                                                   R"([
@@ -331,9 +331,9 @@ TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithMixedTagPredicates) {
         /*field_index=*/1, /*field_name=*/"color", FieldType::STRING,
         Literal(FieldType::STRING, "warm", 4));
     std::shared_ptr<Predicate> low_price_predicate = PredicateBuilder::LessOrEqual(
-        /*field_index=*/2, /*field_name=*/"price", FieldType::DOUBLE, Literal(10.0));
+        /*field_index=*/2, /*field_name=*/"price", FieldType::FLOAT, Literal(10.0f));
     std::shared_ptr<Predicate> high_price_predicate = PredicateBuilder::GreaterOrEqual(
-        /*field_index=*/2, /*field_name=*/"price", FieldType::DOUBLE, Literal(30.0));
+        /*field_index=*/2, /*field_name=*/"price", FieldType::FLOAT, Literal(30.0f));
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<Predicate> price_predicate,
                          PredicateBuilder::Or({low_price_predicate, high_price_predicate}));
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<Predicate> predicate,
@@ -358,7 +358,7 @@ TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithIntegerListTagFilter) {
 
     std::shared_ptr<arrow::DataType> tag_data_type =
         arrow::struct_({arrow::field("f0", arrow::list(arrow::float32())),
-                        arrow::field("category_ids", arrow::list(arrow::int64()))});
+                        arrow::field("category_ids", arrow::list(arrow::int32()))});
     std::shared_ptr<arrow::Array> tag_array =
         arrow::ipc::internal::json::ArrayFromJSON(tag_data_type,
                                                   R"([
@@ -376,8 +376,7 @@ TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithIntegerListTagFilter) {
                          CreateGlobalIndexReader(test_root, data_type_, tag_options, meta));
 
     std::shared_ptr<Predicate> predicate = PredicateBuilder::In(
-        /*field_index=*/1, /*field_name=*/"category_ids", FieldType::BIGINT,
-        {Literal(8l), Literal(9l)});
+        /*field_index=*/1, /*field_name=*/"category_ids", FieldType::INT, {Literal(8), Literal(9)});
     ASSERT_OK_AND_ASSIGN(
         std::shared_ptr<ScoredGlobalIndexResult> scored_result,
         reader->VisitVectorSearch(std::make_shared<VectorSearch>(
@@ -461,10 +460,10 @@ TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithTagNullAndEmptyValues) {
     std::shared_ptr<arrow::DataType> tag_data_type = arrow::struct_(
         {arrow::field("f0", arrow::list(arrow::float32())), arrow::field("color", arrow::utf8()),
          arrow::field("labels", arrow::list(arrow::utf8())),
-         arrow::field("price", arrow::float64()),
-         arrow::field("scores", arrow::list(arrow::float64())),
-         arrow::field("category", arrow::int64()),
-         arrow::field("category_ids", arrow::list(arrow::int64()))});
+         arrow::field("price", arrow::float32()),
+         arrow::field("scores", arrow::list(arrow::float32())),
+         arrow::field("category", arrow::int32()),
+         arrow::field("category_ids", arrow::list(arrow::int32()))});
     std::shared_ptr<arrow::Array> tag_array =
         arrow::ipc::internal::json::ArrayFromJSON(tag_data_type,
                                                   R"([
@@ -519,22 +518,22 @@ TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithTagNullAndEmptyValues) {
                              {Literal(FieldType::STRING, "vip", 3)}),
         {4l}, {0.01f});
     search_and_check(PredicateBuilder::LessOrEqual(/*field_index=*/3, /*field_name=*/"price",
-                                                   FieldType::DOUBLE, Literal(10.0)),
+                                                   FieldType::FLOAT, Literal(10.0f)),
                      {0l}, {4.21f});
     search_and_check(PredicateBuilder::LessThan(/*field_index=*/3, /*field_name=*/"price",
-                                                FieldType::DOUBLE, Literal(10.0)),
+                                                FieldType::FLOAT, Literal(10.0f)),
                      {0l}, {4.21f});
     search_and_check(PredicateBuilder::GreaterThan(/*field_index=*/3, /*field_name=*/"price",
-                                                   FieldType::DOUBLE, Literal(10.0)),
+                                                   FieldType::FLOAT, Literal(10.0f)),
                      {4l, 3l}, {0.01f, 2.21f});
     search_and_check(PredicateBuilder::In(/*field_index=*/4, /*field_name=*/"scores",
-                                          FieldType::DOUBLE, {Literal(0.25), Literal(0.75)}),
+                                          FieldType::FLOAT, {Literal(0.25f), Literal(0.75f)}),
                      {4l, 0l}, {0.01f, 4.21f});
     search_and_check(PredicateBuilder::Equal(/*field_index=*/5, /*field_name=*/"category",
-                                             FieldType::BIGINT, Literal(7l)),
+                                             FieldType::INT, Literal(7)),
                      {0l}, {4.21f});
     search_and_check(PredicateBuilder::In(/*field_index=*/6, /*field_name=*/"category_ids",
-                                          FieldType::BIGINT, {Literal(9l)}),
+                                          FieldType::INT, {Literal(9)}),
                      {4l}, {0.01f});
     search_and_check(
         PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"color", FieldType::STRING,
@@ -553,7 +552,7 @@ TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithTagNullAndEmptyValues) {
                                 Literal(FieldType::STRING, "red", 3)),
         "unknown tag key 'unknown' in label filter");
     search_and_check_error(PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"color",
-                                                   FieldType::BIGINT, Literal(1l)),
+                                                   FieldType::INT, Literal(1)),
                            "tag value type mismatch for key 'color'");
     search_and_check_error(
         PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"price", FieldType::STRING,
@@ -575,7 +574,7 @@ TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithTagNullAndEmptyValues) {
             /*field_index=*/1, /*field_name=*/"color", FieldType::STRING,
             Literal(FieldType::STRING, "blue", 4));
         std::shared_ptr<Predicate> high_price_predicate = PredicateBuilder::GreaterOrEqual(
-            /*field_index=*/3, /*field_name=*/"price", FieldType::DOUBLE, Literal(30.0));
+            /*field_index=*/3, /*field_name=*/"price", FieldType::FLOAT, Literal(30.0f));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<Predicate> blue_high_price_predicate,
                              PredicateBuilder::And({blue_predicate, high_price_predicate}));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<Predicate> compound_predicate,
@@ -609,6 +608,28 @@ TEST_F(LuminaGlobalIndexTest, TestTagSchemaValidation) {
         ASSERT_NOK_WITH_MSG(
             WriteGlobalIndex(index_root, tag_data_type, tag_options, array_, Range(0, 3)),
             "lumina tag field color type string is not compatible with tag_schema value_type");
+    }
+    {
+        std::shared_ptr<arrow::DataType> int64_tag_data_type =
+            arrow::struct_({arrow::field("f0", arrow::list(arrow::float32())),
+                            arrow::field("category", arrow::int64())});
+        std::map<std::string, std::string> tag_options = options_;
+        tag_options["lumina.extension.build.tag.tag_schema"] =
+            R"([{"key_name":"category","type":"enum","value_type":"int64"}])";
+        ASSERT_NOK_WITH_MSG(
+            WriteGlobalIndex(index_root, int64_tag_data_type, tag_options, array_, Range(0, 3)),
+            "lumina tag field category type int64 is not compatible with tag_schema value_type");
+    }
+    {
+        std::shared_ptr<arrow::DataType> double_tag_data_type =
+            arrow::struct_({arrow::field("f0", arrow::list(arrow::float32())),
+                            arrow::field("price", arrow::float64())});
+        std::map<std::string, std::string> tag_options = options_;
+        tag_options["lumina.extension.build.tag.tag_schema"] =
+            R"([{"key_name":"price","type":"range","value_type":"double"}])";
+        ASSERT_NOK_WITH_MSG(
+            WriteGlobalIndex(index_root, double_tag_data_type, tag_options, array_, Range(0, 3)),
+            "lumina tag field price type double is not compatible with tag_schema value_type");
     }
 }
 
@@ -756,7 +777,7 @@ TEST_F(LuminaGlobalIndexTest, TestInvalidInputs) {
                                     "f1",
                                     /*limit=*/2, query_, /*filter=*/nullptr,
                                     PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f0",
-                                                            FieldType::BIGINT, Literal(5l)),
+                                                            FieldType::INT, Literal(5)),
                                     /*distance_type=*/std::nullopt,
                                     /*options=*/std::map<std::string, std::string>())),
                                 "lumina index was not built with tag");

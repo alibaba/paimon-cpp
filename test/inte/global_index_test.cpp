@@ -1139,10 +1139,10 @@ TEST_P(GlobalIndexTest, TestWriteAndQueryLuminaIndexWithTagNullAndEmptyValues) {
                                  arrow::field("embedding", arrow::list(arrow::float32())),
                                  arrow::field("color", arrow::utf8()),
                                  arrow::field("labels", arrow::list(arrow::utf8())),
-                                 arrow::field("price", arrow::float64()),
-                                 arrow::field("scores", arrow::list(arrow::float64())),
-                                 arrow::field("category", arrow::int64()),
-                                 arrow::field("category_ids", arrow::list(arrow::int64()))};
+                                 arrow::field("price", arrow::float32()),
+                                 arrow::field("scores", arrow::list(arrow::float32())),
+                                 arrow::field("category", arrow::int32()),
+                                 arrow::field("category_ids", arrow::list(arrow::int32()))};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> lumina_options = {
         {"lumina.index.dimension", "4"},
@@ -1243,16 +1243,16 @@ TEST_P(GlobalIndexTest, TestWriteAndQueryLuminaIndexWithTagNullAndEmptyValues) {
                              {Literal(FieldType::STRING, "vip", 3)}),
         "row ids: {4}, scores: {0.01}");
     search_and_check(PredicateBuilder::LessOrEqual(/*field_index=*/4, /*field_name=*/"price",
-                                                   FieldType::DOUBLE, Literal(10.0)),
+                                                   FieldType::FLOAT, Literal(10.0f)),
                      "row ids: {0}, scores: {4.21}");
     search_and_check(PredicateBuilder::GreaterOrEqual(/*field_index=*/5, /*field_name=*/"scores",
-                                                      FieldType::DOUBLE, Literal(0.5)),
+                                                      FieldType::FLOAT, Literal(0.5f)),
                      "row ids: {4}, scores: {0.01}");
     search_and_check(PredicateBuilder::Equal(/*field_index=*/6, /*field_name=*/"category",
-                                             FieldType::BIGINT, Literal(7l)),
+                                             FieldType::INT, Literal(7)),
                      "row ids: {0}, scores: {4.21}");
     search_and_check(PredicateBuilder::In(/*field_index=*/7, /*field_name=*/"category_ids",
-                                          FieldType::BIGINT, {Literal(9l)}),
+                                          FieldType::INT, {Literal(9)}),
                      "row ids: {4}, scores: {0.01}");
     search_and_check(
         PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"color", FieldType::STRING,
@@ -1275,7 +1275,7 @@ TEST_P(GlobalIndexTest, TestWriteAndQueryLuminaIndexWithTagNullAndEmptyValues) {
             /*field_index=*/2, /*field_name=*/"color", FieldType::STRING,
             Literal(FieldType::STRING, "blue", 4));
         std::shared_ptr<Predicate> high_price_predicate = PredicateBuilder::GreaterOrEqual(
-            /*field_index=*/4, /*field_name=*/"price", FieldType::DOUBLE, Literal(30.0));
+            /*field_index=*/4, /*field_name=*/"price", FieldType::FLOAT, Literal(30.0f));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<Predicate> blue_high_price_predicate,
                              PredicateBuilder::And({blue_predicate, high_price_predicate}));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<Predicate> compound_predicate,

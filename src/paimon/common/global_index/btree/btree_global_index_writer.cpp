@@ -199,8 +199,7 @@ Result<std::vector<GlobalIndexIOMeta>> BTreeGlobalIndexWriter::Finish() {
     // Create GlobalIndexIOMeta
     std::string file_path = file_writer_->ToPath(index_file_name_);
     PAIMON_ASSIGN_OR_RAISE(int64_t file_size, file_writer_->GetFileSize(index_file_name_));
-    GlobalIndexIOMeta io_meta(file_path, file_size, meta_bytes,
-                              /*extra_field_ids=*/std::nullopt);
+    GlobalIndexIOMeta io_meta(file_path, file_size, meta_bytes);
     return std::vector<GlobalIndexIOMeta>{io_meta};
 }
 

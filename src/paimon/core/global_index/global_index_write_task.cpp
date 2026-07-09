@@ -96,8 +96,13 @@ Result<std::vector<DataField>> GetExtraFields(const TableSchema& table_schema,
     extra_fields.reserve(extra_field_names.size());
     std::set<std::string> dedup_field_names;
     for (const auto& extra_field_name : extra_field_names) {
-        if (extra_field_name == field_name || !dedup_field_names.insert(extra_field_name).second) {
-            continue;
+        if (extra_field_name == field_name) {
+            return Status::Invalid(fmt::format(
+                "global index extra field {} must not be the indexed field", extra_field_name));
+        }
+        if (!dedup_field_names.insert(extra_field_name).second) {
+            return Status::Invalid(fmt::format("global index extra field {} must not be duplicated",
+                                               extra_field_name));
         }
         PAIMON_ASSIGN_OR_RAISE(DataField extra_field, table_schema.GetField(extra_field_name));
         extra_fields.push_back(extra_field);
@@ -174,11 +179,6 @@ Result<std::vector<GlobalIndexIOMeta>> BuildIndex(
             return Status::Invalid(
                 "array read from batch reader is not a struct array in GlobalIndexWriteTask");
         }
-        auto indexed_array = struct_array->GetFieldByName(field_name);
-        if (!indexed_array) {
-            return Status::Invalid(fmt::format(
-                "read array does not contain {} field in GlobalIndexWriteTask", field_name));
-        }
         auto row_id_array = struct_array->GetFieldByName(SpecialFields::RowId().Name());
         auto typed_row_id_array = std::dynamic_pointer_cast<arrow::Int64Array>(row_id_array);
         if (!typed_row_id_array) {
@@ -222,7 +222,8 @@ Result<std::vector<GlobalIndexIOMeta>> BuildIndex(
 Result<std::shared_ptr<CommitMessage>> ToCommitMessage(
     const std::string& index_type, int32_t field_id, const Range& range,
     const std::vector<GlobalIndexIOMeta>& global_index_io_metas, const BinaryRow& partition,
-    int32_t bucket, const std::shared_ptr<GlobalIndexFileManager>& file_manager) {
+    int32_t bucket, const std::shared_ptr<GlobalIndexFileManager>& file_manager,
+    const std::optional<std::vector<int32_t>>& extra_field_ids) {
     std::vector<std::shared_ptr<IndexFileMeta>> index_file_metas;
     index_file_metas.reserve(global_index_io_metas.size());
     bool is_external_path = file_manager->IsExternalPath();
@@ -235,8 +236,7 @@ Result<std::shared_ptr<CommitMessage>> ToCommitMessage(
         index_file_metas.push_back(std::make_shared<IndexFileMeta>(
             index_type, PathUtil::GetName(io_meta.file_path), io_meta.file_size, range.Count(),
             /*dv_ranges=*/std::nullopt, external_path,
-            GlobalIndexMeta(range.from, range.to, field_id, io_meta.extra_field_ids,
-                            io_meta.metadata)));
+            GlobalIndexMeta(range.from, range.to, field_id, extra_field_ids, io_meta.metadata)));
     }
     DataIncrement data_increment(std::move(index_file_metas));
     return std::make_shared<CommitMessageImpl>(partition, bucket,
@@ -313,13 +313,11 @@ Result<std::shared_ptr<CommitMessage>> GlobalIndexWriteTask::WriteIndex(
     PAIMON_ASSIGN_OR_RAISE(std::vector<GlobalIndexIOMeta> global_index_io_metas,
                            BuildIndex(field_name, range, writer_field_names, batch_reader.get(),
                                       global_index_writer.get()));
-    for (auto& io_meta : global_index_io_metas) {
-        io_meta.extra_field_ids = extra_field_ids;
-    }
 
     // generate commit message
     return ToCommitMessage(index_type, field.Id(), range, global_index_io_metas,
-                           data_split->Partition(), data_split->Bucket(), index_file_manager);
+                           data_split->Partition(), data_split->Bucket(), index_file_manager,
+                           extra_field_ids);
 }
 
 }  // namespace paimon

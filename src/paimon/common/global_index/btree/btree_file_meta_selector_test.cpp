@@ -48,12 +48,12 @@ class BTreeFileMetaSelectorTest : public ::testing::Test {
         // file6: only-nulls file (no keys, has_nulls=true)
         auto meta6 = std::make_shared<BTreeIndexMeta>(nullptr, nullptr, true);
         files_ = {
-            GlobalIndexIOMeta("file1", 1, meta1->Serialize(pool_.get()), std::nullopt),
-            GlobalIndexIOMeta("file2", 1, meta2->Serialize(pool_.get()), std::nullopt),
-            GlobalIndexIOMeta("file3", 1, meta3->Serialize(pool_.get()), std::nullopt),
-            GlobalIndexIOMeta("file4", 1, meta4->Serialize(pool_.get()), std::nullopt),
-            GlobalIndexIOMeta("file5", 1, meta5->Serialize(pool_.get()), std::nullopt),
-            GlobalIndexIOMeta("file6", 1, meta6->Serialize(pool_.get()), std::nullopt),
+            GlobalIndexIOMeta("file1", 1, meta1->Serialize(pool_.get())),
+            GlobalIndexIOMeta("file2", 1, meta2->Serialize(pool_.get())),
+            GlobalIndexIOMeta("file3", 1, meta3->Serialize(pool_.get())),
+            GlobalIndexIOMeta("file4", 1, meta4->Serialize(pool_.get())),
+            GlobalIndexIOMeta("file5", 1, meta5->Serialize(pool_.get())),
+            GlobalIndexIOMeta("file6", 1, meta6->Serialize(pool_.get())),
         };
     }
 
