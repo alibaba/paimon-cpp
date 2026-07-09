@@ -124,36 +124,16 @@ std::pair<RowRanges, int64_t> PageFilteredRowGroupReader::ComputeCompressedRowRa
     return {compressed, compressed_offset};
 }
 
-Status PageFilteredRowGroupReader::ExecuteSkipReadPattern(
-    ::parquet::arrow::ColumnReader* column_reader, const RowRanges& ranges, int64_t total_row_count,
-    int32_t row_group_index, int32_t field_index) {
-    int64_t current_row = 0;
+std::vector<std::pair<int64_t, int64_t>> PageFilteredRowGroupReader::RowRangesToSkipReadPattern(
+    const RowRanges& ranges) {
+    std::vector<std::pair<int64_t, int64_t>> pattern;
+    int64_t current = 0;
     for (const auto& range : ranges.GetRanges()) {
-        if (range.from > current_row) {
-            int64_t to_skip = range.from - current_row;
-            int64_t skipped = column_reader->SkipRecords(to_skip);
-            if (skipped != to_skip) {
-                return Status::Invalid(fmt::format(
-                    "PageFilteredRowGroupReader: expected to skip {} records but skipped {} "
-                    "(row_group={}, field={})",
-                    to_skip, skipped, row_group_index, field_index));
-            }
-            current_row = range.from;
-        }
-        int64_t to_read = range.Count();
-        int64_t read = column_reader->ReadRecords(to_read);
-        if (read != to_read) {
-            return Status::Invalid(
-                fmt::format("PageFilteredRowGroupReader: expected to read {} records but read {} "
-                            "(row_group={}, field={}, range=[{},{}])",
-                            to_read, read, row_group_index, field_index, range.from, range.to));
-        }
-        current_row += to_read;
+        int64_t skip = range.from > current ? range.from - current : 0;
+        pattern.emplace_back(skip, range.Count());
+        current = range.to + 1;
     }
-    if (current_row < total_row_count) {
-        column_reader->SkipRecords(total_row_count - current_row);
-    }
-    return Status::OK();
+    return pattern;
 }
 
 Status PageFilteredRowGroupReader::WaitForPreBuffer(
@@ -186,32 +166,14 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
     int32_t row_group_index, int32_t field_index, const std::vector<int32_t>& column_indices,
     const RowRanges& row_ranges, int64_t row_group_row_count,
     std::shared_ptr<::arrow::MemoryPool> pool) {
-    const auto& manifest = arrow_file_reader->manifest();
-    const auto& schema_field = manifest.schema_fields[field_index];
-    bool is_flat = schema_field.is_leaf();
-
-    // For flat columns: compute compressed RowRanges if OffsetIndex is available.
-    // data_page_filter + compressed_ranges enable I/O-level page skipping.
-    // For nested fields: use original row_ranges, decode-level skipping only.
-    RowRanges effective_ranges = row_ranges;
-    int64_t effective_total = row_group_row_count;
-    if (is_flat && rg_page_index_reader) {
-        auto offset_index = rg_page_index_reader->GetOffsetIndex(schema_field.column_index);
-        if (offset_index) {
-            auto [compressed, total] =
-                ComputeCompressedRowRanges(row_ranges, offset_index, row_group_row_count);
-            effective_ranges = std::move(compressed);
-            effective_total = total;
-        }
-    }
-
-    // Factory: set data_page_filter only for flat columns with OffsetIndex
+    // Factory: set data_page_filter on every leaf (per-leaf OffsetIndex).
+    // data_page_filter enables I/O-level page skipping for all leaves.
     auto factory =
-        [row_group_index, is_flat, &rg_page_index_reader, &row_ranges, row_group_row_count](
+        [row_group_index, &rg_page_index_reader, &row_ranges, row_group_row_count](
             int col_idx,
             ::parquet::ParquetFileReader* reader) -> ::parquet::arrow::FileColumnIterator* {
         auto* iter = new ::parquet::arrow::FileColumnIterator(col_idx, reader, {row_group_index});
-        if (is_flat && rg_page_index_reader) {
+        if (rg_page_index_reader) {
             auto offset_index = rg_page_index_reader->GetOffsetIndex(col_idx);
             if (offset_index) {
                 iter->set_data_page_filter(
@@ -230,16 +192,30 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
         return std::shared_ptr<arrow::ChunkedArray>();
     }
 
-    // Phase 1: Prepare for reading
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(column_reader->BeginRead(effective_total));
+    // Per-leaf callback: each leaf gets its own skip/read pattern + total.
+    auto get_leaf_filter =
+        [&rg_page_index_reader, &row_ranges, row_group_row_count](
+            int col_idx) -> std::pair<std::vector<std::pair<int64_t, int64_t>>, int64_t> {
+        RowRanges effective_ranges = row_ranges;
+        int64_t effective_total = row_group_row_count;
+        if (rg_page_index_reader) {
+            auto offset_index = rg_page_index_reader->GetOffsetIndex(col_idx);
+            if (offset_index) {
+                auto [compressed, total] =
+                    ComputeCompressedRowRanges(row_ranges, offset_index, row_group_row_count);
+                effective_ranges = std::move(compressed);
+                effective_total = total;
+            }
+        }
+        return {RowRangesToSkipReadPattern(effective_ranges), effective_total};
+    };
 
-    // Phase 2: Execute skip/read pattern
-    PAIMON_RETURN_NOT_OK(ExecuteSkipReadPattern(column_reader.get(), effective_ranges,
-                                                effective_total, row_group_index, field_index));
+    // Load + filter + transfer (per-leaf, via tree delegation)
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(column_reader->LoadBatchWithRowFilter(get_leaf_filter));
 
-    // Phase 3: Build the Arrow array (TransferColumnData for leaves + assemble for nested)
+    // Build the Arrow array (TransferColumnData for leaves + assemble for nested)
     std::shared_ptr<arrow::ChunkedArray> chunked_array;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(column_reader->BuildArray(effective_total, &chunked_array));
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(column_reader->BuildArray(row_group_row_count, &chunked_array));
 
     return chunked_array;
 }
