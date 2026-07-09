@@ -171,11 +171,11 @@ Status ParquetFileBatchReader::SetReadSchema(
                 FilterRowGroupsByPredicate(predicate, file_schema, target_row_groups));
         }
         if (selection_bitmap) {
-            // workaround: page index filter does not support nested fields for now, skip page index
-            // bitmap pushdown if there is any nested field in the schema
             PAIMON_ASSIGN_OR_RAISE(
                 target_row_groups,
                 FilterRowGroupsByBitmap(selection_bitmap.value(), target_row_groups));
+            // workaround: page index filter does not support nested fields for now, skip page index
+            // bitmap pushdown if there is any nested field in the schema
             if (!has_nested_field && enable_page_index_filter) {
                 PAIMON_ASSIGN_OR_RAISE(target_row_groups,
                                        FilterPagesByBitmap(selection_bitmap.value(),
