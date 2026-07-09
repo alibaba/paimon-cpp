@@ -29,7 +29,6 @@ class TargetRowGroup;
 using TargetRowGroups = std::vector<TargetRowGroup>;
 class TargetRowGroup {
  public:
-    explicit TargetRowGroup(int32_t rg_index) : row_group_index_(rg_index) {}
     TargetRowGroup(int32_t rg_index, bool is_partially_matched, RowRanges ranges)
         : row_group_index_(rg_index),
           is_partially_matched_(is_partially_matched),

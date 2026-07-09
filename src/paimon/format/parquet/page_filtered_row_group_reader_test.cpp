@@ -1117,9 +1117,9 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnRowGroupFilter) {
 /// unavailable for nested read schemas.
 ///
 /// Schema: { id: int32, props: map<utf8, int32> }
-/// 100 rows, 10 per page, 1 row group.
+/// 100 rows, 10 per page, 2 row group.
 /// Predicate: id >= 30 would be a partial-row-group match at first 50-row group.
-/// Because nested schema disables page-level filtering, the entire first row group (0..49) is read,
+/// Because nested schema disables page-level filtering, the entire row group 0 (0..49) is read,
 /// so rows [0, 99] should all be returned.
 TEST_F(PageFilteredRowGroupReaderTest, NestedMapBitmapFallback) {
     std::string file_name = dir_->Str() + "/nested_map_projection_fallback.parquet";
@@ -1148,7 +1148,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapBitmapFallback) {
 ///
 /// Schema: { id: int32, tags: list<item: int32> }
 /// Predicate: id >= 30 would be a partial-row-group match at first 50-row group.
-/// Because nested schema disables page-level filtering, the entire first row group (0..49) is read.
+/// Because nested schema disables page-level filtering, the entire row group 0 (0..49) is read.
 TEST_F(PageFilteredRowGroupReaderTest, NestedListBitmapFallback) {
     std::string file_name = dir_->Str() + "/nested_list_projection_fallback.parquet";
     auto data = MakeListColumnData(100);

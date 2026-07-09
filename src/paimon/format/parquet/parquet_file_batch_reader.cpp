@@ -260,7 +260,12 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByPredicate(
             return Status::Invalid("cannot cast to ParquetFileFragment in ParquetFileBatchReader");
         }
         for (auto rg_index : parquet_fragment->row_groups()) {
-            target_row_groups.emplace_back(src_row_groups[rg_index]);
+            for (auto row_group : src_row_groups) {
+                if (row_group.GetRowGroupIndex() == rg_index) {
+                    target_row_groups.emplace_back(row_group);
+                    break;
+                }
+            }
         }
     }
     return target_row_groups;
@@ -303,7 +308,7 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterPagesByBitmap(
     target_row_groups.reserve(src_row_groups.size());
     for (const auto& row_group : src_row_groups) {
         target_row_groups.emplace_back(
-            FilterRowGroupPagesByBitmap(bitmap, row_group, column_indices, *page_index_reader));
+            FilterRowGroupPagesByBitmap(bitmap, row_group, column_indices, page_index_reader));
     }
     return target_row_groups;
 }
@@ -311,9 +316,9 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterPagesByBitmap(
 TargetRowGroup ParquetFileBatchReader::FilterRowGroupPagesByBitmap(
     const RoaringBitmap32& bitmap, const TargetRowGroup& row_group,
     const std::vector<int32_t>& column_indices,
-    ::parquet::PageIndexReader& page_index_reader) const {
+    const std::shared_ptr<::parquet::PageIndexReader>& page_index_reader) const {
     int32_t row_group_idx = row_group.GetRowGroupIndex();
-    auto rg_page_index_reader = page_index_reader.RowGroup(row_group_idx);
+    auto rg_page_index_reader = page_index_reader->RowGroup(row_group_idx);
     if (!rg_page_index_reader) {
         return row_group;
     }
@@ -332,7 +337,11 @@ TargetRowGroup ParquetFileBatchReader::FilterRowGroupPagesByBitmap(
                                                    rg_start_row, rg_row_count);
         row_ranges = RowRanges::Intersection(row_ranges, page_ranges);
     }
-    return TargetRowGroup(row_group_idx, true, std::move(row_ranges));
+    if (row_ranges.RowCount() == rg_row_count) {
+        return row_group;
+    } else {
+        return TargetRowGroup(row_group_idx, true, std::move(row_ranges));
+    }
 }
 
 RowRanges ParquetFileBatchReader::ComputeColumnPageRanges(
