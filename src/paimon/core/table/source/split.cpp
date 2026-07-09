@@ -210,8 +210,8 @@ Result<std::unordered_map<std::string, std::string>> ReadStringMap(DataInputStre
 }
 
 Result<std::shared_ptr<ChainDataSplitImpl>> ReadChainDataSplitTail(
-    const std::shared_ptr<DataSplitImpl>& base_split, DataInputStream* in,
-    const std::shared_ptr<MemoryPool>& pool) {
+    const std::shared_ptr<DataSplitImpl>& base_split, const std::shared_ptr<MemoryPool>& pool,
+    DataInputStream* in) {
     PAIMON_ASSIGN_OR_RAISE(bool all_snapshot_split, in->ReadValue<bool>());
     PAIMON_ASSIGN_OR_RAISE(BinaryRow read_partition,
                            SerializationUtils::DeserializeBinaryRow(in, pool.get()));
@@ -327,7 +327,7 @@ Result<std::shared_ptr<Split>> Split::Deserialize(const char* buffer, size_t len
         if (pos == stream_length) {
             return data_split;
         } else if (data_split->BucketPath() == ChainDataSplitImpl::VIRTUAL_BUCKET_PATH) {
-            auto chain_split = ReadChainDataSplitTail(data_split, &in, pool);
+            auto chain_split = ReadChainDataSplitTail(data_split, pool, &in);
             if (!chain_split.ok()) {
                 return Status::Invalid(fmt::format("invalid ChainDataSplit byte stream: {}",
                                                    chain_split.status().ToString()));
@@ -337,7 +337,7 @@ Result<std::shared_ptr<Split>> Split::Deserialize(const char* buffer, size_t len
             PAIMON_ASSIGN_OR_RAISE(bool is_fallback, in.ReadValue<bool>());
             return std::make_shared<FallbackDataSplit>(data_split, is_fallback);
         } else {
-            auto chain_split = ReadChainDataSplitTail(data_split, &in, pool);
+            auto chain_split = ReadChainDataSplitTail(data_split, pool, &in);
             if (!chain_split.ok()) {
                 return Status::Invalid(fmt::format("invalid ChainDataSplit byte stream: {}",
                                                    chain_split.status().ToString()));
