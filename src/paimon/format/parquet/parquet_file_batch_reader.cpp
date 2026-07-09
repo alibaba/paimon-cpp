@@ -159,7 +159,7 @@ Status ParquetFileBatchReader::SetReadSchema(
         }
 
         TargetRowGroups target_row_groups =
-            TargetRowGroup::MakeSerialRowGroups(reader_->GetAllRowGroupRanges());
+            TargetRowGroup::MakeForAllRowGroups(reader_->GetAllRowGroupRanges());
         PAIMON_ASSIGN_OR_RAISE(
             bool enable_page_index_filter,
             OptionsUtils::GetValueFromMap<bool>(options_, PARQUET_READ_ENABLE_PAGE_INDEX_FILTER,
@@ -184,8 +184,7 @@ Status ParquetFileBatchReader::SetReadSchema(
         }
         // Apply page-level filtering after bitmap pruning so we don't read page index
         // pages for row groups that the bitmap already excluded.
-        // If no predicate is provided, skip page-level filtering, row_group_row_ranges will be
-        // empty
+        // If no predicate is provided, skip page-level filtering
         if (predicate && !target_row_groups.empty()) {
             // workaround: page index filter does not support nested fields for now, skip page index
             // filter if there is any nested field in the schema
@@ -337,7 +336,7 @@ TargetRowGroup ParquetFileBatchReader::FilterRowGroupPagesByBitmap(
                                                    rg_start_row, rg_row_count);
         row_ranges = RowRanges::Intersection(row_ranges, page_ranges);
     }
-    if (row_ranges.RowCount() == rg_row_count) {
+    if (row_ranges.RowCount() == static_cast<int64_t>(rg_row_count)) {
         return row_group;
     } else {
         return TargetRowGroup(row_group_idx, true, std::move(row_ranges));

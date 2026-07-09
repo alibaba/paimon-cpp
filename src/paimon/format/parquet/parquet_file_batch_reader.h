@@ -214,7 +214,7 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
 
     // Compute the set of row ranges within a single column's pages that
     // overlap with the given bitmap. For each page, the bitmap is queried to
-    // find the precise [first, last] matching rows.
+    // find the first/last matching row in each page, used to trim the page head/tail
     static RowRanges ComputeColumnPageRanges(
         const RoaringBitmap32& bitmap, const std::vector<::parquet::PageLocation>& page_locations,
         uint64_t rg_start_row, uint64_t rg_row_count);

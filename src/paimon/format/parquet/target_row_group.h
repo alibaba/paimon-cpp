@@ -57,14 +57,31 @@ class TargetRowGroup {
         return row_ranges_;
     }
 
-    static TargetRowGroups MakeSerialRowGroups(
+    // Create a list of TargetRowGroups for serial (non-filtered) reading.
+    //
+    // Each element in 'ranges' is a (start, end) pair describing the row
+    // range of a single row group. The vector index 'i' is used as the row
+    // group index, so the caller must ensure that 'ranges' is ordered to
+    // match the physical row-group order in the file.
+    //
+    // For each valid range (start < end), a TargetRowGroup is created with:
+    //   - row_group_index = i
+    //   - is_partially_matched = false  (the entire row group is read)
+    //   - row_ranges = [0, end - start - 1]  (local row indices covering the
+    //     full group; converted from absolute offsets to 0-based local offsets)
+    //
+    // Ranges where start >= end are treated as empty and skipped.
+    static TargetRowGroups MakeForAllRowGroups(
         const std::vector<std::pair<uint64_t, uint64_t>>& ranges) {
         TargetRowGroups target_row_groups;
         target_row_groups.reserve(ranges.size());
         for (size_t i = 0; i < ranges.size(); ++i) {
+            // Skip empty or invalid ranges.
             if (ranges[i].first >= ranges[i].second) {
                 continue;
             }
+            // Convert the absolute [start, end) pair into a 0-based local
+            // row range [0, row_count - 1] for this row group.
             target_row_groups.emplace_back(
                 static_cast<int32_t>(i), false,
                 RowRanges(Range(0, ranges[i].second - ranges[i].first - 1)));

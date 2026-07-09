@@ -1118,9 +1118,8 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnRowGroupFilter) {
 ///
 /// Schema: { id: int32, props: map<utf8, int32> }
 /// 100 rows, 10 per page, 2 row group.
-/// Predicate: id >= 30 would be a partial-row-group match at first 50-row group.
-/// Because nested schema disables page-level filtering, the entire row group 0 (0..49) is read,
-/// so rows [0, 99] should all be returned.
+/// Because nested schema disables page-level filtering, the entire row group 1 (50..99) is read,
+/// so rows [50, 99] should all be returned.
 TEST_F(PageFilteredRowGroupReaderTest, NestedMapBitmapFallback) {
     std::string file_name = dir_->Str() + "/nested_map_projection_fallback.parquet";
     auto data = MakeMapColumnData(100);
@@ -1147,8 +1146,9 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapBitmapFallback) {
 /// unavailable for nested read schemas.
 ///
 /// Schema: { id: int32, tags: list<item: int32> }
-/// Predicate: id >= 30 would be a partial-row-group match at first 50-row group.
-/// Because nested schema disables page-level filtering, the entire row group 0 (0..49) is read.
+/// 100 rows, 10 per page, 2 row group.
+/// Because nested schema disables page-level filtering, the entire row group 1 (50..99) is read,
+/// so rows [50, 99] should all be returned.
 TEST_F(PageFilteredRowGroupReaderTest, NestedListBitmapFallback) {
     std::string file_name = dir_->Str() + "/nested_list_projection_fallback.parquet";
     auto data = MakeListColumnData(100);
@@ -1348,7 +1348,7 @@ TEST_F(PageFilteredRowGroupReaderTest, BitmapAllAndPartialPagesMixed) {
 /// Test: bitmap hits partial pages of a row group, with page-filtered option disabled.
 ///
 /// 200 rows, 10 rows per page, 100 rows per row group → 2 row groups.
-/// Bitmap: {0..99} hits all of RG0 + {120..149} hits pages 2-4 of RG1.
+/// Bitmap: {120..149} hits pages 2-4 of RG1.
 /// Expected: 100 rows (100-199) because page-filtered option is disabled, so page-level bitmap is
 /// ignored.
 TEST_F(PageFilteredRowGroupReaderTest, BitmapWithPageFilteredOptionDisabled) {
