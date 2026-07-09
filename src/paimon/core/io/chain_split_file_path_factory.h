@@ -19,20 +19,27 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "paimon/core/io/data_file_path_factory.h"
+#include "paimon/result.h"
 
 namespace paimon {
 
-class ChainDataFilePathFactory : public DataFilePathFactory {
+class ChainSplitFilePathFactory : public DataFilePathFactory {
  public:
-    ChainDataFilePathFactory(std::shared_ptr<DataFilePathFactory> fallback,
-                             std::unordered_map<std::string, std::string> file_bucket_path_mapping);
+    static Result<std::shared_ptr<ChainSplitFilePathFactory>> Create(
+        const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
+        std::unordered_map<std::string, std::string> file_bucket_path_mapping);
+
+    explicit ChainSplitFilePathFactory(
+        std::unordered_map<std::string, std::string> file_bucket_path_mapping);
 
     std::string ToPath(const std::shared_ptr<DataFileMeta>& file_meta) const override;
+    std::string ToAlignedPath(const std::string& file_name,
+                              const std::shared_ptr<DataFileMeta>& aligned) const override;
 
  private:
-    std::shared_ptr<DataFilePathFactory> fallback_;
     std::unordered_map<std::string, std::string> file_bucket_path_mapping_;
 };
 

@@ -27,14 +27,14 @@
 
 namespace paimon {
 
-class ChainDataSplitImpl : public DataSplitImpl {
+class ChainSplitImpl : public DataSplitImpl {
  public:
     static constexpr const char* VIRTUAL_BUCKET_PATH = "placeholder::virtual-bucket-path";
 
-    ChainDataSplitImpl(const std::shared_ptr<DataSplitImpl>& base_split, bool all_snapshot_split,
-                       const BinaryRow& read_partition,
-                       std::unordered_map<std::string, std::string>&& file_bucket_path_mapping,
-                       std::unordered_map<std::string, std::string>&& file_branch_mapping)
+    ChainSplitImpl(const std::shared_ptr<DataSplitImpl>& base_split, bool all_snapshot_split,
+                   const BinaryRow& read_partition,
+                   std::unordered_map<std::string, std::string>&& file_bucket_path_mapping,
+                   std::unordered_map<std::string, std::string>&& file_branch_mapping)
         : DataSplitImpl(base_split->Partition(), base_split->Bucket(), base_split->BucketPath(),
                         std::vector<std::shared_ptr<DataFileMeta>>(base_split->DataFiles())),
           all_snapshot_split_(all_snapshot_split),
