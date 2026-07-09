@@ -29,6 +29,7 @@
 #include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/macros.h"
 #include "parquet/arrow/reader.h"
+#include "parquet/arrow/schema.h"
 #include "parquet/file_reader.h"
 #include "parquet/metadata.h"
 #include "parquet/page_index.h"
@@ -234,9 +235,9 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::NextPageFiltered(
         PAIMON_ASSIGN_OR_RAISE(
             current_page_filtered_reader_,
             PageFilteredRowGroupReader::ReadFilteredRowGroup(
-                file_reader_->parquet_reader(), target_rg, target_column_indices_,
-                page_filtered_read_schema_, file_reader_->properties().cache_options(),
-                pre_buffered, page_ranges, max_chunksize, pool_));
+                file_reader_.get(), target_rg, target_column_indices_, page_filtered_read_schema_,
+                file_reader_->properties().cache_options(), pre_buffered, page_ranges,
+                max_chunksize, pool_));
         current_filtered_row_ranges_ = target_rg.row_ranges;
         current_filtered_rg_start_ = all_row_group_ranges_[rg_id].first;
         filtered_global_offset_ = 0;
@@ -343,20 +344,18 @@ Status FileReaderWrapper::BuildPageFilteredSchema(const std::vector<int32_t>& co
     if (page_filtered_read_schema_) {
         return Status::OK();
     }
-    std::shared_ptr<arrow::Schema> schema;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetSchema(&schema));
-    auto parquet_schema = file_reader_->parquet_reader()->metadata()->schema();
+
+    // Use SchemaManifest to group leaf columns by top-level field.
+    // This correctly handles nested types (Struct, List, Map) where multiple
+    // leaf Parquet columns map to a single top-level Arrow field.
+    const auto& manifest = file_reader_->manifest();
+    std::vector<int> col_indices_vec(column_indices.begin(), column_indices.end());
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::vector<int> field_indices,
+                                      manifest.GetFieldIndices(col_indices_vec));
+
     std::vector<std::shared_ptr<arrow::Field>> fields;
-    for (int32_t col_idx : column_indices) {
-        const std::string& col_name = parquet_schema->Column(col_idx)->name();
-        auto field = schema->GetFieldByName(col_name);
-        if (!field) {
-            return Status::Invalid(fmt::format(
-                "PrepareForReading: Parquet column {} ('{}') has no matching Arrow field in "
-                "file schema",
-                col_idx, col_name));
-        }
-        fields.push_back(field);
+    for (int field_idx : field_indices) {
+        fields.push_back(manifest.schema_fields[field_idx].field);
     }
     page_filtered_read_schema_ = arrow::schema(fields);
     return Status::OK();

@@ -19,15 +19,18 @@
 #include <algorithm>
 
 #include "arrow/array.h"
+#include "arrow/array/concatenate.h"
 #include "arrow/builder.h"
 #include "arrow/chunked_array.h"
 #include "arrow/io/caching.h"
 #include "arrow/io/interfaces.h"
 #include "arrow/table.h"
+#include "arrow/util/bit_util.h"
 #include "arrow/util/future.h"
 #include "fmt/format.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "parquet/arrow/reader_internal.h"
+#include "parquet/level_conversion.h"
 #include "parquet/metadata.h"
 #include "parquet/schema.h"
 
@@ -57,6 +60,38 @@ class TableRecordBatchReader : public arrow::RecordBatchReader {
     std::shared_ptr<arrow::Table> table_;
     arrow::TableBatchReader inner_;
 };
+
+/// Check if a SchemaField or any of its descendants is a repeated type
+/// (List, Map, FixedSizeList, LargeList). This mirrors
+/// ColumnReaderImpl::IsOrHasRepeatedChild() to decide whether to use
+/// DefRepLevelsToBitmap (true) or DefLevelsToBitmap (false) for Struct assembly.
+bool HasRepeatedDescendant(const ::parquet::arrow::SchemaField& field) {
+    if (field.is_leaf()) return false;
+    for (const auto& child : field.children) {
+        auto type_id = child.field->type()->id();
+        if (type_id == ::arrow::Type::LIST || type_id == ::arrow::Type::MAP ||
+            type_id == ::arrow::Type::FIXED_SIZE_LIST || type_id == ::arrow::Type::LARGE_LIST) {
+            return true;
+        }
+        if (HasRepeatedDescendant(child)) return true;
+    }
+    return false;
+}
+
+/// Convert a ChunkedArray to a single ArrayData.
+/// 0 chunks → null array; 1 chunk → that chunk's data; >1 → concatenate.
+::arrow::Result<std::shared_ptr<::arrow::ArrayData>> ChunksToSingleArrayData(
+    const ::arrow::ChunkedArray& chunked) {
+    if (chunked.num_chunks() == 0) {
+        ARROW_ASSIGN_OR_RAISE(auto array, ::arrow::MakeArrayOfNull(chunked.type(), 0));
+        return array->data();
+    }
+    if (chunked.num_chunks() == 1) {
+        return chunked.chunk(0)->data();
+    }
+    ARROW_ASSIGN_OR_RAISE(auto concatenated, ::arrow::Concatenate(chunked.chunks()));
+    return concatenated->data();
+}
 
 }  // namespace
 
@@ -155,17 +190,18 @@ Status PageFilteredRowGroupReader::ExecuteSkipReadPattern(
     return Status::OK();
 }
 
-Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFilteredColumn(
+Result<std::pair<std::shared_ptr<arrow::ChunkedArray>,
+                 std::shared_ptr<::parquet::internal::RecordReader>>>
+PageFilteredRowGroupReader::ReadLeafColumn(
     const std::shared_ptr<::parquet::RowGroupReader>& row_group_reader,
     ::parquet::ParquetFileReader* parquet_reader,
     const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
     int32_t row_group_index, int32_t column_index, const RowRanges& row_ranges,
     const std::shared_ptr<arrow::Field>& field, int64_t row_group_row_count,
-    std::shared_ptr<::arrow::MemoryPool> pool) {
+    bool enable_page_filter, std::shared_ptr<::arrow::MemoryPool> pool) {
     auto file_metadata = parquet_reader->metadata();
     const auto* col_descriptor = file_metadata->schema()->Column(column_index);
 
-    // Try to get OffsetIndex for I/O-level page skipping
     RowRanges effective_ranges = row_ranges;
     int64_t effective_row_count = row_group_row_count;
 
@@ -176,18 +212,15 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
 
     auto page_reader = row_group_reader->GetColumnPageReader(column_index);
 
-    if (offset_index) {
-        // Set data_page_filter for I/O-level page skipping
+    if (enable_page_filter && offset_index) {
         page_reader->set_data_page_filter(
             MakePageFilter(row_ranges, offset_index, row_group_row_count));
-        // Compute compressed RowRanges for the decode-level skip/read pattern
         auto [compressed_ranges, compressed_total] =
             ComputeCompressedRowRanges(row_ranges, offset_index, row_group_row_count);
         effective_ranges = std::move(compressed_ranges);
         effective_row_count = compressed_total;
     }
 
-    // Create RecordReader
     ::parquet::internal::LevelInfo leaf_info =
         ::parquet::internal::LevelInfo::ComputeLevelInfo(col_descriptor);
     auto record_reader =
@@ -201,7 +234,226 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
     PAIMON_RETURN_NOT_OK_FROM_ARROW(::parquet::arrow::TransferColumnData(
         record_reader.get(), field, col_descriptor, pool.get(), &chunked_array));
 
-    return chunked_array;
+    return std::make_pair(std::move(chunked_array), std::move(record_reader));
+}
+
+Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFilteredColumn(
+    const std::shared_ptr<::parquet::RowGroupReader>& row_group_reader,
+    ::parquet::ParquetFileReader* parquet_reader,
+    const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
+    int32_t row_group_index, int32_t column_index, const RowRanges& row_ranges,
+    const std::shared_ptr<arrow::Field>& field, int64_t row_group_row_count,
+    std::shared_ptr<::arrow::MemoryPool> pool) {
+    PAIMON_ASSIGN_OR_RAISE(auto result,
+                           ReadLeafColumn(row_group_reader, parquet_reader, rg_page_index_reader,
+                                          row_group_index, column_index, row_ranges, field,
+                                          row_group_row_count, /*enable_page_filter=*/true, pool));
+    return result.first;
+}
+
+Result<std::pair<std::shared_ptr<arrow::ChunkedArray>,
+                 std::shared_ptr<::parquet::internal::RecordReader>>>
+PageFilteredRowGroupReader::ReadAndAssembleField(
+    const ::parquet::arrow::SchemaField& schema_field, ::parquet::ParquetFileReader* parquet_reader,
+    const std::shared_ptr<::parquet::RowGroupReader>& row_group_reader,
+    const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
+    int32_t row_group_index, const std::vector<int32_t>& column_indices,
+    const RowRanges& row_ranges, const std::shared_ptr<arrow::Field>& field,
+    int64_t row_group_row_count, int64_t expected_rows, std::shared_ptr<::arrow::MemoryPool> pool,
+    bool is_top_level) {
+    namespace bit_util = ::arrow::bit_util;
+
+    // For leaf/flat fields, use ReadLeafColumn.
+    // Top-level leaf columns get data_page_filter for I/O-level page skipping.
+    // Nested leaf columns (is_top_level=false) skip data_page_filter to preserve
+    // def/rep level synchronization across sibling leaf columns.
+    if (schema_field.is_leaf()) {
+        PAIMON_ASSIGN_OR_RAISE(
+            auto result,
+            ReadLeafColumn(row_group_reader, parquet_reader, rg_page_index_reader, row_group_index,
+                           schema_field.column_index, row_ranges, field, row_group_row_count,
+                           /*enable_page_filter=*/is_top_level, pool));
+        return result;
+    }
+
+    auto type_id = field->type()->id();
+
+    if (type_id == ::arrow::Type::STRUCT) {
+        // === Struct Assembly (mimicking StructReader::BuildArray) ===
+        std::vector<std::shared_ptr<::arrow::ArrayData>> child_data;
+        std::shared_ptr<::parquet::internal::RecordReader> def_level_reader;
+
+        for (const auto& child : schema_field.children) {
+            PAIMON_ASSIGN_OR_RAISE(
+                auto child_result,
+                ReadAndAssembleField(child, parquet_reader, row_group_reader, rg_page_index_reader,
+                                     row_group_index, column_indices, row_ranges, child.field,
+                                     row_group_row_count, expected_rows, pool,
+                                     /*is_top_level=*/false));
+
+            if (!def_level_reader) {
+                def_level_reader = child_result.second;
+            }
+
+            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto array_data,
+                                              ChunksToSingleArrayData(*child_result.first));
+            child_data.push_back(std::move(array_data));
+        }
+
+        // Build validity bitmap from def levels.
+        bool has_repeated_child = HasRepeatedDescendant(schema_field);
+        std::shared_ptr<::arrow::ResizableBuffer> null_bitmap;
+        ::parquet::internal::ValidityBitmapInputOutput validity_io;
+        validity_io.values_read_upper_bound = expected_rows;
+        validity_io.values_read = expected_rows;
+
+        if (has_repeated_child) {
+            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+                null_bitmap, ::arrow::AllocateResizableBuffer(bit_util::BytesForBits(expected_rows),
+                                                              pool.get()));
+            validity_io.valid_bits = null_bitmap->mutable_data();
+
+            const int16_t* def_levels = def_level_reader->def_levels();
+            const int16_t* rep_levels = def_level_reader->rep_levels();
+            int64_t num_levels = def_level_reader->levels_position();
+            ::parquet::internal::DefRepLevelsToBitmap(def_levels, rep_levels, num_levels,
+                                                      schema_field.level_info, &validity_io);
+        } else if (field->nullable()) {
+            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+                null_bitmap, ::arrow::AllocateResizableBuffer(bit_util::BytesForBits(expected_rows),
+                                                              pool.get()));
+            validity_io.valid_bits = null_bitmap->mutable_data();
+
+            const int16_t* def_levels = def_level_reader->def_levels();
+            int64_t num_levels = def_level_reader->levels_position();
+            ::parquet::internal::DefLevelsToBitmap(def_levels, num_levels, schema_field.level_info,
+                                                   &validity_io);
+        }
+
+        if (null_bitmap) {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(
+                null_bitmap->Resize(bit_util::BytesForBits(validity_io.values_read)));
+            null_bitmap->ZeroPadding();
+        }
+
+        if (!field->nullable() && !has_repeated_child && !child_data.empty()) {
+            validity_io.values_read = child_data.front()->length;
+        }
+
+        std::vector<std::shared_ptr<::arrow::Buffer>> buffers{
+            validity_io.null_count > 0 ? null_bitmap : nullptr};
+        auto data = std::make_shared<::arrow::ArrayData>(field->type(), validity_io.values_read,
+                                                         std::move(buffers), std::move(child_data));
+        auto result = ::arrow::MakeArray(data);
+        return std::make_pair(std::make_shared<arrow::ChunkedArray>(result), def_level_reader);
+    }
+
+    if (type_id == ::arrow::Type::LIST || type_id == ::arrow::Type::MAP ||
+        type_id == ::arrow::Type::LARGE_LIST || type_id == ::arrow::Type::FIXED_SIZE_LIST) {
+        // === List/Map Assembly (mimicking ListReader::BuildArray) ===
+        // Map is stored as list<struct<key, value>> in Parquet, so use List assembly.
+        const auto& child = schema_field.children[0];
+        PAIMON_ASSIGN_OR_RAISE(
+            auto child_result,
+            ReadAndAssembleField(child, parquet_reader, row_group_reader, rg_page_index_reader,
+                                 row_group_index, column_indices, row_ranges, child.field,
+                                 row_group_row_count, expected_rows, pool,
+                                 /*is_top_level=*/false));
+
+        auto& item_record_reader = child_result.second;
+        const int16_t* def_levels = item_record_reader->def_levels();
+        const int16_t* rep_levels = item_record_reader->rep_levels();
+        int64_t num_levels = item_record_reader->levels_position();
+
+        bool is_large_list = (type_id == ::arrow::Type::LARGE_LIST);
+        bool is_fixed_size = (type_id == ::arrow::Type::FIXED_SIZE_LIST);
+
+        std::shared_ptr<::arrow::ResizableBuffer> validity_buffer;
+        ::parquet::internal::ValidityBitmapInputOutput validity_io;
+        validity_io.values_read_upper_bound = expected_rows;
+
+        if (field->nullable()) {
+            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+                validity_buffer, ::arrow::AllocateResizableBuffer(
+                                     bit_util::BytesForBits(expected_rows), pool.get()));
+            validity_io.valid_bits = validity_buffer->mutable_data();
+        }
+
+        std::shared_ptr<::arrow::ResizableBuffer> offsets_buffer;
+
+        if (is_large_list) {
+            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+                offsets_buffer,
+                ::arrow::AllocateResizableBuffer(
+                    sizeof(int64_t) * std::max(int64_t{1}, expected_rows + 1), pool.get()));
+            auto* offset_data = reinterpret_cast<int64_t*>(offsets_buffer->mutable_data());
+            offset_data[0] = 0;
+            ::parquet::internal::DefRepLevelsToList(def_levels, rep_levels, num_levels,
+                                                    schema_field.level_info, &validity_io,
+                                                    offset_data);
+        } else {
+            // LIST, MAP, and FIXED_SIZE_LIST all use int32 offsets initially.
+            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+                offsets_buffer,
+                ::arrow::AllocateResizableBuffer(
+                    sizeof(int32_t) * std::max(int64_t{1}, expected_rows + 1), pool.get()));
+            auto* offset_data = reinterpret_cast<int32_t*>(offsets_buffer->mutable_data());
+            offset_data[0] = 0;
+            ::parquet::internal::DefRepLevelsToList(def_levels, rep_levels, num_levels,
+                                                    schema_field.level_info, &validity_io,
+                                                    offset_data);
+        }
+
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto item_data,
+                                          ChunksToSingleArrayData(*child_result.first));
+
+        // Resize buffers to actual size.
+        if (offsets_buffer) {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(
+                offsets_buffer->Resize((validity_io.values_read + 1) *
+                                       (is_large_list ? sizeof(int64_t) : sizeof(int32_t))));
+        }
+        if (validity_buffer) {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(
+                validity_buffer->Resize(bit_util::BytesForBits(validity_io.values_read)));
+            validity_buffer->ZeroPadding();
+        }
+
+        std::vector<std::shared_ptr<::arrow::Buffer>> buffers;
+        if (is_fixed_size) {
+            // Validate each list has the expected fixed size, then drop offsets.
+            const auto& fs_type = static_cast<const ::arrow::FixedSizeListType&>(*field->type());
+            int32_t list_size = fs_type.list_size();
+            const int32_t* offsets = reinterpret_cast<const int32_t*>(offsets_buffer->data());
+            for (int64_t x = 1; x <= validity_io.values_read; ++x) {
+                int32_t size = offsets[x] - offsets[x - 1];
+                if (size != list_size) {
+                    return Status::Invalid(
+                        fmt::format("Expected all lists to be of size={} but index {} had size={}",
+                                    list_size, x, size));
+                }
+            }
+            // FixedSizeList only has a validity buffer (no offsets).
+            buffers.push_back(validity_io.null_count > 0 ? validity_buffer : nullptr);
+        } else {
+            buffers.push_back(validity_io.null_count > 0 ? validity_buffer : nullptr);
+            buffers.push_back(offsets_buffer);
+        }
+
+        auto data = std::make_shared<::arrow::ArrayData>(
+            field->type(), validity_io.values_read, std::move(buffers),
+            std::vector<std::shared_ptr<::arrow::ArrayData>>{item_data}, validity_io.null_count);
+
+        if (type_id == ::arrow::Type::MAP) {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(::arrow::MapArray::ValidateChildData(data->child_data));
+        }
+
+        auto result = ::arrow::MakeArray(data);
+        return std::make_pair(std::make_shared<arrow::ChunkedArray>(result), item_record_reader);
+    }
+
+    return Status::Invalid(fmt::format("PageFilteredRowGroupReader: unsupported field type: {}",
+                                       field->type()->ToString()));
 }
 
 Status PageFilteredRowGroupReader::WaitForPreBuffer(
@@ -229,7 +481,7 @@ Status PageFilteredRowGroupReader::WaitForPreBuffer(
 }
 
 Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::ReadFilteredRowGroup(
-    ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
+    ::parquet::arrow::FileReader* arrow_file_reader, const TargetRowGroup& target_row_group,
     const std::vector<int32_t>& column_indices, const std::shared_ptr<arrow::Schema>& arrow_schema,
     const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
     const std::vector<::arrow::io::ReadRange>& page_ranges, int64_t max_chunksize,
@@ -244,6 +496,8 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
     }
 
     int64_t expected_rows = row_ranges.RowCount();
+
+    ::parquet::ParquetFileReader* parquet_reader = arrow_file_reader->parquet_reader();
 
     PAIMON_RETURN_NOT_OK(WaitForPreBuffer(parquet_reader, row_group_index, column_indices,
                                           cache_options, pre_buffered, page_ranges, pool));
@@ -260,23 +514,34 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
         rg_page_index_reader = page_index_reader->RowGroup(row_group_index);
     }
 
-    // Read each column with page filtering
+    // Use SchemaManifest to group leaf columns by top-level field.
+    // This allows us to handle nested types (Struct, List, Map) correctly by
+    // building a reader tree for each top-level field instead of treating each
+    // leaf column independently.
+    const auto& manifest = arrow_file_reader->manifest();
+    std::vector<int> col_indices_vec(column_indices.begin(), column_indices.end());
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::vector<int> field_indices,
+                                      manifest.GetFieldIndices(col_indices_vec));
+
+    // Read each top-level field with page filtering
     std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
-    columns.reserve(column_indices.size());
+    columns.reserve(field_indices.size());
 
-    for (size_t i = 0; i < column_indices.size(); ++i) {
+    for (size_t i = 0; i < field_indices.size(); ++i) {
+        const auto& schema_field = manifest.schema_fields[field_indices[i]];
         PAIMON_ASSIGN_OR_RAISE(
-            std::shared_ptr<arrow::ChunkedArray> chunked_array,
-            ReadFilteredColumn(row_group_reader, parquet_reader, rg_page_index_reader,
-                               row_group_index, column_indices[i], row_ranges,
-                               arrow_schema->field(static_cast<int>(i)), row_group_row_count,
-                               pool));
+            auto field_result,
+            ReadAndAssembleField(schema_field, parquet_reader, row_group_reader,
+                                 rg_page_index_reader, row_group_index, column_indices, row_ranges,
+                                 arrow_schema->field(static_cast<int>(i)), row_group_row_count,
+                                 expected_rows, pool));
 
+        auto& chunked_array = field_result.first;
         if (chunked_array->length() != expected_rows) {
             return Status::Invalid(fmt::format(
-                "PageFilteredRowGroupReader: column {} produced {} rows but expected {} "
+                "PageFilteredRowGroupReader: field {} produced {} rows but expected {} "
                 "(row_group={})",
-                column_indices[i], chunked_array->length(), expected_rows, row_group_index));
+                field_indices[i], chunked_array->length(), expected_rows, row_group_index));
         }
 
         columns.push_back(std::move(chunked_array));

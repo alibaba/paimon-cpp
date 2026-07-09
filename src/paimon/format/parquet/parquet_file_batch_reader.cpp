@@ -134,13 +134,6 @@ Status ParquetFileBatchReader::SetReadSchema(
                                           arrow::ImportSchema(schema));
 
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> file_schema, reader_->GetSchema());
-        bool has_nested_field = false;
-        for (const auto& field : read_schema->fields()) {
-            if (ArrowSchemaValidator::IsNestedType(field->type())) {
-                has_nested_field = true;
-                break;
-            }
-        }
 
         // Recursively match read_schema against file_schema by field names.
         // STRUCT supports sub-field projection; LIST/MAP require exact type match.
@@ -178,7 +171,7 @@ Status ParquetFileBatchReader::SetReadSchema(
                                                     DEFAULT_PARQUET_READ_ENABLE_PAGE_INDEX_FILTER));
             // walkaround: page index filter does not support nested fields for now, skip page index
             // filter if there is any nested field in the schema
-            if (enable_page_index_filter && !has_nested_field) {
+            if (enable_page_index_filter) {
                 // Build column name to index map for page-level filtering.
                 // For leaf columns, indices[0] is the correct leaf column index in Parquet.
                 // For nested types (struct/list/map), FlattenSchema produces multiple leaf indices,

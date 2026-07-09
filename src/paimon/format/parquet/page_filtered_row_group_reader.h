@@ -28,6 +28,8 @@
 #include "arrow/type.h"
 #include "paimon/format/parquet/row_ranges.h"
 #include "paimon/result.h"
+#include "parquet/arrow/reader.h"
+#include "parquet/arrow/schema.h"
 #include "parquet/column_reader.h"
 #include "parquet/file_reader.h"
 #include "parquet/page_index.h"
@@ -44,7 +46,7 @@ class PageFilteredRowGroupReader {
     ~PageFilteredRowGroupReader() = delete;
 
     /// Read a row group with page-level filtering.
-    /// @param parquet_reader The underlying ParquetFileReader
+    /// @param arrow_file_reader The Arrow FileReader (provides SchemaManifest and GetColumn)
     /// @param target_row_group Target row group with index and row ranges
     /// @param column_indices Leaf column indices to read
     /// @param arrow_schema The target Arrow schema for output columns
@@ -56,7 +58,7 @@ class PageFilteredRowGroupReader {
     /// @param max_chunksize Per-batch row cap for the returned reader.
     /// @return A RecordBatchReader streaming the filtered rows.
     static Result<std::unique_ptr<arrow::RecordBatchReader>> ReadFilteredRowGroup(
-        ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
+        ::parquet::arrow::FileReader* arrow_file_reader, const TargetRowGroup& target_row_group,
         const std::vector<int32_t>& column_indices,
         const std::shared_ptr<arrow::Schema>& arrow_schema,
         const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
@@ -91,6 +93,40 @@ class PageFilteredRowGroupReader {
         const std::shared_ptr<::parquet::internal::RecordReader>& record_reader,
         const RowRanges& ranges, int64_t total_row_count, int32_t row_group_index,
         int32_t column_index);
+
+    /// Read a leaf column and return both the array and the RecordReader.
+    /// The RecordReader is kept alive so callers can access def/rep levels
+    /// for nested array assembly. When enable_page_filter is true,
+    /// data_page_filter + compressed ranges are used for I/O-level page skipping
+    /// (for flat top-level columns). When false, only decode-level skipping
+    /// is used (for leaf columns within nested types, to preserve def/rep
+    /// level synchronization).
+    static Result<std::pair<std::shared_ptr<arrow::ChunkedArray>,
+                            std::shared_ptr<::parquet::internal::RecordReader>>>
+    ReadLeafColumn(const std::shared_ptr<::parquet::RowGroupReader>& row_group_reader,
+                   ::parquet::ParquetFileReader* parquet_reader,
+                   const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
+                   int32_t row_group_index, int32_t column_index, const RowRanges& row_ranges,
+                   const std::shared_ptr<arrow::Field>& field, int64_t row_group_row_count,
+                   bool enable_page_filter, std::shared_ptr<::arrow::MemoryPool> pool);
+
+    /// Read a single top-level field (which may be flat or nested) and assemble
+    /// the result array. For flat/leaf fields, delegates to ReadFilteredColumn with
+    /// data_page_filter + compressed ranges. For nested fields (Struct, List, Map),
+    /// reads all leaf columns via RecordReaders (without data_page_filter), then
+    /// manually assembles the nested array using def/rep levels — mimicking
+    /// StructReader::BuildArray and ListReader::BuildArray.
+    static Result<std::pair<std::shared_ptr<arrow::ChunkedArray>,
+                            std::shared_ptr<::parquet::internal::RecordReader>>>
+    ReadAndAssembleField(
+        const ::parquet::arrow::SchemaField& schema_field,
+        ::parquet::ParquetFileReader* parquet_reader,
+        const std::shared_ptr<::parquet::RowGroupReader>& row_group_reader,
+        const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
+        int32_t row_group_index, const std::vector<int32_t>& column_indices,
+        const RowRanges& row_ranges, const std::shared_ptr<arrow::Field>& field,
+        int64_t row_group_row_count, int64_t expected_rows,
+        std::shared_ptr<::arrow::MemoryPool> pool, bool is_top_level = true);
 
     /// Create a data_page_filter callback for a column based on RowRanges + OffsetIndex.
     static std::function<bool(const ::parquet::DataPageStats&)> MakePageFilter(
