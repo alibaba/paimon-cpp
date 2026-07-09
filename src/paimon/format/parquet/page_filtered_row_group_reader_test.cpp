@@ -1177,4 +1177,53 @@ TEST_F(PageFilteredRowGroupReaderTest, MultipleNestedColumns) {
     ASSERT_TRUE(result->Equals(expected));
 }
 
+/// Test: sub-column projection of a struct type with page-level filtering.
+///
+/// Schema: { id: int32, info: struct<x: int32, y: int32> }
+/// Read schema: { info: struct<x: int32> } — project only x, not y.
+/// Predicate: id >= 70 → 30 rows expected.
+/// Verifies that reading a sub-column of a nested struct works correctly
+/// with page-level filtering and the ColumnReader tree (GetColumn + filter_leaves).
+TEST_F(PageFilteredRowGroupReaderTest, NestedStructSubColumnProjection) {
+    std::string file_name = dir_->Str() + "/nested_struct_subcol.parquet";
+
+    auto field_x = arrow::field("x", arrow::int32());
+    auto field_y = arrow::field("y", arrow::int32());
+    auto field_id = arrow::field("id", arrow::int32());
+    auto field_info = arrow::field("info", arrow::struct_({field_x, field_y}));
+
+    auto id_array = MakeIdColumn(100);
+    auto info_array = MakeNestedStructData(100);
+    auto data =
+        arrow::StructArray::Make({id_array, info_array}, {field_id, field_info}).ValueOrDie();
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
+
+    // Read only info.x (sub-column projection: only x, not y)
+    auto read_schema = arrow::schema({arrow::field("info", arrow::struct_({field_x}))});
+
+    auto predicate = PredicateBuilder::GreaterOrEqual(
+        /*field_index=*/0, /*field_name=*/"id", FieldType::INT, Literal(70));
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateImpl(file_name, read_schema, predicate, &result);
+
+    ASSERT_TRUE(result);
+    ASSERT_EQ(30, result->length());
+
+    // Result is struct<info: struct<x: int32>>
+    auto result_struct = std::dynamic_pointer_cast<arrow::StructArray>(result->chunk(0));
+    ASSERT_TRUE(result_struct);
+    ASSERT_EQ(1, result_struct->num_fields());
+
+    auto info_result = std::dynamic_pointer_cast<arrow::StructArray>(result_struct->field(0));
+    ASSERT_TRUE(info_result);
+    ASSERT_EQ(1, info_result->num_fields());
+
+    auto x_arr = std::dynamic_pointer_cast<arrow::Int32Array>(info_result->field(0));
+    ASSERT_TRUE(x_arr);
+    for (int32_t i = 0; i < 30; ++i) {
+        ASSERT_EQ((70 + i) * 100, x_arr->Value(i)) << "Mismatch at index " << i;
+    }
+}
+
 }  // namespace paimon::parquet::test
