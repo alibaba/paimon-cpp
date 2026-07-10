@@ -271,10 +271,7 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
         columns.push_back(std::move(chunked_array));
     }
 
-    // Build schema from actual column types (not SchemaManifest's full field).
-    // This handles sub-column projection: when filter_leaves prunes some children,
-    // the ChunkedArray type is the projected type (e.g. struct<x> instead of struct<x,y>),
-    // which may differ from the full field in SchemaManifest.
+    // Build schema from actual column types
     std::vector<std::shared_ptr<arrow::Field>> result_fields;
     for (size_t i = 0; i < columns.size(); ++i) {
         const auto& field_name = manifest.schema_fields[field_indices[i]].field->name();
