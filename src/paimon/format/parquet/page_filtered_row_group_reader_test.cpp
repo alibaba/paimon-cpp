@@ -965,14 +965,14 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnRowGroupFilter) {
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
 
-/// Test: Page-level filtering reading the nested struct column along with the predicate column.
+/// Test: Page-level filtering reading only the predicate column (no nested column in read schema).
 ///
-/// This verifies that when reading a subset of columns that includes a nested column
-/// and the predicate column, the schema mapping and column assembly work correctly.
+/// This verifies that when reading only the "id" column (without the nested struct),
+/// page-level filtering works correctly since the read schema contains no nested types.
 ///
 /// Schema: { id: int32, info: struct<x: int32, y: int32> }
-/// Read schema: { id: int32, info: struct<x: int32, y: int32> }
-/// Predicate on "id": id >= 70.
+/// Read schema: { id: int32 }
+/// Predicate on "id": id >= 70. Page-level filtering active → rows 70-99 (30 rows).
 TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnOnlyReadIdField) {
     std::string file_name = dir_->Str() + "/nested_struct_only_nested.parquet";
     auto data = MakeNestedStructData(100);
@@ -1118,6 +1118,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnRowGroupFilter) {
 ///
 /// Schema: { id: int32, props: map<utf8, int32> }
 /// 100 rows, 10 per page, 2 row group.
+/// Bitmap: {70..99} hits the second row group (50..99).
 /// Because nested schema disables page-level filtering, the entire row group 1 (50..99) is read,
 /// so rows [50, 99] should all be returned.
 TEST_F(PageFilteredRowGroupReaderTest, NestedMapBitmapFallback) {
@@ -1147,6 +1148,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapBitmapFallback) {
 ///
 /// Schema: { id: int32, tags: list<item: int32> }
 /// 100 rows, 10 per page, 2 row group.
+/// Bitmap: {70..99} hits the second row group (50..99).
 /// Because nested schema disables page-level filtering, the entire row group 1 (50..99) is read,
 /// so rows [50, 99] should all be returned.
 TEST_F(PageFilteredRowGroupReaderTest, NestedListBitmapFallback) {
@@ -1174,8 +1176,9 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedListBitmapFallback) {
 /// unavailable for nested read schemas.
 ///
 /// Schema: { id: int32, info: struct<x: int32, y: int32> }
-/// Predicate: id >= 30 would be a partial-row-group match at first 50-row group.
-/// Because nested schema disables page-level filtering, the entire first row group (0..49) is read.
+/// Bitmap: {70..99} hits the second row group (50..99).
+/// Because nested schema disables page-level filtering, the entire second row group (50..99) is
+/// read.
 TEST_F(PageFilteredRowGroupReaderTest, NestedStructBitmapFallback) {
     std::string file_name = dir_->Str() + "/nested_struct_projection_fallback.parquet";
     auto data = MakeNestedStructData(100);

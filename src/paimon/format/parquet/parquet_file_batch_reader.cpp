@@ -259,7 +259,7 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByPredicate(
             return Status::Invalid("cannot cast to ParquetFileFragment in ParquetFileBatchReader");
         }
         for (auto rg_index : parquet_fragment->row_groups()) {
-            for (auto row_group : src_row_groups) {
+            for (const auto& row_group : src_row_groups) {
                 if (row_group.GetRowGroupIndex() == rg_index) {
                     target_row_groups.emplace_back(row_group);
                     break;
