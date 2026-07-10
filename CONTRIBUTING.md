@@ -26,6 +26,30 @@ If you find a bug or want to request a feature, please open an [issue](https://g
 
 ---
 
+## Commit Messages and Pull Request Titles
+
+Use the [Conventional Commits](https://www.conventionalcommits.org/) format for commit messages
+and pull request titles:
+
+```text
+<type>(<optional-scope>): <description>
+```
+
+Examples:
+
+```text
+feat(parquet): support page-level bitmap filtering
+fix: handle non-contiguous row ranges
+test(executor): add shutdown coverage
+docs: update the build instructions
+```
+
+Choose a type and optional scope that accurately describe the change. Keep the description concise
+and write it in the imperative mood. A pull request title should summarize the complete change and
+use the same format.
+
+---
+
 ## Submitting Pull Requests
 
 1. **Fork** the repository and create a feature branch from `main`.
