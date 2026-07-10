@@ -78,8 +78,6 @@ bool HasRepeatedDescendant(const ::parquet::arrow::SchemaField& field) {
     return false;
 }
 
-/// Convert a ChunkedArray to a single ArrayData.
-/// 0 chunks → null array; 1 chunk → that chunk's data; >1 → concatenate.
 ::arrow::Result<std::shared_ptr<::arrow::ArrayData>> ChunksToSingleArrayData(
     const ::arrow::ChunkedArray& chunked) {
     if (chunked.num_chunks() == 0) {
@@ -360,21 +358,26 @@ PageFilteredRowGroupReader::ReadAndAssembleField(
         // === Struct Assembly (mimicking StructReader::BuildArray) ===
         std::vector<std::shared_ptr<::arrow::ArrayData>> child_data;
         std::shared_ptr<::parquet::internal::RecordReader> def_level_reader;
-        std::set<int32_t> col_set(column_indices.begin(), column_indices.end());
+        auto& projected_type = static_cast<const ::arrow::StructType&>(*field->type());
 
-        for (const auto& child : schema_field.children) {
-            // Sub-column projection: skip children whose leaf columns are not requested.
-            auto projected_child_field = BuildProjectedField(child, col_set);
-            if (!projected_child_field) {
-                continue;
+        for (int j = 0; j < projected_type.num_fields(); ++j) {
+            const auto& projected_child_field = projected_type.field(j);
+            // Find the matching SchemaField child by name.
+            const ::parquet::arrow::SchemaField* child_schema = nullptr;
+            for (const auto& sf_child : schema_field.children) {
+                if (sf_child.field->name() == projected_child_field->name()) {
+                    child_schema = &sf_child;
+                    break;
+                }
             }
+            if (!child_schema) continue;
 
             PAIMON_ASSIGN_OR_RAISE(
                 auto child_result,
-                ReadAndAssembleField(child, parquet_reader, row_group_reader, rg_page_index_reader,
-                                     row_group_index, column_indices, row_ranges,
-                                     projected_child_field, row_group_row_count, expected_rows,
-                                     pool, /*is_top_level=*/false));
+                ReadAndAssembleField(*child_schema, parquet_reader, row_group_reader,
+                                     rg_page_index_reader, row_group_index, column_indices,
+                                     row_ranges, projected_child_field, row_group_row_count,
+                                     expected_rows, pool, /*is_top_level=*/false));
 
             if (!def_level_reader) {
                 def_level_reader = child_result.second;
@@ -438,13 +441,7 @@ PageFilteredRowGroupReader::ReadAndAssembleField(
         // === List/Map Assembly (mimicking ListReader::BuildArray) ===
         // Map is stored as list<struct<key, value>> in Parquet, so use List assembly.
         const auto& child = schema_field.children[0];
-        std::set<int32_t> col_set(column_indices.begin(), column_indices.end());
-        auto projected_child_field = BuildProjectedField(child, col_set);
-        if (!projected_child_field) {
-            return Status::Invalid(fmt::format(
-                "PageFilteredRowGroupReader: no leaf columns requested for list/map field '{}'",
-                field->name()));
-        }
+        auto projected_child_field = field->type()->field(0);
         PAIMON_ASSIGN_OR_RAISE(
             auto child_result,
             ReadAndAssembleField(child, parquet_reader, row_group_reader, rg_page_index_reader,
@@ -607,9 +604,6 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
     }
 
     // Use SchemaManifest to group leaf columns by top-level field.
-    // This allows us to handle nested types (Struct, List, Map) correctly by
-    // building a reader tree for each top-level field instead of treating each
-    // leaf column independently.
     const auto& manifest = arrow_file_reader->manifest();
     std::vector<int> col_indices_vec(column_indices.begin(), column_indices.end());
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::vector<int> field_indices,

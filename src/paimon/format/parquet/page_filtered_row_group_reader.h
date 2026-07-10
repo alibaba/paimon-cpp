@@ -111,11 +111,6 @@ class PageFilteredRowGroupReader {
 
     /// Read a leaf column and return both the array and the RecordReader.
     /// The RecordReader is kept alive so callers can access def/rep levels
-    /// for nested array assembly. When enable_page_filter is true,
-    /// data_page_filter + compressed ranges are used for I/O-level page skipping
-    /// (for flat top-level columns). When false, only decode-level skipping
-    /// is used (for leaf columns within nested types, to preserve def/rep
-    /// level synchronization).
     static Result<std::pair<std::shared_ptr<arrow::ChunkedArray>,
                             std::shared_ptr<::parquet::internal::RecordReader>>>
     ReadLeafColumn(const std::shared_ptr<::parquet::RowGroupReader>& row_group_reader,
