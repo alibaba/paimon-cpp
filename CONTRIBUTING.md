@@ -26,6 +26,27 @@ If you find a bug or want to request a feature, please open an [issue](https://g
 
 ---
 
+## Commit Messages and Pull Request Titles
+
+Use the [Conventional Commits](https://www.conventionalcommits.org/) format for commit messages and pull request titles:
+
+```text
+<type>(<optional-scope>): <description>
+```
+
+Examples:
+
+```text
+feat(parquet): support page-level bitmap filtering
+fix: handle non-contiguous row ranges
+test(executor): add shutdown coverage
+docs: update the build instructions
+```
+
+Choose a type and optional scope that accurately describe the change. Keep the description concise and write it in the imperative mood. A pull request title should summarize the complete change and use the same format.
+
+---
+
 ## Submitting Pull Requests
 
 1. **Fork** the repository and create a feature branch from `main`.
@@ -33,6 +54,8 @@ If you find a bug or want to request a feature, please open an [issue](https://g
 3. Add or update tests for the functionality you changed.
 4. Ensure all checks pass.
 5. Open a pull request against `main`. Fill in the [PR template](.github/PULL_REQUEST_TEMPLATE.md).
+
+When addressing review feedback or adding follow-up changes to an open pull request, prefer a separate commit instead of amending and force-pushing existing commits. This makes the incremental diff easier for reviewers to inspect. Rewrite existing commits only when a maintainer explicitly requests it.
 
 ### PR Checklist
 
