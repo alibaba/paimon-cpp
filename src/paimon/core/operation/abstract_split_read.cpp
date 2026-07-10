@@ -33,6 +33,7 @@
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/object_utils.h"
+#include "paimon/common/utils/string_utils.h"
 #include "paimon/core/io/chain_split_file_path_factory.h"
 #include "paimon/core/io/complete_row_tracking_fields_reader.h"
 #include "paimon/core/io/data_file_meta.h"
@@ -43,6 +44,7 @@
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/source/chain_split_impl.h"
 #include "paimon/core/table/source/data_split_impl.h"
+#include "paimon/core/utils/branch_manager.h"
 #include "paimon/core/utils/field_mapping.h"
 #include "paimon/core/utils/nested_projection_utils.h"
 #include "paimon/format/file_format.h"
@@ -123,13 +125,58 @@ Result<std::shared_ptr<DataFilePathFactory>> AbstractSplitRead::CreateDataFilePa
     auto chain_split = std::dynamic_pointer_cast<ChainSplitImpl>(data_split);
     if (chain_split) {
         return ChainSplitFilePathFactory::Create(chain_split->DataFiles(),
-                                                 chain_split->FileBucketPathMapping());
+                                                 chain_split->FileBucketPathMapping(),
+                                                 chain_split->FileBranchMapping());
     }
 
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<DataFilePathFactory> base_factory,
         path_factory_->CreateDataFilePathFactory(data_split->Partition(), data_split->Bucket()));
     return base_factory;
+}
+
+Result<const SchemaManager*> AbstractSplitRead::GetSchemaManagerForBranch(
+    const std::string& branch) const {
+    std::string normalized_branch = BranchManager::NormalizeBranch(branch);
+    std::string current_branch = BranchManager::NormalizeBranch(options_.GetBranch());
+    if (StringUtils::ToLowerCase(normalized_branch) == StringUtils::ToLowerCase(current_branch)) {
+        return schema_manager_.get();
+    }
+
+    auto it = branch_schema_managers_.find(normalized_branch);
+    if (it != branch_schema_managers_.end()) {
+        return it->second.get();
+    }
+
+    auto schema_manager = std::make_unique<SchemaManager>(options_.GetFileSystem(),
+                                                          context_->GetPath(), normalized_branch);
+    auto [inserted_it, _] =
+        branch_schema_managers_.emplace(normalized_branch, std::move(schema_manager));
+    return inserted_it->second.get();
+}
+
+Result<std::shared_ptr<TableSchema>> AbstractSplitRead::ReadDataSchema(
+    const std::shared_ptr<DataFileMeta>& file_meta,
+    const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
+    const SchemaManager* schema_manager = schema_manager_.get();
+    bool current_branch = true;
+
+    auto chain_path_factory =
+        std::dynamic_pointer_cast<ChainSplitFilePathFactory>(data_file_path_factory);
+    if (chain_path_factory) {
+        std::optional<std::string> branch = chain_path_factory->BranchForFile(file_meta->file_name);
+        if (!branch) {
+            return Status::Invalid(
+                fmt::format("branch is missing for ChainSplit file {}", file_meta->file_name));
+        }
+        PAIMON_ASSIGN_OR_RAISE(schema_manager, GetSchemaManagerForBranch(branch.value()));
+        current_branch = schema_manager == schema_manager_.get();
+    }
+
+    if (current_branch && file_meta->schema_id == context_->GetTableSchema()->Id()) {
+        return context_->GetTableSchema();
+    }
+    return schema_manager->ReadSchema(file_meta->schema_id);
 }
 
 Result<std::unique_ptr<ReaderBuilder>> AbstractSplitRead::PrepareReaderBuilder(
@@ -175,13 +222,8 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingRe
     const FieldMappingBuilder* field_mapping_builder, DeletionVector::Factory dv_factory,
     const std::optional<std::vector<Range>>& row_ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
-    std::shared_ptr<TableSchema> data_schema;
-    if (file_meta->schema_id == context_->GetTableSchema()->Id()) {
-        data_schema = context_->GetTableSchema();
-    } else {
-        // load schema to get data schema
-        PAIMON_ASSIGN_OR_RAISE(data_schema, schema_manager_->ReadSchema(file_meta->schema_id));
-    }
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<TableSchema> data_schema,
+                           ReadDataSchema(file_meta, data_file_path_factory));
     PAIMON_ASSIGN_OR_RAISE(CoreOptions data_options,
                            CoreOptions::FromMap(data_schema->Options(), options_.GetFileSystem()));
     auto blob_inline_fields = data_options.GetBlobInlineFields();

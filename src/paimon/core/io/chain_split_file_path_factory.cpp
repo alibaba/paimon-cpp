@@ -27,8 +27,13 @@ namespace paimon {
 
 Result<std::shared_ptr<ChainSplitFilePathFactory>> ChainSplitFilePathFactory::Create(
     const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
-    std::unordered_map<std::string, std::string> file_bucket_path_mapping) {
+    std::unordered_map<std::string, std::string> file_bucket_path_mapping,
+    std::unordered_map<std::string, std::string> file_branch_mapping) {
     for (const auto& file : data_files) {
+        if (file_branch_mapping.find(file->file_name) == file_branch_mapping.end()) {
+            return Status::Invalid(
+                fmt::format("branch is missing for ChainSplit file {}", file->file_name));
+        }
         if (file->external_path) {
             continue;
         }
@@ -37,12 +42,20 @@ Result<std::shared_ptr<ChainSplitFilePathFactory>> ChainSplitFilePathFactory::Cr
                 fmt::format("bucket path is missing for ChainSplit file {}", file->file_name));
         }
     }
-    return std::make_shared<ChainSplitFilePathFactory>(std::move(file_bucket_path_mapping));
+    return std::make_shared<ChainSplitFilePathFactory>(std::move(file_bucket_path_mapping),
+                                                       std::move(file_branch_mapping));
 }
 
 ChainSplitFilePathFactory::ChainSplitFilePathFactory(
     std::unordered_map<std::string, std::string> file_bucket_path_mapping)
-    : file_bucket_path_mapping_(std::move(file_bucket_path_mapping)) {}
+    : ChainSplitFilePathFactory(std::move(file_bucket_path_mapping),
+                                std::unordered_map<std::string, std::string>()) {}
+
+ChainSplitFilePathFactory::ChainSplitFilePathFactory(
+    std::unordered_map<std::string, std::string> file_bucket_path_mapping,
+    std::unordered_map<std::string, std::string> file_branch_mapping)
+    : file_bucket_path_mapping_(std::move(file_bucket_path_mapping)),
+      file_branch_mapping_(std::move(file_branch_mapping)) {}
 
 std::string ChainSplitFilePathFactory::ToPath(
     const std::shared_ptr<DataFileMeta>& file_meta) const {
@@ -61,6 +74,15 @@ std::string ChainSplitFilePathFactory::ToAlignedPath(
         return PathUtil::JoinPath(external_path.value(), file_name);
     }
     return PathUtil::JoinPath(file_bucket_path_mapping_.at(aligned->file_name), file_name);
+}
+
+std::optional<std::string> ChainSplitFilePathFactory::BranchForFile(
+    const std::string& file_name) const {
+    auto it = file_branch_mapping_.find(file_name);
+    if (it == file_branch_mapping_.end()) {
+        return std::nullopt;
+    }
+    return it->second;
 }
 
 }  // namespace paimon

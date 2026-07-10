@@ -246,8 +246,25 @@ TEST(ChainSplitTest, ChainSplitFilePathFactoryPreservesExternalAlignedPath) {
 }
 
 TEST(ChainSplitTest, ChainSplitFilePathFactoryRejectsMissingBucketPathMapping) {
-    ASSERT_NOK_WITH_MSG(ChainSplitFilePathFactory::Create({CreateDataFileMeta(kFileName)}, {}),
+    ASSERT_NOK_WITH_MSG(ChainSplitFilePathFactory::Create({CreateDataFileMeta(kFileName)}, {},
+                                                          {{kFileName, kBranch}}),
                         "bucket path is missing for ChainSplit file");
+}
+
+TEST(ChainSplitTest, ChainSplitFilePathFactoryRejectsMissingBranchMapping) {
+    ASSERT_NOK_WITH_MSG(ChainSplitFilePathFactory::Create({CreateDataFileMeta(kFileName)},
+                                                          {{kFileName, kBucketPath}}, {}),
+                        "branch is missing for ChainSplit file");
+}
+
+TEST(ChainSplitTest, ChainSplitFilePathFactoryPreservesFileBranchMapping) {
+    ChainSplitFilePathFactory factory(
+        std::unordered_map<std::string, std::string>{{kFileName, kBucketPath}},
+        std::unordered_map<std::string, std::string>{{kFileName, kBranch}});
+
+    ASSERT_TRUE(factory.BranchForFile(kFileName));
+    EXPECT_EQ(factory.BranchForFile(kFileName).value(), kBranch);
+    EXPECT_EQ(factory.BranchForFile("missing"), std::nullopt);
 }
 
 TEST(ChainSplitTest, SerializeChainSplitPreservesMappings) {

@@ -17,6 +17,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -30,17 +31,22 @@ class ChainSplitFilePathFactory : public DataFilePathFactory {
  public:
     static Result<std::shared_ptr<ChainSplitFilePathFactory>> Create(
         const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
-        std::unordered_map<std::string, std::string> file_bucket_path_mapping);
+        std::unordered_map<std::string, std::string> file_bucket_path_mapping,
+        std::unordered_map<std::string, std::string> file_branch_mapping);
 
     explicit ChainSplitFilePathFactory(
         std::unordered_map<std::string, std::string> file_bucket_path_mapping);
+    ChainSplitFilePathFactory(std::unordered_map<std::string, std::string> file_bucket_path_mapping,
+                              std::unordered_map<std::string, std::string> file_branch_mapping);
 
     std::string ToPath(const std::shared_ptr<DataFileMeta>& file_meta) const override;
     std::string ToAlignedPath(const std::string& file_name,
                               const std::shared_ptr<DataFileMeta>& aligned) const override;
+    std::optional<std::string> BranchForFile(const std::string& file_name) const;
 
  private:
     std::unordered_map<std::string, std::string> file_bucket_path_mapping_;
+    std::unordered_map<std::string, std::string> file_branch_mapping_;
 };
 
 }  // namespace paimon

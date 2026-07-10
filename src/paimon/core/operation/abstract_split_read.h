@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
 #include <optional>
 #include <set>
@@ -112,6 +113,12 @@ class AbstractSplitRead : public SplitRead {
         const std::optional<std::vector<Range>>& row_ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
 
+    Result<std::shared_ptr<TableSchema>> ReadDataSchema(
+        const std::shared_ptr<DataFileMeta>& file_meta,
+        const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
+
+    Result<const SchemaManager*> GetSchemaManagerForBranch(const std::string& branch) const;
+
     Result<std::pair<std::unique_ptr<FileBatchReader>, std::set<int32_t>>>
     ApplySharedShreddingReaderIfNeeded(std::unique_ptr<FileBatchReader>&& file_reader,
                                        const std::shared_ptr<arrow::Schema>& read_schema) const;
@@ -128,6 +135,7 @@ class AbstractSplitRead : public SplitRead {
     std::shared_ptr<arrow::Schema> raw_read_schema_;
     std::shared_ptr<InternalReadContext> context_;
     std::unique_ptr<SchemaManager> schema_manager_;
+    mutable std::map<std::string, std::unique_ptr<SchemaManager>> branch_schema_managers_;
 };
 
 }  // namespace paimon
