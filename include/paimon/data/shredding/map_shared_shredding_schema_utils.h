@@ -34,7 +34,7 @@ namespace paimon {
 struct PAIMON_EXPORT MapSharedShreddingFieldMeta {
     /// field_name -> field_id
     std::map<std::string, int32_t> name_to_id;
-    /// field_id -> set of physical column indices S
+    /// field_id -> ordered physical column indices
     std::map<int32_t, std::vector<int32_t>> field_to_columns;
     /// Set of field_ids that ever spilled into __overflow
     std::set<int32_t> overflow_field_set;
@@ -73,6 +73,7 @@ class PAIMON_EXPORT MapSharedShreddingSchemaUtils {
     /// @param physical_schema The Arrow C physical schema whose fields should receive metadata.
     ///        Ownership of schema resources is transferred to this method.
     /// @param field_name_to_meta Map from physical field name to its shared-shredding metadata.
+    ///        Existing shared-shredding metadata keys on matching fields are overwritten.
     /// @param compression Compression codec name for field_dict serialization.
     /// @return A new Arrow C schema with shared-shredding metadata attached to matching fields.
     static Result<std::unique_ptr<::ArrowSchema>> AttachMetadataToSchema(

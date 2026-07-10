@@ -66,7 +66,11 @@ TEST(MapSharedShreddingSchemaUtilsTest, AttachMetadataToSchemaBasic) {
     ASSERT_EQ(deserialized, tags_meta);
 }
 
-TEST(MapSharedShreddingSchemaUtilsTest, AttachMetadataToSchemaMissingField) {
+TEST(MapSharedShreddingSchemaUtilsTest, AttachMetadataToSchemaInvalidInput) {
+    ASSERT_NOK_WITH_MSG(MapSharedShreddingSchemaUtils::AttachMetadataToSchema(
+                            std::unique_ptr<::ArrowSchema>(), {}, "none"),
+                        "physical schema is null");
+
     MapSharedShreddingFieldMeta tags_meta;
     tags_meta.name_to_id = {{"host", 0}};
     tags_meta.field_to_columns = {{0, {0}}};
@@ -114,6 +118,51 @@ TEST(MapSharedShreddingSchemaUtilsTest, AttachMetadataToSchemaPreservesExistingF
     ASSERT_TRUE(MapSharedShreddingUtils::HasShreddingMetadata(updated_metadata));
 }
 
+TEST(MapSharedShreddingSchemaUtilsTest, AttachMetadataToSchemaOverwritesExistingShreddingMetadata) {
+    MapSharedShreddingFieldMeta old_meta;
+    old_meta.name_to_id = {{"old", 0}};
+    old_meta.field_to_columns = {{0, {0}}};
+    old_meta.num_columns = 1;
+    old_meta.max_row_width = 1;
+
+    MapSharedShreddingFieldMeta tags_meta;
+    tags_meta.name_to_id = {{"host", 0}, {"region", 1}};
+    tags_meta.field_to_columns = {{0, {0}}, {1, {1}}};
+    tags_meta.overflow_field_set = {1};
+    tags_meta.num_columns = 2;
+    tags_meta.max_row_width = 2;
+
+    auto tags_metadata = std::make_shared<arrow::KeyValueMetadata>();
+    tags_metadata->Append("paimon.field.id", "7");
+    ASSERT_OK(MapSharedShreddingUtils::SerializeMetadata(old_meta, "none", tags_metadata.get()));
+    auto schema = arrow::schema({arrow::field(
+        "tags",
+        arrow::struct_({arrow::field("__field_mapping", arrow::list(arrow::int32()), true),
+                        arrow::field("__col_0", arrow::utf8(), true),
+                        arrow::field("__col_1", arrow::utf8(), true)}),
+        true, tags_metadata)});
+
+    auto c_schema = std::make_unique<::ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(*schema, c_schema.get()).ok());
+    ASSERT_OK_AND_ASSIGN(auto c_updated_schema,
+                         MapSharedShreddingSchemaUtils::AttachMetadataToSchema(
+                             std::move(c_schema), {{"tags", tags_meta}}, "none"));
+    auto updated_schema = arrow::ImportSchema(c_updated_schema.get()).ValueOrDie();
+    auto updated_metadata = updated_schema->field(0)->metadata()->Copy();
+
+    ASSERT_EQ(updated_metadata->value(updated_metadata->FindKey("paimon.field.id")), "7");
+    int32_t storage_layout_key_count = 0;
+    for (const auto& key : updated_metadata->keys()) {
+        if (key == MapShreddingDefine::kStorageLayout) {
+            ++storage_layout_key_count;
+        }
+    }
+    ASSERT_EQ(storage_layout_key_count, 1);
+    ASSERT_OK_AND_ASSIGN(auto deserialized,
+                         MapSharedShreddingUtils::DeserializeMetadata(updated_metadata, "none"));
+    ASSERT_EQ(deserialized, tags_meta);
+}
+
 TEST(MapSharedShreddingSchemaUtilsTest, ExtractMetadataFromField) {
     MapSharedShreddingFieldMeta tags_meta;
     tags_meta.name_to_id = {{"host", 0}, {"region", 1}};
@@ -150,10 +199,30 @@ TEST(MapSharedShreddingSchemaUtilsTest, ExtractMetadataFromFieldNoShreddingMetad
                         "metadata is null or storage layout is not shared-shredding");
 }
 
-TEST(MapSharedShreddingSchemaUtilsTest, LogicalToPhysicalSchemaNonMapField) {
+TEST(MapSharedShreddingSchemaUtilsTest, ExtractMetadataFromFieldInvalidInput) {
+    ASSERT_NOK_WITH_MSG(MapSharedShreddingSchemaUtils::ExtractMetadataFromField(
+                            std::unique_ptr<::ArrowSchema>(), "tags", "none"),
+                        "physical schema is null");
+
+    auto schema = arrow::schema({arrow::field("id", arrow::int32())});
+
+    auto c_schema = std::make_unique<::ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(*schema, c_schema.get()).ok());
+
+    ASSERT_NOK_WITH_MSG(MapSharedShreddingSchemaUtils::ExtractMetadataFromField(std::move(c_schema),
+                                                                                "tags", "none"),
+                        "Shared-shredding field 'tags' not found in physical schema.");
+}
+
+TEST(MapSharedShreddingSchemaUtilsTest, LogicalToPhysicalSchemaInvalidInput) {
+    std::map<std::string, int32_t> field_to_num_columns = {{"tags", 2}};
+
+    ASSERT_NOK_WITH_MSG(MapSharedShreddingSchemaUtils::LogicalToPhysicalSchema(
+                            std::unique_ptr<::ArrowSchema>(), field_to_num_columns),
+                        "logical schema is null");
+
     auto schema =
         arrow::schema({arrow::field("ts", arrow::int64()), arrow::field("tags", arrow::int32())});
-    std::map<std::string, int32_t> field_to_num_columns = {{"tags", 2}};
 
     auto c_schema = std::make_unique<::ArrowSchema>();
     ASSERT_TRUE(arrow::ExportSchema(*schema, c_schema.get()).ok());
