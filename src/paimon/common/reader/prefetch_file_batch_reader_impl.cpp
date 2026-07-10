@@ -187,8 +187,6 @@ Status PrefetchFileBatchReaderImpl::RefreshReadRangesAfterCleanUp() {
 
     need_prefetch_ = need_prefetch;
     PAIMON_RETURN_NOT_OK(SetReadRanges(FilterReadRanges(read_ranges, selection_bitmap_)));
-    read_ranges_freshed_ = true;
-
     return Status::OK();
 }
 
@@ -235,6 +233,7 @@ Status PrefetchFileBatchReaderImpl::SetReadRanges(
     for (auto& read_ranges : read_ranges_in_group_) {
         read_ranges.push_back(eof_range);
     }
+    read_ranges_freshed_ = true;
     return Status::OK();
 }
 
