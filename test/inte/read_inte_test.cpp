@@ -268,11 +268,15 @@ std::vector<std::string> StructFieldNames(const std::shared_ptr<arrow::StructArr
     return arrow::schema(array->type()->fields())->field_names();
 }
 
-Result<SystemTableReadResult> ReadSystemTable(const std::string& system_table_path,
-                                              const std::map<std::string, std::string>& options,
-                                              bool streaming_mode = false) {
+Result<SystemTableReadResult> ReadSystemTable(
+    const std::string& system_table_path, const std::map<std::string, std::string>& options,
+    bool streaming_mode = false, const std::shared_ptr<Predicate>& predicate = nullptr,
+    const std::vector<std::string>& read_field_names = {}) {
     ScanContextBuilder scan_context_builder(system_table_path);
     scan_context_builder.SetOptions(options).WithStreamingMode(streaming_mode);
+    if (predicate) {
+        scan_context_builder.SetPredicate(predicate);
+    }
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ScanContext> scan_context,
                            scan_context_builder.Finish());
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableScan> table_scan,
@@ -281,6 +285,12 @@ Result<SystemTableReadResult> ReadSystemTable(const std::string& system_table_pa
 
     ReadContextBuilder read_context_builder(system_table_path);
     read_context_builder.SetOptions(options);
+    if (predicate) {
+        read_context_builder.SetPredicate(predicate);
+    }
+    if (!read_field_names.empty()) {
+        read_context_builder.SetReadFieldNames(read_field_names);
+    }
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
                            read_context_builder.Finish());
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> table_read,
@@ -292,8 +302,8 @@ Result<SystemTableReadResult> ReadSystemTable(const std::string& system_table_pa
     return SystemTableReadResult(std::move(batch_reader), result);
 }
 
-Status WriteAndFullCompact(TestHelper* helper, std::unique_ptr<RecordBatch>&& batch,
-                           int64_t commit_identifier) {
+Status WriteAndFullCompact(std::unique_ptr<RecordBatch>&& batch, int64_t commit_identifier,
+                           TestHelper* helper) {
     PAIMON_RETURN_NOT_OK(helper->write_->Write(std::move(batch)));
     PAIMON_RETURN_NOT_OK(
         helper->write_->Compact(/*partition=*/{}, /*bucket=*/0, /*full_compaction=*/true));
@@ -310,6 +320,18 @@ void AssertStructArrayEqualsJson(const std::shared_ptr<arrow::StructArray>& actu
         arrow::ipc::internal::json::ArrayFromJSON(actual->type(), expected_json).ValueOrDie();
     ASSERT_TRUE(actual->Equals(expected))
         << "expected: " << expected->ToString() << "\nactual: " << actual->ToString();
+}
+
+Result<int64_t> CountDataFiles(const std::vector<std::shared_ptr<Split>>& splits) {
+    int64_t file_count = 0;
+    for (const auto& split : splits) {
+        auto data_split = std::dynamic_pointer_cast<DataSplit>(split);
+        if (!data_split) {
+            return Status::Invalid("expected data split");
+        }
+        file_count += data_split->GetFileList().size();
+    }
+    return file_count;
 }
 
 }  // namespace
@@ -819,7 +841,7 @@ TEST(SystemTableReadInteTest, TestReadOptimizedSystemTable) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch_1,
                          TestHelper::MakeRecordBatch(row_type, R"([[1, 10], [2, 20]])",
                                                      /*partition_map=*/{}, /*bucket=*/0, {}));
-    ASSERT_OK(WriteAndFullCompact(helper.get(), std::move(batch_1), /*commit_identifier=*/0));
+    ASSERT_OK(WriteAndFullCompact(std::move(batch_1), /*commit_identifier=*/0, helper.get()));
 
     ASSERT_OK_AND_ASSIGN(SystemTableReadResult compacted_result,
                          ReadSystemTable(table_path + "$ro", options));
@@ -845,7 +867,7 @@ TEST(SystemTableReadInteTest, TestReadOptimizedSystemTable) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch_3,
                          TestHelper::MakeRecordBatch(row_type, R"([[2, 21], [3, 31]])",
                                                      /*partition_map=*/{}, /*bucket=*/0, {}));
-    ASSERT_OK(WriteAndFullCompact(helper.get(), std::move(batch_3), /*commit_identifier=*/2));
+    ASSERT_OK(WriteAndFullCompact(std::move(batch_3), /*commit_identifier=*/2, helper.get()));
     ASSERT_OK_AND_ASSIGN(SystemTableReadResult refreshed_result,
                          ReadSystemTable(table_path + "$ro", options));
     std::shared_ptr<arrow::ChunkedArray> expected_refreshed;
@@ -895,6 +917,74 @@ TEST(SystemTableReadInteTest, TestReadOptimizedAppendOnlySystemTableWithStreamin
     ASSERT_TRUE(result.array->Equals(expected)) << result.array->ToString();
 }
 
+TEST(SystemTableReadInteTest, TestReadOptimizedPrimaryKeyProjectionAndPredicatePushdown) {
+    arrow::FieldVector fields = {
+        arrow::field("k", arrow::int32()),
+        arrow::field("v", arrow::int32()),
+        arrow::field("extra", arrow::int32()),
+    };
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {
+        {Options::FILE_SYSTEM, "local"},
+        {Options::FILE_FORMAT, "parquet"},
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::BUCKET, "1"},
+        {Options::BUCKET_KEY, "k"},
+        {Options::WRITE_BATCH_SIZE, "1"},
+        {"parquet.page.size", "1"},
+        {"parquet.enable-dictionary", "false"},
+        {"parquet.write.enable-page-index", "true"},
+        {"parquet.write.max-row-group-length", "1"},
+        {"parquet.read.enable-page-index-filter", "true"}};
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<TestHelper> helper,
+                         TestHelper::Create(dir->Str(), schema,
+                                            /*partition_keys=*/{}, /*primary_keys=*/{"k"}, options,
+                                            /*is_streaming_mode=*/true));
+    std::string table_path = PathUtil::JoinPath(dir->Str(), "foo.db/bar");
+    auto row_type = arrow::struct_(fields);
+
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<RecordBatch> batch_1,
+        TestHelper::MakeRecordBatch(row_type, R"([[1, 10, 100], [2, 20, 200], [3, 30, 300]])",
+                                    /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(WriteAndFullCompact(std::move(batch_1), /*commit_identifier=*/0, helper.get()));
+
+    std::shared_ptr<Predicate> predicate =
+        PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"k", FieldType::INT, Literal(2));
+
+    ScanContextBuilder ro_scan_context_builder(table_path + "$ro");
+    ro_scan_context_builder.SetOptions(options).SetPredicate(predicate);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ro_scan_context,
+                         ro_scan_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> ro_table_scan,
+                         TableScan::Create(std::move(ro_scan_context)));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> ro_plan, ro_table_scan->CreatePlan());
+    ASSERT_OK_AND_ASSIGN(int64_t ro_file_count, CountDataFiles(ro_plan->Splits()));
+    ASSERT_EQ(ro_file_count, 1);
+
+    ReadContextBuilder read_context_builder(table_path + "$ro");
+    // Do not enable row-level predicate filtering: the result must come from the file reader's
+    // row-group/page predicate pushdown.
+    read_context_builder.SetOptions(options).SetPredicate(predicate).SetReadFieldNames({"k", "v"});
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<ReadContext> read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableRead> table_read,
+                         TableRead::Create(std::move(read_context)));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<BatchReader> batch_reader,
+                         table_read->CreateReader(ro_plan->Splits()));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> result,
+                         ReadResultCollector::CollectResult(batch_reader.get()));
+    std::shared_ptr<arrow::DataType> expected_type =
+        arrow::struct_({arrow::field("_VALUE_KIND", arrow::int8()),
+                        arrow::field("k", arrow::int32()), arrow::field("v", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> expected;
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(expected_type, {R"([[0, 2, 20]])"},
+                                                                 &expected)
+                    .ok());
+    ASSERT_TRUE(result->Equals(expected)) << result->ToString();
+}
+
 TEST(SystemTableReadInteTest, TestReadOptimizedSystemTableWithBranch) {
     arrow::FieldVector fields = {
         arrow::field("k", arrow::int32()),
@@ -919,8 +1009,7 @@ TEST(SystemTableReadInteTest, TestReadOptimizedSystemTableWithBranch) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> branch_batch,
                          TestHelper::MakeRecordBatch(row_type, R"([[1, 10], [2, 20]])",
                                                      /*partition_map=*/{}, /*bucket=*/0, {}));
-    ASSERT_OK(WriteAndFullCompact(helper.get(), std::move(branch_batch),
-                                  /*commit_identifier=*/0));
+    ASSERT_OK(WriteAndFullCompact(std::move(branch_batch), /*commit_identifier=*/0, helper.get()));
 
     std::string branch_path = PathUtil::JoinPath(table_path, "branch/branch-rt");
     std::filesystem::create_directories(branch_path);
@@ -932,8 +1021,7 @@ TEST(SystemTableReadInteTest, TestReadOptimizedSystemTableWithBranch) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> main_batch,
                          TestHelper::MakeRecordBatch(row_type, R"([[1, 11], [3, 30]])",
                                                      /*partition_map=*/{}, /*bucket=*/0, {}));
-    ASSERT_OK(WriteAndFullCompact(helper.get(), std::move(main_batch),
-                                  /*commit_identifier=*/1));
+    ASSERT_OK(WriteAndFullCompact(std::move(main_batch), /*commit_identifier=*/1, helper.get()));
 
     ASSERT_OK_AND_ASSIGN(SystemTableReadResult result,
                          ReadSystemTable(table_path + "$branch_rt$ro", options));
@@ -945,6 +1033,14 @@ TEST(SystemTableReadInteTest, TestReadOptimizedSystemTableWithBranch) {
                     expected_type, {R"([[0, 1, 10], [0, 2, 20]])"}, &expected)
                     .ok());
     ASSERT_TRUE(result.array->Equals(expected)) << result.array->ToString();
+
+    ASSERT_OK_AND_ASSIGN(SystemTableReadResult main_result,
+                         ReadSystemTable(table_path + "$ro", options));
+    std::shared_ptr<arrow::ChunkedArray> expected_main;
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(
+                    expected_type, {R"([[0, 1, 11], [0, 2, 20], [0, 3, 30]])"}, &expected_main)
+                    .ok());
+    ASSERT_TRUE(main_result.array->Equals(expected_main)) << main_result.array->ToString();
 }
 
 TEST(SystemTableReadInteTest, TestReadOptimizedSystemTableWithFirstRowMergeEngine) {
@@ -973,7 +1069,7 @@ TEST(SystemTableReadInteTest, TestReadOptimizedSystemTableWithFirstRowMergeEngin
         std::unique_ptr<RecordBatch> batch,
         TestHelper::MakeRecordBatch(arrow::struct_(fields), R"([[1, 10], [2, 20]])",
                                     /*partition_map=*/{}, /*bucket=*/0, {}));
-    ASSERT_OK(WriteAndFullCompact(helper.get(), std::move(batch), /*commit_identifier=*/0));
+    ASSERT_OK(WriteAndFullCompact(std::move(batch), /*commit_identifier=*/0, helper.get()));
 
     ASSERT_OK_AND_ASSIGN(SystemTableReadResult result,
                          ReadSystemTable(table_path + "$ro", options));

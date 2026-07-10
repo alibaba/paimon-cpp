@@ -107,12 +107,9 @@ Result<std::unique_ptr<TableRead>> ReadOptimizedSystemTable::NewRead(
         .WithFileSystemSchemeToIdentifierMap(context->GetFileSystemSchemeToIdentifierMap())
         .SetPrefetchCacheMode(context->GetPrefetchCacheMode())
         .WithCacheConfig(context->GetCacheConfig())
-        .WithCache(context->GetCache());
-    if (!context->GetReadFieldIds().empty()) {
-        builder.SetReadFieldIds(context->GetReadFieldIds());
-    } else {
-        builder.SetReadFieldNames(context->GetReadFieldNames());
-    }
+        .WithCache(context->GetCache())
+        .SetReadFieldNames(context->GetReadFieldNames())
+        .SetReadFieldIds(context->GetReadFieldIds());
     if (context->GetSpecificTableSchema().has_value()) {
         builder.SetTableSchema(context->GetSpecificTableSchema().value());
     }

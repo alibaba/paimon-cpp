@@ -27,6 +27,7 @@
 #include "paimon/common/predicate/predicate_validator.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/fields_comparator.h"
+#include "paimon/common/utils/options_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/index/index_file_handler.h"
 #include "paimon/core/manifest/index_manifest_file.h"
@@ -226,15 +227,12 @@ Result<std::unique_ptr<TableScan>> NewDataTableScan(const std::shared_ptr<ScanCo
         }
         table_schema = latest_table_schema.value();
     }
-    const auto read_optimized_iter = context->GetOptions().find(kReadOptimizedScanOption);
-    const bool read_optimized =
-        read_optimized_iter != context->GetOptions().end() && read_optimized_iter->second == "true";
+    PAIMON_ASSIGN_OR_RAISE(bool read_optimized,
+                           OptionsUtils::GetValueFromMap<bool>(context->GetOptions(),
+                                                               kReadOptimizedScanOption, false));
     // merge options
     auto options = table_schema->Options();
     for (const auto& [key, value] : context->GetOptions()) {
-        if (key == kReadOptimizedScanOption) {
-            continue;
-        }
         options[key] = value;
     }
     PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options,
