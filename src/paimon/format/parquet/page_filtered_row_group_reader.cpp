@@ -234,8 +234,8 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
     const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
     const std::vector<::arrow::io::ReadRange>& page_ranges, int64_t max_chunksize,
     std::shared_ptr<::arrow::MemoryPool> pool) {
-    const auto& row_ranges = target_row_group.row_ranges;
-    int32_t row_group_index = target_row_group.row_group_index;
+    const auto& row_ranges = target_row_group.GetRowRanges();
+    int32_t row_group_index = target_row_group.GetRowGroupIndex();
 
     if (row_ranges.IsEmpty()) {
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Table> empty_table,
@@ -289,8 +289,8 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
 std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRanges(
     ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
     const std::vector<int32_t>& column_indices) {
-    int32_t row_group_index = target_row_group.row_group_index;
-    const auto& row_ranges = target_row_group.row_ranges;
+    int32_t row_group_index = target_row_group.GetRowGroupIndex();
+    const auto& row_ranges = target_row_group.GetRowRanges();
 
     std::vector<::arrow::io::ReadRange> ranges;
     auto file_metadata = parquet_reader->metadata();
