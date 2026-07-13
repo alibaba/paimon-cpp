@@ -167,6 +167,11 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::CreateReader(
 Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::WrapWithBlobViewResolverIfNeeded(
     const std::shared_ptr<DataSplit>& data_split,
     std::unique_ptr<BatchReader>&& inner_reader) const {
+    if (!options_.BlobViewResolveEnabled()) {
+        // preserve serialized BlobViewStruct bytes, e.g. for forwarding blob view values to
+        // another blob-view table
+        return std::move(inner_reader);
+    }
     std::vector<std::string> read_blob_view_fields = HasBlobViewField(options_, raw_read_schema_);
     if (read_blob_view_fields.empty()) {
         return std::move(inner_reader);
