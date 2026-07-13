@@ -30,7 +30,7 @@ class FileSystem;
 /// Context passed to global system table constructors, providing catalog-level
 /// access for enumerating databases, tables, and reading metadata.
 struct GlobalSystemTableContext {
-    Catalog* catalog;  // non-owning pointer
+    const Catalog* catalog = nullptr;  // non-owning pointer
     std::shared_ptr<FileSystem> fs;
     std::string warehouse;
     std::map<std::string, std::string> catalog_options;
@@ -41,6 +41,7 @@ struct GlobalSystemTableContext {
 class CatalogOptionsSystemTable : public InMemorySystemTable {
  public:
     static constexpr const char* kName = "catalog_options";
+    static constexpr const char* kEnabledOption = "catalog-options-table.enabled";
 
     explicit CatalogOptionsSystemTable(GlobalSystemTableContext context);
 
@@ -106,12 +107,14 @@ class PartitionsSystemTable : public InMemorySystemTable {
 /// GlobalSystemTableContext instead of a per-table TableSchema.
 class GlobalSystemTableLoader {
  public:
-    static bool IsSupported(const std::string& table_name);
+    static Result<bool> IsSupported(const std::string& table_name,
+                                    const std::map<std::string, std::string>& catalog_options = {});
 
     static Result<std::shared_ptr<SystemTable>> Load(const std::string& table_name,
                                                      const GlobalSystemTableContext& context);
 
-    static std::vector<std::string> GetSupportedTableNames();
+    static Result<std::vector<std::string>> GetSupportedTableNames(
+        const std::map<std::string, std::string>& catalog_options = {});
 };
 
 }  // namespace paimon

@@ -23,6 +23,7 @@
 #include <utility>
 #include <vector>
 
+#include "paimon/catalog/catalog.h"
 #include "paimon/catalog/identifier.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
@@ -193,7 +194,7 @@ Result<std::optional<SystemTablePath>> SystemTableLoader::TryParsePath(const std
     std::string parent_name = PathUtil::GetName(parent);
 
     // Detect global system table paths: <warehouse>/sys/<table_name>
-    if (parent_name == "sys") {
+    if (parent_name == Catalog::SYSTEM_DATABASE_NAME) {
         SystemTablePath system_table_path;
         system_table_path.is_global = true;
         system_table_path.system_table_name = table_name;

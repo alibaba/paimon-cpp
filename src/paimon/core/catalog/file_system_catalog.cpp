@@ -101,7 +101,7 @@ Result<bool> FileSystemCatalog::DatabaseExists(const std::string& db_name) const
 Result<bool> FileSystemCatalog::TableExists(const Identifier& identifier) const {
     // Handle sys database global tables
     if (IsSystemDatabase(identifier.GetDatabaseName())) {
-        return GlobalSystemTableLoader::IsSupported(identifier.GetTableName());
+        return GlobalSystemTableLoader::IsSupported(identifier.GetTableName(), catalog_options_);
     }
     PAIMON_ASSIGN_OR_RAISE(bool is_system_table, identifier.IsSystemTable());
     if (is_system_table) {
@@ -240,7 +240,7 @@ Result<std::vector<std::string>> FileSystemCatalog::ListDatabases() const {
 
 Result<std::vector<std::string>> FileSystemCatalog::ListTables(const std::string& db_name) const {
     if (IsSystemDatabase(db_name)) {
-        return GlobalSystemTableLoader::GetSupportedTableNames();
+        return GlobalSystemTableLoader::GetSupportedTableNames(catalog_options_);
     }
     std::string database_path = NewDatabasePath(warehouse_, db_name);
     std::vector<std::unique_ptr<BasicFileStatus>> file_status_list;
@@ -275,11 +275,13 @@ Result<std::shared_ptr<Schema>> FileSystemCatalog::LoadTableSchema(
     const Identifier& identifier) const {
     // Handle sys database global tables
     if (IsSystemDatabase(identifier.GetDatabaseName())) {
-        if (!GlobalSystemTableLoader::IsSupported(identifier.GetTableName())) {
+        PAIMON_ASSIGN_OR_RAISE(bool supported, GlobalSystemTableLoader::IsSupported(
+                                                   identifier.GetTableName(), catalog_options_));
+        if (!supported) {
             return Status::NotExist(fmt::format("{} not exist", identifier.ToString()));
         }
         GlobalSystemTableContext context;
-        context.catalog = const_cast<FileSystemCatalog*>(this);
+        context.catalog = this;
         context.fs = fs_;
         context.warehouse = warehouse_;
         context.catalog_options = catalog_options_;

@@ -16,12 +16,10 @@
 
 #include "paimon/core/table/system/global_system_tables.h"
 
-#include <ctime>
 #include <functional>
 #include <memory>
 #include <set>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -30,7 +28,7 @@
 #include "paimon/catalog/identifier.h"
 #include "paimon/common/data/binary_string.h"
 #include "paimon/common/data/generic_row.h"
-#include "paimon/common/utils/binary_row_partition_computer.h"
+#include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/core_options.h"
@@ -48,7 +46,6 @@
 #include "paimon/core/utils/field_mapping.h"
 #include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/core/utils/snapshot_manager.h"
-#include "paimon/data/timestamp.h"
 #include "paimon/defs.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/status.h"
@@ -65,24 +62,25 @@ using GlobalSystemTableFactory =
 
 struct GlobalSystemTableRegistryEntry {
     std::string name;
+    bool requires_catalog;
     GlobalSystemTableFactory factory;
 };
 
 const std::vector<GlobalSystemTableRegistryEntry>& GlobalSystemTableRegistry() {
     static const std::vector<GlobalSystemTableRegistryEntry> registry = {
-        {CatalogOptionsSystemTable::kName,
+        {CatalogOptionsSystemTable::kName, false,
          [](const GlobalSystemTableContext& ctx) -> Result<std::shared_ptr<SystemTable>> {
              return std::make_shared<CatalogOptionsSystemTable>(ctx);
          }},
-        {AllTableOptionsSystemTable::kName,
+        {AllTableOptionsSystemTable::kName, true,
          [](const GlobalSystemTableContext& ctx) -> Result<std::shared_ptr<SystemTable>> {
              return std::make_shared<AllTableOptionsSystemTable>(ctx);
          }},
-        {TablesSystemTable::kName,
+        {TablesSystemTable::kName, true,
          [](const GlobalSystemTableContext& ctx) -> Result<std::shared_ptr<SystemTable>> {
              return std::make_shared<TablesSystemTable>(ctx);
          }},
-        {PartitionsSystemTable::kName,
+        {PartitionsSystemTable::kName, true,
          [](const GlobalSystemTableContext& ctx) -> Result<std::shared_ptr<SystemTable>> {
              return std::make_shared<PartitionsSystemTable>(ctx);
          }},
@@ -98,6 +96,30 @@ VariantType StringValue(const std::string& value) {
     return BinaryString::FromString(value, GetDefaultPool().get());
 }
 
+VariantType OptionalStringValue(const std::map<std::string, std::string>& options,
+                                const std::string& key) {
+    auto it = options.find(key);
+    return it == options.end() ? VariantType(NullType()) : VariantType(StringValue(it->second));
+}
+
+Result<VariantType> OptionalLongValue(const std::map<std::string, std::string>& options,
+                                      const std::string& key) {
+    if (options.find(key) == options.end()) {
+        return VariantType(NullType());
+    }
+    PAIMON_ASSIGN_OR_RAISE(int64_t value, OptionsUtils::GetValueFromMap<int64_t>(options, key));
+    return VariantType(value);
+}
+
+Result<bool> IsEnabled(const GlobalSystemTableRegistryEntry& entry,
+                       const std::map<std::string, std::string>& catalog_options) {
+    if (entry.name != CatalogOptionsSystemTable::kName) {
+        return true;
+    }
+    return OptionsUtils::GetValueFromMap<bool>(catalog_options,
+                                               CatalogOptionsSystemTable::kEnabledOption, false);
+}
+
 // Aggregated file-level statistics for a table or partition.
 struct FileStats {
     int64_t record_count = 0;
@@ -106,18 +128,23 @@ struct FileStats {
     int64_t last_file_creation_time_millis = 0;
 };
 
+struct AggregatedFileStats {
+    bool has_snapshot = false;
+    std::map<std::string, FileStats> by_partition;
+};
+
 // Read the latest snapshot's data files and aggregate statistics.
-// Returns an empty map if no snapshot or no data files exist.
-Result<std::map<std::string, FileStats>> AggregateFileStats(
-    const std::shared_ptr<FileSystem>& fs, const std::string& table_path,
-    const std::map<std::string, std::string>& options) {
-    std::map<std::string, FileStats> result;
+Result<AggregatedFileStats> AggregateFileStats(const std::shared_ptr<FileSystem>& fs,
+                                               const std::string& table_path,
+                                               const std::map<std::string, std::string>& options) {
+    AggregatedFileStats result;
 
     SnapshotManager snapshot_manager(fs, table_path, BranchManager::DEFAULT_MAIN_BRANCH);
     PAIMON_ASSIGN_OR_RAISE(std::optional<Snapshot> snapshot, snapshot_manager.LatestSnapshot());
     if (!snapshot) {
         return result;
     }
+    result.has_snapshot = true;
 
     PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(options));
 
@@ -181,14 +208,17 @@ Result<std::map<std::string, FileStats>> AggregateFileStats(
         // Convert partition BinaryRow to string representation
         std::string partition_key;
         if (entry.Partition().GetFieldCount() > 0) {
-            PAIMON_ASSIGN_OR_RAISE(partition_key, BinaryRowPartitionComputer::PartToSimpleString(
-                                                      partition_schema, entry.Partition(), ",",
-                                                      /*max_length=*/255,
-                                                      /*legacy_partition_name_enabled=*/false));
-            partition_key = "{" + partition_key + "}";
+            PAIMON_ASSIGN_OR_RAISE(auto partition_values,
+                                   path_factory->GeneratePartitionVector(entry.Partition()));
+            for (const auto& [key, value] : partition_values) {
+                if (!partition_key.empty()) {
+                    partition_key += "/";
+                }
+                partition_key += key + "=" + value;
+            }
         }
 
-        auto& stats = result[partition_key];
+        auto& stats = result.by_partition[partition_key];
         stats.record_count += file->row_count;
         stats.file_size_in_bytes += file->file_size;
         stats.file_count++;
@@ -207,11 +237,12 @@ Result<std::map<std::string, FileStats>> AggregateFileStats(
 // GlobalSystemTableLoader
 // =============================================================================
 
-bool GlobalSystemTableLoader::IsSupported(const std::string& table_name) {
+Result<bool> GlobalSystemTableLoader::IsSupported(
+    const std::string& table_name, const std::map<std::string, std::string>& catalog_options) {
     std::string normalized = StringUtils::ToLowerCase(table_name);
     for (const auto& entry : GlobalSystemTableRegistry()) {
         if (entry.name == normalized) {
-            return true;
+            return IsEnabled(entry, catalog_options);
         }
     }
     return false;
@@ -222,17 +253,29 @@ Result<std::shared_ptr<SystemTable>> GlobalSystemTableLoader::Load(
     std::string normalized = StringUtils::ToLowerCase(table_name);
     for (const auto& entry : GlobalSystemTableRegistry()) {
         if (entry.name == normalized) {
+            PAIMON_ASSIGN_OR_RAISE(bool enabled, IsEnabled(entry, context.catalog_options));
+            if (!enabled) {
+                return Status::NotExist("global system table is disabled: ", table_name);
+            }
+            if (entry.requires_catalog && context.catalog == nullptr) {
+                return Status::NotImplemented("global system table requires catalog context: ",
+                                              table_name);
+            }
             return entry.factory(context);
         }
     }
     return Status::NotImplemented("unsupported global system table: ", table_name);
 }
 
-std::vector<std::string> GlobalSystemTableLoader::GetSupportedTableNames() {
+Result<std::vector<std::string>> GlobalSystemTableLoader::GetSupportedTableNames(
+    const std::map<std::string, std::string>& catalog_options) {
     std::vector<std::string> names;
     names.reserve(GlobalSystemTableRegistry().size());
     for (const auto& entry : GlobalSystemTableRegistry()) {
-        names.push_back(entry.name);
+        PAIMON_ASSIGN_OR_RAISE(bool enabled, IsEnabled(entry, catalog_options));
+        if (enabled) {
+            names.push_back(entry.name);
+        }
     }
     return names;
 }
@@ -261,8 +304,8 @@ Result<std::vector<GenericRow>> CatalogOptionsSystemTable::BuildRows() const {
     rows.reserve(context_.catalog_options.size());
     for (const auto& [key, value] : context_.catalog_options) {
         GenericRow row(schema->num_fields());
-        row.SetField(0, std::string_view(key));
-        row.SetField(1, std::string_view(value));
+        row.SetField(0, StringValue(key));
+        row.SetField(1, StringValue(value));
         rows.push_back(std::move(row));
     }
     return rows;
@@ -336,12 +379,16 @@ Result<std::shared_ptr<arrow::Schema>> TablesSystemTable::ArrowSchema() const {
         arrow::field("table_name", arrow::utf8(), /*nullable=*/false),
         arrow::field("table_type", arrow::utf8(), /*nullable=*/false),
         arrow::field("partitioned", arrow::boolean(), /*nullable=*/false),
-        arrow::field("primary_key", arrow::utf8(), /*nullable=*/false),
+        arrow::field("primary_key", arrow::boolean(), /*nullable=*/false),
+        arrow::field("owner", arrow::utf8(), /*nullable=*/true),
+        arrow::field("created_at", arrow::int64(), /*nullable=*/true),
+        arrow::field("created_by", arrow::utf8(), /*nullable=*/true),
+        arrow::field("updated_at", arrow::int64(), /*nullable=*/true),
+        arrow::field("updated_by", arrow::utf8(), /*nullable=*/true),
         arrow::field("record_count", arrow::int64(), /*nullable=*/true),
         arrow::field("file_size_in_bytes", arrow::int64(), /*nullable=*/true),
         arrow::field("file_count", arrow::int64(), /*nullable=*/true),
-        arrow::field("last_file_creation_time", arrow::timestamp(arrow::TimeUnit::MILLI),
-                     /*nullable=*/true),
+        arrow::field("last_file_creation_time", arrow::int64(), /*nullable=*/true),
     });
 }
 
@@ -364,36 +411,34 @@ Result<std::vector<GenericRow>> TablesSystemTable::BuildRows() const {
                 continue;
             }
 
-            // Determine table type: EXTERNAL if data-file.external-paths is set
-            std::string table_type_str = "MANAGED";
             const auto& opts = data_schema->Options();
-            if (opts.find(Options::DATA_FILE_EXTERNAL_PATHS) != opts.end()) {
-                table_type_str = "EXTERNAL";
-            }
+            auto table_type = opts.find("type");
+            const std::string table_type_str =
+                table_type == opts.end() ? "TABLE" : table_type->second;
 
             bool partitioned = !data_schema->PartitionKeys().empty();
-            std::string primary_keys_str;
-            const auto& pks = data_schema->PrimaryKeys();
-            for (size_t i = 0; i < pks.size(); ++i) {
-                if (i > 0) primary_keys_str += ",";
-                primary_keys_str += pks[i];
-            }
 
             GenericRow row(schema->num_fields());
             row.SetField(0, StringValue(db));
             row.SetField(1, StringValue(table));
             row.SetField(2, StringValue(table_type_str));
             row.SetField(3, partitioned);
-            row.SetField(4, primary_keys_str.empty() ? VariantType(NullType())
-                                                     : VariantType(StringValue(primary_keys_str)));
+            row.SetField(4, !data_schema->PrimaryKeys().empty());
+            row.SetField(5, OptionalStringValue(opts, "owner"));
+            PAIMON_ASSIGN_OR_RAISE(VariantType created_at, OptionalLongValue(opts, "createdAt"));
+            row.SetField(6, std::move(created_at));
+            row.SetField(7, OptionalStringValue(opts, "createdBy"));
+            PAIMON_ASSIGN_OR_RAISE(VariantType updated_at, OptionalLongValue(opts, "updatedAt"));
+            row.SetField(8, std::move(updated_at));
+            row.SetField(9, OptionalStringValue(opts, "updatedBy"));
 
             // Get table path and aggregate file stats from manifest entries
             PAIMON_ASSIGN_OR_RAISE(std::string table_path, context_.catalog->GetTableLocation(id));
 
             auto file_stats_result =
                 AggregateFileStats(context_.fs, table_path, data_schema->Options());
-            if (file_stats_result.ok()) {
-                auto& all_stats = file_stats_result.value();
+            if (file_stats_result.ok() && file_stats_result.value().has_snapshot) {
+                auto& all_stats = file_stats_result.value().by_partition;
                 int64_t total_record = 0, total_size = 0, total_files = 0, max_creation = 0;
                 for (const auto& [key, stats] : all_stats) {
                     total_record += stats.record_count;
@@ -403,17 +448,16 @@ Result<std::vector<GenericRow>> TablesSystemTable::BuildRows() const {
                         max_creation = stats.last_file_creation_time_millis;
                     }
                 }
-                row.SetField(5, VariantType(total_record));
-                row.SetField(6, VariantType(total_size));
-                row.SetField(7, VariantType(total_files));
-                row.SetField(8, max_creation > 0
-                                    ? VariantType(Timestamp::FromEpochMillis(max_creation))
-                                    : VariantType(NullType()));
+                row.SetField(10, VariantType(total_record));
+                row.SetField(11, VariantType(total_size));
+                row.SetField(12, VariantType(total_files));
+                row.SetField(
+                    13, max_creation > 0 ? VariantType(max_creation) : VariantType(NullType()));
             } else {
-                row.SetField(5, NullType());
-                row.SetField(6, NullType());
-                row.SetField(7, NullType());
-                row.SetField(8, NullType());
+                row.SetField(10, NullType());
+                row.SetField(11, NullType());
+                row.SetField(12, NullType());
+                row.SetField(13, NullType());
             }
 
             rows.push_back(std::move(row));
@@ -441,8 +485,8 @@ Result<std::shared_ptr<arrow::Schema>> PartitionsSystemTable::ArrowSchema() cons
         arrow::field("record_count", arrow::int64(), /*nullable=*/true),
         arrow::field("file_size_in_bytes", arrow::int64(), /*nullable=*/true),
         arrow::field("file_count", arrow::int64(), /*nullable=*/true),
-        arrow::field("last_update_time", arrow::timestamp(arrow::TimeUnit::MILLI),
-                     /*nullable=*/true),
+        arrow::field("last_file_creation_time", arrow::int64(), /*nullable=*/true),
+        arrow::field("done", arrow::boolean(), /*nullable=*/false),
     });
 }
 
@@ -483,7 +527,7 @@ Result<std::vector<GenericRow>> PartitionsSystemTable::BuildRows() const {
                 continue;
             }
 
-            auto& stats_map = file_stats_result.value();
+            auto& stats_map = file_stats_result.value().by_partition;
             for (const auto& [partition_key, stats] : stats_map) {
                 if (stats.file_count == 0) {
                     continue;
@@ -497,9 +541,10 @@ Result<std::vector<GenericRow>> PartitionsSystemTable::BuildRows() const {
                 row.SetField(4, VariantType(stats.file_size_in_bytes));
                 row.SetField(5, VariantType(stats.file_count));
                 row.SetField(6, stats.last_file_creation_time_millis > 0
-                                    ? VariantType(Timestamp::FromEpochMillis(
-                                          stats.last_file_creation_time_millis))
+                                    ? VariantType(stats.last_file_creation_time_millis)
                                     : VariantType(NullType()));
+                // File-system catalog partitions are not explicitly marked as done.
+                row.SetField(7, false);
                 rows.push_back(std::move(row));
             }
         }

@@ -3767,9 +3767,11 @@ Result<SystemTableReadResult> ReadGlobalSystemTable(
 }  // namespace
 
 TEST(SystemTableReadInteTest, TestReadGlobalCatalogOptions) {
-    std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
-                                                  {Options::FILE_FORMAT, "orc"},
-                                                  {"custom.catalog.option", "test-value"}};
+    std::map<std::string, std::string> options = {
+        {Options::FILE_SYSTEM, "local"},
+        {Options::FILE_FORMAT, "orc"},
+        {CatalogOptionsSystemTable::kEnabledOption, "true"},
+        {"custom.catalog.option", "test-value"}};
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
     std::string warehouse = PathUtil::JoinPath(dir->Str(), "warehouse");
@@ -3876,7 +3878,12 @@ TEST(SystemTableReadInteTest, TestReadGlobalTables) {
     std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
                                                   {Options::FILE_FORMAT, "orc"},
                                                   {Options::MANIFEST_FORMAT, "orc"},
-                                                  {Options::BUCKET, "1"}};
+                                                  {Options::BUCKET, "1"},
+                                                  {"owner", "alice"},
+                                                  {"createdAt", "1000"},
+                                                  {"createdBy", "creator"},
+                                                  {"updatedAt", "2000"},
+                                                  {"updatedBy", "updater"}};
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
     std::string warehouse = PathUtil::JoinPath(dir->Str(), "warehouse");
@@ -3901,27 +3908,49 @@ TEST(SystemTableReadInteTest, TestReadGlobalTables) {
     auto struct_array = SingleStructChunk(result);
     ASSERT_TRUE(struct_array);
     ASSERT_GE(struct_array->length(), 1);
+    ASSERT_EQ(StructFieldNames(struct_array),
+              (std::vector<std::string>{
+                  "database_name", "table_name", "table_type", "partitioned", "primary_key",
+                  "owner", "created_at", "created_by", "updated_at", "updated_by", "record_count",
+                  "file_size_in_bytes", "file_count", "last_file_creation_time"}));
 
     auto db_array = std::dynamic_pointer_cast<arrow::StringArray>(struct_array->field(0));
     auto tbl_array = std::dynamic_pointer_cast<arrow::StringArray>(struct_array->field(1));
     auto type_array = std::dynamic_pointer_cast<arrow::StringArray>(struct_array->field(2));
     auto part_array = std::dynamic_pointer_cast<arrow::BooleanArray>(struct_array->field(3));
-    auto pk_array = std::dynamic_pointer_cast<arrow::StringArray>(struct_array->field(4));
+    auto pk_array = std::dynamic_pointer_cast<arrow::BooleanArray>(struct_array->field(4));
+    auto owner_array = std::dynamic_pointer_cast<arrow::StringArray>(struct_array->field(5));
+    auto created_at_array = std::dynamic_pointer_cast<arrow::Int64Array>(struct_array->field(6));
+    auto created_by_array = std::dynamic_pointer_cast<arrow::StringArray>(struct_array->field(7));
+    auto updated_at_array = std::dynamic_pointer_cast<arrow::Int64Array>(struct_array->field(8));
+    auto updated_by_array = std::dynamic_pointer_cast<arrow::StringArray>(struct_array->field(9));
+    auto record_count_array = std::dynamic_pointer_cast<arrow::Int64Array>(struct_array->field(10));
     ASSERT_TRUE(db_array);
     ASSERT_TRUE(tbl_array);
     ASSERT_TRUE(type_array);
     ASSERT_TRUE(part_array);
     ASSERT_TRUE(pk_array);
+    ASSERT_TRUE(owner_array);
+    ASSERT_TRUE(created_at_array);
+    ASSERT_TRUE(created_by_array);
+    ASSERT_TRUE(updated_at_array);
+    ASSERT_TRUE(updated_by_array);
+    ASSERT_TRUE(record_count_array);
 
     // Find our table by table name
     bool found = false;
     for (int64_t i = 0; i < struct_array->length(); ++i) {
         if (std::string(tbl_array->GetString(i)) == "test_tbl") {
             EXPECT_EQ(std::string(db_array->GetString(i)), "test_db");
-            EXPECT_EQ(std::string(type_array->GetString(i)), "MANAGED");
+            EXPECT_EQ(std::string(type_array->GetString(i)), "TABLE");
             EXPECT_FALSE(part_array->Value(i));
-            // pk is stored as BinaryString; check not null
-            EXPECT_FALSE(pk_array->IsNull(i));
+            EXPECT_TRUE(pk_array->Value(i));
+            EXPECT_EQ(owner_array->GetString(i), "alice");
+            EXPECT_EQ(created_at_array->Value(i), 1000);
+            EXPECT_EQ(created_by_array->GetString(i), "creator");
+            EXPECT_EQ(updated_at_array->Value(i), 2000);
+            EXPECT_EQ(updated_by_array->GetString(i), "updater");
+            EXPECT_TRUE(record_count_array->IsNull(i));
             found = true;
         }
     }
@@ -3931,28 +3960,57 @@ TEST(SystemTableReadInteTest, TestReadGlobalTables) {
 TEST(SystemTableReadInteTest, TestReadGlobalPartitions) {
     std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
                                                   {Options::FILE_FORMAT, "orc"},
-                                                  {Options::MANIFEST_FORMAT, "orc"}};
+                                                  {Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::BUCKET, "1"},
+                                                  {Options::BUCKET_KEY, "v"}};
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    std::string warehouse = PathUtil::JoinPath(dir->Str(), "warehouse");
+    std::string warehouse = dir->Str();
+
+    arrow::FieldVector fields = {
+        arrow::field("dt", arrow::utf8()),
+        arrow::field("region", arrow::utf8()),
+        arrow::field("v", arrow::int32()),
+    };
+    auto schema = arrow::schema(fields);
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(warehouse, schema,
+                                                         /*partition_keys=*/{"dt", "region"},
+                                                         /*primary_keys=*/{}, options,
+                                                         /*is_streaming_mode=*/true));
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<RecordBatch> batch,
+        TestHelper::MakeRecordBatch(arrow::struct_(fields), R"([["2026-07-13", "cn", 1]])",
+                                    /*partition_map=*/{{"dt", "2026-07-13"}, {"region", "cn"}},
+                                    /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
     ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(warehouse, options));
     auto fs = catalog->GetFileSystem();
-
-    // Create a database and an unpartitioned table (no partitions → empty result)
-    ASSERT_OK(catalog->CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
-    auto typed_schema = arrow::schema({arrow::field("f0", arrow::int32())});
-    ::ArrowSchema schema;
-    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &schema).ok());
-    ASSERT_OK(catalog->CreateTable(Identifier("test_db", "test_tbl"), &schema,
-                                   /*partition_keys=*/{}, /*primary_keys=*/{}, options,
-                                   /*ignore_if_exists=*/false));
-    ArrowSchemaRelease(&schema);
-
-    // Unpartitioned tables are skipped by sys.partitions → empty result.
-    // CollectResult returns null shared_ptr when result is empty.
     ASSERT_OK_AND_ASSIGN(auto part_result, ReadGlobalSystemTable("partitions", catalog.get(), fs,
                                                                  warehouse, options));
-    ASSERT_FALSE(part_result.array) << "expected null array for empty partitions result";
+    auto struct_array = SingleStructChunk(part_result);
+    ASSERT_TRUE(struct_array);
+    ASSERT_EQ(StructFieldNames(struct_array),
+              (std::vector<std::string>{"database_name", "table_name", "partition_name",
+                                        "record_count", "file_size_in_bytes", "file_count",
+                                        "last_file_creation_time", "done"}));
+    ASSERT_EQ(struct_array->length(), 1);
+    auto db_array = std::dynamic_pointer_cast<arrow::StringArray>(struct_array->field(0));
+    auto table_array = std::dynamic_pointer_cast<arrow::StringArray>(struct_array->field(1));
+    auto partition_array = std::dynamic_pointer_cast<arrow::StringArray>(struct_array->field(2));
+    auto creation_time_array = std::dynamic_pointer_cast<arrow::Int64Array>(struct_array->field(6));
+    auto done_array = std::dynamic_pointer_cast<arrow::BooleanArray>(struct_array->field(7));
+    ASSERT_TRUE(db_array);
+    ASSERT_TRUE(table_array);
+    ASSERT_TRUE(partition_array);
+    ASSERT_TRUE(creation_time_array);
+    ASSERT_TRUE(done_array);
+    EXPECT_EQ(db_array->GetString(0), "foo");
+    EXPECT_EQ(table_array->GetString(0), "bar");
+    EXPECT_EQ(partition_array->GetString(0), "dt=2026-07-13/region=cn");
+    EXPECT_FALSE(creation_time_array->IsNull(0));
+    EXPECT_FALSE(done_array->Value(0));
 }
 
 }  // namespace paimon::test
