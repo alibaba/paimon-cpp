@@ -985,6 +985,70 @@ TEST(SystemTableReadInteTest, TestReadOptimizedPrimaryKeyProjectionAndPredicateP
     ASSERT_TRUE(result->Equals(expected)) << result->ToString();
 }
 
+TEST(SystemTableReadInteTest, TestReadOptimizedSystemTableNestedProjection) {
+    auto payload_type =
+        arrow::struct_({arrow::field("a", arrow::int32()), arrow::field("b", arrow::utf8())});
+    arrow::FieldVector fields = {
+        arrow::field("k", arrow::int32()),
+        arrow::field("payload", payload_type),
+        arrow::field("extra", arrow::int32()),
+    };
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
+                                                  {Options::FILE_FORMAT, "parquet"},
+                                                  {Options::MANIFEST_FORMAT, "avro"},
+                                                  {Options::BUCKET, "1"},
+                                                  {Options::BUCKET_KEY, "k"}};
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<TestHelper> helper,
+                         TestHelper::Create(dir->Str(), schema,
+                                            /*partition_keys=*/{}, /*primary_keys=*/{"k"}, options,
+                                            /*is_streaming_mode=*/true));
+    std::string table_path = PathUtil::JoinPath(dir->Str(), "foo.db/bar");
+
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<RecordBatch> batch,
+        TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                    R"([[1, [10, "x"], 100], [2, [20, "y"], 200]])",
+                                    /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(WriteAndFullCompact(std::move(batch), /*commit_identifier=*/0, helper.get()));
+
+    ScanContextBuilder scan_context_builder(table_path + "$ro");
+    scan_context_builder.SetOptions(options);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> scan_context, scan_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> table_scan,
+                         TableScan::Create(std::move(scan_context)));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan, table_scan->CreatePlan());
+
+    auto projected_schema = arrow::schema({
+        arrow::field("k", arrow::int32()),
+        arrow::field("payload", arrow::struct_({arrow::field("a", arrow::int32())})),
+    });
+    auto c_projected_schema = std::make_unique<ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(*projected_schema, c_projected_schema.get()).ok());
+    ReadContextBuilder read_context_builder(table_path + "$ro");
+    read_context_builder.SetOptions(options).SetReadSchema(std::move(c_projected_schema));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<ReadContext> read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableRead> table_read,
+                         TableRead::Create(std::move(read_context)));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<BatchReader> batch_reader,
+                         table_read->CreateReader(plan->Splits()));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> result,
+                         ReadResultCollector::CollectResult(batch_reader.get()));
+
+    std::shared_ptr<arrow::DataType> expected_type = arrow::struct_({
+        arrow::field("_VALUE_KIND", arrow::int8()),
+        arrow::field("k", arrow::int32()),
+        arrow::field("payload", arrow::struct_({arrow::field("a", arrow::int32())})),
+    });
+    std::shared_ptr<arrow::ChunkedArray> expected;
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(
+                    expected_type, {R"([[0, 1, [10]], [0, 2, [20]]])"}, &expected)
+                    .ok());
+    ASSERT_TRUE(result->Equals(expected)) << result->ToString();
+}
+
 TEST(SystemTableReadInteTest, TestReadOptimizedSystemTableWithBranch) {
     arrow::FieldVector fields = {
         arrow::field("k", arrow::int32()),

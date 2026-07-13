@@ -38,6 +38,12 @@ from multiple LSM levels during query planning and reading. The tradeoff is that
 the result may lag behind the latest committed data until a full compaction
 publishes the newest records into the highest level.
 
+This stale view is not guaranteed to correspond to any single historical table
+snapshot. Full compaction may finish independently for different buckets. When
+``$ro`` scans the latest snapshot, the selected highest-level files can
+therefore combine bucket states produced by full-compaction commits at different
+snapshot IDs.
+
 For primary-key tables, ``$ro`` also enables value-stats filtering, so file-level
 pruning of the reader predicate can be more aggressive than the base table.
 
@@ -48,7 +54,8 @@ Limitations
 ~~~~~~~~~~~
 
 - Primary-key ``$ro`` scans are batch-only. Streaming scans are not supported.
-- Freshness depends on full compaction frequency.
+- Freshness depends on full compaction frequency, and the result may not match
+  any single historical snapshot across buckets.
 - Primary-key tables in bucket-unaware mode are not supported by the current C++
   scan path.
 

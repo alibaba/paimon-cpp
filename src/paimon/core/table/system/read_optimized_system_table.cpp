@@ -20,6 +20,7 @@
 #include <string>
 #include <utility>
 
+#include "arrow/c/bridge.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/source/read_optimized_scan_options.h"
@@ -110,6 +111,13 @@ Result<std::unique_ptr<TableRead>> ReadOptimizedSystemTable::NewRead(
         .WithCache(context->GetCache())
         .SetReadFieldNames(context->GetReadFieldNames())
         .SetReadFieldIds(context->GetReadFieldIds());
+    if (context->HasReadSchema()) {
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> read_schema,
+                                          arrow::ImportSchema(context->GetReadSchema()));
+        auto c_read_schema = std::make_unique<::ArrowSchema>();
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*read_schema, c_read_schema.get()));
+        builder.SetReadSchema(std::move(c_read_schema));
+    }
     if (context->GetSpecificTableSchema().has_value()) {
         builder.SetTableSchema(context->GetSpecificTableSchema().value());
     }
