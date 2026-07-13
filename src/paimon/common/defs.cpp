@@ -102,6 +102,7 @@ const char Options::BLOB_FIELD[] = "blob-field";
 const char Options::BLOB_DESCRIPTOR_FIELD[] = "blob-descriptor-field";
 const char Options::FALLBACK_BLOB_DESCRIPTOR_FIELD[] = "blob.stored-descriptor-fields";
 const char Options::BLOB_VIEW_FIELD[] = "blob-view-field";
+const char Options::BLOB_VIEW_RESOLVE_ENABLED[] = "blob-view.resolve.enabled";
 const char Options::BLOB_VIEW_UPSTREAM_WAREHOUSE[] = "blob-view-upstream-warehouse";
 const char Options::GLOBAL_INDEX_ENABLED[] = "global-index.enabled";
 const char Options::GLOBAL_INDEX_THREAD_NUM[] = "global-index.thread-num";

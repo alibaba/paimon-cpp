@@ -2500,6 +2500,166 @@ TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamTable) {
     }
 }
 
+TEST_P(BlobTableInteTest, TestForwardBlobViewReference) {
+    auto file_format = GetParam();
+    if (file_format != "orc" && file_format != "parquet") {
+        return;
+    }
+
+    // Forward blob view references between two blob-view tables: read the source table with
+    // resolve dynamically disabled, write the preserved BlobViewStruct bytes into the target
+    // table, then verify the target still stores the original upstream references and a
+    // default read resolves them to the actual upstream blob values.
+    const std::string upstream_db_name = "append_table_with_multi_blob";
+    const std::string upstream_table_name = "append_table_with_multi_blob";
+    std::string src_db_path = paimon::test::GetDataDir() + file_format + "/" + upstream_db_name +
+                              ".db/" + upstream_table_name;
+    std::string dst_db_path =
+        PathUtil::JoinPath(dir_->Str(), upstream_db_name + ".db/" + upstream_table_name);
+    ASSERT_TRUE(TestUtil::CopyDirectory(src_db_path, dst_db_path));
+
+    // The source table has no upstream warehouse configured: only a read with resolve
+    // dynamically disabled can succeed on it.
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
+                                 BlobUtils::ToArrowField("view", true)};
+    std::map<std::string, std::string> source_options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                         {Options::FILE_FORMAT, file_format},
+                                                         {Options::BUCKET, "-1"},
+                                                         {Options::ROW_TRACKING_ENABLED, "true"},
+                                                         {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                         {Options::BLOB_VIEW_FIELD, "view"},
+                                                         {Options::FILE_SYSTEM, "local"}};
+    CreateTable(fields, /*partition_keys=*/{}, source_options);
+    std::string source_table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+
+    // The target table configures the upstream warehouse for resolving forwarded references.
+    std::map<std::string, std::string> target_options = source_options;
+    target_options[Options::BLOB_VIEW_UPSTREAM_WAREHOUSE] = dir_->Str();
+    auto schema = arrow::schema(fields);
+    ::ArrowSchema c_target_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*schema, &c_target_schema).ok());
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir_->Str(), {}));
+    ASSERT_OK(catalog->CreateTable(Identifier("foo", "bar_forward"), &c_target_schema,
+                                   /*partition_keys=*/{}, /*primary_keys=*/{}, target_options,
+                                   /*ignore_if_exists=*/false));
+    std::string target_table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar_forward");
+
+    // src array
+    Identifier upstream_identifier(upstream_db_name, upstream_table_name);
+    arrow::LargeBinaryBuilder view_builder;
+    for (int32_t i = 0; i < 8; ++i) {
+        if (i < 6) {
+            BlobViewStruct view_struct(upstream_identifier, /*field_id=*/6,
+                                       /*row_id=*/static_cast<int64_t>(i));
+            auto serialized = view_struct.Serialize(pool_);
+            ASSERT_TRUE(view_builder
+                            .Append(reinterpret_cast<const uint8_t*>(serialized->data()),
+                                    serialized->size())
+                            .ok());
+        } else {
+            ASSERT_TRUE(view_builder.AppendNull().ok());
+        }
+    }
+    std::shared_ptr<arrow::Array> write_view_array;
+    ASSERT_TRUE(view_builder.Finish(&write_view_array).ok());
+    auto write_f0_array = arrow::ipc::internal::json::ArrayFromJSON(
+                              arrow::int32(), R"([100,101,102,103,104,105,106,107])")
+                              .ValueOrDie();
+    auto write_struct = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::StructArray::Make(arrow::ArrayVector({write_f0_array, write_view_array}),
+                                 std::vector<std::string>({"f0", "view"}))
+            .ValueOrDie());
+
+    // write & commit into the source table
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         WriteArray(source_table_path, {}, schema->field_names(), {write_struct}));
+    ASSERT_OK(Commit(source_table_path, commit_msgs));
+
+    // A default read fails on the missing upstream warehouse: the pass-through below is
+    // enabled by the dynamic option alone.
+    ASSERT_OK_AND_ASSIGN(auto source_plan, ScanTable(source_table_path));
+    ASSERT_NOK_WITH_MSG(
+        ReadTable(source_table_path, schema->field_names(), source_plan, /*predicate=*/nullptr),
+        "BLOB_VIEW_UPSTREAM_WAREHOUSE");
+
+    ASSERT_OK_AND_ASSIGN(
+        auto source_result,
+        ReadTable(source_table_path, schema->field_names(), source_plan, /*predicate=*/nullptr,
+                  {{Options::BLOB_VIEW_RESOLVE_ENABLED, "false"}}));
+    ASSERT_TRUE(source_result.chunked_array);
+    auto source_concat = arrow::Concatenate(source_result.chunked_array->chunks()).ValueOrDie();
+    auto source_struct = std::dynamic_pointer_cast<arrow::StructArray>(source_concat);
+    ASSERT_EQ(source_struct->length(), 8);
+    auto forward_f0_array = source_struct->GetFieldByName("f0");
+    ASSERT_TRUE(forward_f0_array);
+    auto forward_view_array = source_struct->GetFieldByName("view");
+    ASSERT_TRUE(forward_view_array);
+    ASSERT_TRUE(forward_view_array->Equals(write_view_array))
+        << "source view:" << forward_view_array->ToString() << std::endl
+        << "written view:" << write_view_array->ToString();
+
+    // Forward the preserved references into the target blob-view table.
+    auto forward_struct = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::StructArray::Make(arrow::ArrayVector({forward_f0_array, forward_view_array}),
+                                 std::vector<std::string>({"f0", "view"}))
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(
+        auto forward_commit_msgs,
+        WriteArray(target_table_path, {}, schema->field_names(), {forward_struct}));
+    ASSERT_OK(Commit(target_table_path, forward_commit_msgs));
+
+    // The target table stores the original upstream references byte-identically.
+    ASSERT_OK_AND_ASSIGN(auto target_plan, ScanTable(target_table_path));
+    ASSERT_OK_AND_ASSIGN(
+        auto raw_target_result,
+        ReadTable(target_table_path, schema->field_names(), target_plan, /*predicate=*/nullptr,
+                  {{Options::BLOB_VIEW_RESOLVE_ENABLED, "false"}}));
+    ASSERT_TRUE(raw_target_result.chunked_array);
+    auto raw_target_concat =
+        arrow::Concatenate(raw_target_result.chunked_array->chunks()).ValueOrDie();
+    auto raw_target_struct = std::dynamic_pointer_cast<arrow::StructArray>(raw_target_concat);
+    ASSERT_EQ(raw_target_struct->length(), 8);
+    auto raw_target_view_array = raw_target_struct->GetFieldByName("view");
+    ASSERT_TRUE(raw_target_view_array);
+    ASSERT_TRUE(raw_target_view_array->Equals(write_view_array))
+        << "target view:" << raw_target_view_array->ToString() << std::endl
+        << "written view:" << write_view_array->ToString();
+
+    // A default read of the target table resolves to the actual upstream blob values.
+    ASSERT_OK_AND_ASSIGN(auto resolved_result,
+                         ReadTable(target_table_path, schema->field_names(), target_plan,
+                                   /*predicate=*/nullptr));
+    ASSERT_TRUE(resolved_result.chunked_array);
+    auto resolved_concat = arrow::Concatenate(resolved_result.chunked_array->chunks()).ValueOrDie();
+    auto resolved_struct = std::dynamic_pointer_cast<arrow::StructArray>(resolved_concat);
+    ASSERT_EQ(resolved_struct->length(), 8);
+    ASSERT_OK_AND_ASSIGN(auto resolved, ConvertDescriptorToRawBlob(resolved_struct, {"view"}));
+
+    std::string padding_b(2048, 'b');
+    std::string padding_d(2048, 'd');
+    std::string padding_e(2048, 'e');
+    std::string padding_f(2048, 'f');
+    // clang-format off
+    std::string expected_json = R"([
+[100, null],
+[101, ")" + padding_b + R"("],
+[102, null],
+[103, ")" + padding_d + R"("],
+[104, ")" + padding_e + R"("],
+[105, ")" + padding_f + R"("],
+[106, null],
+[107, null]
+])";
+    // clang-format on
+    auto expected_struct = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), expected_json)
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(expected_struct));
+    ASSERT_TRUE(resolved->Equals(expected_with_rk))
+        << "resolved:" << resolved->ToString() << std::endl
+        << "expected:" << expected_with_rk->ToString();
+}
+
 TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamDescriptorBlob) {
     auto file_format = GetParam();
     if (GetParam() == "lance") {
