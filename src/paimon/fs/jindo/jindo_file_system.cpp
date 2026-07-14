@@ -57,7 +57,8 @@ JindoFileSystem::JindoFileSystem(std::unique_ptr<JdoFileSystem>&& fs)
 
 Result<std::unique_ptr<InputStream>> JindoFileSystem::Open(const std::string& path) const {
     std::unique_ptr<JdoReader> reader;
-    PAIMON_RETURN_NOT_OK_FROM_JINDO(impl_->GetFileSystem()->openReader(path, &reader));
+    PAIMON_RETURN_NOT_OK_FROM_JINDO_WITH_NOT_EXIST(
+        impl_->GetFileSystem()->openReader(path, &reader));
     return std::make_unique<JindoInputStream>(impl_, std::move(reader));
 }
 
@@ -208,7 +209,10 @@ Result<int64_t> JindoInputStream::GetPos() const {
 
 Result<int64_t> JindoInputStream::Length() const {
     int64_t len = -1;
-    PAIMON_RETURN_NOT_OK_FROM_JINDO(reader_->getFileLength(len));
+    // openReader may succeed lazily for a missing object; keep the not-found mapping here so
+    // that Blob::NewInputStream(), which queries the length right after Open(), still observes
+    // Status::NotExist. Read failures keep the plain IOError mapping.
+    PAIMON_RETURN_NOT_OK_FROM_JINDO_WITH_NOT_EXIST(reader_->getFileLength(len));
     PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(len, "jindo input length"));
     return len;
 }

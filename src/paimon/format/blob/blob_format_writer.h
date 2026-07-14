@@ -26,6 +26,7 @@
 #include "arrow/api.h"
 #include "arrow/util/crc32.h"
 #include "paimon/format/format_writer.h"
+#include "paimon/logging.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
@@ -39,6 +40,7 @@ struct ArrowArray;
 namespace paimon {
 class Blob;
 class FileSystem;
+class InputStream;
 class Metrics;
 class OutputStream;
 }  // namespace paimon
@@ -51,7 +53,8 @@ class BlobFormatWriter : public FormatWriter {
  public:
     static Result<std::unique_ptr<BlobFormatWriter>> Create(
         const std::shared_ptr<OutputStream>& out, const std::shared_ptr<arrow::DataType>& data_type,
-        const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<MemoryPool>& pool);
+        const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<MemoryPool>& pool,
+        bool write_null_on_missing_file = false, bool write_null_on_fetch_failure = false);
 
     Status AddBatch(ArrowArray* batch) override;
 
@@ -70,10 +73,14 @@ class BlobFormatWriter : public FormatWriter {
  private:
     BlobFormatWriter(const std::shared_ptr<OutputStream>& out, const std::string& uri,
                      const std::shared_ptr<arrow::DataType>& data_type,
-                     const std::shared_ptr<FileSystem>& fs,
-                     const std::shared_ptr<MemoryPool>& pool);
+                     const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<MemoryPool>& pool,
+                     bool write_null_on_missing_file, bool write_null_on_fetch_failure);
 
     Status WriteBlob(std::string_view blob_data);
+
+    /// Deserialize the descriptor and open an input stream on the referenced data.
+    Result<std::unique_ptr<InputStream>> OpenDescriptorInputStream(
+        std::string_view blob_data) const;
 
     Status WriteBytes(const char* data, int64_t length);
     Status WriteWithCrc32(const char* data, int64_t length);
@@ -95,6 +102,9 @@ class BlobFormatWriter : public FormatWriter {
     std::shared_ptr<FileSystem> fs_;
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<Metrics> metrics_;
+    bool write_null_on_missing_file_ = false;
+    bool write_null_on_fetch_failure_ = false;
+    std::unique_ptr<Logger> logger_;
 };
 
 }  // namespace paimon::blob

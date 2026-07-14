@@ -798,6 +798,7 @@ if(PAIMON_BUILD_TESTS)
                     fs/local/local_file_test.cpp
                     # fs/jindo/jindo_file_system_factory_test.cpp
                     # fs/jindo/jindo_file_system_test.cpp
+                    # fs/jindo/jindo_utils_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared
                     ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
