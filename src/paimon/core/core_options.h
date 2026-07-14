@@ -77,6 +77,7 @@ class PAIMON_EXPORT CoreOptions {
     int64_t GetPageSize() const;
     int64_t GetTargetFileSize(bool has_primary_key) const;
     int64_t GetBlobTargetFileSize() const;
+    bool BlobSplitByFileSize() const;
     int64_t GetCompactionFileSize(bool has_primary_key) const;
     std::string GetPartitionDefaultName() const;
 

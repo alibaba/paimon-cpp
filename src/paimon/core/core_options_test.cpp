@@ -41,6 +41,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(256 * 1024 * 1024L, core_options.GetTargetFileSize(/*has_primary_key=*/false));
     ASSERT_EQ(128 * 1024 * 1024L, core_options.GetTargetFileSize(/*has_primary_key=*/true));
     ASSERT_EQ(256 * 1024 * 1024L, core_options.GetBlobTargetFileSize());
+    ASSERT_TRUE(core_options.BlobSplitByFileSize());
     ASSERT_EQ(187904815, core_options.GetCompactionFileSize(/*has_primary_key=*/false));
     ASSERT_EQ(93952404, core_options.GetCompactionFileSize(/*has_primary_key=*/true));
 
@@ -240,6 +241,7 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::DATA_EVOLUTION_ENABLED, "true"},
         {Options::BLOB_FIELD, "blob1,blob2"},
         {Options::BLOB_DESCRIPTOR_FIELD, "blob3,blob4"},
+        {Options::BLOB_AS_DESCRIPTOR, "true"},
         {Options::BLOB_VIEW_FIELD, "blob5"},
         {Options::BLOB_VIEW_UPSTREAM_WAREHOUSE, "FILE:///tmp/blob_view_upstream_warehouse/"},
         {Options::BLOB_VIEW_RESOLVE_ENABLED, "false"},
@@ -385,6 +387,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_TRUE(core_options.DataEvolutionEnabled());
     ASSERT_EQ(core_options.GetBlobFields(), std::vector<std::string>({"blob1", "blob2"}));
     ASSERT_EQ(core_options.GetBlobDescriptorFields(), std::vector<std::string>({"blob3", "blob4"}));
+    ASSERT_FALSE(core_options.BlobSplitByFileSize());
     ASSERT_EQ(core_options.GetBlobViewFields(), std::vector<std::string>({"blob5"}));
     ASSERT_EQ(core_options.GetBlobInlineFields(),
               std::vector<std::string>({"blob3", "blob4", "blob5"}));
@@ -969,6 +972,12 @@ TEST(CoreOptionsTest, TestFallback) {
                                   {Options::BLOB_DESCRIPTOR_FIELD, "new_b1 , new_b2"}}));
         ASSERT_EQ(options.GetBlobDescriptorFields(),
                   std::vector<std::string>({"new_b1", "new_b2"}));
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                             CoreOptions::FromMap({{Options::BLOB_AS_DESCRIPTOR, "true"},
+                                                   {Options::BLOB_SPLIT_BY_FILE_SIZE, "true"}}));
+        ASSERT_TRUE(options.BlobSplitByFileSize());
     }
 }
 

@@ -134,8 +134,9 @@ class TableScanImpl {
         auto source_split_open_file_cost = core_options.GetSourceSplitOpenFileCost();
         if (table_schema->PrimaryKeys().empty()) {
             if (core_options.DataEvolutionEnabled()) {
-                return std::make_unique<DataEvolutionSplitGenerator>(source_split_target_size,
-                                                                     source_split_open_file_cost);
+                return std::make_unique<DataEvolutionSplitGenerator>(
+                    source_split_target_size, source_split_open_file_cost,
+                    core_options.BlobSplitByFileSize());
             }
             BucketMode bucket_mode = (core_options.GetBucket() == -1 ? BucketMode::BUCKET_UNAWARE
                                                                      : BucketMode::HASH_FIXED);

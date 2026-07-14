@@ -118,6 +118,10 @@ struct PAIMON_EXPORT Options {
     /// "blob.target-file-size" - Target size of a blob file. Default is TARGET_FILE_SIZE.
     static const char BLOB_TARGET_FILE_SIZE[];
 
+    /// "blob.split-by-file-size" - Whether to consider blob file size as a factor when performing
+    /// scan splitting. Default is the negation of BLOB_AS_DESCRIPTOR.
+    static const char BLOB_SPLIT_BY_FILE_SIZE[];
+
     /// "partition.default-name" - The default partition name in case the dynamic partition column
     /// value is null/empty string. Default is "__DEFAULT_PARTITION__".
     static const char PARTITION_DEFAULT_NAME[];

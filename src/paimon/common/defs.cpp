@@ -33,6 +33,7 @@ const char Options::FILE_FORMAT[] = "file.format";
 const char Options::FILE_SYSTEM[] = "file-system";
 const char Options::TARGET_FILE_SIZE[] = "target-file-size";
 const char Options::BLOB_TARGET_FILE_SIZE[] = "blob.target-file-size";
+const char Options::BLOB_SPLIT_BY_FILE_SIZE[] = "blob.split-by-file-size";
 const char Options::PAGE_SIZE[] = "page-size";
 const char Options::PARTITION_DEFAULT_NAME[] = "partition.default-name";
 const char Options::FILE_COMPRESSION[] = "file.compression";

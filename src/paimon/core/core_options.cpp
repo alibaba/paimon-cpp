@@ -448,6 +448,8 @@ struct CoreOptions::Impl {
     bool row_tracking_partition_group_on_commit = true;
     bool data_evolution_enabled = false;
     bool blob_view_resolve_enabled = true;
+    bool blob_as_descriptor = false;
+    std::optional<bool> blob_split_by_file_size;
     bool legacy_partition_name_enabled = true;
     bool global_index_enabled = true;
     std::optional<int32_t> global_index_thread_num;
@@ -578,6 +580,11 @@ struct CoreOptions::Impl {
         // Parse blob-view.resolve.enabled - whether to resolve blob view fields at read time
         PAIMON_RETURN_NOT_OK(
             parser.Parse<bool>(Options::BLOB_VIEW_RESOLVE_ENABLED, &blob_view_resolve_enabled));
+        // Parse blob-as-descriptor - read blob field as descriptor rather than blob bytes
+        PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::BLOB_AS_DESCRIPTOR, &blob_as_descriptor));
+        // Parse blob.split-by-file-size - whether blob file size counts in scan splitting
+        PAIMON_RETURN_NOT_OK(
+            parser.Parse(Options::BLOB_SPLIT_BY_FILE_SIZE, &blob_split_by_file_size));
         return Status::OK();
     }
 
@@ -982,6 +989,10 @@ int64_t CoreOptions::GetBlobTargetFileSize() const {
         return GetTargetFileSize(/*has_primary_key=*/false);
     }
     return impl_->blob_target_file_size.value();
+}
+
+bool CoreOptions::BlobSplitByFileSize() const {
+    return impl_->blob_split_by_file_size.value_or(!impl_->blob_as_descriptor);
 }
 
 int64_t CoreOptions::GetCompactionFileSize(bool has_primary_key) const {

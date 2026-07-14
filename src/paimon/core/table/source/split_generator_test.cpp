@@ -36,6 +36,7 @@
 #include "paimon/core/stats/simple_stats.h"
 #include "paimon/core/table/bucket_mode.h"
 #include "paimon/core/table/source/append_only_split_generator.h"
+#include "paimon/core/table/source/data_evolution_split_generator.h"
 #include "paimon/core/table/source/merge_tree_split_generator.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/memory/memory_pool.h"
@@ -113,6 +114,21 @@ class SplitGeneratorTest : public testing::Test {
             /*creation_time=*/Timestamp(0, 0), /*delete_row_count=*/0,
             /*embedded_index=*/nullptr, FileSource::Append(), /*external_path=*/std::nullopt,
             /*value_stats_cols=*/std::nullopt, /*first_row_id=*/std::nullopt,
+            /*write_cols=*/std::nullopt);
+    }
+
+    std::shared_ptr<DataFileMeta> CreateDataFileMetaWithRowId(const std::string& file_name,
+                                                              int64_t file_size, int64_t row_count,
+                                                              int64_t first_row_id) {
+        return std::make_shared<DataFileMeta>(
+            file_name, file_size, row_count, /*min_key=*/BinaryRow::EmptyRow(),
+            /*max_key=*/BinaryRow::EmptyRow(), /*key_stats=*/SimpleStats::EmptyStats(),
+            /*value_stats=*/SimpleStats::EmptyStats(), /*min_sequence_number=*/0,
+            /*max_sequence_number=*/0, /*schema_id=*/0,
+            /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
+            /*creation_time=*/Timestamp(0, 0), /*delete_row_count=*/0,
+            /*embedded_index=*/nullptr, FileSource::Append(), /*value_stats_cols=*/std::nullopt,
+            /*external_path=*/std::nullopt, first_row_id,
             /*write_cols=*/std::nullopt);
     }
 
@@ -203,6 +219,41 @@ TEST_F(SplitGeneratorTest, TestAppend) {
                              split_generator.SplitForStreaming(std::move(tmp_files)));
         std::vector<std::vector<std::string>> expected = {{"1", "2", "3", "4", "5", "6"}};
         CheckResult(split_groups, expected);
+    }
+}
+
+TEST_F(SplitGeneratorTest, TestDataEvolutionBlobSplitByFileSize) {
+    // two row id ranges, each with one data file and one much larger blob file
+    auto create_files = [&]() {
+        return std::vector<std::shared_ptr<DataFileMeta>>{
+            CreateDataFileMetaWithRowId("f1", /*file_size=*/100, /*row_count=*/100,
+                                        /*first_row_id=*/0),
+            CreateDataFileMetaWithRowId("blob1.blob", /*file_size=*/1000, /*row_count=*/100,
+                                        /*first_row_id=*/0),
+            CreateDataFileMetaWithRowId("f2", /*file_size=*/100, /*row_count=*/100,
+                                        /*first_row_id=*/100),
+            CreateDataFileMetaWithRowId("blob2.blob", /*file_size=*/1000, /*row_count=*/100,
+                                        /*first_row_id=*/100)};
+    };
+    {
+        // blob file size counts in splitting: each range weighs 1100, so the two ranges cannot
+        // be packed into one split of target size 1200
+        DataEvolutionSplitGenerator split_generator(/*target_split_size=*/1200,
+                                                    /*open_file_cost=*/10,
+                                                    /*count_blob_size=*/true);
+        ASSERT_OK_AND_ASSIGN(std::vector<SplitGenerator::SplitGroup> split_groups,
+                             split_generator.SplitForBatch(create_files()));
+        CheckResult(split_groups, {{"f1", "blob1.blob"}, {"f2", "blob2.blob"}}, {false, false});
+    }
+    {
+        // blob file only weighs the open file cost: each range weighs 110, both ranges fit in
+        // one split of target size 1200
+        DataEvolutionSplitGenerator split_generator(/*target_split_size=*/1200,
+                                                    /*open_file_cost=*/10,
+                                                    /*count_blob_size=*/false);
+        ASSERT_OK_AND_ASSIGN(std::vector<SplitGenerator::SplitGroup> split_groups,
+                             split_generator.SplitForBatch(create_files()));
+        CheckResult(split_groups, {{"f1", "blob1.blob", "f2", "blob2.blob"}}, {false});
     }
 }
 
