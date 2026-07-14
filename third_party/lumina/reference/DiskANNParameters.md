@@ -147,4 +147,4 @@ options from a string map, prefer normalized entry points such as [NormalizeSear
 
 ## Status
 
-v0.2.2 Release Tag (2026-05-14).
+v0.2.3 Release Tag (2026-07-13).
