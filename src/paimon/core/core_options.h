@@ -30,6 +30,7 @@
 #include "paimon/core/options/external_path_strategy.h"
 #include "paimon/core/options/lookup_compact_mode.h"
 #include "paimon/core/options/lookup_strategy.h"
+#include "paimon/core/options/map_shared_shredding_column_placement_policy.h"
 #include "paimon/core/options/map_storage_layout.h"
 #include "paimon/core/options/merge_engine.h"
 #include "paimon/core/options/sort_engine.h"
@@ -78,6 +79,7 @@ class PAIMON_EXPORT CoreOptions {
     int64_t GetSourceSplitOpenFileCost() const;
     std::optional<int64_t> GetScanSnapshotId() const;
     std::optional<int64_t> GetScanTimestampMillis() const;
+    int32_t GetScanManifestEntryCacheMaxSnapshots() const;
 
     int64_t GetManifestTargetFileSize() const;
     std::shared_ptr<Cache> GetCache() const;
@@ -123,6 +125,8 @@ class PAIMON_EXPORT CoreOptions {
 
     Result<MapStorageLayout> GetMapStorageLayout(const std::string& field_name) const;
     Result<int32_t> GetMapSharedShreddingMaxColumns(const std::string& field_name) const;
+    Result<MapSharedShreddingColumnPlacementPolicy> GetMapSharedShreddingColumnPlacementPolicy(
+        const std::string& field_name) const;
 
     bool DeletionVectorsEnabled() const;
     bool DeletionVectorsBitmap64() const;
@@ -193,9 +197,8 @@ class PAIMON_EXPORT CoreOptions {
     const std::vector<std::string>& GetBlobDescriptorFields() const;
     const std::vector<std::string>& GetBlobViewFields() const;
     std::optional<std::string> GetBlobViewUpstreamWarehouse() const;
+    bool BlobViewResolveEnabled() const;
     std::vector<std::string> GetBlobInlineFields() const;
-    const std::vector<std::string>& GetBlobExternalStorageFields() const;
-    std::optional<std::string> GetBlobExternalStoragePath() const;
 
     const std::map<std::string, std::string>& ToMap() const;
 

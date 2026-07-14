@@ -894,6 +894,7 @@ TEST_F(AppendOnlyWriterTest, TestSharedShreddingMapRejectsAvroFormatOnCommit) {
         {Options::MANIFEST_FORMAT, "avro"},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -929,6 +930,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapFieldContent) {
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -1001,6 +1003,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapAllEmptyFirstFile) {
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -1058,6 +1061,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapAllNullThenAllEmptyF
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -1177,6 +1181,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapWithOverflow) {
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "2"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -1241,6 +1246,73 @@ TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapWithOverflow) {
     CheckFileContent(data_file_path, format, expected_array);
 }
 
+TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapWithLruPlacement) {
+    std::string format = GetFormat();
+    auto options = CreateOptions({
+        {Options::FILE_FORMAT, format},
+        {Options::MANIFEST_FORMAT, format},
+        {"fields.tags.map.storage-layout", "shared-shredding"},
+        {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "lru"},
+        {Options::WRITE_ONLY, "true"},
+    });
+
+    auto logical_schema = arrow::schema({
+        arrow::field("id", arrow::int32()),
+        arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+    });
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = CreatePathFactory(dir->Str(), format, options);
+
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         CreateAppendOnlyWriter(options, /*schema_id=*/0, logical_schema,
+                                                /*write_cols=*/std::nullopt,
+                                                /*max_sequence_number=*/-1, path_factory,
+                                                compact_manager_, memory_pool_));
+
+    auto batch = CreateBatch(logical_schema, R"([
+        [1, [["a", 10], ["b", 20], ["c", 30]]],
+        [2, [["a", 40], ["b", 50]]],
+        [3, [["d", 60]]],
+        [4, [["a", 70], ["b", 80], ["c", 90], ["d", 100]]]
+    ])");
+    ASSERT_OK(writer->Write(std::move(batch)));
+    ASSERT_OK_AND_ASSIGN(CommitIncrement inc, writer->PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_OK(writer->Close());
+
+    ASSERT_EQ(1, inc.GetNewFilesIncrement().NewFiles().size());
+    std::string data_file_path =
+        path_factory->ToPath(inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
+
+    std::map<std::string, int32_t> column_to_k = {{"tags", 3}};
+    ASSERT_OK_AND_ASSIGN(
+        auto expected_physical_schema,
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, column_to_k));
+
+    MapSharedShreddingFieldMeta expected_meta;
+    expected_meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}, {"d", 3}};
+    expected_meta.field_to_columns = {{0, {0}}, {1, {1}}, {2, {2}}, {3, {2}}};
+    expected_meta.overflow_field_set = {2};
+    expected_meta.num_columns = 3;
+    expected_meta.max_row_width = 4;
+    CheckShreddingFileSchema(data_file_path, format, expected_physical_schema, /*field_index=*/1,
+                             expected_meta, options.GetFileCompression());
+
+    auto physical_type = arrow::struct_(expected_physical_schema->fields());
+    std::shared_ptr<arrow::ChunkedArray> expected_array;
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(physical_type, {R"([
+        [1, [[0, 1, 2],  10,  20,  30, null]],
+        [2, [[0, 1, -1], 40,  50, null, null]],
+        [3, [[-1, -1, 3], null, null, 60, null]],
+        [4, [[0, 1, 3],  70,  80, 100, [[2, 90]]]]
+    ])"},
+                                                                 &expected_array)
+                    .ok());
+    CheckFileContent(data_file_path, format, expected_array);
+}
+
 TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFiles) {
     std::string format = GetFormat();
     auto options = CreateOptions({
@@ -1248,6 +1320,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "10"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -1381,6 +1454,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapUsesInitialContextFo
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "10"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -1442,8 +1516,10 @@ TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsWithKA
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "8"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {"fields.attrs.map.storage-layout", "shared-shredding"},
         {"fields.attrs.map.shared-shredding.max-columns", "4"},
+        {"fields.attrs.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -1575,6 +1651,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapDataFileMetaInfo) {
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 
@@ -1654,6 +1731,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapWithBlobSeparation) 
         {Options::MANIFEST_FORMAT, format},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "3"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {Options::WRITE_ONLY, "true"},
     });
 

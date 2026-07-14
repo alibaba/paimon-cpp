@@ -317,6 +317,7 @@ TEST_F(KeyValueFileStoreWriteTest, TestSharedShreddingMapRestoreInitializesNextW
         {"file.format", "parquet"},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "10"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {"write-only", "true"},
         {"bucket", "1"},
         {"enable-pk-commit-in-inte-test", ""},

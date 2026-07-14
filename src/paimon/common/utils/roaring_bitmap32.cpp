@@ -310,4 +310,33 @@ RoaringBitmap32::Iterator RoaringBitmap32::EqualOrLarger(int32_t key) const {
     return iter;
 }
 
+std::optional<int32_t> RoaringBitmap32::NextValue(int32_t x) const {
+    auto iter = EqualOrLarger(x);
+    if (iter == End()) {
+        return std::nullopt;
+    }
+    return *iter;
+}
+
+std::optional<int32_t> RoaringBitmap32::PreviousValue(int32_t x) const {
+    if (IsEmpty()) {
+        return std::nullopt;
+    }
+
+    auto& bitmap = GetRoaringBitmap(roaring_bitmap_);
+    if (x <= static_cast<int32_t>(bitmap.minimum())) {
+        return std::nullopt;
+    }
+
+    const uint64_t rank = bitmap.rank(static_cast<uint32_t>(x - 1));
+    if (rank == 0) {
+        return std::nullopt;
+    }
+
+    uint32_t value = 0;
+    [[maybe_unused]] bool found = bitmap.select(static_cast<uint32_t>(rank - 1), &value);
+    assert(found);
+    return static_cast<int32_t>(value);
+}
+
 }  // namespace paimon

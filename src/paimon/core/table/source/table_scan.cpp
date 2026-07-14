@@ -17,6 +17,7 @@
 #include "paimon/table/source/table_scan.h"
 
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
@@ -95,19 +96,35 @@ class TableScanImpl {
             ManifestFile::Create(fs, manifest_file_format, core_options.GetManifestCompression(),
                                  path_factory, core_options.GetManifestTargetFileSize(),
                                  memory_pool, core_options, partition_schema));
+        std::unique_ptr<FileStoreScan> scan;
         if (table_schema->PrimaryKeys().empty()) {
             if (core_options.DataEvolutionEnabled()) {
-                return DataEvolutionFileStoreScan::Create(
-                    snapshot_manager, schema_manager, manifest_list, manifest_file, table_schema,
-                    arrow_schema, context->GetScanFilters(), core_options, executor, memory_pool);
+                PAIMON_ASSIGN_OR_RAISE(
+                    scan, DataEvolutionFileStoreScan::Create(
+                              snapshot_manager, schema_manager, manifest_list, manifest_file,
+                              table_schema, arrow_schema, context->GetScanFilters(), core_options,
+                              executor, memory_pool));
+            } else {
+                PAIMON_ASSIGN_OR_RAISE(
+                    scan, AppendOnlyFileStoreScan::Create(
+                              snapshot_manager, schema_manager, manifest_list, manifest_file,
+                              table_schema, arrow_schema, context->GetScanFilters(), core_options,
+                              executor, memory_pool));
             }
-            return AppendOnlyFileStoreScan::Create(
-                snapshot_manager, schema_manager, manifest_list, manifest_file, table_schema,
-                arrow_schema, context->GetScanFilters(), core_options, executor, memory_pool);
+        } else {
+            PAIMON_ASSIGN_OR_RAISE(
+                scan, KeyValueFileStoreScan::Create(snapshot_manager, schema_manager, manifest_list,
+                                                    manifest_file, table_schema, arrow_schema,
+                                                    context->GetScanFilters(), core_options,
+                                                    executor, memory_pool));
         }
-        return KeyValueFileStoreScan::Create(
-            snapshot_manager, schema_manager, manifest_list, manifest_file, table_schema,
-            arrow_schema, context->GetScanFilters(), core_options, executor, memory_pool);
+        return WithTablePath(std::move(scan), context);
+    }
+
+    static std::unique_ptr<FileStoreScan> WithTablePath(std::unique_ptr<FileStoreScan>&& scan,
+                                                        const ScanContext* context) {
+        scan->WithTablePath(context->GetPath());
+        return std::move(scan);
     }
 
     static Result<std::unique_ptr<SplitGenerator>> CreateSplitGenerator(
@@ -194,13 +211,20 @@ Result<std::unique_ptr<TableScan>> NewDataTableScan(const std::shared_ptr<ScanCo
         CoreOptions tmp_options,
         CoreOptions::FromMap(context->GetOptions(), context->GetSpecificFileSystem(), {}));
     std::string branch = BranchManager::NormalizeBranch(tmp_options.GetBranch());
-    SchemaManager schema_manager(tmp_options.GetFileSystem(), context->GetPath(), branch);
-    PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_table_schema,
-                           schema_manager.Latest());
-    if (latest_table_schema == std::nullopt) {
-        return Status::Invalid("not found latest schema");
+    std::shared_ptr<TableSchema> table_schema;
+    const auto& specific_table_schema = context->GetSpecificTableSchema();
+    if (branch == BranchManager::DEFAULT_MAIN_BRANCH && specific_table_schema) {
+        PAIMON_ASSIGN_OR_RAISE(table_schema,
+                               TableSchema::CreateFromJson(specific_table_schema.value()));
+    } else {
+        SchemaManager schema_manager(tmp_options.GetFileSystem(), context->GetPath(), branch);
+        PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_table_schema,
+                               schema_manager.Latest());
+        if (latest_table_schema == std::nullopt) {
+            return Status::Invalid("not found latest schema");
+        }
+        table_schema = latest_table_schema.value();
     }
-    const auto& table_schema = latest_table_schema.value();
     // merge options
     auto options = table_schema->Options();
     for (const auto& [key, value] : context->GetOptions()) {

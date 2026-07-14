@@ -287,6 +287,7 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingMapRestoreInitializesNex
         {"file.format", "parquet"},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "10"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {"write-only", "true"},
         {"bucket", "1"},
         {"bucket-key", "id"},
@@ -345,6 +346,7 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingRestoreIgnoresAvroFileWi
     shredding_options["file.format"] = "parquet";
     shredding_options["fields.tags.map.storage-layout"] = "shared-shredding";
     shredding_options["fields.tags.map.shared-shredding.max-columns"] = "10";
+    shredding_options["fields.tags.map.shared-shredding.column-placement-policy"] = "plain";
 
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
@@ -377,8 +379,10 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingRestoreMultipleMapColumn
         {"file.format", "parquet"},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "10"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {"fields.attrs.map.storage-layout", "shared-shredding"},
         {"fields.attrs.map.shared-shredding.max-columns", "10"},
+        {"fields.attrs.map.shared-shredding.column-placement-policy", "plain"},
         {"write-only", "true"},
         {"bucket", "1"},
         {"bucket-key", "id"},
@@ -438,8 +442,10 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingRestoreUsesDefaultForMis
         {"file.format", "parquet"},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "10"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {"fields.attrs.map.storage-layout", "shared-shredding"},
         {"fields.attrs.map.shared-shredding.max-columns", "10"},
+        {"fields.attrs.map.shared-shredding.column-placement-policy", "plain"},
         {"write-only", "true"},
         {"bucket", "1"},
         {"bucket-key", "id"},
@@ -488,6 +494,7 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingPartialWriteSkipsMissing
         {"file.format", "parquet"},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "10"},
+        {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {"write-only", "true"},
         {"bucket", "1"},
         {"bucket-key", "id"},

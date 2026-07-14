@@ -166,6 +166,11 @@ struct PAIMON_EXPORT Options {
     /// "latest-full", "latest", "from-snapshot", "from-snapshot-full". Default value is "default".
     static const char SCAN_MODE[];
 
+    /// "scan.manifest-entry-cache.max-snapshots" - Maximum number of snapshot live manifest entry
+    /// results retained per table, branch, and bucket. Setting it to 0 disables manifest entry
+    /// cache. Default value is 0.
+    static const char SCAN_MANIFEST_ENTRY_CACHE_MAX_SNAPSHOTS[];
+
     /// "read.batch-size" - Read batch size for any file format if it supports.
     /// The default value is 1024.
     static const char READ_BATCH_SIZE[];
@@ -379,6 +384,12 @@ struct PAIMON_EXPORT Options {
     /// map.storage-layout = shared-shredding. Rows with more fields than K_max spill to
     /// __overflow. Default value is 256. Each column can have its own max-columns setting.
     static const char MAP_SHARED_SHREDDING_MAX_COLUMNS[];
+    /// "map.shared-shredding.column-placement-policy" - Suffix for per-column shared-shredding
+    /// physical column placement policy.
+    /// Used as `fields.<column>.map.shared-shredding.column-placement-policy`.
+    /// Values: "plain", "sequential" and "lru". Default value is "lru".
+    /// Only effective when map.storage-layout = shared-shredding.
+    static const char MAP_SHARED_SHREDDING_COLUMN_PLACEMENT_POLICY[];
 
     /// "blob-as-descriptor" - Read blob field using blob descriptor rather than blob
     /// bytes. Default value is "false".
@@ -397,17 +408,10 @@ struct PAIMON_EXPORT Options {
     /// serialized BlobViewStruct bytes inline in data files and resolve from upstream tables at
     /// read time. No default value.
     static const char BLOB_VIEW_FIELD[];
-    /// "blob-external-storage-field" - Comma-separated BLOB field names (must be a subset of
-    /// blob-descriptor-field ) whose raw data will be written to external storage at write time.
-    /// The external storage path is configured via blob-external-storage-path. Orphan file cleanup
-    /// is not applied to that path. No default value.
-    static const char BLOB_EXTERNAL_STORAGE_FIELD[];
-    /// "blob-external-storage-path" - The external storage path where raw BLOB data from fields
-    /// configured by 'blob-external-storage-field' is written at write time. Orphan file cleanup is
-    /// not applied to this path. No default value.
-    /// @note: this option differs from the Java paimon and will be deprecated once
-    /// RestCatalog is supported.
-    static const char BLOB_EXTERNAL_STORAGE_PATH[];
+    /// "blob-view.resolve.enabled" - Whether to resolve blob-view-field values from upstream
+    /// tables at read time. Set to false to preserve serialized BlobViewStruct bytes when
+    /// forwarding blob view values to another blob-view table. Default value is "true".
+    static const char BLOB_VIEW_RESOLVE_ENABLED[];
     /// "blob-view-upstream-warehouse" - Since the catalog capabilities are partially missing, when
     /// Blob View is enabled, cpp paimon cannot automatically obtain the upstream table warehouse
     /// path and requires manual configuration by the user. No default value.

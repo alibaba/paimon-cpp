@@ -1687,11 +1687,11 @@ TEST_P(BlobTableInteTest, TestReadTableWithMultiBlobFields) {
     }
 }
 
-TEST_P(BlobTableInteTest, TestBlobDescriptorFieldWithoutExternalStorage) {
+TEST_P(BlobTableInteTest, TestBlobDescriptorField) {
     if (GetParam() == "lance") {
         return;
     }
-    // Two blob fields configured via BLOB_DESCRIPTOR_FIELD, no external storage.
+    // Two blob fields configured via BLOB_DESCRIPTOR_FIELD and stored inline as descriptors.
     arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
                                  BlobUtils::ToArrowField("b0", true),
                                  BlobUtils::ToArrowField("b1", true)};
@@ -1720,7 +1720,7 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorFieldWithoutExternalStorage) {
                          WriteArray(table_path, {}, schema->field_names(), {desc_array}));
     ASSERT_OK(Commit(table_path, commit_msgs));
 
-    // Scan and verify DataFileMeta: no external storage -> write_cols should be nullopt
+    // Scan and verify DataFileMeta: all blob fields are inline descriptors, so write_cols is unset.
     ASSERT_OK_AND_ASSIGN(auto plan, ScanTable(table_path));
     VerifyDataFileMetas(plan, /*expected_file_count=*/1, /*expected_row_counts=*/{3},
                         /*expected_min_seqs=*/{1}, /*expected_max_seqs=*/{1},
@@ -1743,144 +1743,12 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorFieldWithoutExternalStorage) {
     ASSERT_TRUE(read_struct->GetFieldByName("b1")->Equals(desc_array->GetFieldByName("b1")));
 }
 
-TEST_P(BlobTableInteTest, TestBlobDescriptorFieldWithExternalStorage) {
-    if (GetParam() == "lance") {
-        return;
-    }
-    // Two blob fields configured via BLOB_DESCRIPTOR_FIELD + BLOB_EXTERNAL_STORAGE_FIELD
-    // with BLOB_EXTERNAL_STORAGE_PATH pointing to blob_dir_.
-    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
-                                 BlobUtils::ToArrowField("b0", true),
-                                 BlobUtils::ToArrowField("b1", true)};
-
-    std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "orc"},
-        {Options::FILE_FORMAT, GetParam()},
-        {Options::TARGET_FILE_SIZE, "700"},
-        {Options::BUCKET, "-1"},
-        {Options::ROW_TRACKING_ENABLED, "true"},
-        {Options::DATA_EVOLUTION_ENABLED, "true"},
-        {Options::BLOB_DESCRIPTOR_FIELD, "b0,b1"},
-        {Options::BLOB_EXTERNAL_STORAGE_FIELD, "b0,b1"},
-        {Options::BLOB_EXTERNAL_STORAGE_PATH, blob_dir_->Str()},
-        {Options::FILE_SYSTEM, "local"}};
-    CreateTable(fields, /*partition_keys=*/{}, options);
-    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
-
-    // Input uses plain raw bytes for readability
-    std::string raw_json = R"([
-        [1, "image_data_0", "video_data_0"],
-        [2, "image_data_1", "video_data_1"],
-        [3, "image_data_2", "video_data_2"]
-    ])";
-    auto raw_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), raw_json).ValueOrDie());
-    ASSERT_OK_AND_ASSIGN(auto desc_array, ConvertRawBlobToDescriptor(raw_array, {"b0", "b1"}));
-
-    // write descriptor array
-    auto schema = arrow::schema(fields);
-    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
-                         WriteArray(table_path, {}, schema->field_names(), {desc_array}));
-    ASSERT_OK(Commit(table_path, commit_msgs));
-
-    // Scan and verify DataFileMeta: with external storage -> write_cols should be explicit
-    ASSERT_OK_AND_ASSIGN(auto plan, ScanTable(table_path));
-    VerifyDataFileMetas(plan, /*expected_file_count=*/1, /*expected_row_counts=*/{3},
-                        /*expected_min_seqs=*/{1}, /*expected_max_seqs=*/{1},
-                        /*expected_first_row_ids=*/{0},
-                        /*expected_write_cols=*/{std::vector<std::string>{"f0", "b0", "b1"}});
-
-    // Read and resolve descriptors back to raw bytes
-    std::map<std::string, std::string> read_options = {{Options::BLOB_AS_DESCRIPTOR, "true"}};
-    ASSERT_OK_AND_ASSIGN(auto result, ReadTable(table_path, schema->field_names(), plan,
-                                                /*predicate=*/nullptr, read_options));
-    ASSERT_TRUE(result.chunked_array);
-    auto read_concat = arrow::Concatenate(result.chunked_array->chunks()).ValueOrDie();
-    auto read_struct = std::dynamic_pointer_cast<arrow::StructArray>(read_concat);
-    ASSERT_OK_AND_ASSIGN(auto resolved, ConvertDescriptorToRawBlob(read_struct, {"b0", "b1"}));
-    ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(raw_array));
-    ASSERT_TRUE(resolved->Equals(expected_with_rk));
-
-    // Descriptor bytes should differ (repacked by external storage)
-    ASSERT_FALSE(read_struct->GetFieldByName("b0")->Equals(desc_array->GetFieldByName("b0")));
-    ASSERT_FALSE(read_struct->GetFieldByName("b1")->Equals(desc_array->GetFieldByName("b1")));
-}
-
-TEST_P(BlobTableInteTest, TestBlobDescriptorFieldPartialExternalStorage) {
-    if (GetParam() == "lance") {
-        return;
-    }
-    // 4 blob fields: b0,b1 have external storage, b2,b3 are descriptor-only (no external storage).
-    arrow::FieldVector fields = {
-        arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("b0", true),
-        BlobUtils::ToArrowField("b1", true), BlobUtils::ToArrowField("b2", true),
-        BlobUtils::ToArrowField("b3", true)};
-
-    std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "orc"},
-        {Options::FILE_FORMAT, GetParam()},
-        {Options::TARGET_FILE_SIZE, "700"},
-        {Options::BUCKET, "-1"},
-        {Options::ROW_TRACKING_ENABLED, "true"},
-        {Options::DATA_EVOLUTION_ENABLED, "true"},
-        {Options::BLOB_DESCRIPTOR_FIELD, "b0,b1,b2,b3"},
-        {Options::BLOB_EXTERNAL_STORAGE_FIELD, "b0,b1"},
-        {Options::BLOB_EXTERNAL_STORAGE_PATH, blob_dir_->Str()},
-        {Options::FILE_SYSTEM, "local"}};
-    CreateTable(fields, /*partition_keys=*/{}, options);
-    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
-
-    // Input uses plain raw bytes for readability; some blob fields are null
-    std::string raw_json = R"([
-        [1, "img_0", null,    "doc_0", "log_0"],
-        [2, null,    "vid_1", null,    "log_1"],
-        [3, "img_2", "vid_2", "doc_2", null   ]
-    ])";
-    auto raw_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), raw_json).ValueOrDie());
-    ASSERT_OK_AND_ASSIGN(auto desc_array,
-                         ConvertRawBlobToDescriptor(raw_array, {"b0", "b1", "b2", "b3"}));
-
-    // write descriptor array
-    auto schema = arrow::schema(fields);
-    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
-                         WriteArray(table_path, {}, schema->field_names(), {desc_array}));
-    ASSERT_OK(Commit(table_path, commit_msgs));
-
-    // Scan and verify DataFileMeta: external storage on b0,b1 -> write_cols should be explicit
-    ASSERT_OK_AND_ASSIGN(auto plan, ScanTable(table_path));
-    VerifyDataFileMetas(
-        plan, /*expected_file_count=*/1, /*expected_row_counts=*/{3},
-        /*expected_min_seqs=*/{1}, /*expected_max_seqs=*/{1},
-        /*expected_first_row_ids=*/{0},
-        /*expected_write_cols=*/{std::vector<std::string>{"f0", "b0", "b1", "b2", "b3"}});
-
-    // Read and resolve all descriptors back to raw bytes
-    std::map<std::string, std::string> read_options = {{Options::BLOB_AS_DESCRIPTOR, "true"}};
-    ASSERT_OK_AND_ASSIGN(auto result, ReadTable(table_path, schema->field_names(), plan,
-                                                /*predicate=*/nullptr, read_options));
-    ASSERT_TRUE(result.chunked_array);
-    auto read_concat = arrow::Concatenate(result.chunked_array->chunks()).ValueOrDie();
-    auto read_struct = std::dynamic_pointer_cast<arrow::StructArray>(read_concat);
-    ASSERT_OK_AND_ASSIGN(auto resolved,
-                         ConvertDescriptorToRawBlob(read_struct, {"b0", "b1", "b2", "b3"}));
-    ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(raw_array));
-    ASSERT_TRUE(resolved->Equals(expected_with_rk));
-
-    // b0,b1 repacked by external storage, should differ
-    ASSERT_FALSE(read_struct->GetFieldByName("b0")->Equals(desc_array->GetFieldByName("b0")));
-    ASSERT_FALSE(read_struct->GetFieldByName("b1")->Equals(desc_array->GetFieldByName("b1")));
-    // b2,b3 inline descriptor, should match
-    ASSERT_TRUE(read_struct->GetFieldByName("b2")->Equals(desc_array->GetFieldByName("b2")));
-    ASSERT_TRUE(read_struct->GetFieldByName("b3")->Equals(desc_array->GetFieldByName("b3")));
-}
-
 TEST_P(BlobTableInteTest, TestBlobDescriptorFieldPartialInline) {
     if (GetParam() == "lance") {
         return;
     }
-    // 4 blob fields: b0,b1 are descriptor (inline), b2,b3 are regular blob (written to .blob
-    // files). No external storage.
+    // 4 blob fields: b0,b1 are inline descriptors; b2,b3 are regular blob fields written to
+    // .blob files.
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("b0", true),
         BlobUtils::ToArrowField("b1", true), BlobUtils::ToArrowField("b2", true),
@@ -1939,243 +1807,21 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorFieldPartialInline) {
     ASSERT_TRUE(resolved->Equals(expected_with_rk));
 }
 
-TEST_P(BlobTableInteTest, TestBlobDescriptorFieldPartialExternalStorageRepack) {
-    if (GetParam() == "lance") {
-        return;
-    }
-    // 4 blob fields: b0,b1 are descriptor + external-storage-field WITH external-storage-path.
-    // b2,b3 are regular blob (written to .blob files).
-    // All blob descriptors get repacked by external storage or .blob writer.
-    arrow::FieldVector fields = {
-        arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("b0", true),
-        BlobUtils::ToArrowField("b1", true), BlobUtils::ToArrowField("b2", true),
-        BlobUtils::ToArrowField("b3", true)};
-
-    std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "orc"},
-        {Options::FILE_FORMAT, GetParam()},
-        {Options::TARGET_FILE_SIZE, "700"},
-        {Options::BUCKET, "-1"},
-        {Options::ROW_TRACKING_ENABLED, "true"},
-        {Options::DATA_EVOLUTION_ENABLED, "true"},
-        {Options::BLOB_DESCRIPTOR_FIELD, "b0,b1"},
-        {Options::BLOB_EXTERNAL_STORAGE_FIELD, "b0,b1"},
-        {Options::BLOB_EXTERNAL_STORAGE_PATH, blob_dir_->Str()},
-        {Options::FILE_SYSTEM, "local"}};
-    CreateTable(fields, /*partition_keys=*/{}, options);
-    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
-
-    // b0: all non-null, b1: has nulls, b2: all non-null, b3: has nulls
-    std::string raw_json = R"([
-        [1, "img_0", null,    "raw_2_0", "raw_3_0"],
-        [2, "img_1", "vid_1", "raw_2_1", null      ],
-        [3, "img_2", null,    "raw_2_2", "raw_3_2" ]
-    ])";
-    auto raw_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), raw_json).ValueOrDie());
-    ASSERT_OK_AND_ASSIGN(auto desc_array,
-                         ConvertRawBlobToDescriptor(raw_array, {"b0", "b1", "b2", "b3"}));
-
-    auto schema = arrow::schema(fields);
-    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
-                         WriteArray(table_path, {}, schema->field_names(), {desc_array}));
-    ASSERT_OK(Commit(table_path, commit_msgs));
-
-    // b0,b1 repacked to external storage; b2,b3 go to .blob files.
-    // Main file contains f0,b0,b1; .blob files for b2 and b3.
-    ASSERT_OK_AND_ASSIGN(auto plan, ScanTable(table_path));
-    VerifyDataFileMetas(plan, /*expected_file_count=*/3, /*expected_row_counts=*/{3, 3, 3},
-                        /*expected_min_seqs=*/{1, 1, 1}, /*expected_max_seqs=*/{1, 1, 1},
-                        /*expected_first_row_ids=*/{0, 0, 0},
-                        /*expected_write_cols=*/
-                        {std::vector<std::string>{"f0", "b0", "b1"}, std::vector<std::string>{"b2"},
-                         std::vector<std::string>{"b3"}});
-
-    std::map<std::string, std::string> read_options = {{Options::BLOB_AS_DESCRIPTOR, "true"}};
-    ASSERT_OK_AND_ASSIGN(auto result, ReadTable(table_path, schema->field_names(), plan,
-                                                /*predicate=*/nullptr, read_options));
-    ASSERT_TRUE(result.chunked_array);
-    auto read_concat = arrow::Concatenate(result.chunked_array->chunks()).ValueOrDie();
-    auto read_struct = std::dynamic_pointer_cast<arrow::StructArray>(read_concat);
-
-    // Resolve descriptors back to raw bytes and compare
-    ASSERT_OK_AND_ASSIGN(auto resolved,
-                         ConvertDescriptorToRawBlob(read_struct, {"b0", "b1", "b2", "b3"}));
-    ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(raw_array));
-    ASSERT_TRUE(resolved->Equals(expected_with_rk));
-
-    // All blob columns should differ from input desc_array (all repacked)
-    ASSERT_FALSE(read_struct->GetFieldByName("b0")->Equals(desc_array->GetFieldByName("b0")));
-    ASSERT_FALSE(read_struct->GetFieldByName("b1")->Equals(desc_array->GetFieldByName("b1")));
-    ASSERT_FALSE(read_struct->GetFieldByName("b2")->Equals(desc_array->GetFieldByName("b2")));
-    ASSERT_FALSE(read_struct->GetFieldByName("b3")->Equals(desc_array->GetFieldByName("b3")));
-}
-
-TEST_P(BlobTableInteTest, TestBlobDescriptorFieldPartialExternalStorageSingleField) {
-    if (GetParam() == "lance") {
-        return;
-    }
-    // 4 blob fields: b0,b1 are descriptor; only b1 has external storage.
-    // b2,b3 are regular blob (written to .blob files).
-    arrow::FieldVector fields = {
-        arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("b0", true),
-        BlobUtils::ToArrowField("b1", true), BlobUtils::ToArrowField("b2", true),
-        BlobUtils::ToArrowField("b3", true)};
-
-    std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "orc"},
-        {Options::FILE_FORMAT, GetParam()},
-        {Options::TARGET_FILE_SIZE, "700"},
-        {Options::BUCKET, "-1"},
-        {Options::ROW_TRACKING_ENABLED, "true"},
-        {Options::DATA_EVOLUTION_ENABLED, "true"},
-        {Options::BLOB_DESCRIPTOR_FIELD, "b0,b1"},
-        {Options::BLOB_EXTERNAL_STORAGE_FIELD, "b1"},
-        {Options::BLOB_EXTERNAL_STORAGE_PATH, blob_dir_->Str()},
-        {Options::FILE_SYSTEM, "local"}};
-    CreateTable(fields, /*partition_keys=*/{}, options);
-    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
-
-    // b0: all non-null, b1: has nulls, b2: all non-null, b3: has nulls
-    std::string raw_json = R"([
-        [1, "img_0", null,    "raw_2_0", "raw_3_0"],
-        [2, "img_1", "vid_1", "raw_2_1", null      ],
-        [3, "img_2", null,    "raw_2_2", "raw_3_2" ]
-    ])";
-    auto raw_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), raw_json).ValueOrDie());
-    ASSERT_OK_AND_ASSIGN(auto desc_array,
-                         ConvertRawBlobToDescriptor(raw_array, {"b0", "b1", "b2", "b3"}));
-
-    auto schema = arrow::schema(fields);
-    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
-                         WriteArray(table_path, {}, schema->field_names(), {desc_array}));
-    ASSERT_OK(Commit(table_path, commit_msgs));
-
-    // b1 repacked to external storage; b2,b3 go to .blob files; b0 stays inline in main file.
-    // Main file contains f0,b0,b1; .blob files for b2 and b3.
-    ASSERT_OK_AND_ASSIGN(auto plan, ScanTable(table_path));
-    VerifyDataFileMetas(plan, /*expected_file_count=*/3, /*expected_row_counts=*/{3, 3, 3},
-                        /*expected_min_seqs=*/{1, 1, 1}, /*expected_max_seqs=*/{1, 1, 1},
-                        /*expected_first_row_ids=*/{0, 0, 0},
-                        /*expected_write_cols=*/
-                        {std::vector<std::string>{"f0", "b0", "b1"}, std::vector<std::string>{"b2"},
-                         std::vector<std::string>{"b3"}});
-
-    std::map<std::string, std::string> read_options = {{Options::BLOB_AS_DESCRIPTOR, "true"}};
-    ASSERT_OK_AND_ASSIGN(auto result, ReadTable(table_path, schema->field_names(), plan,
-                                                /*predicate=*/nullptr, read_options));
-    ASSERT_TRUE(result.chunked_array);
-    auto read_concat = arrow::Concatenate(result.chunked_array->chunks()).ValueOrDie();
-    auto read_struct = std::dynamic_pointer_cast<arrow::StructArray>(read_concat);
-
-    // Resolve all descriptors back to raw bytes and compare
-    ASSERT_OK_AND_ASSIGN(auto resolved,
-                         ConvertDescriptorToRawBlob(read_struct, {"b0", "b1", "b2", "b3"}));
-    ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(raw_array));
-    ASSERT_TRUE(resolved->Equals(expected_with_rk));
-
-    // b0 is inline descriptor (not repacked), should match input
-    ASSERT_TRUE(read_struct->GetFieldByName("b0")->Equals(desc_array->GetFieldByName("b0")));
-    // b1 is repacked by external storage, should differ
-    ASSERT_FALSE(read_struct->GetFieldByName("b1")->Equals(desc_array->GetFieldByName("b1")));
-    // b2,b3 are repacked by .blob writer, should differ
-    ASSERT_FALSE(read_struct->GetFieldByName("b2")->Equals(desc_array->GetFieldByName("b2")));
-    ASSERT_FALSE(read_struct->GetFieldByName("b3")->Equals(desc_array->GetFieldByName("b3")));
-}
-
-TEST_P(BlobTableInteTest, TestBlobDescriptorFieldPartialExternalStorageNoAsDescriptor) {
-    if (GetParam() == "lance") {
-        return;
-    }
-    // Same as TestBlobDescriptorFieldPartialExternalStorageSingleField but without
-    // BLOB_AS_DESCRIPTOR in table options. Only b0 is explicitly converted to descriptor before
-    // write. b1 is written as raw bytes but still configured as descriptor field, so paimon should
-    // auto-convert it to descriptor internally (write auto-detects descriptor via magic header).
-    // After read with BLOB_AS_DESCRIPTOR=true, b0 and b1 are both stored as descriptor.
-    arrow::FieldVector fields = {
-        arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("b0", true),
-        BlobUtils::ToArrowField("b1", true), BlobUtils::ToArrowField("b2", true),
-        BlobUtils::ToArrowField("b3", true)};
-
-    std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "orc"},
-        {Options::FILE_FORMAT, GetParam()},
-        {Options::TARGET_FILE_SIZE, "700"},
-        {Options::BUCKET, "-1"},
-        {Options::ROW_TRACKING_ENABLED, "true"},
-        {Options::DATA_EVOLUTION_ENABLED, "true"},
-        {Options::BLOB_DESCRIPTOR_FIELD, "b0,b1"},
-        {Options::BLOB_EXTERNAL_STORAGE_FIELD, "b1"},
-        {Options::BLOB_EXTERNAL_STORAGE_PATH, blob_dir_->Str()},
-        {Options::FILE_SYSTEM, "local"}};
-    CreateTable(fields, /*partition_keys=*/{}, options);
-    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
-
-    // b0: all non-null, b1: has nulls, b2: all non-null, b3: has nulls
-    std::string raw_json = R"([
-        [1, "img_0", null,    "raw_2_0", "raw_3_0"],
-        [2, "img_1", "vid_1", "raw_2_1", null      ],
-        [3, "img_2", null,    "raw_2_2", "raw_3_2" ]
-    ])";
-    auto raw_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), raw_json).ValueOrDie());
-    // Only convert b0 to descriptor; b1,b2,b3 remain as raw bytes
-    ASSERT_OK_AND_ASSIGN(auto desc_array, ConvertRawBlobToDescriptor(raw_array, {"b0"}));
-
-    auto schema = arrow::schema(fields);
-    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
-                         WriteArray(table_path, {}, schema->field_names(), {desc_array}));
-    ASSERT_OK(Commit(table_path, commit_msgs));
-
-    // b1 repacked to external storage; b2,b3 go to .blob files; b0 stays inline in main file.
-    ASSERT_OK_AND_ASSIGN(auto plan, ScanTable(table_path));
-    VerifyDataFileMetas(plan, /*expected_file_count=*/3, /*expected_row_counts=*/{3, 3, 3},
-                        /*expected_min_seqs=*/{1, 1, 1}, /*expected_max_seqs=*/{1, 1, 1},
-                        /*expected_first_row_ids=*/{0, 0, 0},
-                        /*expected_write_cols=*/
-                        {std::vector<std::string>{"f0", "b0", "b1"}, std::vector<std::string>{"b2"},
-                         std::vector<std::string>{"b3"}});
-
-    std::map<std::string, std::string> read_options = {{Options::BLOB_AS_DESCRIPTOR, "false"}};
-    ASSERT_OK_AND_ASSIGN(auto result, ReadTable(table_path, schema->field_names(), plan,
-                                                /*predicate=*/nullptr, read_options));
-    ASSERT_TRUE(result.chunked_array);
-    auto read_concat = arrow::Concatenate(result.chunked_array->chunks()).ValueOrDie();
-    auto read_struct = std::dynamic_pointer_cast<arrow::StructArray>(read_concat);
-
-    // After read, b0 and b1 are both descriptor-stored; resolve all back to raw bytes
-    ASSERT_OK_AND_ASSIGN(auto resolved, ConvertDescriptorToRawBlob(read_struct, {"b0", "b1"}));
-    ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(raw_array));
-    ASSERT_TRUE(resolved->Equals(expected_with_rk));
-
-    // b0 is inline descriptor (not repacked), should match input desc_array
-    ASSERT_TRUE(read_struct->GetFieldByName("b0")->Equals(desc_array->GetFieldByName("b0")));
-}
-
 TEST_P(BlobTableInteTest, TestBlobDescriptorMultiCommitAndShuffledReadSchema) {
     if (GetParam() == "lance") {
         return;
     }
-    // Similar to TestBlobDescriptorFieldPartialExternalStorageNoAsDescriptor but:
-    // 1. Multiple write+commit rounds
-    // 2. Read schema is shuffled: b3, b2, b1, b0, f0
+    // Multiple write+commit rounds with a shuffled read schema: b3, b2, b1, b0, f0.
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("b0", true),
         BlobUtils::ToArrowField("b1", true), BlobUtils::ToArrowField("b2", true),
         BlobUtils::ToArrowField("b3", true)};
 
     std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "orc"},
-        {Options::FILE_FORMAT, GetParam()},
-        {Options::TARGET_FILE_SIZE, "700"},
-        {Options::BUCKET, "-1"},
-        {Options::ROW_TRACKING_ENABLED, "true"},
-        {Options::DATA_EVOLUTION_ENABLED, "true"},
-        {Options::BLOB_DESCRIPTOR_FIELD, "b0,b1"},
-        {Options::BLOB_EXTERNAL_STORAGE_FIELD, "b1"},
-        {Options::BLOB_EXTERNAL_STORAGE_PATH, blob_dir_->Str()},
-        {Options::FILE_SYSTEM, "local"}};
+        {Options::MANIFEST_FORMAT, "orc"},         {Options::FILE_FORMAT, GetParam()},
+        {Options::TARGET_FILE_SIZE, "700"},        {Options::BUCKET, "-1"},
+        {Options::ROW_TRACKING_ENABLED, "true"},   {Options::DATA_EVOLUTION_ENABLED, "true"},
+        {Options::BLOB_DESCRIPTOR_FIELD, "b0,b1"}, {Options::FILE_SYSTEM, "local"}};
     CreateTable(fields, /*partition_keys=*/{}, options);
     std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
     auto schema = arrow::schema(fields);
@@ -2187,7 +1833,7 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorMultiCommitAndShuffledReadSchema) {
     ])";
     auto raw_array_1 = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), raw_json_1).ValueOrDie());
-    ASSERT_OK_AND_ASSIGN(auto desc_array_1, ConvertRawBlobToDescriptor(raw_array_1, {"b0"}));
+    ASSERT_OK_AND_ASSIGN(auto desc_array_1, ConvertRawBlobToDescriptor(raw_array_1, {"b0", "b1"}));
     ASSERT_OK_AND_ASSIGN(auto commit_msgs_1,
                          WriteArray(table_path, {}, schema->field_names(), {desc_array_1}));
     ASSERT_OK(Commit(table_path, commit_msgs_1));
@@ -2199,7 +1845,7 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorMultiCommitAndShuffledReadSchema) {
     ])";
     auto raw_array_2 = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), raw_json_2).ValueOrDie());
-    ASSERT_OK_AND_ASSIGN(auto desc_array_2, ConvertRawBlobToDescriptor(raw_array_2, {"b0"}));
+    ASSERT_OK_AND_ASSIGN(auto desc_array_2, ConvertRawBlobToDescriptor(raw_array_2, {"b0", "b1"}));
     ASSERT_OK_AND_ASSIGN(auto commit_msgs_2,
                          WriteArray(table_path, {}, schema->field_names(), {desc_array_2}));
     ASSERT_OK(Commit(table_path, commit_msgs_2));
@@ -2211,7 +1857,7 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorMultiCommitAndShuffledReadSchema) {
     ])";
     auto raw_array_3 = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), raw_json_3).ValueOrDie());
-    ASSERT_OK_AND_ASSIGN(auto desc_array_3, ConvertRawBlobToDescriptor(raw_array_3, {"b0"}));
+    ASSERT_OK_AND_ASSIGN(auto desc_array_3, ConvertRawBlobToDescriptor(raw_array_3, {"b0", "b1"}));
     ASSERT_OK_AND_ASSIGN(auto commit_msgs_3,
                          WriteArray(table_path, {}, schema->field_names(), {desc_array_3}));
     ASSERT_OK(Commit(table_path, commit_msgs_3));
@@ -2539,8 +2185,7 @@ TEST_P(BlobTableInteTest, TestDataEvolutionWithBlobDescriptorField) {
         return;
     }
     // Test DataEvolution (split-column write) combined with blob descriptor fields.
-    // Schema: f0(int32), b0(blob descriptor inline), b1(blob descriptor+external), b2(blob),
-    // b3(blob)
+    // Schema: f0(int32), b0/b1(blob descriptor inline), b2/b3(blob).
     // Commit 1: file A writes (f0, b2, b3)
     // Commit 2: file B writes (f0, b0, b1) with SetFirstRowId(0)
     // -> merges with commit 1
@@ -2553,16 +2198,10 @@ TEST_P(BlobTableInteTest, TestDataEvolutionWithBlobDescriptorField) {
         BlobUtils::ToArrowField("b3", true)};
 
     std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "orc"},
-        {Options::FILE_FORMAT, GetParam()},
-        {Options::TARGET_FILE_SIZE, "700"},
-        {Options::BUCKET, "-1"},
-        {Options::ROW_TRACKING_ENABLED, "true"},
-        {Options::DATA_EVOLUTION_ENABLED, "true"},
-        {Options::BLOB_DESCRIPTOR_FIELD, "b0,b1"},
-        {Options::BLOB_EXTERNAL_STORAGE_FIELD, "b1"},
-        {Options::BLOB_EXTERNAL_STORAGE_PATH, blob_dir_->Str()},
-        {Options::FILE_SYSTEM, "local"}};
+        {Options::MANIFEST_FORMAT, "orc"},         {Options::FILE_FORMAT, GetParam()},
+        {Options::TARGET_FILE_SIZE, "700"},        {Options::BUCKET, "-1"},
+        {Options::ROW_TRACKING_ENABLED, "true"},   {Options::DATA_EVOLUTION_ENABLED, "true"},
+        {Options::BLOB_DESCRIPTOR_FIELD, "b0,b1"}, {Options::FILE_SYSTEM, "local"}};
     CreateTable(fields, /*partition_keys=*/{}, options);
     std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
 
@@ -2586,7 +2225,8 @@ TEST_P(BlobTableInteTest, TestDataEvolutionWithBlobDescriptorField) {
     auto file_b1_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(file_b1_fields), file_b1_json)
             .ValueOrDie());
-    ASSERT_OK_AND_ASSIGN(auto file_b1_desc, ConvertRawBlobToDescriptor(file_b1_array, {"b0"}));
+    ASSERT_OK_AND_ASSIGN(auto file_b1_desc,
+                         ConvertRawBlobToDescriptor(file_b1_array, {"b0", "b1"}));
 
     ASSERT_OK_AND_ASSIGN(auto commit_msgs_a1,
                          WriteArray(table_path, {}, {"f0", "b2", "b3"}, {file_a1_array}));
@@ -2608,7 +2248,8 @@ TEST_P(BlobTableInteTest, TestDataEvolutionWithBlobDescriptorField) {
     auto file_a2_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(file_a2_fields), file_a2_json)
             .ValueOrDie());
-    ASSERT_OK_AND_ASSIGN(auto file_a2_desc, ConvertRawBlobToDescriptor(file_a2_array, {"b0"}));
+    ASSERT_OK_AND_ASSIGN(auto file_a2_desc,
+                         ConvertRawBlobToDescriptor(file_a2_array, {"b0", "b1"}));
 
     std::string file_b2_json = R"([
         ["img_3", "vid_3", "raw_3_3"],
@@ -2619,7 +2260,8 @@ TEST_P(BlobTableInteTest, TestDataEvolutionWithBlobDescriptorField) {
     auto file_b2_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(file_b2_fields), file_b2_json)
             .ValueOrDie());
-    ASSERT_OK_AND_ASSIGN(auto file_b2_desc, ConvertRawBlobToDescriptor(file_b2_array, {"b0"}));
+    ASSERT_OK_AND_ASSIGN(auto file_b2_desc,
+                         ConvertRawBlobToDescriptor(file_b2_array, {"b0", "b1"}));
 
     ASSERT_OK_AND_ASSIGN(auto commit_msgs_a2,
                          WriteArray(table_path, {}, {"f0", "b0", "b1", "b3"}, {file_a2_desc}));
@@ -2666,9 +2308,8 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorFieldWriteRawBytesDirectly) {
     if (GetParam() == "lance") {
         return;
     }
-    // Similar to TestBlobDescriptorFieldWithoutExternalStorage but writes raw bytes directly
-    // without converting to descriptor first. The writer should auto-detect that the data
-    // is NOT a descriptor (no magic header) and handle it accordingly.
+    // Similar to TestBlobDescriptorField but writes raw bytes directly without converting to
+    // descriptor first. Descriptor fields reject values without the descriptor magic header.
     arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
                                  BlobUtils::ToArrowField("b0", true),
                                  BlobUtils::ToArrowField("b1", true)};
@@ -2859,14 +2500,173 @@ TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamTable) {
     }
 }
 
-TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamExternalStorageBlob) {
+TEST_P(BlobTableInteTest, TestForwardBlobViewReference) {
+    auto file_format = GetParam();
+    if (file_format != "orc" && file_format != "parquet") {
+        return;
+    }
+
+    // Forward blob view references between two blob-view tables: read the source table with
+    // resolve dynamically disabled, write the preserved BlobViewStruct bytes into the target
+    // table, then verify the target still stores the original upstream references and a
+    // default read resolves them to the actual upstream blob values.
+    const std::string upstream_db_name = "append_table_with_multi_blob";
+    const std::string upstream_table_name = "append_table_with_multi_blob";
+    std::string src_db_path = paimon::test::GetDataDir() + file_format + "/" + upstream_db_name +
+                              ".db/" + upstream_table_name;
+    std::string dst_db_path =
+        PathUtil::JoinPath(dir_->Str(), upstream_db_name + ".db/" + upstream_table_name);
+    ASSERT_TRUE(TestUtil::CopyDirectory(src_db_path, dst_db_path));
+
+    // The source table has no upstream warehouse configured: only a read with resolve
+    // dynamically disabled can succeed on it.
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
+                                 BlobUtils::ToArrowField("view", true)};
+    std::map<std::string, std::string> source_options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                         {Options::FILE_FORMAT, file_format},
+                                                         {Options::BUCKET, "-1"},
+                                                         {Options::ROW_TRACKING_ENABLED, "true"},
+                                                         {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                         {Options::BLOB_VIEW_FIELD, "view"},
+                                                         {Options::FILE_SYSTEM, "local"}};
+    CreateTable(fields, /*partition_keys=*/{}, source_options);
+    std::string source_table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+
+    // The target table configures the upstream warehouse for resolving forwarded references.
+    std::map<std::string, std::string> target_options = source_options;
+    target_options[Options::BLOB_VIEW_UPSTREAM_WAREHOUSE] = dir_->Str();
+    auto schema = arrow::schema(fields);
+    ::ArrowSchema c_target_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*schema, &c_target_schema).ok());
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir_->Str(), {}));
+    ASSERT_OK(catalog->CreateTable(Identifier("foo", "bar_forward"), &c_target_schema,
+                                   /*partition_keys=*/{}, /*primary_keys=*/{}, target_options,
+                                   /*ignore_if_exists=*/false));
+    std::string target_table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar_forward");
+
+    // src array
+    Identifier upstream_identifier(upstream_db_name, upstream_table_name);
+    arrow::LargeBinaryBuilder view_builder;
+    for (int32_t i = 0; i < 8; ++i) {
+        if (i < 6) {
+            BlobViewStruct view_struct(upstream_identifier, /*field_id=*/6,
+                                       /*row_id=*/static_cast<int64_t>(i));
+            auto serialized = view_struct.Serialize(pool_);
+            ASSERT_TRUE(view_builder
+                            .Append(reinterpret_cast<const uint8_t*>(serialized->data()),
+                                    serialized->size())
+                            .ok());
+        } else {
+            ASSERT_TRUE(view_builder.AppendNull().ok());
+        }
+    }
+    std::shared_ptr<arrow::Array> write_view_array;
+    ASSERT_TRUE(view_builder.Finish(&write_view_array).ok());
+    auto write_f0_array = arrow::ipc::internal::json::ArrayFromJSON(
+                              arrow::int32(), R"([100,101,102,103,104,105,106,107])")
+                              .ValueOrDie();
+    auto write_struct = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::StructArray::Make(arrow::ArrayVector({write_f0_array, write_view_array}),
+                                 std::vector<std::string>({"f0", "view"}))
+            .ValueOrDie());
+
+    // write & commit into the source table
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         WriteArray(source_table_path, {}, schema->field_names(), {write_struct}));
+    ASSERT_OK(Commit(source_table_path, commit_msgs));
+
+    // A default read fails on the missing upstream warehouse: the pass-through below is
+    // enabled by the dynamic option alone.
+    ASSERT_OK_AND_ASSIGN(auto source_plan, ScanTable(source_table_path));
+    ASSERT_NOK_WITH_MSG(
+        ReadTable(source_table_path, schema->field_names(), source_plan, /*predicate=*/nullptr),
+        "BLOB_VIEW_UPSTREAM_WAREHOUSE");
+
+    ASSERT_OK_AND_ASSIGN(
+        auto source_result,
+        ReadTable(source_table_path, schema->field_names(), source_plan, /*predicate=*/nullptr,
+                  {{Options::BLOB_VIEW_RESOLVE_ENABLED, "false"}}));
+    ASSERT_TRUE(source_result.chunked_array);
+    auto source_concat = arrow::Concatenate(source_result.chunked_array->chunks()).ValueOrDie();
+    auto source_struct = std::dynamic_pointer_cast<arrow::StructArray>(source_concat);
+    ASSERT_EQ(source_struct->length(), 8);
+    auto forward_f0_array = source_struct->GetFieldByName("f0");
+    ASSERT_TRUE(forward_f0_array);
+    auto forward_view_array = source_struct->GetFieldByName("view");
+    ASSERT_TRUE(forward_view_array);
+    ASSERT_TRUE(forward_view_array->Equals(write_view_array))
+        << "source view:" << forward_view_array->ToString() << std::endl
+        << "written view:" << write_view_array->ToString();
+
+    // Forward the preserved references into the target blob-view table.
+    auto forward_struct = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::StructArray::Make(arrow::ArrayVector({forward_f0_array, forward_view_array}),
+                                 std::vector<std::string>({"f0", "view"}))
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(
+        auto forward_commit_msgs,
+        WriteArray(target_table_path, {}, schema->field_names(), {forward_struct}));
+    ASSERT_OK(Commit(target_table_path, forward_commit_msgs));
+
+    // The target table stores the original upstream references byte-identically.
+    ASSERT_OK_AND_ASSIGN(auto target_plan, ScanTable(target_table_path));
+    ASSERT_OK_AND_ASSIGN(
+        auto raw_target_result,
+        ReadTable(target_table_path, schema->field_names(), target_plan, /*predicate=*/nullptr,
+                  {{Options::BLOB_VIEW_RESOLVE_ENABLED, "false"}}));
+    ASSERT_TRUE(raw_target_result.chunked_array);
+    auto raw_target_concat =
+        arrow::Concatenate(raw_target_result.chunked_array->chunks()).ValueOrDie();
+    auto raw_target_struct = std::dynamic_pointer_cast<arrow::StructArray>(raw_target_concat);
+    ASSERT_EQ(raw_target_struct->length(), 8);
+    auto raw_target_view_array = raw_target_struct->GetFieldByName("view");
+    ASSERT_TRUE(raw_target_view_array);
+    ASSERT_TRUE(raw_target_view_array->Equals(write_view_array))
+        << "target view:" << raw_target_view_array->ToString() << std::endl
+        << "written view:" << write_view_array->ToString();
+
+    // A default read of the target table resolves to the actual upstream blob values.
+    ASSERT_OK_AND_ASSIGN(auto resolved_result,
+                         ReadTable(target_table_path, schema->field_names(), target_plan,
+                                   /*predicate=*/nullptr));
+    ASSERT_TRUE(resolved_result.chunked_array);
+    auto resolved_concat = arrow::Concatenate(resolved_result.chunked_array->chunks()).ValueOrDie();
+    auto resolved_struct = std::dynamic_pointer_cast<arrow::StructArray>(resolved_concat);
+    ASSERT_EQ(resolved_struct->length(), 8);
+    ASSERT_OK_AND_ASSIGN(auto resolved, ConvertDescriptorToRawBlob(resolved_struct, {"view"}));
+
+    std::string padding_b(2048, 'b');
+    std::string padding_d(2048, 'd');
+    std::string padding_e(2048, 'e');
+    std::string padding_f(2048, 'f');
+    // clang-format off
+    std::string expected_json = R"([
+[100, null],
+[101, ")" + padding_b + R"("],
+[102, null],
+[103, ")" + padding_d + R"("],
+[104, ")" + padding_e + R"("],
+[105, ")" + padding_f + R"("],
+[106, null],
+[107, null]
+])";
+    // clang-format on
+    auto expected_struct = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), expected_json)
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(expected_struct));
+    ASSERT_TRUE(resolved->Equals(expected_with_rk))
+        << "resolved:" << resolved->ToString() << std::endl
+        << "expected:" << expected_with_rk->ToString();
+}
+
+TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamDescriptorBlob) {
     auto file_format = GetParam();
     if (GetParam() == "lance") {
         return;
     }
-    // Upstream table has two blob descriptor fields: b0 (field_id=1, inline descriptor) and
-    // b1 (field_id=2, descriptor + external storage). The downstream view references cells from
-    // both b0 and b1.
+    // Upstream table has two blob descriptor fields. The downstream view references cells from
+    // both b0 (field_id=1) and b1 (field_id=2).
     const std::string upstream_db_name = "upstream_two_blob";
     const std::string upstream_table_name = "upstream_two_blob";
     arrow::FieldVector upstream_fields = {arrow::field("f0", arrow::int32()),
@@ -2880,8 +2680,6 @@ TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamExternalStorageBlob) {
         {Options::ROW_TRACKING_ENABLED, "true"},
         {Options::DATA_EVOLUTION_ENABLED, "true"},
         {Options::BLOB_DESCRIPTOR_FIELD, "b0,b1"},
-        {Options::BLOB_EXTERNAL_STORAGE_FIELD, "b1"},
-        {Options::BLOB_EXTERNAL_STORAGE_PATH, blob_dir_->Str()},
         {Options::FILE_SYSTEM, "local"}};
 
     ::ArrowSchema upstream_c_schema;
@@ -3324,8 +3122,7 @@ TEST_P(BlobTableInteTest, TestReadBlobDescriptorFieldFromJava) {
         return;
     }
     std::string table_path =
-        GetDataDir() + "/" + file_format +
-        "/blob_desc_field_with_external_path.db/blob_desc_field_with_external_path";
+        GetDataDir() + "/" + file_format + "/blob_desc_field.db/blob_desc_field";
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("b0", true),
         BlobUtils::ToArrowField("b1", true), BlobUtils::ToArrowField("b2", true),

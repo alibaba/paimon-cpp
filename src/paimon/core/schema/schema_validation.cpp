@@ -451,9 +451,7 @@ Status SchemaValidation::ValidateBlobFields(const TableSchema& schema, const Cor
     const auto& configured_blob_names = options.GetBlobFields();
     const auto& blob_descriptor_names = options.GetBlobDescriptorFields();
     const auto& blob_view_names = options.GetBlobViewFields();
-    const auto& blob_external_storage_names = options.GetBlobExternalStorageFields();
-    if (configured_blob_names.empty() && blob_descriptor_names.empty() && blob_view_names.empty() &&
-        blob_external_storage_names.empty()) {
+    if (configured_blob_names.empty() && blob_descriptor_names.empty() && blob_view_names.empty()) {
         return Status::OK();
     }
 
@@ -478,8 +476,6 @@ Status SchemaValidation::ValidateBlobFields(const TableSchema& schema, const Cor
     PAIMON_RETURN_NOT_OK(
         validate_blob_fields(blob_descriptor_names, Options::BLOB_DESCRIPTOR_FIELD));
     PAIMON_RETURN_NOT_OK(validate_blob_fields(blob_view_names, Options::BLOB_VIEW_FIELD));
-    PAIMON_RETURN_NOT_OK(
-        validate_blob_fields(blob_external_storage_names, Options::BLOB_EXTERNAL_STORAGE_FIELD));
 
     std::set<std::string> blob_descriptor_name_set(blob_descriptor_names.begin(),
                                                    blob_descriptor_names.end());
@@ -488,22 +484,6 @@ Status SchemaValidation::ValidateBlobFields(const TableSchema& schema, const Cor
             return Status::Invalid(fmt::format("Field '{}' in '{}' can not also be in '{}'.",
                                                blob_view_name, Options::BLOB_VIEW_FIELD,
                                                Options::BLOB_DESCRIPTOR_FIELD));
-        }
-    }
-
-    for (const auto& blob_external_storage_name : blob_external_storage_names) {
-        if (blob_descriptor_name_set.count(blob_external_storage_name) == 0) {
-            return Status::Invalid(
-                fmt::format("Field '{}' in '{}' must also be in '{}'.", blob_external_storage_name,
-                            Options::BLOB_EXTERNAL_STORAGE_FIELD, Options::BLOB_DESCRIPTOR_FIELD));
-        }
-    }
-    if (!blob_external_storage_names.empty()) {
-        auto external_storage_path = options.GetBlobExternalStoragePath();
-        if (!external_storage_path || external_storage_path->empty()) {
-            return Status::Invalid(fmt::format("'{}' must be set when '{}' is configured.",
-                                               Options::BLOB_EXTERNAL_STORAGE_PATH,
-                                               Options::BLOB_EXTERNAL_STORAGE_FIELD));
         }
     }
     return Status::OK();
@@ -565,6 +545,8 @@ Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
         }
         // Validate max-columns config
         PAIMON_RETURN_NOT_OK(options.GetMapSharedShreddingMaxColumns(field_name));
+        // Validate placement policy config
+        PAIMON_RETURN_NOT_OK(options.GetMapSharedShreddingColumnPlacementPolicy(field_name));
     }
     return Status::OK();
 }

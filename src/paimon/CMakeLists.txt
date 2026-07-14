@@ -139,9 +139,11 @@ set(PAIMON_COMMON_SRCS
     common/utils/crc32c.cpp
     common/utils/decimal_utils.cpp
     common/data/shredding/map_shared_shredding_utils.cpp
+    common/data/shredding/map_shared_shredding_schema_utils.cpp
     common/data/shredding/map_shared_shredding_context.cpp
     common/data/shredding/map_shared_shredding_batch_converter.cpp
     common/data/shredding/map_shared_shredding_column_allocator.cpp
+    common/data/shredding/lru_map_shared_shredding_column_allocator.cpp
     common/data/shredding/map_shared_shredding_file_reader.cpp
     common/utils/delta_varint_compressor.cpp
     common/utils/fields_comparator.cpp
@@ -238,7 +240,6 @@ set(PAIMON_CORE_SRCS
     core/io/map_shared_shredding_core_utils.cpp
     core/io/shredding_append_data_file_writer_factory.cpp
     core/io/shredding_key_value_data_file_writer_factory.cpp
-    core/io/external_storage_blob_writer.cpp
     core/io/multiple_blob_file_writer.cpp
     core/io/rolling_blob_file_writer.cpp
     core/manifest/file_kind.cpp
@@ -304,6 +305,7 @@ set(PAIMON_CORE_SRCS
     core/operation/raw_file_split_read.cpp
     core/operation/read_context.cpp
     core/operation/scan_context.cpp
+    core/manifest/snapshot_live_manifest_entries.cpp
     core/operation/write_context.cpp
     core/operation/write_restore.cpp
     core/postpone/postpone_bucket_writer.cpp
@@ -546,8 +548,11 @@ if(PAIMON_BUILD_TESTS)
                     common/utils/threadsafe_queue_test.cpp
                     common/utils/generic_lru_cache_test.cpp
                     common/data/shredding/map_shared_shredding_utils_test.cpp
+                    common/data/shredding/map_shared_shredding_schema_utils_test.cpp
                     common/data/shredding/map_shared_shredding_batch_converter_test.cpp
-                    common/data/shredding/map_shared_shredding_column_allocator_test.cpp
+                    common/data/shredding/lru_map_shared_shredding_column_allocator_test.cpp
+                    common/data/shredding/plain_map_shared_shredding_column_allocator_test.cpp
+                    common/data/shredding/sequential_map_shared_shredding_column_allocator_test.cpp
                     common/data/shredding/map_shared_shredding_field_dict_test.cpp
                     common/data/shredding/map_shared_shredding_context_test.cpp
                     common/data/shredding/map_shared_shredding_file_reader_test.cpp
@@ -631,7 +636,6 @@ if(PAIMON_BUILD_TESTS)
                     core/io/file_index_evaluator_test.cpp
                     core/io/single_file_writer_test.cpp
                     core/io/rolling_blob_file_writer_test.cpp
-                    core/io/external_storage_blob_writer_test.cpp
                     core/global_index/indexed_split_test.cpp
                     core/manifest/file_source_test.cpp
                     core/manifest/file_kind_test.cpp
@@ -736,6 +740,7 @@ if(PAIMON_BUILD_TESTS)
                     core/table/source/data_split_test.cpp
                     core/table/source/deletion_file_test.cpp
                     core/table/source/split_generator_test.cpp
+                    core/table/source/snapshot/snapshot_reader_test.cpp
                     core/table/source/startup_mode_test.cpp
                     core/table/source/table_scan_test.cpp
                     core/table/system/system_table_test.cpp

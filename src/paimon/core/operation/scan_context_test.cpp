@@ -66,6 +66,7 @@ TEST(ScanContextTest, TestSetContent) {
     builder.WithExecutor(executor);
     auto fs = std::make_shared<MockFileSystem>();
     builder.WithFileSystem(fs);
+    builder.SetTableSchema("table-schema-json");
     auto manifest_cache = std::make_shared<LruCache>(1024);
     builder.WithCache(manifest_cache);
     ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
@@ -79,6 +80,8 @@ TEST(ScanContextTest, TestSetContent) {
     ASSERT_EQ("{1,2,4,5}", ctx->GetGlobalIndexResult()->ToString());
     ASSERT_EQ(memory_pool, ctx->GetMemoryPool());
     ASSERT_EQ(executor, ctx->GetExecutor());
+    ASSERT_TRUE(ctx->GetSpecificTableSchema().has_value());
+    ASSERT_EQ("table-schema-json", ctx->GetSpecificTableSchema().value());
     std::map<std::string, std::string> expected_options = {{"key", "value"}};
     ASSERT_EQ(expected_options, ctx->GetOptions());
     ASSERT_EQ(fs, ctx->GetSpecificFileSystem());

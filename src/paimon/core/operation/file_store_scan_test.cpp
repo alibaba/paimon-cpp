@@ -16,13 +16,17 @@
 
 #include "paimon/core/operation/file_store_scan.h"
 
+#include <string>
+
 #include "arrow/type.h"
 #include "gtest/gtest.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/manifest/file_kind.h"
 #include "paimon/core/manifest/file_source.h"
+#include "paimon/core/manifest/snapshot_live_manifest_entries.h"
 #include "paimon/core/stats/simple_stats.h"
 #include "paimon/data/timestamp.h"
+#include "paimon/memory/memory_segment.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -182,5 +186,89 @@ TEST_F(FileStoreScanTest, TestFilterManifestByRowRanges) {
     ASSERT_OK_AND_ASSIGN(row_range_index, RowRangeIndex::Create(std::vector<Range>({Range(0, 0)})));
     file_store_scan->WithRowRangeIndex(row_range_index);
     ASSERT_TRUE(file_store_scan->FilterManifestByRowRanges(manifest2));
+}
+
+TEST_F(FileStoreScanTest, TestSnapshotLiveManifestEntries) {
+    std::vector<ManifestEntry> snapshot1;
+    ASSERT_OK_AND_ASSIGN(
+        auto file1,
+        DataFileMeta::ForAppend("file-1", /*file_size=*/10, /*row_count=*/1,
+                                SimpleStats::EmptyStats(), /*min_sequence_number=*/0,
+                                /*max_sequence_number=*/0, /*schema_id=*/0,
+                                /*file_source=*/std::nullopt, /*value_stats_cols=*/std::nullopt,
+                                /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt,
+                                /*write_cols=*/std::nullopt));
+    snapshot1.emplace_back(FileKind::Add(), BinaryRow::EmptyRow(), /*bucket=*/0,
+                           /*total_buckets=*/1, file1);
+    SnapshotLiveManifestEntries entries(/*max_snapshots=*/2);
+    entries.Put(/*snapshot_id=*/1, std::move(snapshot1));
+    ASSERT_EQ(entries.Size(), 1);
+    auto hit = entries.LatestBeforeOrEqual(/*snapshot_id=*/1);
+    ASSERT_TRUE(hit);
+    ASSERT_EQ(hit->snapshot_id, 1);
+    ASSERT_EQ(hit->entries->size(), 1);
+    ASSERT_EQ((*hit->entries)[0].FileName(), "file-1");
+    auto latest_before_2 = entries.LatestBeforeOrEqual(/*snapshot_id=*/2);
+    ASSERT_TRUE(latest_before_2);
+    ASSERT_EQ(latest_before_2->snapshot_id, 1);
+
+    std::vector<ManifestEntry> snapshot3;
+    ASSERT_OK_AND_ASSIGN(
+        auto file3,
+        DataFileMeta::ForAppend("file-3", /*file_size=*/10, /*row_count=*/1,
+                                SimpleStats::EmptyStats(), /*min_sequence_number=*/0,
+                                /*max_sequence_number=*/0, /*schema_id=*/0,
+                                /*file_source=*/std::nullopt, /*value_stats_cols=*/std::nullopt,
+                                /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt,
+                                /*write_cols=*/std::nullopt));
+    snapshot3.emplace_back(FileKind::Add(), BinaryRow::EmptyRow(), /*bucket=*/0,
+                           /*total_buckets=*/1, file3);
+    entries.Put(/*snapshot_id=*/3, std::move(snapshot3));
+
+    auto latest_before_4 = entries.LatestBeforeOrEqual(/*snapshot_id=*/4);
+    ASSERT_TRUE(latest_before_4);
+    ASSERT_EQ(latest_before_4->snapshot_id, 3);
+
+    entries.Put(/*snapshot_id=*/5, {});
+    ASSERT_EQ(entries.Size(), 2);
+    ASSERT_FALSE(entries.LatestBeforeOrEqual(/*snapshot_id=*/1));
+    ASSERT_TRUE(entries.LatestBeforeOrEqual(/*snapshot_id=*/3));
+    ASSERT_TRUE(entries.LatestBeforeOrEqual(/*snapshot_id=*/5));
+}
+
+TEST_F(FileStoreScanTest, TestSnapshotLiveManifestEntriesSerialization) {
+    std::vector<ManifestEntry> manifest_entries;
+    ASSERT_OK_AND_ASSIGN(
+        auto file1,
+        DataFileMeta::ForAppend("file-1", /*file_size=*/10, /*row_count=*/1,
+                                SimpleStats::EmptyStats(), /*min_sequence_number=*/0,
+                                /*max_sequence_number=*/0, /*schema_id=*/0,
+                                /*file_source=*/std::nullopt, /*value_stats_cols=*/std::nullopt,
+                                /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt,
+                                /*write_cols=*/std::nullopt));
+    manifest_entries.emplace_back(FileKind::Add(), BinaryRow::EmptyRow(), /*bucket=*/0,
+                                  /*total_buckets=*/1, file1);
+    SnapshotLiveManifestEntries entries(/*max_snapshots=*/2);
+    entries.Put(/*snapshot_id=*/1, std::move(manifest_entries));
+    entries.Put(/*snapshot_id=*/3, {});
+
+    ASSERT_OK_AND_ASSIGN(auto bytes, entries.Serialize(GetDefaultPool()));
+    ASSERT_OK_AND_ASSIGN(auto deserialized,
+                         SnapshotLiveManifestEntries::Deserialize(
+                             MemorySegment::Wrap(bytes), /*max_snapshots=*/2, GetDefaultPool()));
+    ASSERT_EQ(deserialized.Size(), 2);
+    auto hit = deserialized.LatestBeforeOrEqual(/*snapshot_id=*/2);
+    ASSERT_TRUE(hit);
+    ASSERT_EQ(hit->snapshot_id, 1);
+    ASSERT_EQ(hit->entries->size(), 1);
+    ASSERT_EQ((*hit->entries)[0].FileName(), "file-1");
+    ASSERT_EQ(deserialized.LatestBeforeOrEqual(/*snapshot_id=*/4)->snapshot_id, 3);
+
+    ASSERT_OK_AND_ASSIGN(auto evicted_deserialized, SnapshotLiveManifestEntries::Deserialize(
+                                                        MemorySegment::Wrap(bytes),
+                                                        /*max_snapshots=*/1, GetDefaultPool()));
+    ASSERT_EQ(evicted_deserialized.Size(), 1);
+    ASSERT_FALSE(evicted_deserialized.LatestBeforeOrEqual(/*snapshot_id=*/1));
+    ASSERT_EQ(evicted_deserialized.LatestBeforeOrEqual(/*snapshot_id=*/3)->snapshot_id, 3);
 }
 }  // namespace paimon::test

@@ -493,13 +493,22 @@ TEST_P(OrcFileBatchReaderTest, TestNextBatchSimple) {
     for (auto batch_size : {1, 2, 3, 5, 8, 10}) {
         auto orc_batch_reader =
             PrepareOrcFileBatchReader(file_name, &read_schema, batch_size, natural_read_size);
-        ASSERT_EQ(orc_batch_reader->GetPreviousBatchFileRowId(0).value(), -1);
-        ASSERT_OK_AND_ASSIGN(auto result_array, paimon::test::ReadResultCollector::CollectResult(
-                                                    orc_batch_reader.get()));
-        ASSERT_EQ(orc_batch_reader->GetPreviousBatchFileRowId(0).value(), 8);
+        ASSERT_NOK(orc_batch_reader->GetPreviousBatchFileRowId(0));
+        int i = 0;
+        while (true) {
+            ASSERT_OK_AND_ASSIGN(
+                auto result_array,
+                paimon::test::ReadResultCollector::CollectResultOneBatch(orc_batch_reader.get()));
+            if (!result_array) {
+                ASSERT_NOK(orc_batch_reader->GetPreviousBatchFileRowId(0));
+                break;
+            }
+            ASSERT_EQ(orc_batch_reader->GetPreviousBatchFileRowId(0).value(), i * batch_size);
+            ASSERT_TRUE(result_array->Equals(std::make_shared<arrow::ChunkedArray>(
+                struct_array_->Slice(i * batch_size, result_array->length()))));
+            i++;
+        }
         orc_batch_reader->Close();
-        auto expected_array = std::make_shared<arrow::ChunkedArray>(struct_array_);
-        ASSERT_TRUE(result_array->Equals(expected_array));
         // test metrics
         auto reader_metrics = orc_batch_reader->GetReaderMetrics();
         ASSERT_OK_AND_ASSIGN(uint64_t io_count,
@@ -767,7 +776,7 @@ TEST_F(OrcFileBatchReaderTest, TestReadNoField) {
     auto orc_batch_reader = PrepareOrcFileBatchReader(file_name, &read_schema, /*batch_size=*/3,
                                                       /*natural_read_size=*/10);
     // read 3 rows
-    ASSERT_EQ(orc_batch_reader->GetPreviousBatchFileRowId(0).value(), -1);
+    ASSERT_NOK(orc_batch_reader->GetPreviousBatchFileRowId(0));
     ASSERT_OK_AND_ASSIGN(auto batch1, orc_batch_reader->NextBatch());
     ASSERT_EQ(orc_batch_reader->GetPreviousBatchFileRowId(0).value(), 0);
     // read 3 rows
@@ -778,7 +787,7 @@ TEST_F(OrcFileBatchReaderTest, TestReadNoField) {
     ASSERT_EQ(orc_batch_reader->GetPreviousBatchFileRowId(0).value(), 6);
     // read rows with eof
     ASSERT_OK_AND_ASSIGN(auto batch4, orc_batch_reader->NextBatch());
-    ASSERT_EQ(orc_batch_reader->GetPreviousBatchFileRowId(0).value(), 8);
+    ASSERT_NOK(orc_batch_reader->GetPreviousBatchFileRowId(0));
     ASSERT_TRUE(BatchReader::IsEofBatch(batch4));
     orc_batch_reader->Close();
 

@@ -153,6 +153,7 @@ PrefetchFileBatchReaderImpl::~PrefetchFileBatchReaderImpl() {
 Status PrefetchFileBatchReaderImpl::SetReadSchema(
     ::ArrowSchema* read_schema, const std::shared_ptr<Predicate>& predicate,
     const std::optional<RoaringBitmap32>& selection_bitmap) {
+    PAIMON_RETURN_NOT_OK(CleanUp());
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> schema,
                                       arrow::ImportSchema(read_schema));
     for (const auto& reader : readers_) {
@@ -162,11 +163,15 @@ Status PrefetchFileBatchReaderImpl::SetReadSchema(
     }
     selection_bitmap_ = selection_bitmap;
     predicate_ = predicate;
-    return RefreshReadRanges();
+    return RefreshReadRangesAfterCleanUp();
 }
 
 Status PrefetchFileBatchReaderImpl::RefreshReadRanges() {
     PAIMON_RETURN_NOT_OK(CleanUp());
+    return RefreshReadRangesAfterCleanUp();
+}
+
+Status PrefetchFileBatchReaderImpl::RefreshReadRangesAfterCleanUp() {
     bool need_prefetch;
     PAIMON_ASSIGN_OR_RAISE(auto read_ranges, readers_[0]->GenReadRanges(&need_prefetch));
 
@@ -182,8 +187,6 @@ Status PrefetchFileBatchReaderImpl::RefreshReadRanges() {
 
     need_prefetch_ = need_prefetch;
     PAIMON_RETURN_NOT_OK(SetReadRanges(FilterReadRanges(read_ranges, selection_bitmap_)));
-    read_ranges_freshed_ = true;
-
     return Status::OK();
 }
 
@@ -230,6 +233,7 @@ Status PrefetchFileBatchReaderImpl::SetReadRanges(
     for (auto& read_ranges : read_ranges_in_group_) {
         read_ranges.push_back(eof_range);
     }
+    read_ranges_freshed_ = true;
     return Status::OK();
 }
 
@@ -279,6 +283,7 @@ Status PrefetchFileBatchReaderImpl::CleanUp() {
     read_ranges_.clear();
     read_ranges_in_group_.clear();
     current_batch_global_row_ids_.clear();
+    read_ranges_freshed_ = false;
     clean_prefetch_queue();
     for (size_t i = 0; i < readers_pos_.size(); i++) {
         readers_pos_[i]->store(0);
@@ -439,25 +444,28 @@ Status PrefetchFileBatchReaderImpl::HandleReadResult(
             return Status::OK();
         }
         auto [slice_begin, slice_end] = ComputeBatchSliceByReadRange(global_row_ids, read_range);
-        if (slice_begin >= slice_end) {
-            readers_pos_[reader_idx]->store(read_range.second);
+        // slice_begin should always be 0, records before read_range.first have been consumed or
+        // filtered out.
+        if (slice_begin != 0) {
+            return Status::Invalid(fmt::format("Slice begin is {}, which is not 0.", slice_begin));
+        }
+
+        if (0 == slice_end) {
+            // fully out of range, data before global_row_ids has been filtered out
+            readers_pos_[reader_idx]->store(global_row_ids[0]);
             ReaderUtils::ReleaseReadBatch(std::move(read_batch));
             return Status::OK();
-        } else if (slice_begin > 0 || slice_end < c_array->length) {
+        } else if (slice_end < c_array->length) {
+            // partially out of range, data before read_range.second has been effectively consumed
             readers_pos_[reader_idx]->store(read_range.second);
             PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> src_array,
                                               arrow::ImportArray(c_array.get(), c_schema.get()));
-            auto array = src_array->Slice(slice_begin, slice_end - slice_begin);
+            auto array = src_array->Slice(0, slice_end);
             PAIMON_RETURN_NOT_OK_FROM_ARROW(
                 arrow::ExportArray(*array, c_array.get(), c_schema.get()));
-            RoaringBitmap32 sliced_bitmap;
-            for (auto iter = bitmap.EqualOrLarger(slice_begin);
-                 iter != bitmap.End() && *iter < slice_end; ++iter) {
-                sliced_bitmap.Add(*iter - slice_begin);
-            }
-            bitmap = std::move(sliced_bitmap);
-            global_row_ids = std::vector<uint64_t>(global_row_ids.begin() + slice_begin,
-                                                   global_row_ids.begin() + slice_end);
+            bitmap.RemoveRange(slice_end, src_array->length());
+            global_row_ids =
+                std::vector<uint64_t>(global_row_ids.begin(), global_row_ids.begin() + slice_end);
         } else {
             readers_pos_[reader_idx]->store(readers_[reader_idx]->GetNextRowToRead());
         }
@@ -599,7 +607,7 @@ Result<std::unique_ptr<::ArrowSchema>> PrefetchFileBatchReaderImpl::GetFileSchem
 
 Result<uint64_t> PrefetchFileBatchReaderImpl::GetPreviousBatchFileRowId(
     uint64_t batch_row_id) const {
-    if (current_batch_global_row_ids_.size() == 0) {
+    if (current_batch_global_row_ids_.empty()) {
         return Status::Invalid(
             "Last batch is not read or last batch is empty, cannot get previous batch global row "
             "id");

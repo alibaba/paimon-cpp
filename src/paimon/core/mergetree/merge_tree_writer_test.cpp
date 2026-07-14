@@ -383,6 +383,7 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMapDataFileMetaInfo) {
                              {Options::FILE_FORMAT, "orc"},
                              {"fields.tags.map.storage-layout", "shared-shredding"},
                              {"fields.tags.map.shared-shredding.max-columns", "3"},
+                             {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
                              {Options::WRITE_ONLY, "true"},
                          }));
 
@@ -491,8 +492,10 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation)
                              {Options::FILE_FORMAT, "orc"},
                              {"fields.tags.map.storage-layout", "shared-shredding"},
                              {"fields.tags.map.shared-shredding.max-columns", "8"},
+                             {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
                              {"fields.attrs.map.storage-layout", "shared-shredding"},
                              {"fields.attrs.map.shared-shredding.max-columns", "4"},
+                             {"fields.attrs.map.shared-shredding.column-placement-policy", "plain"},
                              {Options::WRITE_ONLY, "true"},
                          }));
 

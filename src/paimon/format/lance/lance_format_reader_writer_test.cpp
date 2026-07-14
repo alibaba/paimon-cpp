@@ -497,7 +497,7 @@ TEST_F(LanceFileReaderWriterTest, TestPreviousBatchFirstRowNumber) {
     // eof
     ASSERT_OK_AND_ASSIGN(read_batch, reader->NextBatch());
     ASSERT_TRUE(BatchReader::IsEofBatch(read_batch));
-    ASSERT_EQ(6, reader->GetPreviousBatchFileRowId(0).value());
+    ASSERT_NOK(reader->GetPreviousBatchFileRowId(0));
 
     // test with bitmap pushdown
     ArrowSchema c_read_schema;

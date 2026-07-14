@@ -30,33 +30,31 @@ std::vector<IndexManifestEntry> IndexManifestFileHandler::BucketedCombiner::Comb
     const std::vector<IndexManifestEntry>& new_index_files) const {
     std::unordered_map<BucketIdentifier, IndexManifestEntry> index_entries;
     for (const auto& entry : prev_index_files) {
-        index_entries.emplace(
+        index_entries.insert_or_assign(
             BucketIdentifier(entry.partition, entry.bucket, entry.index_file->IndexType()), entry);
     }
 
-    std::unordered_map<BucketIdentifier, IndexManifestEntry> removed;
+    std::vector<IndexManifestEntry> removed;
     removed.reserve(new_index_files.size());
-    std::unordered_map<BucketIdentifier, IndexManifestEntry> added;
+    std::vector<IndexManifestEntry> added;
     added.reserve(new_index_files.size());
 
     for (const auto& entry : new_index_files) {
         if (entry.kind == FileKind::Delete()) {
-            removed.emplace(
-                BucketIdentifier(entry.partition, entry.bucket, entry.index_file->IndexType()),
-                entry);
+            removed.push_back(entry);
         } else if (entry.kind == FileKind::Add()) {
-            added.emplace(
-                BucketIdentifier(entry.partition, entry.bucket, entry.index_file->IndexType()),
-                entry);
+            added.push_back(entry);
         }
     }
 
     // The deleted entry is processed first to avoid overwriting a new entry.
     for (const auto& entry : removed) {
-        index_entries.erase(entry.first);
+        index_entries.erase(
+            BucketIdentifier(entry.partition, entry.bucket, entry.index_file->IndexType()));
     }
     for (const auto& entry : added) {
-        index_entries.emplace(entry.first, entry.second);
+        index_entries.insert_or_assign(
+            BucketIdentifier(entry.partition, entry.bucket, entry.index_file->IndexType()), entry);
     }
 
     std::vector<IndexManifestEntry> result_entries;
@@ -72,7 +70,7 @@ std::vector<IndexManifestEntry> IndexManifestFileHandler::GlobalFileNameCombiner
     const std::vector<IndexManifestEntry>& new_index_files) const {
     std::map<std::string, IndexManifestEntry> index_entries;
     for (const auto& entry : prev_index_files) {
-        index_entries.emplace(entry.index_file->FileName(), entry);
+        index_entries.insert_or_assign(entry.index_file->FileName(), entry);
     }
 
     std::vector<IndexManifestEntry> removed;
@@ -93,7 +91,7 @@ std::vector<IndexManifestEntry> IndexManifestFileHandler::GlobalFileNameCombiner
         index_entries.erase(entry.index_file->FileName());
     }
     for (const auto& entry : added) {
-        index_entries.emplace(entry.index_file->FileName(), entry);
+        index_entries.insert_or_assign(entry.index_file->FileName(), entry);
     }
 
     std::vector<IndexManifestEntry> result_entries;

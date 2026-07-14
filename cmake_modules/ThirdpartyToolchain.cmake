@@ -1809,6 +1809,8 @@ endmacro()
 
 macro(build_glog)
     message(STATUS "Building glog from source")
+    find_library(LIBUNWIND_LIBRARY NAMES unwind)
+
     set(GLOG_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/glog_ep-install")
     set(GLOG_INCLUDE_DIR "${GLOG_PREFIX}/include")
     if(${UPPERCASE_BUILD_TYPE} STREQUAL "DEBUG")
@@ -1831,6 +1833,9 @@ macro(build_glog)
         -DWITH_GTEST=OFF
         -DCMAKE_CXX_FLAGS=${GLOG_CMAKE_CXX_FLAGS}
         -DCMAKE_C_FLAGS=${GLOG_CMAKE_C_FLAGS})
+    if(NOT LIBUNWIND_LIBRARY)
+        list(APPEND GLOG_CMAKE_ARGS -DWITH_UNWIND=none)
+    endif()
 
     externalproject_add(glog_ep
                         URL ${GLOG_SOURCE_URL}
@@ -1848,7 +1853,6 @@ macro(build_glog)
 
     add_dependencies(glog glog_ep)
 
-    find_library(LIBUNWIND_LIBRARY NAMES unwind)
     if(LIBUNWIND_LIBRARY)
         target_link_libraries(glog INTERFACE ${LIBUNWIND_LIBRARY})
     endif()

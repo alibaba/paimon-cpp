@@ -16,6 +16,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <limits>
 #include <map>
 #include <memory>
@@ -63,10 +64,12 @@ class ScanInteTest : public testing::TestWithParam<ManifestCacheMode> {
     Result<std::unique_ptr<ScanContext>> FinishScanContext(ScanContextBuilder& builder) {
         if (GetParam() == ManifestCacheMode::Cache) {
             if (!cache_) {
-                cache_ =
-                    std::make_shared<CountingRoutingCache>(CacheKind::MANIFEST, 64 * 1024 * 1024);
+                cache_ = std::make_shared<CountingRoutingCache>(std::map<CacheKind, int64_t>{
+                    {CacheKind::MANIFEST, 64 * 1024 * 1024},
+                    {CacheKind::SNAPSHOT_LIVE_MANIFEST, 64 * 1024 * 1024}});
             }
-            builder.WithCache(cache_);
+            builder.AddOption(Options::SCAN_MANIFEST_ENTRY_CACHE_MAX_SNAPSHOTS, "3")
+                .WithCache(cache_);
         }
         return builder.Finish();
     }
@@ -284,6 +287,110 @@ TEST(ScanInteManifestCacheTest, TestRepeatedScanReusesManifestCache) {
     ASSERT_EQ(supplier_calls_after_first_scan, manifest_cache->SupplierCallCount());
 }
 
+Result<std::vector<std::shared_ptr<DataSplitImpl>>> RunBucketSnapshotScan(
+    const std::string& table_path, int64_t snapshot_id, int32_t bucket,
+    const std::shared_ptr<Cache>& cache, int32_t max_snapshot_live_manifest_versions) {
+    ScanContextBuilder context_builder(table_path);
+    context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, std::to_string(snapshot_id))
+        .SetBucketFilter(bucket);
+    if (max_snapshot_live_manifest_versions > 0) {
+        context_builder.AddOption(Options::SCAN_MANIFEST_ENTRY_CACHE_MAX_SNAPSHOTS,
+                                  std::to_string(max_snapshot_live_manifest_versions));
+    }
+    if (cache) {
+        context_builder.WithCache(cache);
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ScanContext> scan_context, context_builder.Finish());
+    PAIMON_ASSIGN_OR_RAISE(auto table_scan, TableScan::Create(std::move(scan_context)));
+    PAIMON_ASSIGN_OR_RAISE(auto plan, table_scan->CreatePlan());
+
+    std::vector<std::shared_ptr<DataSplitImpl>> data_splits;
+    for (const auto& split : plan->Splits()) {
+        auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
+        if (!data_split) {
+            return Status::Invalid("expected DataSplitImpl from bucket snapshot scan");
+        }
+        data_splits.push_back(data_split);
+    }
+    return data_splits;
+}
+
+void AssertDataSplitsEqual(const std::vector<std::shared_ptr<DataSplitImpl>>& expected,
+                           const std::vector<std::shared_ptr<DataSplitImpl>>& actual) {
+    ASSERT_EQ(actual.size(), expected.size());
+    for (size_t i = 0; i < actual.size(); ++i) {
+        ASSERT_EQ(*actual[i], *expected[i]) << actual[i]->ToString() << std::endl
+                                            << expected[i]->ToString();
+    }
+}
+
+std::shared_ptr<CountingRoutingCache> CreateSnapshotLiveManifestTestCache() {
+    return std::make_shared<CountingRoutingCache>(
+        std::map<CacheKind, int64_t>{{CacheKind::MANIFEST, 64 * 1024 * 1024},
+                                     {CacheKind::SNAPSHOT_LIVE_MANIFEST, 64 * 1024 * 1024}});
+}
+
+TEST(ScanInteManifestCacheTest, TestRepeatedBucketSnapshotScanReusesSnapshotLiveManifestCache) {
+    std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
+    auto cache = CreateSnapshotLiveManifestTestCache();
+
+    ASSERT_OK_AND_ASSIGN(auto expected,
+                         RunBucketSnapshotScan(table_path, /*snapshot_id=*/5,
+                                               /*bucket=*/1, nullptr,
+                                               /*max_snapshot_live_manifest_versions=*/0));
+    ASSERT_OK_AND_ASSIGN(auto first,
+                         RunBucketSnapshotScan(table_path, /*snapshot_id=*/5,
+                                               /*bucket=*/1, cache,
+                                               /*max_snapshot_live_manifest_versions=*/3));
+    AssertDataSplitsEqual(expected, first);
+    ASSERT_GT(cache->SupplierCallCount(CacheKind::SNAPSHOT_LIVE_MANIFEST), 0);
+    int64_t get_count_after_first_scan = cache->GetCount(CacheKind::SNAPSHOT_LIVE_MANIFEST);
+    int64_t supplier_calls_after_first_scan =
+        cache->SupplierCallCount(CacheKind::SNAPSHOT_LIVE_MANIFEST);
+
+    ASSERT_OK_AND_ASSIGN(auto second,
+                         RunBucketSnapshotScan(table_path, /*snapshot_id=*/5,
+                                               /*bucket=*/1, cache,
+                                               /*max_snapshot_live_manifest_versions=*/3));
+    AssertDataSplitsEqual(expected, second);
+    ASSERT_EQ(get_count_after_first_scan + 1, cache->GetCount(CacheKind::SNAPSHOT_LIVE_MANIFEST));
+    ASSERT_EQ(supplier_calls_after_first_scan,
+              cache->SupplierCallCount(CacheKind::SNAPSHOT_LIVE_MANIFEST));
+}
+
+TEST(ScanInteManifestCacheTest, TestSnapshotLiveManifestCacheRetainsSnapshotsPerBucketValue) {
+    std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
+    auto cache = CreateSnapshotLiveManifestTestCache();
+
+    ASSERT_OK_AND_ASSIGN(auto expected_snapshot3,
+                         RunBucketSnapshotScan(table_path, /*snapshot_id=*/3, /*bucket=*/0, nullptr,
+                                               /*max_snapshot_live_manifest_versions=*/0));
+    ASSERT_OK_AND_ASSIGN(auto cached_snapshot3,
+                         RunBucketSnapshotScan(table_path, /*snapshot_id=*/3, /*bucket=*/0, cache,
+                                               /*max_snapshot_live_manifest_versions=*/3));
+    AssertDataSplitsEqual(expected_snapshot3, cached_snapshot3);
+
+    ASSERT_OK_AND_ASSIGN(auto expected_snapshot5,
+                         RunBucketSnapshotScan(table_path, /*snapshot_id=*/5, /*bucket=*/0, nullptr,
+                                               /*max_snapshot_live_manifest_versions=*/0));
+    ASSERT_OK_AND_ASSIGN(auto cached_snapshot5,
+                         RunBucketSnapshotScan(table_path, /*snapshot_id=*/5, /*bucket=*/0, cache,
+                                               /*max_snapshot_live_manifest_versions=*/3));
+    AssertDataSplitsEqual(expected_snapshot5, cached_snapshot5);
+    int64_t get_count_after_snapshot5 = cache->GetCount(CacheKind::SNAPSHOT_LIVE_MANIFEST);
+    int64_t supplier_calls_after_snapshot5 =
+        cache->SupplierCallCount(CacheKind::SNAPSHOT_LIVE_MANIFEST);
+
+    ASSERT_OK_AND_ASSIGN(auto cached_snapshot3_again,
+                         RunBucketSnapshotScan(table_path, /*snapshot_id=*/3, /*bucket=*/0, cache,
+                                               /*max_snapshot_live_manifest_versions=*/3));
+    AssertDataSplitsEqual(expected_snapshot3, cached_snapshot3_again);
+    ASSERT_EQ(get_count_after_snapshot5 + 1, cache->GetCount(CacheKind::SNAPSHOT_LIVE_MANIFEST));
+    ASSERT_EQ(supplier_calls_after_snapshot5,
+              cache->SupplierCallCount(CacheKind::SNAPSHOT_LIVE_MANIFEST));
+}
+
 TEST_P(ScanInteTest, TestScanAppendWithSnapshot1) {
     std::string table_path = paimon::test::GetDataDir() + "orc/append_09.db/append_09";
     ScanContextBuilder context_builder(table_path);
@@ -394,6 +501,76 @@ TEST_P(ScanInteTest, TestScanAppendWithSnapshot3) {
     std::vector<std::shared_ptr<DataSplitImpl>> expected_data_splits = {
         expected_data_split1, expected_data_split2, expected_data_split3};
     CheckResult(expected_data_splits, result_data_splits);
+}
+
+TEST_P(ScanInteTest, TestScanAppendWithSpecificTableSchema) {
+    std::string data_dir = paimon::test::GetDataDir();
+    if (!std::filesystem::exists(data_dir + "orc/append_09.db/append_09/schema/schema-0")) {
+        data_dir = "../" + data_dir;
+    }
+    std::string table_path = data_dir + "orc/append_09.db/append_09";
+
+    auto check_result = [&](const std::optional<std::string>& specific_table_schema) {
+        ScanContextBuilder context_builder(table_path);
+        context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "3");
+        if (specific_table_schema) {
+            context_builder.SetTableSchema(specific_table_schema.value());
+        }
+        ASSERT_OK_AND_ASSIGN(auto scan_context, FinishScanContext(context_builder));
+        ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+        ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
+
+        ASSERT_EQ(result_plan->SnapshotId().value(), 3);
+
+        auto result_data_splits = CollectDataSplits(result_plan);
+        DataSplitImpl::Builder builder1(BinaryRowGenerator::GenerateRow({10}, pool_.get()),
+                                        /*bucket=*/0, /*bucket_path=*/
+                                        data_dir + "orc/append_09.db/append_09/f1=10/bucket-0",
+                                        {meta_snapshot1_partition10_bucket0_});
+        auto expected_data_split1 =
+            std::dynamic_pointer_cast<DataSplitImpl>(builder1.WithTotalBuckets(2)
+                                                         .WithSnapshot(3)
+                                                         .IsStreaming(false)
+                                                         .RawConvertible(true)
+                                                         .Build()
+                                                         .value());
+
+        DataSplitImpl::Builder builder2(
+            BinaryRowGenerator::GenerateRow({10}, pool_.get()), /*bucket=*/1, /*bucket_path=*/
+            data_dir + "orc/append_09.db/append_09/f1=10/bucket-1",
+            {meta_snapshot1_partition10_bucket1_, meta_snapshot2_partition10_bucket1_,
+             meta_snapshot3_partition10_bucket1_});
+        auto expected_data_split2 =
+            std::dynamic_pointer_cast<DataSplitImpl>(builder2.WithTotalBuckets(2)
+                                                         .WithSnapshot(3)
+                                                         .IsStreaming(false)
+                                                         .RawConvertible(true)
+                                                         .Build()
+                                                         .value());
+
+        DataSplitImpl::Builder builder3(
+            BinaryRowGenerator::GenerateRow({20}, pool_.get()), /*bucket=*/0, /*bucket_path=*/
+            data_dir + "orc/append_09.db/append_09/f1=20/bucket-0",
+            {meta_snapshot1_partition20_bucket0_, meta_snapshot2_partition20_bucket0_});
+        auto expected_data_split3 =
+            std::dynamic_pointer_cast<DataSplitImpl>(builder3.WithTotalBuckets(2)
+                                                         .WithSnapshot(3)
+                                                         .IsStreaming(false)
+                                                         .RawConvertible(true)
+                                                         .Build()
+                                                         .value());
+
+        std::vector<std::shared_ptr<DataSplitImpl>> expected_data_splits = {
+            expected_data_split1, expected_data_split2, expected_data_split3};
+        CheckResult(expected_data_splits, result_data_splits);
+    };
+
+    check_result(std::nullopt);
+
+    auto fs = std::make_shared<LocalFileSystem>();
+    std::string schema_str;
+    ASSERT_OK(fs->ReadFile(table_path + "/schema/schema-0", &schema_str));
+    check_result(std::optional<std::string>(schema_str));
 }
 
 TEST_P(ScanInteTest, TestScanInvalidSnapshot) {

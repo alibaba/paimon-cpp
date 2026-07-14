@@ -1,4 +1,4 @@
-<!-- Please specify the module before the PR name: feat: ... or fix: ... -->
+<!-- PR titles must follow Conventional Commits: <type>(<optional-scope>): <description> -->
 
 ### Purpose
 

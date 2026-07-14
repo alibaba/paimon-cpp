@@ -24,6 +24,7 @@
 
 #include "arrow/memory_pool.h"
 #include "arrow/type.h"
+#include "fmt/format.h"
 #include "paimon/common/data/blob_defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/memory/bytes.h"
@@ -104,8 +105,17 @@ class BlobFileBatchReader : public FileBatchReader {
                 "bitmap pushdown, rows in the array returned by NextBatch are no longer "
                 "contiguous.");
         }
-        if (previous_batch_first_row_number_ == std::numeric_limits<uint64_t>::max()) {
-            return Status::Invalid("No batch has been read yet.");
+        if (previous_batch_row_count_ == 0) {
+            if (previous_batch_first_row_number_ == std::numeric_limits<uint64_t>::max()) {
+                return Status::Invalid("No batch has been read yet.");
+            } else {
+                return Status::Invalid("Last batch was EOF.");
+            }
+        }
+        if (batch_row_id >= previous_batch_row_count_) {
+            return Status::Invalid(
+                fmt::format("batch_row_id {} is out of range, last batch row count is {}",
+                            batch_row_id, previous_batch_row_count_));
         }
         return previous_batch_first_row_number_ + batch_row_id;
     }
@@ -177,6 +187,7 @@ class BlobFileBatchReader : public FileBatchReader {
 
     size_t current_pos_ = 0;
     uint64_t previous_batch_first_row_number_ = std::numeric_limits<uint64_t>::max();
+    uint64_t previous_batch_row_count_ = 0;
     bool closed_ = false;
 };
 

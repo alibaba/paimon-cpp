@@ -98,10 +98,14 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         bool* need_prefetch) const override;
 
     Result<uint64_t> GetPreviousBatchFileRowId(uint64_t batch_row_id) const override {
-        if (row_mapping_.size() == 0) {
-            return Status::Invalid(
-                "Last batch is not read or last batch is empty, cannot get previous batch global "
-                "row id");
+        if (row_mapping_.empty()) {
+            PAIMON_ASSIGN_OR_RAISE(uint64_t previous_first_row,
+                                   reader_->GetPreviousBatchFirstRowNumber());
+            if (previous_first_row == std::numeric_limits<uint64_t>::max()) {
+                return Status::Invalid("No batch has been read yet.");
+            } else {
+                return Status::Invalid("Last batch was EOF.");
+            }
         }
         if (batch_row_id >= row_mapping_.size()) {
             return Status::Invalid(
@@ -191,7 +195,7 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         const std::shared_ptr<arrow::Schema>& read_schema,
         const std::shared_ptr<arrow::Schema>& file_schema);
 
-    Status UpdateAllTargetRowranges(const std::vector<TargetRowGroup>& target_row_groups);
+    Status UpdateAllTargetRowRanges(const std::vector<TargetRowGroup>& target_row_groups);
 
     // precondition: predicate supposed not be empty
     Result<TargetRowGroups> FilterRowGroupsByPredicate(
@@ -200,8 +204,26 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         const TargetRowGroups& src_row_groups) const;
 
     Result<TargetRowGroups> FilterRowGroupsByBitmap(const RoaringBitmap32& bitmap,
-                                                    const TargetRowGroups& src_row_groups,
-                                                    bool has_nested_column) const;
+                                                    const TargetRowGroups& src_row_groups) const;
+
+    Result<TargetRowGroups> FilterPagesByBitmap(const RoaringBitmap32& bitmap,
+                                                const TargetRowGroups& src_row_groups,
+                                                const std::vector<int32_t>& column_indices) const;
+
+    // Apply page-level bitmap filtering to a single row group across all
+    // requested columns. Intersects the row group's existing ranges with the
+    // per-column page ranges derived from the bitmap.
+    TargetRowGroup FilterRowGroupPagesByBitmap(
+        const RoaringBitmap32& bitmap, const TargetRowGroup& row_group,
+        const std::vector<int32_t>& column_indices,
+        const std::shared_ptr<::parquet::PageIndexReader>& page_index_reader) const;
+
+    // Compute the set of row ranges within a single column's pages that
+    // overlap with the given bitmap. For each page, the bitmap is queried to
+    // find the first/last matching row in each page, used to trim the page head/tail
+    static RowRanges ComputeColumnPageRanges(
+        const RoaringBitmap32& bitmap, const std::vector<::parquet::PageLocation>& page_locations,
+        uint64_t rg_start_row, uint64_t rg_row_count);
 
     // Apply page-level filtering using column index.
     // Returns (filtered row groups, per-row-group RowRanges for partial matches).

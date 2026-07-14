@@ -29,42 +29,62 @@ class TargetRowGroup;
 using TargetRowGroups = std::vector<TargetRowGroup>;
 class TargetRowGroup {
  public:
-    explicit TargetRowGroup(int32_t rg_index) : row_group_index(rg_index) {}
     TargetRowGroup(int32_t rg_index, bool is_partially_matched, RowRanges ranges)
-        : row_group_index(rg_index),
-          is_partially_matched(is_partially_matched),
-          row_ranges(std::move(ranges)) {}
+        : row_group_index_(rg_index),
+          is_partially_matched_(is_partially_matched),
+          row_ranges_(std::move(ranges)) {}
 
     TargetRowGroup(const TargetRowGroup& other) = default;
     TargetRowGroup& operator=(const TargetRowGroup& other) = default;
 
     bool IsExcludedByReadRange() const {
-        return excluded_by_read_range;
+        return excluded_by_read_range_;
     }
 
     void SetExcludedByReadRange(bool excluded) {
-        excluded_by_read_range = excluded;
+        excluded_by_read_range_ = excluded;
     }
 
     int32_t GetRowGroupIndex() const {
-        return row_group_index;
+        return row_group_index_;
     }
 
     bool IsPartiallyMatched() const {
-        return is_partially_matched;
+        return is_partially_matched_;
     }
 
     const RowRanges& GetRowRanges() const {
-        return row_ranges;
+        return row_ranges_;
     }
 
-    static TargetRowGroups MakeSerialRowGroups(
+    // Create a list of TargetRowGroups for serial (non-filtered) reading.
+    //
+    // Each element in 'ranges' is a (start, end) pair describing the row
+    // range of a single row group. The vector index 'i' is used as the row
+    // group index, so the caller must ensure that 'ranges' is ordered to
+    // match the physical row-group order in the file.
+    //
+    // For each valid range (start < end), a TargetRowGroup is created with:
+    //   - row_group_index = i
+    //   - is_partially_matched = false  (the entire row group is read)
+    //   - row_ranges = [0, end - start - 1]  (local row indices covering the
+    //     full group; converted from absolute offsets to 0-based local offsets)
+    //
+    // Ranges where start >= end are treated as empty and skipped.
+    static TargetRowGroups MakeForAllRowGroups(
         const std::vector<std::pair<uint64_t, uint64_t>>& ranges) {
         TargetRowGroups target_row_groups;
         target_row_groups.reserve(ranges.size());
         for (size_t i = 0; i < ranges.size(); ++i) {
+            // Skip empty or invalid ranges.
+            if (ranges[i].first >= ranges[i].second) {
+                continue;
+            }
+            // Convert the absolute [start, end) pair into a 0-based local
+            // row range [0, row_count - 1] for this row group.
             target_row_groups.emplace_back(
-                i, false, RowRanges(Range(0, ranges[i].second - ranges[i].first - 1)));
+                static_cast<int32_t>(i), false,
+                RowRanges(Range(0, ranges[i].second - ranges[i].first - 1)));
         }
         return target_row_groups;
     }
@@ -79,14 +99,14 @@ class TargetRowGroup {
     }
 
  private:
-    int32_t row_group_index{-1};
-    bool is_partially_matched{false};
+    int32_t row_group_index_{-1};
+    bool is_partially_matched_{false};
     // Local row ranges
-    RowRanges row_ranges;
+    RowRanges row_ranges_;
     // Whether this row group has been excluded by ApplyReadRanges.
     // When true, this row group is logically skipped during iteration
     // but retained so that a subsequent wider ApplyReadRanges can restore it.
-    bool excluded_by_read_range{false};
+    bool excluded_by_read_range_{false};
 };
 
 }  // namespace paimon::parquet

@@ -17,10 +17,9 @@
 #pragma once
 
 #include <cstdint>
-#include <map>
-#include <set>
 #include <string>
-#include <vector>
+
+#include "paimon/data/shredding/map_shared_shredding_schema_utils.h"
 
 namespace paimon {
 
@@ -68,29 +67,6 @@ struct MapSharedShreddingDefine {
     /// Returns the name of the i-th physical column: "__col_0", "__col_1", etc.
     static std::string PhysicalColumnName(int32_t index) {
         return "__col_" + std::to_string(index);
-    }
-};
-
-/// Parsed file-level meta for one shared-shredding MAP column.
-struct MapSharedShreddingFieldMeta {
-    /// field_name -> field_id
-    std::map<std::string, int32_t> name_to_id;
-    /// field_id -> set of physical column indices S
-    std::map<int32_t, std::vector<int32_t>> field_to_columns;
-    /// Set of field_ids that ever spilled into __overflow
-    std::set<int32_t> overflow_field_set;
-    /// Number of physical columns K in this file
-    int32_t num_columns = 0;
-    /// Maximum row width observed in this file
-    int32_t max_row_width = 0;
-
-    bool operator==(const MapSharedShreddingFieldMeta& other) const {
-        if (this == &other) {
-            return true;
-        }
-        return name_to_id == other.name_to_id && field_to_columns == other.field_to_columns &&
-               overflow_field_set == other.overflow_field_set && num_columns == other.num_columns &&
-               max_row_width == other.max_row_width;
     }
 };
 

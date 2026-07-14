@@ -322,9 +322,11 @@ TEST_F(PostponeBucketWriterTest, TestSharedShreddingMap) {
                                  arrow::field("tags", arrow::map(arrow::utf8(), arrow::int32()))};
     ASSERT_OK_AND_ASSIGN(
         CoreOptions options,
-        CoreOptions::FromMap({{Options::FILE_FORMAT, file_format},
-                              {"fields.tags.map.storage-layout", "shared-shredding"},
-                              {"fields.tags.map.shared-shredding.max-columns", "3"}}));
+        CoreOptions::FromMap(
+            {{Options::FILE_FORMAT, file_format},
+             {"fields.tags.map.storage-layout", "shared-shredding"},
+             {"fields.tags.map.shared-shredding.max-columns", "3"},
+             {"fields.tags.map.shared-shredding.column-placement-policy", "plain"}}));
 
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);

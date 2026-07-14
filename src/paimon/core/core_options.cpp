@@ -382,7 +382,6 @@ struct CoreOptions::Impl {
     std::vector<std::string> blob_fields;
     std::vector<std::string> blob_descriptor_fields;
     std::vector<std::string> blob_view_fields;
-    std::vector<std::string> blob_external_storage_fields;
 
     std::string partition_default_name = "__DEFAULT_PARTITION__";
     StartupMode startup_mode = StartupMode::Default();
@@ -395,7 +394,6 @@ struct CoreOptions::Impl {
     std::optional<std::string> field_default_func;
     std::optional<std::string> scan_fallback_branch;
     std::optional<std::string> data_file_external_paths;
-    std::optional<std::string> blob_external_storage_path;
     std::optional<std::string> blob_view_upstream_warehouse;
 
     std::map<std::string, std::string> raw_options;
@@ -403,6 +401,7 @@ struct CoreOptions::Impl {
     int32_t bucket = -1;
 
     int32_t manifest_merge_min_count = 30;
+    int32_t scan_manifest_entry_cache_max_snapshots = 0;
     int32_t read_batch_size = 1024;
     int32_t write_batch_size = 1024;
     int32_t local_sort_max_num_file_handles = 128;
@@ -443,6 +442,7 @@ struct CoreOptions::Impl {
     bool row_tracking_enabled = false;
     bool row_tracking_partition_group_on_commit = true;
     bool data_evolution_enabled = false;
+    bool blob_view_resolve_enabled = true;
     bool legacy_partition_name_enabled = true;
     bool global_index_enabled = true;
     std::optional<int32_t> global_index_thread_num;
@@ -564,13 +564,9 @@ struct CoreOptions::Impl {
         // Parse blob-view-upstream-warehouse - warehouse path for configured blob view fields
         PAIMON_RETURN_NOT_OK(
             parser.Parse(Options::BLOB_VIEW_UPSTREAM_WAREHOUSE, &blob_view_upstream_warehouse));
-        // Parse blob-external-storage-field - descriptor BLOB fields written to external storage
-        PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
-            Options::BLOB_EXTERNAL_STORAGE_FIELD, Options::FIELDS_SEPARATOR,
-            &blob_external_storage_fields, /*need_trim=*/true));
-        // Parse blob-external-storage-path - external storage path for configured BLOB fields
+        // Parse blob-view.resolve.enabled - whether to resolve blob view fields at read time
         PAIMON_RETURN_NOT_OK(
-            parser.Parse(Options::BLOB_EXTERNAL_STORAGE_PATH, &blob_external_storage_path));
+            parser.Parse<bool>(Options::BLOB_VIEW_RESOLVE_ENABLED, &blob_view_resolve_enabled));
         return Status::OK();
     }
 
@@ -717,6 +713,13 @@ struct CoreOptions::Impl {
         }
         // Parse scan.mode - scanning behavior of the source, default "default"
         PAIMON_RETURN_NOT_OK(parser.ParseStartupMode(&startup_mode));
+        // Parse scan.manifest-entry-cache.max-snapshots - cached snapshots per bucket.
+        PAIMON_RETURN_NOT_OK(parser.Parse(Options::SCAN_MANIFEST_ENTRY_CACHE_MAX_SNAPSHOTS,
+                                          &scan_manifest_entry_cache_max_snapshots));
+        if (scan_manifest_entry_cache_max_snapshots < 0) {
+            return Status::Invalid(fmt::format("{} must be non-negative",
+                                               Options::SCAN_MANIFEST_ENTRY_CACHE_MAX_SNAPSHOTS));
+        }
         // Parse scan.fallback-branch - fallback branch when partition not found
         PAIMON_RETURN_NOT_OK(parser.Parse(Options::SCAN_FALLBACK_BRANCH, &scan_fallback_branch));
         // Parse branch - branch name, default "main"
@@ -968,6 +971,11 @@ std::optional<int64_t> CoreOptions::GetScanSnapshotId() const {
 std::optional<int64_t> CoreOptions::GetScanTimestampMillis() const {
     return impl_->scan_timestamp_millis;
 }
+
+int32_t CoreOptions::GetScanManifestEntryCacheMaxSnapshots() const {
+    return impl_->scan_manifest_entry_cache_max_snapshots;
+}
+
 int64_t CoreOptions::GetManifestTargetFileSize() const {
     return impl_->manifest_target_file_size;
 }
@@ -1211,6 +1219,24 @@ Result<int32_t> CoreOptions::GetMapSharedShreddingMaxColumns(const std::string& 
                                            std::string(Options::MAP_SHARED_SHREDDING_MAX_COLUMNS)));
     }
     return max_columns;
+}
+
+Result<MapSharedShreddingColumnPlacementPolicy>
+CoreOptions::GetMapSharedShreddingColumnPlacementPolicy(const std::string& field_name) const {
+    std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
+                      std::string(Options::MAP_SHARED_SHREDDING_COLUMN_PLACEMENT_POLICY);
+    PAIMON_ASSIGN_OR_RAISE(std::string policy_str, OptionsUtils::GetValueFromMap<std::string>(
+                                                       impl_->raw_options, key, "lru"));
+    std::string lower = StringUtils::ToLowerCase(policy_str);
+    if (lower == "plain") {
+        return MapSharedShreddingColumnPlacementPolicy::PLAIN;
+    } else if (lower == "sequential") {
+        return MapSharedShreddingColumnPlacementPolicy::SEQUENTIAL;
+    } else if (lower == "lru") {
+        return MapSharedShreddingColumnPlacementPolicy::LRU;
+    }
+    return Status::Invalid(
+        fmt::format("invalid map.shared-shredding.column-placement-policy: {}", policy_str));
 }
 
 bool CoreOptions::DeletionVectorsEnabled() const {
@@ -1467,19 +1493,15 @@ std::optional<std::string> CoreOptions::GetBlobViewUpstreamWarehouse() const {
     return impl_->blob_view_upstream_warehouse;
 }
 
+bool CoreOptions::BlobViewResolveEnabled() const {
+    return impl_->blob_view_resolve_enabled;
+}
+
 std::vector<std::string> CoreOptions::GetBlobInlineFields() const {
     std::vector<std::string> blob_inline_fields = impl_->blob_descriptor_fields;
     blob_inline_fields.insert(blob_inline_fields.end(), impl_->blob_view_fields.begin(),
                               impl_->blob_view_fields.end());
     return blob_inline_fields;
-}
-
-const std::vector<std::string>& CoreOptions::GetBlobExternalStorageFields() const {
-    return impl_->blob_external_storage_fields;
-}
-
-std::optional<std::string> CoreOptions::GetBlobExternalStoragePath() const {
-    return impl_->blob_external_storage_path;
 }
 
 int64_t CoreOptions::GetLookupCacheFileRetentionMs() const {

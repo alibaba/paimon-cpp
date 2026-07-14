@@ -215,12 +215,6 @@ TEST(MapSharedShreddingUtilsTest, BuildSpecificPhysicalStructTypeWithoutOverflow
 // ---- BuildColumnToNumColumns ----
 
 TEST(MapSharedShreddingUtilsTest, BuildColumnToNumColumns) {
-    auto schema = arrow::schema({
-        arrow::field("id", arrow::int32()),
-        arrow::field("tags", arrow::map(arrow::utf8(), arrow::utf8())),
-        arrow::field("metrics", arrow::map(arrow::utf8(), arrow::float64())),
-    });
-
     ASSERT_OK_AND_ASSIGN(
         CoreOptions options,
         CoreOptions::FromMap({{"fields.tags.map.shared-shredding.max-columns", "128"},
@@ -236,10 +230,6 @@ TEST(MapSharedShreddingUtilsTest, BuildColumnToNumColumns) {
 }
 
 TEST(MapSharedShreddingUtilsTest, BuildColumnToNumColumnsDefault) {
-    auto schema = arrow::schema({
-        arrow::field("tags", arrow::map(arrow::utf8(), arrow::utf8())),
-    });
-
     // No explicit max-columns config -> default 256
     ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
     std::vector<std::string> shredding_field_names = {"tags"};

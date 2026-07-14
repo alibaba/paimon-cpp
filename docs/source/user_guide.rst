@@ -25,6 +25,7 @@ User Guide
    user_guide/snapshot
    user_guide/manifest
    user_guide/manifest_cache
+   user_guide/manifest_entry_cache
    user_guide/parquet_metadata_cache
    user_guide/data_types
    user_guide/primary_key_table

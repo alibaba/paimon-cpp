@@ -91,7 +91,8 @@ function(add_paimon_lib LIB_NAME)
     add_library(${LIB_NAME}_objlib OBJECT ${ARG_SOURCES})
     target_link_libraries(${LIB_NAME}_objlib
                           PRIVATE "$<BUILD_INTERFACE:paimon_sanitizer_flags>")
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STREQUAL
+                                                      "Clang")
         target_compile_options(${LIB_NAME}_objlib PRIVATE -Wno-global-constructors)
     endif()
     # Necessary to make static linking into other shared libraries work properly
@@ -337,7 +338,8 @@ function(add_test_case REL_TEST_NAME)
         add_dependencies(${TEST_NAME} ${ARG_EXTRA_DEPENDENCIES})
     endif()
 
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STREQUAL
+                                                      "Clang")
         target_compile_options(${TEST_NAME} PRIVATE -Wno-global-constructors)
     endif()
     target_compile_options(${TEST_NAME} PRIVATE -fno-access-control)
@@ -469,7 +471,8 @@ function(add_benchmark_case REL_BENCHMARK_NAME)
         target_include_directories(${BENCHMARK_NAME} SYSTEM PUBLIC ${ARG_EXTRA_INCLUDES})
     endif()
 
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STREQUAL
+                                                      "Clang")
         target_compile_options(${BENCHMARK_NAME} PRIVATE -Wno-global-constructors)
     endif()
     target_compile_options(${BENCHMARK_NAME} PRIVATE -fno-access-control)

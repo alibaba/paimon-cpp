@@ -116,6 +116,7 @@ Result<BatchReader::ReadBatch> AvroFileBatchReader::NextBatch() {
         previous_first_row_ = next_row_to_read_;
         next_row_to_read_ += array_builder_->length();
         if (array_builder_->length() == 0) {
+            previous_batch_row_count_ = 0;
             return BatchReader::MakeEofBatch();
         }
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,
@@ -123,6 +124,7 @@ Result<BatchReader::ReadBatch> AvroFileBatchReader::NextBatch() {
         std::unique_ptr<ArrowArray> c_array = std::make_unique<ArrowArray>();
         std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, c_array.get(), c_schema.get()));
+        previous_batch_row_count_ = c_array->length;
         return make_pair(std::move(c_array), std::move(c_schema));
     } catch (const ::avro::Exception& e) {
         return Status::Invalid(fmt::format("avro reader next batch failed. {}", e.what()));
@@ -168,6 +170,7 @@ Status AvroFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
     reader_ = std::move(reader);
     array_builder_ = std::move(array_builder);
     previous_first_row_ = std::numeric_limits<uint64_t>::max();
+    previous_batch_row_count_ = 0;
     next_row_to_read_ = std::numeric_limits<uint64_t>::max();
     close_ = false;
     return Status::OK();

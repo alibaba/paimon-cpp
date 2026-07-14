@@ -47,6 +47,8 @@ const char Options::SOURCE_SPLIT_TARGET_SIZE[] = "source.split.target-size";
 const char Options::SOURCE_SPLIT_OPEN_FILE_COST[] = "source.split.open-file-cost";
 const char Options::SCAN_SNAPSHOT_ID[] = "scan.snapshot-id";
 const char Options::SCAN_MODE[] = "scan.mode";
+const char Options::SCAN_MANIFEST_ENTRY_CACHE_MAX_SNAPSHOTS[] =
+    "scan.manifest-entry-cache.max-snapshots";
 const char Options::READ_BATCH_SIZE[] = "read.batch-size";
 const char Options::WRITE_BATCH_SIZE[] = "write.batch-size";
 const char Options::WRITE_BUFFER_SIZE[] = "write-buffer-size";
@@ -93,14 +95,15 @@ const char Options::DATA_EVOLUTION_ENABLED[] = "data-evolution.enabled";
 const char Options::PARTITION_GENERATE_LEGACY_NAME[] = "partition.legacy-name";
 const char Options::MAP_STORAGE_LAYOUT[] = "map.storage-layout";
 const char Options::MAP_SHARED_SHREDDING_MAX_COLUMNS[] = "map.shared-shredding.max-columns";
+const char Options::MAP_SHARED_SHREDDING_COLUMN_PLACEMENT_POLICY[] =
+    "map.shared-shredding.column-placement-policy";
 const char Options::BLOB_AS_DESCRIPTOR[] = "blob-as-descriptor";
 const char Options::BLOB_FIELD[] = "blob-field";
 const char Options::BLOB_DESCRIPTOR_FIELD[] = "blob-descriptor-field";
 const char Options::FALLBACK_BLOB_DESCRIPTOR_FIELD[] = "blob.stored-descriptor-fields";
 const char Options::BLOB_VIEW_FIELD[] = "blob-view-field";
+const char Options::BLOB_VIEW_RESOLVE_ENABLED[] = "blob-view.resolve.enabled";
 const char Options::BLOB_VIEW_UPSTREAM_WAREHOUSE[] = "blob-view-upstream-warehouse";
-const char Options::BLOB_EXTERNAL_STORAGE_FIELD[] = "blob-external-storage-field";
-const char Options::BLOB_EXTERNAL_STORAGE_PATH[] = "blob-external-storage-path";
 const char Options::GLOBAL_INDEX_ENABLED[] = "global-index.enabled";
 const char Options::GLOBAL_INDEX_THREAD_NUM[] = "global-index.thread-num";
 const char Options::GLOBAL_INDEX_EXTERNAL_PATH[] = "global-index.external-path";
