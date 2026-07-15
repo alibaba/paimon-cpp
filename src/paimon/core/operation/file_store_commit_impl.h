@@ -244,7 +244,7 @@ class FileStoreCommitImpl : public FileStoreCommit {
     int32_t num_bucket_ = 0;
     BucketMode bucket_mode_ = BucketMode::BUCKET_UNAWARE;
     std::shared_ptr<TableSchema> table_schema_;
-    CommitScanner commit_scanner_;
+    std::shared_ptr<CommitScanner> commit_scanner_;
     ConflictDetection conflict_detection_;
 
     std::shared_ptr<ManifestFile> manifest_file_;

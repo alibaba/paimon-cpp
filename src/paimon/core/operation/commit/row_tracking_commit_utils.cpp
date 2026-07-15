@@ -62,13 +62,19 @@ void RowTrackingCommitUtils::AssignSnapshotId(int64_t snapshot_id,
     for (const auto& entry : delta_files) {
         ManifestEntry assigned_entry = CloneEntryWithClonedFileMeta(entry);
         int64_t min_seq_number = assigned_entry.File()->min_sequence_number;
+        int64_t max_seq_number = assigned_entry.File()->max_sequence_number;
         if (min_seq_number == 0L) {
             // Case 1: New file (e.g., from INSERT)
             // All records in this file get the current snapshot ID as sequence number
             assigned_entry.AssignSequenceNumber(snapshot_id, snapshot_id);
+        } else if (max_seq_number == 0L) {
+            // Case 2: File with some modified records
+            // - min: preserve original sequence number (from unmodified records)
+            // - max: assign current snapshot ID
+            assigned_entry.AssignSequenceNumber(min_seq_number, snapshot_id);
         } else {
+            // Case 3: Pure compact file (no modified records)
             // Preserve original min/max sequence numbers from source files.
-            // This follows Java release-1.4 row-tracking commit semantics.
         }
         snapshot_assigned->emplace_back(std::move(assigned_entry));
     }

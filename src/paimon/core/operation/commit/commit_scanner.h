@@ -70,6 +70,9 @@ class CommitScanner {
     Result<std::vector<ManifestEntry>> ReadAllEntriesFromChangedPartitions(
         const Snapshot& snapshot, const std::vector<BinaryRow>& changed_partitions) const;
 
+    Result<std::vector<ManifestEntry>> ReadIncrementalEntries(
+        const Snapshot& snapshot, const std::vector<BinaryRow>& changed_partitions) const;
+
     Result<std::unordered_map<BinaryRow, int32_t>> ReadTotalBuckets(
         const Snapshot& snapshot, const std::vector<BinaryRow>& changed_partitions) const;
 

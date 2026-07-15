@@ -163,10 +163,12 @@ FileStoreCommitImpl::FileStoreCommitImpl(
       num_bucket_(options.GetBucket()),
       bucket_mode_(ResolveBucketMode(options.GetBucket(), table_schema)),
       table_schema_(table_schema),
-      commit_scanner_(snapshot_manager, schema_manager, manifest_list, manifest_file,
-                      index_manifest_file, table_schema, schema, options, executor, pool,
-                      partition_computer_.get(), std::move(scan_supplier)),
-      conflict_detection_(table_schema, options, snapshot_manager_, manifest_list, manifest_file),
+      commit_scanner_(std::make_shared<CommitScanner>(
+          snapshot_manager, schema_manager, manifest_list, manifest_file, index_manifest_file,
+          table_schema, schema, options, executor, pool, partition_computer_.get(),
+          std::move(scan_supplier))),
+    conflict_detection_(table_schema, options, snapshot_manager_, manifest_list, manifest_file,
+                          commit_scanner_),
       manifest_file_(manifest_file),
       manifest_list_(manifest_list),
       index_manifest_file_(index_manifest_file),
@@ -548,7 +550,7 @@ Result<std::string> FileStoreCommitImpl::GetLastCommitTableRequest() {
 Result<std::vector<ManifestEntry>> FileStoreCommitImpl::GetAllFiles(
     const Snapshot& snapshot,
     const std::vector<std::map<std::string, std::string>>& partitions) const {
-    return commit_scanner_.ReadAllEntriesFromPartitions(snapshot, partitions);
+    return commit_scanner_->ReadAllEntriesFromPartitions(snapshot, partitions);
 }
 
 Result<std::map<std::string, std::string>> FileStoreCommitImpl::PartitionToMap(
@@ -632,7 +634,7 @@ Result<int32_t> FileStoreCommitImpl::TryOverwrite(
     int64_t commit_identifier, std::optional<int64_t> watermark,
     const std::map<std::string, std::string>& properties) {
     std::shared_ptr<CommitChangesProvider> changes_provider =
-        commit_scanner_.OverwriteChangesProvider(partitions, changes, index_entries);
+        commit_scanner_->OverwriteChangesProvider(partitions, changes, index_entries);
     return TryCommit(changes_provider, commit_identifier, watermark, properties,
                      Snapshot::CommitKind::Overwrite(), /*detect_conflicts=*/true);
 }
@@ -797,7 +799,7 @@ Status FileStoreCommitImpl::CheckSameBucketFromSnapshot(
 
     PAIMON_ASSIGN_OR_RAISE(
         auto previous_total_buckets,
-        commit_scanner_.ReadTotalBuckets(latest_snapshot.value(), changed_partitions));
+        commit_scanner_->ReadTotalBuckets(latest_snapshot.value(), changed_partitions));
 
     return conflict_detection_.CheckSameBucketByTotalBuckets(expected_total_buckets,
                                                              previous_total_buckets);
@@ -893,7 +895,7 @@ Result<bool> FileStoreCommitImpl::TryCommitOnce(
         std::vector<BinaryRow> changed_partitions =
             ManifestEntryChanges::ChangedPartitions(delta_files, index_entries);
         PAIMON_ASSIGN_OR_RAISE(std::vector<ManifestEntry> base_data_files,
-                               commit_scanner_.ReadAllEntriesFromChangedPartitions(
+                               commit_scanner_->ReadAllEntriesFromChangedPartitions(
                                    latest_snapshot.value(), changed_partitions));
 
         if (discard_duplicate) {

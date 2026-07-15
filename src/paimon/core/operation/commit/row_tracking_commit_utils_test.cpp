@@ -81,7 +81,7 @@ TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingStampsSequence) {
     EXPECT_EQ(100, assigned.assigned_entries[0].File()->min_sequence_number);
     EXPECT_EQ(100, assigned.assigned_entries[0].File()->max_sequence_number);
     EXPECT_EQ(7, assigned.assigned_entries[1].File()->min_sequence_number);
-    EXPECT_EQ(0, assigned.assigned_entries[1].File()->max_sequence_number);
+    EXPECT_EQ(100, assigned.assigned_entries[1].File()->max_sequence_number);
     EXPECT_EQ(3, assigned.assigned_entries[2].File()->min_sequence_number);
     EXPECT_EQ(5, assigned.assigned_entries[2].File()->max_sequence_number);
 }

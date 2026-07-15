@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "paimon/common/data/binary_row.h"
+#include "paimon/common/utils/range_helper.h"
 #include "paimon/common/utils/linked_hash_map.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/snapshot.h"
@@ -33,6 +34,7 @@ namespace paimon {
 
 class ManifestEntry;
 struct IndexManifestEntry;
+class CommitScanner;
 class ManifestFile;
 class ManifestList;
 class RowIdColumnConflictChecker;
@@ -45,7 +47,8 @@ class ConflictDetection {
     ConflictDetection(std::shared_ptr<TableSchema> table_schema, const CoreOptions& options,
                       std::shared_ptr<SnapshotManager> snapshot_manager,
                       std::shared_ptr<ManifestList> manifest_list,
-                      std::shared_ptr<ManifestFile> manifest_file);
+                      std::shared_ptr<ManifestFile> manifest_file,
+                      std::shared_ptr<CommitScanner> commit_scanner);
 
     Status CheckConflicts(const Snapshot& latest_snapshot,
                           const std::vector<ManifestEntry>& base_entries,
@@ -91,6 +94,14 @@ class ConflictDetection {
     Status CheckRowIdRangeConflicts(const Snapshot::CommitKind& commit_kind,
                                     const std::vector<ManifestEntry>& merged_entries) const;
 
+    Status CheckDataFileRowIdRangeConflicts(
+        RangeHelper<ManifestEntry>& range_helper,
+        const std::vector<ManifestEntry>& data_files) const;
+
+    Status CheckDedicatedFileRowIdRangeConflicts(
+        const std::vector<ManifestEntry>& data_files,
+        const std::vector<ManifestEntry>& dedicated_files) const;
+
     Status CheckForRowIdFromSnapshot(
         const Snapshot& latest_snapshot, const std::vector<ManifestEntry>& delta_entries,
         const std::vector<IndexManifestEntry>& delta_index_entries,
@@ -110,6 +121,7 @@ class ConflictDetection {
     std::shared_ptr<SnapshotManager> snapshot_manager_;
     std::shared_ptr<ManifestList> manifest_list_;
     std::shared_ptr<ManifestFile> manifest_file_;
+    std::shared_ptr<CommitScanner> commit_scanner_;
     mutable LinkedHashMap<BinaryRow, bool> same_bucket_checked_partitions_;
 };
 

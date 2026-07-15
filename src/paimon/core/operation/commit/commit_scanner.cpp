@@ -31,6 +31,7 @@
 #include "paimon/core/manifest/file_kind.h"
 #include "paimon/core/manifest/index_manifest_file.h"
 #include "paimon/core/manifest/manifest_entry.h"
+#include "paimon/core/manifest/manifest_file_meta.h"
 #include "paimon/core/operation/commit/overwrite_changes_provider.h"
 #include "paimon/core/operation/file_store_scan.h"
 #include "paimon/core/table/bucket_mode.h"
@@ -96,6 +97,32 @@ Result<std::vector<ManifestEntry>> CommitScanner::ReadAllEntriesFromChangedParti
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FileStoreScan::RawPlan> plan,
                            scan->WithSnapshot(snapshot)->WithKind(ScanMode::ALL)->CreatePlan());
     return plan->Files();
+}
+
+Result<std::vector<ManifestEntry>> CommitScanner::ReadIncrementalEntries(
+    const Snapshot& snapshot, const std::vector<BinaryRow>& changed_partitions) const {
+    if (changed_partitions.empty()) {
+        return std::vector<ManifestEntry>{};
+    }
+
+    std::unordered_set<BinaryRow> changed_partition_set(changed_partitions.begin(),
+                                                        changed_partitions.end());
+    std::vector<ManifestFileMeta> delta_manifests;
+    PAIMON_RETURN_NOT_OK(manifest_list_->ReadDeltaManifests(snapshot, &delta_manifests));
+
+    std::vector<ManifestEntry> incremental_entries;
+    for (const ManifestFileMeta& manifest_meta : delta_manifests) {
+        std::vector<ManifestEntry> manifest_entries;
+        PAIMON_RETURN_NOT_OK(
+            manifest_file_->Read(manifest_meta.FileName(), /*filter=*/nullptr, &manifest_entries));
+        for (const ManifestEntry& entry : manifest_entries) {
+            if (changed_partition_set.find(entry.Partition()) != changed_partition_set.end()) {
+                incremental_entries.push_back(entry);
+            }
+        }
+    }
+
+    return incremental_entries;
 }
 
 Result<std::vector<ManifestEntry>> CommitScanner::ReadAllEntriesFromPartitions(

@@ -30,11 +30,12 @@ RowRangeIndex::RowRangeIndex(std::vector<Range> ranges) : ranges_(std::move(rang
     }
 }
 
-Result<RowRangeIndex> RowRangeIndex::Create(const std::vector<Range>& ranges) {
+Result<RowRangeIndex> RowRangeIndex::Create(const std::vector<Range>& ranges,
+                                            bool merge_adjacent) {
     if (ranges.empty()) {
         return Status::Invalid("Ranges cannot be empty in RowRangeIndex");
     }
-    return RowRangeIndex(Range::SortAndMergeOverlap(ranges, /*adjacent=*/true));
+    return RowRangeIndex(Range::SortAndMergeOverlap(ranges, merge_adjacent));
 }
 
 const std::vector<Range>& RowRangeIndex::Ranges() const {
@@ -44,6 +45,17 @@ const std::vector<Range>& RowRangeIndex::Ranges() const {
 bool RowRangeIndex::Intersects(int64_t start, int64_t end) const {
     int32_t candidate = LowerBound(start);
     return candidate < static_cast<int32_t>(starts_.size()) && starts_[candidate] <= end;
+}
+
+bool RowRangeIndex::Contains(const Range& range) const {
+    int32_t candidate = LowerBound(range.from);
+    return candidate < static_cast<int32_t>(ranges_.size()) &&
+           ranges_[candidate].from <= range.from && ranges_[candidate].to >= range.to;
+}
+
+bool RowRangeIndex::ContainsExactly(const Range& range) const {
+    int32_t candidate = LowerBound(range.from);
+    return candidate < static_cast<int32_t>(ranges_.size()) && ranges_[candidate] == range;
 }
 
 std::vector<Range> RowRangeIndex::IntersectedRanges(int64_t start, int64_t end) const {
