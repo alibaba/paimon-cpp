@@ -294,10 +294,9 @@ TEST_F(ConflictDetectionTest, TestDedicatedStorageRowIdRangeConflicts) {
     dedicated_only_entries.push_back(CreateManifestEntryWithFirstRowId(
         "blob-only.blob", partition, FileKind::Add(), /*bucket=*/0, /*first_row_id=*/0,
         /*row_count=*/1));
-    ASSERT_NOK_WITH_MSG(
-        CheckConflicts(detection, no_data_entries, dedicated_only_entries,
-                       Snapshot::CommitKind::Compact()),
-        "is not covered by one data file range");
+    ASSERT_NOK_WITH_MSG(CheckConflicts(detection, no_data_entries, dedicated_only_entries,
+                                       Snapshot::CommitKind::Compact()),
+                        "is not covered by one data file range");
 }
 
 TEST_F(ConflictDetectionTest, TestBucketKeepSame) {

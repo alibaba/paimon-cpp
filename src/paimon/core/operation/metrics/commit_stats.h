@@ -17,10 +17,10 @@
 #pragma once
 
 #include <cstdint>
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <set>
 
 #include "paimon/common/data/binary_row.h"
 #include "paimon/core/manifest/file_kind.h"
