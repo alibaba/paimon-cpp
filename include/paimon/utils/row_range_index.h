@@ -31,8 +31,8 @@ class PAIMON_EXPORT RowRangeIndex {
  public:
     /// Creates a RowRangeIndex from the given ranges. The ranges will be sorted and merged
     /// (overlapping and adjacent ranges are combined) before indexing.
-   static Result<RowRangeIndex> Create(const std::vector<Range>& ranges,
-                              bool merge_adjacent = true);
+    static Result<RowRangeIndex> Create(const std::vector<Range>& ranges,
+                                        bool merge_adjacent = true);
 
     /// Returns the sorted, non-overlapping ranges held by this index.
     const std::vector<Range>& Ranges() const;
@@ -40,11 +40,11 @@ class PAIMON_EXPORT RowRangeIndex {
     /// Returns true if any range in this index intersects with the interval [start, end].
     bool Intersects(int64_t start, int64_t end) const;
 
-   /// Returns true if one range in this index fully contains `range`.
-   bool Contains(const Range& range) const;
+    /// Returns true if one range in this index fully contains `range`.
+    bool Contains(const Range& range) const;
 
-   /// Returns true if one range in this index exactly equals `range`.
-   bool ContainsExactly(const Range& range) const;
+    /// Returns true if one range in this index exactly equals `range`.
+    bool ContainsExactly(const Range& range) const;
 
     /// Returns the sub-ranges of this index that intersect with the interval [start, end].
     /// Each returned range is clipped to lie within [start, end].

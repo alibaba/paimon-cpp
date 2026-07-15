@@ -24,8 +24,8 @@
 #include <vector>
 
 #include "paimon/common/data/binary_row.h"
-#include "paimon/common/utils/range_helper.h"
 #include "paimon/common/utils/linked_hash_map.h"
+#include "paimon/common/utils/range_helper.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/status.h"
@@ -94,9 +94,8 @@ class ConflictDetection {
     Status CheckRowIdRangeConflicts(const Snapshot::CommitKind& commit_kind,
                                     const std::vector<ManifestEntry>& merged_entries) const;
 
-    Status CheckDataFileRowIdRangeConflicts(
-        RangeHelper<ManifestEntry>& range_helper,
-        const std::vector<ManifestEntry>& data_files) const;
+    Status CheckDataFileRowIdRangeConflicts(RangeHelper<ManifestEntry>& range_helper,
+                                            const std::vector<ManifestEntry>& data_files) const;
 
     Status CheckDedicatedFileRowIdRangeConflicts(
         const std::vector<ManifestEntry>& data_files,

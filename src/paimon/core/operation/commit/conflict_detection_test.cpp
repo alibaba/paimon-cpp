@@ -285,10 +285,9 @@ TEST_F(ConflictDetectionTest, TestDedicatedStorageRowIdRangeConflicts) {
     spanning_dedicated_entries.push_back(CreateManifestEntryWithFirstRowId(
         "vector-0.vector.data", partition, FileKind::Add(), /*bucket=*/0, /*first_row_id=*/3,
         /*row_count=*/10));
-    ASSERT_NOK_WITH_MSG(
-        CheckConflicts(detection, disjoint_data_entries, spanning_dedicated_entries,
-                       Snapshot::CommitKind::Compact()),
-        "spans multiple data file ranges");
+    ASSERT_NOK_WITH_MSG(CheckConflicts(detection, disjoint_data_entries, spanning_dedicated_entries,
+                                       Snapshot::CommitKind::Compact()),
+                        "spans multiple data file ranges");
 }
 
 TEST_F(ConflictDetectionTest, TestBucketKeepSame) {
@@ -300,8 +299,7 @@ TEST_F(ConflictDetectionTest, TestBucketKeepSame) {
 
     const BinaryRow partition = CreateIntRow(10);
     {
-        ConflictDetection detection(table_schema, core_options, nullptr, nullptr, nullptr,
-                        nullptr);
+        ConflictDetection detection(table_schema, core_options, nullptr, nullptr, nullptr, nullptr);
         std::vector<ManifestEntry> base_entries;
         base_entries.push_back(CreateManifestEntry("base", partition, FileKind::Add(),
                                                    DataFileMeta::EmptyMinKey(),
@@ -316,8 +314,7 @@ TEST_F(ConflictDetectionTest, TestBucketKeepSame) {
         ASSERT_OK(CheckConflicts(detection, base_entries, changes, Snapshot::CommitKind::Append()));
     }
     {
-        ConflictDetection detection(table_schema, core_options, nullptr, nullptr, nullptr,
-                        nullptr);
+        ConflictDetection detection(table_schema, core_options, nullptr, nullptr, nullptr, nullptr);
         std::vector<ManifestEntry> base_entries;
         base_entries.push_back(CreateManifestEntry("base", partition, FileKind::Add(),
                                                    DataFileMeta::EmptyMinKey(),
@@ -334,8 +331,7 @@ TEST_F(ConflictDetectionTest, TestBucketKeepSame) {
             "Total buckets of partition");
     }
     {
-        ConflictDetection detection(table_schema, core_options, nullptr, nullptr, nullptr,
-                        nullptr);
+        ConflictDetection detection(table_schema, core_options, nullptr, nullptr, nullptr, nullptr);
         std::vector<ManifestEntry> base_entries;
         base_entries.push_back(CreateManifestEntry("base", partition, FileKind::Add(),
                                                    DataFileMeta::EmptyMinKey(),
@@ -350,8 +346,7 @@ TEST_F(ConflictDetectionTest, TestBucketKeepSame) {
         ASSERT_OK(CheckConflicts(detection, base_entries, changes, Snapshot::CommitKind::Append()));
     }
     {
-        ConflictDetection detection(table_schema, core_options, nullptr, nullptr, nullptr,
-                        nullptr);
+        ConflictDetection detection(table_schema, core_options, nullptr, nullptr, nullptr, nullptr);
         std::vector<ManifestEntry> base_entries;
         base_entries.push_back(CreateManifestEntry("base", partition, FileKind::Add(),
                                                    DataFileMeta::EmptyMinKey(),

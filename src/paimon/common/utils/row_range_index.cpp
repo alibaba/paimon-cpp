@@ -30,8 +30,7 @@ RowRangeIndex::RowRangeIndex(std::vector<Range> ranges) : ranges_(std::move(rang
     }
 }
 
-Result<RowRangeIndex> RowRangeIndex::Create(const std::vector<Range>& ranges,
-                                            bool merge_adjacent) {
+Result<RowRangeIndex> RowRangeIndex::Create(const std::vector<Range>& ranges, bool merge_adjacent) {
     if (ranges.empty()) {
         return Status::Invalid("Ranges cannot be empty in RowRangeIndex");
     }

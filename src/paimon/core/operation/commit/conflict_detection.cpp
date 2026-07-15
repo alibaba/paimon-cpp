@@ -71,8 +71,7 @@ struct PartitionBucketKey {
 
 struct PartitionBucketKeyHash {
     size_t operator()(const PartitionBucketKey& key) const {
-        return std::hash<BinaryRow>()(key.partition) ^
-               (std::hash<int32_t>()(key.bucket) << 1);
+        return std::hash<BinaryRow>()(key.partition) ^ (std::hash<int32_t>()(key.bucket) << 1);
     }
 };
 
@@ -82,14 +81,14 @@ ConflictDetection::ConflictDetection(std::shared_ptr<TableSchema> table_schema,
                                      const CoreOptions& options,
                                      std::shared_ptr<SnapshotManager> snapshot_manager,
                                      std::shared_ptr<ManifestList> manifest_list,
-                                                                         std::shared_ptr<ManifestFile> manifest_file,
-                                                                         std::shared_ptr<CommitScanner> commit_scanner)
+                                     std::shared_ptr<ManifestFile> manifest_file,
+                                     std::shared_ptr<CommitScanner> commit_scanner)
     : table_schema_(std::move(table_schema)),
       options_(options),
       snapshot_manager_(std::move(snapshot_manager)),
       manifest_list_(std::move(manifest_list)),
-            manifest_file_(std::move(manifest_file)),
-            commit_scanner_(std::move(commit_scanner)) {}
+      manifest_file_(std::move(manifest_file)),
+      commit_scanner_(std::move(commit_scanner)) {}
 
 void ConflictDetection::SetRowIdCheckFromSnapshot(
     const std::optional<int64_t>& row_id_check_from_snapshot) {
@@ -330,9 +329,8 @@ Status ConflictDetection::CheckRowIdExistence(const std::vector<ManifestEntry>& 
 
     std::optional<RowRangeIndex> existing_index = std::nullopt;
     if (!existing_data_ranges.empty()) {
-        PAIMON_ASSIGN_OR_RAISE(existing_index,
-                               RowRangeIndex::Create(existing_data_ranges,
-                                                     /*merge_adjacent=*/false));
+        PAIMON_ASSIGN_OR_RAISE(existing_index, RowRangeIndex::Create(existing_data_ranges,
+                                                                     /*merge_adjacent=*/false));
     }
 
     for (const ManifestEntry& entry : files_to_check) {
@@ -408,8 +406,7 @@ Status ConflictDetection::CheckRowIdRangeConflicts(
 }
 
 Status ConflictDetection::CheckDataFileRowIdRangeConflicts(
-    RangeHelper<ManifestEntry>& range_helper,
-    const std::vector<ManifestEntry>& data_files) const {
+    RangeHelper<ManifestEntry>& range_helper, const std::vector<ManifestEntry>& data_files) const {
     std::vector<ManifestEntry> data_files_copy = data_files;
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::vector<ManifestEntry>> data_file_groups,
                            range_helper.MergeOverlappingRanges(std::move(data_files_copy)));
@@ -451,10 +448,9 @@ Status ConflictDetection::CheckDedicatedFileRowIdRangeConflicts(
 
         std::vector<Range> intersecting_ranges =
             data_file_row_range_index.IntersectedRanges(dedicated_range.from, dedicated_range.to);
-        bool covered_by_one_data_range =
-            intersecting_ranges.size() == 1 &&
-            intersecting_ranges[0].from <= dedicated_range.from &&
-            intersecting_ranges[0].to >= dedicated_range.to;
+        bool covered_by_one_data_range = intersecting_ranges.size() == 1 &&
+                                         intersecting_ranges[0].from <= dedicated_range.from &&
+                                         intersecting_ranges[0].to >= dedicated_range.to;
         if (!covered_by_one_data_range) {
             std::string conflict_reason = intersecting_ranges.size() > 1
                                               ? "spans multiple data file ranges"
@@ -475,8 +471,7 @@ Status ConflictDetection::CheckForRowIdFromSnapshot(
     const std::optional<std::shared_ptr<RowIdColumnConflictChecker>>&
         row_id_column_conflict_checker) const {
     if (!options_.DataEvolutionEnabled() || !row_id_check_from_snapshot_ || !snapshot_manager_ ||
-        !row_id_column_conflict_checker ||
-        !row_id_column_conflict_checker.value() ||
+        !row_id_column_conflict_checker || !row_id_column_conflict_checker.value() ||
         row_id_column_conflict_checker.value()->IsEmpty()) {
         return Status::OK();
     }
@@ -529,9 +524,9 @@ Status ConflictDetection::CheckForRowIdFromSnapshot(
             if (history_first_row_id >= check_next_row_id) {
                 continue;
             }
-            PAIMON_ASSIGN_OR_RAISE(bool conflicts,
-                                   row_id_column_conflict_checker.value()->ConflictsWith(
-                                       history_entry.File()));
+            PAIMON_ASSIGN_OR_RAISE(
+                bool conflicts,
+                row_id_column_conflict_checker.value()->ConflictsWith(history_entry.File()));
             if (conflicts) {
                 return Status::Invalid(
                     "For Data Evolution table, multiple MERGE INTO operations have "
@@ -601,8 +596,8 @@ Status ConflictDetection::CheckGlobalIndexRowIdExistence(
         const GlobalIndexMeta& global_index = index_entry.index_file->GetGlobalIndexMeta().value();
         Range index_range(global_index.row_range_start, global_index.row_range_end);
 
-                std::vector<Range> intersected = group_iter->second.IntersectedRanges(index_range.from,
-                                                                                                                                                            index_range.to);
+        std::vector<Range> intersected =
+            group_iter->second.IntersectedRanges(index_range.from, index_range.to);
         bool covered = intersected.size() == 1 && intersected[0].from <= index_range.from &&
                        intersected[0].to >= index_range.to;
         if (!covered) {
