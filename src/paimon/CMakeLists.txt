@@ -764,18 +764,31 @@ if(PAIMON_BUILD_TESTS)
                     ${TEST_STATIC_LINK_LIBS}
                     ${GTEST_LINK_TOOLCHAIN})
 
+    set(PAIMON_JINDO_FS_TEST_SOURCES)
+    set(PAIMON_JINDO_FS_TEST_LINK_LIBS)
+    if(PAIMON_ENABLE_JINDO_TESTS)
+        list(APPEND PAIMON_JINDO_FS_TEST_SOURCES
+             fs/jindo/jindo_file_system_factory_test.cpp
+             fs/jindo/jindo_file_system_test.cpp)
+        list(APPEND PAIMON_JINDO_FS_TEST_LINK_LIBS
+             ${PAIMON_JINDO_FILE_SYSTEM_STATIC_LINK_LIBS})
+    endif()
+
     add_paimon_test(fs_test
                     SOURCES
                     common/fs/file_system_test.cpp
                     common/fs/resolving_file_system_test.cpp
                     fs/local/local_file_test.cpp
-                    # fs/jindo/jindo_file_system_factory_test.cpp
-                    # fs/jindo/jindo_file_system_test.cpp
+                    ${PAIMON_JINDO_FS_TEST_SOURCES}
                     STATIC_LINK_LIBS
                     paimon_shared
                     ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
-                    # ${PAIMON_JINDO_FILE_SYSTEM_STATIC_LINK_LIBS}
+                    ${PAIMON_JINDO_FS_TEST_LINK_LIBS}
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
+
+    if(PAIMON_ENABLE_JINDO_TESTS)
+        target_compile_definitions(paimon-fs-test PRIVATE PAIMON_ENABLE_JINDO_TESTS)
+    endif()
 
 endif()

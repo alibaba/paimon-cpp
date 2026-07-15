@@ -16,6 +16,7 @@
 
 #include "paimon/fs/jindo/jindo_file_system.h"
 
+#include <atomic>
 #include <cassert>
 #include <utility>
 
@@ -51,6 +52,29 @@ class JindoFileSystemImpl {
  private:
     std::unique_ptr<JdoFileSystem> fs_;
 };
+
+namespace {
+
+class AsyncReadState {
+ public:
+    explicit AsyncReadState(std::function<void(Status)>&& callback)
+        : callback_(std::move(callback)) {}
+
+    void Complete(JdoStatus status) {
+        if (completed_.exchange(true)) {
+            return;
+        }
+        callback_(status.ok() ? Status::OK() : Status::IOError(status.errMsg()));
+    }
+
+    std::string_view result;
+
+ private:
+    std::atomic<bool> completed_{false};
+    std::function<void(Status)> callback_;
+};
+
+}  // namespace
 
 JindoFileSystem::JindoFileSystem(std::unique_ptr<JdoFileSystem>&& fs)
     : impl_(std::make_shared<JindoFileSystemImpl>(std::move(fs))) {}
@@ -215,15 +239,17 @@ Result<int64_t> JindoInputStream::Length() const {
 
 Result<int64_t> JindoInputStream::Read(char* buffer, int64_t size) {
     PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(size, "read length"));
-    PAIMON_RETURN_NOT_OK_FROM_JINDO(reader_->read(size, &result_, buffer));
-    return result_.length();
+    std::string_view result;
+    PAIMON_RETURN_NOT_OK_FROM_JINDO(reader_->read(size, &result, buffer));
+    return result.length();
 }
 
 Result<int64_t> JindoInputStream::Read(char* buffer, int64_t size, int64_t offset) {
     PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(size, "read length"));
     PAIMON_RETURN_NOT_OK(ValidateValueNonNegative(offset, "read offset"));
-    PAIMON_RETURN_NOT_OK_FROM_JINDO(reader_->pread(offset, size, &result_, buffer));
-    return result_.length();
+    std::string_view result;
+    PAIMON_RETURN_NOT_OK_FROM_JINDO(reader_->pread(offset, size, &result, buffer));
+    return result.length();
 }
 
 void JindoInputStream::ReadAsync(char* buffer, int64_t size, int64_t offset,
@@ -238,12 +264,16 @@ void JindoInputStream::ReadAsync(char* buffer, int64_t size, int64_t offset,
         callback(validate_status);
         return;
     }
-    auto outer_callback = [=](JdoStatus status) {
-        callback(status.ok() ? Status::OK() : Status::IOError(status.errMsg()));
-    };
-    auto task = reader_->preadAsync(offset, size, &result_, buffer, outer_callback);
+    std::shared_ptr<AsyncReadState> state = std::make_shared<AsyncReadState>(std::move(callback));
+    auto task = reader_->preadAsync(offset, size, &state->result, buffer,
+                                    [state](JdoStatus status) { state->Complete(status); });
     assert(task);
-    [[maybe_unused]] auto perform_status = task->perform();
+
+    auto perform_status = task->perform();
+    if (!perform_status.ok()) {
+        state->Complete(perform_status);
+        return;
+    }
 }
 
 Status JindoInputStream::Close() {
