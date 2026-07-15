@@ -288,6 +288,16 @@ TEST_F(ConflictDetectionTest, TestDedicatedStorageRowIdRangeConflicts) {
     ASSERT_NOK_WITH_MSG(CheckConflicts(detection, disjoint_data_entries, spanning_dedicated_entries,
                                        Snapshot::CommitKind::Compact()),
                         "spans multiple data file ranges");
+
+    std::vector<ManifestEntry> no_data_entries;
+    std::vector<ManifestEntry> dedicated_only_entries;
+    dedicated_only_entries.push_back(CreateManifestEntryWithFirstRowId(
+        "blob-only.blob", partition, FileKind::Add(), /*bucket=*/0, /*first_row_id=*/0,
+        /*row_count=*/1));
+    ASSERT_NOK_WITH_MSG(
+        CheckConflicts(detection, no_data_entries, dedicated_only_entries,
+                       Snapshot::CommitKind::Compact()),
+        "is not covered by one data file range");
 }
 
 TEST_F(ConflictDetectionTest, TestBucketKeepSame) {

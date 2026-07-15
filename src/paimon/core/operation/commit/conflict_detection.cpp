@@ -327,11 +327,9 @@ Status ConflictDetection::CheckRowIdExistence(const std::vector<ManifestEntry>& 
         existing_data_ranges.emplace_back(range_from, range_to);
     }
 
-    std::optional<RowRangeIndex> existing_index = std::nullopt;
-    if (!existing_data_ranges.empty()) {
-        PAIMON_ASSIGN_OR_RAISE(existing_index, RowRangeIndex::Create(existing_data_ranges,
-                                                                     /*merge_adjacent=*/false));
-    }
+    PAIMON_ASSIGN_OR_RAISE(RowRangeIndex existing_index,
+                           RowRangeIndex::Create(existing_data_ranges,
+                                                 /*merge_adjacent=*/false));
 
     for (const ManifestEntry& entry : files_to_check) {
         int64_t range_from = entry.File()->first_row_id.value();
@@ -339,12 +337,10 @@ Status ConflictDetection::CheckRowIdExistence(const std::vector<ManifestEntry>& 
         Range row_range(range_from, range_to);
 
         bool exists = false;
-        if (existing_index.has_value()) {
-            if (IsDedicatedStorageFile(entry.FileName())) {
-                exists = existing_index.value().Contains(row_range);
-            } else {
-                exists = existing_index.value().ContainsExactly(row_range);
-            }
+        if (IsDedicatedStorageFile(entry.FileName())) {
+            exists = existing_index.Contains(row_range);
+        } else {
+            exists = existing_index.ContainsExactly(row_range);
         }
 
         if (!exists) {
