@@ -136,15 +136,13 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
                                         const std::shared_ptr<Predicate>& predicate,
                                         const RoaringBitmap32& bitmap,
                                         std::shared_ptr<arrow::ChunkedArray>* out,
-                                        int32_t batch_size = 1024,
-                                        bool enable_page_level_filter = true) {
+                                        const std::map<std::string, std::string> options = {},
+                                        int32_t batch_size = 1024) {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
         ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
         auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
 
-        std::map<std::string, std::string> options;
-        options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] =
-            enable_page_level_filter ? "true" : "false";
+        // std::map<std::string, std::string> options;
         ASSERT_OK_AND_ASSIGN(auto batch_reader,
                              ParquetFileBatchReader::Create(std::move(in_stream), options,
                                                             batch_size, nullptr, arrow_pool_));
@@ -1363,9 +1361,11 @@ TEST_F(PageFilteredRowGroupReaderTest, BitmapWithPageFilteredOptionDisabled) {
     bitmap.AddRange(120, 150);  // pages 2-4 of RG1
 
     auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::map<std::string, std::string> options;
+    options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] = "false";
     std::shared_ptr<arrow::ChunkedArray> result;
     ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result,
-                                   1024, false);
+                                   options);
     ASSERT_TRUE(result);
     ASSERT_EQ(100, result->length());
 
@@ -1487,42 +1487,135 @@ TEST_F(PageFilteredRowGroupReaderTest, BitmapMixedWithPredicate) {
     }
 }
 
-/// Test: read parquet with scattered bitmap
+/// Test: read parquet with coalesce strategy
 ///
 /// 200 rows, 50 rows per page, 100 rows per row group → 2 row groups.
-/// Bitmap: [20,30), [35, 40), [125, 126), [130, 131), [150, 200)
-/// To test if unneeded row at the start and end of pages are filtered out.
-/// Expected: 76 rows ([20, 40) + [125, 131) + [150, 200).
-TEST_F(PageFilteredRowGroupReaderTest, ScatteredBitmapTest) {
+/// Bitmap: [0,32), [64, 96), [100, 132), [165, 180).
+/// To test if hole size <= 32 is filled.
+/// Expected: 143 rows ([0, 96) + [100, 132) + [165, 180).
+TEST_F(PageFilteredRowGroupReaderTest, BitmapCoalesceTest) {
     std::string file_name = dir_->Str() + "/scattered_bitmap.parquet";
     auto data = MakeSequentialIntData(200);
     WriteTestFile(file_name, data, /*write_batch_size=*/50, /*max_row_group_length=*/100);
 
     RoaringBitmap32 bitmap;
-    bitmap.AddRange(20, 30);
-    bitmap.AddRange(35, 40);
-    bitmap.Add(125);
-    bitmap.Add(130);
-    bitmap.AddRange(150, 200);
+    bitmap.AddRange(0, 32);
+    bitmap.AddRange(64, 96);
+    bitmap.AddRange(100, 132);
+    bitmap.AddRange(165, 180);
 
     auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
     std::shared_ptr<arrow::ChunkedArray> result;
     ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result);
     ASSERT_TRUE(result);
-    ASSERT_EQ(76, result->length());
+    ASSERT_EQ(143, result->length());
 
     auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
     auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
     ASSERT_TRUE(struct_arr);
     auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    for (int32_t i = 0; i < 96; ++i) {
+        ASSERT_EQ(0 + i, val_arr->Value(i));
+    }
+    for (int32_t i = 0; i < 32; ++i) {
+        ASSERT_EQ(100 + i, val_arr->Value(96 + i));
+    }
+    for (int32_t i = 0; i < 15; ++i) {
+        ASSERT_EQ(165 + i, val_arr->Value(128 + i));
+    }
+}
+
+/// Test: coalesce strategy with a small hole_size_limit (5 instead of default 32).
+///
+/// Same bitmap as BitmapCoalesceTest but with hole_size_limit=5.
+/// Bitmap: [0,32), [64, 96), [100, 132), [165, 180).
+/// Gaps of 32 and 33 rows exceed the limit, so no ranges are merged.
+/// Expected: 111 rows (exact bitmap selection, no holes filled).
+/// Compare with BitmapCoalesceTest which gets 143 rows (holes filled with default limit=32).
+TEST_F(PageFilteredRowGroupReaderTest, BitmapCoalesceSmallHoleSizeTest) {
+    std::string file_name = dir_->Str() + "/coalesce_small_hole.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/50, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 32);
+    bitmap.AddRange(64, 96);
+    bitmap.AddRange(100, 132);
+    bitmap.AddRange(165, 180);
+
+    std::map<std::string, std::string> options;
+    options[PARQUET_READ_ROW_RANGES_COALESCE_HOLE_SIZE_LIMIT] = "5";
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result,
+                                   options);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(111, result->length());
+
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    ASSERT_TRUE(val_arr);
+    // RG0: [0,31] and [64,95] — not merged (gap=32 > 5)
+    for (int32_t i = 0; i < 32; ++i) {
+        ASSERT_EQ(0 + i, val_arr->Value(i));
+    }
+    for (int32_t i = 0; i < 32; ++i) {
+        ASSERT_EQ(64 + i, val_arr->Value(32 + i));
+    }
+    // RG1: [100,131] and [165,179] — not merged (gap=33 > 5)
+    for (int32_t i = 0; i < 32; ++i) {
+        ASSERT_EQ(100 + i, val_arr->Value(64 + i));
+    }
+    for (int32_t i = 0; i < 15; ++i) {
+        ASSERT_EQ(165 + i, val_arr->Value(96 + i));
+    }
+}
+
+/// Test: trim strategy for bitmap row filtering.
+///
+/// Same bitmap as BitmapCoalesceTest but using "trim" strategy instead of "coalesce".
+/// Bitmap: [0,32), [64, 96), [120, 130), [135, 140).
+/// Expected: 84 rows.
+/// Compare with BitmapCoalesceTest which gets 143 rows.
+TEST_F(PageFilteredRowGroupReaderTest, BitmapTrimStrategyTest) {
+    std::string file_name = dir_->Str() + "/trim_strategy.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/50, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 32);
+    bitmap.AddRange(64, 96);
+    bitmap.AddRange(120, 130);
+    bitmap.AddRange(135, 140);
+
+    std::map<std::string, std::string> options;
+    options[PARQUET_READ_BITMAP_ROW_RANGE_REFINING_STRATEGY] = "trim";
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result,
+                                   options);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(84, result->length());
+
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    ASSERT_TRUE(val_arr);
+    // RG0: page 0 trimmed to [0,31], page 1 trimmed to [64,95]
+    for (int32_t i = 0; i < 32; ++i) {
+        ASSERT_EQ(0 + i, val_arr->Value(i));
+    }
+    for (int32_t i = 0; i < 32; ++i) {
+        ASSERT_EQ(64 + i, val_arr->Value(32 + i));
+    }
+    // RG1: page 0 trimmed to [120,139]
     for (int32_t i = 0; i < 20; ++i) {
-        ASSERT_EQ(20 + i, val_arr->Value(i));
-    }
-    for (int32_t i = 0; i < 6; ++i) {
-        ASSERT_EQ(125 + i, val_arr->Value(20 + i));
-    }
-    for (int32_t i = 0; i < 50; ++i) {
-        ASSERT_EQ(150 + i, val_arr->Value(26 + i));
+        ASSERT_EQ(120 + i, val_arr->Value(64 + i));
     }
 }
 
