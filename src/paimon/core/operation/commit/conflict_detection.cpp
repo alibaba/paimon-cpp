@@ -382,7 +382,8 @@ Status ConflictDetection::CheckRowIdRangeConflicts(
             }
         }
 
-        PAIMON_ASSIGN_OR_RAISE(bool all_data_ranges_same, range_helper.AreAllRangesSame(data_files));
+        PAIMON_ASSIGN_OR_RAISE(bool all_data_ranges_same,
+                               range_helper.AreAllRangesSame(data_files));
         if (!all_data_ranges_same) {
             return Status::Invalid(
                 "For Data Evolution table, multiple MERGE INTO/COMPACT operations have "
@@ -390,8 +391,8 @@ Status ConflictDetection::CheckRowIdRangeConflicts(
         }
     }
 
-    // TODO(yonghao.fyh): release-1.4 parity keeps dedicated-storage row-id containment unchecked here.
-    // Consider adding a strict-mode validation that each dedicated-file range is fully
+    // TODO(yonghao.fyh): release-1.4 parity keeps dedicated-storage row-id containment unchecked
+    // here. Consider adding a strict-mode validation that each dedicated-file range is fully
     // covered by one data-file range to catch dangling/cross-file mappings.
 
     return Status::OK();
