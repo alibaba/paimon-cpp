@@ -101,10 +101,38 @@ class OrcBackedArrowBuffer : public arrow::ResizableBuffer {
     ::orc::DataBuffer<T> orc_buffer_;
 };
 
-class EmptyBuilder : public arrow::ArrayBuilder {
+template <typename BaseBuilder>
+class ValidityBitmapAppendingBuilder : public BaseBuilder {
  public:
+    using BaseBuilder::BaseBuilder;
+
+ protected:
+    arrow::Status AppendValidBytesToBitmap(const uint8_t* valid_bytes, int64_t length) {
+        ARROW_RETURN_NOT_OK(ReserveValidityBitmap(length));
+        this->UnsafeAppendToBitmap(valid_bytes, length);
+        return arrow::Status::OK();
+    }
+
+ private:
+    arrow::Status ReserveValidityBitmap(int64_t additional_capacity) {
+        int64_t min_capacity = this->length() + additional_capacity;
+        if (min_capacity <= this->capacity()) {
+            return arrow::Status::OK();
+        }
+
+        int64_t new_capacity = arrow::BufferBuilder::GrowByFactor(this->capacity(), min_capacity);
+        ARROW_RETURN_NOT_OK(this->CheckCapacity(new_capacity));
+        ARROW_RETURN_NOT_OK(this->null_bitmap_builder_.Resize(new_capacity));
+        this->capacity_ = new_capacity;
+        return arrow::Status::OK();
+    }
+};
+
+class EmptyBuilder : public ValidityBitmapAppendingBuilder<arrow::ArrayBuilder> {
+ public:
+    using Base = ValidityBitmapAppendingBuilder<arrow::ArrayBuilder>;
     using arrow::ArrayBuilder::SetNotNull;
-    explicit EmptyBuilder(arrow::MemoryPool* pool) : arrow::ArrayBuilder(pool) {}
+    explicit EmptyBuilder(arrow::MemoryPool* pool) : Base(pool) {}
     arrow::Status AppendNulls(int64_t length) override {
         return arrow::Status::NotImplemented("AppendNulls is not implemented");
     }
@@ -144,9 +172,7 @@ class UnPooledBooleanBuilder : public EmptyBuilder {
     }
 
     arrow::Status SetNulls(const uint8_t* valid_bytes, int64_t length) {
-        ARROW_RETURN_NOT_OK(this->Reserve(length));
-        this->UnsafeAppendToBitmap(valid_bytes, length);
-        return arrow::Status::OK();
+        return this->AppendValidBytesToBitmap(valid_bytes, length);
     }
 
     arrow::Status SetData(const uint8_t* data, int64_t length) {
@@ -176,10 +202,12 @@ class UnPooledBooleanBuilder : public EmptyBuilder {
 };
 
 template <typename Type>
-class UnPooledPrimitiveBuilder : public arrow::NumericBuilder<Type> {
+class UnPooledPrimitiveBuilder
+    : public ValidityBitmapAppendingBuilder<arrow::NumericBuilder<Type>> {
  public:
+    using Base = ValidityBitmapAppendingBuilder<arrow::NumericBuilder<Type>>;
     UnPooledPrimitiveBuilder(const std::shared_ptr<arrow::DataType>& type, arrow::MemoryPool* pool)
-        : arrow::NumericBuilder<Type>(type, pool) {}
+        : Base(type, pool) {}
 
     void SetData(const std::shared_ptr<arrow::Buffer>& data) {
         data_ = data;
@@ -191,9 +219,7 @@ class UnPooledPrimitiveBuilder : public arrow::NumericBuilder<Type> {
     }
 
     arrow::Status SetNulls(const uint8_t* valid_bytes, int64_t length) {
-        ARROW_RETURN_NOT_OK(this->Reserve(length));
-        this->UnsafeAppendToBitmap(valid_bytes, length);
-        return arrow::Status::OK();
+        return this->AppendValidBytesToBitmap(valid_bytes, length);
     }
 
     arrow::Status FinishInternal(std::shared_ptr<arrow::ArrayData>* out) override {
@@ -216,12 +242,14 @@ class UnPooledPrimitiveBuilder : public arrow::NumericBuilder<Type> {
     std::shared_ptr<arrow::Buffer> data_;
 };
 
-class UnPooledLargeBinaryBuilder : public arrow::LargeBinaryBuilder {
+class UnPooledLargeBinaryBuilder
+    : public ValidityBitmapAppendingBuilder<arrow::LargeBinaryBuilder> {
  public:
+    using Base = ValidityBitmapAppendingBuilder<arrow::LargeBinaryBuilder>;
     using arrow::ArrayBuilder::SetNotNull;
     UnPooledLargeBinaryBuilder(const std::shared_ptr<arrow::DataType>& type,
                                arrow::MemoryPool* pool)
-        : arrow::LargeBinaryBuilder(pool), type_(type) {}
+        : Base(pool), type_(type) {}
 
     void SetOffsets(const std::shared_ptr<arrow::Buffer>& offsets) {
         offsets_ = offsets;
@@ -234,9 +262,7 @@ class UnPooledLargeBinaryBuilder : public arrow::LargeBinaryBuilder {
         length_ += length;
     }
     arrow::Status SetNulls(const uint8_t* valid_bytes, int64_t length) {
-        ARROW_RETURN_NOT_OK(this->Reserve(length));
-        this->UnsafeAppendToBitmap(valid_bytes, length);
-        return arrow::Status::OK();
+        return this->AppendValidBytesToBitmap(valid_bytes, length);
     }
     arrow::Status FinishInternal(std::shared_ptr<arrow::ArrayData>* out) override {
         std::shared_ptr<arrow::Buffer> null_bitmap;
@@ -261,11 +287,12 @@ class UnPooledLargeBinaryBuilder : public arrow::LargeBinaryBuilder {
     std::shared_ptr<arrow::Buffer> data_;
 };
 
-class UnPooledBinaryBuilder : public arrow::BinaryBuilder {
+class UnPooledBinaryBuilder : public ValidityBitmapAppendingBuilder<arrow::BinaryBuilder> {
  public:
+    using Base = ValidityBitmapAppendingBuilder<arrow::BinaryBuilder>;
     using arrow::ArrayBuilder::SetNotNull;
     UnPooledBinaryBuilder(const std::shared_ptr<arrow::DataType>& type, arrow::MemoryPool* pool)
-        : arrow::BinaryBuilder(pool), type_(type) {}
+        : Base(pool), type_(type) {}
 
     void SetOffsets(const std::shared_ptr<arrow::Buffer>& offsets) {
         offsets_ = offsets;
@@ -281,9 +308,7 @@ class UnPooledBinaryBuilder : public arrow::BinaryBuilder {
     }
 
     arrow::Status SetNulls(const uint8_t* valid_bytes, int64_t length) {
-        ARROW_RETURN_NOT_OK(this->Reserve(length));
-        this->UnsafeAppendToBitmap(valid_bytes, length);
-        return arrow::Status::OK();
+        return this->AppendValidBytesToBitmap(valid_bytes, length);
     }
 
     arrow::Status FinishInternal(std::shared_ptr<arrow::ArrayData>* out) override {
@@ -323,9 +348,7 @@ class UnPooledListBuilder : public EmptyBuilder {
     }
 
     arrow::Status SetNulls(const uint8_t* valid_bytes, int64_t length) {
-        ARROW_RETURN_NOT_OK(this->Reserve(length));
-        this->UnsafeAppendToBitmap(valid_bytes, length);
-        return arrow::Status::OK();
+        return this->AppendValidBytesToBitmap(valid_bytes, length);
     }
 
     void SetOffsets(const std::shared_ptr<arrow::Buffer>& offsets) {
@@ -373,9 +396,7 @@ class UnPooledStructBuilder : public EmptyBuilder {
     }
 
     arrow::Status SetNulls(const uint8_t* valid_bytes, int64_t length) {
-        ARROW_RETURN_NOT_OK(this->Reserve(length));
-        this->UnsafeAppendToBitmap(valid_bytes, length);
-        return arrow::Status::OK();
+        return this->AppendValidBytesToBitmap(valid_bytes, length);
     }
 
     arrow::Status FinishInternal(std::shared_ptr<arrow::ArrayData>* out) override {
@@ -501,9 +522,7 @@ class UnPooledStringDictionaryBuilder : public EmptyBuilder {
         indices_ = indices;
     }
     arrow::Status SetNulls(const uint8_t* valid_bytes, int64_t length) {
-        ARROW_RETURN_NOT_OK(this->Reserve(length));
-        this->UnsafeAppendToBitmap(valid_bytes, length);
-        return arrow::Status::OK();
+        return this->AppendValidBytesToBitmap(valid_bytes, length);
     }
     arrow::Status FinishInternal(std::shared_ptr<arrow::ArrayData>* out) override {
         std::shared_ptr<arrow::Buffer> null_bitmap;
