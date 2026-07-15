@@ -3903,6 +3903,13 @@ TEST(SystemTableReadInteTest, TestReadGlobalTables) {
                                    /*ignore_if_exists=*/false));
     ArrowSchemaRelease(&schema);
 
+    ::ArrowSchema no_pk_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &no_pk_schema).ok());
+    ASSERT_OK(catalog->CreateTable(Identifier("test_db", "test_no_pk_tbl"), &no_pk_schema,
+                                   /*partition_keys=*/{}, /*primary_keys=*/{}, options,
+                                   /*ignore_if_exists=*/false));
+    ArrowSchemaRelease(&no_pk_schema);
+
     ASSERT_OK_AND_ASSIGN(auto result,
                          ReadGlobalSystemTable("tables", catalog.get(), fs, warehouse, options));
     auto struct_array = SingleStructChunk(result);
@@ -3939,6 +3946,7 @@ TEST(SystemTableReadInteTest, TestReadGlobalTables) {
 
     // Find our table by table name
     bool found = false;
+    bool found_no_pk = false;
     for (int64_t i = 0; i < struct_array->length(); ++i) {
         if (std::string(tbl_array->GetString(i)) == "test_tbl") {
             EXPECT_EQ(std::string(db_array->GetString(i)), "test_db");
@@ -3952,9 +3960,13 @@ TEST(SystemTableReadInteTest, TestReadGlobalTables) {
             EXPECT_EQ(updated_by_array->GetString(i), "updater");
             EXPECT_TRUE(record_count_array->IsNull(i));
             found = true;
+        } else if (std::string(tbl_array->GetString(i)) == "test_no_pk_tbl") {
+            EXPECT_FALSE(pk_array->Value(i));
+            found_no_pk = true;
         }
     }
     ASSERT_TRUE(found) << "table not found in sys.tables";
+    ASSERT_TRUE(found_no_pk) << "no-PK table not found in sys.tables";
 }
 
 TEST(SystemTableReadInteTest, TestReadGlobalPartitions) {

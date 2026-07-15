@@ -108,13 +108,13 @@ class PartitionsSystemTable : public InMemorySystemTable {
 class GlobalSystemTableLoader {
  public:
     static Result<bool> IsSupported(const std::string& table_name,
-                                    const std::map<std::string, std::string>& catalog_options = {});
+                                    const std::map<std::string, std::string>& catalog_options);
 
     static Result<std::shared_ptr<SystemTable>> Load(const std::string& table_name,
                                                      const GlobalSystemTableContext& context);
 
     static Result<std::vector<std::string>> GetSupportedTableNames(
-        const std::map<std::string, std::string>& catalog_options = {});
+        const std::map<std::string, std::string>& catalog_options);
 };
 
 }  // namespace paimon
