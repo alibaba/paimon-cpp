@@ -65,6 +65,14 @@ static inline const char PARQUET_READ_CACHE_OPTION_PREFETCH_LIMIT[] =
     "parquet.read.cache-option.prefetch-limit";
 static inline const char PARQUET_READ_CACHE_OPTION_RANGE_SIZE_LIMIT[] =
     "parquet.read.cache-option.range-size-limit";
+// Defines how bitmap is used to filter row ranges
+// Two strategies are available: "coalesce" and "trim"
+static inline const char PARQUET_READ_BITMAP_ROW_RANGE_REFINING_STRATEGY[] =
+    "parquet.read.bitmap.row-range-refining-strategy";
+// Defines the minimum hole size between nearby row ranges from bitmap (in rows)
+// Only used when PARQUET_READ_ROW_RANGES_COALESCE is set to "coalesce"
+static inline const char PARQUET_READ_ROW_RANGES_COALESCE_HOLE_SIZE_LIMIT[] =
+    "parquet.read.bitmap.coalesce-hole-size-limit";
 
 // stack-overflow may happen while the number of predicate node is too large, limit the number of
 // predicate nodes. Predicate will not be pushdown when exceed limit.
@@ -82,6 +90,8 @@ static constexpr uint32_t DEFAULT_PARQUET_READ_CACHE_OPTION_PREFETCH_LIMIT = 0;
 static constexpr uint32_t DEFAULT_PARQUET_READ_CACHE_OPTION_RANGE_SIZE_LIMIT = 32 * 1024 * 1024;
 static constexpr uint32_t DEFAULT_PARQUET_READ_PREDICATE_NODE_COUNT_LIMIT = 512;
 static constexpr bool DEFAULT_PARQUET_READ_ENABLE_PAGE_INDEX_FILTER = true;
+static constexpr char DEFAULT_PARQUET_READ_BITMAP_STRATEGY[] = "coalesce";
+static constexpr uint32_t DEFAULT_PARQUET_READ_ROW_RANGES_COALESCE_HOLE_SIZE_LIMIT = 32;
 
 class ParquetMetrics {
  public:

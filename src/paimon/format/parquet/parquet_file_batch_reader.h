@@ -170,12 +170,6 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         }
     }
 
-    static RowRanges BitmapToRowRanges(const RoaringBitmap32& bitmap, uint64_t start_row,
-                                       uint64_t end_row);
-
-    Result<TargetRowGroups> FilterPagesByBitmap(const RoaringBitmap32& bitmap,
-                                                int32_t row_group_idx, uint64_t rg_start_row,
-                                                int64_t rg_row_count) const;
     /// Recursively collect leaf column indices for the sub-fields in read_type
     /// that match file_type by paimon field ID. Unmatched sub-fields in file_type
     /// have their leaf indices skipped. Partial projection inside LIST/MAP is
@@ -206,17 +200,29 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     Result<TargetRowGroups> FilterRowGroupsByBitmap(const RoaringBitmap32& bitmap,
                                                     const TargetRowGroups& src_row_groups) const;
 
-    Result<TargetRowGroups> FilterPagesByBitmap(const RoaringBitmap32& bitmap,
-                                                const TargetRowGroups& src_row_groups,
-                                                const std::vector<int32_t>& column_indices) const;
+    // Apply bitmap filtering to row ranges by trimming start and end rows in pages.
+    // Then apply intersection among all target columns.
+    Result<TargetRowGroups> RefineRowRangesByTrimming(
+        const RoaringBitmap32& bitmap, const TargetRowGroups& src_row_groups,
+        const std::vector<int32_t>& column_indices) const;
 
     // Apply page-level bitmap filtering to a single row group across all
     // requested columns. Intersects the row group's existing ranges with the
     // per-column page ranges derived from the bitmap.
-    TargetRowGroup FilterRowGroupPagesByBitmap(
+    TargetRowGroup TrimRowGroupPageRanges(
         const RoaringBitmap32& bitmap, const TargetRowGroup& row_group,
         const std::vector<int32_t>& column_indices,
         const std::shared_ptr<::parquet::PageIndexReader>& page_index_reader) const;
+
+    // Apply bitmap filtering to row ranges by coalescing nearby ranges.
+    Result<TargetRowGroups> RefineRowRangesByCoalescing(
+        const RoaringBitmap32& bitmap, const TargetRowGroups& src_row_groups) const;
+    // Convert bitmap set bits within [start_row, end_row) to contiguous
+    // row ranges, stored relative to start_row.
+    static RowRanges BitmapToContiguousRanges(const RoaringBitmap32& bitmap, uint64_t start_row,
+                                              uint64_t end_row);
+    // Merge ranges whose inter-range gap is <= max_hole_size.
+    static RowRanges CoalesceNearbyRanges(const RowRanges& input, uint64_t max_hole_size);
 
     // Compute the set of row ranges within a single column's pages that
     // overlap with the given bitmap. For each page, the bitmap is queried to
