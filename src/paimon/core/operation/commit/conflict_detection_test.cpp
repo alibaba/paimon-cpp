@@ -243,6 +243,38 @@ TEST_F(ConflictDetectionTest, TestGlobalIndexRowIdExistenceConflicts) {
         "Global index row ID existence conflict");
 }
 
+TEST_F(ConflictDetectionTest, TestDedicatedStorageRowIdRangeParityWithRelease14) {
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<TableSchema> table_schema,
+        TableSchema::Create(/*schema_id=*/0, arrow::schema(fields_), /*partition_keys=*/{"f1"},
+                            /*primary_keys=*/{}, /*options=*/{}));
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options,
+                         CoreOptions::FromMap({{Options::DATA_EVOLUTION_ENABLED, "true"}}));
+    ConflictDetection detection(table_schema, core_options, nullptr, nullptr, nullptr);
+
+    const BinaryRow partition = CreateIntRow(10);
+    std::vector<ManifestEntry> base_entries;
+    base_entries.push_back(CreateManifestEntryWithFirstRowId("data-0.orc", partition,
+                                                             FileKind::Add(), /*bucket=*/0,
+                                                             /*first_row_id=*/0,
+                                                             /*row_count=*/10));
+
+    std::vector<ManifestEntry> out_of_range_dedicated_entries;
+    out_of_range_dedicated_entries.push_back(CreateManifestEntryWithFirstRowId(
+        "blob-0.blob", partition, FileKind::Add(), /*bucket=*/0, /*first_row_id=*/5,
+        /*row_count=*/10));
+    // release-1.4 parity: CheckRowIdRangeConflicts validates only data-file range consistency.
+    ASSERT_OK(CheckConflicts(detection, base_entries, out_of_range_dedicated_entries,
+                             Snapshot::CommitKind::Compact()));
+
+    std::vector<ManifestEntry> contained_dedicated_entries;
+    contained_dedicated_entries.push_back(CreateManifestEntryWithFirstRowId(
+        "blob-1.blob", partition, FileKind::Add(), /*bucket=*/0, /*first_row_id=*/5,
+        /*row_count=*/4));
+    ASSERT_OK(CheckConflicts(detection, base_entries, contained_dedicated_entries,
+                             Snapshot::CommitKind::Compact()));
+}
+
 TEST_F(ConflictDetectionTest, TestBucketKeepSame) {
     ASSERT_OK_AND_ASSIGN(
         std::shared_ptr<TableSchema> table_schema,

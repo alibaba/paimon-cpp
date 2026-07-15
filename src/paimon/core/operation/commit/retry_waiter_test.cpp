@@ -33,4 +33,15 @@ TEST(RetryWaiterTest, TestRetryWaitWithZeroBoundsReturnsQuickly) {
     ASSERT_LT(elapsed.count(), 20);
 }
 
+TEST(RetryWaiterTest, TestRetryWaitWithLargeRetryCountIsClamped) {
+    RetryWaiter waiter(/*min_retry_wait_ms=*/10, /*max_retry_wait_ms=*/10);
+
+    auto begin = std::chrono::steady_clock::now();
+    waiter.RetryWait(/*retry_count=*/1024);
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - begin);
+
+    ASSERT_GE(elapsed.count(), 8);
+}
+
 }  // namespace paimon::test

@@ -31,6 +31,7 @@
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/fields_comparator.h"
+#include "paimon/common/utils/range_helper.h"
 #include "paimon/core/deletionvectors/deletion_vectors_index_file.h"
 #include "paimon/core/manifest/file_entry.h"
 #include "paimon/core/manifest/file_kind.h"
@@ -351,55 +352,47 @@ Status ConflictDetection::CheckRowIdRangeConflicts(
         return Status::OK();
     }
 
-    std::vector<std::pair<Range, ManifestEntry>> entries_with_ranges;
+    std::vector<ManifestEntry> entries_with_ranges;
     entries_with_ranges.reserve(merged_entries.size());
     for (const ManifestEntry& entry : merged_entries) {
-        if (!entry.File()->first_row_id) {
-            continue;
+        if (entry.File()->first_row_id) {
+            entries_with_ranges.push_back(entry);
         }
-        int64_t range_from = entry.File()->first_row_id.value();
-        int64_t range_to = range_from + entry.File()->row_count - 1;
-        entries_with_ranges.emplace_back(Range(range_from, range_to), entry);
     }
     if (entries_with_ranges.empty()) {
         return Status::OK();
     }
 
-    std::sort(entries_with_ranges.begin(), entries_with_ranges.end(),
-              [](const auto& lhs, const auto& rhs) { return lhs.first.from < rhs.first.from; });
+    RangeHelper<ManifestEntry> range_helper(
+        [](const ManifestEntry& entry) -> Result<int64_t> {
+            return entry.File()->first_row_id.value();
+        },
+        [](const ManifestEntry& entry) -> Result<int64_t> {
+            return entry.File()->first_row_id.value() + entry.File()->row_count - 1;
+        });
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::vector<ManifestEntry>> merged_groups,
+                           range_helper.MergeOverlappingRanges(std::move(entries_with_ranges)));
 
-    size_t group_start = 0;
-    int64_t group_max_to = entries_with_ranges[0].first.to;
-    for (size_t i = 1; i <= entries_with_ranges.size(); ++i) {
-        bool overlap_group_end =
-            (i == entries_with_ranges.size()) || (entries_with_ranges[i].first.from > group_max_to);
-        if (!overlap_group_end) {
-            group_max_to = std::max(group_max_to, entries_with_ranges[i].first.to);
-            continue;
-        }
-
-        std::optional<std::pair<int64_t, int64_t>> expected_range;
-        for (size_t j = group_start; j < i; ++j) {
-            const ManifestEntry& entry = entries_with_ranges[j].second;
-            if (IsDedicatedStorageFile(entry.FileName())) {
-                continue;
-            }
-            std::pair<int64_t, int64_t> current = {entries_with_ranges[j].first.from,
-                                                   entries_with_ranges[j].first.to};
-            if (!expected_range) {
-                expected_range = current;
-            } else if (expected_range.value() != current) {
-                return Status::Invalid(
-                    "For Data Evolution table, multiple MERGE INTO/COMPACT operations have "
-                    "encountered row-id range conflicts.");
+    for (const auto& group : merged_groups) {
+        std::vector<ManifestEntry> data_files;
+        for (const ManifestEntry& entry : group) {
+            // release-1.4 parity: row-id range conflict check excludes blob files only.
+            if (!BlobUtils::IsBlobFile(entry.FileName())) {
+                data_files.push_back(entry);
             }
         }
 
-        if (i < entries_with_ranges.size()) {
-            group_start = i;
-            group_max_to = entries_with_ranges[i].first.to;
+        PAIMON_ASSIGN_OR_RAISE(bool all_data_ranges_same, range_helper.AreAllRangesSame(data_files));
+        if (!all_data_ranges_same) {
+            return Status::Invalid(
+                "For Data Evolution table, multiple MERGE INTO/COMPACT operations have "
+                "encountered row-id range conflicts.");
         }
     }
+
+    // TODO(yonghao.fyh): release-1.4 parity keeps dedicated-storage row-id containment unchecked here.
+    // Consider adding a strict-mode validation that each dedicated-file range is fully
+    // covered by one data-file range to catch dangling/cross-file mappings.
 
     return Status::OK();
 }
@@ -423,7 +416,8 @@ Status ConflictDetection::CheckForRowIdFromSnapshot(
     PAIMON_ASSIGN_OR_RAISE(Snapshot check_snapshot,
                            snapshot_manager_->LoadSnapshot(row_id_check_from_snapshot_.value()));
     if (!check_snapshot.NextRowId()) {
-        return Status::OK();
+        return Status::Invalid(fmt::format("Next row id cannot be null for snapshot {}.",
+                                           row_id_check_from_snapshot_.value()));
     }
     int64_t check_next_row_id = check_snapshot.NextRowId().value();
 

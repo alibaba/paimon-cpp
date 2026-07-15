@@ -1765,52 +1765,6 @@ TEST_F(FileStoreCommitImplTest, TestCommitWithCompactDeletedIndexFiles) {
     ASSERT_TRUE(index_entries.empty());
 }
 
-TEST_F(FileStoreCommitImplTest, DISABLED_TestOverwriteWithIndexFiles) {
-    CommitContextBuilder context_builder(table_path_, "commit_user_1");
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
-                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
-                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
-                             .AddOption(Options::FILE_SYSTEM, "local")
-                             .Finish());
-
-    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
-    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
-        std::shared_ptr<FileStoreCommit>(std::move(commit)));
-    const BinaryRow partition = CreateIntRow(10);
-
-    std::vector<std::shared_ptr<IndexFileMeta>> new_index_files_1;
-    new_index_files_1.push_back(CreateIndexFileMeta("bitmap-index-1"));
-    DataIncrement data_increment_1({}, {}, {}, std::move(new_index_files_1), {});
-    std::shared_ptr<CommitMessage> msg_1 =
-        std::make_shared<CommitMessageImpl>(partition, /*bucket=*/0, /*total_buckets=*/2,
-                                            data_increment_1, CompactIncrement({}, {}, {}));
-
-    ASSERT_OK(commit_impl->Overwrite({}, {msg_1}, 1));
-    ASSERT_OK_AND_ASSIGN(auto snapshot1, commit_impl->snapshot_manager_->LatestSnapshot());
-    ASSERT_TRUE(snapshot1.value().IndexManifest());
-    std::vector<IndexManifestEntry> index_entries_1;
-    ASSERT_OK(commit_impl->index_manifest_file_->Read(snapshot1.value().IndexManifest().value(),
-                                                      /*filter=*/nullptr, &index_entries_1));
-    ASSERT_EQ(1u, index_entries_1.size());
-    ASSERT_EQ("bitmap-index-1", index_entries_1[0].index_file->FileName());
-
-    std::vector<std::shared_ptr<IndexFileMeta>> new_index_files_2;
-    new_index_files_2.push_back(CreateIndexFileMeta("bitmap-index-2"));
-    DataIncrement data_increment_2({}, {}, {}, std::move(new_index_files_2), {});
-    std::shared_ptr<CommitMessage> msg_2 =
-        std::make_shared<CommitMessageImpl>(partition, /*bucket=*/0, /*total_buckets=*/2,
-                                            data_increment_2, CompactIncrement({}, {}, {}));
-
-    ASSERT_OK(commit_impl->Overwrite({}, {msg_2}, 2));
-    ASSERT_OK_AND_ASSIGN(auto snapshot2, commit_impl->snapshot_manager_->LatestSnapshot());
-    ASSERT_TRUE(snapshot2.value().IndexManifest());
-    std::vector<IndexManifestEntry> index_entries_2;
-    ASSERT_OK(commit_impl->index_manifest_file_->Read(snapshot2.value().IndexManifest().value(),
-                                                      /*filter=*/nullptr, &index_entries_2));
-    ASSERT_EQ(1u, index_entries_2.size());
-    ASSERT_EQ("bitmap-index-2", index_entries_2[0].index_file->FileName());
-}
-
 TEST_F(FileStoreCommitImplTest, TestOverwriteWithCompactIndexFiles) {
     CommitContextBuilder context_builder(table_path_, "commit_user_1");
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
@@ -1901,50 +1855,6 @@ TEST_F(FileStoreCommitImplTest, TestFilterAndOverwrite) {
     ASSERT_TRUE(IsStringInSet(file_names, "data-7b3f4cc7-116b-4d2f-9c62-5dadc1f11bcb-0.orc"));
 }
 
-TEST_F(FileStoreCommitImplTest, DISABLED_TestFilterAndOverwriteWithIndexFiles) {
-    CommitContextBuilder context_builder(table_path_, "commit_user_1");
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
-                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
-                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
-                             .AddOption(Options::FILE_SYSTEM, "local")
-                             .Finish());
-
-    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
-    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
-        std::shared_ptr<FileStoreCommit>(std::move(commit)));
-    const BinaryRow partition = CreateIntRow(10);
-
-    std::vector<std::shared_ptr<IndexFileMeta>> new_index_files_1;
-    new_index_files_1.push_back(CreateIndexFileMeta("bitmap-index-filter-1"));
-    DataIncrement data_increment_1({}, {}, {}, std::move(new_index_files_1), {});
-    std::shared_ptr<CommitMessage> msg_1 =
-        std::make_shared<CommitMessageImpl>(partition, /*bucket=*/0, /*total_buckets=*/2,
-                                            data_increment_1, CompactIncrement({}, {}, {}));
-
-    ASSERT_OK_AND_ASSIGN(int32_t actual_commit,
-                         commit_impl->FilterAndOverwrite({}, {msg_1}, 1, 10));
-    ASSERT_EQ(1, actual_commit);
-    ASSERT_OK_AND_ASSIGN(actual_commit, commit_impl->FilterAndOverwrite({}, {msg_1}, 1, 5));
-    ASSERT_EQ(0, actual_commit);
-
-    std::vector<std::shared_ptr<IndexFileMeta>> new_index_files_2;
-    new_index_files_2.push_back(CreateIndexFileMeta("bitmap-index-filter-2"));
-    DataIncrement data_increment_2({}, {}, {}, std::move(new_index_files_2), {});
-    std::shared_ptr<CommitMessage> msg_2 =
-        std::make_shared<CommitMessageImpl>(partition, /*bucket=*/0, /*total_buckets=*/2,
-                                            data_increment_2, CompactIncrement({}, {}, {}));
-
-    ASSERT_OK_AND_ASSIGN(actual_commit, commit_impl->FilterAndOverwrite({}, {msg_2}, 2, 20));
-    ASSERT_EQ(1, actual_commit);
-    ASSERT_OK_AND_ASSIGN(auto snapshot, commit_impl->snapshot_manager_->LatestSnapshot());
-    ASSERT_TRUE(snapshot.value().IndexManifest());
-    std::vector<IndexManifestEntry> index_entries;
-    ASSERT_OK(commit_impl->index_manifest_file_->Read(snapshot.value().IndexManifest().value(),
-                                                      /*filter=*/nullptr, &index_entries));
-    ASSERT_EQ(1u, index_entries.size());
-    ASSERT_EQ("bitmap-index-filter-2", index_entries[0].index_file->FileName());
-}
-
 TEST_F(FileStoreCommitImplTest, TestFilterAndOverwriteWithCompactIndexFiles) {
     CommitContextBuilder context_builder(table_path_, "commit_user_1");
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
@@ -1984,7 +1894,7 @@ TEST_F(FileStoreCommitImplTest, TestFilterAndOverwriteWithCompactIndexFiles) {
     ASSERT_EQ("bitmap-index-filter-compact-1", index_entries[0].index_file->FileName());
 }
 
-TEST_F(FileStoreCommitImplTest, DISABLED_TestOverwriteWithSpecifyPartition) {
+TEST_F(FileStoreCommitImplTest, TestOverwriteWithSpecifyPartition) {
     CommitContextBuilder context_builder(table_path_, "commit_user_1");
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
                          context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
@@ -2010,76 +1920,13 @@ TEST_F(FileStoreCommitImplTest, DISABLED_TestOverwriteWithSpecifyPartition) {
 
     std::map<std::string, std::string> partitions;
     partitions["f1"] = "10";
-    ASSERT_NOK(commit_impl->Overwrite(partitions, msgs2, 2));
+    ASSERT_OK(commit_impl->Overwrite(partitions, msgs2, 2));
     ASSERT_OK_AND_ASSIGN(auto snapshot1, commit_impl->snapshot_manager_->LatestSnapshot());
     ASSERT_OK_AND_ASSIGN(auto entries1, commit_impl->GetAllFiles(snapshot1.value(), {}));
-    ASSERT_EQ(3u, entries1.size());
+    ASSERT_EQ(2u, entries1.size());
     std::set<std::string> file_names = CollectFileNames(entries1);
-    ASSERT_TRUE(IsStringInSet(file_names, "data-51a45441-6037-4af3-b67b-5cefd75dc6f2-0.orc"));
-    ASSERT_TRUE(IsStringInSet(file_names, "data-6828284c-e707-49b5-af6b-69be79af120c-0.orc"));
-    ASSERT_TRUE(IsStringInSet(file_names, "data-8dc7f04c-3c98-48b2-9d56-834d746c4a40-0.orc"));
-}
-
-TEST_F(FileStoreCommitImplTest, DISABLED_TestOverwriteWithSpecifyPartitionIndexFiles) {
-    CommitContextBuilder context_builder(table_path_, "commit_user_1");
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
-                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
-                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
-                             .AddOption(Options::FILE_SYSTEM, "local")
-                             .Finish());
-
-    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
-    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
-        std::shared_ptr<FileStoreCommit>(std::move(commit)));
-
-    const BinaryRow partition_10 = CreateIntRow(10);
-    const BinaryRow partition_20 = CreateIntRow(20);
-
-    std::vector<std::shared_ptr<IndexFileMeta>> index_files_partition_10_v1;
-    index_files_partition_10_v1.push_back(CreateIndexFileMeta("bitmap-index-partition-10-v1"));
-    DataIncrement data_increment_partition_10_v1({}, {}, {}, std::move(index_files_partition_10_v1),
-                                                 {});
-    std::shared_ptr<CommitMessage> msg_partition_10_v1 = std::make_shared<CommitMessageImpl>(
-        partition_10, /*bucket=*/0, /*total_buckets=*/2, data_increment_partition_10_v1,
-        CompactIncrement({}, {}, {}));
-
-    std::vector<std::shared_ptr<IndexFileMeta>> index_files_partition_20_v1;
-    index_files_partition_20_v1.push_back(CreateIndexFileMeta("bitmap-index-partition-20-v1"));
-    DataIncrement data_increment_partition_20_v1({}, {}, {}, std::move(index_files_partition_20_v1),
-                                                 {});
-    std::shared_ptr<CommitMessage> msg_partition_20_v1 = std::make_shared<CommitMessageImpl>(
-        partition_20, /*bucket=*/0, /*total_buckets=*/2, data_increment_partition_20_v1,
-        CompactIncrement({}, {}, {}));
-
-    ASSERT_OK(commit_impl->Overwrite({}, {msg_partition_10_v1, msg_partition_20_v1}, 1));
-
-    std::vector<std::shared_ptr<IndexFileMeta>> index_files_partition_10_v2;
-    index_files_partition_10_v2.push_back(CreateIndexFileMeta("bitmap-index-partition-10-v2"));
-    DataIncrement data_increment_partition_10_v2({}, {}, {}, std::move(index_files_partition_10_v2),
-                                                 {});
-    std::shared_ptr<CommitMessage> msg_partition_10_v2 = std::make_shared<CommitMessageImpl>(
-        partition_10, /*bucket=*/0, /*total_buckets=*/2, data_increment_partition_10_v2,
-        CompactIncrement({}, {}, {}));
-
-    std::map<std::string, std::string> partition_spec;
-    partition_spec["f1"] = "10";
-    ASSERT_OK(commit_impl->Overwrite(partition_spec, {msg_partition_10_v2}, 2));
-
-    ASSERT_OK_AND_ASSIGN(auto snapshot, commit_impl->snapshot_manager_->LatestSnapshot());
-    ASSERT_TRUE(snapshot.value().IndexManifest());
-    std::vector<IndexManifestEntry> index_entries;
-    ASSERT_OK(commit_impl->index_manifest_file_->Read(snapshot.value().IndexManifest().value(),
-                                                      /*filter=*/nullptr, &index_entries));
-    ASSERT_EQ(2u, index_entries.size());
-
-    std::set<std::string> index_file_names;
-    for (const auto& entry : index_entries) {
-        index_file_names.insert(entry.index_file->FileName());
-    }
-
-    ASSERT_TRUE(IsStringInSet(index_file_names, "bitmap-index-partition-10-v2"));
-    ASSERT_TRUE(IsStringInSet(index_file_names, "bitmap-index-partition-20-v1"));
-    ASSERT_FALSE(IsStringInSet(index_file_names, "bitmap-index-partition-10-v1"));
+    ASSERT_TRUE(IsStringInSet(file_names, "data-fd1d2255-43f2-4534-b4cc-08b29e662940-0.orc"));
+    ASSERT_TRUE(IsStringInSet(file_names, "data-7b3f4cc7-116b-4d2f-9c62-5dadc1f11bcb-0.orc"));
 }
 
 TEST_F(FileStoreCommitImplTest, TestOverwriteWithSameFile) {

@@ -32,8 +32,16 @@ RetryWaiter::RetryWaiter(int64_t min_retry_wait_ms, int64_t max_retry_wait_ms)
 void RetryWaiter::RetryWait(int32_t retry_count) const {
     int32_t non_negative_retry_count = std::max<int32_t>(0, retry_count);
     double exponential = std::pow(2.0, static_cast<double>(non_negative_retry_count));
-    int64_t retry_wait = static_cast<int64_t>(min_retry_wait_ms_ * exponential);
-    retry_wait = std::min(retry_wait, max_retry_wait_ms_);
+    int64_t retry_wait = 0;
+    if (min_retry_wait_ms_ > 0 && max_retry_wait_ms_ > 0) {
+        double max_safe_exponential =
+            static_cast<double>(max_retry_wait_ms_) / static_cast<double>(min_retry_wait_ms_);
+        if (!std::isfinite(exponential) || exponential >= max_safe_exponential) {
+            retry_wait = max_retry_wait_ms_;
+        } else {
+            retry_wait = static_cast<int64_t>(min_retry_wait_ms_ * exponential);
+        }
+    }
 
     int64_t jitter_upper = std::max<int64_t>(1, static_cast<int64_t>(retry_wait * 0.2));
     std::mt19937 rng(std::random_device{}());  // NOLINT(whitespace/braces)

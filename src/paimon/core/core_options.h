@@ -48,7 +48,7 @@ class Cache;
 
 class PAIMON_EXPORT CoreOptions {
  public:
-    // Specifies how to initialize the next sequence number for primary key table writers.
+    /// Specifies how to initialize the next sequence number for primary key table writers.
     enum class SequenceNumberInitMode {
         // initialize by scanning existing file metadata.
         SCAN,

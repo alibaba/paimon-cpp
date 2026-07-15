@@ -171,4 +171,36 @@ TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingDoesNotMutateInputEntrie
     EXPECT_NE(input_file_1.get(), assigned.assigned_entries[1].File().get());
 }
 
+TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingReassignsOnRetryWithAdvancedRowId) {
+    std::vector<ManifestEntry> input;
+    input.push_back(CreateEntry("retry-file", /*row_count=*/10, /*min_seq=*/0, /*max_seq=*/0,
+                                FileSource::Append(), std::vector<std::string>{"f0"}));
+
+    ASSERT_OK_AND_ASSIGN(RowTrackingCommitUtils::RowTrackingAssigned first_attempt,
+                         RowTrackingCommitUtils::AssignRowTracking(
+                             /*new_snapshot_id=*/100, /*first_row_id_start=*/1000, input));
+    ASSERT_EQ(1u, first_attempt.assigned_entries.size());
+    EXPECT_EQ(100, first_attempt.assigned_entries[0].File()->min_sequence_number);
+    EXPECT_EQ(100, first_attempt.assigned_entries[0].File()->max_sequence_number);
+    ASSERT_TRUE(first_attempt.assigned_entries[0].File()->first_row_id.has_value());
+    EXPECT_EQ(1000, first_attempt.assigned_entries[0].File()->first_row_id.value());
+    EXPECT_EQ(1010, first_attempt.next_row_id_start);
+
+    // Simulate CAS retry with a newer latest snapshot and advanced next_row_id.
+    ASSERT_OK_AND_ASSIGN(RowTrackingCommitUtils::RowTrackingAssigned second_attempt,
+                         RowTrackingCommitUtils::AssignRowTracking(
+                             /*new_snapshot_id=*/101, /*first_row_id_start=*/2000, input));
+    ASSERT_EQ(1u, second_attempt.assigned_entries.size());
+    EXPECT_EQ(101, second_attempt.assigned_entries[0].File()->min_sequence_number);
+    EXPECT_EQ(101, second_attempt.assigned_entries[0].File()->max_sequence_number);
+    ASSERT_TRUE(second_attempt.assigned_entries[0].File()->first_row_id.has_value());
+    EXPECT_EQ(2000, second_attempt.assigned_entries[0].File()->first_row_id.value());
+    EXPECT_EQ(2010, second_attempt.next_row_id_start);
+
+    // Input remains immutable across attempts; retry assignment always starts from fresh metadata.
+    EXPECT_EQ(0, input[0].File()->min_sequence_number);
+    EXPECT_EQ(0, input[0].File()->max_sequence_number);
+    EXPECT_EQ(std::nullopt, input[0].File()->first_row_id);
+}
+
 }  // namespace paimon::test
