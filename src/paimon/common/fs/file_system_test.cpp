@@ -1474,7 +1474,9 @@ TEST_P(FileSystemTest, TestAtomicStoreAlreadyExist) {
 std::vector<std::string> GetTestValuesForFileSystemTest() {
     std::vector<std::string> values;
     values.emplace_back("local");
-    // values.emplace_back("jindo");
+#ifdef PAIMON_ENABLE_JINDO_TESTS
+    values.emplace_back("jindo");
+#endif
     return values;
 }
 

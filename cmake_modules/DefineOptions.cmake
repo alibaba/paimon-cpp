@@ -107,6 +107,9 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
 
     define_option(PAIMON_BUILD_TESTS "Build the Paimon googletest unit tests" OFF)
 
+    define_option(PAIMON_ENABLE_JINDO_TESTS "Enable Jindo tests that access remote OSS"
+                  OFF)
+
     define_option(PAIMON_BUILD_BENCHMARKS
                   "Build the Paimon Google Benchmark performance benchmarks" OFF)
 

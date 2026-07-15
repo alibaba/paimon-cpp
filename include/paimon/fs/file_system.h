@@ -98,6 +98,8 @@ class PAIMON_EXPORT InputStream : public Stream {
     /// @param callback The callback function to be invoked upon completion of the read operation.
     ///                 The callback will receive a Status object indicating the success or failure
     ///                 of the read operation.
+    /// @note The caller must keep the input stream, buffer, and any externally referenced callback
+    ///       state alive until the callback is invoked.
     virtual void ReadAsync(char* buffer, int64_t size, int64_t offset,
                            std::function<void(Status)>&& callback) = 0;
 
