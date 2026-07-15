@@ -16,12 +16,14 @@
 
 #pragma once
 
+#include <limits>
 #include <memory>
 #include <set>
 #include <utility>
 #include <vector>
 
 #include "avro/DataFile.hh"
+#include "fmt/format.h"
 #include "paimon/format/avro/avro_direct_decoder.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/metrics.h"
