@@ -424,7 +424,7 @@ Result<std::vector<DataField>> ProjectWriteFields(const std::shared_ptr<TableSch
     std::vector<DataField> fields;
     fields.reserve(file.write_cols->size() + data_schema->PartitionKeys().size());
     for (const auto& write_col : file.write_cols.value()) {
-        if (SpecialFields::IsSpecialFieldName(write_col)) {
+        if (SpecialFields::IsSystemField(write_col)) {
             continue;
         }
         PAIMON_ASSIGN_OR_RAISE(DataField field, data_schema->GetField(write_col));
