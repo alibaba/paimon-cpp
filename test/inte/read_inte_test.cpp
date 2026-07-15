@@ -3903,10 +3903,12 @@ TEST(SystemTableReadInteTest, TestReadGlobalTables) {
                                    /*ignore_if_exists=*/false));
     ArrowSchemaRelease(&schema);
 
+    std::map<std::string, std::string> no_pk_options = options;
+    no_pk_options[Options::BUCKET_KEY] = "pk";
     ::ArrowSchema no_pk_schema;
     ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &no_pk_schema).ok());
     ASSERT_OK(catalog->CreateTable(Identifier("test_db", "test_no_pk_tbl"), &no_pk_schema,
-                                   /*partition_keys=*/{}, /*primary_keys=*/{}, options,
+                                   /*partition_keys=*/{}, /*primary_keys=*/{}, no_pk_options,
                                    /*ignore_if_exists=*/false));
     ArrowSchemaRelease(&no_pk_schema);
 
