@@ -57,7 +57,7 @@ class TestHelper {
         const std::vector<std::string>& partition_keys,
         const std::vector<std::string>& primary_keys,
         const std::map<std::string, std::string>& options, bool is_streaming_mode,
-        bool ignore_if_exists = false) {
+        bool ignore_if_exists = false, const std::string& temp_directory = "") {
         // only for test && only check the key
         auto new_options = options;
         new_options["enable-object-store-catalog-in-inte-test"] = "";
@@ -70,12 +70,12 @@ class TestHelper {
                                                   partition_keys, primary_keys, new_options,
                                                   ignore_if_exists));
         std::string table_path = PathUtil::JoinPath(root_path, "foo.db/bar");
-        return Create(table_path, new_options, is_streaming_mode);
+        return Create(table_path, new_options, is_streaming_mode, temp_directory);
     }
 
     static Result<std::unique_ptr<TestHelper>> Create(
         const std::string& table_path, const std::map<std::string, std::string>& options,
-        bool is_streaming_mode) {
+        bool is_streaming_mode, const std::string& temp_directory = "") {
         std::string file_system_identifier = "local";
         auto fs_iter = options.find(Options::FILE_SYSTEM);
         if (fs_iter != options.end()) {
@@ -85,6 +85,9 @@ class TestHelper {
                                FileSystemFactory::Get(file_system_identifier, table_path, options));
         std::string commit_user = "commit_user";
         WriteContextBuilder context_builder(table_path, commit_user);
+        if (!temp_directory.empty()) {
+            context_builder.WithTempDirectory(temp_directory);
+        }
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<WriteContext> write_context,
                                context_builder.SetOptions(options)
                                    .WithStreamingMode(is_streaming_mode)

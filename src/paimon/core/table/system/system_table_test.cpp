@@ -14,15 +14,20 @@
  * limitations under the License.
  */
 
+#include "paimon/core/table/system/system_table.h"
+
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
+#include <vector>
 
 #include "arrow/api.h"
 #include "gtest/gtest.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/system/audit_log_system_table.h"
 #include "paimon/core/table/system/binlog_system_table.h"
+#include "paimon/core/table/system/read_optimized_system_table.h"
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/result.h"
@@ -60,6 +65,35 @@ TEST(SystemTableTest, TestChangelogArrowSchemaReturnsInvalidOptions) {
     BinlogSystemTable binlog(/*fs=*/nullptr, "/tmp/table", table_schema, options);
     ASSERT_NOK_WITH_MSG(binlog.ArrowSchema(),
                         "Invalid Config [table-read.sequence-number.enabled: invalid]");
+}
+
+TEST(SystemTableTest, TestReadOptimizedSystemTableRegistration) {
+    ASSERT_TRUE(SystemTableLoader::IsSupported(ReadOptimizedSystemTable::kName));
+
+    std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
+                                                  {Options::FILE_FORMAT, "orc"}};
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                         CreateTableSchemaForTest(options));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<SystemTable> system_table,
+                         SystemTableLoader::Load(ReadOptimizedSystemTable::kName, /*fs=*/nullptr,
+                                                 "/tmp/table", table_schema,
+                                                 /*dynamic_options=*/{}));
+    ASSERT_EQ(system_table->Name(), ReadOptimizedSystemTable::kName);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Schema> arrow_schema, system_table->ArrowSchema());
+    ASSERT_EQ(arrow_schema->field_names(), (std::vector<std::string>{"pk", "v"}));
+    ASSERT_EQ(arrow_schema->field(0)->type()->id(), arrow::Type::STRING);
+    ASSERT_EQ(arrow_schema->field(1)->type()->id(), arrow::Type::INT32);
+}
+
+TEST(SystemTableTest, TestReadOptimizedSystemTablePathParsing) {
+    ASSERT_OK_AND_ASSIGN(std::optional<SystemTablePath> parsed,
+                         SystemTableLoader::TryParsePath("/tmp/db.db/t$branch_audit$ro"));
+    ASSERT_TRUE(parsed.has_value());
+    ASSERT_EQ(parsed->table_path, "/tmp/db.db/t");
+    ASSERT_TRUE(parsed->branch.has_value());
+    ASSERT_EQ(parsed->branch.value(), "audit");
+    ASSERT_EQ(parsed->system_table_name, ReadOptimizedSystemTable::kName);
 }
 
 }  // namespace paimon::test
