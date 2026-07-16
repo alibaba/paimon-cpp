@@ -33,6 +33,8 @@ class ManifestFileMeta;
 
 class SequenceSnapshotProperties {
  public:
+    SequenceSnapshotProperties() = delete;
+
     static constexpr const char* kMaxSequenceNumberKey = "sequence.generation.max-sequence-number";
 
     static Result<std::optional<int64_t>> MaxSequenceNumber(
@@ -45,9 +47,6 @@ class SequenceSnapshotProperties {
         const std::map<std::string, std::string>& properties,
         const std::optional<int64_t>& latest_max_sequence_number,
         const std::vector<ManifestEntry>& delta_files);
-
- private:
-    SequenceSnapshotProperties() = delete;
 };
 
 }  // namespace paimon

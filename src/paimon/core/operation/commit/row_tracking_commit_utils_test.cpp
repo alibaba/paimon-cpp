@@ -65,13 +65,15 @@ class RowTrackingCommitUtilsTest : public testing::Test {
 
 TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingStampsSequence) {
     std::vector<ManifestEntry> input;
-    input.push_back(CreateEntry("new-file", /*row_count=*/10, /*min_seq=*/0, /*max_seq=*/0,
+    input.push_back(CreateEntry("new-file", /*row_count=*/10, /*min_seq_number=*/0,
+                                /*max_seq_number=*/0,
                                 FileSource::Append(), std::vector<std::string>{"f0"}));
-    input.push_back(CreateEntry("partial-modified", /*row_count=*/8, /*min_seq=*/7,
-                                /*max_seq=*/0, FileSource::Append(),
+    input.push_back(CreateEntry("partial-modified", /*row_count=*/8, /*min_seq_number=*/7,
+                                /*max_seq_number=*/0, FileSource::Append(),
                                 std::vector<std::string>{"f0"}));
-    input.push_back(CreateEntry("compact-file", /*row_count=*/6, /*min_seq=*/3, /*max_seq=*/5,
-                                FileSource::Compact(), std::vector<std::string>{"f0"}));
+    input.push_back(CreateEntry("compact-file", /*row_count=*/6, /*min_seq_number=*/3,
+                                /*max_seq_number=*/5, FileSource::Compact(),
+                                std::vector<std::string>{"f0"}));
 
     ASSERT_OK_AND_ASSIGN(RowTrackingCommitUtils::RowTrackingAssigned assigned,
                          RowTrackingCommitUtils::AssignRowTracking(
@@ -88,8 +90,9 @@ TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingStampsSequence) {
 
 TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingStampsSequenceRangeStartingAtZero) {
     std::vector<ManifestEntry> input;
-    input.push_back(CreateEntry("range-starts-at-zero", /*row_count=*/10, /*min_seq=*/0,
-                                /*max_seq=*/9, FileSource::Append(),
+    input.push_back(CreateEntry("range-starts-at-zero", /*row_count=*/10,
+                                /*min_seq_number=*/0, /*max_seq_number=*/9,
+                                FileSource::Append(),
                                 std::vector<std::string>{"f0"}));
 
     ASSERT_OK_AND_ASSIGN(RowTrackingCommitUtils::RowTrackingAssigned assigned,
@@ -103,17 +106,21 @@ TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingStampsSequenceRangeStart
 
 TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTracking) {
     std::vector<ManifestEntry> input;
-    input.push_back(CreateEntry("normal-file", /*row_count=*/10, /*min_seq=*/0, /*max_seq=*/0,
-                                FileSource::Append(), std::vector<std::string>{"f0"}));
-    input.push_back(CreateEntry("blob-a.blob", /*row_count=*/3, /*min_seq=*/0, /*max_seq=*/0,
+    input.push_back(CreateEntry("normal-file", /*row_count=*/10, /*min_seq_number=*/0,
+                                /*max_seq_number=*/0, FileSource::Append(),
+                                std::vector<std::string>{"f0"}));
+    input.push_back(CreateEntry("blob-a.blob", /*row_count=*/3, /*min_seq_number=*/0,
+                                /*max_seq_number=*/0,
                                 FileSource::Append(), std::vector<std::string>{"blob_a"}));
-    input.push_back(CreateEntry("blob-a-2.blob", /*row_count=*/2, /*min_seq=*/0, /*max_seq=*/0,
+    input.push_back(CreateEntry("blob-a-2.blob", /*row_count=*/2, /*min_seq_number=*/0,
+                                /*max_seq_number=*/0,
                                 FileSource::Append(), std::vector<std::string>{"blob_a"}));
-    input.push_back(CreateEntry("vector-1.vector.data", /*row_count=*/4, /*min_seq=*/0,
-                                /*max_seq=*/0, FileSource::Append(),
+    input.push_back(CreateEntry("vector-1.vector.data", /*row_count=*/4,
+                                /*min_seq_number=*/0, /*max_seq_number=*/0, FileSource::Append(),
                                 std::vector<std::string>{"vec"}));
-    input.push_back(CreateEntry("normal-file-2", /*row_count=*/5, /*min_seq=*/0, /*max_seq=*/0,
-                                FileSource::Append(), std::vector<std::string>{"f0"}));
+    input.push_back(CreateEntry("normal-file-2", /*row_count=*/5, /*min_seq_number=*/0,
+                                /*max_seq_number=*/0, FileSource::Append(),
+                                std::vector<std::string>{"f0"}));
 
     ASSERT_OK_AND_ASSIGN(RowTrackingCommitUtils::RowTrackingAssigned assigned,
                          RowTrackingCommitUtils::AssignRowTracking(
@@ -135,8 +142,9 @@ TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTracking) {
 
 TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingWithoutFileSource) {
     std::vector<ManifestEntry> input;
-    input.push_back(CreateEntry("invalid-no-source", /*row_count=*/1, /*min_seq=*/0,
-                                /*max_seq=*/0, std::nullopt, std::vector<std::string>{"f0"}));
+    input.push_back(CreateEntry("invalid-no-source", /*row_count=*/1, /*min_seq_number=*/0,
+                                /*max_seq_number=*/0, std::nullopt,
+                                std::vector<std::string>{"f0"}));
 
     ASSERT_NOK_WITH_MSG(RowTrackingCommitUtils::AssignRowTracking(
                             /*new_snapshot_id=*/1, /*first_row_id_start=*/0, input),
@@ -145,10 +153,12 @@ TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingWithoutFileSource) {
 
 TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingDoesNotMutateInputEntries) {
     std::vector<ManifestEntry> input;
-    input.push_back(CreateEntry("normal-file", /*row_count=*/10, /*min_seq=*/0, /*max_seq=*/0,
-                                FileSource::Append(), std::vector<std::string>{"f0"}));
-    input.push_back(CreateEntry("normal-file-2", /*row_count=*/5, /*min_seq=*/7, /*max_seq=*/0,
-                                FileSource::Append(), std::vector<std::string>{"f0"}));
+    input.push_back(CreateEntry("normal-file", /*row_count=*/10, /*min_seq_number=*/0,
+                                /*max_seq_number=*/0, FileSource::Append(),
+                                std::vector<std::string>{"f0"}));
+    input.push_back(CreateEntry("normal-file-2", /*row_count=*/5, /*min_seq_number=*/7,
+                                /*max_seq_number=*/0, FileSource::Append(),
+                                std::vector<std::string>{"f0"}));
 
     std::shared_ptr<DataFileMeta> input_file_0 = input[0].File();
     std::shared_ptr<DataFileMeta> input_file_1 = input[1].File();
@@ -173,8 +183,9 @@ TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingDoesNotMutateInputEntrie
 
 TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingReassignsOnRetryWithAdvancedRowId) {
     std::vector<ManifestEntry> input;
-    input.push_back(CreateEntry("retry-file", /*row_count=*/10, /*min_seq=*/0, /*max_seq=*/0,
-                                FileSource::Append(), std::vector<std::string>{"f0"}));
+    input.push_back(CreateEntry("retry-file", /*row_count=*/10, /*min_seq_number=*/0,
+                                /*max_seq_number=*/0, FileSource::Append(),
+                                std::vector<std::string>{"f0"}));
 
     ASSERT_OK_AND_ASSIGN(RowTrackingCommitUtils::RowTrackingAssigned first_attempt,
                          RowTrackingCommitUtils::AssignRowTracking(

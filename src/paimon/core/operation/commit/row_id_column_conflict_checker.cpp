@@ -152,7 +152,7 @@ Result<bool> RowIdColumnConflictChecker::ConflictsWith(
 
 int32_t RowIdColumnConflictChecker::FirstPossibleRange(const Range& range) const {
     int32_t low = 0;
-    int32_t high = static_cast<int32_t>(write_ranges_.size());
+    auto high = static_cast<int32_t>(write_ranges_.size());
     while (low < high) {
         const int32_t mid = low + (high - low) / 2;
         if (write_ranges_[mid].range.to < range.from) {
