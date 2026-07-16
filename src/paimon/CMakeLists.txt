@@ -794,10 +794,11 @@ if(PAIMON_BUILD_TESTS)
     set(PAIMON_JINDO_FS_TEST_SOURCES)
     set(PAIMON_JINDO_FS_TEST_LINK_LIBS)
     if(PAIMON_ENABLE_JINDO)
-        list(APPEND PAIMON_JINDO_FS_TEST_SOURCES
-             fs/jindo/jindo_file_system_factory_test.cpp fs/jindo/jindo_utils_test.cpp)
+        list(APPEND PAIMON_JINDO_FS_TEST_SOURCES fs/jindo/jindo_utils_test.cpp)
         if(PAIMON_ENABLE_NETWORK_TESTS)
-            list(APPEND PAIMON_JINDO_FS_TEST_SOURCES fs/jindo/jindo_file_system_test.cpp)
+            list(APPEND PAIMON_JINDO_FS_TEST_SOURCES
+                 fs/jindo/jindo_file_system_factory_test.cpp
+                 fs/jindo/jindo_file_system_test.cpp)
         endif()
         list(APPEND PAIMON_JINDO_FS_TEST_LINK_LIBS
              ${PAIMON_JINDO_FILE_SYSTEM_STATIC_LINK_LIBS})
