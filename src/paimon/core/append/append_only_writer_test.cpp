@@ -741,6 +741,40 @@ TEST_F(AppendOnlyWriterTest, TestWriteWithSingleBlobField) {
     ASSERT_OK(writer->Close());
 }
 
+TEST_F(AppendOnlyWriterTest, TestWriteWithOnlyBlobField) {
+    auto options =
+        CreateOptions({{Options::FILE_FORMAT, "orc"}, {Options::MANIFEST_FORMAT, "orc"}});
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = CreatePathFactory(dir->Str(), "orc", options);
+
+    auto blob_field = BlobUtils::ToArrowField("blob", false);
+    auto schema = arrow::schema({blob_field});
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         CreateAppendOnlyWriter(options, /*schema_id=*/0, schema,
+                                                /*write_cols=*/std::vector<std::string>{"blob"},
+                                                /*max_sequence_number=*/-1, path_factory,
+                                                compact_manager_, memory_pool_));
+
+    arrow::LargeBinaryBuilder blob_builder;
+    ASSERT_TRUE(blob_builder.Append("a", 1).ok());
+    ASSERT_TRUE(blob_builder.Append("bb", 2).ok());
+    auto blob_array = blob_builder.Finish().ValueOrDie();
+
+    ASSERT_OK(writer->Write(CreateStructBatch(schema, {blob_array})));
+    ASSERT_OK_AND_ASSIGN(CommitIncrement inc, writer->PrepareCommit(/*wait_compaction=*/true));
+
+    const auto& new_files = inc.GetNewFilesIncrement().NewFiles();
+    ASSERT_EQ(new_files.size(), 1);
+    ASSERT_TRUE(BlobUtils::IsBlobFile(new_files[0]->file_name));
+    ASSERT_EQ(new_files[0]->row_count, 2);
+    ASSERT_TRUE(new_files[0]->write_cols.has_value());
+    ASSERT_EQ(new_files[0]->write_cols.value(), std::vector<std::string>({"blob"}));
+    ASSERT_TRUE(
+        options.GetFileSystem()->Exists(path_factory->ToPath(new_files[0]->file_name)).value());
+    ASSERT_OK(writer->Close());
+}
+
 TEST_F(AppendOnlyWriterTest, TestWriteWithMultipleBlobFields) {
     auto options =
         CreateOptions({{Options::FILE_FORMAT, "orc"}, {Options::MANIFEST_FORMAT, "orc"}});

@@ -55,7 +55,7 @@ RollingBlobFileWriter::RollingBlobFileWriter(
 Status RollingBlobFileWriter::Write(::ArrowArray* record) {
     ScopeGuard guard([this]() -> void { this->Abort(); });
     // Open the current writer if write the first record or roll over happen before.
-    if (PAIMON_UNLIKELY(current_writer_ == nullptr)) {
+    if (writer_factory_ != nullptr && PAIMON_UNLIKELY(current_writer_ == nullptr)) {
         PAIMON_RETURN_NOT_OK(OpenCurrentWriter());
     }
     if (PAIMON_UNLIKELY(blob_writer_ == nullptr)) {
@@ -69,12 +69,14 @@ Status RollingBlobFileWriter::Write(::ArrowArray* record) {
     PAIMON_ASSIGN_OR_RAISE(BlobUtils::SeparatedStructArrays separated_arrays,
                            BlobUtils::SeparateBlobArray(struct_array, inline_fields_));
     // Write main (non-blob) data
-    ::ArrowArray c_main_array;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(
-        arrow::ExportArray(*separated_arrays.main_array, &c_main_array));
-    ScopeGuard array_lifecycle_guard(
-        [&c_main_array]() -> void { ArrowArrayRelease(&c_main_array); });
-    PAIMON_RETURN_NOT_OK(current_writer_->Write(&c_main_array));
+    if (current_writer_ != nullptr) {
+        ::ArrowArray c_main_array;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(
+            arrow::ExportArray(*separated_arrays.main_array, &c_main_array));
+        ScopeGuard array_lifecycle_guard(
+            [&c_main_array]() -> void { ArrowArrayRelease(&c_main_array); });
+        PAIMON_RETURN_NOT_OK(current_writer_->Write(&c_main_array));
+    }
 
     // Write blob data via MultipleBlobFileWriter (each blob field independently)
     ::ArrowArray c_blob_array;
@@ -84,28 +86,35 @@ Status RollingBlobFileWriter::Write(::ArrowArray* record) {
     PAIMON_RETURN_NOT_OK(blob_writer_->Write(&c_blob_array));
 
     record_count_ += record_count;
-    PAIMON_ASSIGN_OR_RAISE(bool need_rolling_file, NeedRollingFile());
-    if (need_rolling_file) {
-        PAIMON_RETURN_NOT_OK(CloseCurrentWriter());
+    if (current_writer_ != nullptr) {
+        PAIMON_ASSIGN_OR_RAISE(bool need_rolling_file, NeedRollingFile());
+        if (need_rolling_file) {
+            PAIMON_RETURN_NOT_OK(CloseCurrentWriter());
+        }
     }
     guard.Release();
     return Status::OK();
 }
 
 Status RollingBlobFileWriter::CloseCurrentWriter() {
-    if (current_writer_ == nullptr) {
+    if (current_writer_ == nullptr && blob_writer_ == nullptr) {
         return Status::OK();
     }
     if (blob_writer_ == nullptr) {
         return Status::OK();
     }
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFileMeta> main_data_file_meta, CloseMainWriter());
+    std::shared_ptr<DataFileMeta> main_data_file_meta;
+    if (current_writer_ != nullptr) {
+        PAIMON_ASSIGN_OR_RAISE(main_data_file_meta, CloseMainWriter());
+    }
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<DataFileMeta>> blob_metas,
                            CloseBlobWriter());
-    PAIMON_RETURN_NOT_OK(
-        ValidateFileConsistency(main_data_file_meta, blob_metas, blob_schema_->num_fields()));
 
-    results_.push_back(main_data_file_meta);
+    if (main_data_file_meta != nullptr) {
+        PAIMON_RETURN_NOT_OK(
+            ValidateFileConsistency(main_data_file_meta, blob_metas, blob_schema_->num_fields()));
+        results_.push_back(main_data_file_meta);
+    }
     results_.insert(results_.end(), blob_metas.begin(), blob_metas.end());
 
     current_writer_.reset();

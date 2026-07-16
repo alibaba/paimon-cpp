@@ -997,30 +997,92 @@ TEST_P(BlobTableInteTest, TestMultipleAppends) {
     }
 }
 
-TEST_P(BlobTableInteTest, TestOnlySomeColumns) {
-    CreateTable();
+TEST_P(BlobTableInteTest, TestDataEvolutionBlobOnlyWriteWithFirstRowId) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
+                                 arrow::field("f1", arrow::utf8()), BlobUtils::ToArrowField("b0")};
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(fields, /*partition_keys=*/{}, options);
     std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
-    auto schema = arrow::schema(fields_);
+    auto schema = arrow::schema(fields);
 
-    // write field: f0
-    std::vector<std::string> write_cols0 = {"f0"};
+    // Initial full-row write assigns row ids 0 and 1.
     auto src_array0 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields_[0]}), R"([
-        [1]
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+        [1, "a", "old_blob_0"],
+        [2, "b", "old_blob_1"]
     ])")
             .ValueOrDie());
-    ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, {}, write_cols0, {src_array0}));
-    ASSERT_OK(Commit(table_path, commit_msgs));
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs0,
+                         WriteArray(table_path, {}, schema->field_names(), {src_array0}));
+    ASSERT_OK(Commit(table_path, commit_msgs0));
 
-    // write field: f1
-    std::vector<std::string> write_cols1 = {"f1"};
+    // Update only b0 and align it with the existing row ids.
+    std::vector<std::string> blob_write_cols = {"b0"};
     auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields_[1]}), R"([
-        ["a"]
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields[2]}), R"([
+        ["new_blob_0"],
+        ["new_blob_1"]
     ])")
             .ValueOrDie());
-    ASSERT_NOK_WITH_MSG(WriteArray(table_path, {}, write_cols1, {src_array1}),
-                        "SeparateBlobArray expects at least one main field, but got none.");
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs1,
+                         WriteArray(table_path, {}, blob_write_cols, {src_array1}));
+    SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs1);
+    ASSERT_OK(Commit(table_path, commit_msgs1));
+
+    auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+        [1, "a", "new_blob_0"],
+        [2, "b", "new_blob_1"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_array));
+
+    if (GetParam() != "lance") {
+        auto expected_with_row_id = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(
+                arrow::struct_({fields[0], fields[1], fields[2], SpecialFields::RowId().field_}),
+                R"([
+        [1, "a", "new_blob_0", 0],
+        [2, "b", "new_blob_1", 1]
+    ])")
+                .ValueOrDie());
+        ASSERT_OK(ScanAndRead(table_path, {"f0", "f1", "b0", "_ROW_ID"}, expected_with_row_id));
+    }
+}
+
+TEST_P(BlobTableInteTest, TestDataEvolutionBlobOnlyFirstCommitFailsWithoutFirstRowId) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
+                                 arrow::field("f1", arrow::utf8()), BlobUtils::ToArrowField("b0")};
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(fields, /*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+
+    auto blob_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields[2]}), R"([
+        ["blob_0"]
+    ])")
+            .ValueOrDie());
+    std::vector<std::string> blob_write_cols = {"b0"};
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         WriteArray(table_path, {}, blob_write_cols, {blob_array}));
+
+    ASSERT_EQ(commit_msgs.size(), 1);
+    auto commit_msg = std::dynamic_pointer_cast<CommitMessageImpl>(commit_msgs[0]);
+    ASSERT_TRUE(commit_msg);
+    ASSERT_EQ(commit_msg->data_increment_.new_files_.size(), 1);
+    const auto& blob_file = commit_msg->data_increment_.new_files_[0];
+    ASSERT_TRUE(BlobUtils::IsBlobFile(blob_file->file_name));
+    ASSERT_FALSE(blob_file->first_row_id.has_value());
+
+    ASSERT_NOK_WITH_MSG(Commit(table_path, commit_msgs), "blobStart 0 should be less than start 0");
 }
 
 TEST_P(BlobTableInteTest, TestMultipleAppendsDifferentFirstRowIds) {

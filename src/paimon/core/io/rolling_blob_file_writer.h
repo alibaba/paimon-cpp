@@ -38,7 +38,8 @@ namespace paimon {
 /// between them.
 ///
 /// Multiple blob fields are supported. Each blob field is written to its own set of blob files
-/// independently via MultipleBlobFileWriter.
+/// independently via MultipleBlobFileWriter. For blob-only writes, the main writer factory may be
+/// nullptr and only blob files are produced.
 ///
 /// <pre>
 /// For example,

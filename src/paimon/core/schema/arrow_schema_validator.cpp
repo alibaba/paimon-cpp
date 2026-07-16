@@ -55,10 +55,19 @@ Status ArrowSchemaValidator::ValidateSchema(const arrow::Schema& schema) {
 
 Status ArrowSchemaValidator::ValidateSchemaWithFieldId(const arrow::Schema& schema) {
     PAIMON_RETURN_NOT_OK(ValidateSchema(schema));
-    auto struct_type = arrow::struct_(schema.fields());
     std::set<int32_t> field_id_set;
-    PAIMON_RETURN_NOT_OK(
-        ValidateDataTypeWithFieldId(struct_type, /*key_value_metadata=*/nullptr, &field_id_set));
+    for (const auto& field : schema.fields()) {
+        PAIMON_ASSIGN_OR_RAISE(DataField data_field,
+                               DataField::ConvertArrowFieldToDataField(field));
+        auto iter = field_id_set.find(data_field.Id());
+        if (iter != field_id_set.end()) {
+            return Status::Invalid(
+                fmt::format("field id must be unique, duplicate field id {}", data_field.Id()));
+        }
+        field_id_set.insert(data_field.Id());
+        PAIMON_RETURN_NOT_OK(ValidateDataTypeWithFieldId(field->type(), field->metadata(),
+                                                         /*allow_blob=*/true, &field_id_set));
+    }
     return Status::OK();
 }
 
@@ -93,7 +102,7 @@ Status ArrowSchemaValidator::ValidateNoWhitespaceOnlyFields(const arrow::FieldVe
 
 Status ArrowSchemaValidator::ValidateDataTypeWithFieldId(
     const std::shared_ptr<arrow::DataType>& type,
-    const std::shared_ptr<const arrow::KeyValueMetadata>& key_value_metadata,
+    const std::shared_ptr<const arrow::KeyValueMetadata>& key_value_metadata, bool allow_blob,
     std::set<int32_t>* field_id_set) {
     const auto kind = type->id();
     switch (kind) {
@@ -114,7 +123,7 @@ Status ArrowSchemaValidator::ValidateDataTypeWithFieldId(
             const auto& value_field =
                 arrow::internal::checked_cast<arrow::BaseListType*>(type.get())->value_field();
             PAIMON_RETURN_NOT_OK(ValidateDataTypeWithFieldId(
-                value_field->type(), value_field->metadata(), field_id_set));
+                value_field->type(), value_field->metadata(), /*allow_blob=*/false, field_id_set));
             break;
         }
         case arrow::Type::type::STRUCT: {
@@ -135,7 +144,7 @@ Status ArrowSchemaValidator::ValidateDataTypeWithFieldId(
                 }
                 field_id_set->insert(data_field.Id());
                 PAIMON_RETURN_NOT_OK(ValidateDataTypeWithFieldId(
-                    sub_field->type(), sub_field->metadata(), field_id_set));
+                    sub_field->type(), sub_field->metadata(), /*allow_blob=*/false, field_id_set));
             }
             break;
         }
@@ -144,14 +153,17 @@ Status ArrowSchemaValidator::ValidateDataTypeWithFieldId(
                 arrow::internal::checked_cast<arrow::MapType*>(type.get())->key_field();
             const auto& item_field =
                 arrow::internal::checked_cast<arrow::MapType*>(type.get())->item_field();
-            PAIMON_RETURN_NOT_OK(ValidateDataTypeWithFieldId(key_field->type(),
-                                                             key_field->metadata(), field_id_set));
-            PAIMON_RETURN_NOT_OK(ValidateDataTypeWithFieldId(item_field->type(),
-                                                             item_field->metadata(), field_id_set));
+            PAIMON_RETURN_NOT_OK(ValidateDataTypeWithFieldId(
+                key_field->type(), key_field->metadata(), /*allow_blob=*/false, field_id_set));
+            PAIMON_RETURN_NOT_OK(ValidateDataTypeWithFieldId(
+                item_field->type(), item_field->metadata(), /*allow_blob=*/false, field_id_set));
             break;
         }
         case arrow::Type::type::LARGE_BINARY: {
             if (BlobUtils::IsBlobMetadata(key_value_metadata)) {
+                if (!allow_blob) {
+                    return Status::Invalid("Blob field must be a top-level field.");
+                }
                 break;
             }
             [[fallthrough]];
@@ -164,6 +176,11 @@ Status ArrowSchemaValidator::ValidateDataTypeWithFieldId(
 }
 
 Status ArrowSchemaValidator::ValidateField(const std::shared_ptr<arrow::Field>& field) {
+    return ValidateField(field, /*allow_blob=*/true);
+}
+
+Status ArrowSchemaValidator::ValidateField(const std::shared_ptr<arrow::Field>& field,
+                                           bool allow_blob) {
     const auto kind = field->type()->id();
     switch (kind) {
         case arrow::Type::type::BOOL:
@@ -185,7 +202,7 @@ Status ArrowSchemaValidator::ValidateField(const std::shared_ptr<arrow::Field>& 
             const auto& value_field =
                 arrow::internal::checked_cast<const arrow::BaseListType&>(*field->type())
                     .value_field();
-            PAIMON_RETURN_NOT_OK(ValidateField(value_field));
+            PAIMON_RETURN_NOT_OK(ValidateField(value_field, /*allow_blob=*/false));
             break;
         }
         case arrow::Type::type::STRUCT: {
@@ -202,7 +219,7 @@ Status ArrowSchemaValidator::ValidateField(const std::shared_ptr<arrow::Field>& 
             arrow::FieldVector arrow_fields =
                 arrow::internal::checked_cast<const arrow::StructType&>(*field->type()).fields();
             for (const auto& sub_field : arrow_fields) {
-                PAIMON_RETURN_NOT_OK(ValidateField(sub_field));
+                PAIMON_RETURN_NOT_OK(ValidateField(sub_field, /*allow_blob=*/false));
             }
             break;
         }
@@ -211,12 +228,15 @@ Status ArrowSchemaValidator::ValidateField(const std::shared_ptr<arrow::Field>& 
                 arrow::internal::checked_cast<const arrow::MapType&>(*field->type()).key_field();
             const auto& item_field =
                 arrow::internal::checked_cast<const arrow::MapType&>(*field->type()).item_field();
-            PAIMON_RETURN_NOT_OK(ValidateField(key_field));
-            PAIMON_RETURN_NOT_OK(ValidateField(item_field));
+            PAIMON_RETURN_NOT_OK(ValidateField(key_field, /*allow_blob=*/false));
+            PAIMON_RETURN_NOT_OK(ValidateField(item_field, /*allow_blob=*/false));
             break;
         }
         case arrow::Type::type::LARGE_BINARY: {
             if (BlobUtils::IsBlobField(field)) {
+                if (!allow_blob) {
+                    return Status::Invalid("Blob field must be a top-level field.");
+                }
                 break;
             }
             [[fallthrough]];
