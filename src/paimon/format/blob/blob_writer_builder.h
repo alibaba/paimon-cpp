@@ -73,8 +73,8 @@ class BlobWriterBuilder : public SpecificFSWriterBuilder {
         PAIMON_ASSIGN_OR_RAISE(bool write_null_on_fetch_failure,
                                OptionsUtils::GetValueFromMap<bool>(
                                    options_, Options::BLOB_WRITE_NULL_ON_FETCH_FAILURE, false));
-        return BlobFormatWriter::Create(out, data_type_, fs_, pool_, write_null_on_missing_file,
-                                        write_null_on_fetch_failure);
+        return BlobFormatWriter::Create(out, data_type_, write_null_on_missing_file,
+                                        write_null_on_fetch_failure, fs_, pool_);
     }
 
  private:

@@ -25,11 +25,6 @@ namespace paimon::jindo::test {
 
 namespace {
 
-Status ConvertWithNotExist(const JdoStatus& jdo_status) {
-    PAIMON_RETURN_NOT_OK_FROM_JINDO_WITH_NOT_EXIST(jdo_status);
-    return Status::OK();
-}
-
 Status Convert(const JdoStatus& jdo_status) {
     PAIMON_RETURN_NOT_OK_FROM_JINDO(jdo_status);
     return Status::OK();
@@ -37,21 +32,16 @@ Status Convert(const JdoStatus& jdo_status) {
 
 }  // namespace
 
-TEST(JindoUtilsTest, TestNotExistMacroMapsStatusByErrorCode) {
-    ASSERT_OK(ConvertWithNotExist(JdoStatus()));
+TEST(JindoUtilsTest, TestMacroMapsStatusByErrorCode) {
+    ASSERT_OK(Convert(JdoStatus()));
 
-    Status not_found = ConvertWithNotExist(JdoStatus(JDO_FILE_NOT_FOUND_ERROR, "file not found"));
+    Status not_found = Convert(JdoStatus(JDO_FILE_NOT_FOUND_ERROR, "file not found"));
     ASSERT_TRUE(not_found.IsNotExist());
     ASSERT_NOK_WITH_MSG(not_found, "file not found");
 
-    Status other = ConvertWithNotExist(JdoStatus(JDO_FILE_NOT_FOUND_ERROR + 1, "some other error"));
+    Status other = Convert(JdoStatus(JDO_FILE_NOT_FOUND_ERROR + 1, "some other error"));
     ASSERT_TRUE(other.IsIOError());
     ASSERT_NOK_WITH_MSG(other, "some other error");
-}
-
-TEST(JindoUtilsTest, TestPlainMacroKeepsIOErrorForNotFound) {
-    Status status = Convert(JdoStatus(JDO_FILE_NOT_FOUND_ERROR, "file not found"));
-    ASSERT_TRUE(status.IsIOError());
 }
 
 }  // namespace paimon::jindo::test

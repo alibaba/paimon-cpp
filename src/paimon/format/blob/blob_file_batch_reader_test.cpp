@@ -234,8 +234,10 @@ TEST_P(BlobFileBatchReaderTest, EmptyFile) {
                          file_system->Create(dir->Str() + "/file.blob", /*overwrite=*/true));
     std::shared_ptr<arrow::Field> blob_field = BlobUtils::ToArrowField("blob_col");
     auto struct_type = arrow::struct_({blob_field});
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<BlobFormatWriter> writer,
-                         BlobFormatWriter::Create(output_stream, struct_type, file_system, pool_));
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<BlobFormatWriter> writer,
+        BlobFormatWriter::Create(output_stream, struct_type, /*write_null_on_missing_file=*/false,
+                                 /*write_null_on_fetch_failure=*/false, file_system, pool_));
 
     ASSERT_OK(writer->Flush());
     ASSERT_OK(writer->Finish());

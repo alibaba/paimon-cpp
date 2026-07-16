@@ -37,10 +37,10 @@ namespace paimon::blob {
 
 BlobFormatWriter::BlobFormatWriter(const std::shared_ptr<OutputStream>& out, const std::string& uri,
                                    const std::shared_ptr<arrow::DataType>& data_type,
-                                   const std::shared_ptr<FileSystem>& fs,
-                                   const std::shared_ptr<MemoryPool>& pool,
                                    bool write_null_on_missing_file,
-                                   bool write_null_on_fetch_failure)
+                                   bool write_null_on_fetch_failure,
+                                   const std::shared_ptr<FileSystem>& fs,
+                                   const std::shared_ptr<MemoryPool>& pool)
     : out_(out),
       uri_(uri),
       data_type_(data_type),
@@ -56,8 +56,8 @@ BlobFormatWriter::BlobFormatWriter(const std::shared_ptr<OutputStream>& out, con
 
 Result<std::unique_ptr<BlobFormatWriter>> BlobFormatWriter::Create(
     const std::shared_ptr<OutputStream>& out, const std::shared_ptr<arrow::DataType>& data_type,
-    const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<MemoryPool>& pool,
-    bool write_null_on_missing_file, bool write_null_on_fetch_failure) {
+    bool write_null_on_missing_file, bool write_null_on_fetch_failure,
+    const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<MemoryPool>& pool) {
     if (out == nullptr) {
         return Status::Invalid("blob format writer create failed. out is nullptr");
     }
@@ -77,7 +77,7 @@ Result<std::unique_ptr<BlobFormatWriter>> BlobFormatWriter::Create(
     }
     PAIMON_ASSIGN_OR_RAISE(std::string uri, out->GetUri());
     return std::unique_ptr<BlobFormatWriter>(new BlobFormatWriter(
-        out, uri, data_type, fs, pool, write_null_on_missing_file, write_null_on_fetch_failure));
+        out, uri, data_type, write_null_on_missing_file, write_null_on_fetch_failure, fs, pool));
 }
 
 Status BlobFormatWriter::AddBatch(ArrowArray* batch) {

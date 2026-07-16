@@ -51,10 +51,14 @@ namespace paimon::blob {
 // https://cwiki.apache.org/confluence/display/PAIMON/PIP-35%3A+Introduce+Blob+to+store+multimodal+data
 class BlobFormatWriter : public FormatWriter {
  public:
+    /// When opening a descriptor input fails, `write_null_on_missing_file` converts a
+    /// missing file (Status::NotExist) to a NULL element and `write_null_on_fetch_failure`
+    /// converts any other open failure; failures during the streaming copy always fail the
+    /// write. See Options::BLOB_WRITE_NULL_ON_MISSING_FILE / BLOB_WRITE_NULL_ON_FETCH_FAILURE.
     static Result<std::unique_ptr<BlobFormatWriter>> Create(
         const std::shared_ptr<OutputStream>& out, const std::shared_ptr<arrow::DataType>& data_type,
-        const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<MemoryPool>& pool,
-        bool write_null_on_missing_file = false, bool write_null_on_fetch_failure = false);
+        bool write_null_on_missing_file, bool write_null_on_fetch_failure,
+        const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<MemoryPool>& pool);
 
     Status AddBatch(ArrowArray* batch) override;
 
@@ -73,8 +77,9 @@ class BlobFormatWriter : public FormatWriter {
  private:
     BlobFormatWriter(const std::shared_ptr<OutputStream>& out, const std::string& uri,
                      const std::shared_ptr<arrow::DataType>& data_type,
-                     const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<MemoryPool>& pool,
-                     bool write_null_on_missing_file, bool write_null_on_fetch_failure);
+                     bool write_null_on_missing_file, bool write_null_on_fetch_failure,
+                     const std::shared_ptr<FileSystem>& fs,
+                     const std::shared_ptr<MemoryPool>& pool);
 
     Status WriteBlob(std::string_view blob_data);
 
