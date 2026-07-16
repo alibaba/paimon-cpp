@@ -1288,8 +1288,8 @@ TEST_F(PageFilteredRowGroupReaderTest, BitmapAllPagesSomeRowGroups) {
 /// Test: bitmap hits partial pages of a row group (no predicate).
 ///
 /// 200 rows, 10 rows per page, 100 rows per row group → 2 row groups.
-/// Bitmap: {30..59} hits pages 3-5 of RG0 (rows 30-59), RG1 excluded.
-/// Expected: 30 rows (30-59).
+/// Bitmap: {90..109} hits pages 9 of RG0 (rows 90-99), and page 0 of RG1 (rows 100-109).
+/// Expected: 20 rows (90-109).
 TEST_F(PageFilteredRowGroupReaderTest, BitmapPartialPagesSingleRowGroup) {
     std::string file_name = dir_->Str() + "/bitmap_partial_pages_rg.parquet";
     auto data = MakeSequentialIntData(200);

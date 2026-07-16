@@ -406,8 +406,11 @@ Result<TargetRowGroups> ParquetFileBatchReader::RefineRowRangesByTrimming(
     TargetRowGroups target_row_groups;
     target_row_groups.reserve(src_row_groups.size());
     for (const auto& row_group : src_row_groups) {
-        target_row_groups.emplace_back(
-            TrimRowGroupPageRanges(bitmap, row_group, column_indices, page_index_reader));
+        auto filtered = TrimRowGroupPageRanges(bitmap, row_group, column_indices, page_index_reader);
+        if (!filtered.GetRowRanges().IsEmpty())
+        {
+            target_row_groups.emplace_back(std::move(filtered));
+        }
     }
     return target_row_groups;
 }
