@@ -722,7 +722,7 @@ TEST(SchemaValidationTest, ValidateInvalidConfiguration) {
             TableSchema::Create(/*schema_id=*/0, invalid_schema, /*partition_keys=*/{},
                                 /*primary_keys=*/{}, /*options=*/{}));
         ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
-                            "field name '_KEY_a' in schema cannot start with '_KEY_'");
+                            "field name '_KEY_a' in schema cannot be special field.");
     }
     {
         std::map<std::string, std::string> options = {{Options::CHANGELOG_PRODUCER, "input"},

@@ -48,6 +48,15 @@ class Cache;
 
 class PAIMON_EXPORT CoreOptions {
  public:
+    /// Specifies how to initialize the next sequence number for primary key table writers.
+    enum class SequenceNumberInitMode {
+        // initialize by scanning existing file metadata.
+        SCAN,
+        // initialize from the maximum sequence number recorded in snapshot properties,
+        // which can avoid scanning existing file metadata in write-only mode.
+        SNAPSHOT,
+    };
+
     static Result<CoreOptions> FromMap(
         const std::map<std::string, std::string>& options_map,
         const std::shared_ptr<FileSystem>& specified_file_system = nullptr,
@@ -68,6 +77,7 @@ class PAIMON_EXPORT CoreOptions {
     int64_t GetPageSize() const;
     int64_t GetTargetFileSize(bool has_primary_key) const;
     int64_t GetBlobTargetFileSize() const;
+    bool BlobSplitByFileSize() const;
     int64_t GetCompactionFileSize(bool has_primary_key) const;
     std::string GetPartitionDefaultName() const;
 
@@ -101,6 +111,11 @@ class PAIMON_EXPORT CoreOptions {
     bool CompactionForceUpLevel0() const;
     int64_t GetCommitTimeout() const;
     int32_t GetCommitMaxRetries() const;
+    int64_t GetCommitMinRetryWait() const;
+    int64_t GetCommitMaxRetryWait() const;
+    bool CommitDiscardDuplicateFiles() const;
+    bool DynamicPartitionOverwrite() const;
+    bool OverwriteUpgrade() const;
     int32_t GetCompactionMinFileNum() const;
     int32_t GetCompactionMaxSizeAmplificationPercent() const;
     int32_t GetCompactionSizeRatio() const;
@@ -116,6 +131,8 @@ class PAIMON_EXPORT CoreOptions {
     SortEngine GetSortEngine() const;
     bool IgnoreDelete() const;
     bool WriteOnly() const;
+    bool BucketAppendOrdered() const;
+    SequenceNumberInitMode WriteSequenceNumberInitMode() const;
 
     std::optional<std::string> GetFieldsDefaultFunc() const;
     Result<std::optional<std::string>> GetFieldAggFunc(const std::string& field_name) const;

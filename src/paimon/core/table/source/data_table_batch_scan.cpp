@@ -33,10 +33,15 @@ class DataSplit;
 
 DataTableBatchScan::DataTableBatchScan(bool pk_table, const CoreOptions& core_options,
                                        const std::shared_ptr<SnapshotReader>& snapshot_reader,
-                                       std::optional<int32_t> push_down_limit)
+                                       bool read_optimized, std::optional<int32_t> push_down_limit)
     : AbstractTableScan(core_options, snapshot_reader), push_down_limit_(push_down_limit) {
-    if (pk_table && (core_options.DeletionVectorsEnabled() ||
-                     core_options.GetMergeEngine() == MergeEngine::FIRST_ROW)) {
+    if (pk_table && read_optimized) {
+        int32_t top_level = core_options.GetNumLevels() - 1;
+        snapshot_reader_->WithLevelFilter(
+            [top_level](int32_t level) -> bool { return level == top_level; });
+        snapshot_reader_->EnableValueFilter();
+    } else if (pk_table && (core_options.DeletionVectorsEnabled() ||
+                            core_options.GetMergeEngine() == MergeEngine::FIRST_ROW)) {
         auto level_filter = [](int32_t level) -> bool { return level > 0; };
         snapshot_reader_->WithLevelFilter(level_filter);
         snapshot_reader_->EnableValueFilter();

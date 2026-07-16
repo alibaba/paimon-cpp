@@ -56,6 +56,11 @@ class Snapshot : public Jsonizable<Snapshot> {
         bool operator==(const CommitKind& other) const {
             return value_ == other.value_;
         }
+
+        bool operator!=(const CommitKind& other) const {
+            return value_ != other.value_;
+        }
+
         static std::string ToString(const CommitKind& kind);
         static CommitKind FromString(const std::string& kind);
 
@@ -77,7 +82,6 @@ class Snapshot : public Jsonizable<Snapshot> {
     static constexpr char FIELD_COMMIT_IDENTIFIER[] = "commitIdentifier";
     static constexpr char FIELD_COMMIT_KIND[] = "commitKind";
     static constexpr char FIELD_TIME_MILLIS[] = "timeMillis";
-    static constexpr char FIELD_LOG_OFFSETS[] = "logOffsets";
     static constexpr char FIELD_TOTAL_RECORD_COUNT[] = "totalRecordCount";
     static constexpr char FIELD_DELTA_RECORD_COUNT[] = "deltaRecordCount";
     static constexpr char FIELD_CHANGELOG_RECORD_COUNT[] = "changelogRecordCount";
@@ -96,9 +100,7 @@ class Snapshot : public Jsonizable<Snapshot> {
              const std::optional<int64_t>& changelog_manifest_list_size,
              const std::optional<std::string>& index_manifest, const std::string& commit_user,
              int64_t commit_identifier, CommitKind commit_kind, int64_t time_millis,
-             const std::optional<std::map<int32_t, int64_t>>& log_offsets,
-             const std::optional<int64_t>& total_record_count,
-             const std::optional<int64_t>& delta_record_count,
+             int64_t total_record_count, int64_t delta_record_count,
              const std::optional<int64_t>& changelog_record_count,
              const std::optional<int64_t>& watermark, const std::optional<std::string>& statistics,
              const std::optional<std::map<std::string, std::string>>& properties,
@@ -106,7 +108,7 @@ class Snapshot : public Jsonizable<Snapshot> {
         : Snapshot(CURRENT_VERSION, id, schema_id, base_manifest_list, base_manifest_list_size,
                    delta_manifest_list, delta_manifest_list_size, changelog_manifest_list,
                    changelog_manifest_list_size, index_manifest, commit_user, commit_identifier,
-                   commit_kind, time_millis, log_offsets, total_record_count, delta_record_count,
+                   commit_kind, time_millis, total_record_count, delta_record_count,
                    changelog_record_count, watermark, statistics, properties, next_row_id) {}
 
     Snapshot(const std::optional<int32_t>& version, int64_t id, int64_t schema_id,
@@ -118,9 +120,7 @@ class Snapshot : public Jsonizable<Snapshot> {
              const std::optional<int64_t>& changelog_manifest_list_size,
              const std::optional<std::string>& index_manifest, const std::string& commit_user,
              int64_t commit_identifier, CommitKind commit_kind, int64_t time_millis,
-             const std::optional<std::map<int32_t, int64_t>>& log_offsets,
-             const std::optional<int64_t>& total_record_count,
-             const std::optional<int64_t>& delta_record_count,
+             int64_t total_record_count, int64_t delta_record_count,
              const std::optional<int64_t>& changelog_record_count,
              const std::optional<int64_t>& watermark, const std::optional<std::string>& statistics,
              const std::optional<std::map<std::string, std::string>>& properties,
@@ -192,15 +192,11 @@ class Snapshot : public Jsonizable<Snapshot> {
         return time_millis_;
     }
 
-    const std::optional<std::map<int32_t, int64_t>>& LogOffsets() const {
-        return log_offsets_;
-    }
-
-    const std::optional<int64_t>& TotalRecordCount() const {
+    int64_t TotalRecordCount() const {
         return total_record_count_;
     }
 
-    const std::optional<int64_t>& DeltaRecordCount() const {
+    int64_t DeltaRecordCount() const {
         return delta_record_count_;
     }
 
@@ -273,15 +269,11 @@ class Snapshot : public Jsonizable<Snapshot> {
 
     int64_t time_millis_;
 
-    std::optional<std::map<int32_t, int64_t>> log_offsets_;
-
     // record count of all changes occurred in this snapshot
-    // null for paimon <= 0.3
-    std::optional<int64_t> total_record_count_;
+    int64_t total_record_count_ = 0;
 
     // record count of all new changes occurred in this snapshot
-    // null for paimon <= 0.3
-    std::optional<int64_t> delta_record_count_;
+    int64_t delta_record_count_ = 0;
 
     // record count of all changelog produced in this snapshot
     // null for paimon <= 0.3

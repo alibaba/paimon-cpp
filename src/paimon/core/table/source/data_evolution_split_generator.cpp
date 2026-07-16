@@ -21,6 +21,7 @@
 #include <functional>
 #include <iterator>
 
+#include "paimon/common/data/blob_utils.h"
 #include "paimon/common/utils/bin_packing.h"
 #include "paimon/common/utils/range_helper.h"
 #include "paimon/core/io/data_file_meta.h"
@@ -40,11 +41,15 @@ Result<std::vector<SplitGenerator::SplitGroup>> DataEvolutionSplitGenerator::Spl
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::vector<std::shared_ptr<DataFileMeta>>> ranges,
                            range_helper.MergeOverlappingRanges(std::move(input)));
 
-    auto weight_func = [open_file_cost = open_file_cost_](
+    auto weight_func = [open_file_cost = open_file_cost_, count_blob_size = count_blob_size_](
                            const std::vector<std::shared_ptr<DataFileMeta>>& metas) -> int64_t {
         int64_t file_size_sum = 0;
         for (const auto& meta : metas) {
-            file_size_sum += meta->file_size;
+            if (BlobUtils::IsBlobFile(meta->file_name)) {
+                file_size_sum += count_blob_size ? meta->file_size : open_file_cost;
+            } else {
+                file_size_sum += meta->file_size;
+            }
         }
         return std::max(file_size_sum, open_file_cost);
     };

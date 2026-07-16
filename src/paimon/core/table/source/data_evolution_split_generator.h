@@ -30,8 +30,11 @@ struct DataFileMeta;
 /// Append data evolution table split generator, which implementation of `SplitGenerator`.
 class DataEvolutionSplitGenerator : public SplitGenerator {
  public:
-    DataEvolutionSplitGenerator(int64_t target_split_size, int64_t open_file_cost)
-        : target_split_size_(target_split_size), open_file_cost_(open_file_cost) {}
+    DataEvolutionSplitGenerator(int64_t target_split_size, int64_t open_file_cost,
+                                bool count_blob_size)
+        : target_split_size_(target_split_size),
+          open_file_cost_(open_file_cost),
+          count_blob_size_(count_blob_size) {}
 
     Result<std::vector<SplitGroup>> SplitForBatch(
         std::vector<std::shared_ptr<DataFileMeta>>&& input) const override;
@@ -44,6 +47,7 @@ class DataEvolutionSplitGenerator : public SplitGenerator {
  private:
     int64_t target_split_size_;
     int64_t open_file_cost_;
+    bool count_blob_size_;
 };
 
 }  // namespace paimon

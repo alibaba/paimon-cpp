@@ -43,6 +43,8 @@ BlobDataFileWriterFactory::BlobDataFileWriterFactory(
 
 Result<std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>>
 BlobDataFileWriterFactory::CreateWriter() const {
+    std::shared_ptr<LongCounter> seq_num_counter =
+        options_.DataEvolutionEnabled() ? std::make_shared<LongCounter>(0) : seq_num_counter_;
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileFormat> format,
                            FileFormatFactory::Get("blob", options_.ToMap()));
     PAIMON_ASSIGN_OR_RAISE(WriterResources resources,
@@ -50,7 +52,7 @@ BlobDataFileWriterFactory::CreateWriter() const {
                                                  /*create_stats_extractor=*/true));
     auto writer = std::make_unique<DataFileWriter>(
         /*compression=*/"none", std::function<Status(::ArrowArray*, ::ArrowArray*)>(), schema_id_,
-        seq_num_counter_, FileSource::Append(), resources.stats_extractor,
+        seq_num_counter, FileSource::Append(), resources.stats_extractor,
         path_factory_->IsExternalPath(), write_cols_, pool_);
     PAIMON_RETURN_NOT_OK(writer->Init(options_.GetFileSystem(), path_factory_->NewBlobPath(),
                                       resources.writer_builder));

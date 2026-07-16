@@ -16,6 +16,7 @@
 
 #include "paimon/table/source/table_scan.h"
 
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -57,6 +58,19 @@ TEST(TableScanTest, TestPkSchemaEvolutionScan) {
     ASSERT_OK_AND_ASSIGN(auto plan, table_scan->CreatePlan());
     ASSERT_TRUE(plan->SnapshotId());
     ASSERT_FALSE(plan->Splits().empty());
+}
+
+TEST(TableScanTest, TestReadOptimizedPrimaryKeyStreamingScanUnsupported) {
+    std::string path = paimon::test::GetDataDir() +
+                       "/orc/pk_table_with_alter_table.db/pk_table_with_alter_table$ro";
+    ScanContextBuilder builder(path);
+    builder.AddOption(Options::FILE_FORMAT, "orc");
+    builder.WithStreamingMode(true);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> context, builder.Finish());
+
+    ASSERT_NOK_WITH_MSG(TableScan::Create(std::move(context)),
+                        "read-optimized system table does not support streaming scan for primary "
+                        "key table");
 }
 
 }  // namespace paimon::test

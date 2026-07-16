@@ -16,7 +16,12 @@
 
 #pragma once
 
+#include <memory>
+
 namespace paimon {
+
+class CommitStats;
+class Metrics;
 
 /// Metrics to measure a commit.
 class CommitMetrics {
@@ -40,6 +45,10 @@ class CommitMetrics {
     static constexpr char LAST_BUCKETS_WRITTEN[] = "lastBucketsWritten";
     static constexpr char LAST_COMPACTION_INPUT_FILE_SIZE[] = "lastCompactionInputFileSize";
     static constexpr char LAST_COMPACTION_OUTPUT_FILE_SIZE[] = "lastCompactionOutputFileSize";
+    static constexpr char LAST_COMMITTED_SNAPSHOT_ID[] = "lastCommittedSnapshotId";
+
+    static void ReportCommit(const std::shared_ptr<Metrics>& metrics,
+                             const CommitStats& commit_stats);
 };
 
 }  // namespace paimon

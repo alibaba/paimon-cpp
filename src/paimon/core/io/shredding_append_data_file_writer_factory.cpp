@@ -47,6 +47,8 @@ ShreddingAppendDataFileWriterFactory::CreateWriter() const {
     if (!shredding_context_) {
         return Status::Invalid("Shared-shredding append writer requires a shredding context.");
     }
+    std::shared_ptr<LongCounter> seq_num_counter =
+        options_.DataEvolutionEnabled() ? std::make_shared<LongCounter>(0) : seq_num_counter_;
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<MapSharedShreddingBatchConverter> converter,
                            MapSharedShreddingBatchConverter::Create(
                                write_schema_, shredding_context_, options_, pool_));
@@ -61,7 +63,7 @@ ShreddingAppendDataFileWriterFactory::CreateWriter() const {
                            CreateWriterResources(*options_.GetFileFormat(), file_schema,
                                                  /*create_stats_extractor=*/true));
     auto writer = std::make_unique<DataFileWriter>(
-        options_.GetFileCompression(), std::move(batch_converter), schema_id_, seq_num_counter_,
+        options_.GetFileCompression(), std::move(batch_converter), schema_id_, seq_num_counter,
         file_source_, resources.stats_extractor, path_factory_->IsExternalPath(), write_cols_,
         pool_);
     PAIMON_RETURN_NOT_OK(
