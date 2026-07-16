@@ -17,8 +17,11 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 
 namespace paimon {
+
+class TableSchema;
 
 /// Bucket mode of the table, it affects the writing process and also affects the data skipping in
 /// reading.
@@ -61,5 +64,7 @@ class BucketModeDefine {
     static constexpr int32_t UNAWARE_BUCKET = 0;
     static constexpr int32_t POSTPONE_BUCKET = -2;
 };
+
+BucketMode ResolveBucketMode(int32_t bucket, const std::shared_ptr<TableSchema>& table_schema);
 
 }  // namespace paimon

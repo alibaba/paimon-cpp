@@ -37,7 +37,7 @@ TEST(CommitTableRequestTest, TestSimple) {
         /*changelog_manifest_list_size=*/std::nullopt, /*index_manifest=*/std::nullopt,
         /*commit_user=*/"commit_user_1", /*commit_identifier=*/9223372036854775807,
         /*commit_kind=*/Snapshot::CommitKind::Append(), /*time_millis=*/1758097357597,
-        /*log_offsets=*/std::map<int32_t, int64_t>(), /*total_record_count=*/5,
+        /*total_record_count=*/5,
         /*delta_record_count=*/5, /*changelog_record_count=*/0, /*watermark=*/std::nullopt,
         /*statistics=*/std::nullopt, /*properties=*/std::nullopt, /*next_row_id=*/0);
     std::vector<PartitionStatistics> partition_statistics = {
@@ -61,7 +61,6 @@ TEST(CommitTableRequestTest, TestSimple) {
         "commitIdentifier": 9223372036854775807,
         "commitKind": "APPEND",
         "timeMillis": 1758097357597,
-        "logOffsets": {},
         "totalRecordCount": 5,
         "deltaRecordCount": 5,
         "changelogRecordCount": 0,

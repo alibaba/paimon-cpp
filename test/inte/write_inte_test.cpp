@@ -464,8 +464,8 @@ TEST_P(WriteInteTest, TestAppendTableBatchWrite) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot1, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot1);
     ASSERT_EQ(1, snapshot1.value().Id());
-    ASSERT_EQ(4, snapshot1.value().TotalRecordCount().value());
-    ASSERT_EQ(4, snapshot1.value().DeltaRecordCount().value());
+    ASSERT_EQ(4, snapshot1.value().TotalRecordCount());
+    ASSERT_EQ(4, snapshot1.value().DeltaRecordCount());
 
     arrow::FieldVector fields_with_row_kind = fields;
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
@@ -567,8 +567,8 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithOneBucket) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot1, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot1);
     ASSERT_EQ(1, snapshot1.value().Id());
-    ASSERT_EQ(4, snapshot1.value().TotalRecordCount().value());
-    ASSERT_EQ(4, snapshot1.value().DeltaRecordCount().value());
+    ASSERT_EQ(4, snapshot1.value().TotalRecordCount());
+    ASSERT_EQ(4, snapshot1.value().DeltaRecordCount());
 
     arrow::FieldVector fields_with_row_kind = fields;
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
@@ -637,8 +637,8 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithOneBucket) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot2, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot2);
     ASSERT_EQ(2, snapshot2.value().Id());
-    ASSERT_EQ(7, snapshot2.value().TotalRecordCount().value());
-    ASSERT_EQ(3, snapshot2.value().DeltaRecordCount().value());
+    ASSERT_EQ(7, snapshot2.value().TotalRecordCount());
+    ASSERT_EQ(3, snapshot2.value().DeltaRecordCount());
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_2, helper->Scan());
     ASSERT_EQ(data_splits_2.size(), 1);
 
@@ -707,8 +707,8 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithPartitionAndMultiBuckets) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot1, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot1);
     ASSERT_EQ(1, snapshot1.value().Id());
-    ASSERT_EQ(8, snapshot1.value().TotalRecordCount().value());
-    ASSERT_EQ(8, snapshot1.value().DeltaRecordCount().value());
+    ASSERT_EQ(8, snapshot1.value().TotalRecordCount());
+    ASSERT_EQ(8, snapshot1.value().DeltaRecordCount());
 
     arrow::FieldVector fields_with_row_kind = fields;
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
@@ -772,8 +772,8 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithPartitionAndMultiBuckets) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot2, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot2);
     ASSERT_EQ(2, snapshot2.value().Id());
-    ASSERT_EQ(16, snapshot2.value().TotalRecordCount().value());
-    ASSERT_EQ(8, snapshot2.value().DeltaRecordCount().value());
+    ASSERT_EQ(16, snapshot2.value().TotalRecordCount());
+    ASSERT_EQ(8, snapshot2.value().DeltaRecordCount());
 
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_2, helper->Scan());
     ASSERT_EQ(data_splits_2.size(), 3);
@@ -886,8 +886,8 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithComplexType) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot1, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot1);
     ASSERT_EQ(1, snapshot1.value().Id());
-    ASSERT_EQ(6, snapshot1.value().TotalRecordCount().value());
-    ASSERT_EQ(6, snapshot1.value().DeltaRecordCount().value());
+    ASSERT_EQ(6, snapshot1.value().TotalRecordCount());
+    ASSERT_EQ(6, snapshot1.value().DeltaRecordCount());
 
     arrow::FieldVector fields_with_row_kind = fields;
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
@@ -949,8 +949,8 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithComplexType) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot2, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot2);
     ASSERT_EQ(2, snapshot2.value().Id());
-    ASSERT_EQ(10, snapshot2.value().TotalRecordCount().value());
-    ASSERT_EQ(4, snapshot2.value().DeltaRecordCount().value());
+    ASSERT_EQ(10, snapshot2.value().TotalRecordCount());
+    ASSERT_EQ(4, snapshot2.value().DeltaRecordCount());
 
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_2, helper->Scan());
     ASSERT_EQ(data_splits_2.size(), 1);
@@ -1087,8 +1087,8 @@ TEST_P(WriteInteTest, TestPkTableStreamWrite) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot1, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot1);
     ASSERT_EQ(1, snapshot1.value().Id());
-    ASSERT_EQ(5, snapshot1.value().TotalRecordCount().value());
-    ASSERT_EQ(5, snapshot1.value().DeltaRecordCount().value());
+    ASSERT_EQ(5, snapshot1.value().TotalRecordCount());
+    ASSERT_EQ(5, snapshot1.value().DeltaRecordCount());
 
     // round 1 read
     arrow::FieldVector fields_with_row_kind = fields;
@@ -1217,8 +1217,8 @@ TEST_P(WriteInteTest, TestPkTableStreamWrite) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot2, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot2);
     ASSERT_EQ(2, snapshot2.value().Id());
-    ASSERT_EQ(9, snapshot2.value().TotalRecordCount().value());
-    ASSERT_EQ(4, snapshot2.value().DeltaRecordCount().value());
+    ASSERT_EQ(9, snapshot2.value().TotalRecordCount());
+    ASSERT_EQ(4, snapshot2.value().DeltaRecordCount());
 
     // round 2 read
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_2, helper->Scan());
@@ -1362,8 +1362,8 @@ TEST_P(WriteInteTest, TestPkTableBatchWrite) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot1, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot1);
     ASSERT_EQ(1, snapshot1.value().Id());
-    ASSERT_EQ(5, snapshot1.value().TotalRecordCount().value());
-    ASSERT_EQ(5, snapshot1.value().DeltaRecordCount().value());
+    ASSERT_EQ(5, snapshot1.value().TotalRecordCount());
+    ASSERT_EQ(5, snapshot1.value().DeltaRecordCount());
 
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_1,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
@@ -1506,8 +1506,8 @@ TEST_P(WriteInteTest, TestPkTableWriteWithNoPartitionKey) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot1, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot1);
     ASSERT_EQ(1, snapshot1.value().Id());
-    ASSERT_EQ(5, snapshot1.value().TotalRecordCount().value());
-    ASSERT_EQ(5, snapshot1.value().DeltaRecordCount().value());
+    ASSERT_EQ(5, snapshot1.value().TotalRecordCount());
+    ASSERT_EQ(5, snapshot1.value().DeltaRecordCount());
 
     // round1 read
     arrow::FieldVector fields_with_row_kind = fields;
@@ -1610,8 +1610,8 @@ TEST_P(WriteInteTest, TestPkTableWriteWithNoPartitionKey) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot2, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot2);
     ASSERT_EQ(2, snapshot2.value().Id());
-    ASSERT_EQ(9, snapshot2.value().TotalRecordCount().value());
-    ASSERT_EQ(4, snapshot2.value().DeltaRecordCount().value());
+    ASSERT_EQ(9, snapshot2.value().TotalRecordCount());
+    ASSERT_EQ(4, snapshot2.value().DeltaRecordCount());
 
     // round2 read
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_2, helper->Scan());
@@ -1723,8 +1723,8 @@ TEST_P(WriteInteTest, TestPkTableWriteWithComplexType) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot1, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot1);
     ASSERT_EQ(1, snapshot1.value().Id());
-    ASSERT_EQ(5, snapshot1.value().TotalRecordCount().value());
-    ASSERT_EQ(5, snapshot1.value().DeltaRecordCount().value());
+    ASSERT_EQ(5, snapshot1.value().TotalRecordCount());
+    ASSERT_EQ(5, snapshot1.value().DeltaRecordCount());
 
     arrow::FieldVector fields_with_row_kind = fields;
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
@@ -1797,8 +1797,8 @@ TEST_P(WriteInteTest, TestPkTableWriteWithComplexType) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot2, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot2);
     ASSERT_EQ(2, snapshot2.value().Id());
-    ASSERT_EQ(9, snapshot2.value().TotalRecordCount().value());
-    ASSERT_EQ(4, snapshot2.value().DeltaRecordCount().value());
+    ASSERT_EQ(9, snapshot2.value().TotalRecordCount());
+    ASSERT_EQ(4, snapshot2.value().DeltaRecordCount());
 
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_2, helper->Scan());
     ASSERT_EQ(data_splits_2.size(), 1);
@@ -1855,8 +1855,8 @@ TEST_P(WriteInteTest, TestPkTableForceLookup) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot1, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot1);
     ASSERT_EQ(1, snapshot1.value().Id());
-    ASSERT_EQ(4, snapshot1.value().TotalRecordCount().value());
-    ASSERT_EQ(4, snapshot1.value().DeltaRecordCount().value());
+    ASSERT_EQ(4, snapshot1.value().TotalRecordCount());
+    ASSERT_EQ(4, snapshot1.value().DeltaRecordCount());
 
     // read
     arrow::FieldVector fields_with_row_kind = fields;
@@ -1920,8 +1920,8 @@ TEST_P(WriteInteTest, TestPkTableEnableDeletionVector) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot1, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot1);
     ASSERT_EQ(1, snapshot1.value().Id());
-    ASSERT_EQ(4, snapshot1.value().TotalRecordCount().value());
-    ASSERT_EQ(4, snapshot1.value().DeltaRecordCount().value());
+    ASSERT_EQ(4, snapshot1.value().TotalRecordCount());
+    ASSERT_EQ(4, snapshot1.value().DeltaRecordCount());
 
     // read
     arrow::FieldVector fields_with_row_kind = fields;
@@ -2806,8 +2806,8 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithExternalPath) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot1, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot1);
     ASSERT_EQ(1, snapshot1.value().Id());
-    ASSERT_EQ(4, snapshot1.value().TotalRecordCount().value());
-    ASSERT_EQ(4, snapshot1.value().DeltaRecordCount().value());
+    ASSERT_EQ(4, snapshot1.value().TotalRecordCount());
+    ASSERT_EQ(4, snapshot1.value().DeltaRecordCount());
 
     arrow::FieldVector fields_with_row_kind = fields;
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
@@ -2875,8 +2875,8 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithExternalPath) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot2, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot2);
     ASSERT_EQ(2, snapshot2.value().Id());
-    ASSERT_EQ(7, snapshot2.value().TotalRecordCount().value());
-    ASSERT_EQ(3, snapshot2.value().DeltaRecordCount().value());
+    ASSERT_EQ(7, snapshot2.value().TotalRecordCount());
+    ASSERT_EQ(3, snapshot2.value().DeltaRecordCount());
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_2, helper->Scan());
     ASSERT_EQ(data_splits_2.size(), 1);
     std::string expected_data_2 =
@@ -3483,8 +3483,8 @@ TEST_P(WriteInteTest, TestPkTablePostponeBucket) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot1, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot1);
     ASSERT_EQ(1, snapshot1.value().Id());
-    ASSERT_EQ(5, snapshot1.value().TotalRecordCount().value());
-    ASSERT_EQ(5, snapshot1.value().DeltaRecordCount().value());
+    ASSERT_EQ(5, snapshot1.value().TotalRecordCount());
+    ASSERT_EQ(5, snapshot1.value().DeltaRecordCount());
 
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
@@ -3893,8 +3893,8 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithBlobType) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot);
     ASSERT_EQ(1, snapshot.value().Id());
-    ASSERT_EQ(8, snapshot.value().TotalRecordCount().value());
-    ASSERT_EQ(8, snapshot.value().DeltaRecordCount().value());
+    ASSERT_EQ(8, snapshot.value().TotalRecordCount());
+    ASSERT_EQ(8, snapshot.value().DeltaRecordCount());
     ASSERT_EQ(4, snapshot.value().NextRowId().value());
 
     // check data file meta after commit
@@ -3965,8 +3965,8 @@ TEST_P(WriteInteTest, TestAppendTableWithDateFieldAsPartitionField) {
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot1, helper->LatestSnapshot());
     ASSERT_TRUE(snapshot1);
     ASSERT_EQ(1, snapshot1.value().Id());
-    ASSERT_EQ(2, snapshot1.value().TotalRecordCount().value());
-    ASSERT_EQ(2, snapshot1.value().DeltaRecordCount().value());
+    ASSERT_EQ(2, snapshot1.value().TotalRecordCount());
+    ASSERT_EQ(2, snapshot1.value().DeltaRecordCount());
 
     arrow::FieldVector fields_with_row_kind = fields;
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
@@ -4728,8 +4728,8 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithMultipleBlobFields) {
     ASSERT_TRUE(snapshot);
     ASSERT_EQ(1, snapshot.value().Id());
     // 3 rows * 3 files (1 main + 1 blob1 + 1 blob2) = 9 total records
-    ASSERT_EQ(9, snapshot.value().TotalRecordCount().value());
-    ASSERT_EQ(9, snapshot.value().DeltaRecordCount().value());
+    ASSERT_EQ(9, snapshot.value().TotalRecordCount());
+    ASSERT_EQ(9, snapshot.value().DeltaRecordCount());
     ASSERT_EQ(3, snapshot.value().NextRowId().value());
 
     // Check data file meta after commit

@@ -27,11 +27,13 @@
 #include "paimon/core/manifest/index_manifest_file.h"
 #include "paimon/core/manifest/manifest_file.h"
 #include "paimon/core/manifest/manifest_list.h"
+#include "paimon/core/operation/append_only_file_store_scan.h"
 #include "paimon/core/operation/expire_snapshots.h"
 #include "paimon/core/operation/file_store_commit_impl.h"
+#include "paimon/core/operation/file_store_scan.h"
+#include "paimon/core/operation/key_value_file_store_scan.h"
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
-#include "paimon/core/table/bucket_mode.h"
 #include "paimon/core/utils/field_mapping.h"
 #include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/core/utils/snapshot_manager.h"
@@ -44,6 +46,50 @@ class Schema;
 }  // namespace arrow
 
 namespace paimon {
+
+namespace {
+
+CommitScanner::ScanSupplier CreateAppendScanSupplier(
+    const std::shared_ptr<SnapshotManager>& snapshot_manager,
+    const std::shared_ptr<SchemaManager>& schema_manager,
+    const std::shared_ptr<ManifestList>& manifest_list,
+    const std::shared_ptr<ManifestFile>& manifest_file,
+    const std::shared_ptr<TableSchema>& table_schema,
+    const std::shared_ptr<arrow::Schema>& arrow_schema, const CoreOptions& options,
+    const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool) {
+    return [snapshot_manager, schema_manager, manifest_list, manifest_file, table_schema,
+            arrow_schema, options, executor, pool](const std::shared_ptr<ScanFilter>& scan_filter)
+               -> Result<std::unique_ptr<FileStoreScan>> {
+        PAIMON_ASSIGN_OR_RAISE(
+            std::unique_ptr<AppendOnlyFileStoreScan> scan,
+            AppendOnlyFileStoreScan::Create(snapshot_manager, schema_manager, manifest_list,
+                                            manifest_file, table_schema, arrow_schema, scan_filter,
+                                            options, executor, pool));
+        return std::unique_ptr<FileStoreScan>(std::move(scan));
+    };
+}
+
+CommitScanner::ScanSupplier CreatePkScanSupplier(
+    const std::shared_ptr<SnapshotManager>& snapshot_manager,
+    const std::shared_ptr<SchemaManager>& schema_manager,
+    const std::shared_ptr<ManifestList>& manifest_list,
+    const std::shared_ptr<ManifestFile>& manifest_file,
+    const std::shared_ptr<TableSchema>& table_schema,
+    const std::shared_ptr<arrow::Schema>& arrow_schema, const CoreOptions& options,
+    const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool) {
+    return [snapshot_manager, schema_manager, manifest_list, manifest_file, table_schema,
+            arrow_schema, options, executor, pool](const std::shared_ptr<ScanFilter>& scan_filter)
+               -> Result<std::unique_ptr<FileStoreScan>> {
+        PAIMON_ASSIGN_OR_RAISE(
+            std::unique_ptr<KeyValueFileStoreScan> scan,
+            KeyValueFileStoreScan::Create(snapshot_manager, schema_manager, manifest_list,
+                                          manifest_file, table_schema, arrow_schema, scan_filter,
+                                          options, executor, pool));
+        return std::unique_ptr<FileStoreScan>(std::move(scan));
+    };
+}
+
+}  // namespace
 
 Result<std::unique_ptr<FileStoreCommit>> FileStoreCommit::Create(
     std::unique_ptr<CommitContext> ctx) {
@@ -67,15 +113,6 @@ Result<std::unique_ptr<FileStoreCommit>> FileStoreCommit::Create(
         return Status::Invalid("not found latest schema");
     }
     const auto& schema = table_schema.value();
-    if (!schema->PrimaryKeys().empty() &&
-        ctx->GetOptions().find("enable-pk-commit-in-inte-test") == ctx->GetOptions().end()) {
-        // Postpone bucket mode (bucket=-2) writes all data files to the bucket-postpone/ directory.
-        // A compaction job will later redistribute files into real buckets. The commit logic
-        // (manifest and snapshot generation) is the same as append tables, so we allow it.
-        if (schema->NumBuckets() != BucketModeDefine::POSTPONE_BUCKET) {
-            return Status::NotImplemented("not support pk table commit yet");
-        }
-    }
     auto opts = schema->Options();
     for (const auto& [key, value] : ctx->GetOptions()) {
         opts[key] = value;
@@ -86,6 +123,8 @@ Result<std::unique_ptr<FileStoreCommit>> FileStoreCommit::Create(
                            CoreOptions::FromMap(opts, ctx->GetSpecificFileSystem()));
     assert(options.GetFileSystem());
     assert(options.GetFileFormat());
+    PAIMON_RETURN_NOT_OK(FileStoreCommitImpl::ValidateCommitOptions(options));
+
     PAIMON_ASSIGN_OR_RAISE(bool is_object_store, FileSystem::IsObjectStore(root_path));
     if (is_object_store && !ctx->UseRESTCatalogCommit() &&
         opts.find("enable-object-store-commit-in-inte-test") == opts.end()) {
@@ -135,11 +174,23 @@ Result<std::unique_ptr<FileStoreCommit>> FileStoreCommit::Create(
         snapshot_manager, path_factory, manifest_list, manifest_file, options.GetFileSystem(),
         options.GetExpireConfig(), ctx->GetExecutor());
 
+    CommitScanner::ScanSupplier scan_supplier;
+    if (table_schema.value()->PrimaryKeys().empty()) {
+        scan_supplier = CreateAppendScanSupplier(snapshot_manager, schema_manager, manifest_list,
+                                                 manifest_file, table_schema.value(), arrow_schema,
+                                                 options, ctx->GetExecutor(), ctx->GetMemoryPool());
+    } else {
+        scan_supplier = CreatePkScanSupplier(snapshot_manager, schema_manager, manifest_list,
+                                             manifest_file, table_schema.value(), arrow_schema,
+                                             options, ctx->GetExecutor(), ctx->GetMemoryPool());
+    }
+
     return std::make_unique<FileStoreCommitImpl>(
         ctx->GetMemoryPool(), ctx->GetExecutor(), arrow_schema, root_path, ctx->GetCommitUser(),
         options, path_factory, std::move(partition_computer), snapshot_manager,
-        ctx->IgnoreEmptyCommit(), ctx->UseRESTCatalogCommit(), table_schema.value(), manifest_file,
-        manifest_list, index_manifest_file, expire_snapshots, schema_manager);
+        ctx->IgnoreEmptyCommit(), ctx->UseRESTCatalogCommit(), ctx->AppendCommitCheckConflict(),
+        table_schema.value(), manifest_file, manifest_list, index_manifest_file, expire_snapshots,
+        schema_manager, std::move(scan_supplier));
 }
 
 }  // namespace paimon

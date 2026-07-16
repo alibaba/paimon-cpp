@@ -1416,7 +1416,7 @@ TEST(SystemTableReadInteTest, TestReadTagBranchAndConsumerSystemTables) {
         Timestamp tag_commit_time,
         DateTimeUtils::ToLocalTimestamp(Timestamp::FromEpochMillis(tag.TimeMillis())));
     ASSERT_EQ(tag_commit_time_array->Value(0), tag_commit_time.GetMillisecond());
-    ASSERT_EQ(tag_record_count_array->Value(0), tag.TotalRecordCount().value());
+    ASSERT_EQ(tag_record_count_array->Value(0), tag.TotalRecordCount());
     ASSERT_FALSE(tag_create_time_array->IsNull(0));
     ASSERT_EQ(tag_create_time_array->Value(0), 1770185290000);
     ASSERT_EQ(tag_time_retained_array->GetString(0), "3.000000");

@@ -57,13 +57,14 @@ TEST(SpecialFieldsTest, TestKeyValueSpecialFieldCount) {
     ASSERT_EQ(SpecialFields::KEY_VALUE_SPECIAL_FIELD_COUNT, 2);
 }
 
-TEST(SpecialFieldsTest, TestIsSpecialFieldName) {
-    ASSERT_TRUE(SpecialFields::IsSpecialFieldName("_SEQUENCE_NUMBER"));
-    ASSERT_TRUE(SpecialFields::IsSpecialFieldName("_VALUE_KIND"));
-    ASSERT_FALSE(SpecialFields::IsSpecialFieldName("VALUE_KIND"));
-    ASSERT_TRUE(SpecialFields::IsSpecialFieldName("rowkind"));
-    ASSERT_TRUE(SpecialFields::IsSpecialFieldName("_ROW_ID"));
-    ASSERT_TRUE(SpecialFields::IsSpecialFieldName("_INDEX_SCORE"));
+TEST(SpecialFieldsTest, TestIsSystemField) {
+    ASSERT_TRUE(SpecialFields::IsSystemField("_SEQUENCE_NUMBER"));
+    ASSERT_TRUE(SpecialFields::IsSystemField("_VALUE_KIND"));
+    ASSERT_FALSE(SpecialFields::IsSystemField("VALUE_KIND"));
+    ASSERT_TRUE(SpecialFields::IsSystemField("rowkind"));
+    ASSERT_TRUE(SpecialFields::IsSystemField("_ROW_ID"));
+    ASSERT_TRUE(SpecialFields::IsSystemField("_INDEX_SCORE"));
+    ASSERT_TRUE(SpecialFields::IsSystemField("_KEY_0"));
 }
 
 }  // namespace paimon::test

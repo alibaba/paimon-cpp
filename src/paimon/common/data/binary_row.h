@@ -156,6 +156,19 @@ struct hash<std::tuple<paimon::BinaryRow, int32_t, std::string>> {
     }
 };
 
+/// for std::unordered_map<std::tuple<paimon::BinaryRow, int32_t, int32_t>, ...>
+template <>
+struct hash<std::tuple<paimon::BinaryRow, int32_t, int32_t>> {
+    size_t operator()(
+        const std::tuple<paimon::BinaryRow, int32_t, int32_t>& partition_bucket_level) const {
+        const auto& [partition, bucket, level] = partition_bucket_level;
+        size_t hash = paimon::MurmurHashUtils::HashUnsafeBytes(
+            reinterpret_cast<const void*>(&bucket), 0, sizeof(bucket), partition.HashCode());
+        return paimon::MurmurHashUtils::HashUnsafeBytes(reinterpret_cast<const void*>(&level), 0,
+                                                        sizeof(level), hash);
+    }
+};
+
 template <>
 struct hash<paimon::BinaryRow> {
     size_t operator()(const paimon::BinaryRow& row) const {
