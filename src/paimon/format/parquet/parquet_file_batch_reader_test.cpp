@@ -903,8 +903,9 @@ TEST_F(ParquetFileBatchReaderTest, TestPredicateAndBitmapPagePushDown) {
         std::optional<RoaringBitmap32> bitmap = RoaringBitmap32::From({100, 400, 600});
         auto predicate = PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f0",
                                                        FieldType::INT, Literal(800));
-        auto parquet_batch_reader = PrepareParquetFileBatchReader(
-            file_path_, arrow_schema, predicate, bitmap, /*batch_size=*/length, /*enable_page_level_filter=*/true);
+        auto parquet_batch_reader =
+            PrepareParquetFileBatchReader(file_path_, arrow_schema, predicate, bitmap,
+                                          /*batch_size=*/length, /*enable_page_level_filter=*/true);
         ASSERT_OK_AND_ASSIGN(
             std::shared_ptr<arrow::ChunkedArray> result_array,
             paimon::test::ReadResultCollector::CollectResult(parquet_batch_reader.get()));
