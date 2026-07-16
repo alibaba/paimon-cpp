@@ -33,6 +33,22 @@ const std::shared_ptr<arrow::DataType>& ManifestEntry::DataType() {
     return data_type;
 }
 
+int64_t ManifestEntry::RecordCount(const std::vector<ManifestEntry>& entries) {
+    int64_t record_count = 0;
+    for (const auto& entry : entries) {
+        record_count += entry.File()->row_count;
+    }
+    return record_count;
+}
+
+std::optional<int64_t> ManifestEntry::NullableRecordCount(
+    const std::vector<ManifestEntry>& entries) {
+    if (entries.empty()) {
+        return std::nullopt;
+    }
+    return RecordCount(entries);
+}
+
 int64_t ManifestEntry::RecordCountAdd(const std::vector<ManifestEntry>& entries) {
     int64_t record_count = 0;
     for (const auto& entry : entries) {

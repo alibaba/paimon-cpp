@@ -20,6 +20,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -48,7 +49,8 @@ class ConflictDetection {
                       std::shared_ptr<SnapshotManager> snapshot_manager,
                       std::shared_ptr<ManifestList> manifest_list,
                       std::shared_ptr<ManifestFile> manifest_file,
-                      std::shared_ptr<CommitScanner> commit_scanner);
+                      std::shared_ptr<CommitScanner> commit_scanner, const std::string& commit_user,
+                      const std::string& table_name);
 
     Status CheckConflicts(const Snapshot& latest_snapshot,
                           const std::vector<ManifestEntry>& base_entries,
@@ -75,17 +77,37 @@ class ConflictDetection {
 
  private:
     Status CheckBucketKeepSame(const std::vector<ManifestEntry>& all_entries,
-                               const Snapshot::CommitKind& commit_kind) const;
+                               const Snapshot::CommitKind& commit_kind,
+                               const std::string& base_commit_user,
+                               const std::vector<ManifestEntry>& base_entries,
+                               const std::vector<ManifestEntry>& delta_entries) const;
 
     Status BucketNumMismatch(const BinaryRow& partition, int32_t num_buckets,
                              int32_t previous_num_buckets) const;
 
+    Status TotalBucketsChanged(const BinaryRow& partition, int32_t num_buckets,
+                               int32_t previous_num_buckets, const std::string& base_commit_user,
+                               const std::vector<ManifestEntry>& base_entries,
+                               const std::vector<ManifestEntry>& delta_entries) const;
+
+    std::string BuildConflictMessage(const std::string& message,
+                                     const std::string& base_commit_user,
+                                     const std::vector<ManifestEntry>& base_entries,
+                                     const std::vector<ManifestEntry>& delta_entries,
+                                     const std::string& cause = "") const;
+
     void MarkBucketCheckedPartitions(
         const std::unordered_map<BinaryRow, int32_t>& total_buckets) const;
 
-    Status CheckDeleteInEntries(const std::vector<ManifestEntry>& merged_entries) const;
+    Status CheckDeleteInEntries(const std::vector<ManifestEntry>& merged_entries,
+                                const std::string& base_commit_user,
+                                const std::vector<ManifestEntry>& base_entries,
+                                const std::vector<ManifestEntry>& delta_entries) const;
 
-    Status CheckKeyRange(const std::vector<ManifestEntry>& merged_entries) const;
+    Status CheckKeyRange(const std::vector<ManifestEntry>& merged_entries,
+                         const std::string& base_commit_user,
+                         const std::vector<ManifestEntry>& base_entries,
+                         const std::vector<ManifestEntry>& delta_entries) const;
 
     Status CheckRowIdExistence(const std::vector<ManifestEntry>& base_entries,
                                const std::vector<ManifestEntry>& delta_entries,
@@ -121,6 +143,8 @@ class ConflictDetection {
     std::shared_ptr<ManifestList> manifest_list_;
     std::shared_ptr<ManifestFile> manifest_file_;
     std::shared_ptr<CommitScanner> commit_scanner_;
+    std::string commit_user_;
+    std::string table_name_;
     mutable LinkedHashMap<BinaryRow, bool> same_bucket_checked_partitions_;
 };
 

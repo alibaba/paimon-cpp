@@ -33,9 +33,14 @@ class SnapshotTest : public testing::Test {
         replaced_str = StringUtils::Replace(replaced_str, "\t", "");
         replaced_str = StringUtils::Replace(replaced_str, "\n", "");
         // logOffsets was removed from snapshot json; normalize legacy fixtures.
-        replaced_str = StringUtils::Replace(replaced_str, "\"logOffsets\":{},", "");
-        replaced_str = StringUtils::Replace(replaced_str, ",\"logOffsets\":{}", "");
-        replaced_str = StringUtils::Replace(replaced_str, "\"logOffsets\":{}", "");
+        replaced_str = StringUtils::Replace(replaced_str, R"("logOffsets":{},)", "");
+        replaced_str = StringUtils::Replace(replaced_str, R"(,"logOffsets":{})", "");
+        replaced_str = StringUtils::Replace(replaced_str, R"("logOffsets":{})", "");
+        // changelogManifestList is now omitted when null (aligns with Java @JsonInclude NON_NULL);
+        // normalize legacy fixtures that still carry the explicit null.
+        replaced_str = StringUtils::Replace(replaced_str, R"("changelogManifestList":null,)", "");
+        replaced_str = StringUtils::Replace(replaced_str, R"(,"changelogManifestList":null)", "");
+        replaced_str = StringUtils::Replace(replaced_str, R"("changelogManifestList":null)", "");
         return replaced_str;
     }
 };

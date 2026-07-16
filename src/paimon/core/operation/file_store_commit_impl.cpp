@@ -168,7 +168,7 @@ FileStoreCommitImpl::FileStoreCommitImpl(
           table_schema, schema, options, executor, pool, partition_computer_.get(),
           std::move(scan_supplier))),
       conflict_detection_(table_schema, options, snapshot_manager_, manifest_list, manifest_file,
-                          commit_scanner_),
+                          commit_scanner_, commit_user, PathUtil::GetName(root_path)),
       manifest_file_(manifest_file),
       manifest_list_(manifest_list),
       index_manifest_file_(index_manifest_file),
@@ -1039,7 +1039,8 @@ Result<bool> FileStoreCommitImpl::TryCommitOnce(
 
     std::optional<std::string> statistics =
         latest_snapshot ? latest_snapshot.value().Statistics() : std::nullopt;
-    int64_t changelog_record_count = RowCounts(changelog_entries);
+    std::optional<int64_t> changelog_record_count =
+        ManifestEntry::NullableRecordCount(changelog_entries);
     int64_t schema_id = 0;
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> table_schema,
                            schema_manager_->Latest());
@@ -1192,13 +1193,6 @@ void FileStoreCommitImpl::ReportCommit(const ManifestEntryChanges& changes, int6
                              commit_duration, generated_snapshot, attempt,
                              last_committed_snapshot_id_);
     CommitMetrics::ReportCommit(metrics_, commit_stats);
-}
-
-int64_t FileStoreCommitImpl::RowCounts(const std::vector<ManifestEntry>& files) {
-    return std::accumulate(files.begin(), files.end(), 0L,
-                           [](int64_t row_count, const ManifestEntry& entry) {
-                               return row_count + entry.File()->row_count;
-                           });
 }
 
 }  // namespace paimon

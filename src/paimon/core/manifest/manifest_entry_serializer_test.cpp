@@ -33,10 +33,11 @@ namespace paimon::test {
 
 class ManifestEntrySerializerTest : public testing::Test {
  private:
-    std::shared_ptr<DataFileMeta> GetDataFileMeta() {
+    std::shared_ptr<DataFileMeta> GetDataFileMeta(int64_t row_count) {
         return std::make_shared<DataFileMeta>(
-            "some_file_name", 1024, 8, DataFileMeta::EmptyMinKey(), DataFileMeta::EmptyMaxKey(),
-            SimpleStats::EmptyStats(), SimpleStats::EmptyStats(), /*min_seq_no=*/16,
+            "some_file_name", 1024, row_count, DataFileMeta::EmptyMinKey(),
+            DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
+            /*min_seq_no=*/16,
             /*max_seq_no=*/32,
             /*schema_id=*/1, /*level=*/2, /*extra_files=*/std::vector<std::optional<std::string>>(),
             /*creation_time=*/Timestamp(0, 0), /*delete_row_count=*/3,
@@ -48,9 +49,9 @@ class ManifestEntrySerializerTest : public testing::Test {
 TEST_F(ManifestEntrySerializerTest, TestToFromRow) {
     auto pool = GetDefaultPool();
     std::vector<ManifestEntry> entries = {
-        ManifestEntry(FileKind::Add(), BinaryRow::EmptyRow(), 0, 2, GetDataFileMeta()),
+        ManifestEntry(FileKind::Add(), BinaryRow::EmptyRow(), 0, 2, GetDataFileMeta(8)),
         ManifestEntry(FileKind::Add(), BinaryRowGenerator::GenerateRow({10}, pool.get()), 1, 2,
-                      GetDataFileMeta())};
+                      GetDataFileMeta(8))};
     ManifestEntrySerializer serializer(pool);
     for (const auto& entry : entries) {
         ASSERT_OK_AND_ASSIGN(auto row, serializer.ToRow(entry));
@@ -58,5 +59,19 @@ TEST_F(ManifestEntrySerializerTest, TestToFromRow) {
         ASSERT_EQ(entry, result_entry);
         ASSERT_EQ(entry.ToString(), result_entry.ToString());
     }
+}
+
+TEST_F(ManifestEntrySerializerTest, TestNullableRecordCount) {
+    std::vector<ManifestEntry> empty_entries;
+    ASSERT_FALSE(ManifestEntry::NullableRecordCount(empty_entries).has_value());
+
+    std::vector<ManifestEntry> entries = {
+        ManifestEntry(FileKind::Add(), BinaryRow::EmptyRow(), 0, 2, GetDataFileMeta(3)),
+        ManifestEntry(FileKind::Delete(), BinaryRow::EmptyRow(), 0, 2, GetDataFileMeta(8))};
+    ASSERT_EQ(11, ManifestEntry::RecordCount(entries));
+
+    std::optional<int64_t> record_count = ManifestEntry::NullableRecordCount(entries);
+    ASSERT_TRUE(record_count.has_value());
+    ASSERT_EQ(11, record_count.value());
 }
 }  // namespace paimon::test

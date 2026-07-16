@@ -82,13 +82,16 @@ ConflictDetection::ConflictDetection(std::shared_ptr<TableSchema> table_schema,
                                      std::shared_ptr<SnapshotManager> snapshot_manager,
                                      std::shared_ptr<ManifestList> manifest_list,
                                      std::shared_ptr<ManifestFile> manifest_file,
-                                     std::shared_ptr<CommitScanner> commit_scanner)
+                                     std::shared_ptr<CommitScanner> commit_scanner,
+                                     const std::string& commit_user, const std::string& table_name)
     : table_schema_(std::move(table_schema)),
       options_(options),
       snapshot_manager_(std::move(snapshot_manager)),
       manifest_list_(std::move(manifest_list)),
       manifest_file_(std::move(manifest_file)),
-      commit_scanner_(std::move(commit_scanner)) {}
+      commit_scanner_(std::move(commit_scanner)),
+      commit_user_(commit_user),
+      table_name_(table_name) {}
 
 void ConflictDetection::SetRowIdCheckFromSnapshot(
     const std::optional<int64_t>& row_id_check_from_snapshot) {
@@ -112,20 +115,34 @@ Status ConflictDetection::CheckConflicts(
             "check conflicts failed. not yet support dv with BUCKET_UNAWARE mode");
     }
 
+    std::string base_commit_user = latest_snapshot.CommitUser();
+
     std::vector<ManifestEntry> all_entries = base_entries;
     all_entries.insert(all_entries.end(), delta_entries.begin(), delta_entries.end());
-    PAIMON_RETURN_NOT_OK(CheckBucketKeepSame(all_entries, commit_kind));
+    PAIMON_RETURN_NOT_OK(CheckBucketKeepSame(all_entries, commit_kind, base_commit_user,
+                                             base_entries, delta_entries));
 
     // check the delta, it is important not to delete and add the same file. Since scan
     // relies on map for deduplication, this may result in the loss of this file
     std::vector<ManifestEntry> merged_delta_entries;
-    PAIMON_RETURN_NOT_OK(FileEntry::MergeEntries(delta_entries, &merged_delta_entries));
+    if (Status status = FileEntry::MergeEntries(delta_entries, &merged_delta_entries);
+        !status.ok()) {
+        return Status::Invalid(
+            BuildConflictMessage("File deletion conflicts detected! Give up committing.",
+                                 base_commit_user, base_entries, delta_entries, status.ToString()));
+    }
 
     std::vector<ManifestEntry> merged_entries;
     // merge manifest entries and also check if the files we want to delete are still there
-    PAIMON_RETURN_NOT_OK(FileEntry::MergeEntries(all_entries, &merged_entries));
-    PAIMON_RETURN_NOT_OK(CheckDeleteInEntries(merged_entries));
-    PAIMON_RETURN_NOT_OK(CheckKeyRange(merged_entries));
+    if (Status status = FileEntry::MergeEntries(all_entries, &merged_entries); !status.ok()) {
+        return Status::Invalid(
+            BuildConflictMessage("File deletion conflicts detected! Give up committing.",
+                                 base_commit_user, base_entries, delta_entries, status.ToString()));
+    }
+    PAIMON_RETURN_NOT_OK(
+        CheckDeleteInEntries(merged_entries, base_commit_user, base_entries, delta_entries));
+    PAIMON_RETURN_NOT_OK(
+        CheckKeyRange(merged_entries, base_commit_user, base_entries, delta_entries));
     if (commit_kind != Snapshot::CommitKind::Compact()) {
         PAIMON_RETURN_NOT_OK(
             CheckRowIdExistence(base_entries, delta_entries, latest_snapshot.NextRowId()));
@@ -155,8 +172,10 @@ bool ConflictDetection::ShouldBeOverwriteCommit(
     return false;
 }
 
-Status ConflictDetection::CheckBucketKeepSame(const std::vector<ManifestEntry>& all_entries,
-                                              const Snapshot::CommitKind& commit_kind) const {
+Status ConflictDetection::CheckBucketKeepSame(
+    const std::vector<ManifestEntry>& all_entries, const Snapshot::CommitKind& commit_kind,
+    const std::string& base_commit_user, const std::vector<ManifestEntry>& base_entries,
+    const std::vector<ManifestEntry>& delta_entries) const {
     if (commit_kind == Snapshot::CommitKind::Overwrite()) {
         return Status::OK();
     }
@@ -177,7 +196,8 @@ Status ConflictDetection::CheckBucketKeepSame(const std::vector<ManifestEntry>& 
             continue;
         }
 
-        return BucketNumMismatch(entry.Partition(), entry.TotalBuckets(), iter->second);
+        return TotalBucketsChanged(entry.Partition(), entry.TotalBuckets(), iter->second,
+                                   base_commit_user, base_entries, delta_entries);
     }
 
     MarkBucketCheckedPartitions(total_buckets);
@@ -220,10 +240,77 @@ Status ConflictDetection::CheckSameBucketByTotalBuckets(
 
 Status ConflictDetection::BucketNumMismatch(const BinaryRow& partition, int32_t num_buckets,
                                             int32_t previous_num_buckets) const {
+    std::string part_info = table_schema_->PartitionKeys().empty()
+                                ? std::string("table")
+                                : fmt::format("partition {{{}}}", partition.ToString());
     return Status::Invalid(fmt::format(
+        "Try to write {} with a new bucket num {}, but the previous bucket num is {}. Please "
+        "switch to batch mode, and perform INSERT OVERWRITE to rescale current data layout first.",
+        part_info, num_buckets, previous_num_buckets));
+}
+
+Status ConflictDetection::TotalBucketsChanged(
+    const BinaryRow& partition, int32_t num_buckets, int32_t previous_num_buckets,
+    const std::string& base_commit_user, const std::vector<ManifestEntry>& base_entries,
+    const std::vector<ManifestEntry>& delta_entries) const {
+    std::string message = fmt::format(
         "Total buckets of partition {} changed from {} to {} without overwrite. Give up "
         "committing.",
-        partition.ToString(), previous_num_buckets, num_buckets));
+        partition.ToString(), previous_num_buckets, num_buckets);
+    return Status::Invalid(
+        BuildConflictMessage(message, base_commit_user, base_entries, delta_entries));
+}
+
+std::string ConflictDetection::BuildConflictMessage(const std::string& message,
+                                                    const std::string& base_commit_user,
+                                                    const std::vector<ManifestEntry>& base_entries,
+                                                    const std::vector<ManifestEntry>& delta_entries,
+                                                    const std::string& cause) const {
+    static constexpr const char* kPossibleCauses =
+        "Don't panic!\n"
+        "Conflicts during commits are normal and this failure is intended to resolve the "
+        "conflicts.\n"
+        "Conflicts are mainly caused by the following scenarios:\n"
+        "1. Multiple jobs are writing into the same partition at the same time, or you use "
+        "STATEMENT SET to execute multiple INSERT statements into the same Paimon table.\n"
+        "   You'll probably see different base commit user and current commit user below.\n"
+        "   You can use dedicated compaction job to support multiple writing.\n"
+        "2. You're recovering from an old savepoint, or you're creating multiple jobs from a "
+        "savepoint.\n"
+        "   The job will fail continuously in this scenario to protect metadata from corruption.\n"
+        "   You can either recover from the latest savepoint, or you can revert the table to the "
+        "snapshot corresponding to the old savepoint.";
+
+    constexpr size_t kMaxEntry = 50;
+    auto join_entries = [](const std::vector<ManifestEntry>& entries,
+                           size_t max_entry) -> std::string {
+        std::string joined;
+        size_t limit = std::min(entries.size(), max_entry);
+        for (size_t i = 0; i < limit; ++i) {
+            if (i > 0) {
+                joined += "\n";
+            }
+            joined += entries[i].ToString();
+        }
+        return joined;
+    };
+
+    std::string commit_user_string = fmt::format(
+        "Base commit user is: {}; Current commit user is: {}", base_commit_user, commit_user_);
+    std::string base_entries_string = "Base entries are:\n" + join_entries(base_entries, kMaxEntry);
+    std::string changes_string = "Changes are:\n" + join_entries(delta_entries, kMaxEntry);
+
+    std::string result = fmt::format("{}\n\n{}\n\n{}\n\n{}\n\n{}", message, kPossibleCauses,
+                                     commit_user_string, base_entries_string, changes_string);
+    if (base_entries.size() > kMaxEntry || delta_entries.size() > kMaxEntry) {
+        result +=
+            "\n\nThe entry list above are not fully displayed, please refer to logs for more "
+            "information.";
+    }
+    if (!cause.empty()) {
+        result += "\n\nCaused by: " + cause;
+    }
+    return result;
 }
 
 void ConflictDetection::MarkBucketCheckedPartitions(
@@ -241,18 +328,27 @@ void ConflictDetection::MarkBucketCheckedPartitions(
 }
 
 Status ConflictDetection::CheckDeleteInEntries(
-    const std::vector<ManifestEntry>& merged_entries) const {
+    const std::vector<ManifestEntry>& merged_entries, const std::string& base_commit_user,
+    const std::vector<ManifestEntry>& base_entries,
+    const std::vector<ManifestEntry>& delta_entries) const {
     for (const auto& entry : merged_entries) {
         if (entry.Kind() == FileKind::Delete()) {
-            return Status::Invalid(fmt::format(
-                "Trying to delete file {} which is not previously added.", entry.FileName()));
+            std::string message = fmt::format(
+                "File deletion conflicts detected! Give up committing. Trying to delete file {} "
+                "for table {} which is not previously added.",
+                entry.FileName(), table_name_);
+            return Status::Invalid(
+                BuildConflictMessage(message, base_commit_user, base_entries, delta_entries));
         }
     }
 
     return Status::OK();
 }
 
-Status ConflictDetection::CheckKeyRange(const std::vector<ManifestEntry>& merged_entries) const {
+Status ConflictDetection::CheckKeyRange(const std::vector<ManifestEntry>& merged_entries,
+                                        const std::string& base_commit_user,
+                                        const std::vector<ManifestEntry>& base_entries,
+                                        const std::vector<ManifestEntry>& delta_entries) const {
     if (table_schema_->PrimaryKeys().empty()) {
         return Status::OK();
     }
@@ -287,9 +383,11 @@ Status ConflictDetection::CheckKeyRange(const std::vector<ManifestEntry>& merged
             const ManifestEntry& a = entries[i];
             const ManifestEntry& b = entries[i + 1];
             if (key_comparator->CompareTo(a.MaxKey(), b.MinKey()) >= 0) {
-                return Status::Invalid(fmt::format(
+                std::string message = fmt::format(
                     "LSM conflicts detected! Give up committing. Conflict files are {} and {}.",
-                    a.FileName(), b.FileName()));
+                    a.FileName(), b.FileName());
+                return Status::Invalid(
+                    BuildConflictMessage(message, base_commit_user, base_entries, delta_entries));
             }
         }
     }
