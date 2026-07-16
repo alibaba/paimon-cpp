@@ -26,6 +26,7 @@
 #include "fmt/format.h"
 #include "jdo_error.h"  // NOLINT(build/include_subdir)
 #include "paimon/common/utils/math.h"
+#include "paimon/common/utils/path_util.h"
 #include "paimon/fs/jindo/jindo_file_status.h"
 #include "paimon/fs/jindo/jindo_utils.h"
 
@@ -68,6 +69,14 @@ Result<std::unique_ptr<OutputStream>> JindoFileSystem::Create(const std::string&
         return Status::Invalid(
             fmt::format("do not allow overwrite, but the file {} already exists", path));
     }
+    const std::string parent_path = PathUtil::GetParentDirPath(path);
+    if (!parent_path.empty()) {
+        PAIMON_RETURN_NOT_OK(Mkdirs(parent_path));
+    }
+    return OpenWriter(path);
+}
+
+Result<std::unique_ptr<OutputStream>> JindoFileSystem::OpenWriter(const std::string& path) const {
     std::unique_ptr<JdoWriter> writer;
     PAIMON_RETURN_NOT_OK_FROM_JINDO(impl_->GetFileSystem()->openWriter(path, &writer));
     return std::make_unique<JindoOutputStream>(impl_, std::move(writer));
