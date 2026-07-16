@@ -66,8 +66,8 @@ class RowTrackingCommitUtilsTest : public testing::Test {
 TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingStampsSequence) {
     std::vector<ManifestEntry> input;
     input.push_back(CreateEntry("new-file", /*row_count=*/10, /*min_seq_number=*/0,
-                                /*max_seq_number=*/0,
-                                FileSource::Append(), std::vector<std::string>{"f0"}));
+                                /*max_seq_number=*/0, FileSource::Append(),
+                                std::vector<std::string>{"f0"}));
     input.push_back(CreateEntry("partial-modified", /*row_count=*/8, /*min_seq_number=*/7,
                                 /*max_seq_number=*/0, FileSource::Append(),
                                 std::vector<std::string>{"f0"}));
@@ -91,8 +91,7 @@ TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingStampsSequence) {
 TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingStampsSequenceRangeStartingAtZero) {
     std::vector<ManifestEntry> input;
     input.push_back(CreateEntry("range-starts-at-zero", /*row_count=*/10,
-                                /*min_seq_number=*/0, /*max_seq_number=*/9,
-                                FileSource::Append(),
+                                /*min_seq_number=*/0, /*max_seq_number=*/9, FileSource::Append(),
                                 std::vector<std::string>{"f0"}));
 
     ASSERT_OK_AND_ASSIGN(RowTrackingCommitUtils::RowTrackingAssigned assigned,
@@ -110,11 +109,11 @@ TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTracking) {
                                 /*max_seq_number=*/0, FileSource::Append(),
                                 std::vector<std::string>{"f0"}));
     input.push_back(CreateEntry("blob-a.blob", /*row_count=*/3, /*min_seq_number=*/0,
-                                /*max_seq_number=*/0,
-                                FileSource::Append(), std::vector<std::string>{"blob_a"}));
+                                /*max_seq_number=*/0, FileSource::Append(),
+                                std::vector<std::string>{"blob_a"}));
     input.push_back(CreateEntry("blob-a-2.blob", /*row_count=*/2, /*min_seq_number=*/0,
-                                /*max_seq_number=*/0,
-                                FileSource::Append(), std::vector<std::string>{"blob_a"}));
+                                /*max_seq_number=*/0, FileSource::Append(),
+                                std::vector<std::string>{"blob_a"}));
     input.push_back(CreateEntry("vector-1.vector.data", /*row_count=*/4,
                                 /*min_seq_number=*/0, /*max_seq_number=*/0, FileSource::Append(),
                                 std::vector<std::string>{"vec"}));
