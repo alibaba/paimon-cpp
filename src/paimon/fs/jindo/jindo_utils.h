@@ -17,15 +17,21 @@
 #pragma once
 
 #include "JdoStatus.hpp"  // NOLINT(build/include_subdir)
+#include "jdo_error.h"    // NOLINT(build/include_subdir)
 #include "paimon/status.h"
 
 namespace paimon::jindo {
-#define PAIMON_RETURN_NOT_OK_FROM_JINDO(JINDO_STATUS) \
-    do {                                              \
-        auto __s = (JINDO_STATUS);                    \
-        if (PAIMON_UNLIKELY(!(__s).ok())) {           \
-            return Status::IOError(__s.errMsg());     \
-        }                                             \
+/// Maps a jindo file-not-found error to Status::NotExist so that callers can distinguish
+/// a missing file from other IO errors, consistent with LocalFileSystem.
+#define PAIMON_RETURN_NOT_OK_FROM_JINDO(JINDO_STATUS)             \
+    do {                                                          \
+        auto __s = (JINDO_STATUS);                                \
+        if (PAIMON_UNLIKELY(!(__s).ok())) {                       \
+            if ((__s).getErrCode() == JDO_FILE_NOT_FOUND_ERROR) { \
+                return Status::NotExist(__s.errMsg());            \
+            }                                                     \
+            return Status::IOError(__s.errMsg());                 \
+        }                                                         \
     } while (false)
 
 }  // namespace paimon::jindo

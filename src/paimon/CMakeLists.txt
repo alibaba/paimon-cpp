@@ -791,18 +791,29 @@ if(PAIMON_BUILD_TESTS)
                     ${TEST_STATIC_LINK_LIBS}
                     ${GTEST_LINK_TOOLCHAIN})
 
+    # jindo_utils_test only checks the in-memory status conversion and does not need an
+    # OSS cluster, so it runs whenever jindo is built. The other jindo tests need real
+    # OSS access and stay disabled.
+    set(FS_TEST_JINDO_SOURCES)
+    if(PAIMON_ENABLE_JINDO)
+        list(APPEND FS_TEST_JINDO_SOURCES fs/jindo/jindo_utils_test.cpp)
+    endif()
+
     add_paimon_test(fs_test
                     SOURCES
                     common/fs/file_system_test.cpp
                     common/fs/resolving_file_system_test.cpp
                     fs/local/local_file_test.cpp
+                    ${FS_TEST_JINDO_SOURCES}
                     # fs/jindo/jindo_file_system_factory_test.cpp
                     # fs/jindo/jindo_file_system_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared
                     ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
-                    # ${PAIMON_JINDO_FILE_SYSTEM_STATIC_LINK_LIBS}
+                    ${PAIMON_JINDO_FILE_SYSTEM_STATIC_LINK_LIBS}
                     test_utils_static
-                    ${GTEST_LINK_TOOLCHAIN})
+                    ${GTEST_LINK_TOOLCHAIN}
+                    EXTRA_INCLUDES
+                    ${JINDOSDK_INCLUDE_DIR})
 
 endif()
