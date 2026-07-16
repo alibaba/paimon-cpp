@@ -79,7 +79,7 @@ bool Snapshot::TEST_Equal(const Snapshot& other) const {
     return version_ == other.version_ && id_ == other.id_ && schema_id_ == other.schema_id_ &&
            index_manifest_ == other.index_manifest_ && commit_user_ == other.commit_user_ &&
            commit_identifier_ == other.commit_identifier_ && commit_kind_ == other.commit_kind_ &&
-           log_offsets_ == other.log_offsets_ && total_record_count_ == other.total_record_count_ &&
+           total_record_count_ == other.total_record_count_ &&
            delta_record_count_ == other.delta_record_count_ &&
            changelog_record_count_ == other.changelog_record_count_ &&
            watermark_ == other.watermark_ && statistics_ == other.statistics_ &&
@@ -99,8 +99,7 @@ bool Snapshot::operator==(const Snapshot& other) const {
            changelog_manifest_list_size_ == other.changelog_manifest_list_size_ &&
            index_manifest_ == other.index_manifest_ && commit_user_ == other.commit_user_ &&
            commit_identifier_ == other.commit_identifier_ && commit_kind_ == other.commit_kind_ &&
-           time_millis_ == other.time_millis_ && log_offsets_ == other.log_offsets_ &&
-           total_record_count_ == other.total_record_count_ &&
+           time_millis_ == other.time_millis_ && total_record_count_ == other.total_record_count_ &&
            delta_record_count_ == other.delta_record_count_ &&
            changelog_record_count_ == other.changelog_record_count_ &&
            watermark_ == other.watermark_ && statistics_ == other.statistics_ &&
@@ -145,9 +144,7 @@ Snapshot::Snapshot(const std::optional<int32_t>& version, int64_t id, int64_t sc
                    const std::optional<int64_t>& changelog_manifest_list_size,
                    const std::optional<std::string>& index_manifest, const std::string& commit_user,
                    int64_t commit_identifier, CommitKind commit_kind, int64_t time_millis,
-                   const std::optional<std::map<int32_t, int64_t>>& log_offsets,
-                   const std::optional<int64_t>& total_record_count,
-                   const std::optional<int64_t>& delta_record_count,
+                   int64_t total_record_count, int64_t delta_record_count,
                    const std::optional<int64_t>& changelog_record_count,
                    const std::optional<int64_t>& watermark,
                    const std::optional<std::string>& statistics,
@@ -167,7 +164,6 @@ Snapshot::Snapshot(const std::optional<int32_t>& version, int64_t id, int64_t sc
       commit_identifier_(commit_identifier),
       commit_kind_(commit_kind),
       time_millis_(time_millis),
-      log_offsets_(log_offsets),
       total_record_count_(total_record_count),
       delta_record_count_(delta_record_count),
       changelog_record_count_(changelog_record_count),
@@ -228,17 +224,10 @@ rapidjson::Value Snapshot::ToJson(rapidjson::Document::AllocatorType* allocator)
 
     obj.AddMember(rapidjson::StringRef(FIELD_TIME_MILLIS),
                   RapidJsonUtil::SerializeValue(time_millis_, allocator).Move(), *allocator);
-    if (log_offsets_ != std::nullopt) {
-        obj.AddMember(rapidjson::StringRef(FIELD_LOG_OFFSETS),
-                      RapidJsonUtil::SerializeValue(log_offsets_.value(), allocator).Move(),
-                      *allocator);
-    }
     obj.AddMember(rapidjson::StringRef(FIELD_TOTAL_RECORD_COUNT),
-                  RapidJsonUtil::SerializeValue(total_record_count_.value(), allocator).Move(),
-                  *allocator);
+                  RapidJsonUtil::SerializeValue(total_record_count_, allocator).Move(), *allocator);
     obj.AddMember(rapidjson::StringRef(FIELD_DELTA_RECORD_COUNT),
-                  RapidJsonUtil::SerializeValue(delta_record_count_.value(), allocator).Move(),
-                  *allocator);
+                  RapidJsonUtil::SerializeValue(delta_record_count_, allocator).Move(), *allocator);
 
     if (changelog_record_count_ != std::nullopt) {
         obj.AddMember(
@@ -298,12 +287,10 @@ void Snapshot::FromJson(const rapidjson::Value& obj) noexcept(false) {
         throw std::invalid_argument("deserialize CommitKind failed");
     }
     time_millis_ = RapidJsonUtil::DeserializeKeyValue<int64_t>(obj, FIELD_TIME_MILLIS);
-    log_offsets_ = RapidJsonUtil::DeserializeKeyValue<std::optional<std::map<int32_t, int64_t>>>(
-        obj, FIELD_LOG_OFFSETS);
     total_record_count_ =
-        RapidJsonUtil::DeserializeKeyValue<std::optional<int64_t>>(obj, FIELD_TOTAL_RECORD_COUNT);
+        RapidJsonUtil::DeserializeKeyValue<int64_t>(obj, FIELD_TOTAL_RECORD_COUNT);
     delta_record_count_ =
-        RapidJsonUtil::DeserializeKeyValue<std::optional<int64_t>>(obj, FIELD_DELTA_RECORD_COUNT);
+        RapidJsonUtil::DeserializeKeyValue<int64_t>(obj, FIELD_DELTA_RECORD_COUNT);
     changelog_record_count_ = RapidJsonUtil::DeserializeKeyValue<std::optional<int64_t>>(
         obj, FIELD_CHANGELOG_RECORD_COUNT);
     watermark_ = RapidJsonUtil::DeserializeKeyValue<std::optional<int64_t>>(obj, FIELD_WATERMARK);

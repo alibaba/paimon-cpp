@@ -28,6 +28,7 @@ namespace paimon {
 
 CommitContext::CommitContext(const std::string& root_path, const std::string& commit_user,
                              bool ignore_empty_commit, bool use_rest_catalog_commit,
+                             bool append_commit_check_conflict,
                              const std::shared_ptr<MemoryPool>& memory_pool,
                              const std::shared_ptr<Executor>& executor,
                              const std::shared_ptr<FileSystem>& specific_file_system,
@@ -36,6 +37,7 @@ CommitContext::CommitContext(const std::string& root_path, const std::string& co
       commit_user_(commit_user),
       ignore_empty_commit_(ignore_empty_commit),
       use_rest_catalog_commit_(use_rest_catalog_commit),
+      append_commit_check_conflict_(append_commit_check_conflict),
       memory_pool_(memory_pool),
       executor_(executor),
       specific_file_system_(specific_file_system),
@@ -50,6 +52,7 @@ class CommitContextBuilder::Impl {
     void Reset() {
         ignore_empty_commit_ = true;
         use_rest_catalog_commit_ = false;
+        append_commit_check_conflict_ = false;
         memory_pool_ = GetDefaultPool();
         executor_ = CreateDefaultExecutor();
         specific_file_system_.reset();
@@ -61,6 +64,7 @@ class CommitContextBuilder::Impl {
     std::string commit_user_;
     bool ignore_empty_commit_ = true;
     bool use_rest_catalog_commit_ = false;
+    bool append_commit_check_conflict_ = false;
     std::shared_ptr<MemoryPool> memory_pool_ = GetDefaultPool();
     std::shared_ptr<Executor> executor_ = CreateDefaultExecutor();
     std::shared_ptr<FileSystem> specific_file_system_;
@@ -98,6 +102,12 @@ CommitContextBuilder& CommitContextBuilder::UseRESTCatalogCommit(bool use_rest_c
     return *this;
 }
 
+CommitContextBuilder& CommitContextBuilder::AppendCommitCheckConflict(
+    bool append_commit_check_conflict) {
+    impl_->append_commit_check_conflict_ = append_commit_check_conflict;
+    return *this;
+}
+
 CommitContextBuilder& CommitContextBuilder::WithMemoryPool(
     const std::shared_ptr<MemoryPool>& memory_pool) {
     impl_->memory_pool_ = memory_pool;
@@ -123,8 +133,8 @@ Result<std::unique_ptr<CommitContext>> CommitContextBuilder::Finish() {
     }
     auto ctx = std::make_unique<CommitContext>(
         impl_->root_path_, impl_->commit_user_, impl_->ignore_empty_commit_,
-        impl_->use_rest_catalog_commit_, impl_->memory_pool_, impl_->executor_,
-        impl_->specific_file_system_, impl_->options_);
+        impl_->use_rest_catalog_commit_, impl_->append_commit_check_conflict_, impl_->memory_pool_,
+        impl_->executor_, impl_->specific_file_system_, impl_->options_);
     impl_->Reset();
     return ctx;
 }

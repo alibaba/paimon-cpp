@@ -288,6 +288,17 @@ set(PAIMON_CORE_SRCS
     core/operation/abstract_split_read.cpp
     core/operation/append_only_file_store_scan.cpp
     core/operation/append_only_file_store_write.cpp
+    core/operation/metrics/commit_metrics.cpp
+    core/operation/commit/conflict_detection.cpp
+    core/operation/commit/commit_scanner.cpp
+    core/operation/commit/commit_changes_provider.cpp
+    core/operation/commit/compacted_changelog_path_resolver.cpp
+    core/operation/commit/overwrite_changes_provider.cpp
+    core/operation/commit/row_id_column_conflict_checker.cpp
+    core/operation/commit/manifest_entry_changes.cpp
+    core/operation/commit/row_tracking_commit_utils.cpp
+    core/operation/commit/sequence_snapshot_properties.cpp
+    core/operation/commit/retry_waiter.cpp
     core/operation/commit_context.cpp
     core/operation/expire_snapshots.cpp
     core/operation/file_store_commit.cpp
@@ -320,6 +331,7 @@ set(PAIMON_CORE_SRCS
     core/stats/simple_stats.cpp
     core/stats/simple_stats_evolution.cpp
     core/table/table.cpp
+    core/table/bucket_mode.cpp
     core/table/sink/commit_message.cpp
     core/table/sink/commit_message_impl.cpp
     core/table/sink/commit_message_serializer.cpp
@@ -344,6 +356,7 @@ set(PAIMON_CORE_SRCS
     core/table/system/binlog_system_table.cpp
     core/table/system/in_memory_system_table.cpp
     core/table/system/metadata_system_tables.cpp
+    core/table/system/read_optimized_system_table.cpp
     core/table/system/system_table.cpp
     core/table/system/system_table_scan.cpp
     core/table/system/system_table_schema.cpp
@@ -696,13 +709,24 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/spill_reader_writer_test.cpp
                     core/migrate/file_meta_utils_test.cpp
                     core/operation/metrics/compaction_metrics_test.cpp
+                    core/operation/metrics/commit_stats_test.cpp
                     core/operation/data_evolution_file_store_scan_test.cpp
                     core/operation/data_evolution_split_read_test.cpp
+                    core/operation/commit/compacted_changelog_path_resolver_test.cpp
+                    core/operation/commit/commit_changes_provider_test.cpp
+                    core/operation/commit/commit_scanner_test.cpp
+                    core/operation/commit/conflict_detection_test.cpp
+                    core/operation/commit/manifest_entry_changes_test.cpp
+                    core/operation/commit/overwrite_changes_provider_test.cpp
+                    core/operation/commit/row_id_column_conflict_checker_test.cpp
+                    core/operation/commit/row_tracking_commit_utils_test.cpp
+                    core/operation/commit/retry_waiter_test.cpp
                     core/operation/key_value_file_store_write_test.cpp
                     core/operation/internal_read_context_test.cpp
                     core/operation/abstract_split_read_test.cpp
                     core/operation/append_only_file_store_write_test.cpp
                     core/operation/commit_metrics_test.cpp
+                    core/operation/commit_context_test.cpp
                     core/operation/expire_snapshots_test.cpp
                     core/operation/file_store_commit_impl_test.cpp
                     core/operation/file_store_commit_test.cpp
@@ -731,6 +755,7 @@ if(PAIMON_BUILD_TESTS)
                     core/stats/simple_stats_collector_test.cpp
                     core/stats/simple_stats_test.cpp
                     core/table/table_test.cpp
+                    core/table/bucket_mode_test.cpp
                     core/table/sink/commit_message_test.cpp
                     core/table/sink/commit_message_impl_test.cpp
                     core/table/source/fallback_data_split_test.cpp
@@ -768,12 +793,15 @@ if(PAIMON_BUILD_TESTS)
 
     set(PAIMON_JINDO_FS_TEST_SOURCES)
     set(PAIMON_JINDO_FS_TEST_LINK_LIBS)
+    if(PAIMON_ENABLE_JINDO)
+        list(APPEND PAIMON_JINDO_FS_TEST_SOURCES fs/jindo/jindo_utils_test.cpp)
+        list(APPEND PAIMON_JINDO_FS_TEST_LINK_LIBS
+             ${PAIMON_JINDO_FILE_SYSTEM_STATIC_LINK_LIBS})
+    endif()
     if(PAIMON_ENABLE_JINDO_TESTS)
         list(APPEND PAIMON_JINDO_FS_TEST_SOURCES
              fs/jindo/jindo_file_system_factory_test.cpp
              fs/jindo/jindo_file_system_test.cpp)
-        list(APPEND PAIMON_JINDO_FS_TEST_LINK_LIBS
-             ${PAIMON_JINDO_FILE_SYSTEM_STATIC_LINK_LIBS})
     endif()
 
     add_paimon_test(fs_test
@@ -787,7 +815,9 @@ if(PAIMON_BUILD_TESTS)
                     ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
                     ${PAIMON_JINDO_FS_TEST_LINK_LIBS}
                     test_utils_static
-                    ${GTEST_LINK_TOOLCHAIN})
+                    ${GTEST_LINK_TOOLCHAIN}
+                    EXTRA_INCLUDES
+                    ${JINDOSDK_INCLUDE_DIR})
 
     if(PAIMON_ENABLE_JINDO_TESTS)
         target_compile_definitions(paimon-fs-test PRIVATE PAIMON_ENABLE_JINDO_TESTS)

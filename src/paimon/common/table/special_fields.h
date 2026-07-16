@@ -22,6 +22,7 @@
 
 #include "arrow/type_fwd.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/string_utils.h"
 #include "paimon/utils/special_field_ids.h"
 
 namespace paimon {
@@ -63,14 +64,15 @@ struct SpecialFields {
         return data_field;
     }
 
-    static bool IsSpecialFieldName(const std::string& field_name) {
-        if (field_name == SequenceNumber().Name() || field_name == ValueKind().Name() ||
-            field_name == RowKind().Name() || field_name == RowId().Name() ||
-            field_name == IndexScore().Name()) {
+    static bool IsSystemField(const std::string& field_name) {
+        if (StringUtils::StartsWith(field_name, KEY_FIELD_PREFIX)) {
             return true;
         }
-        return false;
+        return field_name == SequenceNumber().Name() || field_name == ValueKind().Name() ||
+               field_name == RowKind().Name() || field_name == RowId().Name() ||
+               field_name == IndexScore().Name();
     }
+
     // TODO(xinyu.lxy): add a func to complete row-tracking fields
 
     static std::shared_ptr<arrow::Schema> CompleteSequenceAndValueKindField(

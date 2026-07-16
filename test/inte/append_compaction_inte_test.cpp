@@ -81,8 +81,8 @@ class AppendCompactionInteTest : public testing::Test,
         ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot1, helper->LatestSnapshot());
         ASSERT_TRUE(snapshot1);
         ASSERT_EQ(1, snapshot1.value().Id());
-        ASSERT_EQ(5, snapshot1.value().TotalRecordCount().value());
-        ASSERT_EQ(5, snapshot1.value().DeltaRecordCount().value());
+        ASSERT_EQ(5, snapshot1.value().TotalRecordCount());
+        ASSERT_EQ(5, snapshot1.value().DeltaRecordCount());
 
         std::vector<BinaryRow> datas_2;
         datas_2.push_back(
@@ -101,8 +101,8 @@ class AppendCompactionInteTest : public testing::Test,
         ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot2, helper->LatestSnapshot());
         ASSERT_TRUE(snapshot2);
         ASSERT_EQ(2, snapshot2.value().Id());
-        ASSERT_EQ(9, snapshot2.value().TotalRecordCount().value());
-        ASSERT_EQ(4, snapshot2.value().DeltaRecordCount().value());
+        ASSERT_EQ(9, snapshot2.value().TotalRecordCount());
+        ASSERT_EQ(4, snapshot2.value().DeltaRecordCount());
 
         std::vector<BinaryRow> datas_3;
         datas_3.push_back(
@@ -115,8 +115,8 @@ class AppendCompactionInteTest : public testing::Test,
         ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot3, helper->LatestSnapshot());
         ASSERT_TRUE(snapshot3);
         ASSERT_EQ(3, snapshot3.value().Id());
-        ASSERT_EQ(10, snapshot3.value().TotalRecordCount().value());
-        ASSERT_EQ(1, snapshot3.value().DeltaRecordCount().value());
+        ASSERT_EQ(10, snapshot3.value().TotalRecordCount());
+        ASSERT_EQ(1, snapshot3.value().DeltaRecordCount());
 
         // @note: for append-only tables in Spark, native row-level deletes aren't supported during
         // writing. Instead, deletions are expressed by committing a Deletion Vector (DV) file
@@ -209,8 +209,8 @@ TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompaction) {
     ASSERT_OK(helper->commit_->Commit(commit_messages, commit_identifier));
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot5, helper->LatestSnapshot());
     ASSERT_EQ(5, snapshot5.value().Id());
-    ASSERT_EQ(11, snapshot5.value().TotalRecordCount().value());
-    ASSERT_EQ(0, snapshot5.value().DeltaRecordCount().value());
+    ASSERT_EQ(11, snapshot5.value().TotalRecordCount());
+    ASSERT_EQ(0, snapshot5.value().DeltaRecordCount());
     ASSERT_EQ(Snapshot::CommitKind::Compact(), snapshot5.value().GetCommitKind());
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
@@ -536,8 +536,8 @@ TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompactionWithDv)
     ASSERT_OK(helper2->commit_->Commit(commit_messages, commit_identifier));
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot5, helper2->LatestSnapshot());
     ASSERT_EQ(6, snapshot5.value().Id());
-    ASSERT_EQ(8, snapshot5.value().TotalRecordCount().value());
-    ASSERT_EQ(-3, snapshot5.value().DeltaRecordCount().value());
+    ASSERT_EQ(8, snapshot5.value().TotalRecordCount());
+    ASSERT_EQ(-3, snapshot5.value().DeltaRecordCount());
     ASSERT_EQ(Snapshot::CommitKind::Compact(), snapshot5.value().GetCommitKind());
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper2->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
@@ -618,8 +618,8 @@ TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteBestEffortCompaction)
     ASSERT_OK(helper->commit_->Commit(commit_messages, commit_identifier));
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot5, helper->LatestSnapshot());
     ASSERT_EQ(5, snapshot5.value().Id());
-    ASSERT_EQ(11, snapshot5.value().TotalRecordCount().value());
-    ASSERT_EQ(0, snapshot5.value().DeltaRecordCount().value());
+    ASSERT_EQ(11, snapshot5.value().TotalRecordCount());
+    ASSERT_EQ(0, snapshot5.value().DeltaRecordCount());
     ASSERT_EQ(Snapshot::CommitKind::Compact(), snapshot5.value().GetCommitKind());
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
@@ -709,8 +709,8 @@ TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteCompactionWithExterna
     ASSERT_OK(helper->commit_->Commit(commit_messages, commit_identifier));
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot5, helper->LatestSnapshot());
     ASSERT_EQ(5, snapshot5.value().Id());
-    ASSERT_EQ(11, snapshot5.value().TotalRecordCount().value());
-    ASSERT_EQ(0, snapshot5.value().DeltaRecordCount().value());
+    ASSERT_EQ(11, snapshot5.value().TotalRecordCount());
+    ASSERT_EQ(0, snapshot5.value().DeltaRecordCount());
     ASSERT_EQ(Snapshot::CommitKind::Compact(), snapshot5.value().GetCommitKind());
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));

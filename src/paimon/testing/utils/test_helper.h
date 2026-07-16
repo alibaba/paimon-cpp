@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+#include "arrow/api.h"
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/api.h"
 #include "paimon/api.h"
@@ -57,7 +58,7 @@ class TestHelper {
         const std::vector<std::string>& partition_keys,
         const std::vector<std::string>& primary_keys,
         const std::map<std::string, std::string>& options, bool is_streaming_mode,
-        bool ignore_if_exists = false) {
+        bool ignore_if_exists = false, const std::string& temp_directory = "") {
         // only for test && only check the key
         auto new_options = options;
         new_options["enable-object-store-catalog-in-inte-test"] = "";
@@ -70,12 +71,12 @@ class TestHelper {
                                                   partition_keys, primary_keys, new_options,
                                                   ignore_if_exists));
         std::string table_path = PathUtil::JoinPath(root_path, "foo.db/bar");
-        return Create(table_path, new_options, is_streaming_mode);
+        return Create(table_path, new_options, is_streaming_mode, temp_directory);
     }
 
     static Result<std::unique_ptr<TestHelper>> Create(
         const std::string& table_path, const std::map<std::string, std::string>& options,
-        bool is_streaming_mode) {
+        bool is_streaming_mode, const std::string& temp_directory = "") {
         std::string file_system_identifier = "local";
         auto fs_iter = options.find(Options::FILE_SYSTEM);
         if (fs_iter != options.end()) {
@@ -85,6 +86,9 @@ class TestHelper {
                                FileSystemFactory::Get(file_system_identifier, table_path, options));
         std::string commit_user = "commit_user";
         WriteContextBuilder context_builder(table_path, commit_user);
+        if (!temp_directory.empty()) {
+            context_builder.WithTempDirectory(temp_directory);
+        }
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<WriteContext> write_context,
                                context_builder.SetOptions(options)
                                    .WithStreamingMode(is_streaming_mode)
@@ -170,6 +174,27 @@ class TestHelper {
         }
         PAIMON_ASSIGN_OR_RAISE(auto result_plan, scan_->CreatePlan());
         return result_plan->Splits();
+    }
+
+    /// Builds a one-row struct array holding the serialized descriptor of the blob.
+    static Result<std::shared_ptr<arrow::Array>> MakeBlobDescriptorArray(
+        const std::shared_ptr<arrow::DataType>& struct_type, const std::shared_ptr<Blob>& blob,
+        const std::shared_ptr<MemoryPool>& pool) {
+        if (struct_type->num_fields() != 1 ||
+            struct_type->field(0)->type()->id() != arrow::Type::LARGE_BINARY) {
+            return Status::Invalid("struct_type must have a single large binary field");
+        }
+        arrow::StructBuilder struct_builder(struct_type, arrow::default_memory_pool(),
+                                            {std::make_shared<arrow::LargeBinaryBuilder>()});
+        auto blob_builder =
+            static_cast<arrow::LargeBinaryBuilder*>(struct_builder.field_builder(0));
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder.Append());
+        PAIMON_UNIQUE_PTR<Bytes> descriptor = blob->ToDescriptor(pool);
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(
+            blob_builder->Append(descriptor->data(), descriptor->size()));
+        std::shared_ptr<arrow::Array> array;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder.Finish(&array));
+        return array;
     }
 
     static Result<bool> CheckBlobsEqual(const std::vector<std::shared_ptr<Blob>>& result_blobs,

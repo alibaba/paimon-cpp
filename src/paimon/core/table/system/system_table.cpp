@@ -31,6 +31,7 @@
 #include "paimon/core/table/system/audit_log_system_table.h"
 #include "paimon/core/table/system/binlog_system_table.h"
 #include "paimon/core/table/system/metadata_system_tables.h"
+#include "paimon/core/table/system/read_optimized_system_table.h"
 #include "paimon/core/utils/branch_manager.h"
 #include "paimon/status.h"
 
@@ -85,6 +86,14 @@ const std::vector<SystemTableRegistryEntry>& SystemTableRegistry() {
              -> Result<std::shared_ptr<SystemTable>> {
              return std::make_shared<BinlogSystemTable>(
                  fs, table_path, table_schema, MergeOptions(table_schema, dynamic_options));
+         }},
+        {ReadOptimizedSystemTable::kName,
+         [](const std::shared_ptr<FileSystem>& /*fs*/, const std::string& table_path,
+            const std::shared_ptr<TableSchema>& table_schema,
+            const std::map<std::string, std::string>& dynamic_options)
+             -> Result<std::shared_ptr<SystemTable>> {
+             return std::make_shared<ReadOptimizedSystemTable>(
+                 table_path, table_schema, MergeOptions(table_schema, dynamic_options));
          }},
         {SnapshotsSystemTable::kName,
          [](const std::shared_ptr<FileSystem>& fs, const std::string& table_path,

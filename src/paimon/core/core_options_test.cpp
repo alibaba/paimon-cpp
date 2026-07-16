@@ -41,6 +41,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(256 * 1024 * 1024L, core_options.GetTargetFileSize(/*has_primary_key=*/false));
     ASSERT_EQ(128 * 1024 * 1024L, core_options.GetTargetFileSize(/*has_primary_key=*/true));
     ASSERT_EQ(256 * 1024 * 1024L, core_options.GetBlobTargetFileSize());
+    ASSERT_TRUE(core_options.BlobSplitByFileSize());
     ASSERT_EQ(187904815, core_options.GetCompactionFileSize(/*has_primary_key=*/false));
     ASSERT_EQ(93952404, core_options.GetCompactionFileSize(/*has_primary_key=*/true));
 
@@ -68,8 +69,13 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ("zstd", core_options.GetSpillCompressOptions().compress);
     ASSERT_EQ(1, core_options.GetSpillCompressOptions().zstd_level);
     ASSERT_FALSE(core_options.CommitForceCompact());
+    ASSERT_TRUE(core_options.DynamicPartitionOverwrite());
+    ASSERT_TRUE(core_options.OverwriteUpgrade());
     ASSERT_EQ(std::numeric_limits<int64_t>::max(), core_options.GetCommitTimeout());
     ASSERT_EQ(10, core_options.GetCommitMaxRetries());
+    ASSERT_EQ(10, core_options.GetCommitMinRetryWait());
+    ASSERT_EQ(10 * 1000, core_options.GetCommitMaxRetryWait());
+    ASSERT_FALSE(core_options.CommitDiscardDuplicateFiles());
     ExpireConfig expire_config = core_options.GetExpireConfig();
     ASSERT_EQ(10, expire_config.GetSnapshotRetainMin());
     ASSERT_EQ(std::numeric_limits<int32_t>::max(), expire_config.GetSnapshotRetainMax());
@@ -82,6 +88,9 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(SortEngine::LOSER_TREE, core_options.GetSortEngine());
     ASSERT_FALSE(core_options.IgnoreDelete());
     ASSERT_FALSE(core_options.WriteOnly());
+    ASSERT_FALSE(core_options.BucketAppendOrdered());
+    ASSERT_EQ(CoreOptions::SequenceNumberInitMode::SCAN,
+              core_options.WriteSequenceNumberInitMode());
     ASSERT_EQ(5, core_options.GetCompactionMinFileNum());
     ASSERT_FALSE(core_options.CompactionForceRewriteAllFiles());
     ASSERT_FALSE(core_options.CompactionForceUpLevel0());
@@ -184,6 +193,11 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::COMMIT_FORCE_COMPACT, "true"},
         {Options::COMMIT_TIMEOUT, "120s"},
         {Options::COMMIT_MAX_RETRIES, "20"},
+        {Options::COMMIT_MIN_RETRY_WAIT, "5ms"},
+        {Options::COMMIT_MAX_RETRY_WAIT, "3s"},
+        {Options::COMMIT_DISCARD_DUPLICATE_FILES, "true"},
+        {Options::DYNAMIC_PARTITION_OVERWRITE, "false"},
+        {Options::OVERWRITE_UPGRADE, "false"},
         {Options::SCAN_SNAPSHOT_ID, "5"},
         {Options::SCAN_MODE, "from-snapshot-full"},
         {Options::SCAN_MANIFEST_ENTRY_CACHE_MAX_SNAPSHOTS, "7"},
@@ -227,6 +241,7 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::DATA_EVOLUTION_ENABLED, "true"},
         {Options::BLOB_FIELD, "blob1,blob2"},
         {Options::BLOB_DESCRIPTOR_FIELD, "blob3,blob4"},
+        {Options::BLOB_AS_DESCRIPTOR, "true"},
         {Options::BLOB_VIEW_FIELD, "blob5"},
         {Options::BLOB_VIEW_UPSTREAM_WAREHOUSE, "FILE:///tmp/blob_view_upstream_warehouse/"},
         {Options::BLOB_VIEW_RESOLVE_ENABLED, "false"},
@@ -236,6 +251,8 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::GLOBAL_INDEX_EXTERNAL_PATH, "FILE:///tmp/global_index/"},
         {Options::SCAN_TAG_NAME, "test-tag"},
         {Options::WRITE_ONLY, "true"},
+        {Options::BUCKET_APPEND_ORDERED, "true"},
+        {Options::WRITE_SEQUENCE_NUMBER_INIT_MODE, "snapshot"},
         {Options::COMPACTION_MIN_FILE_NUM, "10"},
         {Options::COMPACTION_FORCE_REWRITE_ALL_FILES, "true"},
         {Options::COMPACTION_FORCE_UP_LEVEL_0, "true"},
@@ -305,8 +322,13 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ("lz4", core_options.GetSpillCompressOptions().compress);
     ASSERT_EQ(2, core_options.GetSpillCompressOptions().zstd_level);
     ASSERT_TRUE(core_options.CommitForceCompact());
+    ASSERT_FALSE(core_options.DynamicPartitionOverwrite());
+    ASSERT_FALSE(core_options.OverwriteUpgrade());
     ASSERT_EQ(120 * 1000, core_options.GetCommitTimeout());
     ASSERT_EQ(20, core_options.GetCommitMaxRetries());
+    ASSERT_EQ(5, core_options.GetCommitMinRetryWait());
+    ASSERT_EQ(3 * 1000, core_options.GetCommitMaxRetryWait());
+    ASSERT_TRUE(core_options.CommitDiscardDuplicateFiles());
     ASSERT_EQ(5, core_options.GetScanSnapshotId().value_or(-1));
     ASSERT_EQ(7, core_options.GetScanManifestEntryCacheMaxSnapshots());
     ExpireConfig expire_config = core_options.GetExpireConfig();
@@ -365,6 +387,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_TRUE(core_options.DataEvolutionEnabled());
     ASSERT_EQ(core_options.GetBlobFields(), std::vector<std::string>({"blob1", "blob2"}));
     ASSERT_EQ(core_options.GetBlobDescriptorFields(), std::vector<std::string>({"blob3", "blob4"}));
+    ASSERT_FALSE(core_options.BlobSplitByFileSize());
     ASSERT_EQ(core_options.GetBlobViewFields(), std::vector<std::string>({"blob5"}));
     ASSERT_EQ(core_options.GetBlobInlineFields(),
               std::vector<std::string>({"blob3", "blob4", "blob5"}));
@@ -381,6 +404,9 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(375809637, core_options.GetCompactionFileSize(/*has_primary_key=*/true));
     ASSERT_EQ(375809637, core_options.GetCompactionFileSize(/*has_primary_key=*/false));
     ASSERT_TRUE(core_options.WriteOnly());
+    ASSERT_TRUE(core_options.BucketAppendOrdered());
+    ASSERT_EQ(CoreOptions::SequenceNumberInitMode::SNAPSHOT,
+              core_options.WriteSequenceNumberInitMode());
     ASSERT_EQ(10, core_options.GetCompactionMinFileNum());
     ASSERT_EQ(123, core_options.GetCompactionMaxSizeAmplificationPercent());
     ASSERT_EQ(9, core_options.GetCompactionSizeRatio());
@@ -443,6 +469,9 @@ TEST(CoreOptionsTest, TestInvalidCase) {
         "The high priority pool ratio should in the range [0, 1), while input is 1.1");
     ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::BUCKET_FUNCTION_TYPE, "invalid"}}),
                         "invalid bucket function type: invalid");
+    ASSERT_NOK_WITH_MSG(
+        CoreOptions::FromMap({{Options::WRITE_SEQUENCE_NUMBER_INIT_MODE, "invalid"}}),
+        "invalid write sequence number init mode: invalid");
 }
 
 TEST(CoreOptionsTest, TestLookupCompactMaxIntervalComputedValue) {
@@ -452,6 +481,27 @@ TEST(CoreOptionsTest, TestLookupCompactMaxIntervalComputedValue) {
     };
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
     ASSERT_EQ(13, core_options.GetLookupCompactMaxInterval());
+}
+
+TEST(CoreOptionsTest, TestDynamicPartitionOverwriteOption) {
+    {
+        ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap({}));
+        ASSERT_TRUE(core_options.DynamicPartitionOverwrite());
+    }
+
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions core_options,
+            CoreOptions::FromMap({{Options::DYNAMIC_PARTITION_OVERWRITE, "false"}}));
+        ASSERT_FALSE(core_options.DynamicPartitionOverwrite());
+    }
+
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions core_options,
+            CoreOptions::FromMap({{Options::DYNAMIC_PARTITION_OVERWRITE, "true"}}));
+        ASSERT_TRUE(core_options.DynamicPartitionOverwrite());
+    }
 }
 
 TEST(CoreOptionsTest, TestNumSortedRunsStopTriggerFloorAndDefault) {
@@ -922,6 +972,12 @@ TEST(CoreOptionsTest, TestFallback) {
                                   {Options::BLOB_DESCRIPTOR_FIELD, "new_b1 , new_b2"}}));
         ASSERT_EQ(options.GetBlobDescriptorFields(),
                   std::vector<std::string>({"new_b1", "new_b2"}));
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                             CoreOptions::FromMap({{Options::BLOB_AS_DESCRIPTOR, "true"},
+                                                   {Options::BLOB_SPLIT_BY_FILE_SIZE, "true"}}));
+        ASSERT_TRUE(options.BlobSplitByFileSize());
     }
 }
 

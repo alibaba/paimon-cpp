@@ -265,9 +265,9 @@ TEST_F(IndexFileHandlerTest, TestScanWithNoIndexManifest) {
         snapshot.DeltaManifestListSize(), snapshot.ChangelogManifestList(),
         snapshot.ChangelogManifestListSize(), /*index_manifest=*/std::nullopt,
         snapshot.CommitUser(), snapshot.CommitIdentifier(), snapshot.GetCommitKind(),
-        snapshot.TimeMillis(), snapshot.LogOffsets(), snapshot.TotalRecordCount(),
-        snapshot.DeltaRecordCount(), snapshot.ChangelogRecordCount(), snapshot.Watermark(),
-        snapshot.Statistics(), snapshot.Properties(), snapshot.NextRowId());
+        snapshot.TimeMillis(), snapshot.TotalRecordCount(), snapshot.DeltaRecordCount(),
+        snapshot.ChangelogRecordCount(), snapshot.Watermark(), snapshot.Statistics(),
+        snapshot.Properties(), snapshot.NextRowId());
 
     auto partition = BinaryRowGenerator::GenerateRow({10}, memory_pool_.get());
     std::unordered_set<BinaryRow> partitions = {partition};

@@ -104,13 +104,9 @@ Status SchemaValidation::ValidateTableSchema(const TableSchema& schema) {
     // TODO(yonghao.fyh): check changelog num retain
     // TODO(yonghao.fyh): support file format validate data fields
     for (const auto& field_name : field_names) {
-        if (SpecialFields::IsSpecialFieldName(field_name)) {
+        if (SpecialFields::IsSystemField(field_name)) {
             return Status::Invalid(
                 fmt::format("field name '{}' in schema cannot be special field.", field_name));
-        }
-        if (StringUtils::StartsWith(field_name, SpecialFields::KEY_FIELD_PREFIX)) {
-            return Status::Invalid(fmt::format("field name '{}' in schema cannot start with '{}'.",
-                                               field_name, SpecialFields::KEY_FIELD_PREFIX));
         }
     }
     // TODO(yonghao.fyh): check streaming read overwrite

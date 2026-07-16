@@ -36,9 +36,7 @@ Tag::Tag(const std::optional<int32_t>& version, const int64_t id, const int64_t 
          const std::optional<int64_t>& changelog_manifest_list_size,
          const std::optional<std::string>& index_manifest, const std::string& commit_user,
          const int64_t commit_identifier, const CommitKind commit_kind, const int64_t time_millis,
-         const std::optional<std::map<int32_t, int64_t>>& log_offsets,
-         const std::optional<int64_t>& total_record_count,
-         const std::optional<int64_t>& delta_record_count,
+         const int64_t total_record_count, const int64_t delta_record_count,
          const std::optional<int64_t>& changelog_record_count,
          const std::optional<int64_t>& watermark, const std::optional<std::string>& statistics,
          const std::optional<std::map<std::string, std::string>>& properties,
@@ -48,7 +46,7 @@ Tag::Tag(const std::optional<int32_t>& version, const int64_t id, const int64_t 
     : Snapshot(version, id, schema_id, base_manifest_list, base_manifest_list_size,
                delta_manifest_list, delta_manifest_list_size, changelog_manifest_list,
                changelog_manifest_list_size, index_manifest, commit_user, commit_identifier,
-               commit_kind, time_millis, log_offsets, total_record_count, delta_record_count,
+               commit_kind, time_millis, total_record_count, delta_record_count,
                changelog_record_count, watermark, statistics, properties, next_row_id),
       tag_create_time_(tag_create_time),
       tag_time_retained_(tag_time_retained) {}
@@ -74,9 +72,8 @@ Result<Snapshot> Tag::TrimToSnapshot() const {
     return Snapshot(Version(), Id(), SchemaId(), BaseManifestList(), BaseManifestListSize(),
                     DeltaManifestList(), DeltaManifestListSize(), ChangelogManifestList(),
                     ChangelogManifestListSize(), IndexManifest(), CommitUser(), CommitIdentifier(),
-                    GetCommitKind(), TimeMillis(), LogOffsets(), TotalRecordCount(),
-                    DeltaRecordCount(), ChangelogRecordCount(), Watermark(), Statistics(),
-                    Properties(), NextRowId());
+                    GetCommitKind(), TimeMillis(), TotalRecordCount(), DeltaRecordCount(),
+                    ChangelogRecordCount(), Watermark(), Statistics(), Properties(), NextRowId());
 }
 
 rapidjson::Value Tag::ToJson(rapidjson::Document::AllocatorType* allocator) const noexcept(false) {
