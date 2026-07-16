@@ -71,7 +71,11 @@ Result<std::unique_ptr<OutputStream>> JindoFileSystem::Create(const std::string&
     }
     const std::string parent_path = PathUtil::GetParentDirPath(path);
     if (!parent_path.empty()) {
-        PAIMON_RETURN_NOT_OK(Mkdirs(parent_path));
+        PAIMON_ASSIGN_OR_RAISE(Path parent, PathUtil::ToPath(parent_path));
+        // Do not issue mkdir for scheme-only or authority-only URI parents.
+        if (!parent.path.empty()) {
+            PAIMON_RETURN_NOT_OK(Mkdirs(parent_path));
+        }
     }
     return OpenWriter(path);
 }

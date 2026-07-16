@@ -18,6 +18,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "paimon/fs/jindo/jindo_file_system.h"
@@ -58,6 +59,7 @@ class TestJindoFileSystem : public jindo::JindoFileSystem {
 
     Status Mkdirs(const std::string& path) const override {
         parent_path_ = path;
+        calls_.push_back("mkdirs");
         return mkdirs_status_;
     }
 
@@ -73,11 +75,13 @@ class TestJindoFileSystem : public jindo::JindoFileSystem {
         return writer_opened_;
     }
 
+    const std::vector<std::string>& GetCalls() const {
+        return calls_;
+    }
+
  protected:
     Result<std::unique_ptr<OutputStream>> OpenWriter(const std::string&) const override {
-        if (parent_path_.empty()) {
-            return Status::IOError("parent directory was not created");
-        }
+        calls_.push_back("open_writer");
         writer_opened_ = true;
         std::unique_ptr<OutputStream> output = std::make_unique<TestOutputStream>();
         return output;
@@ -86,6 +90,7 @@ class TestJindoFileSystem : public jindo::JindoFileSystem {
  private:
     mutable std::string parent_path_;
     mutable bool writer_opened_ = false;
+    mutable std::vector<std::string> calls_;
     Status mkdirs_status_ = Status::OK();
 };
 
@@ -98,6 +103,22 @@ TEST(JindoFileSystemUnitTest, CreateMakesParentDirectoryBeforeOpeningWriter) {
     ASSERT_TRUE(output);
     ASSERT_EQ(fs.GetParentPath(), "oss://bucket/table/bucket-24");
     ASSERT_TRUE(fs.IsWriterOpened());
+    ASSERT_EQ(fs.GetCalls().size(), 2);
+    ASSERT_EQ(fs.GetCalls()[0], "mkdirs");
+    ASSERT_EQ(fs.GetCalls()[1], "open_writer");
+}
+
+TEST(JindoFileSystemUnitTest, CreateSkipsObjectStoreRootParent) {
+    TestJindoFileSystem fs;
+    const std::string path = "oss://bucket/data.orc";
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<OutputStream> output,
+                         fs.Create(path, /*overwrite=*/false));
+    ASSERT_TRUE(output);
+    ASSERT_TRUE(fs.GetParentPath().empty());
+    ASSERT_TRUE(fs.IsWriterOpened());
+    ASSERT_EQ(fs.GetCalls().size(), 1);
+    ASSERT_EQ(fs.GetCalls()[0], "open_writer");
 }
 
 TEST(JindoFileSystemUnitTest, CreateReturnsParentDirectoryFailure) {
@@ -108,6 +129,8 @@ TEST(JindoFileSystemUnitTest, CreateReturnsParentDirectoryFailure) {
     ASSERT_NOK_WITH_MSG(fs.Create(path, /*overwrite=*/false), "failed to create parent directory");
     ASSERT_EQ(fs.GetParentPath(), "oss://bucket/table/bucket-24");
     ASSERT_FALSE(fs.IsWriterOpened());
+    ASSERT_EQ(fs.GetCalls().size(), 1);
+    ASSERT_EQ(fs.GetCalls()[0], "mkdirs");
 }
 
 }  // namespace paimon::test
