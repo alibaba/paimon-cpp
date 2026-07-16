@@ -18,6 +18,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <string_view>
 #include <utility>
 
 #include "JdoFileInfo.hpp"    // NOLINT(build/include_subdir)
