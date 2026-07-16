@@ -142,7 +142,6 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
         ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
         auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
 
-        // std::map<std::string, std::string> options;
         ASSERT_OK_AND_ASSIGN(auto batch_reader,
                              ParquetFileBatchReader::Create(std::move(in_stream), options,
                                                             batch_size, nullptr, arrow_pool_));

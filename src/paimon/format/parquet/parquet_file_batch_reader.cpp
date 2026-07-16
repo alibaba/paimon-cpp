@@ -18,7 +18,6 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <iostream>
 #include <unordered_map>
 
 #include "arrow/acero/options.h"
@@ -386,6 +385,9 @@ Result<TargetRowGroups> ParquetFileBatchReader::RefineRowRangesByCoalescing(
         RowRanges coalesced = CoalesceNearbyRanges(contiguous, hole_size_limit);
 
         auto rg_row_count = static_cast<int64_t>(rg_end_row - rg_start_row);
+        if (coalesced.IsEmpty()) {
+            continue;
+        }
         if (coalesced.RowCount() == rg_row_count) {
             target_row_groups.emplace_back(row_group);
         } else {
