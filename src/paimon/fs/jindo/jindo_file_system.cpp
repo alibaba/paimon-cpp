@@ -273,6 +273,7 @@ void JindoInputStream::ReadAsync(char* buffer, int64_t size, int64_t offset,
     auto perform_status = task->perform();
     if (!perform_status.ok()) {
         state->Complete(perform_status);
+        [[maybe_unused]] auto status = task->cancel();
         return;
     }
 }

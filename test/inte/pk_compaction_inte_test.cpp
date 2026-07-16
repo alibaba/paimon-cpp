@@ -183,9 +183,6 @@ class PkCompactionInteTest : public ::testing::Test,
     Status Commit(const std::string& table_path,
                   const std::vector<std::shared_ptr<CommitMessage>>& commit_msgs) const {
         CommitContextBuilder commit_builder(table_path, "commit_user_1");
-        std::map<std::string, std::string> commit_options = {
-            {"enable-pk-commit-in-inte-test", ""}, {"enable-object-store-commit-in-inte-test", ""}};
-        commit_builder.SetOptions(commit_options);
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<CommitContext> commit_context,
                                commit_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStoreCommit> file_store_commit,

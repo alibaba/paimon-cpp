@@ -794,14 +794,13 @@ if(PAIMON_BUILD_TESTS)
     set(PAIMON_JINDO_FS_TEST_SOURCES)
     set(PAIMON_JINDO_FS_TEST_LINK_LIBS)
     if(PAIMON_ENABLE_JINDO)
-        list(APPEND PAIMON_JINDO_FS_TEST_SOURCES fs/jindo/jindo_utils_test.cpp)
+        list(APPEND PAIMON_JINDO_FS_TEST_SOURCES
+             fs/jindo/jindo_file_system_factory_test.cpp fs/jindo/jindo_utils_test.cpp)
+        if(PAIMON_ENABLE_NETWORK_TESTS)
+            list(APPEND PAIMON_JINDO_FS_TEST_SOURCES fs/jindo/jindo_file_system_test.cpp)
+        endif()
         list(APPEND PAIMON_JINDO_FS_TEST_LINK_LIBS
              ${PAIMON_JINDO_FILE_SYSTEM_STATIC_LINK_LIBS})
-    endif()
-    if(PAIMON_ENABLE_JINDO_TESTS)
-        list(APPEND PAIMON_JINDO_FS_TEST_SOURCES
-             fs/jindo/jindo_file_system_factory_test.cpp
-             fs/jindo/jindo_file_system_test.cpp)
     endif()
 
     add_paimon_test(fs_test
@@ -819,8 +818,8 @@ if(PAIMON_BUILD_TESTS)
                     EXTRA_INCLUDES
                     ${JINDOSDK_INCLUDE_DIR})
 
-    if(PAIMON_ENABLE_JINDO_TESTS)
-        target_compile_definitions(paimon-fs-test PRIVATE PAIMON_ENABLE_JINDO_TESTS)
+    if(PAIMON_ENABLE_NETWORK_TESTS)
+        target_compile_definitions(paimon-fs-test PRIVATE PAIMON_ENABLE_NETWORK_TESTS)
     endif()
 
 endif()
