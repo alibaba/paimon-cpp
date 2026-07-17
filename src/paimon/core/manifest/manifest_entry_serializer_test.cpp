@@ -37,9 +37,8 @@ class ManifestEntrySerializerTest : public testing::Test {
         return std::make_shared<DataFileMeta>(
             "some_file_name", 1024, row_count, DataFileMeta::EmptyMinKey(),
             DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
-            /*min_seq_no=*/16,
-            /*max_seq_no=*/32,
-            /*schema_id=*/1, /*level=*/2, /*extra_files=*/std::vector<std::optional<std::string>>(),
+            /*min_seq_no=*/16, /*max_seq_no=*/32, /*schema_id=*/1, /*level=*/2,
+            /*extra_files=*/std::vector<std::optional<std::string>>(),
             /*creation_time=*/Timestamp(0, 0), /*delete_row_count=*/3,
             /*embedded_index=*/nullptr, /*file_source=*/std::nullopt,
             /*value_stats_cols=*/std::nullopt, /*external_path=*/std::optional<std::string>(),

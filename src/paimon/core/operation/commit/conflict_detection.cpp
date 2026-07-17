@@ -29,6 +29,7 @@
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/binary_row_partition_computer.h"
 #include "paimon/common/utils/fields_comparator.h"
 #include "paimon/common/utils/range_helper.h"
 #include "paimon/core/deletionvectors/deletion_vectors_index_file.h"
@@ -44,6 +45,8 @@
 #include "paimon/core/operation/commit/row_id_column_conflict_checker.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/bucket_mode.h"
+#include "paimon/core/utils/field_mapping.h"
+#include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/core/utils/snapshot_manager.h"
 #include "paimon/utils/range.h"
 #include "paimon/utils/row_range_index.h"
@@ -83,13 +86,15 @@ ConflictDetection::ConflictDetection(std::shared_ptr<TableSchema> table_schema,
                                      std::shared_ptr<ManifestList> manifest_list,
                                      std::shared_ptr<ManifestFile> manifest_file,
                                      std::shared_ptr<CommitScanner> commit_scanner,
-                                     const std::string& commit_user, const std::string& table_name)
+                                     const std::string& commit_user, const std::string& table_name,
+                                     const std::shared_ptr<FileStorePathFactory>& path_factory)
     : table_schema_(std::move(table_schema)),
       options_(options),
       snapshot_manager_(std::move(snapshot_manager)),
       manifest_list_(std::move(manifest_list)),
       manifest_file_(std::move(manifest_file)),
       commit_scanner_(std::move(commit_scanner)),
+      path_factory_(path_factory),
       commit_user_(commit_user),
       table_name_(table_name) {}
 
@@ -109,13 +114,12 @@ Status ConflictDetection::CheckConflicts(
     const std::optional<std::shared_ptr<RowIdColumnConflictChecker>>&
         row_id_column_conflict_checker,
     const Snapshot::CommitKind& commit_kind) const {
+    std::string base_commit_user = latest_snapshot.CommitUser();
     if (options_.DeletionVectorsEnabled() &&
         ResolveBucketMode(options_.GetBucket(), table_schema_) == BucketMode::BUCKET_UNAWARE) {
         return Status::NotImplemented(
             "check conflicts failed. not yet support dv with BUCKET_UNAWARE mode");
     }
-
-    std::string base_commit_user = latest_snapshot.CommitUser();
 
     std::vector<ManifestEntry> all_entries = base_entries;
     all_entries.insert(all_entries.end(), delta_entries.begin(), delta_entries.end());
@@ -240,9 +244,14 @@ Status ConflictDetection::CheckSameBucketByTotalBuckets(
 
 Status ConflictDetection::BucketNumMismatch(const BinaryRow& partition, int32_t num_buckets,
                                             int32_t previous_num_buckets) const {
-    std::string part_info = table_schema_->PartitionKeys().empty()
-                                ? std::string("table")
-                                : fmt::format("partition {{{}}}", partition.ToString());
+    std::string part_info;
+    if (table_schema_->PartitionKeys().empty()) {
+        part_info = "table";
+    } else {
+        PAIMON_ASSIGN_OR_RAISE(std::string partition_string,
+                               path_factory_->GetPartitionString(partition));
+        part_info = fmt::format("partition {{{}}}", partition_string);
+    }
     return Status::Invalid(fmt::format(
         "Try to write {} with a new bucket num {}, but the previous bucket num is {}. Please "
         "switch to batch mode, and perform INSERT OVERWRITE to rescale current data layout first.",
@@ -253,10 +262,19 @@ Status ConflictDetection::TotalBucketsChanged(
     const BinaryRow& partition, int32_t num_buckets, int32_t previous_num_buckets,
     const std::string& base_commit_user, const std::vector<ManifestEntry>& base_entries,
     const std::vector<ManifestEntry>& delta_entries) const {
+    std::shared_ptr<arrow::Schema> arrow_schema =
+        DataField::ConvertDataFieldsToArrowSchema(table_schema_->Fields());
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<arrow::Schema> partition_schema,
+        FieldMapping::GetPartitionSchema(arrow_schema, table_schema_->PartitionKeys()));
+    PAIMON_ASSIGN_OR_RAISE(std::string partition_string,
+                           BinaryRowPartitionComputer::PartToSimpleString(
+                               partition_schema, partition, "-", 200,
+                               /*legacy_partition_name_enabled=*/false));
     std::string message = fmt::format(
         "Total buckets of partition {} changed from {} to {} without overwrite. Give up "
         "committing.",
-        partition.ToString(), previous_num_buckets, num_buckets);
+        partition_string, previous_num_buckets, num_buckets);
     return Status::Invalid(
         BuildConflictMessage(message, base_commit_user, base_entries, delta_entries));
 }
@@ -383,9 +401,16 @@ Status ConflictDetection::CheckKeyRange(const std::vector<ManifestEntry>& merged
             const ManifestEntry& a = entries[i];
             const ManifestEntry& b = entries[i + 1];
             if (key_comparator->CompareTo(a.MaxKey(), b.MinKey()) >= 0) {
+                PAIMON_ASSIGN_OR_RAISE(std::string a_partition_string,
+                                       path_factory_->GetPartitionString(a.Partition()));
+                PAIMON_ASSIGN_OR_RAISE(std::string b_partition_string,
+                                       path_factory_->GetPartitionString(b.Partition()));
                 std::string message = fmt::format(
-                    "LSM conflicts detected! Give up committing. Conflict files are {} and {}.",
-                    a.FileName(), b.FileName());
+                    "LSM conflicts detected! Give up committing. Conflict files are:\n"
+                    "{}, bucket {}, level {}, file {}\n"
+                    "{}, bucket {}, level {}, file {}",
+                    a_partition_string, a.Bucket(), a.Level(), a.FileName(), b_partition_string,
+                    b.Bucket(), b.Level(), b.FileName());
                 return Status::Invalid(
                     BuildConflictMessage(message, base_commit_user, base_entries, delta_entries));
             }
@@ -444,7 +469,9 @@ Status ConflictDetection::CheckRowIdExistence(const std::vector<ManifestEntry>& 
         if (!exists) {
             return Status::Invalid(fmt::format(
                 "Row ID existence conflict: file '{}' references firstRowId={}, rowCount={} in "
-                "bucket {}, but no matching file exists in the current snapshot.",
+                "bucket {}, but no matching file exists in the current snapshot. The referenced "
+                "file may have been rewritten by a concurrent compaction or removed by an "
+                "overwrite.",
                 entry.FileName(), entry.File()->first_row_id.value(), entry.File()->row_count,
                 entry.Bucket()));
         }
@@ -508,9 +535,17 @@ Status ConflictDetection::CheckDataFileRowIdRangeConflicts(
         PAIMON_ASSIGN_OR_RAISE(bool all_data_ranges_same,
                                range_helper.AreAllRangesSame(data_file_group));
         if (!all_data_ranges_same) {
-            return Status::Invalid(
-                "For Data Evolution table, multiple MERGE INTO/COMPACT operations have "
-                "encountered row-id range conflicts.");
+            std::string data_files_str;
+            for (size_t i = 0; i < data_file_group.size(); ++i) {
+                if (i > 0) {
+                    data_files_str += ", ";
+                }
+                data_files_str += data_file_group[i].ToString();
+            }
+            return Status::Invalid(fmt::format(
+                "For Data Evolution table, multiple 'MERGE INTO' and 'COMPACT' operations have "
+                "encountered conflicts, data files: [{}]",
+                data_files_str));
         }
     }
 
@@ -549,10 +584,24 @@ Status ConflictDetection::CheckDedicatedFileRowIdRangeConflicts(
             std::string conflict_reason = intersecting_ranges.size() > 1
                                               ? "spans multiple data file ranges"
                                               : "is not covered by one data file range";
+            std::string intersecting_files_str;
+            bool first = true;
+            for (const ManifestEntry& data_file : data_files) {
+                int64_t data_from = data_file.File()->first_row_id.value();
+                int64_t data_to = data_from + data_file.File()->row_count - 1;
+                if (data_from <= dedicated_range.to && dedicated_range.from <= data_to) {
+                    if (!first) {
+                        intersecting_files_str += ", ";
+                    }
+                    intersecting_files_str += data_file.ToString();
+                    first = false;
+                }
+            }
             return Status::Invalid(fmt::format(
-                "For Data Evolution table, multiple MERGE INTO/COMPACT operations have "
-                "encountered row-id range conflicts, dedicated file '{}' range {} {}.",
-                dedicated_file.FileName(), dedicated_range.ToString(), conflict_reason));
+                "For Data Evolution table, multiple 'MERGE INTO' and 'COMPACT' operations have "
+                "encountered conflicts, dedicated file {} {} {}: [{}]",
+                dedicated_file.ToString(), dedicated_range.ToString(), conflict_reason,
+                intersecting_files_str));
         }
     }
 
@@ -623,9 +672,9 @@ Status ConflictDetection::CheckForRowIdFromSnapshot(
                 row_id_column_conflict_checker.value()->ConflictsWith(history_entry.File()));
             if (conflicts) {
                 return Status::Invalid(
-                    "For Data Evolution table, multiple MERGE INTO operations have "
-                    "encountered conflicts while checking row-id history from "
-                    "snapshot.");
+                    "For Data Evolution table, multiple 'MERGE INTO' operations have "
+                    "encountered conflicts, updating the same file, which can render some "
+                    "updates ineffective.");
             }
         }
     }
@@ -680,7 +729,8 @@ Status ConflictDetection::CheckGlobalIndexRowIdExistence(
         if (group_iter == range_index_by_group.end()) {
             return Status::Invalid(fmt::format(
                 "Global index row ID existence conflict: index file '{}' references row range {}, "
-                "but this range is not fully covered by current data files.",
+                "but this range is not fully covered by current data files. The referenced row "
+                "IDs may have been reassigned or removed by a concurrent commit.",
                 index_entry.index_file->FileName(),
                 Range(index_entry.index_file->GetGlobalIndexMeta().value().row_range_start,
                       index_entry.index_file->GetGlobalIndexMeta().value().row_range_end)
@@ -697,7 +747,8 @@ Status ConflictDetection::CheckGlobalIndexRowIdExistence(
         if (!covered) {
             return Status::Invalid(fmt::format(
                 "Global index row ID existence conflict: index file '{}' references row range {}, "
-                "but this range is not fully covered by current data files.",
+                "but this range is not fully covered by current data files. The referenced row "
+                "IDs may have been reassigned or removed by a concurrent commit.",
                 index_entry.index_file->FileName(), index_range.ToString()));
         }
     }

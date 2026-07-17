@@ -36,6 +36,7 @@ namespace paimon {
 class ManifestEntry;
 struct IndexManifestEntry;
 class CommitScanner;
+class FileStorePathFactory;
 class ManifestFile;
 class ManifestList;
 class RowIdColumnConflictChecker;
@@ -50,7 +51,8 @@ class ConflictDetection {
                       std::shared_ptr<ManifestList> manifest_list,
                       std::shared_ptr<ManifestFile> manifest_file,
                       std::shared_ptr<CommitScanner> commit_scanner, const std::string& commit_user,
-                      const std::string& table_name);
+                      const std::string& table_name,
+                      const std::shared_ptr<FileStorePathFactory>& path_factory);
 
     Status CheckConflicts(const Snapshot& latest_snapshot,
                           const std::vector<ManifestEntry>& base_entries,
@@ -143,6 +145,7 @@ class ConflictDetection {
     std::shared_ptr<ManifestList> manifest_list_;
     std::shared_ptr<ManifestFile> manifest_file_;
     std::shared_ptr<CommitScanner> commit_scanner_;
+    std::shared_ptr<FileStorePathFactory> path_factory_;
     std::string commit_user_;
     std::string table_name_;
     mutable LinkedHashMap<BinaryRow, bool> same_bucket_checked_partitions_;

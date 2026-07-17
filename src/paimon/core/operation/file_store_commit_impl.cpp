@@ -168,7 +168,7 @@ FileStoreCommitImpl::FileStoreCommitImpl(
           table_schema, schema, options, executor, pool, partition_computer_.get(),
           std::move(scan_supplier))),
       conflict_detection_(table_schema, options, snapshot_manager_, manifest_list, manifest_file,
-                          commit_scanner_, commit_user, PathUtil::GetName(root_path)),
+                          commit_scanner_, commit_user, table_name_, path_factory),
       manifest_file_(manifest_file),
       manifest_list_(manifest_list),
       index_manifest_file_(index_manifest_file),

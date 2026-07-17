@@ -394,10 +394,9 @@ TEST_F(FileStoreCommitImplTest, TestRESTCatalogCommit) {
         /*changelog_manifest_list_size=*/std::nullopt, /*index_manifest=*/std::nullopt,
         /*commit_user=*/"commit_user_1", /*commit_identifier=*/9223372036854775807,
         /*commit_kind=*/Snapshot::CommitKind::Append(), /*time_millis=*/1758097357597,
-        /*total_record_count=*/5,
-        /*delta_record_count=*/5, /*changelog_record_count=*/std::nullopt,
-        /*watermark=*/std::nullopt,
-        /*statistics=*/std::nullopt, /*properties=*/std::nullopt, /*next_row_id=*/0);
+        /*total_record_count=*/5, /*delta_record_count=*/5, /*changelog_record_count=*/std::nullopt,
+        /*watermark=*/std::nullopt, /*statistics=*/std::nullopt, /*properties=*/std::nullopt,
+        /*next_row_id=*/0);
     std::vector<PartitionStatistics> expected_partition_statistics = {
         PartitionStatistics(/*spec=*/{{"f1", "20"}}, /*record_count=*/1, /*file_size_in_bytes=*/541,
                             /*file_count=*/1,
