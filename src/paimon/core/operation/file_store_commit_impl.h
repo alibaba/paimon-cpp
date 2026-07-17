@@ -222,8 +222,6 @@ class FileStoreCommitImpl : public FileStoreCommit {
     Status CheckFilesExistence(
         const std::vector<std::shared_ptr<ManifestCommittable>>& committables) const;
 
-    static int64_t RowCounts(const std::vector<ManifestEntry>& files);
-
  private:
     std::shared_ptr<MemoryPool> memory_pool_;
     std::shared_ptr<Executor> executor_;

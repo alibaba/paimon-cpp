@@ -56,7 +56,6 @@ TEST(CommitTableRequestTest, TestSimple) {
         "baseManifestListSize": 291,
         "deltaManifestList": "manifest-list-3879e56f-2f27-49ae-a2f3-3dcbb8eb0beb-1",
         "deltaManifestListSize": 1342,
-        "changelogManifestList": null,
         "commitUser": "commit_user_1",
         "commitIdentifier": 9223372036854775807,
         "commitKind": "APPEND",
