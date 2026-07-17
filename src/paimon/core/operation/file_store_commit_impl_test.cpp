@@ -40,8 +40,11 @@
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/catalog/commit_table_request.h"
+#include "paimon/core/core_options.h"
 #include "paimon/core/index/global_index_meta.h"
+#include "paimon/core/index/index_path_factory.h"
 #include "paimon/core/io/data_file_meta.h"
+#include "paimon/core/io/data_file_path_factory.h"
 #include "paimon/core/manifest/file_kind.h"
 #include "paimon/core/manifest/file_source.h"
 #include "paimon/core/manifest/index_manifest_entry.h"
@@ -55,6 +58,7 @@
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/stats/simple_stats.h"
 #include "paimon/core/table/sink/commit_message_impl.h"
+#include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/core/utils/file_utils.h"
 #include "paimon/core/utils/snapshot_manager.h"
 #include "paimon/data/timestamp.h"
@@ -236,6 +240,22 @@ class FileStoreCommitImplTest : public testing::Test {
         return std::make_shared<IndexFileMeta>(
             "HASH", file_name, /*file_size=*/100, /*row_count=*/5,
             /*dv_ranges=*/std::nullopt, /*external_path=*/std::nullopt, global_index);
+    }
+
+    std::shared_ptr<DataFileMeta> CreateLeveledDataFileMeta(const std::string& file_name,
+                                                            const BinaryRow& min_key,
+                                                            const BinaryRow& max_key, int32_t level,
+                                                            int32_t schema_id = 0) {
+        return std::make_shared<DataFileMeta>(
+            file_name, 1024, 8, min_key, max_key, SimpleStats::EmptyStats(),
+            SimpleStats::EmptyStats(), /*min_seq_no=*/16, /*max_seq_no=*/32, schema_id, level,
+            /*extra_files=*/std::vector<std::optional<std::string>>(),
+            /*creation_time=*/Timestamp(0, 0),
+            /*delete_row_count=*/std::nullopt,
+            /*embedded_index=*/nullptr, FileSource::Append(),
+            /*external_path=*/std::nullopt,
+            /*value_stats_cols=*/std::nullopt, /*first_row_id=*/std::nullopt,
+            /*write_cols=*/std::nullopt);
     }
 
     std::shared_ptr<DataFileMeta> CreateAppendDataFileMeta(const std::string& file_name,
@@ -1246,6 +1266,112 @@ TEST_F(FileStoreCommitImplTest, TestDropMultiPartitionAndExpireSnapshot) {
     ASSERT_EQ(3, manifests[0].NumDeletedFiles());
 }
 
+TEST_F(FileStoreCommitImplTest, TestTruncateTable) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .IgnoreEmptyCommit(true)
+                             .Finish());
+
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    std::vector<std::shared_ptr<CommitMessage>> msgs =
+        GetCommitMessages(paimon::test::GetDataDir() +
+                              "/orc/append_09.db/append_09/commit_messages/"
+                              "commit_messages-01",
+                          /*version=*/3);
+    ASSERT_OK(commit->Commit(msgs, /*commit_identifier=*/0));
+
+    // Truncate overwrites all partitions with no new files, deleting every existing file.
+    ASSERT_OK(commit->TruncateTable(/*commit_identifier=*/1));
+
+    ASSERT_OK_AND_ASSIGN(bool exist, file_system_->Exists(table_path_ + "/snapshot/snapshot-2"));
+    ASSERT_TRUE(exist);
+    auto commit_impl = dynamic_cast<FileStoreCommitImpl*>(commit.get());
+    ASSERT_TRUE(commit_impl);
+    ASSERT_OK_AND_ASSIGN(Snapshot snapshot, commit_impl->snapshot_manager_->LoadSnapshot(2));
+    ASSERT_EQ(Snapshot::CommitKind::Overwrite(), snapshot.GetCommitKind());
+    std::vector<ManifestFileMeta> manifests;
+    ASSERT_OK(commit_impl->manifest_list_->ReadDeltaManifests(snapshot, &manifests));
+    ASSERT_EQ(1, manifests.size());
+    ASSERT_EQ(0, manifests[0].NumAddedFiles());
+    // The append_09 fixture contains 3 data files spread across partitions f1=10 and f1=20.
+    ASSERT_EQ(3, manifests[0].NumDeletedFiles());
+}
+
+TEST_F(FileStoreCommitImplTest, TestAbortDeletesDataAndIndexFiles) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
+        std::shared_ptr<FileStoreCommit>(std::move(commit)));
+
+    const BinaryRow partition = CreateIntRow(10);
+    const int32_t bucket = 0;
+    auto new_data_file = CreateAppendDataFileMeta("abort-new-data", 1);
+    auto compact_data_file = CreateAppendDataFileMeta("abort-compact-data", 1);
+    auto new_index_file = CreateIndexFileMeta("abort-new-index");
+    auto compact_index_file = CreateIndexFileMeta("abort-compact-index");
+
+    DataIncrement data_increment(/*new_files=*/{new_data_file}, /*deleted_files=*/{},
+                                 /*changelog_files=*/{}, /*new_index_files=*/{new_index_file},
+                                 /*deleted_index_files=*/{});
+    CompactIncrement compact_increment(/*compact_before=*/{}, /*compact_after=*/{compact_data_file},
+                                       /*changelog_files=*/{},
+                                       /*new_index_files=*/{compact_index_file},
+                                       /*deleted_index_files=*/{});
+    std::shared_ptr<CommitMessage> message = std::make_shared<CommitMessageImpl>(
+        partition, bucket, /*total_buckets=*/2, data_increment, compact_increment);
+
+    // Materialize the referenced files so we can observe them being cleaned up.
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<DataFilePathFactory> data_pf,
+                         commit_impl->path_factory_->CreateDataFilePathFactory(partition, bucket));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<IndexPathFactory> index_pf,
+                         commit_impl->path_factory_->CreateIndexFileFactory(partition, bucket));
+    std::vector<std::string> paths = {
+        data_pf->ToPath(new_data_file), data_pf->ToPath(compact_data_file),
+        index_pf->ToPath(new_index_file), index_pf->ToPath(compact_index_file)};
+    for (const auto& path : paths) {
+        ASSERT_OK(file_system_->WriteFile(path, /*content=*/"", /*overwrite=*/false));
+        ASSERT_OK_AND_ASSIGN(bool exist, file_system_->Exists(path));
+        ASSERT_TRUE(exist);
+    }
+
+    ASSERT_OK(commit_impl->Abort({message}));
+
+    for (const auto& path : paths) {
+        ASSERT_OK_AND_ASSIGN(bool exist, file_system_->Exists(path));
+        ASSERT_FALSE(exist);
+    }
+}
+
+TEST_F(FileStoreCommitImplTest, AbortIgnoresMissingFilesAndFailsForNonImplMessage) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
+        std::shared_ptr<FileStoreCommit>(std::move(commit)));
+
+    // Deleting files that were never written is a best-effort no-op, not an error.
+    DataIncrement data_increment(/*new_files=*/{CreateAppendDataFileMeta("abort-missing", 1)},
+                                 /*deleted_files=*/{}, /*changelog_files=*/{});
+    std::shared_ptr<CommitMessage> message =
+        std::make_shared<CommitMessageImpl>(CreateIntRow(10), /*bucket=*/0, /*total_buckets=*/2,
+                                            data_increment, CompactIncrement({}, {}, {}));
+    ASSERT_OK(commit_impl->Abort({message}));
+
+    // A commit message that is not a CommitMessageImpl is rejected.
+    ASSERT_NOK_WITH_MSG(commit_impl->Abort({std::make_shared<CommitMessage>()}),
+                        "fail to cast commit message to impl");
+}
+
 TEST_F(FileStoreCommitImplTest, TestCreateManifestCommittable) {
     CommitContextBuilder context_builder(table_path_, "commit_user_1");
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
@@ -2096,6 +2222,452 @@ TEST_F(FileStoreCommitImplTest, TestFixedBucketPKTableCommitAllowed) {
     ASSERT_OK_AND_ASSIGN(auto commit_context, builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto committer, FileStoreCommit::Create(std::move(commit_context)));
     ASSERT_TRUE(committer != nullptr);
+}
+
+TEST_F(FileStoreCommitImplTest, ValidateCommitOptionsRejectsUnsupportedOptions) {
+    const std::vector<std::string> unsupported_keys = {
+        "commit.strict-mode.last-safe-snapshot", "manifest.delete-file-drop-stats",
+        "sequence.snapshot-ordering", "pk-clustering-override"};
+    for (const auto& key : unsupported_keys) {
+        ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({{key, "true"}}));
+        ASSERT_NOK_WITH_MSG(FileStoreCommitImpl::ValidateCommitOptions(options),
+                            "not supported by C++ commit path");
+    }
+
+    // Supported options should validate successfully.
+    ASSERT_OK_AND_ASSIGN(CoreOptions ok_options,
+                         CoreOptions::FromMap({{Options::FILE_SYSTEM, "local"}}));
+    ASSERT_OK(FileStoreCommitImpl::ValidateCommitOptions(ok_options));
+}
+
+TEST_F(FileStoreCommitImplTest, DropPartitionWithEmptyPartitionsFails) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    ASSERT_NOK_WITH_MSG(commit->DropPartition({}, /*commit_identifier=*/1),
+                        "partitions list cannot be empty");
+}
+
+TEST_F(FileStoreCommitImplTest, FilterAndCommitMultipleIdentifiersAndEmptyInput) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
+        std::shared_ptr<FileStoreCommit>(std::move(commit)));
+
+    // Empty input map takes the FilterCommitted fast-exit path (nothing to commit).
+    ASSERT_OK_AND_ASSIGN(int32_t committed_empty, commit_impl->FilterAndCommit({}, 1));
+    ASSERT_EQ(0, committed_empty);
+
+    std::vector<std::string> data_files = {
+        "/f1=10/bucket-0/data-51a45441-6037-4af3-b67b-5cefd75dc6f2-0.orc",
+        "/f1=10/bucket-1/data-6828284c-e707-49b5-af6b-69be79af120c-0.orc",
+        "/f1=20/bucket-0/data-8dc7f04c-3c98-48b2-9d56-834d746c4a40-0.orc",
+        "/f1=10/bucket-1/data-fd1d2255-43f2-4534-b4cc-08b29e662940-0.orc",
+        "/f1=20/bucket-0/data-7b3f4cc7-116b-4d2f-9c62-5dadc1f11bcb-0.orc"};
+    ASSERT_OK(PrepareFakeFiles(data_files));
+
+    std::vector<std::shared_ptr<CommitMessage>> msgs1 =
+        GetCommitMessages(paimon::test::GetDataDir() +
+                              "/orc/append_09.db/append_09/commit_messages/commit_messages-01",
+                          /*version=*/3);
+    std::vector<std::shared_ptr<CommitMessage>> msgs2 =
+        GetCommitMessages(paimon::test::GetDataDir() +
+                              "/orc/append_09.db/append_09/commit_messages/commit_messages-02",
+                          /*version=*/3);
+
+    // Two identifiers in a single call exercises the sort-by-identifier comparator.
+    std::map<int64_t, std::vector<std::shared_ptr<CommitMessage>>> inputs;
+    inputs[2] = msgs2;
+    inputs[1] = msgs1;
+    ASSERT_OK_AND_ASSIGN(int32_t committed, commit_impl->FilterAndCommit(inputs, 5));
+    ASSERT_EQ(2, committed);
+}
+
+TEST_F(FileStoreCommitImplTest, CheckFilesExistenceFailsForNonImplCommitMessage) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
+        std::shared_ptr<FileStoreCommit>(std::move(commit)));
+
+    auto committable = std::make_shared<ManifestCommittable>(/*identifier=*/1);
+    committable->AddFileCommittable(std::make_shared<CommitMessage>());
+    ASSERT_NOK_WITH_MSG(commit_impl->CheckFilesExistence({committable}),
+                        "fail to cast commit message to impl");
+}
+
+TEST_F(FileStoreCommitImplTest, CheckFilesExistenceCollectsIndexFilePaths) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
+        std::shared_ptr<FileStoreCommit>(std::move(commit)));
+    const BinaryRow partition = CreateIntRow(10);
+
+    // New index files from both the data increment and the compact increment must be
+    // collected for the existence check.
+    DataIncrement data_increment(/*new_files=*/{}, /*deleted_files=*/{}, /*changelog_files=*/{},
+                                 /*new_index_files=*/{CreateIndexFileMeta("new-index-missing")},
+                                 /*deleted_index_files=*/{});
+    CompactIncrement compact_increment(
+        /*compact_before=*/{}, /*compact_after=*/{}, /*changelog_files=*/{},
+        /*new_index_files=*/{CreateIndexFileMeta("compact-index-missing")},
+        /*deleted_index_files=*/{});
+    std::shared_ptr<CommitMessage> message = std::make_shared<CommitMessageImpl>(
+        partition, /*bucket=*/0, /*total_buckets=*/2, data_increment, compact_increment);
+
+    auto committable = std::make_shared<ManifestCommittable>(/*identifier=*/1);
+    committable->AddFileCommittable(message);
+    // The referenced index files were never written, so the existence check reports them missing.
+    ASSERT_NOK_WITH_MSG(commit_impl->CheckFilesExistence({committable}), "have been deleted");
+}
+
+TEST_F(FileStoreCommitImplTest, OverwriteStaticPartitionValidatesFileOwnership) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .AddOption(Options::DYNAMIC_PARTITION_OVERWRITE, "false")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
+        std::shared_ptr<FileStoreCommit>(std::move(commit)));
+
+    // Files whose partition matches the overwrite target are accepted.
+    DataIncrement matching_increment({CreateAppendDataFileMeta("static-f1-10", 1)}, {}, {});
+    std::shared_ptr<CommitMessage> matching_msg =
+        std::make_shared<CommitMessageImpl>(CreateIntRow(10), /*bucket=*/0, /*total_buckets=*/2,
+                                            matching_increment, CompactIncrement({}, {}, {}));
+    ASSERT_OK(commit_impl->Overwrite({{"f1", "10"}}, {matching_msg}, /*commit_identifier=*/1));
+
+    // Files belonging to a different partition than the overwrite target are rejected.
+    DataIncrement mismatching_increment({CreateAppendDataFileMeta("static-f1-20", 1)}, {}, {});
+    std::shared_ptr<CommitMessage> mismatching_msg =
+        std::make_shared<CommitMessageImpl>(CreateIntRow(20), /*bucket=*/0, /*total_buckets=*/2,
+                                            mismatching_increment, CompactIncrement({}, {}, {}));
+    ASSERT_NOK_WITH_MSG(
+        commit_impl->Overwrite({{"f1", "10"}}, {mismatching_msg}, /*commit_identifier=*/2),
+        "does not belong to this partition");
+}
+
+TEST_F(FileStoreCommitImplTest, OverwriteWithChangelogFilesLogsWarning) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
+        std::shared_ptr<FileStoreCommit>(std::move(commit)));
+    const BinaryRow partition = CreateIntRow(10);
+
+    // Overwrite ignores changelog files but emits a warning listing them.
+    DataIncrement data_increment(
+        /*new_files=*/{CreateAppendDataFileMeta("overwrite-with-changelog", 1)},
+        /*deleted_files=*/{},
+        /*changelog_files=*/{CreateAppendDataFileMeta("ignored-append-changelog", 1)},
+        /*new_index_files=*/{}, /*deleted_index_files=*/{});
+    CompactIncrement compact_increment(
+        /*compact_before=*/{}, /*compact_after=*/{},
+        /*changelog_files=*/{CreateAppendDataFileMeta("ignored-compact-changelog", 1)});
+    std::shared_ptr<CommitMessage> message = std::make_shared<CommitMessageImpl>(
+        partition, /*bucket=*/0, /*total_buckets=*/2, data_increment, compact_increment);
+
+    ASSERT_OK(commit_impl->Overwrite({}, {message}, /*commit_identifier=*/1));
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot,
+                         commit_impl->snapshot_manager_->LatestSnapshot());
+    ASSERT_TRUE(snapshot.has_value());
+}
+
+TEST_F(FileStoreCommitImplTest, OverwriteUpgradesNonOverlappingPrimaryKeyFiles) {
+    auto pk_dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(pk_dir);
+    std::string pk_root = pk_dir->Str();
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(pk_root, {}));
+    ASSERT_OK(catalog->CreateDatabase("db", {}, false));
+
+    arrow::Schema pk_schema(
+        {arrow::field("pk", arrow::int32()), arrow::field("val", arrow::utf8())});
+    ::ArrowSchema arrow_schema;
+    ASSERT_TRUE(arrow::ExportSchema(pk_schema, &arrow_schema).ok());
+    std::map<std::string, std::string> table_options = {{Options::BUCKET, "4"}};
+    ASSERT_OK(catalog->CreateTable(Identifier("db", "pk_tbl"), &arrow_schema,
+                                   /*partition_keys=*/{}, /*primary_keys=*/{"pk"}, table_options,
+                                   /*ignore_if_exists=*/false));
+    std::string pk_table_path = PathUtil::JoinPath(pk_root, "db.db/pk_tbl");
+
+    CommitContextBuilder builder(pk_table_path, "test_user");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .AddOption(Options::OVERWRITE_UPGRADE, "true")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
+        std::shared_ptr<FileStoreCommit>(std::move(commit)));
+
+    const BinaryRow partition = BinaryRow::EmptyRow();
+    // Bucket 0: non-overlapping key ranges -> files are upgraded to a higher level.
+    DataIncrement bucket0_increment(
+        {CreateLeveledDataFileMeta("pk-b0-lo", CreateIntRow(0), CreateIntRow(10), /*level=*/0),
+         CreateLeveledDataFileMeta("pk-b0-hi", CreateIntRow(20), CreateIntRow(30), /*level=*/0)},
+        {}, {});
+    std::shared_ptr<CommitMessage> bucket0_msg =
+        std::make_shared<CommitMessageImpl>(partition, /*bucket=*/0, /*total_buckets=*/4,
+                                            bucket0_increment, CompactIncrement({}, {}, {}));
+    // Bucket 1: overlapping key ranges -> files are kept at their original level.
+    DataIncrement bucket1_increment(
+        {CreateLeveledDataFileMeta("pk-b1-a", CreateIntRow(0), CreateIntRow(20), /*level=*/0),
+         CreateLeveledDataFileMeta("pk-b1-b", CreateIntRow(10), CreateIntRow(30), /*level=*/0)},
+        {}, {});
+    std::shared_ptr<CommitMessage> bucket1_msg =
+        std::make_shared<CommitMessageImpl>(partition, /*bucket=*/1, /*total_buckets=*/4,
+                                            bucket1_increment, CompactIncrement({}, {}, {}));
+
+    ASSERT_OK(commit_impl->Overwrite({}, {bucket0_msg, bucket1_msg}, /*commit_identifier=*/1));
+
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot,
+                         commit_impl->snapshot_manager_->LatestSnapshot());
+    ASSERT_TRUE(snapshot.has_value());
+    ASSERT_OK_AND_ASSIGN(std::vector<ManifestEntry> entries,
+                         commit_impl->GetAllFiles(snapshot.value(), {}));
+    ASSERT_EQ(4u, entries.size());
+
+    int32_t max_level = 0;
+    int32_t level0_count = 0;
+    for (const auto& entry : entries) {
+        max_level = std::max(max_level, entry.Level());
+        if (entry.Level() == 0) {
+            level0_count++;
+        }
+    }
+    // Bucket 0 files were upgraded above level 0, bucket 1 files stayed at level 0.
+    ASSERT_GT(max_level, 0);
+    ASSERT_EQ(2, level0_count);
+}
+
+TEST_F(FileStoreCommitImplTest, CommitWithAppendCommitCheckConflict) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .AppendCommitCheckConflict(true)
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+
+    std::vector<std::shared_ptr<CommitMessage>> msgs =
+        GetCommitMessages(paimon::test::GetDataDir() +
+                              "/orc/append_09.db/append_09/commit_messages/commit_messages-01",
+                          /*version=*/3);
+    ASSERT_GT(msgs.size(), 0);
+    ASSERT_OK(commit->Commit(msgs, /*commit_identifier=*/1));
+    ASSERT_OK_AND_ASSIGN(
+        bool exist, file_system_->Exists(PathUtil::JoinPath(table_path_, "snapshot/snapshot-1")));
+    ASSERT_TRUE(exist);
+}
+
+TEST_F(FileStoreCommitImplTest, SnapshotSequenceMaxFallsBackToManifestScan) {
+    // First snapshot is committed in the default (scan) mode, so it does NOT carry the
+    // max-sequence-number property.
+    {
+        CommitContextBuilder context_builder(table_path_, "commit_user_1");
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                             context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                                 .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
+                                 .AddOption(Options::FILE_SYSTEM, "local")
+                                 .Finish());
+        ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+        std::vector<std::shared_ptr<CommitMessage>> msgs1 =
+            GetCommitMessages(paimon::test::GetDataDir() +
+                                  "/orc/append_09.db/append_09/commit_messages/commit_messages-01",
+                              /*version=*/3);
+        ASSERT_OK(commit->Commit(msgs1, /*commit_identifier=*/1));
+    }
+
+    // Second commit uses snapshot-init mode; since the previous snapshot lacks the property,
+    // the max sequence number is recomputed by scanning the base manifests.
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .AddOption(Options::WRITE_SEQUENCE_NUMBER_INIT_MODE, "snapshot")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
+        std::shared_ptr<FileStoreCommit>(std::move(commit)));
+
+    ASSERT_OK_AND_ASSIGN(Snapshot snapshot1, commit_impl->snapshot_manager_->LoadSnapshot(1));
+    if (snapshot1.Properties()) {
+        ASSERT_EQ(snapshot1.Properties().value().end(),
+                  snapshot1.Properties().value().find("sequence.generation.max-sequence-number"));
+    }
+
+    std::vector<std::shared_ptr<CommitMessage>> msgs2 =
+        GetCommitMessages(paimon::test::GetDataDir() +
+                              "/orc/append_09.db/append_09/commit_messages/commit_messages-02",
+                          /*version=*/3);
+    ASSERT_OK(commit_impl->Commit(msgs2, /*commit_identifier=*/2));
+
+    ASSERT_OK_AND_ASSIGN(Snapshot snapshot2, commit_impl->snapshot_manager_->LoadSnapshot(2));
+    ASSERT_TRUE(snapshot2.Properties());
+    auto iter = snapshot2.Properties().value().find("sequence.generation.max-sequence-number");
+    ASSERT_TRUE(iter != snapshot2.Properties().value().end());
+}
+
+TEST_F(FileStoreCommitImplTest, FilterAndOverwriteWithSpecifiedPartition) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
+        std::shared_ptr<FileStoreCommit>(std::move(commit)));
+
+    std::vector<std::shared_ptr<CommitMessage>> msgs =
+        GetCommitMessages(paimon::test::GetDataDir() +
+                              "/orc/append_09.db/append_09/commit_messages/commit_messages-01",
+                          /*version=*/3);
+    // A non-empty partition spec is forwarded to the overwrite so the partition list is populated.
+    std::map<std::string, std::string> partition_spec = {{"f1", "10"}};
+    ASSERT_OK_AND_ASSIGN(int32_t actual_commit, commit_impl->FilterAndOverwrite(
+                                                    partition_spec, msgs, /*commit_identifier=*/1,
+                                                    /*watermark=*/10));
+    ASSERT_EQ(1, actual_commit);
+
+    ASSERT_OK_AND_ASSIGN(auto snapshot, commit_impl->snapshot_manager_->LatestSnapshot());
+    ASSERT_TRUE(snapshot);
+    ASSERT_EQ(Snapshot::CommitKind::Overwrite(), snapshot.value().GetCommitKind());
+}
+
+TEST_F(FileStoreCommitImplTest, TryUpgradeReturnsInputWhenOverwriteUpgradeDisabled) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .AddOption(Options::OVERWRITE_UPGRADE, "false")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
+        std::shared_ptr<FileStoreCommit>(std::move(commit)));
+
+    std::vector<ManifestEntry> entries = {
+        CreateManifestEntry("upgrade-disabled-1", FileKind::Add())};
+    // overwrite-upgrade disabled: TryUpgrade returns the input unchanged.
+    ASSERT_OK_AND_ASSIGN(std::vector<ManifestEntry> result, commit_impl->TryUpgrade(entries));
+    ASSERT_EQ(entries.size(), result.size());
+}
+
+TEST_F(FileStoreCommitImplTest, TryUpgradeReturnsInputWhenEntryLevelAboveZero) {
+    auto pk_dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(pk_dir);
+    std::string pk_root = pk_dir->Str();
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(pk_root, {}));
+    ASSERT_OK(catalog->CreateDatabase("db", {}, false));
+
+    arrow::Schema pk_schema(
+        {arrow::field("pk", arrow::int32()), arrow::field("val", arrow::utf8())});
+    ::ArrowSchema arrow_schema;
+    ASSERT_TRUE(arrow::ExportSchema(pk_schema, &arrow_schema).ok());
+    std::map<std::string, std::string> table_options = {{Options::BUCKET, "4"}};
+    ASSERT_OK(catalog->CreateTable(Identifier("db", "pk_tbl"), &arrow_schema,
+                                   /*partition_keys=*/{}, /*primary_keys=*/{"pk"}, table_options,
+                                   /*ignore_if_exists=*/false));
+    std::string pk_table_path = PathUtil::JoinPath(pk_root, "db.db/pk_tbl");
+
+    CommitContextBuilder builder(pk_table_path, "test_user");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .AddOption(Options::OVERWRITE_UPGRADE, "true")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
+        std::shared_ptr<FileStoreCommit>(std::move(commit)));
+
+    // A PK-table entry already at a level above 0 bypasses the upgrade and returns the input.
+    std::vector<ManifestEntry> entries = {
+        CreateManifestEntry("already-upgraded", BinaryRow::EmptyRow(), FileKind::Add(),
+                            DataFileMeta::EmptyMinKey(), DataFileMeta::EmptyMaxKey(), /*level=*/2,
+                            /*bucket=*/0)};
+    ASSERT_OK_AND_ASSIGN(std::vector<ManifestEntry> result, commit_impl->TryUpgrade(entries));
+    ASSERT_EQ(entries.size(), result.size());
+    ASSERT_EQ(2, result[0].Level());
+}
+
+TEST_F(FileStoreCommitImplTest, CheckSameBucketFromSnapshotReturnsOkForEmptyDelta) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
+        std::shared_ptr<FileStoreCommit>(std::move(commit)));
+
+    std::vector<std::shared_ptr<CommitMessage>> msgs =
+        GetCommitMessages(paimon::test::GetDataDir() +
+                              "/orc/append_09.db/append_09/commit_messages/commit_messages-01",
+                          /*version=*/3);
+    ASSERT_OK(commit_impl->Commit(msgs, /*commit_identifier=*/1));
+
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot,
+                         commit_impl->snapshot_manager_->LatestSnapshot());
+    ASSERT_TRUE(snapshot);
+    // No delta entries -> no buckets to verify -> returns OK without scanning the snapshot.
+    ASSERT_OK(commit_impl->CheckSameBucketFromSnapshot(/*delta_entries=*/{}, snapshot));
+}
+
+TEST_F(FileStoreCommitImplTest, MaxSequenceNumberReturnsNulloptForEmptyManifests) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
+        std::shared_ptr<FileStoreCommit>(std::move(commit)));
+
+    // No manifests to scan -> no sequence number found -> returns nullopt.
+    ASSERT_OK_AND_ASSIGN(std::optional<int64_t> max_seq, commit_impl->MaxSequenceNumber({}));
+    ASSERT_FALSE(max_seq.has_value());
+}
+
+TEST_F(FileStoreCommitImplTest, RowIdCheckConflictSetsCheckSnapshotAndReturnsSelf) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
+        std::shared_ptr<FileStoreCommit>(std::move(commit)));
+
+    ASSERT_FALSE(commit_impl->conflict_detection_.HasRowIdCheckFromSnapshot());
+    // RowIdCheckConflict records the snapshot to verify against and returns *this for chaining.
+    FileStoreCommit& returned = commit_impl->RowIdCheckConflict(/*row_id_check_from_snapshot=*/5);
+    ASSERT_EQ(commit_impl.get(), &returned);
+    ASSERT_TRUE(commit_impl->conflict_detection_.HasRowIdCheckFromSnapshot());
 }
 
 }  // namespace paimon::test

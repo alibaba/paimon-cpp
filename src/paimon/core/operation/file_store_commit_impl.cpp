@@ -202,6 +202,62 @@ Status FileStoreCommitImpl::DropPartition(
     return Status::OK();
 }
 
+Status FileStoreCommitImpl::TruncateTable(int64_t commit_identifier) {
+    // An empty partition list means "all partitions", so this overwrites the whole table with
+    // no new files, effectively truncating it. Mirrors Java tryOverwritePartition(null, ...).
+    PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] int32_t attempt,
+                           TryOverwrite(/*partition=*/{}, /*changes=*/{}, /*index_entries=*/{},
+                                        commit_identifier, std::nullopt, /*properties=*/{}));
+    return Status::OK();
+}
+
+Status FileStoreCommitImpl::Abort(
+    const std::vector<std::shared_ptr<CommitMessage>>& commit_messages) {
+    for (const auto& message : commit_messages) {
+        auto* msg = dynamic_cast<CommitMessageImpl*>(message.get());
+        if (msg == nullptr) {
+            return Status::Invalid("fail to cast commit message to impl");
+        }
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<DataFilePathFactory> data_file_path_factory,
+            path_factory_->CreateDataFilePathFactory(msg->Partition(), msg->Bucket()));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::unique_ptr<IndexPathFactory> index_file_path_factory,
+            path_factory_->CreateIndexFileFactory(msg->Partition(), msg->Bucket()));
+
+        const DataIncrement& new_files_increment = msg->GetNewFilesIncrement();
+        const CompactIncrement& compact_increment = msg->GetCompactIncrement();
+
+        std::vector<std::shared_ptr<DataFileMeta>> data_files_to_delete;
+        auto append_data_files =
+            [&data_files_to_delete](const std::vector<std::shared_ptr<DataFileMeta>>& files) {
+                data_files_to_delete.insert(data_files_to_delete.end(), files.begin(), files.end());
+            };
+        append_data_files(new_files_increment.NewFiles());
+        append_data_files(new_files_increment.ChangelogFiles());
+        append_data_files(compact_increment.CompactAfter());
+        append_data_files(compact_increment.ChangelogFiles());
+        for (const auto& file : data_files_to_delete) {
+            // Best-effort cleanup: ignore delete failures, aligning with Java deleteQuietly.
+            [[maybe_unused]] Status status =
+                fs_->Delete(data_file_path_factory->ToPath(file), /*recursive=*/false);
+        }
+
+        std::vector<std::shared_ptr<IndexFileMeta>> index_files_to_delete;
+        auto append_index_files = [&index_files_to_delete](
+                                      const std::vector<std::shared_ptr<IndexFileMeta>>& files) {
+            index_files_to_delete.insert(index_files_to_delete.end(), files.begin(), files.end());
+        };
+        append_index_files(new_files_increment.NewIndexFiles());
+        append_index_files(compact_increment.NewIndexFiles());
+        for (const auto& file : index_files_to_delete) {
+            [[maybe_unused]] Status status =
+                fs_->Delete(index_file_path_factory->ToPath(file), /*recursive=*/false);
+        }
+    }
+    return Status::OK();
+}
+
 FileStoreCommit& FileStoreCommitImpl::RowIdCheckConflict(
     std::optional<int64_t> row_id_check_from_snapshot) {
     conflict_detection_.SetRowIdCheckFromSnapshot(row_id_check_from_snapshot);

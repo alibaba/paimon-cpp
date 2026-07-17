@@ -125,6 +125,10 @@ class FileStoreCommitImpl : public FileStoreCommit {
     Status DropPartition(const std::vector<std::map<std::string, std::string>>& partitions,
                          int64_t commit_identifier) override;
 
+    Status TruncateTable(int64_t commit_identifier) override;
+
+    Status Abort(const std::vector<std::shared_ptr<CommitMessage>>& commit_messages) override;
+
     FileStoreCommit& RowIdCheckConflict(std::optional<int64_t> row_id_check_from_snapshot) override;
 
     std::shared_ptr<Metrics> GetCommitMetrics() const override {
