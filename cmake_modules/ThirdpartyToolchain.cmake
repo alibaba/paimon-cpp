@@ -1389,9 +1389,6 @@ macro(build_orc)
              "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}")
     endif()
 
-    set(ORC_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPERCASE_BUILD_TYPE}}")
-    set(ORC_CMAKE_C_FLAGS "${EP_C_FLAGS} ${CMAKE_CXX_FLAGS_${UPPERCASE_BUILD_TYPE}}")
-
     set(ORC_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/orc_ep-prefix")
     set(ORC_INCLUDE_DIR "${ORC_PREFIX}/include")
     set(ORC_SOURCE_DIR "${ORC_PREFIX}/cpp")
@@ -1399,15 +1396,9 @@ macro(build_orc)
 
     set(ORC_STATIC_LIB "${ORC_PREFIX}/lib/liborc.a")
 
-    message("ORC_STATIC_LIB IS ${ORC_STATIC_LIB}")
-    message("ORC_CMAKE_CXX_FLAGS ${ORC_CMAKE_CXX_FLAGS}")
-    message("ORC_CMAKE_C_FLAGS ${ORC_CMAKE_C_FLAGS}")
-
     set(ORC_CMAKE_ARGS
         ${EP_COMMON_CMAKE_ARGS}
         "-DCMAKE_INSTALL_PREFIX=${ORC_PREFIX}"
-        "-DCMAKE_CXX_FLAGS=${ORC_CMAKE_CXX_FLAGS}"
-        "-DCMAKE_C_FLAGS=${ORC_CMAKE_C_FLAGS}"
         ${ORC_LINKER_FLAGS}
         "-DSNAPPY_HOME=${ORC_SNAPPY_ROOT}"
         "-DLZ4_HOME=${ORC_LZ4_ROOT}"
