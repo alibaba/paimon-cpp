@@ -52,7 +52,7 @@ jobs:
         env:
           CC: clang
           CXX: clang++
-        run: ci/scripts/build_paimon.sh $(pwd) false false Release
+        run: ci/scripts/build_paimon.sh --source_dir "$(pwd)" --build_type Release
       - name: Show ccache statistics
         if: always()
         run: ccache -s
@@ -78,7 +78,7 @@ jobs:
         env:
           CC: gcc-14
           CXX: g++-14
-        run: ci/scripts/build_paimon.sh $(pwd) false false Release
+        run: ci/scripts/build_paimon.sh --source_dir "$(pwd)" --build_type Release
       - name: Show ccache statistics
         if: always()
         run: ccache -s

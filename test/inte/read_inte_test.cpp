@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -3580,7 +3581,8 @@ TEST_P(ReadInteTest, TestReadWithAppendPtBranch) {
 TEST_P(ReadInteTest, TestSpecificFs) {
     class CountableInputStream : public InputStream {
      public:
-        CountableInputStream(const std::shared_ptr<InputStream>& input, size_t* io_count)
+        CountableInputStream(const std::shared_ptr<InputStream>& input,
+                             std::atomic<size_t>* io_count)
             : input_(input), io_count_(io_count) {}
         ~CountableInputStream() override = default;
 
@@ -3591,16 +3593,16 @@ TEST_P(ReadInteTest, TestSpecificFs) {
             return input_->GetPos();
         }
         Result<int64_t> Read(char* buffer, int64_t size) override {
-            (*io_count_)++;
+            io_count_->fetch_add(1, std::memory_order_relaxed);
             return input_->Read(buffer, size);
         }
         Result<int64_t> Read(char* buffer, int64_t size, int64_t offset) override {
-            (*io_count_)++;
+            io_count_->fetch_add(1, std::memory_order_relaxed);
             return input_->Read(buffer, size, offset);
         }
         void ReadAsync(char* buffer, int64_t size, int64_t offset,
                        std::function<void(Status)>&& callback) override {
-            (*io_count_)++;
+            io_count_->fetch_add(1, std::memory_order_relaxed);
             return input_->ReadAsync(buffer, size, offset, std::move(callback));
         }
 
@@ -3615,12 +3617,12 @@ TEST_P(ReadInteTest, TestSpecificFs) {
         }
 
         std::shared_ptr<InputStream> input_;
-        size_t* io_count_;
+        std::atomic<size_t>* io_count_;
     };
 
     class CountableFileSystem : public FileSystem {
      public:
-        CountableFileSystem(const std::shared_ptr<FileSystem>& fs, size_t* io_count)
+        CountableFileSystem(const std::shared_ptr<FileSystem>& fs, std::atomic<size_t>* io_count)
             : fs_(fs), io_count_(io_count) {}
         ~CountableFileSystem() override = default;
 
@@ -3658,10 +3660,10 @@ TEST_P(ReadInteTest, TestSpecificFs) {
         }
 
         std::shared_ptr<FileSystem> fs_;
-        size_t* io_count_;
+        std::atomic<size_t>* io_count_;
     };
 
-    size_t io_count = 0;
+    std::atomic<size_t> io_count = {0};
     auto param = GetParam();
     std::string path =
         paimon::test::GetDataDir() + "/" + param.file_format + "/append_09.db/append_09";
@@ -3714,7 +3716,7 @@ TEST_P(ReadInteTest, TestSpecificFs) {
                                                                          &expected_array);
     ASSERT_TRUE(array_status.ok());
     ASSERT_TRUE(result_array->Equals(expected_array));
-    ASSERT_GT(io_count, 0);
+    ASSERT_GT(io_count.load(std::memory_order_relaxed), 0);
 }
 
 }  // namespace paimon::test

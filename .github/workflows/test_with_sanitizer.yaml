@@ -35,6 +35,14 @@ jobs:
     timeout-minutes: 120
     strategy:
       fail-fast: false
+      matrix:
+        include:
+          - sanitizer: asan-ubsan
+            sanitizer_args: --enable_asan --enable_ubsan
+            setup_rust: true
+          - sanitizer: tsan
+            sanitizer_args: --enable_tsan
+            setup_rust: false
     steps:
       - name: Checkout paimon-cpp
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -43,8 +51,9 @@ jobs:
       - name: Setup ccache
         uses: ./.github/actions/setup-ccache
         with:
-          cache-key-prefix: ccache-sanitizer
+          cache-key-prefix: ccache-${{ matrix.sanitizer }}
       - name: Install Rust toolchain (tantivy-fts)
+        if: matrix.setup_rust
         shell: bash
         run: ci/scripts/setup_rust.sh
       - name: Build Paimon
@@ -52,7 +61,10 @@ jobs:
         env:
           CC: clang
           CXX: clang++
-        run: ci/scripts/build_paimon.sh $(pwd) true
+        run: >-
+          ci/scripts/build_paimon.sh
+          --source_dir "$(pwd)"
+          ${{ matrix.sanitizer_args }}
       - name: Show ccache statistics
         if: always()
         run: ccache -s

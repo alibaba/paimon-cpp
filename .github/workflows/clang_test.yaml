@@ -53,7 +53,7 @@ jobs:
         env:
           CC: clang
           CXX: clang++
-        run: ci/scripts/build_paimon.sh $(pwd) false true
+        run: ci/scripts/build_paimon.sh --source_dir "$(pwd)" --check_clang_tidy
       - name: Show ccache statistics
         if: always()
         run: ccache -s
