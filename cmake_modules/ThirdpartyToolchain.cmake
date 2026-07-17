@@ -23,6 +23,8 @@ set(THIRDPARTY_LOG_OPTIONS
     LOG_INSTALL
     1
     LOG_DOWNLOAD
+    1
+    LOG_OUTPUT_ON_FAILURE
     1)
 set(THIRDPARTY_CONFIGURE_COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}")
 if(CMAKE_GENERATOR_TOOLSET)
@@ -947,7 +949,8 @@ macro(build_boost)
                         BUILD_BYPRODUCTS ${BOOST_BYPRODUCTS}
                         LOG_DOWNLOAD ON
                         LOG_CONFIGURE ON
-                        LOG_BUILD ON)
+                        LOG_BUILD ON
+                        LOG_OUTPUT_ON_FAILURE ON)
 
     include_directories(SYSTEM ${BOOST_INCLUDE_DIR})
 
