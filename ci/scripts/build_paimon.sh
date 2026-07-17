@@ -17,7 +17,7 @@
 set -eux
 
 usage() {
-    echo "Usage: $0 --source_dir <path> [--enable_asan] [--enable_ubsan] [--enable_tsan] [--check_clang_tidy] [--build_type <type>]"
+    echo "Usage: $0 --source_dir <path> [--enable_asan] [--enable_ubsan] [--enable_tsan] [--check_clang_tidy] [--build_type <type>] [--lint_git_target_commit <commit-or-branch>]"
 }
 
 source_dir=""
@@ -26,6 +26,7 @@ enable_ubsan="false"
 enable_tsan="false"
 check_clang_tidy="false"
 build_type="Debug"
+lint_git_target_commit="origin/main"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -61,6 +62,15 @@ while [[ $# -gt 0 ]]; do
                 exit 1
             fi
             build_type=$2
+            shift 2
+            ;;
+        --lint_git_target_commit)
+            if [[ $# -lt 2 ]]; then
+                echo "Missing value for --lint_git_target_commit" >&2
+                usage >&2
+                exit 1
+            fi
+            lint_git_target_commit=$2
             shift 2
             ;;
         -h | --help)
@@ -126,6 +136,7 @@ CMAKE_ARGS=(
     "-DPAIMON_ENABLE_LUMINA=${ENABLE_LUMINA}"
     "-DPAIMON_ENABLE_LUCENE=ON"
     "-DPAIMON_ENABLE_TANTIVY=${ENABLE_TANTIVY}"
+    "-DPAIMON_LINT_GIT_TARGET_COMMIT=${lint_git_target_commit}"
 )
 
 if [[ "${enable_asan}" == "true" ]]; then

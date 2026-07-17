@@ -56,8 +56,10 @@ jobs:
           - name: clang-debug
             cc: clang
             cxx: clang++
-            fetch_depth: 0
-            build_args: --check_clang_tidy
+            fetch_depth: 0 # fetch the PR target branch history for clang-tidy
+            build_args: >-
+              --check_clang_tidy
+              --lint_git_target_commit "origin/${{ github.base_ref || github.event.repository.default_branch }}"
     steps:
       - name: Checkout paimon-cpp
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
