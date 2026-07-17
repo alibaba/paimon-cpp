@@ -197,9 +197,11 @@ rapidjson::Value Snapshot::ToJson(rapidjson::Document::AllocatorType* allocator)
                       RapidJsonUtil::SerializeValue(delta_manifest_list_size_, allocator).Move(),
                       *allocator);
     }
-    obj.AddMember(rapidjson::StringRef(FIELD_CHANGELOG_MANIFEST_LIST),
-                  RapidJsonUtil::SerializeValue(changelog_manifest_list_, allocator).Move(),
-                  *allocator);
+    if (changelog_manifest_list_) {
+        obj.AddMember(rapidjson::StringRef(FIELD_CHANGELOG_MANIFEST_LIST),
+                      RapidJsonUtil::SerializeValue(changelog_manifest_list_, allocator).Move(),
+                      *allocator);
+    }
     if (changelog_manifest_list_size_) {
         obj.AddMember(
             rapidjson::StringRef(FIELD_CHANGELOG_MANIFEST_LIST_SIZE),

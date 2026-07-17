@@ -392,7 +392,7 @@ TEST_P(DataEvolutionTableTest, TestCommitConflictOnOverlappedRowIdAndWriteColumn
     ASSERT_NOK_WITH_MSG(
         CommitWithRowIdCheckFromSnapshot(table_path, commit_msgs_2,
                                          /*row_id_check_from_snapshot=*/1),
-        "multiple MERGE INTO operations have encountered conflicts while checking row-id history");
+        "multiple 'MERGE INTO' operations have encountered conflicts, updating the same file");
 }
 
 TEST_P(DataEvolutionTableTest, TestMultipleAppends) {

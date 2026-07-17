@@ -35,6 +35,11 @@ class TagTest : public testing::Test {
         replaced_str = StringUtils::Replace(replaced_str, "\"logOffsets\":{},", "");
         replaced_str = StringUtils::Replace(replaced_str, ",\"logOffsets\":{}", "");
         replaced_str = StringUtils::Replace(replaced_str, "\"logOffsets\":{}", "");
+        // changelogManifestList is @JsonInclude(NON_NULL) in Java and omitted on serialization;
+        // strip the stale null field from checked-in Java fixtures before comparing.
+        replaced_str = StringUtils::Replace(replaced_str, "\"changelogManifestList\":null,", "");
+        replaced_str = StringUtils::Replace(replaced_str, ",\"changelogManifestList\":null", "");
+        replaced_str = StringUtils::Replace(replaced_str, "\"changelogManifestList\":null", "");
         if (serialized) {
             replaced_str = StringUtils::Replace(replaced_str, ".0", ".000000000");
         }
@@ -120,7 +125,6 @@ TEST_F(TagTest, TestJsonizable) {
         "baseManifestListSize" : 20,
         "deltaManifestList" : "manifest-list-d96fcc30-99e8-4f45-962b-a1157c56f378-1",
         "deltaManifestListSize" : 50,
-        "changelogManifestList" : null,
         "commitUser" : "0e4d92f7-53b0-40d6-a7c0-102bf3801e6a",
         "commitIdentifier" : 9223372036854775807,
         "commitKind" : "OVERWRITE",
@@ -186,7 +190,6 @@ TEST_F(TagTest, TestSerializeAndDeserialize) {
           "baseManifestListSize" : 100,
           "deltaManifestList" : "delta-manifest-list-2",
           "deltaManifestListSize" : 200,
-          "changelogManifestList" : null,
           "commitUser" : "commit-usr-3",
           "commitIdentifier" : 12,
           "commitKind" : "APPEND",
@@ -213,7 +216,6 @@ TEST_F(TagTest, TestSerializeAndDeserialize) {
           "baseManifestListSize" : 100,
           "deltaManifestList" : "delta-manifest-list-2",
           "deltaManifestListSize" : 200,
-          "changelogManifestList" : null,
           "commitUser" : "commit-usr-3",
           "commitIdentifier" : 12,
           "commitKind" : "APPEND",
