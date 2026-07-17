@@ -267,10 +267,10 @@ Status ConflictDetection::TotalBucketsChanged(
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<arrow::Schema> partition_schema,
         FieldMapping::GetPartitionSchema(arrow_schema, table_schema_->PartitionKeys()));
-    PAIMON_ASSIGN_OR_RAISE(std::string partition_string,
-                           BinaryRowPartitionComputer::PartToSimpleString(
-                               partition_schema, partition, "-", 200,
-                               /*legacy_partition_name_enabled=*/false));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::string partition_string,
+        BinaryRowPartitionComputer::PartToSimpleString(partition_schema, partition, "-", 200,
+                                                       /*legacy_partition_name_enabled=*/false));
     std::string message = fmt::format(
         "Total buckets of partition {} changed from {} to {} without overwrite. Give up "
         "committing.",
