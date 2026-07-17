@@ -35,6 +35,11 @@ class TagTest : public testing::Test {
         replaced_str = StringUtils::Replace(replaced_str, "\"logOffsets\":{},", "");
         replaced_str = StringUtils::Replace(replaced_str, ",\"logOffsets\":{}", "");
         replaced_str = StringUtils::Replace(replaced_str, "\"logOffsets\":{}", "");
+        // changelogManifestList is @JsonInclude(NON_NULL) in Java and omitted on serialization;
+        // strip the stale null field from checked-in Java fixtures before comparing.
+        replaced_str = StringUtils::Replace(replaced_str, "\"changelogManifestList\":null,", "");
+        replaced_str = StringUtils::Replace(replaced_str, ",\"changelogManifestList\":null", "");
+        replaced_str = StringUtils::Replace(replaced_str, "\"changelogManifestList\":null", "");
         if (serialized) {
             replaced_str = StringUtils::Replace(replaced_str, ".0", ".000000000");
         }

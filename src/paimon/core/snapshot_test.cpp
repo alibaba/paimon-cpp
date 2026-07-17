@@ -36,6 +36,11 @@ class SnapshotTest : public testing::Test {
         replaced_str = StringUtils::Replace(replaced_str, R"("logOffsets":{},)", "");
         replaced_str = StringUtils::Replace(replaced_str, R"(,"logOffsets":{})", "");
         replaced_str = StringUtils::Replace(replaced_str, R"("logOffsets":{})", "");
+        // changelogManifestList is @JsonInclude(NON_NULL) in Java and omitted on serialization;
+        // strip the stale null field from checked-in Java fixtures before comparing.
+        replaced_str = StringUtils::Replace(replaced_str, R"("changelogManifestList":null,)", "");
+        replaced_str = StringUtils::Replace(replaced_str, R"(,"changelogManifestList":null)", "");
+        replaced_str = StringUtils::Replace(replaced_str, R"("changelogManifestList":null)", "");
         return replaced_str;
     }
 };
