@@ -394,7 +394,7 @@ TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithCompatibleTagArrowTypes) {
     tag_options["lumina.extension.build.tag.tag_schema"] =
         R"([{"key_name":"tag_i8","type":"enum","value_type":"int32"},)"
         R"({"key_name":"tag_i16","type":"enum","value_type":"int32"},)"
-        R"({"key_name":"tag_i32","type":"enum","value_type":"int32"},)"
+        R"({"key_name":"tag_i32","type":"range","value_type":"int32"},)"
         R"({"key_name":"tag_i64","type":"enum","value_type":"int64"},)"
         R"({"key_name":"tag_f32","type":"range","value_type":"float"},)"
         R"({"key_name":"tag_f64","type":"enum","value_type":"double"}])";
@@ -438,9 +438,9 @@ TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithCompatibleTagArrowTypes) {
         PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"tag_i16", FieldType::SMALLINT,
                                 Literal(static_cast<int16_t>(30))),
         {2l}, {2.21f});
-    search_and_check(PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"tag_i32",
-                                             FieldType::INT, Literal(400)),
-                     {3l}, {0.01f});
+    search_and_check(PredicateBuilder::GreaterThan(/*field_index=*/3, /*field_name=*/"tag_i32",
+                                                   FieldType::INT, Literal(250)),
+                     {3l, 2l}, {0.01f, 2.21f});
     search_and_check(PredicateBuilder::Equal(
                          /*field_index=*/4, /*field_name=*/"tag_i64", FieldType::BIGINT,
                          Literal(static_cast<int64_t>(10000000003))),

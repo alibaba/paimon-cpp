@@ -54,6 +54,10 @@ Result<std::unique_ptr<BTreeGlobalIndexer>> BTreeGlobalIndexer::Create(
     return std::unique_ptr<BTreeGlobalIndexer>(new BTreeGlobalIndexer(cache_manager, options));
 }
 
+Result<std::optional<std::vector<std::string>>> BTreeGlobalIndexer::GetExtraFieldNames() const {
+    return std::optional<std::vector<std::string>>(std::nullopt);
+}
+
 Result<std::shared_ptr<GlobalIndexWriter>> BTreeGlobalIndexer::CreateWriter(
     const std::string& field_name, ::ArrowSchema* arrow_schema,
     const std::shared_ptr<GlobalIndexFileWriter>& file_writer,

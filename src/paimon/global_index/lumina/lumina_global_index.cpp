@@ -96,11 +96,6 @@ Result<LuminaTagField> ParseTagField(const rapidjson::Value& obj, const std::str
         return Status::Invalid(
             fmt::format("lumina tag_schema {} key_name must not be empty", tag_label));
     }
-    if (key_name.size() > ::lumina::core::kMaxTagKNameLength) {
-        return Status::Invalid(fmt::format("lumina tag_schema {} key_name exceeds max length {}",
-                                           tag_label, ::lumina::core::kMaxTagKNameLength));
-    }
-
     LuminaTagField::Type parsed_type;
     if (type == std::string(::lumina::core::kExtensionTagTypeEnum)) {
         parsed_type = LuminaTagField::Type::ENUM;
@@ -178,6 +173,15 @@ Status AppendTagValue(const std::shared_ptr<arrow::Array>& array, int64_t index,
         return Status::OK();
     }
 
+    auto validate_array_type = [&](arrow::Type::type expected_type,
+                                   const char* value_type_name) -> Status {
+        if (array->type_id() != expected_type) {
+            return Status::Invalid(fmt::format("lumina {} tag field has unsupported arrow type {}",
+                                               value_type_name, array->type()->ToString()));
+        }
+        return Status::OK();
+    };
+
     if constexpr (std::is_same_v<ValueType, int32_t>) {
         switch (array->type_id()) {
             case arrow::Type::INT8:
@@ -195,30 +199,16 @@ Status AppendTagValue(const std::shared_ptr<arrow::Array>& array, int64_t index,
                                 array->type()->ToString()));
         }
     } else if constexpr (std::is_same_v<ValueType, int64_t>) {
-        if (array->type_id() != arrow::Type::INT64) {
-            return Status::Invalid(fmt::format(
-                "lumina int64 tag field has unsupported arrow type {}", array->type()->ToString()));
-        }
+        PAIMON_RETURN_NOT_OK(validate_array_type(arrow::Type::INT64, "int64"));
         AppendPrimitiveTagValue<ValueType, arrow::Int64Array>(array, index, values);
     } else if constexpr (std::is_same_v<ValueType, float>) {
-        if (array->type_id() != arrow::Type::FLOAT) {
-            return Status::Invalid(fmt::format(
-                "lumina float tag field has unsupported arrow type {}", array->type()->ToString()));
-        }
+        PAIMON_RETURN_NOT_OK(validate_array_type(arrow::Type::FLOAT, "float"));
         AppendPrimitiveTagValue<ValueType, arrow::FloatArray>(array, index, values);
     } else if constexpr (std::is_same_v<ValueType, double>) {
-        if (array->type_id() != arrow::Type::DOUBLE) {
-            return Status::Invalid(
-                fmt::format("lumina double tag field has unsupported arrow type {}",
-                            array->type()->ToString()));
-        }
+        PAIMON_RETURN_NOT_OK(validate_array_type(arrow::Type::DOUBLE, "double"));
         AppendPrimitiveTagValue<ValueType, arrow::DoubleArray>(array, index, values);
     } else if constexpr (std::is_same_v<ValueType, std::string>) {
-        if (array->type_id() != arrow::Type::STRING) {
-            return Status::Invalid(
-                fmt::format("lumina string tag field has unsupported arrow type {}",
-                            array->type()->ToString()));
-        }
+        PAIMON_RETURN_NOT_OK(validate_array_type(arrow::Type::STRING, "string"));
         auto string_array = static_cast<const arrow::StringArray*>(array.get());
         auto view = string_array->GetView(index);
         values->emplace_back(view.data(), view.size());

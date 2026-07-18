@@ -38,9 +38,7 @@ class PAIMON_EXPORT GlobalIndexer {
     virtual ~GlobalIndexer() = default;
 
     /// Returns additional table fields required during index construction.
-    virtual Result<std::optional<std::vector<std::string>>> GetExtraFieldNames() const {
-        return std::optional<std::vector<std::string>>(std::nullopt);
-    }
+    virtual Result<std::optional<std::vector<std::string>>> GetExtraFieldNames() const = 0;
 
     /// Creates a writer for building a global index on a specific field.
     ///
