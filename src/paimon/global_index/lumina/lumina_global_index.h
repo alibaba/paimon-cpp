@@ -44,7 +44,9 @@ struct LuminaTagField {
     };
 
     enum class ValueType {
+        INT32,
         INT64,
+        FLOAT,
         DOUBLE,
         STRING,
     };

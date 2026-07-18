@@ -306,7 +306,7 @@ TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithMixedTagPredicates) {
     std::map<std::string, std::string> tag_options = options_;
     tag_options["lumina.extension.build.tag.tag_schema"] =
         R"([{"key_name":"color","type":"enum","value_type":"string"},)"
-        R"({"key_name":"price","type":"range","value_type":"double"}])";
+        R"({"key_name":"price","type":"range","value_type":"float"}])";
 
     std::shared_ptr<arrow::DataType> tag_data_type = arrow::struct_(
         {arrow::field("f0", arrow::list(arrow::float32())), arrow::field("color", arrow::utf8()),
@@ -354,7 +354,7 @@ TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithIntegerListTagFilter) {
 
     std::map<std::string, std::string> tag_options = options_;
     tag_options["lumina.extension.build.tag.tag_schema"] =
-        R"([{"key_name":"category_ids","type":"enum","value_type":"int64"}])";
+        R"([{"key_name":"category_ids","type":"enum","value_type":"int32"}])";
 
     std::shared_ptr<arrow::DataType> tag_data_type =
         arrow::struct_({arrow::field("f0", arrow::list(arrow::float32())),
@@ -392,22 +392,25 @@ TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithCompatibleTagArrowTypes) {
 
     std::map<std::string, std::string> tag_options = options_;
     tag_options["lumina.extension.build.tag.tag_schema"] =
-        R"([{"key_name":"tag_i8","type":"enum","value_type":"int64"},)"
-        R"({"key_name":"tag_i16","type":"enum","value_type":"int64"},)"
-        R"({"key_name":"tag_i32","type":"enum","value_type":"int64"},)"
-        R"({"key_name":"tag_f32","type":"range","value_type":"double"}])";
+        R"([{"key_name":"tag_i8","type":"enum","value_type":"int32"},)"
+        R"({"key_name":"tag_i16","type":"enum","value_type":"int32"},)"
+        R"({"key_name":"tag_i32","type":"enum","value_type":"int32"},)"
+        R"({"key_name":"tag_i64","type":"enum","value_type":"int64"},)"
+        R"({"key_name":"tag_f32","type":"range","value_type":"float"},)"
+        R"({"key_name":"tag_f64","type":"enum","value_type":"double"}])";
 
     std::shared_ptr<arrow::DataType> tag_data_type = arrow::struct_(
         {arrow::field("f0", arrow::list(arrow::float32())), arrow::field("tag_i8", arrow::int8()),
          arrow::field("tag_i16", arrow::int16()), arrow::field("tag_i32", arrow::int32()),
-         arrow::field("tag_f32", arrow::float32())});
+         arrow::field("tag_i64", arrow::int64()), arrow::field("tag_f32", arrow::float32()),
+         arrow::field("tag_f64", arrow::float64())});
     std::shared_ptr<arrow::Array> tag_array =
         arrow::ipc::internal::json::ArrayFromJSON(tag_data_type,
                                                   R"([
-        [[0.0, 0.0, 0.0, 0.0], 1, 10, 100, 1.5],
-        [[0.0, 1.0, 0.0, 1.0], 2, 20, 200, 2.5],
-        [[1.0, 0.0, 1.0, 0.0], 3, 30, 300, 3.5],
-        [[1.0, 1.0, 1.0, 1.0], 4, 40, 400, 4.5]
+        [[0.0, 0.0, 0.0, 0.0], 1, 10, 100, 10000000001, 1.5, 1.25],
+        [[0.0, 1.0, 0.0, 1.0], 2, 20, 200, 10000000002, 2.5, 2.25],
+        [[1.0, 0.0, 1.0, 0.0], 3, 30, 300, 10000000003, 3.5, 3.25],
+        [[1.0, 1.0, 1.0, 1.0], 4, 40, 400, 10000000004, 4.5, 4.25]
     ])")
             .ValueOrDie();
 
@@ -438,9 +441,24 @@ TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithCompatibleTagArrowTypes) {
     search_and_check(PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"tag_i32",
                                              FieldType::INT, Literal(400)),
                      {3l}, {0.01f});
-    search_and_check(PredicateBuilder::GreaterThan(/*field_index=*/4, /*field_name=*/"tag_f32",
+    search_and_check(PredicateBuilder::Equal(
+                         /*field_index=*/4, /*field_name=*/"tag_i64", FieldType::BIGINT,
+                         Literal(static_cast<int64_t>(10000000003))),
+                     {2l}, {2.21f});
+    search_and_check(PredicateBuilder::In(
+                         /*field_index=*/4, /*field_name=*/"tag_i64", FieldType::BIGINT,
+                         {Literal(static_cast<int64_t>(10000000001)),
+                          Literal(static_cast<int64_t>(10000000004))}),
+                     {3l, 0l}, {0.01f, 4.21f});
+    search_and_check(PredicateBuilder::GreaterThan(/*field_index=*/5, /*field_name=*/"tag_f32",
                                                    FieldType::FLOAT, Literal(4.0f)),
                      {3l}, {0.01f});
+    search_and_check(PredicateBuilder::Equal(/*field_index=*/6, /*field_name=*/"tag_f64",
+                                             FieldType::DOUBLE, Literal(3.25)),
+                     {2l}, {2.21f});
+    search_and_check(PredicateBuilder::In(/*field_index=*/6, /*field_name=*/"tag_f64",
+                                          FieldType::DOUBLE, {Literal(2.25), Literal(4.25)}),
+                     {3l, 1l}, {0.01f, 2.01f});
 }
 
 TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithTagNullAndEmptyValues) {
@@ -452,10 +470,10 @@ TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithTagNullAndEmptyValues) {
     tag_options["lumina.extension.build.tag.tag_schema"] =
         R"([{"key_name":"color","type":"enum","value_type":"string"},)"
         R"({"key_name":"labels","type":"enum","value_type":"string"},)"
-        R"({"key_name":"price","type":"range","value_type":"double"},)"
-        R"({"key_name":"scores","type":"enum","value_type":"double"},)"
-        R"({"key_name":"category","type":"enum","value_type":"int64"},)"
-        R"({"key_name":"category_ids","type":"enum","value_type":"int64"}])";
+        R"({"key_name":"price","type":"range","value_type":"float"},)"
+        R"({"key_name":"scores","type":"enum","value_type":"float"},)"
+        R"({"key_name":"category","type":"enum","value_type":"int32"},)"
+        R"({"key_name":"category_ids","type":"enum","value_type":"int32"}])";
 
     std::shared_ptr<arrow::DataType> tag_data_type = arrow::struct_(
         {arrow::field("f0", arrow::list(arrow::float32())), arrow::field("color", arrow::utf8()),
@@ -599,12 +617,13 @@ TEST_F(LuminaGlobalIndexTest, TestTagSchemaValidation) {
             R"([{"key_name":"color","type":"range","value_type":"string"}])";
         ASSERT_NOK_WITH_MSG(
             WriteGlobalIndex(index_root, tag_data_type, tag_options, array_, Range(0, 3)),
-            "lumina tag_schema tag[0] range type does not support string value_type");
+            "Option extension.build.tag.tag_schema tag[0] range type does not support value_type "
+            "'string'");
     }
     {
         std::map<std::string, std::string> tag_options = options_;
         tag_options["lumina.extension.build.tag.tag_schema"] =
-            R"([{"key_name":"color","type":"enum","value_type":"int64"}])";
+            R"([{"key_name":"color","type":"enum","value_type":"int32"}])";
         ASSERT_NOK_WITH_MSG(
             WriteGlobalIndex(index_root, tag_data_type, tag_options, array_, Range(0, 3)),
             "lumina tag field color type string is not compatible with tag_schema value_type");
@@ -615,7 +634,7 @@ TEST_F(LuminaGlobalIndexTest, TestTagSchemaValidation) {
                             arrow::field("category", arrow::int64())});
         std::map<std::string, std::string> tag_options = options_;
         tag_options["lumina.extension.build.tag.tag_schema"] =
-            R"([{"key_name":"category","type":"enum","value_type":"int64"}])";
+            R"([{"key_name":"category","type":"enum","value_type":"int32"}])";
         ASSERT_NOK_WITH_MSG(
             WriteGlobalIndex(index_root, int64_tag_data_type, tag_options, array_, Range(0, 3)),
             "lumina tag field category type int64 is not compatible with tag_schema value_type");
@@ -629,7 +648,20 @@ TEST_F(LuminaGlobalIndexTest, TestTagSchemaValidation) {
             R"([{"key_name":"price","type":"range","value_type":"double"}])";
         ASSERT_NOK_WITH_MSG(
             WriteGlobalIndex(index_root, double_tag_data_type, tag_options, array_, Range(0, 3)),
-            "lumina tag field price type double is not compatible with tag_schema value_type");
+            "Option extension.build.tag.tag_schema tag[0] range type does not support value_type "
+            "'double'");
+    }
+    {
+        std::shared_ptr<arrow::DataType> int64_tag_data_type =
+            arrow::struct_({arrow::field("f0", arrow::list(arrow::float32())),
+                            arrow::field("price", arrow::int64())});
+        std::map<std::string, std::string> tag_options = options_;
+        tag_options["lumina.extension.build.tag.tag_schema"] =
+            R"([{"key_name":"price","type":"range","value_type":"int64"}])";
+        ASSERT_NOK_WITH_MSG(
+            WriteGlobalIndex(index_root, int64_tag_data_type, tag_options, array_, Range(0, 3)),
+            "Option extension.build.tag.tag_schema tag[0] range type does not support value_type "
+            "'int64'");
     }
 }
 
@@ -644,8 +676,8 @@ TEST_F(LuminaGlobalIndexTest, TestGetExtraFieldNames) {
         std::map<std::string, std::string> tag_options = options_;
         tag_options["lumina.extension.build.tag.tag_schema"] =
             R"([{"key_name":"color","type":"enum","value_type":"string"},)"
-            R"({"key_name":"price","type":"range","value_type":"double"},)"
-            R"({"key_name":"category_ids","type":"enum","value_type":"int64"}])";
+            R"({"key_name":"price","type":"range","value_type":"float"},)"
+            R"({"key_name":"category_ids","type":"enum","value_type":"int32"}])";
         LuminaGlobalIndex global_index(tag_options);
         ASSERT_OK_AND_ASSIGN(std::optional<std::vector<std::string>> field_names,
                              global_index.GetExtraFieldNames());

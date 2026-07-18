@@ -112,8 +112,12 @@ Result<LuminaTagField> ParseTagField(const rapidjson::Value& obj, const std::str
     }
 
     LuminaTagField::ValueType parsed_value_type;
-    if (value_type == std::string(::lumina::core::kExtensionTagVTypeInt64)) {
+    if (value_type == std::string(::lumina::core::kExtensionTagVTypeInt32)) {
+        parsed_value_type = LuminaTagField::ValueType::INT32;
+    } else if (value_type == std::string(::lumina::core::kExtensionTagVTypeInt64)) {
         parsed_value_type = LuminaTagField::ValueType::INT64;
+    } else if (value_type == std::string(::lumina::core::kExtensionTagVTypeFloat)) {
+        parsed_value_type = LuminaTagField::ValueType::FLOAT;
     } else if (value_type == std::string(::lumina::core::kExtensionTagVTypeDouble)) {
         parsed_value_type = LuminaTagField::ValueType::DOUBLE;
     } else if (value_type == std::string(::lumina::core::kExtensionTagVTypeString)) {
@@ -121,11 +125,6 @@ Result<LuminaTagField> ParseTagField(const rapidjson::Value& obj, const std::str
     } else {
         return Status::Invalid(fmt::format("lumina tag_schema {} has unsupported value_type: {}",
                                            tag_label, value_type));
-    }
-    if (parsed_type == LuminaTagField::Type::RANGE &&
-        parsed_value_type == LuminaTagField::ValueType::STRING) {
-        return Status::Invalid(fmt::format(
-            "lumina tag_schema {} range type does not support string value_type", tag_label));
     }
     return LuminaTagField{key_name, parsed_type, parsed_value_type};
 }
@@ -137,17 +136,21 @@ Status ValidateTagArrowType(const LuminaTagField& tag_field,
         value_type = list_type->value_type();
     }
 
-    // Lumina currently downcasts range tag values to 32-bit precision internally.
-    // Reject Arrow int64/double inputs to avoid silent precision loss.
     bool compatible = false;
     switch (tag_field.value_type) {
-        case LuminaTagField::ValueType::INT64:
+        case LuminaTagField::ValueType::INT32:
             compatible = value_type->id() == arrow::Type::INT8 ||
                          value_type->id() == arrow::Type::INT16 ||
                          value_type->id() == arrow::Type::INT32;
             break;
-        case LuminaTagField::ValueType::DOUBLE:
+        case LuminaTagField::ValueType::INT64:
+            compatible = value_type->id() == arrow::Type::INT64;
+            break;
+        case LuminaTagField::ValueType::FLOAT:
             compatible = value_type->id() == arrow::Type::FLOAT;
+            break;
+        case LuminaTagField::ValueType::DOUBLE:
+            compatible = value_type->id() == arrow::Type::DOUBLE;
             break;
         case LuminaTagField::ValueType::STRING:
             compatible = value_type->id() == arrow::Type::STRING;
@@ -175,7 +178,7 @@ Status AppendTagValue(const std::shared_ptr<arrow::Array>& array, int64_t index,
         return Status::OK();
     }
 
-    if constexpr (std::is_same_v<ValueType, int64_t>) {
+    if constexpr (std::is_same_v<ValueType, int32_t>) {
         switch (array->type_id()) {
             case arrow::Type::INT8:
                 AppendPrimitiveTagValue<ValueType, arrow::Int8Array>(array, index, values);
@@ -191,16 +194,25 @@ Status AppendTagValue(const std::shared_ptr<arrow::Array>& array, int64_t index,
                     fmt::format("lumina integer tag field has unsupported arrow type {}",
                                 array->type()->ToString()));
         }
-    } else if constexpr (std::is_same_v<ValueType, double>) {
-        switch (array->type_id()) {
-            case arrow::Type::FLOAT:
-                AppendPrimitiveTagValue<ValueType, arrow::FloatArray>(array, index, values);
-                break;
-            default:
-                return Status::Invalid(
-                    fmt::format("lumina floating tag field has unsupported arrow type {}",
-                                array->type()->ToString()));
+    } else if constexpr (std::is_same_v<ValueType, int64_t>) {
+        if (array->type_id() != arrow::Type::INT64) {
+            return Status::Invalid(fmt::format(
+                "lumina int64 tag field has unsupported arrow type {}", array->type()->ToString()));
         }
+        AppendPrimitiveTagValue<ValueType, arrow::Int64Array>(array, index, values);
+    } else if constexpr (std::is_same_v<ValueType, float>) {
+        if (array->type_id() != arrow::Type::FLOAT) {
+            return Status::Invalid(fmt::format(
+                "lumina float tag field has unsupported arrow type {}", array->type()->ToString()));
+        }
+        AppendPrimitiveTagValue<ValueType, arrow::FloatArray>(array, index, values);
+    } else if constexpr (std::is_same_v<ValueType, double>) {
+        if (array->type_id() != arrow::Type::DOUBLE) {
+            return Status::Invalid(
+                fmt::format("lumina double tag field has unsupported arrow type {}",
+                            array->type()->ToString()));
+        }
+        AppendPrimitiveTagValue<ValueType, arrow::DoubleArray>(array, index, values);
     } else if constexpr (std::is_same_v<ValueType, std::string>) {
         if (array->type_id() != arrow::Type::STRING) {
             return Status::Invalid(
@@ -251,13 +263,17 @@ Result<TagValue> LiteralToTagValue(const Literal& literal) {
     }
     switch (literal.GetType()) {
         case FieldType::TINYINT:
-            return TagValue(static_cast<int64_t>(literal.GetValue<int8_t>()));
+            return TagValue(static_cast<int32_t>(literal.GetValue<int8_t>()));
         case FieldType::SMALLINT:
-            return TagValue(static_cast<int64_t>(literal.GetValue<int16_t>()));
+            return TagValue(static_cast<int32_t>(literal.GetValue<int16_t>()));
         case FieldType::INT:
-            return TagValue(static_cast<int64_t>(literal.GetValue<int32_t>()));
+            return TagValue(literal.GetValue<int32_t>());
+        case FieldType::BIGINT:
+            return TagValue(literal.GetValue<int64_t>());
         case FieldType::FLOAT:
-            return TagValue(static_cast<double>(literal.GetValue<float>()));
+            return TagValue(literal.GetValue<float>());
+        case FieldType::DOUBLE:
+            return TagValue(literal.GetValue<double>());
         case FieldType::STRING:
             return TagValue(literal.GetValue<std::string>());
         default:
@@ -285,6 +301,18 @@ Result<TagValues> LiteralsToTagValues(const std::vector<Literal>& literals) {
         case FieldType::TINYINT:
         case FieldType::SMALLINT:
         case FieldType::INT: {
+            std::vector<int32_t> values;
+            values.reserve(literals.size());
+            for (const auto& literal : literals) {
+                PAIMON_ASSIGN_OR_RAISE(TagValue value, LiteralToTagValue(literal));
+                auto typed_value = std::get_if<int32_t>(&value);
+                CHECK_NOT_NULL(typed_value,
+                               "lumina tag predicate IN literals must have the same value type");
+                values.push_back(*typed_value);
+            }
+            return TagValues(std::move(values));
+        }
+        case FieldType::BIGINT: {
             std::vector<int64_t> values;
             values.reserve(literals.size());
             for (const auto& literal : literals) {
@@ -297,6 +325,18 @@ Result<TagValues> LiteralsToTagValues(const std::vector<Literal>& literals) {
             return TagValues(std::move(values));
         }
         case FieldType::FLOAT: {
+            std::vector<float> values;
+            values.reserve(literals.size());
+            for (const auto& literal : literals) {
+                PAIMON_ASSIGN_OR_RAISE(TagValue value, LiteralToTagValue(literal));
+                auto typed_value = std::get_if<float>(&value);
+                CHECK_NOT_NULL(typed_value,
+                               "lumina tag predicate IN literals must have the same value type");
+                values.push_back(*typed_value);
+            }
+            return TagValues(std::move(values));
+        }
+        case FieldType::DOUBLE: {
             std::vector<double> values;
             values.reserve(literals.size());
             for (const auto& literal : literals) {
@@ -342,10 +382,24 @@ Result<std::vector<TagDimensionData>> LuminaIndexWriter::ExtractTagDataForSegmen
         TagDimensionData tag_dimension_data;
         tag_dimension_data.tagkName = tag_field.name;
         switch (tag_field.value_type) {
+            case LuminaTagField::ValueType::INT32: {
+                std::vector<std::vector<int32_t>> values;
+                PAIMON_RETURN_NOT_OK(
+                    ExtractTagValues<int32_t>(field_array, segment_start, segment_len, &values));
+                tag_dimension_data.values = std::move(values);
+                break;
+            }
             case LuminaTagField::ValueType::INT64: {
                 std::vector<std::vector<int64_t>> values;
                 PAIMON_RETURN_NOT_OK(
                     ExtractTagValues<int64_t>(field_array, segment_start, segment_len, &values));
+                tag_dimension_data.values = std::move(values);
+                break;
+            }
+            case LuminaTagField::ValueType::FLOAT: {
+                std::vector<std::vector<float>> values;
+                PAIMON_RETURN_NOT_OK(
+                    ExtractTagValues<float>(field_array, segment_start, segment_len, &values));
                 tag_dimension_data.values = std::move(values);
                 break;
             }

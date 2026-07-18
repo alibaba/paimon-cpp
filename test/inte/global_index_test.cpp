@@ -1153,10 +1153,10 @@ TEST_P(GlobalIndexTest, TestWriteAndQueryLuminaIndexWithTagNullAndEmptyValues) {
         {"lumina.extension.build.tag.tag_schema",
          R"([{"key_name":"color","type":"enum","value_type":"string"},)"
          R"({"key_name":"labels","type":"enum","value_type":"string"},)"
-         R"({"key_name":"price","type":"range","value_type":"double"},)"
-         R"({"key_name":"scores","type":"range","value_type":"double"},)"
-         R"({"key_name":"category","type":"enum","value_type":"int64"},)"
-         R"({"key_name":"category_ids","type":"enum","value_type":"int64"}])"}};
+         R"({"key_name":"price","type":"range","value_type":"float"},)"
+         R"({"key_name":"scores","type":"range","value_type":"float"},)"
+         R"({"key_name":"category","type":"enum","value_type":"int32"},)"
+         R"({"key_name":"category_ids","type":"enum","value_type":"int32"}])"}};
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
                                                   {Options::FILE_FORMAT, file_format_},
                                                   {Options::FILE_SYSTEM, "local"},
@@ -1197,7 +1197,7 @@ TEST_P(GlobalIndexTest, TestWriteAndQueryLuminaIndexWithTagNullAndEmptyValues) {
         new_index_files[0]->GetGlobalIndexMeta();
     ASSERT_TRUE(global_index_meta);
     std::string expected_index_meta_json =
-        R"({"distance.metric":"l2","encoding.type":"rawf32","extension.build.tag.tag_schema":"[{\"key_name\":\"color\",\"type\":\"enum\",\"value_type\":\"string\"},{\"key_name\":\"labels\",\"type\":\"enum\",\"value_type\":\"string\"},{\"key_name\":\"price\",\"type\":\"range\",\"value_type\":\"double\"},{\"key_name\":\"scores\",\"type\":\"range\",\"value_type\":\"double\"},{\"key_name\":\"category\",\"type\":\"enum\",\"value_type\":\"int64\"},{\"key_name\":\"category_ids\",\"type\":\"enum\",\"value_type\":\"int64\"}]","index.dimension":"4","index.type":"bruteforce","search.parallel_number":"10"})";
+        R"({"distance.metric":"l2","encoding.type":"rawf32","extension.build.tag.tag_schema":"[{\"key_name\":\"color\",\"type\":\"enum\",\"value_type\":\"string\"},{\"key_name\":\"labels\",\"type\":\"enum\",\"value_type\":\"string\"},{\"key_name\":\"price\",\"type\":\"range\",\"value_type\":\"float\"},{\"key_name\":\"scores\",\"type\":\"range\",\"value_type\":\"float\"},{\"key_name\":\"category\",\"type\":\"enum\",\"value_type\":\"int32\"},{\"key_name\":\"category_ids\",\"type\":\"enum\",\"value_type\":\"int32\"}]","index.dimension":"4","index.type":"bruteforce","search.parallel_number":"10"})";
     GlobalIndexMeta expected_global_index_meta(
         /*row_range_start=*/0, /*row_range_end=*/4, /*index_field_id=*/1,
         /*extra_field_ids=*/std::optional<std::vector<int32_t>>({2, 3, 4, 5, 6, 7}),
