@@ -38,6 +38,9 @@ namespace paimon {
 class ManifestEntry : public FileEntry {
  public:
     static const std::shared_ptr<arrow::DataType>& DataType();
+    static int64_t RecordCount(const std::vector<ManifestEntry>& manifest_entries);
+    static std::optional<int64_t> NullableRecordCount(
+        const std::vector<ManifestEntry>& manifest_entries);
     static int64_t RecordCountAdd(const std::vector<ManifestEntry>& manifest_entries);
     static int64_t RecordCountDelete(const std::vector<ManifestEntry>& manifest_entries);
 
