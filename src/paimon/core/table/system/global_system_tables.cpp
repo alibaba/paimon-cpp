@@ -39,7 +39,6 @@
 #include "paimon/core/manifest/manifest_file.h"
 #include "paimon/core/manifest/manifest_file_meta.h"
 #include "paimon/core/manifest/manifest_list.h"
-#include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/core/utils/branch_manager.h"
@@ -120,6 +119,46 @@ Result<bool> IsEnabled(const GlobalSystemTableRegistryEntry& entry,
                                                CatalogOptionsSystemTable::kEnabledOption, false);
 }
 
+struct CatalogTableInfo {
+    std::string database_name;
+    std::string table_name;
+    std::shared_ptr<DataSchema> schema;
+};
+
+// Match Java CatalogUtils::listAllTables: tolerate databases or tables removed concurrently, but
+// propagate all other catalog and schema errors instead of returning incomplete system-table rows.
+Result<std::vector<CatalogTableInfo>> LoadAllDataTables(const Catalog& catalog) {
+    std::vector<CatalogTableInfo> result;
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> databases, catalog.ListDatabases());
+    for (const std::string& database : databases) {
+        Result<std::vector<std::string>> tables_result = catalog.ListTables(database);
+        if (!tables_result.ok()) {
+            if (tables_result.status().IsNotExist()) {
+                continue;
+            }
+            return tables_result.status();
+        }
+        for (const std::string& table : tables_result.value()) {
+            Identifier identifier(database, table);
+            Result<std::shared_ptr<Schema>> schema_result = catalog.LoadTableSchema(identifier);
+            if (!schema_result.ok()) {
+                if (schema_result.status().IsNotExist()) {
+                    continue;
+                }
+                return schema_result.status();
+            }
+            std::shared_ptr<DataSchema> data_schema =
+                std::dynamic_pointer_cast<DataSchema>(schema_result.value());
+            if (!data_schema) {
+                return Status::Invalid("catalog returned a non-data schema for ",
+                                       identifier.ToString());
+            }
+            result.push_back({database, table, std::move(data_schema)});
+        }
+    }
+    return result;
+}
+
 // Aggregated file-level statistics for a table or partition.
 struct FileStats {
     int64_t record_count = 0;
@@ -136,7 +175,7 @@ struct AggregatedFileStats {
 // Read the latest snapshot's data files and aggregate statistics.
 Result<AggregatedFileStats> AggregateFileStats(const std::shared_ptr<FileSystem>& fs,
                                                const std::string& table_path,
-                                               const std::map<std::string, std::string>& options) {
+                                               const DataSchema& table_schema) {
     AggregatedFileStats result;
 
     SnapshotManager snapshot_manager(fs, table_path, BranchManager::DEFAULT_MAIN_BRANCH);
@@ -146,20 +185,14 @@ Result<AggregatedFileStats> AggregateFileStats(const std::shared_ptr<FileSystem>
     }
     result.has_snapshot = true;
 
-    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(options));
-
-    // Use SchemaManager to load the latest schema for field/partition info
-    SchemaManager schema_mgr(fs, table_path, BranchManager::DEFAULT_MAIN_BRANCH);
-    auto latest_schema_result = schema_mgr.Latest();
-    if (!latest_schema_result.ok() || !latest_schema_result.value()) {
-        return result;
-    }
-    auto table_schema = *latest_schema_result.value();
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(table_schema.Options()));
 
     auto pool = GetDefaultPool();
 
-    std::shared_ptr<arrow::Schema> arrow_schema =
-        DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::ArrowSchema> c_arrow_schema,
+                           table_schema.GetArrowSchema());
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> arrow_schema,
+                                      arrow::ImportSchema(c_arrow_schema.get()));
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> external_paths,
                            core_options.CreateExternalPaths());
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> global_index_external_path,
@@ -167,7 +200,7 @@ Result<AggregatedFileStats> AggregateFileStats(const std::shared_ptr<FileSystem>
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<FileStorePathFactory> path_factory,
         FileStorePathFactory::Create(
-            table_path, arrow_schema, table_schema->PartitionKeys(),
+            table_path, arrow_schema, table_schema.PartitionKeys(),
             core_options.GetPartitionDefaultName(), core_options.GetFileFormat()->Identifier(),
             core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
             external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
@@ -183,7 +216,7 @@ Result<AggregatedFileStats> AggregateFileStats(const std::shared_ptr<FileSystem>
 
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<arrow::Schema> partition_schema,
-        FieldMapping::GetPartitionSchema(arrow_schema, table_schema->PartitionKeys()));
+        FieldMapping::GetPartitionSchema(arrow_schema, table_schema.PartitionKeys()));
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ManifestFile> manifest_file,
                            ManifestFile::Create(fs, core_options.GetManifestFormat(),
                                                 core_options.GetManifestCompression(), path_factory,
@@ -335,28 +368,16 @@ Result<std::vector<GenericRow>> AllTableOptionsSystemTable::BuildRows() const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     std::vector<GenericRow> rows;
 
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> databases, context_.catalog->ListDatabases());
-    for (const auto& db : databases) {
-        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> tables, context_.catalog->ListTables(db));
-        for (const auto& table : tables) {
-            Identifier id(db, table);
-            auto schema_result = context_.catalog->LoadTableSchema(id);
-            if (!schema_result.ok()) {
-                continue;  // skip tables with errors (e.g. dropped concurrently)
-            }
-            auto schema_ptr = schema_result.value();
-            auto data_schema = std::dynamic_pointer_cast<DataSchema>(schema_ptr);
-            if (!data_schema) {
-                continue;
-            }
-            for (const auto& [key, value] : data_schema->Options()) {
-                GenericRow row(schema->num_fields());
-                row.SetField(0, StringValue(db));
-                row.SetField(1, StringValue(table));
-                row.SetField(2, StringValue(key));
-                row.SetField(3, StringValue(value));
-                rows.push_back(std::move(row));
-            }
+    PAIMON_ASSIGN_OR_RAISE(std::vector<CatalogTableInfo> tables,
+                           LoadAllDataTables(*context_.catalog));
+    for (const CatalogTableInfo& table : tables) {
+        for (const auto& [key, value] : table.schema->Options()) {
+            GenericRow row(schema->num_fields());
+            row.SetField(0, StringValue(table.database_name));
+            row.SetField(1, StringValue(table.table_name));
+            row.SetField(2, StringValue(key));
+            row.SetField(3, StringValue(value));
+            rows.push_back(std::move(row));
         }
     }
     return rows;
@@ -396,72 +417,66 @@ Result<std::vector<GenericRow>> TablesSystemTable::BuildRows() const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     std::vector<GenericRow> rows;
 
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> databases, context_.catalog->ListDatabases());
-    for (const auto& db : databases) {
-        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> tables, context_.catalog->ListTables(db));
-        for (const auto& table : tables) {
-            Identifier id(db, table);
-            auto schema_result = context_.catalog->LoadTableSchema(id);
-            if (!schema_result.ok()) {
-                continue;
-            }
-            auto schema_ptr = schema_result.value();
-            auto data_schema = std::dynamic_pointer_cast<DataSchema>(schema_ptr);
-            if (!data_schema) {
-                continue;
-            }
+    PAIMON_ASSIGN_OR_RAISE(std::vector<CatalogTableInfo> tables,
+                           LoadAllDataTables(*context_.catalog));
+    for (const CatalogTableInfo& table : tables) {
+        const std::shared_ptr<DataSchema>& data_schema = table.schema;
+        Identifier id(table.database_name, table.table_name);
 
-            const auto& opts = data_schema->Options();
-            auto table_type = opts.find("type");
-            const std::string table_type_str =
-                table_type == opts.end() ? "TABLE" : table_type->second;
+        const auto& opts = data_schema->Options();
+        auto table_type = opts.find("type");
+        const std::string table_type_str = table_type == opts.end() ? "TABLE" : table_type->second;
 
-            bool partitioned = !data_schema->PartitionKeys().empty();
+        bool partitioned = !data_schema->PartitionKeys().empty();
 
-            GenericRow row(schema->num_fields());
-            row.SetField(0, StringValue(db));
-            row.SetField(1, StringValue(table));
-            row.SetField(2, StringValue(table_type_str));
-            row.SetField(3, partitioned);
-            row.SetField(4, !data_schema->PrimaryKeys().empty());
-            row.SetField(5, OptionalStringValue(opts, "owner"));
-            PAIMON_ASSIGN_OR_RAISE(VariantType created_at, OptionalLongValue(opts, "createdAt"));
-            row.SetField(6, std::move(created_at));
-            row.SetField(7, OptionalStringValue(opts, "createdBy"));
-            PAIMON_ASSIGN_OR_RAISE(VariantType updated_at, OptionalLongValue(opts, "updatedAt"));
-            row.SetField(8, std::move(updated_at));
-            row.SetField(9, OptionalStringValue(opts, "updatedBy"));
+        GenericRow row(schema->num_fields());
+        row.SetField(0, StringValue(table.database_name));
+        row.SetField(1, StringValue(table.table_name));
+        row.SetField(2, StringValue(table_type_str));
+        row.SetField(3, partitioned);
+        row.SetField(4, !data_schema->PrimaryKeys().empty());
+        row.SetField(5, OptionalStringValue(opts, "owner"));
+        PAIMON_ASSIGN_OR_RAISE(VariantType created_at, OptionalLongValue(opts, "createdAt"));
+        row.SetField(6, std::move(created_at));
+        row.SetField(7, OptionalStringValue(opts, "createdBy"));
+        PAIMON_ASSIGN_OR_RAISE(VariantType updated_at, OptionalLongValue(opts, "updatedAt"));
+        row.SetField(8, std::move(updated_at));
+        row.SetField(9, OptionalStringValue(opts, "updatedBy"));
 
-            // Get table path and aggregate file stats from manifest entries
-            PAIMON_ASSIGN_OR_RAISE(std::string table_path, context_.catalog->GetTableLocation(id));
+        // Get table path and aggregate file stats from manifest entries. Ignore only concurrent
+        // table deletion; corrupted metadata, unsupported aggregation, and I/O errors must fail the
+        // query.
+        PAIMON_ASSIGN_OR_RAISE(std::string table_path, context_.catalog->GetTableLocation(id));
 
-            auto file_stats_result =
-                AggregateFileStats(context_.fs, table_path, data_schema->Options());
-            if (file_stats_result.ok() && file_stats_result.value().has_snapshot) {
-                auto& all_stats = file_stats_result.value().by_partition;
-                int64_t total_record = 0, total_size = 0, total_files = 0, max_creation = 0;
-                for (const auto& [key, stats] : all_stats) {
-                    total_record += stats.record_count;
-                    total_size += stats.file_size_in_bytes;
-                    total_files += stats.file_count;
-                    if (stats.last_file_creation_time_millis > max_creation) {
-                        max_creation = stats.last_file_creation_time_millis;
-                    }
-                }
-                row.SetField(10, VariantType(total_record));
-                row.SetField(11, VariantType(total_size));
-                row.SetField(12, VariantType(total_files));
-                row.SetField(
-                    13, max_creation > 0 ? VariantType(max_creation) : VariantType(NullType()));
-            } else {
-                row.SetField(10, NullType());
-                row.SetField(11, NullType());
-                row.SetField(12, NullType());
-                row.SetField(13, NullType());
-            }
-
-            rows.push_back(std::move(row));
+        Result<AggregatedFileStats> file_stats_result =
+            AggregateFileStats(context_.fs, table_path, *data_schema);
+        if (!file_stats_result.ok() && !file_stats_result.status().IsNotExist()) {
+            return file_stats_result.status();
         }
+        if (file_stats_result.ok() && file_stats_result.value().has_snapshot) {
+            auto& all_stats = file_stats_result.value().by_partition;
+            int64_t total_record = 0, total_size = 0, total_files = 0, max_creation = 0;
+            for (const auto& [key, stats] : all_stats) {
+                total_record += stats.record_count;
+                total_size += stats.file_size_in_bytes;
+                total_files += stats.file_count;
+                if (stats.last_file_creation_time_millis > max_creation) {
+                    max_creation = stats.last_file_creation_time_millis;
+                }
+            }
+            row.SetField(10, VariantType(total_record));
+            row.SetField(11, VariantType(total_size));
+            row.SetField(12, VariantType(total_files));
+            row.SetField(13,
+                         max_creation > 0 ? VariantType(max_creation) : VariantType(NullType()));
+        } else {
+            row.SetField(10, NullType());
+            row.SetField(11, NullType());
+            row.SetField(12, NullType());
+            row.SetField(13, NullType());
+        }
+
+        rows.push_back(std::move(row));
     }
     return rows;
 }
@@ -494,59 +509,55 @@ Result<std::vector<GenericRow>> PartitionsSystemTable::BuildRows() const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
     std::vector<GenericRow> rows;
 
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> databases, context_.catalog->ListDatabases());
-    for (const auto& db : databases) {
-        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> tables, context_.catalog->ListTables(db));
-        for (const auto& table : tables) {
-            Identifier id(db, table);
-            auto schema_result = context_.catalog->LoadTableSchema(id);
-            if (!schema_result.ok()) {
-                continue;
-            }
-            auto schema_ptr = schema_result.value();
-            auto data_schema = std::dynamic_pointer_cast<DataSchema>(schema_ptr);
-            if (!data_schema) {
-                continue;
-            }
+    PAIMON_ASSIGN_OR_RAISE(std::vector<CatalogTableInfo> tables,
+                           LoadAllDataTables(*context_.catalog));
+    for (const CatalogTableInfo& table : tables) {
+        const std::shared_ptr<DataSchema>& data_schema = table.schema;
+        Identifier id(table.database_name, table.table_name);
 
-            // Only emit rows for partitioned tables
-            if (data_schema->PartitionKeys().empty()) {
+        // Only emit rows for partitioned tables
+        if (data_schema->PartitionKeys().empty()) {
+            continue;
+        }
+
+        // Match Java's toAllPartitions by ignoring only concurrent table deletion. All other
+        // metadata and I/O errors must fail the query.
+        Result<std::string> table_path_result = context_.catalog->GetTableLocation(id);
+        if (!table_path_result.ok()) {
+            if (table_path_result.status().IsNotExist()) {
                 continue;
             }
+            return table_path_result.status();
+        }
 
-            // Get table path and aggregate file stats by partition
-            auto table_path_result = context_.catalog->GetTableLocation(id);
-            if (!table_path_result.ok()) {
+        Result<AggregatedFileStats> file_stats_result =
+            AggregateFileStats(context_.fs, table_path_result.value(), *data_schema);
+        if (!file_stats_result.ok()) {
+            if (file_stats_result.status().IsNotExist()) {
                 continue;
             }
-            std::string table_path = table_path_result.value();
+            return file_stats_result.status();
+        }
 
-            auto file_stats_result =
-                AggregateFileStats(context_.fs, table_path, data_schema->Options());
-            if (!file_stats_result.ok()) {
+        auto& stats_map = file_stats_result.value().by_partition;
+        for (const auto& [partition_key, stats] : stats_map) {
+            if (stats.file_count == 0) {
                 continue;
             }
-
-            auto& stats_map = file_stats_result.value().by_partition;
-            for (const auto& [partition_key, stats] : stats_map) {
-                if (stats.file_count == 0) {
-                    continue;
-                }
-                GenericRow row(schema->num_fields());
-                row.SetField(0, StringValue(db));
-                row.SetField(1, StringValue(table));
-                row.SetField(2, partition_key.empty() ? VariantType(NullType())
-                                                      : VariantType(StringValue(partition_key)));
-                row.SetField(3, VariantType(stats.record_count));
-                row.SetField(4, VariantType(stats.file_size_in_bytes));
-                row.SetField(5, VariantType(stats.file_count));
-                row.SetField(6, stats.last_file_creation_time_millis > 0
-                                    ? VariantType(stats.last_file_creation_time_millis)
-                                    : VariantType(NullType()));
-                // File-system catalog partitions are not explicitly marked as done.
-                row.SetField(7, false);
-                rows.push_back(std::move(row));
-            }
+            GenericRow row(schema->num_fields());
+            row.SetField(0, StringValue(table.database_name));
+            row.SetField(1, StringValue(table.table_name));
+            row.SetField(2, partition_key.empty() ? VariantType(NullType())
+                                                  : VariantType(StringValue(partition_key)));
+            row.SetField(3, VariantType(stats.record_count));
+            row.SetField(4, VariantType(stats.file_size_in_bytes));
+            row.SetField(5, VariantType(stats.file_count));
+            row.SetField(6, stats.last_file_creation_time_millis > 0
+                                ? VariantType(stats.last_file_creation_time_millis)
+                                : VariantType(NullType()));
+            // File-system catalog partitions are not explicitly marked as done.
+            row.SetField(7, false);
+            rows.push_back(std::move(row));
         }
     }
     return rows;

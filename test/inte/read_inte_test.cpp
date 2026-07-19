@@ -47,12 +47,14 @@
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/manifest/file_source.h"
+#include "paimon/core/snapshot.h"
 #include "paimon/core/stats/simple_stats.h"
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/core/table/source/deletion_file.h"
 #include "paimon/core/table/source/fallback_data_split.h"
 #include "paimon/core/table/system/global_system_tables.h"
 #include "paimon/core/tag/tag.h"
+#include "paimon/core/utils/snapshot_manager.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/defs.h"
@@ -4025,6 +4027,113 @@ TEST(SystemTableReadInteTest, TestReadGlobalPartitions) {
     EXPECT_EQ(partition_array->GetString(0), "dt=2026-07-13/region=cn");
     EXPECT_FALSE(creation_time_array->IsNull(0));
     EXPECT_FALSE(done_array->Value(0));
+}
+
+TEST(SystemTableReadInteTest, TestGlobalSystemTablesPropagateCorruptSchema) {
+    std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
+                                                  {Options::FILE_FORMAT, "orc"},
+                                                  {Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::BUCKET, "1"},
+                                                  {Options::BUCKET_KEY, "v"}};
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    std::string warehouse = dir->Str();
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(warehouse, options));
+    ASSERT_OK(catalog->CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
+
+    auto typed_schema = arrow::schema({arrow::field("v", arrow::int32())});
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &schema).ok());
+    Identifier identifier("test_db", "test_tbl");
+    ASSERT_OK(catalog->CreateTable(identifier, &schema,
+                                   /*partition_keys=*/{}, /*primary_keys=*/{}, options,
+                                   /*ignore_if_exists=*/false));
+    ArrowSchemaRelease(&schema);
+
+    ASSERT_OK_AND_ASSIGN(std::string table_path, catalog->GetTableLocation(identifier));
+    std::shared_ptr<FileSystem> fs = catalog->GetFileSystem();
+    ASSERT_OK(fs->WriteFile(PathUtil::JoinPath(table_path, "schema/schema-0"), "{invalid-json",
+                            /*overwrite=*/true));
+
+    for (const std::string& system_table : {"all_table_options", "tables", "partitions"}) {
+        ASSERT_NOK(ReadGlobalSystemTable(system_table, catalog.get(), fs, warehouse, options));
+    }
+}
+
+TEST(SystemTableReadInteTest, TestGlobalSystemTablesPropagateCorruptSnapshot) {
+    std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
+                                                  {Options::FILE_FORMAT, "orc"},
+                                                  {Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::BUCKET, "1"},
+                                                  {Options::BUCKET_KEY, "v"}};
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    std::string warehouse = dir->Str();
+
+    arrow::FieldVector fields = {
+        arrow::field("dt", arrow::utf8()),
+        arrow::field("v", arrow::int32()),
+    };
+    auto schema = arrow::schema(fields);
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(warehouse, schema,
+                                                         /*partition_keys=*/{"dt"},
+                                                         /*primary_keys=*/{}, options,
+                                                         /*is_streaming_mode=*/true));
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<RecordBatch> batch,
+        TestHelper::MakeRecordBatch(arrow::struct_(fields), R"([["2026-07-19", 1]])",
+                                    /*partition_map=*/{{"dt", "2026-07-19"}}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(warehouse, options));
+    std::shared_ptr<FileSystem> fs = catalog->GetFileSystem();
+    std::string table_path = PathUtil::JoinPath(warehouse, "foo.db/bar");
+    ASSERT_OK(fs->WriteFile(PathUtil::JoinPath(table_path, "snapshot/snapshot-1"), "{invalid-json",
+                            /*overwrite=*/true));
+
+    ASSERT_NOK(ReadGlobalSystemTable("tables", catalog.get(), fs, warehouse, options));
+    ASSERT_NOK(ReadGlobalSystemTable("partitions", catalog.get(), fs, warehouse, options));
+}
+
+TEST(SystemTableReadInteTest, TestGlobalSystemTablesPropagateCorruptManifest) {
+    std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
+                                                  {Options::FILE_FORMAT, "orc"},
+                                                  {Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::BUCKET, "1"},
+                                                  {Options::BUCKET_KEY, "v"}};
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    std::string warehouse = dir->Str();
+
+    arrow::FieldVector fields = {
+        arrow::field("dt", arrow::utf8()),
+        arrow::field("v", arrow::int32()),
+    };
+    auto schema = arrow::schema(fields);
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(warehouse, schema,
+                                                         /*partition_keys=*/{"dt"},
+                                                         /*primary_keys=*/{}, options,
+                                                         /*is_streaming_mode=*/true));
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<RecordBatch> batch,
+        TestHelper::MakeRecordBatch(arrow::struct_(fields), R"([["2026-07-19", 1]])",
+                                    /*partition_map=*/{{"dt", "2026-07-19"}}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(warehouse, options));
+    std::shared_ptr<FileSystem> fs = catalog->GetFileSystem();
+    std::string table_path = PathUtil::JoinPath(warehouse, "foo.db/bar");
+    SnapshotManager snapshot_manager(fs, table_path);
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot, snapshot_manager.LatestSnapshot());
+    ASSERT_TRUE(snapshot);
+    ASSERT_OK(fs->WriteFile(
+        PathUtil::JoinPath(table_path, "manifest/" + snapshot->BaseManifestList()), "corrupt",
+        /*overwrite=*/true));
+
+    ASSERT_NOK(ReadGlobalSystemTable("tables", catalog.get(), fs, warehouse, options));
+    ASSERT_NOK(ReadGlobalSystemTable("partitions", catalog.get(), fs, warehouse, options));
 }
 
 }  // namespace paimon::test
