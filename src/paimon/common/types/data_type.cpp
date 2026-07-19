@@ -126,19 +126,19 @@ std::string DataType::DataTypeToString(const std::shared_ptr<arrow::DataType>& t
             if (VariantTypeUtils::IsVariantMetadata(metadata_)) {
                 return "VARIANT";
             }
-            [[fallthrough]];
+            break;
         }
         case arrow::Type::type::LARGE_BINARY: {
             // TODO(xinyu): change binary to large binary?
-            if (type->id() == arrow::Type::type::LARGE_BINARY &&
-                BlobUtils::IsBlobMetadata(metadata_)) {
+            if (BlobUtils::IsBlobMetadata(metadata_)) {
                 return "BLOB";
             }
-            [[fallthrough]];
+            break;
         }
         default:
-            throw std::invalid_argument(fmt::format("unknown type {}", type->ToString()));
+            break;
     }
+    throw std::invalid_argument(fmt::format("unknown type {}", type->ToString()));
 }
 
 }  // namespace paimon

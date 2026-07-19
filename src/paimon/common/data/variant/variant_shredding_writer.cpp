@@ -49,7 +49,7 @@ Result<__int128_t> ScaleUpUnscaled(__int128_t unscaled, int32_t power) {
     return result;
 }
 
-Status AppendDecimalTo(arrow::ArrayBuilder* builder, __int128_t unscaled) {
+Status AppendDecimalTo(__int128_t unscaled, arrow::ArrayBuilder* builder) {
     auto* decimal_builder = static_cast<arrow::Decimal128Builder*>(builder);
     arrow::Decimal128 value(static_cast<int64_t>(unscaled >> 64),
                             static_cast<uint64_t>(static_cast<__uint128_t>(unscaled)));
@@ -126,7 +126,7 @@ Status VariantShreddedColumnWriter::BuildNode(const std::shared_ptr<VariantSchem
 }
 
 Status VariantShreddedColumnWriter::Append(const GenericVariant& variant) {
-    return AppendVariantNode(&root_, variant);
+    return AppendVariantNode(variant, &root_);
 }
 
 Status VariantShreddedColumnWriter::AppendNull() {
@@ -140,7 +140,7 @@ Result<std::shared_ptr<arrow::Array>> VariantShreddedColumnWriter::Finish() {
     return array;
 }
 
-Status VariantShreddedColumnWriter::AppendVariantNode(Node* node, const GenericVariant& variant) {
+Status VariantShreddedColumnWriter::AppendVariantNode(const GenericVariant& variant, Node* node) {
     const VariantSchema& schema = *node->schema;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(node->group->Append());
     if (schema.top_level_metadata_idx >= 0) {
@@ -154,7 +154,7 @@ Status VariantShreddedColumnWriter::AppendVariantNode(Node* node, const GenericV
         for (int32_t i = 0; i < size; ++i) {
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GenericVariant> element,
                                    variant.GetElementAtIndex(i));
-            PAIMON_RETURN_NOT_OK(AppendVariantNode(node->array_element.get(), *element));
+            PAIMON_RETURN_NOT_OK(AppendVariantNode(*element, node->array_element.get()));
         }
         if (node->value != nullptr) {
             PAIMON_RETURN_NOT_OK_FROM_ARROW(node->value->AppendNull());
@@ -169,14 +169,15 @@ Status VariantShreddedColumnWriter::AppendVariantNode(Node* node, const GenericV
         int32_t start = residual.GetWritePos();
         PAIMON_ASSIGN_OR_RAISE(int32_t object_size, variant.ObjectSize());
         for (int32_t i = 0; i < object_size; ++i) {
-            PAIMON_ASSIGN_OR_RAISE(auto field, variant.GetFieldAtIndex(i));
+            PAIMON_ASSIGN_OR_RAISE(std::optional<GenericVariant::ObjectField> field,
+                                   variant.GetFieldAtIndex(i));
             if (!field.has_value()) {
-                return VariantBinaryUtil::MalformedVariant();
+                return VariantBinaryUtil::MalformedVariant("an object field is missing");
             }
             auto it = schema.object_schema_map.find(field->key);
             if (it != schema.object_schema_map.end()) {
                 PAIMON_RETURN_NOT_OK(
-                    AppendVariantNode(&node->object_children[it->second], *field->value));
+                    AppendVariantNode(*field->value, &node->object_children[it->second]));
                 matched[it->second] = true;
             } else {
                 // The field is not shredded. Put it in the untyped value column. The shallow
@@ -205,7 +206,7 @@ Status VariantShreddedColumnWriter::AppendVariantNode(Node* node, const GenericV
         }
     } else if (schema.scalar_schema.has_value()) {
         bool shredded = false;
-        PAIMON_RETURN_NOT_OK(TryTypedShred(node, variant, variant_type, &shredded));
+        PAIMON_RETURN_NOT_OK(TryTypedShred(variant, variant_type, node, &shredded));
         if (shredded) {
             if (node->value != nullptr) {
                 PAIMON_RETURN_NOT_OK_FROM_ARROW(node->value->AppendNull());
@@ -255,8 +256,9 @@ Status VariantShreddedColumnWriter::AppendMissingNode(Node* node) {
     return Status::OK();
 }
 
-Status VariantShreddedColumnWriter::TryTypedShred(Node* node, const GenericVariant& variant,
-                                                  VariantValueType variant_type, bool* shredded) {
+Status VariantShreddedColumnWriter::TryTypedShred(const GenericVariant& variant,
+                                                  VariantValueType variant_type, Node* node,
+                                                  bool* shredded) {
     const VariantSchema::ScalarType& target = node->schema->scalar_schema.value();
     *shredded = false;
     switch (variant_type) {
@@ -300,7 +302,7 @@ Status VariantShreddedColumnWriter::TryTypedShred(Node* node, const GenericVaria
                         VariantDecimal probe{scaled.value(), target.scale};
                         if (probe.Precision() <= target.precision) {
                             PAIMON_RETURN_NOT_OK(
-                                AppendDecimalTo(node->typed_scalar, scaled.value()));
+                                AppendDecimalTo(scaled.value(), node->typed_scalar));
                             *shredded = true;
                         }
                     }
@@ -318,7 +320,7 @@ Status VariantShreddedColumnWriter::TryTypedShred(Node* node, const GenericVaria
                                        VariantBinaryUtil::GetDecimalWithOriginalScale(
                                            variant.RawValue(), variant.Pos()));
                 if (value.Precision() <= target.precision && value.scale == target.scale) {
-                    PAIMON_RETURN_NOT_OK(AppendDecimalTo(node->typed_scalar, value.unscaled));
+                    PAIMON_RETURN_NOT_OK(AppendDecimalTo(value.unscaled, node->typed_scalar));
                     *shredded = true;
                     break;
                 }
@@ -345,7 +347,7 @@ Status VariantShreddedColumnWriter::TryTypedShred(Node* node, const GenericVaria
                 if (exact) {
                     VariantDecimal probe{rescaled, target.scale};
                     if (probe.Precision() <= target.precision) {
-                        PAIMON_RETURN_NOT_OK(AppendDecimalTo(node->typed_scalar, rescaled));
+                        PAIMON_RETURN_NOT_OK(AppendDecimalTo(rescaled, node->typed_scalar));
                         *shredded = true;
                     }
                 }

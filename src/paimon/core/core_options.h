@@ -148,11 +148,11 @@ class PAIMON_EXPORT CoreOptions {
     /// The configured variant shredding schema JSON, if any (falls back to
     /// "parquet.variant.shreddingSchema").
     std::optional<std::string> GetVariantShreddingSchema() const;
-    Result<bool> VariantInferShreddingSchemaEnabled() const;
-    Result<int32_t> GetVariantShreddingMaxSchemaWidth() const;
-    Result<int32_t> GetVariantShreddingMaxSchemaDepth() const;
-    Result<double> GetVariantShreddingMinFieldCardinalityRatio() const;
-    Result<int32_t> GetVariantShreddingMaxInferBufferRow() const;
+    bool VariantInferShreddingSchemaEnabled() const;
+    int32_t GetVariantShreddingMaxSchemaWidth() const;
+    int32_t GetVariantShreddingMaxSchemaDepth() const;
+    double GetVariantShreddingMinFieldCardinalityRatio() const;
+    int32_t GetVariantShreddingMaxInferBufferRow() const;
 
     bool DeletionVectorsEnabled() const;
     bool DeletionVectorsBitmap64() const;

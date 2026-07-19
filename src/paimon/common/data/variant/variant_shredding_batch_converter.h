@@ -17,6 +17,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "paimon/common/data/shredding/shredding_batch_converter.h"
 #include "paimon/common/data/variant/variant_shredding_write_plan.h"
@@ -26,6 +27,8 @@
 struct ArrowArray;
 
 namespace arrow {
+class Array;
+class Field;
 class MemoryPool;
 class Schema;
 }  // namespace arrow
@@ -53,6 +56,16 @@ class VariantShreddingBatchConverter : public ShreddingBatchConverter {
  private:
     VariantShreddingBatchConverter(const std::shared_ptr<VariantShreddingWritePlan>& plan,
                                    const std::shared_ptr<MemoryPool>& pool);
+
+    /// Converts the logical array at field-index path `path`, shredding it when planned and
+    /// otherwise recursing into struct children whose subtree contains a planned column.
+    /// `ancestors` holds the enclosing struct arrays; rows that are null at any level shred to
+    /// null without decoding the (unspecified) child slot contents.
+    Result<std::shared_ptr<arrow::Array>> ConvertField(
+        const std::shared_ptr<arrow::Array>& logical,
+        const std::shared_ptr<arrow::Field>& logical_field,
+        const std::shared_ptr<arrow::Field>& physical_field, std::vector<int32_t>* path,
+        std::vector<const arrow::Array*>* ancestors) const;
 
     std::shared_ptr<VariantShreddingWritePlan> plan_;
     std::shared_ptr<MemoryPool> pool_;

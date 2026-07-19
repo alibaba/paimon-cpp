@@ -23,6 +23,7 @@
 #include "paimon/common/data/variant/variant_builder.h"
 #include "paimon/common/data/variant/variant_path_segment.h"
 #include "paimon/common/data/variant/variant_type_utils.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/testing/utils/testharness.h"
@@ -72,11 +73,12 @@ class VariantGetTest : public ::testing::Test {
     Result<std::shared_ptr<arrow::Array>> GetAsArrow(
         const std::string& path, const std::shared_ptr<arrow::Field>& target_field) {
         return VariantGetExecutor::GetAsArrow(variant_, path, target_field, cast_args_, pool_,
-                                              arrow::default_memory_pool());
+                                              arrow_pool_);
     }
 
  protected:
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_ = GetArrowPool(pool_);
     std::shared_ptr<GenericVariant> variant_;
     VariantCastArgs cast_args_;
 };
@@ -229,6 +231,18 @@ TEST_F(VariantGetTest, CastToStructTarget) {
     ASSERT_EQ(static_cast<const arrow::StringArray&>(*address.field(0)).GetString(0), "Hangzhou");
     // A target field absent from the variant object is null.
     ASSERT_TRUE(row.field(3)->IsNull(0));
+
+    // With fail_on_error == false a child that cannot cast becomes null while the parent row
+    // stays non-null.
+    auto mixed_target = arrow::field("r", arrow::struct_({arrow::field("string", arrow::int64()),
+                                                          arrow::field("long", arrow::int64())}));
+    ASSERT_OK_AND_ASSIGN(array, GetAsArrow("$", mixed_target));
+    const auto& mixed_row = static_cast<const arrow::StructArray&>(*array);
+    ASSERT_FALSE(mixed_row.IsNull(0));
+    // "string" holds "Hello, World!", which cannot cast to int64.
+    ASSERT_TRUE(mixed_row.field(0)->IsNull(0));
+    ASSERT_FALSE(mixed_row.field(1)->IsNull(0));
+    ASSERT_EQ(static_cast<const arrow::Int64Array&>(*mixed_row.field(1)).Value(0), 12345678901234);
 }
 
 TEST_F(VariantGetTest, CastToStructFromNonObject) {
@@ -236,8 +250,8 @@ TEST_F(VariantGetTest, CastToStructFromNonObject) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Array> array, GetAsArrow("$.array", target));
     ASSERT_TRUE(array->IsNull(0));
     cast_args_.fail_on_error = true;
-    auto result = VariantGetExecutor::GetAsArrow(variant_, "$.array", target, cast_args_, pool_,
-                                                 arrow::default_memory_pool());
+    auto result =
+        VariantGetExecutor::GetAsArrow(variant_, "$.array", target, cast_args_, pool_, arrow_pool_);
     ASSERT_NOK(result);
 }
 
@@ -272,9 +286,8 @@ TEST_F(VariantGetTest, CastToListTarget) {
         arrow::field("l", arrow::list(arrow::struct_({arrow::field("a", arrow::int64())})));
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<GenericVariant> rows,
                          GenericVariant::FromJson("[{\"a\": 1}, {\"a\": 2}]", pool_));
-    ASSERT_OK_AND_ASSIGN(
-        array, VariantGetExecutor::GetAsArrow(rows, "$", list_of_structs, cast_args_, pool_,
-                                              arrow::default_memory_pool()));
+    ASSERT_OK_AND_ASSIGN(array, VariantGetExecutor::GetAsArrow(rows, "$", list_of_structs,
+                                                               cast_args_, pool_, arrow_pool_));
     const auto& struct_list = static_cast<const arrow::ListArray&>(*array);
     ASSERT_EQ(struct_list.value_length(0), 2);
     const auto& elements = static_cast<const arrow::StructArray&>(*struct_list.values());
@@ -283,17 +296,30 @@ TEST_F(VariantGetTest, CastToListTarget) {
 }
 
 TEST_F(VariantGetTest, CastToVariantTarget) {
+    // Re-encodes the extracted sub-variant against a fresh metadata dictionary.
     auto target = VariantTypeUtils::ToArrowField("v", /*nullable=*/true, {});
+    auto read_variant_json = [&](const arrow::Array& array) {
+        const auto& row = static_cast<const arrow::StructArray&>(array);
+        EXPECT_FALSE(row.IsNull(0));
+        std::string_view value = static_cast<const arrow::BinaryArray&>(*row.field(0)).GetView(0);
+        std::string_view metadata =
+            static_cast<const arrow::BinaryArray&>(*row.field(1)).GetView(0);
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<GenericVariant> copied,
+                             GenericVariant::Create(value, metadata, pool_));
+        EXPECT_OK_AND_ASSIGN(std::string json, copied->ToJson());
+        return json;
+    };
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Array> array,
                          GetAsArrow("$.object.address", target));
-    const auto& row = static_cast<const arrow::StructArray&>(*array);
-    ASSERT_FALSE(row.IsNull(0));
-    std::string_view value = static_cast<const arrow::BinaryArray&>(*row.field(0)).GetView(0);
-    std::string_view metadata = static_cast<const arrow::BinaryArray&>(*row.field(1)).GetView(0);
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GenericVariant> copied,
-                         GenericVariant::Create(value, metadata, pool_));
-    ASSERT_OK_AND_ASSIGN(std::string json, copied->ToJson());
-    ASSERT_EQ(json, "{\"city\":\"Hangzhou\",\"street\":\"Main St\"}");
+    ASSERT_EQ(read_variant_json(*array), "{\"city\":\"Hangzhou\",\"street\":\"Main St\"}");
+
+    // A variant null cast to a VARIANT target stays an encoded variant null (a non-null row
+    // whose value renders as JSON null); only scalar targets turn a variant null into SQL NULL.
+    ASSERT_OK_AND_ASSIGN(array, GetAsArrow("$.nullField", target));
+    ASSERT_EQ(read_variant_json(*array), "null");
+    // An unmatched path is SQL NULL by contrast.
+    ASSERT_OK_AND_ASSIGN(array, GetAsArrow("$.missing", target));
+    ASSERT_TRUE(array->IsNull(0));
 }
 
 TEST_F(VariantGetTest, NestedTargetNullSemantics) {

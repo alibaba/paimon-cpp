@@ -70,16 +70,17 @@ class VariantParquetTest : public ::testing::Test {
     }
 
     std::shared_ptr<arrow::StructArray> BuildArray(const std::vector<const char*>& jsons) {
-        auto result = paimon::test::BuildVariantBatch(paimon_schema_->field(0),
-                                                      paimon_schema_->field(1), jsons, pool_);
-        EXPECT_TRUE(result.ok()) << result.status().ToString();
-        return std::move(result).value();
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<arrow::StructArray> batch,
+                             paimon::test::VariantTestData::BuildVariantBatch(
+                                 paimon_schema_->field(0), paimon_schema_->field(1), jsons, pool_));
+        return batch;
     }
 
-    void WriteFile(const std::shared_ptr<arrow::StructArray>& array) {
-        // The production write path maps paimon field ids to parquet field ids.
+    // Writes one batch with the given logical schema through the production parquet write path
+    // (mapping paimon field ids to parquet field ids).
+    void WriteFile(const std::shared_ptr<arrow::Schema>& schema, ArrowArray* c_array) {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Schema> write_schema,
-                             ParquetFieldIdConverter::AddParquetIdsFromPaimonIds(paimon_schema_));
+                             ParquetFieldIdConverter::AddParquetIdsFromPaimonIds(schema));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
                              fs_->Create(file_path_, /*overwrite=*/true));
         ::parquet::WriterProperties::Builder builder;
@@ -88,13 +89,17 @@ class VariantParquetTest : public ::testing::Test {
             auto format_writer,
             ParquetFormatWriter::Create(out, write_schema, writer_properties,
                                         DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE, arrow_pool_));
-        auto arrow_array = std::make_unique<ArrowArray>();
-        ASSERT_TRUE(arrow::ExportArray(*array, arrow_array.get()).ok());
-        ASSERT_OK(format_writer->AddBatch(arrow_array.get()));
+        ASSERT_OK(format_writer->AddBatch(c_array));
         ASSERT_OK(format_writer->Flush());
         ASSERT_OK(format_writer->Finish());
         ASSERT_OK(out->Flush());
         ASSERT_OK(out->Close());
+    }
+
+    void WriteFile(const std::shared_ptr<arrow::StructArray>& array) {
+        auto arrow_array = std::make_unique<ArrowArray>();
+        ASSERT_TRUE(arrow::ExportArray(*array, arrow_array.get()).ok());
+        WriteFile(paimon_schema_, arrow_array.get());
     }
 
     // Writes `jsons` shredded according to the configured ROW-type shredding schema JSON.
@@ -103,6 +108,7 @@ class VariantParquetTest : public ::testing::Test {
         ASSERT_OK_AND_ASSIGN(
             std::shared_ptr<VariantShreddingWritePlan> plan,
             VariantShreddingWritePlan::FromConfiguredSchema(paimon_schema_, shredding_schema_json));
+        ASSERT_NE(plan, nullptr);
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<VariantShreddingBatchConverter> converter,
                              VariantShreddingBatchConverter::Create(plan, pool_));
         auto logical = BuildArray(jsons);
@@ -110,22 +116,7 @@ class VariantParquetTest : public ::testing::Test {
         ASSERT_TRUE(arrow::ExportArray(*logical, c_logical.get()).ok());
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<ArrowArray> c_physical,
                              converter->Convert(c_logical.get()));
-        ASSERT_OK_AND_ASSIGN(
-            std::shared_ptr<arrow::Schema> write_schema,
-            ParquetFieldIdConverter::AddParquetIdsFromPaimonIds(converter->GetPhysicalSchema()));
-        ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
-                             fs_->Create(file_path_, /*overwrite=*/true));
-        ::parquet::WriterProperties::Builder builder;
-        auto writer_properties = builder.build();
-        ASSERT_OK_AND_ASSIGN(
-            auto format_writer,
-            ParquetFormatWriter::Create(out, write_schema, writer_properties,
-                                        DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE, arrow_pool_));
-        ASSERT_OK(format_writer->AddBatch(c_physical.get()));
-        ASSERT_OK(format_writer->Flush());
-        ASSERT_OK(format_writer->Finish());
-        ASSERT_OK(out->Flush());
-        ASSERT_OK(out->Close());
+        WriteFile(converter->GetPhysicalSchema(), c_physical.get());
     }
 
     // Opens the written file and returns the reader plus its imported file schema.
@@ -227,7 +218,10 @@ TEST_F(VariantParquetTest, PhysicalLayoutMatchesJava) {
     WriteFile(array);
 
     // The on-disk layout must match the Java ParquetSchemaConverter: an (unannotated) group
-    // with two REQUIRED BINARY fields `value` (id 0) and `metadata` (id 1).
+    // with two REQUIRED BINARY fields `value` (id 0) and `metadata` (id 1). The raw parquet
+    // reader is required because these parquet-level properties (repetition, physical types,
+    // field ids, the absence of a logical-type annotation) are not visible in the Arrow schema
+    // surfaced by the paimon reader.
     auto file = arrow::io::ReadableFile::Open(file_path_, arrow_pool_.get());
     ASSERT_TRUE(file.ok());
     std::unique_ptr<::parquet::arrow::FileReader> reader;

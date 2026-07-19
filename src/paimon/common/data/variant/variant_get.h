@@ -68,8 +68,9 @@ class VariantGetExecutor {
     /// appends null.
     static Status CastToBuilder(const std::shared_ptr<GenericVariant>& variant,
                                 const std::shared_ptr<arrow::Field>& target_field,
-                                arrow::ArrayBuilder* builder, const VariantCastArgs& cast_args,
-                                const std::shared_ptr<MemoryPool>& pool);
+                                const VariantCastArgs& cast_args,
+                                const std::shared_ptr<MemoryPool>& pool,
+                                arrow::ArrayBuilder* builder);
 
     /// Extracts a sub-variant by `path`, casts it to the (possibly nested) type of
     /// `target_field`, and returns a length-1 arrow array holding the result (a null slot
@@ -77,7 +78,8 @@ class VariantGetExecutor {
     static Result<std::shared_ptr<arrow::Array>> GetAsArrow(
         const std::shared_ptr<GenericVariant>& variant, const std::string& path,
         const std::shared_ptr<arrow::Field>& target_field, const VariantCastArgs& cast_args,
-        const std::shared_ptr<MemoryPool>& pool, arrow::MemoryPool* arrow_pool);
+        const std::shared_ptr<MemoryPool>& pool,
+        const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
 };
 
 }  // namespace paimon

@@ -51,11 +51,13 @@ class VariantReassembler {
     /// @param shredded The physical shredded array read from the file.
     /// @param schema The shredding schema of the column
     ///        (`VariantShreddingUtils::BuildVariantSchema` of the file type).
-    /// @param pool The Arrow memory pool used for the output.
+    /// @param pool The memory pool used for intermediate variant rebuilding.
+    /// @param arrow_pool The Arrow memory pool used for the output array.
     /// @return The unshredded variant array (`VariantTypeUtils::UnshreddedStructType`).
     static Result<std::shared_ptr<arrow::Array>> AssembleVariantArray(
         const std::shared_ptr<arrow::StructArray>& shredded,
-        const std::shared_ptr<VariantSchema>& schema, arrow::MemoryPool* pool);
+        const std::shared_ptr<VariantSchema>& schema, const std::shared_ptr<MemoryPool>& pool,
+        arrow::MemoryPool* arrow_pool);
 
     /// Rebuilds the variant value at `row` of a shredded (sub-)struct into `builder`, following
     /// the same reconstruction algorithm. `schema` describes `shredded`, which may be any level

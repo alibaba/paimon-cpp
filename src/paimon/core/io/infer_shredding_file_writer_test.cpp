@@ -107,9 +107,10 @@ class InferShreddingFileWriterTest : public ::testing::Test {
     }
 
     std::shared_ptr<arrow::Array> BuildBatch(const std::vector<const char*>& jsons) {
-        auto result = BuildVariantBatch(schema_->field(0), schema_->field(1), jsons, pool_);
-        EXPECT_TRUE(result.ok()) << result.status().ToString();
-        return std::move(result).value();
+        EXPECT_OK_AND_ASSIGN(
+            std::shared_ptr<arrow::StructArray> batch,
+            VariantTestData::BuildVariantBatch(schema_->field(0), schema_->field(1), jsons, pool_));
+        return batch;
     }
 
     Status WriteBatch(InferShreddingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>* w,
@@ -127,10 +128,8 @@ class InferShreddingFileWriterTest : public ::testing::Test {
             {"variant.shredding.maxInferBufferRow", std::to_string(buffer_rows)},
             // Keep the manifest format resolvable in test binaries without the avro plugin.
             {"manifest.format", "parquet"}};
-        auto options = CoreOptions::FromMap(option_map);
-        EXPECT_TRUE(options.ok()) << options.status().ToString();
-        auto plan_factory =
-            std::make_shared<VariantShreddingWritePlanFactory>(options.value(), schema_, pool_);
+        EXPECT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap(option_map));
+        auto plan_factory = VariantShreddingWritePlanFactory::Create(options, schema_, pool_);
         auto create_inner = [this](const std::shared_ptr<ShreddingBatchConverter>& converter)
             -> Result<
                 std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>> {

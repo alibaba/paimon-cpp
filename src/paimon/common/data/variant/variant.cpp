@@ -45,14 +45,14 @@ class Variant::Impl {
         return pool_;
     }
 
-    arrow::MemoryPool* GetArrowMemoryPool() const {
-        return arrow_pool_.get();
+    const std::shared_ptr<arrow::MemoryPool>& GetArrowMemoryPool() const {
+        return arrow_pool_;
     }
 
  private:
     std::shared_ptr<GenericVariant> variant_;
     std::shared_ptr<MemoryPool> pool_;
-    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
+    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
 };
 
 Variant::Variant(std::unique_ptr<Impl>&& impl) : impl_(std::move(impl)) {}
@@ -148,7 +148,7 @@ Status VariantAccessBuilder::AddField(struct ArrowSchema* target_type, const std
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Field> target,
                                       arrow::ImportField(target_type));
     // Validate the path eagerly so mistakes fail at build time, not at read time.
-    PAIMON_RETURN_NOT_OK(VariantPathSegment::Parse(path).status());
+    PAIMON_RETURN_NOT_OK(VariantPathSegment::Parse(path));
     // Keep the target field's own metadata (e.g. the variant extension marker of a
     // `Variant::ArrowField` target, which drives the deep re-encode cast) and add the access
     // description to it.

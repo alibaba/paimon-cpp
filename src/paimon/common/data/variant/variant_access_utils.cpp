@@ -28,7 +28,7 @@ namespace paimon {
 
 namespace {
 
-Result<std::string> GetDescription(const std::shared_ptr<arrow::Field>& field) {
+std::string GetDescription(const std::shared_ptr<arrow::Field>& field) {
     if (field->metadata() == nullptr) {
         return std::string();
     }
@@ -58,8 +58,7 @@ std::vector<std::string> SplitDescription(const std::string& description) {
 }
 
 bool HasAccessDescription(const std::shared_ptr<arrow::Field>& field) {
-    auto description = GetDescription(field);
-    return description.ok() && description.value().rfind(VariantAccessUtils::kMetadataKey, 0) == 0;
+    return GetDescription(field).rfind(VariantAccessUtils::kMetadataKey, 0) == 0;
 }
 
 }  // namespace
@@ -94,7 +93,7 @@ Result<std::vector<VariantAccessSpec>> VariantAccessUtils::ParseAccessSpecs(
     std::vector<VariantAccessSpec> specs;
     specs.reserve(access_field->type()->num_fields());
     for (const auto& child : access_field->type()->fields()) {
-        PAIMON_ASSIGN_OR_RAISE(std::string description, GetDescription(child));
+        std::string description = GetDescription(child);
         std::vector<std::string> parts = SplitDescription(description);
         if (parts.size() != 3) {
             return Status::Invalid(

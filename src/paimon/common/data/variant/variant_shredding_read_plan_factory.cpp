@@ -20,6 +20,8 @@
 #include <vector>
 
 #include "arrow/api.h"
+#include "arrow/util/bitmap_ops.h"
+#include "arrow/util/checked_cast.h"
 #include "fmt/format.h"
 #include "paimon/common/data/variant/generic_variant.h"
 #include "paimon/common/data/variant/variant_access_utils.h"
@@ -42,10 +44,12 @@ class FullVariantColumnReadPlan : public ShreddingColumnReadPlan {
  public:
     FullVariantColumnReadPlan(std::shared_ptr<arrow::Field> logical_field,
                               std::shared_ptr<arrow::Field> physical_field,
-                              std::shared_ptr<VariantSchema> schema)
+                              std::shared_ptr<VariantSchema> schema,
+                              std::shared_ptr<MemoryPool> pool)
         : logical_field_(std::move(logical_field)),
           physical_field_(std::move(physical_field)),
-          schema_(std::move(schema)) {}
+          schema_(std::move(schema)),
+          pool_(std::move(pool)) {}
 
     const std::shared_ptr<arrow::Field>& LogicalField() const override {
         return logical_field_;
@@ -62,14 +66,155 @@ class FullVariantColumnReadPlan : public ShreddingColumnReadPlan {
                                                physical_field_->name()));
         }
         auto physical_struct = std::static_pointer_cast<arrow::StructArray>(physical);
-        return VariantReassembler::AssembleVariantArray(physical_struct, schema_, pool);
+        return VariantReassembler::AssembleVariantArray(physical_struct, schema_, pool_, pool);
     }
 
  private:
     std::shared_ptr<arrow::Field> logical_field_;
     std::shared_ptr<arrow::Field> physical_field_;
     std::shared_ptr<VariantSchema> schema_;
+    std::shared_ptr<MemoryPool> pool_;
 };
+
+/// A node of a nested reassembly plan tree: a shredded variant position or a struct level to
+/// descend through.
+struct NestedVariantNode {
+    /// Set when this position is a shredded variant column to reassemble.
+    std::shared_ptr<VariantSchema> schema;
+    /// The struct children (by field index) whose subtree holds shredded variants.
+    std::map<int32_t, NestedVariantNode> children;
+};
+
+/// Reassembles shredded variant columns nested inside a top-level STRUCT column back into their
+/// unshredded `struct<value, metadata>` representation.
+class NestedVariantColumnReadPlan : public ShreddingColumnReadPlan {
+ public:
+    NestedVariantColumnReadPlan(std::shared_ptr<arrow::Field> logical_field,
+                                std::shared_ptr<arrow::Field> physical_field,
+                                NestedVariantNode root, std::shared_ptr<MemoryPool> pool)
+        : logical_field_(std::move(logical_field)),
+          physical_field_(std::move(physical_field)),
+          root_(std::move(root)),
+          pool_(std::move(pool)) {}
+
+    const std::shared_ptr<arrow::Field>& LogicalField() const override {
+        return logical_field_;
+    }
+
+    const std::shared_ptr<arrow::Field>& PhysicalField() const override {
+        return physical_field_;
+    }
+
+    Result<std::shared_ptr<arrow::Array>> Assemble(const std::shared_ptr<arrow::Array>& physical,
+                                                   arrow::MemoryPool* pool) const override {
+        return AssembleNode(physical, logical_field_, root_, pool);
+    }
+
+ private:
+    Result<std::shared_ptr<arrow::Array>> AssembleNode(
+        const std::shared_ptr<arrow::Array>& physical,
+        const std::shared_ptr<arrow::Field>& logical_field, const NestedVariantNode& node,
+        arrow::MemoryPool* pool) const {
+        if (physical->type_id() != arrow::Type::STRUCT) {
+            return Status::Invalid(fmt::format("cannot cast shredded variant field {} to a struct",
+                                               logical_field->name()));
+        }
+        auto physical_struct = std::static_pointer_cast<arrow::StructArray>(physical);
+        if (node.schema != nullptr) {
+            return VariantReassembler::AssembleVariantArray(physical_struct, node.schema, pool_,
+                                                            pool);
+        }
+        const auto& logical_type =
+            arrow::internal::checked_cast<const arrow::StructType&>(*logical_field->type());
+        arrow::ArrayVector children = physical_struct->fields();
+        for (const auto& [index, child_node] : node.children) {
+            PAIMON_ASSIGN_OR_RAISE(children[index],
+                                   AssembleNode(physical_struct->field(index),
+                                                logical_type.field(index), child_node, pool));
+        }
+        std::shared_ptr<arrow::Buffer> validity;
+        int64_t null_count = physical_struct->null_count();
+        if (null_count > 0) {
+            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+                validity,
+                arrow::internal::CopyBitmap(pool, physical_struct->null_bitmap_data(),
+                                            physical_struct->offset(), physical_struct->length()));
+        }
+        return std::make_shared<arrow::StructArray>(logical_field->type(),
+                                                    physical_struct->length(), std::move(children),
+                                                    std::move(validity), null_count);
+    }
+
+    std::shared_ptr<arrow::Field> logical_field_;
+    std::shared_ptr<arrow::Field> physical_field_;
+    NestedVariantNode root_;
+    std::shared_ptr<MemoryPool> pool_;
+};
+
+/// Whether the field is a STRUCT (that is not itself a variant) holding a variant field in its
+/// subtree, descending through structs only (variants inside arrays or maps are never shredded).
+bool ContainsStructNestedVariant(const std::shared_ptr<arrow::Field>& field) {
+    if (VariantTypeUtils::IsVariantField(field) || field->type()->id() != arrow::Type::STRUCT) {
+        return false;
+    }
+    for (const auto& child : field->type()->fields()) {
+        if (VariantTypeUtils::IsVariantField(child) || ContainsStructNestedVariant(child)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/// Builds the nested reassembly plan of one top-level struct column: substitutes the shredded
+/// file types at nested variant positions into `read_field` (producing the physical field to
+/// push down) and records the reassembly schemas in `node`. Returns whether any nested position
+/// is shredded in the file.
+Result<bool> BuildNestedVariantPlan(const std::shared_ptr<arrow::Field>& read_field,
+                                    const std::shared_ptr<arrow::Field>& file_field,
+                                    std::shared_ptr<arrow::Field>* physical_field,
+                                    NestedVariantNode* node) {
+    const auto& read_type =
+        arrow::internal::checked_cast<const arrow::StructType&>(*read_field->type());
+    const auto& file_type =
+        arrow::internal::checked_cast<const arrow::StructType&>(*file_field->type());
+    arrow::FieldVector physical_children = read_type.fields();
+    bool any_shredded = false;
+    for (int32_t i = 0; i < read_type.num_fields(); ++i) {
+        const std::shared_ptr<arrow::Field>& read_child = read_type.field(i);
+        std::shared_ptr<arrow::Field> file_child = file_type.GetFieldByName(read_child->name());
+        if (file_child == nullptr) {
+            // The nested column is absent in the file (schema evolution); it is filled with
+            // nulls downstream.
+            continue;
+        }
+        if (VariantTypeUtils::IsVariantField(read_child)) {
+            if (!VariantShreddingUtils::IsShreddedFileType(file_child->type())) {
+                // The file stores the nested variant unshredded; nothing to reassemble.
+                continue;
+            }
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<VariantSchema> schema,
+                                   VariantShreddingUtils::BuildVariantSchema(file_child->type()));
+            node->children[i].schema = std::move(schema);
+            physical_children[i] = read_child->WithType(file_child->type());
+            any_shredded = true;
+        } else if (ContainsStructNestedVariant(read_child) &&
+                   file_child->type()->id() == arrow::Type::STRUCT) {
+            std::shared_ptr<arrow::Field> physical_child;
+            NestedVariantNode child_node;
+            PAIMON_ASSIGN_OR_RAISE(
+                bool child_shredded,
+                BuildNestedVariantPlan(read_child, file_child, &physical_child, &child_node));
+            if (child_shredded) {
+                node->children[i] = std::move(child_node);
+                physical_children[i] = physical_child;
+                any_shredded = true;
+            }
+        }
+    }
+    *physical_field =
+        any_shredded ? read_field->WithType(arrow::struct_(physical_children)) : read_field;
+    return any_shredded;
+}
 
 /// One access path segment resolved against the shredded schema of one file.
 struct ResolvedSegment {
@@ -153,6 +298,7 @@ class VariantAccessColumnReadPlan : public ShreddingColumnReadPlan {
         const auto& physical_struct = static_cast<const arrow::StructArray&>(*physical);
         std::unique_ptr<arrow::ArrayBuilder> builder;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::MakeBuilder(pool, logical_field_->type(), &builder));
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Reserve(physical_struct.length()));
         auto* struct_builder = static_cast<arrow::StructBuilder*>(builder.get());
         for (int64_t row = 0; row < physical_struct.length(); ++row) {
             if (physical_struct.IsNull(row)) {
@@ -160,7 +306,7 @@ class VariantAccessColumnReadPlan : public ShreddingColumnReadPlan {
                 continue;
             }
             if (physical_struct.field(schema_->top_level_metadata_idx)->IsNull(row)) {
-                return VariantBinaryUtil::MalformedVariant();
+                return VariantBinaryUtil::MalformedVariant("the variant metadata column is null");
             }
             std::string_view metadata = static_cast<const arrow::BinaryArray&>(
                                             *physical_struct.field(schema_->top_level_metadata_idx))
@@ -169,7 +315,7 @@ class VariantAccessColumnReadPlan : public ShreddingColumnReadPlan {
             for (size_t i = 0; i < specs_.size(); ++i) {
                 PAIMON_RETURN_NOT_OK(
                     ExtractField(physical_struct, row, metadata, specs_[i],
-                                 struct_builder->field_builder(static_cast<int>(i))));
+                                 struct_builder->field_builder(static_cast<int32_t>(i))));
             }
         }
         std::shared_ptr<arrow::Array> result;
@@ -202,7 +348,8 @@ class VariantAccessColumnReadPlan : public ShreddingColumnReadPlan {
                     *object_array.field(segment.extraction_idx));
                 if (field_array.IsNull(row)) {
                     // Shredded object fields must not be null.
-                    return VariantBinaryUtil::MalformedVariant();
+                    return VariantBinaryUtil::MalformedVariant(
+                        "a shredded object field group is null");
                 }
                 schema = schema->object_schema[segment.extraction_idx].schema.get();
                 current = &field_array;
@@ -225,7 +372,8 @@ class VariantAccessColumnReadPlan : public ShreddingColumnReadPlan {
                     static_cast<const arrow::StructArray&>(*list_array.values());
                 if (element_array.IsNull(element_row)) {
                     // Shredded array elements must not be null.
-                    return VariantBinaryUtil::MalformedVariant();
+                    return VariantBinaryUtil::MalformedVariant(
+                        "a shredded array element group is null");
                 }
                 schema = schema->array_schema.get();
                 current = &element_array;
@@ -241,8 +389,8 @@ class VariantAccessColumnReadPlan : public ShreddingColumnReadPlan {
                                                                   pool_, &variant_builder));
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GenericVariant> variant,
                                    variant_builder.Build(pool_));
-            return VariantGetExecutor::CastToBuilder(variant, resolved.spec.target_field, builder,
-                                                     resolved.spec.cast_args, pool_);
+            return VariantGetExecutor::CastToBuilder(variant, resolved.spec.target_field,
+                                                     resolved.spec.cast_args, pool_, builder);
         }
         if (schema->variant_idx >= 0 && !current->field(schema->variant_idx)->IsNull(row)) {
             std::string_view value =
@@ -250,10 +398,11 @@ class VariantAccessColumnReadPlan : public ShreddingColumnReadPlan {
                     .GetView(row);
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GenericVariant> variant,
                                    GenericVariant::Create(value, metadata, pool_));
-            return VariantGetExecutor::CastToBuilder(variant, resolved.spec.target_field, builder,
-                                                     resolved.spec.cast_args, pool_);
+            return VariantGetExecutor::CastToBuilder(variant, resolved.spec.target_field,
+                                                     resolved.spec.cast_args, pool_, builder);
         }
-        return VariantBinaryUtil::MalformedVariant();
+        return VariantBinaryUtil::MalformedVariant(
+            "both typed_value and value of a required variant are null");
     }
 
     Status ExtractFromBinary(const arrow::StructArray& current, int64_t row,
@@ -281,8 +430,8 @@ class VariantAccessColumnReadPlan : public ShreddingColumnReadPlan {
                 variant = nullptr;
             }
         }
-        return VariantGetExecutor::CastToBuilder(variant, resolved.spec.target_field, builder,
-                                                 resolved.spec.cast_args, pool_);
+        return VariantGetExecutor::CastToBuilder(variant, resolved.spec.target_field,
+                                                 resolved.spec.cast_args, pool_, builder);
     }
 
     std::shared_ptr<arrow::Field> logical_field_;
@@ -300,14 +449,31 @@ VariantShreddingReadPlanFactory::CreateReadPlans(const std::shared_ptr<arrow::Sc
                                                  const std::shared_ptr<MemoryPool>& pool) {
     std::map<std::string, std::shared_ptr<ShreddingColumnReadPlan>> plans;
     for (const auto& read_field : read_schema->fields()) {
+        bool nested_variant = ContainsStructNestedVariant(read_field);
         if (!VariantTypeUtils::IsVariantField(read_field) &&
-            !VariantAccessUtils::IsVariantAccessType(read_field->type())) {
+            !VariantAccessUtils::IsVariantAccessType(read_field->type()) && !nested_variant) {
             continue;
         }
         auto file_field = file_schema->GetFieldByName(read_field->name());
         if (file_field == nullptr) {
             // The column is absent in the file (schema evolution); it is filled with nulls
             // downstream.
+            continue;
+        }
+        if (nested_variant) {
+            if (file_field->type()->id() != arrow::Type::STRUCT) {
+                continue;
+            }
+            std::shared_ptr<arrow::Field> physical_field;
+            NestedVariantNode root;
+            PAIMON_ASSIGN_OR_RAISE(
+                bool any_shredded,
+                BuildNestedVariantPlan(read_field, file_field, &physical_field, &root));
+            if (any_shredded) {
+                plans.emplace(read_field->name(),
+                              std::make_shared<NestedVariantColumnReadPlan>(
+                                  read_field, physical_field, std::move(root), pool));
+            }
             continue;
         }
         bool file_shredded = VariantShreddingUtils::IsShreddedFileType(file_field->type());
@@ -331,7 +497,7 @@ VariantShreddingReadPlanFactory::CreateReadPlans(const std::shared_ptr<arrow::Sc
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<VariantSchema> schema,
                                    VariantShreddingUtils::BuildVariantSchema(file_field->type()));
             plans.emplace(read_field->name(), std::make_shared<FullVariantColumnReadPlan>(
-                                                  read_field, file_field, std::move(schema)));
+                                                  read_field, file_field, std::move(schema), pool));
         }
         // A plain VARIANT read of an unshredded file needs no plan.
     }

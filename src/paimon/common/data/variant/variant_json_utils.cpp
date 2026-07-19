@@ -100,24 +100,36 @@ std::string FloatingToJavaString(T value) {
             break;
         }
     }
-    std::string_view repr(buf, static_cast<size_t>(len));
-    bool negative = repr[0] == '-';
-    if (negative) {
-        repr.remove_prefix(1);
-    }
-    size_t e_pos = repr.find('e');
-    std::string_view mantissa = repr.substr(0, e_pos);
-    size_t exp_start = e_pos + 1;
-    // `std::from_chars` does not accept a leading '+'.
-    if (repr[exp_start] == '+') {
-        ++exp_start;
-    }
-    int32_t exp = 0;
-    std::from_chars(repr.data() + exp_start, repr.data() + repr.size(), exp);
+    auto parse = [](std::string_view repr, std::string* digits, int32_t* exp, bool* negative) {
+        *negative = repr[0] == '-';
+        if (*negative) {
+            repr.remove_prefix(1);
+        }
+        size_t e_pos = repr.find('e');
+        std::string_view mantissa = repr.substr(0, e_pos);
+        size_t exp_start = e_pos + 1;
+        // `std::from_chars` does not accept a leading '+'.
+        if (repr[exp_start] == '+') {
+            ++exp_start;
+        }
+        *exp = 0;
+        std::from_chars(repr.data() + exp_start, repr.data() + repr.size(), *exp);
+        digits->clear();
+        digits->push_back(mantissa[0]);
+        if (mantissa.size() > 2) {
+            digits->append(mantissa.substr(2));
+        }
+    };
     std::string digits;
-    digits.push_back(mantissa[0]);
-    if (mantissa.size() > 2) {
-        digits.append(mantissa.substr(2));
+    int32_t exp = 0;
+    bool negative = false;
+    parse(std::string_view(buf, static_cast<size_t>(len)), &digits, &exp, &negative);
+    if (digits.size() == 1 && (exp < -3 || exp >= 8)) {
+        // Java's FloatingDecimal emits at least two significant digits when the first digit
+        // alone would terminate in scientific form; re-render the correctly rounded two-digit
+        // representation (e.g. `Double.MIN_VALUE` is `4.9E-324`, not `5.0E-324`).
+        len = std::snprintf(buf, sizeof(buf), "%.1e", static_cast<double>(value));
+        parse(std::string_view(buf, static_cast<size_t>(len)), &digits, &exp, &negative);
     }
     return JavaFloatingToString(digits, exp, negative);
 }

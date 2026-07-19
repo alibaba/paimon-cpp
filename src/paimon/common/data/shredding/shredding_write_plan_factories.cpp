@@ -35,8 +35,7 @@ std::shared_ptr<ShreddingWritePlanFactory> ShreddingWritePlanFactories::SelectAc
             return map_factory;
         }
     }
-    auto variant_factory =
-        std::make_shared<VariantShreddingWritePlanFactory>(options, write_schema, pool);
+    auto variant_factory = VariantShreddingWritePlanFactory::Create(options, write_schema, pool);
     if (variant_factory->ShouldCreateWritePlan()) {
         return variant_factory;
     }

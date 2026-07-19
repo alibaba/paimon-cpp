@@ -291,7 +291,9 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::ApplyVariantShreddin
     const std::shared_ptr<arrow::Schema>& read_schema) const {
     bool has_variant_field = false;
     for (const auto& read_field : read_schema->fields()) {
-        if (VariantTypeUtils::IsVariantField(read_field)) {
+        // Variant columns may be nested inside struct columns; a variant-access projection also
+        // matches because it carries the variant extension marker itself.
+        if (VariantTypeUtils::ContainsVariantField(read_field)) {
             has_variant_field = true;
             break;
         }
@@ -303,8 +305,9 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::ApplyVariantShreddin
                            file_reader->GetFileSchema());
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> file_arrow_schema,
                                       arrow::ImportSchema(file_schema.get()));
-    PAIMON_ASSIGN_OR_RAISE(auto plans, VariantShreddingReadPlanFactory::CreateReadPlans(
-                                           read_schema, file_arrow_schema, pool_));
+    std::map<std::string, std::shared_ptr<ShreddingColumnReadPlan>> plans;
+    PAIMON_ASSIGN_OR_RAISE(plans, VariantShreddingReadPlanFactory::CreateReadPlans(
+                                      read_schema, file_arrow_schema, pool_));
     if (!plans.empty()) {
         file_reader =
             std::make_unique<ShreddingFileReader>(std::move(file_reader), std::move(plans), pool_);

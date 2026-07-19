@@ -35,12 +35,16 @@ namespace paimon {
 
 /// Creates VARIANT shredding batch converters, either from the configured
 /// `variant.shreddingSchema` or, when `variant.inferShreddingSchema` is enabled, by inferring a
-/// shredding schema from sampled rows buffered per file.
+/// shredding schema from sampled rows buffered per file. Variant columns nested inside ROW
+/// (struct) columns are inferred and shredded too; variants inside arrays or maps are not (as in
+/// Java).
 class VariantShreddingWritePlanFactory : public ShreddingWritePlanFactory {
  public:
-    VariantShreddingWritePlanFactory(const CoreOptions& options,
-                                     const std::shared_ptr<arrow::Schema>& write_schema,
-                                     const std::shared_ptr<MemoryPool>& pool);
+    /// Creates the factory. The `variant.*` option values are already parsed and validated by
+    /// `CoreOptions::FromMap`, so creation cannot fail on configuration.
+    static std::shared_ptr<VariantShreddingWritePlanFactory> Create(
+        const CoreOptions& options, const std::shared_ptr<arrow::Schema>& write_schema,
+        const std::shared_ptr<MemoryPool>& pool);
 
     bool ShouldCreateWritePlan() const override;
 
@@ -52,21 +56,34 @@ class VariantShreddingWritePlanFactory : public ShreddingWritePlanFactory {
         const std::string& file_format_identifier,
         const std::vector<std::shared_ptr<arrow::Array>>& sample_batches) const override;
 
+    MetadataFinalizer CreateMetadataFinalizer(
+        const std::shared_ptr<ShreddingBatchConverter>& converter) const override {
+        // The shredded physical schema is self-describing; no per-file metadata is needed.
+        return nullptr;
+    }
+
  private:
+    VariantShreddingWritePlanFactory(std::optional<std::string> configured_schema,
+                                     bool infer_enabled, int32_t max_schema_width,
+                                     int32_t max_schema_depth, double min_field_cardinality_ratio,
+                                     int32_t max_infer_buffer_row,
+                                     const std::shared_ptr<arrow::Schema>& write_schema,
+                                     const std::shared_ptr<MemoryPool>& pool);
+
     bool HasConfiguredShreddingSchema() const;
-    bool ContainsVariantField() const;
+    /// Whether the write schema holds a shreddable variant field: at the top level or nested
+    /// inside structs only (variants inside arrays or maps are never shredded).
+    bool ContainsShreddableVariantField() const;
 
     std::shared_ptr<arrow::Schema> write_schema_;
     std::shared_ptr<MemoryPool> pool_;
 
-    // Option values resolved at construction; a parse failure is deferred to CreateConverter.
     std::optional<std::string> configured_schema_;
     bool infer_enabled_ = false;
     int32_t max_schema_width_ = 0;
     int32_t max_schema_depth_ = 0;
     double min_field_cardinality_ratio_ = 0.0;
     int32_t max_infer_buffer_row_ = 0;
-    Status config_status_ = Status::OK();
 };
 
 }  // namespace paimon

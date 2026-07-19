@@ -26,6 +26,7 @@
 
 #include "arrow/api.h"
 #include "arrow/util/checked_cast.h"
+#include "fmt/format.h"
 #include "paimon/common/data/variant/generic_variant.h"
 #include "paimon/common/data/variant/variant_builder.h"
 #include "paimon/common/data/variant/variant_type_utils.h"
@@ -144,7 +145,8 @@ Status Rebuild(const Cursor& cursor, std::string_view metadata, const VariantSch
             for (size_t field_idx = 0; field_idx < schema.object_schema.size(); ++field_idx) {
                 // Shredded fields must not be null.
                 if (object_cursor.IsNullAt(static_cast<int32_t>(field_idx))) {
-                    return VariantBinaryUtil::MalformedVariant();
+                    return VariantBinaryUtil::MalformedVariant(
+                        "a shredded object field group is null");
                 }
                 const std::string& field_name = schema.object_schema[field_idx].name;
                 const VariantSchema& field_schema = *schema.object_schema[field_idx].schema;
@@ -169,17 +171,21 @@ Status Rebuild(const Cursor& cursor, std::string_view metadata, const VariantSch
                     GenericVariant::Create(cursor.GetBinary(variant_idx), metadata, pool));
                 PAIMON_ASSIGN_OR_RAISE(VariantValueType leftover_type, leftover->GetType());
                 if (leftover_type != VariantValueType::kObject) {
-                    return VariantBinaryUtil::MalformedVariant();
+                    return VariantBinaryUtil::MalformedVariant(
+                        "the value column of a shredded object is not an object");
                 }
                 PAIMON_ASSIGN_OR_RAISE(int32_t leftover_size, leftover->ObjectSize());
                 for (int32_t i = 0; i < leftover_size; ++i) {
-                    PAIMON_ASSIGN_OR_RAISE(auto field, leftover->GetFieldAtIndex(i));
+                    PAIMON_ASSIGN_OR_RAISE(std::optional<GenericVariant::ObjectField> field,
+                                           leftover->GetFieldAtIndex(i));
                     if (!field.has_value()) {
-                        return VariantBinaryUtil::MalformedVariant();
+                        return VariantBinaryUtil::MalformedVariant(
+                            "a leftover object field is missing");
                     }
                     // `value` must not contain any shredded field.
                     if (schema.object_schema_map.count(field->key) > 0) {
-                        return VariantBinaryUtil::MalformedVariant();
+                        return VariantBinaryUtil::MalformedVariant(fmt::format(
+                            "the value column duplicates the shredded field '{}'", field->key));
                     }
                     int32_t id = builder->AddKey(field->key);
                     fields.emplace_back(field->key, id, builder->GetWritePos() - start);
@@ -196,7 +202,8 @@ Status Rebuild(const Cursor& cursor, std::string_view metadata, const VariantSch
         return builder->AppendVariant(*variant);
     } else {
         // The variant is missing in a context where it must be present; the data is invalid.
-        return VariantBinaryUtil::MalformedVariant();
+        return VariantBinaryUtil::MalformedVariant(
+            "both typed_value and value of a required variant are null");
     }
 }
 
@@ -211,14 +218,14 @@ Status VariantReassembler::RebuildValue(const arrow::StructArray& shredded, int6
 
 Result<std::shared_ptr<arrow::Array>> VariantReassembler::AssembleVariantArray(
     const std::shared_ptr<arrow::StructArray>& shredded,
-    const std::shared_ptr<VariantSchema>& schema, arrow::MemoryPool* pool) {
+    const std::shared_ptr<VariantSchema>& schema, const std::shared_ptr<MemoryPool>& pool,
+    arrow::MemoryPool* arrow_pool) {
     if (schema->top_level_metadata_idx < 0) {
-        return VariantBinaryUtil::MalformedVariant();
+        return VariantBinaryUtil::MalformedVariant("a shredded file column misses metadata");
     }
-    std::shared_ptr<MemoryPool> paimon_pool = GetDefaultPool();
     auto output_type = VariantTypeUtils::UnshreddedStructType();
     std::unique_ptr<arrow::ArrayBuilder> output_builder;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::MakeBuilder(pool, output_type, &output_builder));
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::MakeBuilder(arrow_pool, output_type, &output_builder));
     auto* struct_builder = static_cast<arrow::StructBuilder*>(output_builder.get());
     auto* value_builder = static_cast<arrow::BinaryBuilder*>(struct_builder->field_builder(0));
     auto* metadata_builder = static_cast<arrow::BinaryBuilder*>(struct_builder->field_builder(1));
@@ -231,23 +238,26 @@ Result<std::shared_ptr<arrow::Array>> VariantReassembler::AssembleVariantArray(
         }
         Cursor cursor{shredded.get(), row};
         if (cursor.IsNullAt(schema->top_level_metadata_idx)) {
-            return VariantBinaryUtil::MalformedVariant();
+            return VariantBinaryUtil::MalformedVariant("the variant metadata column is null");
         }
         std::string_view metadata = cursor.GetBinary(schema->top_level_metadata_idx);
         PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder->Append());
         if (unshredded) {
             // Rebuilding is unnecessary for unshredded variants.
+            // TODO(nicholas): avoid copying the value/metadata binaries through the builder for
+            // unshredded files; the physical arrays could be returned directly with at most a
+            // per-row malformed-variant check.
             if (cursor.IsNullAt(schema->variant_idx)) {
-                return VariantBinaryUtil::MalformedVariant();
+                return VariantBinaryUtil::MalformedVariant(
+                    "the value column of an unshredded variant is null");
             }
             PAIMON_RETURN_NOT_OK_FROM_ARROW(
                 value_builder->Append(cursor.GetBinary(schema->variant_idx)));
             PAIMON_RETURN_NOT_OK_FROM_ARROW(metadata_builder->Append(metadata));
         } else {
             VariantBuilder builder(/*allow_duplicate_keys=*/false);
-            PAIMON_RETURN_NOT_OK(Rebuild(cursor, metadata, *schema, paimon_pool, &builder));
-            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GenericVariant> variant,
-                                   builder.Build(paimon_pool));
+            PAIMON_RETURN_NOT_OK(Rebuild(cursor, metadata, *schema, pool, &builder));
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GenericVariant> variant, builder.Build(pool));
             PAIMON_RETURN_NOT_OK_FROM_ARROW(value_builder->Append(variant->RawValue()));
             PAIMON_RETURN_NOT_OK_FROM_ARROW(metadata_builder->Append(variant->Metadata()));
         }

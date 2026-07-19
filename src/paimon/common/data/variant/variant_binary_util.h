@@ -102,7 +102,9 @@ class VariantBinaryUtil {
         int32_t data_start;
     };
 
-    static Status MalformedVariant();
+    /// Creates the MALFORMED_VARIANT error. `message` describes the specific corruption for
+    /// debugging and is appended to the error when non-empty.
+    static Status MalformedVariant(const std::string& message = "");
     static Status UnknownPrimitiveTypeInVariant(int32_t id);
     static Status VariantConstructorSizeLimit();
     static Status UnexpectedType(VariantValueType type);
@@ -113,7 +115,7 @@ class VariantBinaryUtil {
 
     /// Writes the least significant `num_bytes` bytes in `value` into
     /// `bytes[pos, pos + num_bytes)` in little endian.
-    static void WriteLong(uint8_t* bytes, int32_t pos, int64_t value, int32_t num_bytes);
+    static void WriteLong(int64_t value, int32_t num_bytes, uint8_t* bytes, int32_t pos);
 
     /// Reads a little-endian signed long value from `bytes[pos, pos + num_bytes)`.
     static Result<int64_t> ReadLong(std::string_view bytes, int32_t pos, int32_t num_bytes);
@@ -127,7 +129,7 @@ class VariantBinaryUtil {
     static Result<int32_t> CheckedElementPos(int32_t base, int32_t offset, size_t buffer_size) {
         int64_t pos = static_cast<int64_t>(base) + offset;
         if (pos >= static_cast<int64_t>(buffer_size)) {
-            return MalformedVariant();
+            return MalformedVariant("element offset points outside the value buffer");
         }
         return static_cast<int32_t>(pos);
     }

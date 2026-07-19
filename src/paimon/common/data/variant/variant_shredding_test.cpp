@@ -39,17 +39,14 @@ class VariantShreddingTest : public ::testing::Test {
     std::shared_ptr<arrow::StructArray> RoundTrip(
         const std::shared_ptr<arrow::DataType>& shredding_type,
         const std::vector<const char*>& jsons) {
-        auto physical_result = VariantShreddingUtils::VariantShreddingSchema(shredding_type);
-        EXPECT_TRUE(physical_result.ok()) << physical_result.status().ToString();
-        auto physical = physical_result.value();
-        auto schema_result = VariantShreddingUtils::BuildVariantSchema(physical);
-        EXPECT_TRUE(schema_result.ok()) << schema_result.status().ToString();
-        auto schema = schema_result.value();
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> physical,
+                             VariantShreddingUtils::VariantShreddingSchema(shredding_type));
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<VariantSchema> schema,
+                             VariantShreddingUtils::BuildVariantSchema(physical));
 
-        auto writer_result =
-            VariantShreddedColumnWriter::Create(schema, physical, arrow::default_memory_pool());
-        EXPECT_TRUE(writer_result.ok()) << writer_result.status().ToString();
-        auto& writer = writer_result.value();
+        EXPECT_OK_AND_ASSIGN(
+            std::unique_ptr<VariantShreddedColumnWriter> writer,
+            VariantShreddedColumnWriter::Create(schema, physical, arrow::default_memory_pool()));
         std::vector<std::string> expected_jsons;
         for (const char* json : jsons) {
             if (json == nullptr) {
@@ -57,21 +54,19 @@ class VariantShreddingTest : public ::testing::Test {
                 expected_jsons.emplace_back();
                 continue;
             }
-            auto variant = GenericVariant::FromJson(json, pool_);
-            EXPECT_TRUE(variant.ok()) << variant.status().ToString();
-            auto to_json = variant.value()->ToJson();
-            EXPECT_TRUE(to_json.ok());
-            expected_jsons.push_back(to_json.value());
-            EXPECT_OK(writer->Append(*variant.value()));
+            EXPECT_OK_AND_ASSIGN(std::shared_ptr<GenericVariant> variant,
+                                 GenericVariant::FromJson(json, pool_));
+            EXPECT_OK_AND_ASSIGN(std::string expected_json, variant->ToJson());
+            expected_jsons.push_back(std::move(expected_json));
+            EXPECT_OK(writer->Append(*variant));
         }
-        auto shredded_result = writer->Finish();
-        EXPECT_TRUE(shredded_result.ok()) << shredded_result.status().ToString();
-        auto shredded = std::static_pointer_cast<arrow::StructArray>(shredded_result.value());
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<arrow::Array> shredded_array, writer->Finish());
+        auto shredded = std::static_pointer_cast<arrow::StructArray>(shredded_array);
 
-        auto assembled_result = VariantReassembler::AssembleVariantArray(
-            shredded, schema, arrow::default_memory_pool());
-        EXPECT_TRUE(assembled_result.ok()) << assembled_result.status().ToString();
-        auto assembled = std::static_pointer_cast<arrow::StructArray>(assembled_result.value());
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<arrow::Array> assembled_array,
+                             VariantReassembler::AssembleVariantArray(
+                                 shredded, schema, pool_, arrow::default_memory_pool()));
+        auto assembled = std::static_pointer_cast<arrow::StructArray>(assembled_array);
         EXPECT_EQ(assembled->length(), static_cast<int64_t>(jsons.size()));
         auto value_column = std::static_pointer_cast<arrow::BinaryArray>(assembled->field(0));
         auto metadata_column = std::static_pointer_cast<arrow::BinaryArray>(assembled->field(1));
@@ -82,12 +77,11 @@ class VariantShreddingTest : public ::testing::Test {
                 continue;
             }
             EXPECT_FALSE(assembled->IsNull(i));
-            auto variant = GenericVariant::Create(value_column->GetView(i),
-                                                  metadata_column->GetView(i), pool_);
-            EXPECT_TRUE(variant.ok()) << variant.status().ToString();
-            auto actual_json = variant.value()->ToJson();
-            EXPECT_TRUE(actual_json.ok()) << actual_json.status().ToString();
-            EXPECT_EQ(actual_json.value(), expected_jsons[i]);
+            EXPECT_OK_AND_ASSIGN(std::shared_ptr<GenericVariant> variant,
+                                 GenericVariant::Create(value_column->GetView(i),
+                                                        metadata_column->GetView(i), pool_));
+            EXPECT_OK_AND_ASSIGN(std::string actual_json, variant->ToJson());
+            EXPECT_EQ(actual_json, expected_jsons[i]);
         }
         return shredded;
     }

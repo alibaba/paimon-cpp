@@ -85,8 +85,11 @@ std::string VariantDecimal::ToPlainString() const {
     return result;
 }
 
-Status VariantBinaryUtil::MalformedVariant() {
-    return Status::Invalid("MALFORMED_VARIANT");
+Status VariantBinaryUtil::MalformedVariant(const std::string& message) {
+    if (message.empty()) {
+        return Status::Invalid("MALFORMED_VARIANT");
+    }
+    return Status::Invalid(fmt::format("MALFORMED_VARIANT: {}", message));
 }
 
 Status VariantBinaryUtil::UnknownPrimitiveTypeInVariant(int32_t id) {
@@ -107,12 +110,13 @@ Status VariantBinaryUtil::UnexpectedType(VariantValueType type) {
 
 Status VariantBinaryUtil::CheckIndex(int32_t pos, int32_t length) {
     if (pos < 0 || pos >= length) {
-        return MalformedVariant();
+        return MalformedVariant(
+            fmt::format("index {} is out of bounds for a buffer of {} bytes", pos, length));
     }
     return Status::OK();
 }
 
-void VariantBinaryUtil::WriteLong(uint8_t* bytes, int32_t pos, int64_t value, int32_t num_bytes) {
+void VariantBinaryUtil::WriteLong(int64_t value, int32_t num_bytes, uint8_t* bytes, int32_t pos) {
     for (int32_t i = 0; i < num_bytes; ++i) {
         bytes[pos + i] = static_cast<uint8_t>((static_cast<uint64_t>(value) >> (8 * i)) & 0xFF);
     }
@@ -147,7 +151,7 @@ Result<int32_t> VariantBinaryUtil::ReadUnsigned(std::string_view bytes, int32_t 
         result |= unsigned_byte_value << (8 * i);
     }
     if (result < 0 || result > std::numeric_limits<int32_t>::max()) {
-        return MalformedVariant();
+        return MalformedVariant(fmt::format("unsigned value {} does not fit into int32", result));
     }
     return static_cast<int32_t>(result);
 }
@@ -348,7 +352,9 @@ namespace {
 // Checks whether the precision and scale of the decimal are within the limit.
 Status CheckDecimal(const VariantDecimal& d, int32_t max_precision) {
     if (d.Precision() > max_precision || d.scale > max_precision) {
-        return VariantBinaryUtil::MalformedVariant();
+        return VariantBinaryUtil::MalformedVariant(
+            fmt::format("decimal precision {} or scale {} exceeds the maximum precision {}",
+                        d.Precision(), d.scale, max_precision));
     }
     return Status::OK();
 }
@@ -519,7 +525,7 @@ Result<VariantBinaryUtil::ObjectInfo> VariantBinaryUtil::GetObjectInfo(std::stri
     int64_t data_start =
         offset_start + (static_cast<int64_t>(info.num_elements) + 1) * info.offset_size;
     if (data_start > static_cast<int64_t>(value.size())) {
-        return MalformedVariant();
+        return MalformedVariant("object layout exceeds the value buffer");
     }
     info.offset_start = static_cast<int32_t>(offset_start);
     info.data_start = static_cast<int32_t>(data_start);
@@ -548,7 +554,7 @@ Result<VariantBinaryUtil::ArrayInfo> VariantBinaryUtil::GetArrayInfo(std::string
     int64_t data_start = static_cast<int64_t>(info.offset_start) +
                          (static_cast<int64_t>(info.num_elements) + 1) * info.offset_size;
     if (data_start > static_cast<int64_t>(value.size())) {
-        return MalformedVariant();
+        return MalformedVariant("array layout exceeds the value buffer");
     }
     info.data_start = static_cast<int32_t>(data_start);
     return info;
@@ -562,7 +568,8 @@ Result<std::string_view> VariantBinaryUtil::GetMetadataKey(std::string_view meta
     int32_t offset_size = ((static_cast<uint8_t>(metadata[0]) >> 6) & 0x3) + 1;
     PAIMON_ASSIGN_OR_RAISE(int32_t dict_size, ReadUnsigned(metadata, 1, offset_size));
     if (id >= dict_size) {
-        return MalformedVariant();
+        return MalformedVariant(fmt::format(
+            "metadata key id {} is out of bounds for a dictionary of {} keys", id, dict_size));
     }
     // There are a header byte, a `dict_size` with `offset_size` bytes, and `(dict_size + 1)`
     // offsets before the string data.
@@ -570,7 +577,7 @@ Result<std::string_view> VariantBinaryUtil::GetMetadataKey(std::string_view meta
     // corrupted dictionary size.
     int64_t string_start64 = 1 + (static_cast<int64_t>(dict_size) + 2) * offset_size;
     if (string_start64 > static_cast<int64_t>(length)) {
-        return MalformedVariant();
+        return MalformedVariant("metadata dictionary layout exceeds the metadata buffer");
     }
     auto string_start = static_cast<int32_t>(string_start64);
     PAIMON_ASSIGN_OR_RAISE(int32_t offset,
@@ -578,10 +585,10 @@ Result<std::string_view> VariantBinaryUtil::GetMetadataKey(std::string_view meta
     PAIMON_ASSIGN_OR_RAISE(int32_t next_offset,
                            ReadUnsigned(metadata, 1 + (id + 2) * offset_size, offset_size));
     if (offset > next_offset) {
-        return MalformedVariant();
+        return MalformedVariant("metadata key offsets are not monotonic");
     }
     if (static_cast<int64_t>(string_start) + next_offset > static_cast<int64_t>(length)) {
-        return MalformedVariant();
+        return MalformedVariant("metadata key data exceeds the metadata buffer");
     }
     return metadata.substr(string_start + offset, next_offset - offset);
 }

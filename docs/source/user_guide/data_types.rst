@@ -241,14 +241,17 @@ and `Arrow DataTypes <https://arrow.apache.org/docs/format/Columnar.html#data-ty
        parquet columns per the parquet-format
        `Variant Shredding <https://github.com/apache/parquet-format/blob/master/VariantShredding.md>`_
        specification by setting ``variant.shreddingSchema`` to a ROW type JSON
-       whose fields map variant column names to their shredding types.
-       Alternatively, setting ``variant.inferShreddingSchema`` to ``true``
-       infers a shredding schema per file from the first written rows
-       (tuned by ``variant.shredding.maxSchemaWidth``,
+       whose fields map top-level variant column names to their shredding
+       types. Alternatively, setting ``variant.inferShreddingSchema`` to
+       ``true`` infers a shredding schema per file from the first written rows
+       (tuned by ``variant.shredding.maxSchemaWidth``, which bounds the total
+       number of shredded fields across all variant columns of the schema,
        ``variant.shredding.maxSchemaDepth``,
        ``variant.shredding.minFieldCardinalityRatio`` and
-       ``variant.shredding.maxInferBufferRow``). Readers reassemble shredded
-       columns transparently.
+       ``variant.shredding.maxInferBufferRow``). Inference also covers variant
+       columns nested inside ROW columns (variants inside arrays or maps stay
+       unshredded, as in Java Paimon). Readers reassemble shredded columns
+       transparently.
 
        When reading, instead of the full variant, specific paths can be
        extracted by replacing the variant column in the read schema with a

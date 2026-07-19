@@ -211,6 +211,20 @@ Result<std::shared_ptr<VariantSchema>> BuildVariantSchemaImpl(
                                                   decimal_type->precision(), decimal_type->scale()};
                     break;
                 }
+                case arrow::Type::TIMESTAMP: {
+                    const auto& timestamp_type =
+                        std::static_pointer_cast<arrow::TimestampType>(field_type);
+                    // The variant binary stores timestamps as microseconds since the epoch; a
+                    // typed_value column of any other precision would misinterpret the values.
+                    if (timestamp_type->unit() != arrow::TimeUnit::MICRO) {
+                        return InvalidVariantShreddingSchema(type);
+                    }
+                    schema->scalar_schema =
+                        VariantSchema::ScalarType{timestamp_type->timezone().empty()
+                                                      ? VariantSchema::ScalarKind::kTimestampNtz
+                                                      : VariantSchema::ScalarKind::kTimestampLtz};
+                    break;
+                }
                 default:
                     return InvalidVariantShreddingSchema(type);
             }
@@ -273,6 +287,10 @@ Result<std::shared_ptr<arrow::DataType>> VariantShreddingUtils::ScalarSchemaToAr
             return arrow::decimal128(scalar.precision, scalar.scale);
         case VariantSchema::ScalarKind::kDate:
             return arrow::date32();
+        case VariantSchema::ScalarKind::kTimestampLtz:
+            return arrow::timestamp(arrow::TimeUnit::MICRO, "UTC");
+        case VariantSchema::ScalarKind::kTimestampNtz:
+            return arrow::timestamp(arrow::TimeUnit::MICRO);
         default:
             return Status::NotImplemented(fmt::format("Unsupported variant scalar kind: {}",
                                                       static_cast<int32_t>(scalar.kind)));

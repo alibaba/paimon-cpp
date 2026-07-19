@@ -44,25 +44,27 @@ class JsonToVariantHandler
     explicit JsonToVariantHandler(VariantBuilder* builder) : builder_(builder) {}
 
     bool Null() {
-        return Ok(BeforeValue()) && Ok(builder_->AppendNull());
+        BeforeValue();
+        return Ok(builder_->AppendNull());
     }
 
     bool Bool(bool b) {
-        return Ok(BeforeValue()) && Ok(builder_->AppendBoolean(b));
+        BeforeValue();
+        return Ok(builder_->AppendBoolean(b));
     }
 
     bool RawNumber(const char* str, rapidjson::SizeType length, bool /*copy*/) {
-        return Ok(BeforeValue()) && Ok(AppendNumber(std::string_view(str, length)));
+        BeforeValue();
+        return Ok(AppendNumber(std::string_view(str, length)));
     }
 
     bool String(const char* str, rapidjson::SizeType length, bool /*copy*/) {
-        return Ok(BeforeValue()) && Ok(builder_->AppendString(std::string_view(str, length)));
+        BeforeValue();
+        return Ok(builder_->AppendString(std::string_view(str, length)));
     }
 
     bool StartObject() {
-        if (!Ok(BeforeValue())) {
-            return false;
-        }
+        BeforeValue();
         contexts_.emplace_back(Context{true, builder_->GetWritePos(), {}, {}, {}});
         return true;
     }
@@ -79,9 +81,7 @@ class JsonToVariantHandler
     }
 
     bool StartArray() {
-        if (!Ok(BeforeValue())) {
-            return false;
-        }
+        BeforeValue();
         contexts_.emplace_back(Context{false, builder_->GetWritePos(), {}, {}, {}});
         return true;
     }
@@ -114,9 +114,9 @@ class JsonToVariantHandler
     }
 
     // Records the offset of the value that is about to be appended in the enclosing container.
-    Status BeforeValue() {
+    void BeforeValue() {
         if (contexts_.empty()) {
-            return Status::OK();
+            return;
         }
         Context& top = contexts_.back();
         int32_t offset = builder_->GetWritePos() - top.start;
@@ -126,7 +126,6 @@ class JsonToVariantHandler
         } else {
             top.offsets.push_back(offset);
         }
-        return Status::OK();
     }
 
     // Mirrors the Java number handling: integers that fit in a long are appended as long;
@@ -262,18 +261,18 @@ Result<std::shared_ptr<GenericVariant>> VariantBuilder::Build(
         Bytes::AllocateBytes(static_cast<size_t>(metadata_size), pool.get());
     auto* metadata_data = reinterpret_cast<uint8_t*>(metadata->data());
     int32_t header_byte = VariantDefs::kVersion | ((offset_size - 1) << 6);
-    VariantBinaryUtil::WriteLong(metadata_data, 0, header_byte, 1);
-    VariantBinaryUtil::WriteLong(metadata_data, 1, num_keys, offset_size);
+    VariantBinaryUtil::WriteLong(header_byte, 1, metadata_data, 0);
+    VariantBinaryUtil::WriteLong(num_keys, offset_size, metadata_data, 1);
     int32_t current_offset = 0;
     for (int32_t i = 0; i < num_keys; ++i) {
-        VariantBinaryUtil::WriteLong(metadata_data, offset_start + i * offset_size, current_offset,
-                                     offset_size);
+        VariantBinaryUtil::WriteLong(current_offset, offset_size, metadata_data,
+                                     offset_start + i * offset_size);
         const std::string& key = dictionary_keys_[i];
         memcpy(metadata_data + string_start + current_offset, key.data(), key.size());
         current_offset += static_cast<int32_t>(key.size());
     }
-    VariantBinaryUtil::WriteLong(metadata_data, offset_start + num_keys * offset_size,
-                                 current_offset, offset_size);
+    VariantBinaryUtil::WriteLong(current_offset, offset_size, metadata_data,
+                                 offset_start + num_keys * offset_size);
 
     std::shared_ptr<Bytes> value =
         Bytes::AllocateBytes(static_cast<size_t>(write_pos_), pool.get());
@@ -287,8 +286,8 @@ Status VariantBuilder::AppendString(std::string_view str) {
                                        static_cast<int32_t>(str.size())));
     if (long_str) {
         write_buffer_[write_pos_++] = VariantBinaryUtil::PrimitiveHeader(VariantDefs::kLongStr);
-        VariantBinaryUtil::WriteLong(write_buffer_.data(), write_pos_,
-                                     static_cast<int64_t>(str.size()), VariantDefs::kU32Size);
+        VariantBinaryUtil::WriteLong(static_cast<int64_t>(str.size()), VariantDefs::kU32Size,
+                                     write_buffer_.data(), write_pos_);
         write_pos_ += VariantDefs::kU32Size;
     } else {
         write_buffer_[write_pos_++] =
@@ -316,19 +315,19 @@ Status VariantBuilder::AppendLong(int64_t l) {
     PAIMON_RETURN_NOT_OK(CheckCapacity(1 + 8));
     if (l == static_cast<int8_t>(l)) {
         write_buffer_[write_pos_++] = VariantBinaryUtil::PrimitiveHeader(VariantDefs::kInt1);
-        VariantBinaryUtil::WriteLong(write_buffer_.data(), write_pos_, l, 1);
+        VariantBinaryUtil::WriteLong(l, 1, write_buffer_.data(), write_pos_);
         write_pos_ += 1;
     } else if (l == static_cast<int16_t>(l)) {
         write_buffer_[write_pos_++] = VariantBinaryUtil::PrimitiveHeader(VariantDefs::kInt2);
-        VariantBinaryUtil::WriteLong(write_buffer_.data(), write_pos_, l, 2);
+        VariantBinaryUtil::WriteLong(l, 2, write_buffer_.data(), write_pos_);
         write_pos_ += 2;
     } else if (l == static_cast<int32_t>(l)) {
         write_buffer_[write_pos_++] = VariantBinaryUtil::PrimitiveHeader(VariantDefs::kInt4);
-        VariantBinaryUtil::WriteLong(write_buffer_.data(), write_pos_, l, 4);
+        VariantBinaryUtil::WriteLong(l, 4, write_buffer_.data(), write_pos_);
         write_pos_ += 4;
     } else {
         write_buffer_[write_pos_++] = VariantBinaryUtil::PrimitiveHeader(VariantDefs::kInt8);
-        VariantBinaryUtil::WriteLong(write_buffer_.data(), write_pos_, l, 8);
+        VariantBinaryUtil::WriteLong(l, 8, write_buffer_.data(), write_pos_);
         write_pos_ += 8;
     }
     return Status::OK();
@@ -339,7 +338,7 @@ Status VariantBuilder::AppendDouble(double d) {
     write_buffer_[write_pos_++] = VariantBinaryUtil::PrimitiveHeader(VariantDefs::kDouble);
     int64_t bits;
     memcpy(&bits, &d, sizeof(bits));
-    VariantBinaryUtil::WriteLong(write_buffer_.data(), write_pos_, bits, 8);
+    VariantBinaryUtil::WriteLong(bits, 8, write_buffer_.data(), write_pos_);
     write_pos_ += 8;
     return Status::OK();
 }
@@ -358,15 +357,15 @@ Status VariantBuilder::AppendDecimal(const VariantDecimal& d) {
         precision <= VariantDefs::kMaxDecimal4Precision) {
         write_buffer_[write_pos_++] = VariantBinaryUtil::PrimitiveHeader(VariantDefs::kDecimal4);
         write_buffer_[write_pos_++] = static_cast<uint8_t>(d.scale);
-        VariantBinaryUtil::WriteLong(write_buffer_.data(), write_pos_,
-                                     static_cast<int64_t>(d.unscaled), 4);
+        VariantBinaryUtil::WriteLong(static_cast<int64_t>(d.unscaled), 4, write_buffer_.data(),
+                                     write_pos_);
         write_pos_ += 4;
     } else if (d.scale <= VariantDefs::kMaxDecimal8Precision &&
                precision <= VariantDefs::kMaxDecimal8Precision) {
         write_buffer_[write_pos_++] = VariantBinaryUtil::PrimitiveHeader(VariantDefs::kDecimal8);
         write_buffer_[write_pos_++] = static_cast<uint8_t>(d.scale);
-        VariantBinaryUtil::WriteLong(write_buffer_.data(), write_pos_,
-                                     static_cast<int64_t>(d.unscaled), 8);
+        VariantBinaryUtil::WriteLong(static_cast<int64_t>(d.unscaled), 8, write_buffer_.data(),
+                                     write_pos_);
         write_pos_ += 8;
     } else {
         write_buffer_[write_pos_++] = VariantBinaryUtil::PrimitiveHeader(VariantDefs::kDecimal16);
@@ -383,7 +382,7 @@ Status VariantBuilder::AppendDecimal(const VariantDecimal& d) {
 Status VariantBuilder::AppendDate(int32_t days_since_epoch) {
     PAIMON_RETURN_NOT_OK(CheckCapacity(1 + 4));
     write_buffer_[write_pos_++] = VariantBinaryUtil::PrimitiveHeader(VariantDefs::kDate);
-    VariantBinaryUtil::WriteLong(write_buffer_.data(), write_pos_, days_since_epoch, 4);
+    VariantBinaryUtil::WriteLong(days_since_epoch, 4, write_buffer_.data(), write_pos_);
     write_pos_ += 4;
     return Status::OK();
 }
@@ -391,7 +390,7 @@ Status VariantBuilder::AppendDate(int32_t days_since_epoch) {
 Status VariantBuilder::AppendTimestamp(int64_t micros_since_epoch) {
     PAIMON_RETURN_NOT_OK(CheckCapacity(1 + 8));
     write_buffer_[write_pos_++] = VariantBinaryUtil::PrimitiveHeader(VariantDefs::kTimestamp);
-    VariantBinaryUtil::WriteLong(write_buffer_.data(), write_pos_, micros_since_epoch, 8);
+    VariantBinaryUtil::WriteLong(micros_since_epoch, 8, write_buffer_.data(), write_pos_);
     write_pos_ += 8;
     return Status::OK();
 }
@@ -399,7 +398,7 @@ Status VariantBuilder::AppendTimestamp(int64_t micros_since_epoch) {
 Status VariantBuilder::AppendTimestampNtz(int64_t micros_since_epoch) {
     PAIMON_RETURN_NOT_OK(CheckCapacity(1 + 8));
     write_buffer_[write_pos_++] = VariantBinaryUtil::PrimitiveHeader(VariantDefs::kTimestampNtz);
-    VariantBinaryUtil::WriteLong(write_buffer_.data(), write_pos_, micros_since_epoch, 8);
+    VariantBinaryUtil::WriteLong(micros_since_epoch, 8, write_buffer_.data(), write_pos_);
     write_pos_ += 8;
     return Status::OK();
 }
@@ -409,7 +408,7 @@ Status VariantBuilder::AppendFloat(float f) {
     write_buffer_[write_pos_++] = VariantBinaryUtil::PrimitiveHeader(VariantDefs::kFloat);
     int32_t bits;
     memcpy(&bits, &f, sizeof(bits));
-    VariantBinaryUtil::WriteLong(write_buffer_.data(), write_pos_, bits, 4);
+    VariantBinaryUtil::WriteLong(bits, 4, write_buffer_.data(), write_pos_);
     write_pos_ += 4;
     return Status::OK();
 }
@@ -418,8 +417,8 @@ Status VariantBuilder::AppendBinary(std::string_view binary) {
     PAIMON_RETURN_NOT_OK(
         CheckCapacity(1 + VariantDefs::kU32Size + static_cast<int32_t>(binary.size())));
     write_buffer_[write_pos_++] = VariantBinaryUtil::PrimitiveHeader(VariantDefs::kBinary);
-    VariantBinaryUtil::WriteLong(write_buffer_.data(), write_pos_,
-                                 static_cast<int64_t>(binary.size()), VariantDefs::kU32Size);
+    VariantBinaryUtil::WriteLong(static_cast<int64_t>(binary.size()), VariantDefs::kU32Size,
+                                 write_buffer_.data(), write_pos_);
     write_pos_ += VariantDefs::kU32Size;
     memcpy(write_buffer_.data() + write_pos_, binary.data(), binary.size());
     write_pos_ += static_cast<int32_t>(binary.size());
@@ -517,17 +516,17 @@ Status VariantBuilder::FinishWritingObject(int32_t start, std::vector<FieldEntry
             static_cast<size_t>(data_size));
     write_pos_ += header_size;
     write_buffer_[start] = VariantBinaryUtil::ObjectHeader(large_size, id_size, offset_size);
-    VariantBinaryUtil::WriteLong(write_buffer_.data(), start + 1, size, size_bytes);
+    VariantBinaryUtil::WriteLong(size, size_bytes, write_buffer_.data(), start + 1);
     int32_t id_start = start + 1 + size_bytes;
     int32_t offset_start = id_start + size * id_size;
     for (int32_t i = 0; i < size; ++i) {
-        VariantBinaryUtil::WriteLong(write_buffer_.data(), id_start + i * id_size, (*fields)[i].id,
-                                     id_size);
-        VariantBinaryUtil::WriteLong(write_buffer_.data(), offset_start + i * offset_size,
-                                     (*fields)[i].offset, offset_size);
+        VariantBinaryUtil::WriteLong((*fields)[i].id, id_size, write_buffer_.data(),
+                                     id_start + i * id_size);
+        VariantBinaryUtil::WriteLong((*fields)[i].offset, offset_size, write_buffer_.data(),
+                                     offset_start + i * offset_size);
     }
-    VariantBinaryUtil::WriteLong(write_buffer_.data(), offset_start + size * offset_size, data_size,
-                                 offset_size);
+    VariantBinaryUtil::WriteLong(data_size, offset_size, write_buffer_.data(),
+                                 offset_start + size * offset_size);
     return Status::OK();
 }
 
@@ -545,14 +544,14 @@ Status VariantBuilder::FinishWritingArray(int32_t start, const std::vector<int32
             static_cast<size_t>(data_size));
     write_pos_ += header_size;
     write_buffer_[start] = VariantBinaryUtil::ArrayHeader(large_size, offset_size);
-    VariantBinaryUtil::WriteLong(write_buffer_.data(), start + 1, size, size_bytes);
+    VariantBinaryUtil::WriteLong(size, size_bytes, write_buffer_.data(), start + 1);
     int32_t offset_start = start + 1 + size_bytes;
     for (int32_t i = 0; i < size; ++i) {
-        VariantBinaryUtil::WriteLong(write_buffer_.data(), offset_start + i * offset_size,
-                                     offsets[i], offset_size);
+        VariantBinaryUtil::WriteLong(offsets[i], offset_size, write_buffer_.data(),
+                                     offset_start + i * offset_size);
     }
-    VariantBinaryUtil::WriteLong(write_buffer_.data(), offset_start + size * offset_size, data_size,
-                                 offset_size);
+    VariantBinaryUtil::WriteLong(data_size, offset_size, write_buffer_.data(),
+                                 offset_start + size * offset_size);
     return Status::OK();
 }
 

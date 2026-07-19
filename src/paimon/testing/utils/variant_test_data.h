@@ -27,13 +27,25 @@
 
 namespace paimon::test {
 
-/// Builds a `[id, v]` struct array where `v` holds the variant encodings of `jsons` (nullptr
-/// means a null variant) and `id` is a running int32 starting at `id_offset`. `variant_field`
-/// must be a variant-marked field (see `VariantTypeUtils::ToArrowField`).
-inline Result<std::shared_ptr<arrow::StructArray>> BuildVariantBatch(
+/// Helpers for building variant test data.
+class VariantTestData {
+ public:
+    VariantTestData() = delete;
+    ~VariantTestData() = delete;
+
+    /// Builds a `[id, v]` struct array where `v` holds the variant encodings of `jsons` (nullptr
+    /// means a null variant) and `id` is a running int32 starting at `id_offset`.
+    /// `variant_field` must be a variant-marked field (see `VariantTypeUtils::ToArrowField`).
+    static Result<std::shared_ptr<arrow::StructArray>> BuildVariantBatch(
+        const std::shared_ptr<arrow::Field>& id_field,
+        const std::shared_ptr<arrow::Field>& variant_field, const std::vector<const char*>& jsons,
+        const std::shared_ptr<MemoryPool>& pool, int32_t id_offset = 0);
+};
+
+inline Result<std::shared_ptr<arrow::StructArray>> VariantTestData::BuildVariantBatch(
     const std::shared_ptr<arrow::Field>& id_field,
     const std::shared_ptr<arrow::Field>& variant_field, const std::vector<const char*>& jsons,
-    const std::shared_ptr<MemoryPool>& pool, int32_t id_offset = 0) {
+    const std::shared_ptr<MemoryPool>& pool, int32_t id_offset) {
     arrow::Int32Builder id_builder;
     auto value_builder = std::make_shared<arrow::BinaryBuilder>();
     auto metadata_builder = std::make_shared<arrow::BinaryBuilder>();

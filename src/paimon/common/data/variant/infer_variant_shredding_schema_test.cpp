@@ -30,6 +30,14 @@ namespace paimon::test {
 
 class InferVariantShreddingSchemaTest : public ::testing::Test {
  public:
+    // Infers one column with a fresh shared-width budget.
+    static Result<std::shared_ptr<arrow::DataType>> InferColumn(
+        const InferVariantShreddingSchema& infer,
+        const std::vector<std::shared_ptr<GenericVariant>>& samples) {
+        InferVariantShreddingSchema::MaxFields max_fields = infer.CreateMaxFieldsBudget();
+        return infer.InferColumnShreddingType(samples, &max_fields);
+    }
+
     std::vector<std::shared_ptr<GenericVariant>> Samples(const std::vector<const char*>& jsons) {
         std::vector<std::shared_ptr<GenericVariant>> samples;
         for (const char* json : jsons) {
@@ -57,8 +65,7 @@ TEST_F(InferVariantShreddingSchemaTest, InferObjectSchema) {
         nullptr,
         R"({"age": 120000000000, "city": "Shanghai"})",
     });
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
-                         infer_.InferColumnShreddingType(samples));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred, InferColumn(infer_, samples));
     ASSERT_NE(inferred, nullptr);
     // Integers widen to int64, strings stay, arrays of small ints infer as list<int64>.
     auto expected =
@@ -73,8 +80,7 @@ TEST_F(InferVariantShreddingSchemaTest, MixedTypesFallToVariant) {
         R"({"x": 1, "y": 1.5e0})",
         R"({"x": "string now", "y": 2.5e0})",
     });
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
-                         infer_.InferColumnShreddingType(samples));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred, InferColumn(infer_, samples));
     ASSERT_NE(inferred, nullptr);
     // x saw both int and string: untyped variant leaf; y stays double (exponent notation
     // parses as double, plain decimals parse as DECIMAL).
@@ -91,8 +97,7 @@ TEST_F(InferVariantShreddingSchemaTest, RareFieldsDropped) {
     }
     jsons.push_back(R"({"common": 2, "rare": true})");
     auto samples = Samples(jsons);
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
-                         infer_.InferColumnShreddingType(samples));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred, InferColumn(infer_, samples));
     ASSERT_NE(inferred, nullptr);
     // "rare" appears in 1/20 rows (< 0.1 ratio): dropped from the typed schema.
     auto expected = arrow::struct_({arrow::field("common", arrow::int64())});
@@ -105,8 +110,7 @@ TEST_F(InferVariantShreddingSchemaTest, DecimalMerging) {
         "{\"d\": 1.5}",
         "{\"d\": 42}",
     });
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
-                         infer_.InferColumnShreddingType(samples));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred, InferColumn(infer_, samples));
     ASSERT_NE(inferred, nullptr);
     // Decimals merge to a widened decimal (scale 2, enough integer digits), capped at 18 digits.
     auto expected = arrow::struct_({arrow::field("d", arrow::decimal128(18, 2))});
@@ -116,20 +120,20 @@ TEST_F(InferVariantShreddingSchemaTest, DecimalMerging) {
 TEST_F(InferVariantShreddingSchemaTest, NoUsefulSchema) {
     auto scalar_samples = Samples({"1", "2"});
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> scalar_inferred,
-                         infer_.InferColumnShreddingType(scalar_samples));
+                         InferColumn(infer_, scalar_samples));
     ASSERT_NE(scalar_inferred, nullptr);
     ASSERT_TRUE(scalar_inferred->Equals(*arrow::int64())) << scalar_inferred->ToString();
 
     // Conflicting top-level types stay unshredded.
     auto mixed_samples = Samples({"1", "\"a string\""});
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> mixed_inferred,
-                         infer_.InferColumnShreddingType(mixed_samples));
+                         InferColumn(infer_, mixed_samples));
     ASSERT_EQ(mixed_inferred, nullptr);
 
     // All-null columns stay unshredded.
     auto null_samples = Samples({nullptr, nullptr});
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> null_inferred,
-                         infer_.InferColumnShreddingType(null_samples));
+                         InferColumn(infer_, null_samples));
     ASSERT_EQ(null_inferred, nullptr);
 }
 
@@ -138,11 +142,25 @@ TEST_F(InferVariantShreddingSchemaTest, MaxSchemaWidthLimit) {
                                              /*min_field_cardinality_ratio=*/0.1};
     auto samples = Samples({R"({"a": 1, "b": 2, "c": 3, "d": 4, "e": 5})"});
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
-                         narrow_infer.InferColumnShreddingType(samples));
-    if (inferred != nullptr) {
-        ASSERT_EQ(inferred->id(), arrow::Type::STRUCT);
-        ASSERT_LT(inferred->num_fields(), 5);
-    }
+                         InferColumn(narrow_infer, samples));
+    ASSERT_NE(inferred, nullptr);
+    // Budget of 3: the root object costs 1, "a" costs 2 (value + typed_value); the remaining
+    // fields exceed the budget and are dropped from the typed schema.
+    auto expected = arrow::struct_({arrow::field("a", arrow::int64())});
+    ASSERT_TRUE(inferred->Equals(*expected)) << inferred->ToString();
+
+    // One budget serves all variant columns of a schema: after the first column consumes it, a
+    // second column cannot shred anymore.
+    InferVariantShreddingSchema::MaxFields max_fields = narrow_infer.CreateMaxFieldsBudget();
+    auto first_samples = Samples({R"({"a": 1, "b": 2})"});
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> first,
+                         narrow_infer.InferColumnShreddingType(first_samples, &max_fields));
+    ASSERT_NE(first, nullptr);
+    ASSERT_TRUE(first->Equals(*expected)) << first->ToString();
+    auto second_samples = Samples({R"({"c": 1})"});
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> second,
+                         narrow_infer.InferColumnShreddingType(second_samples, &max_fields));
+    ASSERT_EQ(second, nullptr);
 }
 
 TEST_F(InferVariantShreddingSchemaTest, MaxSchemaDepthLimit) {
@@ -150,7 +168,7 @@ TEST_F(InferVariantShreddingSchemaTest, MaxSchemaDepthLimit) {
                                               /*min_field_cardinality_ratio=*/0.1};
     auto samples = Samples({R"({"outer": {"inner": 1}})"});
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
-                         shallow_infer.InferColumnShreddingType(samples));
+                         InferColumn(shallow_infer, samples));
     ASSERT_NE(inferred, nullptr);
     // Depth 1: the nested object stays an untyped variant leaf.
     auto expected = arrow::struct_({arrow::field("outer", arrow::null())});
@@ -162,14 +180,13 @@ TEST_F(InferVariantShreddingSchemaTest, TrailingZeroDecimalNormalized) {
     // scale or reassembling the shredded file would be rejected. After normalization the value
     // is an integral decimal, which finalization widens to int64.
     auto samples = Samples({"100.00"});
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
-                         infer_.InferColumnShreddingType(samples));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred, InferColumn(infer_, samples));
     ASSERT_NE(inferred, nullptr);
     ASSERT_TRUE(inferred->Equals(*arrow::int64())) << inferred->ToString();
 
     auto mixed = Samples({"100.00", "1.5"});
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> mixed_inferred,
-                         infer_.InferColumnShreddingType(mixed));
+                         InferColumn(infer_, mixed));
     ASSERT_NE(mixed_inferred, nullptr);
     ASSERT_TRUE(mixed_inferred->Equals(*arrow::decimal128(18, 1))) << mixed_inferred->ToString();
 }
@@ -181,14 +198,14 @@ TEST_F(InferVariantShreddingSchemaTest, TemporalValuesStayUnshredded) {
     ASSERT_OK(date_builder.AppendDate(19000));
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<GenericVariant> date_variant, date_builder.Build(pool_));
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> date_inferred,
-                         infer_.InferColumnShreddingType({date_variant}));
+                         InferColumn(infer_, {date_variant}));
     ASSERT_EQ(date_inferred, nullptr);
 
     VariantBuilder ts_builder(/*allow_duplicate_keys=*/false);
     ASSERT_OK(ts_builder.AppendTimestamp(1700000000000000));
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<GenericVariant> ts_variant, ts_builder.Build(pool_));
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> ts_inferred,
-                         infer_.InferColumnShreddingType({ts_variant}));
+                         InferColumn(infer_, {ts_variant}));
     ASSERT_EQ(ts_inferred, nullptr);
 }
 

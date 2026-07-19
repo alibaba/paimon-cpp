@@ -21,14 +21,18 @@
 
 #include "arrow/api.h"
 #include "arrow/c/bridge.h"
+#include "fmt/format.h"
 #include "gtest/gtest.h"
 #include "paimon/common/data/variant/generic_variant.h"
 #include "paimon/common/data/variant/variant_type_utils.h"
+#include "paimon/common/factories/io_hook.h"
+#include "paimon/common/utils/scope_guard.h"
 #include "paimon/data/variant.h"
 #include "paimon/defs.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/record_batch.h"
 #include "paimon/table/source/startup_mode.h"
+#include "paimon/testing/utils/io_exception_helper.h"
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/test_helper.h"
 #include "paimon/testing/utils/testharness.h"
@@ -54,7 +58,8 @@ class VariantTableInteTest : public ::testing::Test {
 
     std::shared_ptr<arrow::StructArray> BuildArray(const std::vector<const char*>& jsons,
                                                    int32_t id_offset = 0) {
-        auto result = BuildVariantBatch(fields_[0], fields_[1], jsons, pool_, id_offset);
+        auto result =
+            VariantTestData::BuildVariantBatch(fields_[0], fields_[1], jsons, pool_, id_offset);
         EXPECT_TRUE(result.ok()) << result.status().ToString();
         return std::move(result).value();
     }
@@ -124,11 +129,35 @@ TEST_F(VariantTableInteTest, TestAppendTable) {
     ASSERT_OK_AND_ASSIGN(
         auto helper, TestHelper::Create(test_dir_, schema_, /*partition_keys=*/{},
                                         /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+    // The document set covers deep object/array alternation, escaped and unicode strings,
+    // wide integers, decimals, exponent doubles and empty containers.
     std::vector<const char*> jsons = {
         R"({"age": 35, "city": "Hangzhou"})",
         nullptr,
         "[1, \"two\", 3.5, null, true]",
         "{\"nested\": {\"x\": [1, 2]}, \"s\": \"中文\"}",
+        R"({
+            "user": {
+                "id": 9007199254740993,
+                "name": "张三 \"quoted\" \\ / \b\f\n\r\t",
+                "tags": ["a", 1, 2.5, true, null, {"deep": [[1, [2, [3, [4]]]]]}],
+                "address": {
+                    "city": "Hangzhou",
+                    "geo": {"lat": 30.274085, "lng": 120.15507, "alt": -1.5e-3},
+                    "history": [
+                        {"year": 2020, "city": "Beijing"},
+                        {"year": 2021, "city": "Shanghai", "note": null}
+                    ]
+                },
+                "balance": 12345678901234567890.123456789,
+                "scores": [0.1, -0.0, 1e100, -1e-100]
+            },
+            "empty_object": {},
+            "empty_array": [],
+            "flags": [true, false, null]
+        })",
+        R"([{"a": [{"b": {"c": [null, {"d": 1}]}}]}, [], {}, "end"])",
+        R"({"unicode": "😀"})",
     };
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch, MakeBatch(BuildArray(jsons)));
     ASSERT_OK_AND_ASSIGN(auto commit_msgs,
@@ -137,7 +166,7 @@ TEST_F(VariantTableInteTest, TestAppendTable) {
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt,
                                          /*is_streaming=*/false));
-    ReadAndCheck(helper.get(), splits, {0, 1, 2, 3}, jsons);
+    ReadAndCheck(helper.get(), splits, {0, 1, 2, 3, 4, 5, 6}, jsons);
 }
 
 TEST_F(VariantTableInteTest, TestPrimaryKeyTable) {
@@ -213,6 +242,82 @@ TEST_F(VariantTableInteTest, TestVariantAccessRead) {
     ASSERT_TRUE(v_column->IsNull(2));
     ASSERT_TRUE(other.IsNull(0));
     ASSERT_EQ(other.GetString(1), "Hello");
+}
+
+TEST_F(VariantTableInteTest, TestReadWithIOException) {
+    // Injects an IO error at every position of the scan+read path and verifies each failure
+    // surfaces as a clean error status.
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, "parquet"},
+        {Options::BUCKET, "-1"},
+    };
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(test_dir_, schema_, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+    std::vector<const char*> jsons = {R"({"age": 35, "city": "Hangzhou"})", nullptr, "[1, 2, 3]"};
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch, MakeBatch(BuildArray(jsons)));
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                                /*expected_commit_messages=*/std::nullopt));
+
+    bool run_complete = false;
+    auto io_hook = IOHook::GetInstance();
+    for (size_t i = 0; i < 500; i++) {
+        ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
+        io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
+        Result<std::vector<std::shared_ptr<Split>>> splits =
+            helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt,
+                            /*is_streaming=*/false);
+        CHECK_HOOK_STATUS(splits.status(), i);
+        Result<std::shared_ptr<arrow::ChunkedArray>> read_result =
+            helper->ReadResult(splits.value());
+        CHECK_HOOK_STATUS(read_result.status(), i);
+        run_complete = true;
+        // All IO succeeded before the injected position was reached: check the data.
+        io_hook->Clear();
+        ReadAndCheck(helper.get(), splits.value(), {0, 1, 2}, jsons);
+        break;
+    }
+    ASSERT_TRUE(run_complete);
+}
+
+TEST_F(VariantTableInteTest, TestWriteWithIOException) {
+    // Injects an IO error at every position of the create+write+commit path (on a fresh table
+    // directory per attempt) and verifies each failure surfaces as a clean error status.
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, "parquet"},
+        {Options::BUCKET, "-1"},
+    };
+    std::vector<const char*> jsons = {R"({"age": 35, "city": "Hangzhou"})", nullptr};
+    bool run_complete = false;
+    auto io_hook = IOHook::GetInstance();
+    for (size_t i = 0; i < 500; i++) {
+        std::string table_dir = test_dir_ + fmt::format("/io_exception_{}", i);
+        ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
+        io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
+        Result<std::unique_ptr<TestHelper>> helper =
+            TestHelper::Create(table_dir, schema_, /*partition_keys=*/{},
+                               /*primary_keys=*/{}, options, /*is_streaming_mode=*/false);
+        CHECK_HOOK_STATUS(helper.status(), i);
+        Result<std::unique_ptr<RecordBatch>> batch = MakeBatch(BuildArray(jsons));
+        CHECK_HOOK_STATUS(batch.status(), i);
+        Result<std::vector<std::shared_ptr<CommitMessage>>> commit_msgs =
+            helper.value()->WriteAndCommit(std::move(batch).value(), /*commit_identifier=*/0,
+                                           /*expected_commit_messages=*/std::nullopt);
+        CHECK_HOOK_STATUS(commit_msgs.status(), i);
+        run_complete = true;
+        // All IO succeeded before the injected position was reached: check the data.
+        io_hook->Clear();
+        ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> splits,
+                             helper.value()->NewScan(StartupMode::LatestFull(),
+                                                     /*snapshot_id=*/std::nullopt,
+                                                     /*is_streaming=*/false));
+        ReadAndCheck(helper.value().get(), splits, {0, 1}, jsons);
+        break;
+    }
+    ASSERT_TRUE(run_complete);
 }
 
 TEST_F(VariantTableInteTest, TestOrcFormatRejected) {

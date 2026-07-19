@@ -25,6 +25,7 @@
 #include <utility>
 
 #include "arrow/util/base64.h"
+#include "fmt/format.h"
 #include "paimon/common/data/variant/variant_builder.h"
 #include "paimon/common/data/variant/variant_defs.h"
 #include "paimon/common/data/variant/variant_json_utils.h"
@@ -170,7 +171,7 @@ Status ToJsonImpl(std::string_view value, std::string_view metadata, int32_t pos
             return Status::OK();
         }
     }
-    return VariantBinaryUtil::MalformedVariant();
+    return VariantBinaryUtil::MalformedVariant("unknown variant value type in JSON rendering");
 }
 
 }  // namespace
@@ -187,7 +188,7 @@ Result<std::shared_ptr<GenericVariant>> GenericVariant::Create(std::shared_ptr<B
     // There is currently only one allowed version.
     if (metadata->size() < 1 || (static_cast<uint8_t>((*metadata)[0]) &
                                  VariantDefs::kVersionMask) != VariantDefs::kVersion) {
-        return VariantBinaryUtil::MalformedVariant();
+        return VariantBinaryUtil::MalformedVariant("unsupported variant metadata version");
     }
     // Don't attempt to use a Variant larger than 128 MiB. We'll never produce one, and it risks
     // memory instability.
@@ -389,7 +390,8 @@ Result<int32_t> GenericVariant::GetDictionaryIdAtIndex(int32_t index) const {
     PAIMON_ASSIGN_OR_RAISE(VariantBinaryUtil::ObjectInfo info,
                            VariantBinaryUtil::GetObjectInfo(raw, pos_));
     if (index < 0 || index >= info.num_elements) {
-        return VariantBinaryUtil::MalformedVariant();
+        return VariantBinaryUtil::MalformedVariant(fmt::format(
+            "object field index {} is out of bounds for {} fields", index, info.num_elements));
     }
     return VariantBinaryUtil::ReadUnsigned(raw, info.id_start + info.id_size * index, info.id_size);
 }

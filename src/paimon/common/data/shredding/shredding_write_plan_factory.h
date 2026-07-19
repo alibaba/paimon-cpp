@@ -61,9 +61,7 @@ class ShreddingWritePlanFactory {
     /// The per-file metadata finalizer persisted into the file footer, or nullptr when the
     /// physical schema is self-describing (as it is for VARIANT shredding).
     virtual MetadataFinalizer CreateMetadataFinalizer(
-        const std::shared_ptr<ShreddingBatchConverter>& converter) const {
-        return nullptr;
-    }
+        const std::shared_ptr<ShreddingBatchConverter>& converter) const = 0;
 };
 
 }  // namespace paimon

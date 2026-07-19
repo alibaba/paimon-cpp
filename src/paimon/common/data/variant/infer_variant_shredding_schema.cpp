@@ -59,11 +59,6 @@ struct SimpleSchema {
     }
 };
 
-// Tracks the total number of shredded fields remaining, shared across the whole schema.
-struct MaxFields {
-    int32_t remaining;
-};
-
 std::shared_ptr<SimpleSchema> MergeSchema(const std::shared_ptr<SimpleSchema>& s1,
                                           const std::shared_ptr<SimpleSchema>& s2);
 
@@ -180,9 +175,10 @@ Result<std::shared_ptr<SimpleSchema>> SchemaOf(const GenericVariant& variant, in
             result->is_object = true;
             result->fields.reserve(size);
             for (int32_t i = 0; i < size; ++i) {
-                PAIMON_ASSIGN_OR_RAISE(auto field, variant.GetFieldAtIndex(i));
+                PAIMON_ASSIGN_OR_RAISE(std::optional<GenericVariant::ObjectField> field,
+                                       variant.GetFieldAtIndex(i));
                 if (!field.has_value()) {
-                    return VariantBinaryUtil::MalformedVariant();
+                    return VariantBinaryUtil::MalformedVariant("an object field is missing");
                 }
                 PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<SimpleSchema> field_schema,
                                        SchemaOf(*field->value, max_depth - 1));
@@ -275,9 +271,9 @@ Result<std::shared_ptr<SimpleSchema>> SchemaOf(const GenericVariant& variant, in
 
 // Finalizes the inferred schema: 1) widen integer types to int64, 2) replace empty objects with
 // VARIANT, 3) limit the total number of shredded fields in the schema.
-std::shared_ptr<arrow::DataType> FinalizeSimpleSchema(const std::shared_ptr<SimpleSchema>& schema,
-                                                      int64_t min_cardinality,
-                                                      MaxFields* max_fields) {
+std::shared_ptr<arrow::DataType> FinalizeSimpleSchema(
+    const std::shared_ptr<SimpleSchema>& schema, int64_t min_cardinality,
+    InferVariantShreddingSchema::MaxFields* max_fields) {
     // Every field uses a value column.
     --max_fields->remaining;
     if (max_fields->remaining <= 0) {
@@ -332,7 +328,7 @@ std::shared_ptr<arrow::DataType> FinalizeSimpleSchema(const std::shared_ptr<Simp
 }  // namespace
 
 Result<std::shared_ptr<arrow::DataType>> InferVariantShreddingSchema::InferColumnShreddingType(
-    const std::vector<std::shared_ptr<GenericVariant>>& samples) const {
+    const std::vector<std::shared_ptr<GenericVariant>>& samples, MaxFields* max_fields) const {
     int64_t num_non_null_values = 0;
     std::shared_ptr<SimpleSchema> simple_schema;
     for (const auto& sample : samples) {
@@ -348,9 +344,8 @@ Result<std::shared_ptr<arrow::DataType>> InferVariantShreddingSchema::InferColum
     // the rows.
     auto min_cardinality = static_cast<int64_t>(
         std::ceil(static_cast<double>(num_non_null_values) * min_field_cardinality_ratio_));
-    MaxFields max_fields{max_schema_width_};
     std::shared_ptr<arrow::DataType> finalized =
-        FinalizeSimpleSchema(simple_schema, min_cardinality, &max_fields);
+        FinalizeSimpleSchema(simple_schema, min_cardinality, max_fields);
     if (finalized->id() == arrow::Type::NA) {
         // The whole column stays unshredded.
         return std::shared_ptr<arrow::DataType>(nullptr);

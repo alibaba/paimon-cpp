@@ -85,14 +85,14 @@ class VariantShreddedColumnWriter {
     static Status BuildNode(const std::shared_ptr<VariantSchema>& schema,
                             arrow::StructBuilder* group, Node* node);
 
-    Status AppendVariantNode(Node* node, const GenericVariant& variant);
+    Status AppendVariantNode(const GenericVariant& variant, Node* node);
 
     /// Appends a missing object field: the group is present with all its children set to null.
     Status AppendMissingNode(Node* node);
 
     /// Tries to append the variant as a typed scalar. Sets `*shredded` to whether it succeeded
     /// (on failure nothing is appended).
-    Status TryTypedShred(Node* node, const GenericVariant& variant, VariantValueType variant_type,
+    Status TryTypedShred(const GenericVariant& variant, VariantValueType variant_type, Node* node,
                          bool* shredded);
 
     std::shared_ptr<VariantSchema> schema_;

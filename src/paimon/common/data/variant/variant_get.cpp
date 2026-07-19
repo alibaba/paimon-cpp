@@ -108,6 +108,12 @@ Result<std::optional<Literal>> CastVariant(const std::shared_ptr<GenericVariant>
         }
         case VariantValueType::kDouble: {
             PAIMON_ASSIGN_OR_RAISE(double value, variant->GetDouble());
+            if (target_is_string) {
+                // Match `GenericVariant::ToJson` and Java's `Double.toString` instead of the
+                // arrow cast formatting.
+                std::string str = VariantJsonUtils::JavaDoubleToString(value);
+                return std::optional<Literal>(Literal(FieldType::STRING, str.data(), str.size()));
+            }
             input = Literal(value);
             input_type = arrow::float64();
             break;
@@ -134,6 +140,11 @@ Result<std::optional<Literal>> CastVariant(const std::shared_ptr<GenericVariant>
         }
         case VariantValueType::kFloat: {
             PAIMON_ASSIGN_OR_RAISE(float value, variant->GetFloat());
+            if (target_is_string) {
+                // Match `GenericVariant::ToJson` and Java's `Float.toString`.
+                std::string str = VariantJsonUtils::JavaFloatToString(value);
+                return std::optional<Literal>(Literal(FieldType::STRING, str.data(), str.size()));
+            }
             input = Literal(value);
             input_type = arrow::float32();
             break;
@@ -257,9 +268,9 @@ Status AppendLiteralToBuilder(const Literal& literal,
 
 Status VariantGetExecutor::CastToBuilder(const std::shared_ptr<GenericVariant>& variant,
                                          const std::shared_ptr<arrow::Field>& target_field,
-                                         arrow::ArrayBuilder* builder,
                                          const VariantCastArgs& cast_args,
-                                         const std::shared_ptr<MemoryPool>& pool) {
+                                         const std::shared_ptr<MemoryPool>& pool,
+                                         arrow::ArrayBuilder* builder) {
     if (variant == nullptr) {
         return ToPaimonStatus(builder->AppendNull());
     }
@@ -303,8 +314,8 @@ Status VariantGetExecutor::CastToBuilder(const std::shared_ptr<GenericVariant>& 
                 const std::shared_ptr<arrow::Field>& child_field = struct_type.field(i);
                 PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GenericVariant> child,
                                        variant->GetFieldByKey(child_field->name()));
-                PAIMON_RETURN_NOT_OK(CastToBuilder(
-                    child, child_field, struct_builder->field_builder(i), cast_args, pool));
+                PAIMON_RETURN_NOT_OK(CastToBuilder(child, child_field, cast_args, pool,
+                                                   struct_builder->field_builder(i)));
             }
             return Status::OK();
         }
@@ -326,8 +337,8 @@ Status VariantGetExecutor::CastToBuilder(const std::shared_ptr<GenericVariant>& 
                 PAIMON_RETURN_NOT_OK_FROM_ARROW(
                     static_cast<arrow::StringBuilder*>(map_builder->key_builder())
                         ->Append(field->key));
-                PAIMON_RETURN_NOT_OK(CastToBuilder(field->value, map_type.item_field(),
-                                                   map_builder->item_builder(), cast_args, pool));
+                PAIMON_RETURN_NOT_OK(CastToBuilder(field->value, map_type.item_field(), cast_args,
+                                                   pool, map_builder->item_builder()));
             }
             return Status::OK();
         }
@@ -342,8 +353,8 @@ Status VariantGetExecutor::CastToBuilder(const std::shared_ptr<GenericVariant>& 
             for (int32_t i = 0; i < array_size; ++i) {
                 PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GenericVariant> element,
                                        variant->GetElementAtIndex(i));
-                PAIMON_RETURN_NOT_OK(CastToBuilder(element, list_type.value_field(),
-                                                   list_builder->value_builder(), cast_args, pool));
+                PAIMON_RETURN_NOT_OK(CastToBuilder(element, list_type.value_field(), cast_args,
+                                                   pool, list_builder->value_builder()));
             }
             return Status::OK();
         }
@@ -361,11 +372,12 @@ Status VariantGetExecutor::CastToBuilder(const std::shared_ptr<GenericVariant>& 
 Result<std::shared_ptr<arrow::Array>> VariantGetExecutor::GetAsArrow(
     const std::shared_ptr<GenericVariant>& variant, const std::string& path,
     const std::shared_ptr<arrow::Field>& target_field, const VariantCastArgs& cast_args,
-    const std::shared_ptr<MemoryPool>& pool, arrow::MemoryPool* arrow_pool) {
+    const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<arrow::MemoryPool>& arrow_pool) {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GenericVariant> extracted, ExtractByPath(variant, path));
     std::unique_ptr<arrow::ArrayBuilder> builder;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::MakeBuilder(arrow_pool, target_field->type(), &builder));
-    PAIMON_RETURN_NOT_OK(CastToBuilder(extracted, target_field, builder.get(), cast_args, pool));
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(
+        arrow::MakeBuilder(arrow_pool.get(), target_field->type(), &builder));
+    PAIMON_RETURN_NOT_OK(CastToBuilder(extracted, target_field, cast_args, pool, builder.get()));
     std::shared_ptr<arrow::Array> array;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Finish(&array));
     return array;

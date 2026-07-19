@@ -34,18 +34,30 @@ namespace paimon {
 /// fields is limited.
 class InferVariantShreddingSchema {
  public:
+    /// The mutable budget of shredded fields remaining. One instance is shared across all
+    /// variant columns of a schema so that the total inferred width stays within
+    /// `variant.shredding.maxSchemaWidth` (mirroring the Java `MaxFields`).
+    struct MaxFields {
+        int32_t remaining;
+    };
+
     InferVariantShreddingSchema(int32_t max_schema_width, int32_t max_schema_depth,
                                 double min_field_cardinality_ratio)
         : max_schema_width_(max_schema_width),
           max_schema_depth_(max_schema_depth),
           min_field_cardinality_ratio_(min_field_cardinality_ratio) {}
 
+    /// Creates the shared shredded-field budget for one schema inference.
+    MaxFields CreateMaxFieldsBudget() const {
+        return MaxFields{max_schema_width_};
+    }
+
     /// Infers the shredding type of one variant column from its sampled non-null values, e.g.
     /// `struct{a: int64, b: string}`. `arrow::null()` leaves denote untyped variant sub-values.
-    /// Returns nullptr when no useful shredding schema was found (the column should stay
-    /// unshredded).
+    /// `max_fields` is the budget shared across all columns of the schema. Returns nullptr when
+    /// no useful shredding schema was found (the column should stay unshredded).
     Result<std::shared_ptr<arrow::DataType>> InferColumnShreddingType(
-        const std::vector<std::shared_ptr<GenericVariant>>& samples) const;
+        const std::vector<std::shared_ptr<GenericVariant>>& samples, MaxFields* max_fields) const;
 
  private:
     int32_t max_schema_width_;
