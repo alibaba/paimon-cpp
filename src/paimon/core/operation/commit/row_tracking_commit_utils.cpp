@@ -23,16 +23,13 @@
 #include "fmt/format.h"
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/table/special_fields.h"
+#include "paimon/common/utils/vector_store_utils.h"
 #include "paimon/core/manifest/file_source.h"
 #include "paimon/status.h"
 
 namespace paimon {
 
 namespace {
-
-bool IsVectorStoreFile(const std::string& file_name) {
-    return file_name.find(".vector.") != std::string::npos;
-}
 
 ManifestEntry CloneEntryWithClonedFileMeta(const ManifestEntry& entry) {
     auto cloned_file = std::make_shared<DataFileMeta>(*entry.File());
@@ -124,7 +121,7 @@ Result<int64_t> RowTrackingCommitUtils::AssignRowTrackingMeta(
                 }
                 assigned_entry.AssignFirstRowId(blob_start);
                 blob_starts[blob_field_name] = blob_start + row_count;
-            } else if (IsVectorStoreFile(entry.File()->file_name)) {
+            } else if (VectorStoreUtils::IsVectorStoreFile(entry.File()->file_name)) {
                 if (vector_store_start >= start) {
                     return Status::Invalid(fmt::format(
                         "This is a bug, vectorStoreStart {} should be less than start {} "

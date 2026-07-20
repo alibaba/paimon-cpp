@@ -20,11 +20,41 @@
 
 namespace paimon {
 
+/// Utility class for resolving compacted changelog file paths.
+///
+/// This class provides functionality to resolve fake compacted changelog file paths to their real
+/// file paths.
+///
+/// File Name Protocol
+///
+/// There are two kinds of file name. In the following description, `bid1` and `bid2` are bucket
+/// id, `off` is offset, `len1` and `len2` are lengths.
+///
+/// - `bucket-bid1/compacted-changelog-xxx$bid1-len1`: This is the real file name. If this file
+///   name is recorded in manifest file meta, reader should read the bytes of this file starting
+///   from offset `0` with length `len1`.
+/// - `bucket-bid2/compacted-changelog-xxx$bid1-len1-off-len2`: This is the fake file name. Reader
+///   should read the bytes of file `bucket-bid1/compacted-changelog-xxx$bid1-len1` starting from
+///   offset `off` with length `len2`.
 class CompactedChangelogPathResolver {
  public:
-    static bool IsCompactedChangelogPath(const std::string& path);
-
+    /// Resolves a file path, handling compacted changelog file path resolution if applicable.
+    ///
+    /// For compacted changelog files, resolves fake file paths to their real file paths as
+    /// described in the protocol above. For non-compacted changelog files, returns the path
+    /// unchanged.
+    ///
+    /// @param path The file path to resolve.
+    /// @return The resolved real file path for compacted changelog files, or the original path
+    ///     unchanged for other files.
     static std::string Resolve(const std::string& path);
+
+ private:
+    /// Checks if the given path is a compacted changelog file path.
+    ///
+    /// @param path The file path to check.
+    /// @return true if the path is a compacted changelog file, false otherwise.
+    static bool IsCompactedChangelogPath(const std::string& path);
 };
 
 }  // namespace paimon

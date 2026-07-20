@@ -92,6 +92,7 @@ class GmockFileSystem : public LocalFileSystem {
                 (const, override));
     MOCK_METHOD(Status, AtomicStore, (const std::string& path, const std::string& content),
                 (override));
+    MOCK_METHOD(Result<bool>, Exists, (const std::string& path), (const, override));
 };
 
 class GmockFileSystemFactory : public LocalFileSystemFactory {
@@ -123,6 +124,11 @@ class GmockFileSystemFactory : public LocalFileSystemFactory {
         ON_CALL(*fs, AtomicStore(A<const std::string&>(), A<const std::string&>()))
             .WillByDefault(Invoke([fs_ptr](const std::string& path, const std::string& content) {
                 return fs_ptr->FileSystem::AtomicStore(path, content);
+            }));
+
+        ON_CALL(*fs, Exists(A<const std::string&>()))
+            .WillByDefault(Invoke([fs_ptr](const std::string& path) {
+                return fs_ptr->LocalFileSystem::Exists(path);
             }));
 
         return fs;
@@ -227,6 +233,17 @@ class FileStoreCommitImplTest : public testing::Test {
             result.insert(entry.FileName());
         }
         return result;
+    }
+
+    size_t CountFiles(const std::string& dir) const {
+        size_t count = 0;
+        std::error_code ec;
+        for (std::filesystem::directory_iterator it(dir, ec), end; it != end; it.increment(ec)) {
+            if (it->is_regular_file(ec)) {
+                ++count;
+            }
+        }
+        return count;
     }
 
     std::shared_ptr<IndexFileMeta> CreateIndexFileMeta(const std::string& file_name,
@@ -955,6 +972,59 @@ TEST_F(FileStoreCommitImplTest, TestRollbackToAsLatestDeletionVectorOnlyChange) 
     ASSERT_EQ(CollectFileNames(rolled_back_entries), CollectFileNames(target_entries));
 }
 
+TEST_F(FileStoreCommitImplTest, TestRollbackToAsLatestConcurrentConflictReturnsFalse) {
+    // When a concurrent writer wins the race for the next snapshot id, the atomic snapshot commit
+    // reports failure (returns false); RollbackToAsLatest surfaces that without error and without
+    // advancing the committed snapshot id. The temporary base/delta manifest lists written before
+    // the failed commit are intentionally left behind, matching Java (no cleanup on this path).
+    //
+    // The conflict is a TOCTOU race: snapshot-2 does not exist when LatestSnapshot() resolves the
+    // current latest (so it stays snapshot-1), but exists by the time RenamingSnapshotCommit checks
+    // before writing. A stateful Exists() mock reproduces exactly that ordering.
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileSystem> fs,
+                         FileSystemFactory::Get("gmock_fs", table_path_, {}));
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
+                             .WithFileSystem(fs)
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = dynamic_cast<FileStoreCommitImpl*>(commit.get());
+    ASSERT_TRUE(commit_impl);
+
+    std::vector<std::shared_ptr<CommitMessage>> msgs =
+        GetCommitMessages(paimon::test::GetDataDir() +
+                              "/orc/append_09.db/append_09/commit_messages/commit_messages-01",
+                          /*version=*/3);
+    ASSERT_GT(msgs.size(), 0);
+    ASSERT_OK(commit->Commit(msgs, /*commit_identifier=*/1));
+    ASSERT_EQ(commit_impl->last_committed_snapshot_id_, 1);
+
+    // snapshot-2 is invisible the first time it is probed (LatestSnapshot keeps snapshot-1 as the
+    // latest) and visible afterwards (RenamingSnapshotCommit sees the conflicting file).
+    const std::string next_snapshot = PathUtil::JoinPath(table_path_, "snapshot/snapshot-2");
+    auto* mock_fs = dynamic_cast<GmockFileSystem*>(fs.get());
+    ASSERT_TRUE(mock_fs);
+    EXPECT_CALL(*mock_fs, Exists(testing::_))
+        .Times(testing::AnyNumber())
+        .WillRepeatedly(testing::Invoke(
+            [mock_fs](const std::string& path) { return mock_fs->LocalFileSystem::Exists(path); }));
+    EXPECT_CALL(*mock_fs, Exists(testing::StrEq(next_snapshot)))
+        .WillOnce(testing::Return(Result<bool>(false)))
+        .WillRepeatedly(testing::Return(Result<bool>(true)));
+
+    const std::string manifest_dir = PathUtil::JoinPath(table_path_, "manifest");
+    const size_t manifest_count_before = CountFiles(manifest_dir);
+
+    ASSERT_OK_AND_ASSIGN(bool rolled_back, commit->RollbackToAsLatest(/*target_snapshot_id=*/1));
+    ASSERT_FALSE(rolled_back);
+    // The committed snapshot id must not advance on the failed rollback.
+    ASSERT_EQ(commit_impl->last_committed_snapshot_id_, 1);
+    // The temporary base/delta manifest lists are leaked (not cleaned up) on the failure path.
+    ASSERT_GT(CountFiles(manifest_dir), manifest_count_before);
+}
+
 TEST_F(FileStoreCommitImplTest, TestCommitAndOverwriteWithNoPartitionKey) {
     CommitContextBuilder context_builder(table_path_, "commit_user_1");
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
@@ -1542,6 +1612,76 @@ TEST_F(FileStoreCommitImplTest, AbortIgnoresMissingFilesAndFailsForNonImplMessag
     // A commit message that is not a CommitMessageImpl is rejected.
     ASSERT_NOK_WITH_MSG(commit_impl->Abort({std::make_shared<CommitMessage>()}),
                         "fail to cast commit message to impl");
+}
+
+TEST_F(FileStoreCommitImplTest, AbortIgnoresDeleteFailures) {
+    // A delete that fails with an IO error (e.g. permission denied) must be swallowed by
+    // best-effort cleanup, mirroring Java deleteQuietly: Abort still returns OK and does not
+    // propagate the failure.
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = dynamic_cast<FileStoreCommitImpl*>(commit.get());
+    ASSERT_TRUE(commit_impl);
+
+    const BinaryRow partition = CreateIntRow(10);
+    const int32_t bucket = 0;
+    auto new_data_file = CreateAppendDataFileMeta("abort-io-fail-data", 1);
+    DataIncrement data_increment(/*new_files=*/{new_data_file}, /*deleted_files=*/{},
+                                 /*changelog_files=*/{});
+    std::shared_ptr<CommitMessage> message = std::make_shared<CommitMessageImpl>(
+        partition, bucket, /*total_buckets=*/2, data_increment, CompactIncrement({}, {}, {}));
+
+    // Materialize the file so we can observe that a failed delete leaves it untouched.
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<DataFilePathFactory> data_pf,
+                         commit_impl->path_factory_->CreateDataFilePathFactory(partition, bucket));
+    const std::string data_path = data_pf->ToPath(new_data_file);
+    ASSERT_OK(file_system_->WriteFile(data_path, /*content=*/"", /*overwrite=*/false));
+
+    // Fault-inject an IO error on the delete. Abort performs no local file IO before its delete
+    // loop, so position 0 lands on the delete itself. The error must be swallowed. Clearing on
+    // scope exit keeps the process-global hook from leaking into other tests.
+    auto io_hook = IOHook::GetInstance();
+    ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
+    io_hook->Reset(/*pos=*/0, IOHook::Mode::RETURN_ERROR);
+    ASSERT_OK(commit_impl->Abort({message}));
+    io_hook->Clear();
+
+    // Because the delete failed, the file remains on disk.
+    ASSERT_OK_AND_ASSIGN(bool exist, file_system_->Exists(data_path));
+    ASSERT_TRUE(exist);
+}
+
+TEST_F(FileStoreCommitImplTest, TestTruncateEmptyTable) {
+    // Truncating a table that has never been committed succeeds and produces an OVERWRITE snapshot
+    // with no added and no deleted files: there is nothing to overwrite, but the overwrite is still
+    // materialized.
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .IgnoreEmptyCommit(true)
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+
+    ASSERT_OK(commit->TruncateTable(/*commit_identifier=*/1));
+
+    ASSERT_OK_AND_ASSIGN(bool exist, file_system_->Exists(table_path_ + "/snapshot/snapshot-1"));
+    ASSERT_TRUE(exist);
+    auto commit_impl = dynamic_cast<FileStoreCommitImpl*>(commit.get());
+    ASSERT_TRUE(commit_impl);
+    ASSERT_OK_AND_ASSIGN(Snapshot snapshot, commit_impl->snapshot_manager_->LoadSnapshot(1));
+    ASSERT_EQ(Snapshot::CommitKind::Overwrite(), snapshot.GetCommitKind());
+    std::vector<ManifestFileMeta> manifests;
+    ASSERT_OK(commit_impl->manifest_list_->ReadDeltaManifests(snapshot, &manifests));
+    for (const auto& manifest : manifests) {
+        ASSERT_EQ(0, manifest.NumAddedFiles());
+        ASSERT_EQ(0, manifest.NumDeletedFiles());
+    }
 }
 
 TEST_F(FileStoreCommitImplTest, TestCreateManifestCommittable) {

@@ -686,7 +686,7 @@ struct CoreOptions::Impl {
             Options::SEQUENCE_FIELD, Options::FIELDS_SEPARATOR, &sequence_field));
         // Parse sequence.field.sort-order - order of sequence field, default "ascending"
         PAIMON_RETURN_NOT_OK(parser.ParseSortOrder(&sequence_field_sort_order));
-        // Parse write-sequence-number-init-mode - sequence init mode for write path
+        // Parse write.sequence-number-init-mode - sequence init mode for write path
         std::string write_sequence_init_mode_str = "scan";
         PAIMON_RETURN_NOT_OK(
             parser.Parse(Options::WRITE_SEQUENCE_NUMBER_INIT_MODE, &write_sequence_init_mode_str));
