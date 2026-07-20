@@ -204,9 +204,6 @@ class FileStoreCommitImpl : public FileStoreCommit {
 
     Result<std::vector<ManifestEntry>> ReadAddManifestEntries(const Snapshot& snapshot) const;
 
-    static std::optional<int64_t> MaxNextRowId(const std::optional<int64_t>& left,
-                                               const std::optional<int64_t>& right);
-
     void CleanUpTmpManifests(const std::string& previous_changes_list_name,
                              const std::string& new_changes_list_name,
                              const std::vector<ManifestFileMeta>& old_metas,

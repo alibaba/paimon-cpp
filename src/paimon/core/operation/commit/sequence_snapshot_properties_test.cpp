@@ -83,20 +83,20 @@ class SequenceSnapshotPropertiesTest : public testing::Test {
 TEST_F(SequenceSnapshotPropertiesTest, MaxSequenceNumberEmptySnapshot) {
     ASSERT_OK_AND_ASSIGN(std::optional<int64_t> result,
                          SequenceSnapshotProperties::MaxSequenceNumber(std::nullopt));
-    EXPECT_FALSE(result.has_value());
+    ASSERT_FALSE(result.has_value());
 }
 
 TEST_F(SequenceSnapshotPropertiesTest, MaxSequenceNumberSnapshotWithoutProperties) {
     ASSERT_OK_AND_ASSIGN(std::optional<int64_t> result,
                          SequenceSnapshotProperties::MaxSequenceNumber(MakeSnapshot(std::nullopt)));
-    EXPECT_FALSE(result.has_value());
+    ASSERT_FALSE(result.has_value());
 }
 
 TEST_F(SequenceSnapshotPropertiesTest, MaxSequenceNumberKeyMissing) {
     std::map<std::string, std::string> properties{{"other-key", "42"}};
     ASSERT_OK_AND_ASSIGN(std::optional<int64_t> result,
                          SequenceSnapshotProperties::MaxSequenceNumber(MakeSnapshot(properties)));
-    EXPECT_FALSE(result.has_value());
+    ASSERT_FALSE(result.has_value());
 }
 
 TEST_F(SequenceSnapshotPropertiesTest, MaxSequenceNumberValid) {

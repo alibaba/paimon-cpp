@@ -281,17 +281,6 @@ Result<std::vector<ManifestEntry>> FileStoreCommitImpl::ReadAddManifestEntries(
     return add_entries;
 }
 
-std::optional<int64_t> FileStoreCommitImpl::MaxNextRowId(const std::optional<int64_t>& left,
-                                                         const std::optional<int64_t>& right) {
-    if (!left) {
-        return right;
-    }
-    if (!right) {
-        return left;
-    }
-    return std::max(left.value(), right.value());
-}
-
 Result<bool> FileStoreCommitImpl::RollbackToAsLatest(int64_t target_snapshot_id) {
     PAIMON_ASSIGN_OR_RAISE(std::optional<Snapshot> latest_opt, snapshot_manager_->LatestSnapshot());
     if (!latest_opt) {
@@ -344,8 +333,7 @@ Result<bool> FileStoreCommitImpl::RollbackToAsLatest(int64_t target_snapshot_id)
     // not move it backwards, otherwise new appends would reuse row ids already assigned by the
     // snapshots between the target and the previous latest, breaking the global uniqueness of
     // _ROW_ID. Keep the larger of the previous latest and the target nextRowId.
-    std::optional<int64_t> next_row_id =
-        MaxNextRowId(latest.NextRowId(), target_snapshot.NextRowId());
+    std::optional<int64_t> next_row_id = std::max(latest.NextRowId(), target_snapshot.NextRowId());
 
     int64_t delta_record_count =
         ManifestEntry::RecordCountAdd(delta_files) - ManifestEntry::RecordCountDelete(delta_files);
