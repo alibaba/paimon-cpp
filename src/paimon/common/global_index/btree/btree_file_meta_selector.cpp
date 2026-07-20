@@ -46,11 +46,7 @@ Result<std::vector<GlobalIndexIOMeta>> BTreeFileMetaSelector::VisitEqual(const L
         if (meta.OnlyNulls()) {
             return false;
         }
-        MemorySlice min_key_slice = WrapKeySlice(meta.FirstKey());
-        MemorySlice max_key_slice = WrapKeySlice(meta.LastKey());
-        PAIMON_ASSIGN_OR_RAISE(int32_t cmp_min, comparator_(literal_slice, min_key_slice));
-        PAIMON_ASSIGN_OR_RAISE(int32_t cmp_max, comparator_(literal_slice, max_key_slice));
-        return cmp_min >= 0 && cmp_max <= 0;
+        return Overlaps(meta, literal_slice, literal_slice);
     });
 }
 
@@ -67,8 +63,7 @@ Result<std::vector<GlobalIndexIOMeta>> BTreeFileMetaSelector::VisitLessThan(
         if (meta.OnlyNulls()) {
             return false;
         }
-        MemorySlice min_key_slice = WrapKeySlice(meta.FirstKey());
-        PAIMON_ASSIGN_OR_RAISE(int32_t cmp, comparator_(min_key_slice, literal_slice));
+        PAIMON_ASSIGN_OR_RAISE(int32_t cmp, CompareFirstKey(meta, literal_slice));
         return cmp < 0;
     });
 }
@@ -81,8 +76,7 @@ Result<std::vector<GlobalIndexIOMeta>> BTreeFileMetaSelector::VisitLessOrEqual(
         if (meta.OnlyNulls()) {
             return false;
         }
-        MemorySlice min_key_slice = WrapKeySlice(meta.FirstKey());
-        PAIMON_ASSIGN_OR_RAISE(int32_t cmp, comparator_(min_key_slice, literal_slice));
+        PAIMON_ASSIGN_OR_RAISE(int32_t cmp, CompareFirstKey(meta, literal_slice));
         return cmp <= 0;
     });
 }
@@ -95,8 +89,7 @@ Result<std::vector<GlobalIndexIOMeta>> BTreeFileMetaSelector::VisitGreaterThan(
         if (meta.OnlyNulls()) {
             return false;
         }
-        MemorySlice max_key_slice = WrapKeySlice(meta.LastKey());
-        PAIMON_ASSIGN_OR_RAISE(int32_t cmp, comparator_(max_key_slice, literal_slice));
+        PAIMON_ASSIGN_OR_RAISE(int32_t cmp, CompareLastKey(meta, literal_slice));
         return cmp > 0;
     });
 }
@@ -109,8 +102,7 @@ Result<std::vector<GlobalIndexIOMeta>> BTreeFileMetaSelector::VisitGreaterOrEqua
         if (meta.OnlyNulls()) {
             return false;
         }
-        MemorySlice max_key_slice = WrapKeySlice(meta.LastKey());
-        PAIMON_ASSIGN_OR_RAISE(int32_t cmp, comparator_(max_key_slice, literal_slice));
+        PAIMON_ASSIGN_OR_RAISE(int32_t cmp, CompareLastKey(meta, literal_slice));
         return cmp >= 0;
     });
 }
@@ -127,12 +119,9 @@ Result<std::vector<GlobalIndexIOMeta>> BTreeFileMetaSelector::VisitIn(
         if (meta.OnlyNulls()) {
             return false;
         }
-        MemorySlice min_key_slice = WrapKeySlice(meta.FirstKey());
-        MemorySlice max_key_slice = WrapKeySlice(meta.LastKey());
         for (const auto& literal_slice : literal_slices) {
-            PAIMON_ASSIGN_OR_RAISE(int32_t cmp_min, comparator_(literal_slice, min_key_slice));
-            PAIMON_ASSIGN_OR_RAISE(int32_t cmp_max, comparator_(literal_slice, max_key_slice));
-            if (cmp_min >= 0 && cmp_max <= 0) {
+            PAIMON_ASSIGN_OR_RAISE(bool overlaps, Overlaps(meta, literal_slice, literal_slice));
+            if (overlaps) {
                 return true;
             }
         }
@@ -174,6 +163,39 @@ Result<std::vector<GlobalIndexIOMeta>> BTreeFileMetaSelector::Filter(
         }
     }
     return result;
+}
+
+Result<bool> BTreeFileMetaSelector::Overlaps(const BTreeIndexMeta& meta, const MemorySlice& from,
+                                             const MemorySlice& to) const {
+    if (meta.FirstKey()) {
+        PAIMON_ASSIGN_OR_RAISE(int32_t cmp, comparator_(to, WrapKeySlice(meta.FirstKey())));
+        if (cmp < 0) {
+            return false;
+        }
+    }
+    if (meta.LastKey()) {
+        PAIMON_ASSIGN_OR_RAISE(int32_t cmp, comparator_(from, WrapKeySlice(meta.LastKey())));
+        if (cmp > 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+Result<int32_t> BTreeFileMetaSelector::CompareFirstKey(const BTreeIndexMeta& meta,
+                                                       const MemorySlice& literal) const {
+    if (!meta.FirstKey()) {
+        return -1;
+    }
+    return comparator_(WrapKeySlice(meta.FirstKey()), literal);
+}
+
+Result<int32_t> BTreeFileMetaSelector::CompareLastKey(const BTreeIndexMeta& meta,
+                                                      const MemorySlice& literal) const {
+    if (!meta.LastKey()) {
+        return 1;
+    }
+    return comparator_(WrapKeySlice(meta.LastKey()), literal);
 }
 
 MemorySlice BTreeFileMetaSelector::WrapKeySlice(const std::shared_ptr<Bytes>& key) {

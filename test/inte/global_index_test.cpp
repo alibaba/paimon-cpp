@@ -2413,6 +2413,100 @@ TEST_P(GlobalIndexTest, TestBTreeWriteCommitScanReadIndex) {
     }
 }
 
+TEST_P(GlobalIndexTest, TestBTreeEmptyStringKeyPredicates) {
+    CreateTable();
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    auto schema = arrow::schema(fields_);
+    std::vector<std::string> write_cols = schema->field_names();
+
+    // Null keys are tracked separately. The non-null keys remain monotonically increasing.
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+[null, 10, 0, 10.0],
+["", 20, 1, 20.0],
+["abc", 30, 2, 30.0]
+    ])")
+                         .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+    ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f0", "btree",
+                         /*options=*/{}, Range(0, 2)));
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
+                                                 /*executor=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(auto index_readers,
+                         global_index_scan->CreateReaders("f0", /*row_range_index=*/std::nullopt));
+    ASSERT_EQ(index_readers.size(), 1u);
+    auto index_reader = index_readers[0];
+
+    Literal empty(FieldType::STRING, "", 0);
+    Literal abc(FieldType::STRING, "abc", 3);
+    Literal missing(FieldType::STRING, "missing", 7);
+
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitEqual(empty));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{1}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitEqual(abc));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{2}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitEqual(missing));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitNotEqual(empty));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{2}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitIsNull());
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{0}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitIsNotNull());
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{1,2}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitIn({empty, abc, missing}));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{1,2}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitNotIn({empty, missing}));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{2}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitLessThan(abc));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{1}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitLessOrEqual(empty));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{1}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitGreaterThan(empty));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{2}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitGreaterOrEqual(abc));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{2}");
+    }
+}
+
 TEST_P(GlobalIndexTest, TestBTreeWriteCommitScanReadIndexWithPartition) {
     // BTree index with partitioned table. Each partition's data is sorted by f0 independently.
     auto schema = arrow::schema(fields_);
