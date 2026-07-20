@@ -1346,39 +1346,6 @@ TEST_F(PageFilteredRowGroupReaderTest, BitmapAllAndPartialPagesMixed) {
     }
 }
 
-/// Test: bitmap hits partial pages of a row group, with page-filtered option disabled.
-///
-/// 200 rows, 10 rows per page, 100 rows per row group → 2 row groups.
-/// Bitmap: {120..149} hits pages 2-4 of RG1.
-/// Expected: 100 rows (100-199) because page-filtered option is disabled, so page-level bitmap is
-/// ignored.
-TEST_F(PageFilteredRowGroupReaderTest, BitmapWithPageFilteredOptionDisabled) {
-    std::string file_name = dir_->Str() + "/bitmap_all_and_partial.parquet";
-    auto data = MakeSequentialIntData(200);
-    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
-
-    RoaringBitmap32 bitmap;
-    bitmap.AddRange(120, 150);  // pages 2-4 of RG1
-
-    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
-    std::map<std::string, std::string> options;
-    options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] = "false";
-    std::shared_ptr<arrow::ChunkedArray> result;
-    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result,
-                                   options);
-    ASSERT_TRUE(result);
-    ASSERT_EQ(100, result->length());
-
-    // Verify: 100-199
-    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
-    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
-    ASSERT_TRUE(struct_arr);
-    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
-    for (int32_t i = 0; i < 100; ++i) {
-        ASSERT_EQ(100 + i, val_arr->Value(i));
-    }
-}
-
 /// Test: bitmap + predicate both applied, bitmap hits all pages of some row groups.
 ///
 /// 200 rows, 10 rows per page, 100 rows per row group → 2 row groups.
@@ -1612,6 +1579,129 @@ TEST_F(PageFilteredRowGroupReaderTest, BitmapTrimStrategyTest) {
     // RG0 page 1 trimmed to [60, 69] — rows 50-59 not read (unlike coalesce)
     for (int32_t i = 0; i < 10; ++i) {
         ASSERT_EQ(60 + i, val_arr->Value(50 + i));
+    }
+}
+
+/// Test: invalid strategy value returns Status::Invalid.
+///
+/// 200 rows, 50 rows per page, 100 rows per row group → 2 row groups.
+/// Bitmap: [0,10), [45, 50), [60, 70) — same as BitmapCoalesceTest.
+/// Strategy: "invalid" (not one of "coalesce", "trim", "none").
+/// Expected: SetReadSchema returns Status::Invalid.
+TEST_F(PageFilteredRowGroupReaderTest, BitmapInvalidStrategyTest) {
+    std::string file_name = dir_->Str() + "/invalid_strategy.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/50, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 10);
+    bitmap.AddRange(45, 50);
+    bitmap.AddRange(60, 70);
+
+    std::map<std::string, std::string> options;
+    options[PARQUET_READ_BITMAP_ROW_RANGE_REFINING_STRATEGY] = "invalid";
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
+    ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+
+    ASSERT_OK_AND_ASSIGN(
+        auto batch_reader,
+        ParquetFileBatchReader::Create(std::move(in_stream), options, 1024, nullptr, arrow_pool_));
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    auto c_schema = std::make_unique<ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
+
+    auto status = batch_reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr, bitmap);
+    ASSERT_FALSE(status.ok());
+    ASSERT_TRUE(status.IsInvalid());
+}
+
+/// Test: "none" strategy performs no row-range refinement within a row group.
+///
+/// 200 rows, 50 rows per page, 100 rows per row group → 2 row groups.
+/// Bitmap: [0,10), [45, 50), [60, 70) — all within RG0 (rows 0-99).
+/// Strategy: "none" → no refinement, so the entire RG0 (100 rows) is read.
+/// Expected: 100 rows (0-99).
+/// Compare with BitmapCoalesceTest (35 rows) and BitmapTrimStrategyTest (60 rows) which use
+/// the same bitmap but apply refinement.
+TEST_F(PageFilteredRowGroupReaderTest, BitmapNoneStrategyTest) {
+    std::string file_name = dir_->Str() + "/none_strategy.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/50, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 10);
+    bitmap.AddRange(45, 50);
+    bitmap.AddRange(60, 70);
+
+    std::map<std::string, std::string> options;
+    options[PARQUET_READ_BITMAP_ROW_RANGE_REFINING_STRATEGY] = "none";
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result,
+                                   options);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(100, result->length());
+
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    for (int32_t i = 0; i < 100; ++i) {
+        ASSERT_EQ(i, val_arr->Value(i));
+    }
+}
+
+/// Test: trim strategy with multiple columns — intersection of per-column trimmed ranges.
+///
+/// 200 rows, 50 rows per page, 100 rows per row group → 2 row groups.
+/// Two columns: a[i] = i, b[i] = i * 10.
+/// Bitmap: [0,10), [45, 50), [60, 70) — same as BitmapTrimStrategyTest.
+/// Both columns share the same page boundaries, so their trimmed ranges are identical.
+/// The intersection is the same as either column alone:
+/// - RG0 page 0 ([0,49]): trimmed to [0, 49] (50 rows)
+/// - RG0 page 1 ([50,99]): trimmed to [60, 69] (10 rows)
+/// Expected: 60 rows. Both columns must remain aligned after trimming.
+TEST_F(PageFilteredRowGroupReaderTest, BitmapTrimMultiColumnTest) {
+    std::string file_name = dir_->Str() + "/trim_multi_col.parquet";
+    auto data = MakeTwoColumnData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/50, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 10);
+    bitmap.AddRange(45, 50);
+    bitmap.AddRange(60, 70);
+
+    std::map<std::string, std::string> options;
+    options[PARQUET_READ_BITMAP_ROW_RANGE_REFINING_STRATEGY] = "trim";
+
+    auto read_schema =
+        arrow::schema({arrow::field("a", arrow::int32()), arrow::field("b", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result,
+                                   options);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(60, result->length());
+
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto a_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    auto b_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(1));
+    ASSERT_TRUE(a_arr);
+    ASSERT_TRUE(b_arr);
+    // RG0 page 0 trimmed to [0, 49]
+    for (int32_t i = 0; i < 50; ++i) {
+        ASSERT_EQ(i, a_arr->Value(i));
+        ASSERT_EQ(i * 10, b_arr->Value(i));
+    }
+    // RG0 page 1 trimmed to [60, 69]
+    for (int32_t i = 0; i < 10; ++i) {
+        ASSERT_EQ(60 + i, a_arr->Value(50 + i));
+        ASSERT_EQ((60 + i) * 10, b_arr->Value(50 + i));
     }
 }
 
