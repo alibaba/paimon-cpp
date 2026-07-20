@@ -791,13 +791,20 @@ if(PAIMON_BUILD_TESTS)
                     ${TEST_STATIC_LINK_LIBS}
                     ${GTEST_LINK_TOOLCHAIN})
 
-    # jindo_utils_test only checks the in-memory status conversion and does not need an
-    # OSS cluster, so it runs whenever jindo is built. The other jindo tests need real
-    # OSS access and stay disabled.
-    set(FS_TEST_JINDO_SOURCES)
+    set(PAIMON_JINDO_FS_TEST_SOURCES)
+    set(PAIMON_JINDO_FS_TEST_LINK_LIBS)
     if(PAIMON_ENABLE_JINDO)
-        list(APPEND FS_TEST_JINDO_SOURCES fs/jindo/jindo_file_system_unit_test.cpp
+        # These unit tests do not access remote OSS.
+        list(APPEND PAIMON_JINDO_FS_TEST_SOURCES fs/jindo/jindo_file_system_unit_test.cpp
              fs/jindo/jindo_utils_test.cpp)
+        if(PAIMON_ENABLE_NETWORK_TESTS)
+            # Factory and integration tests access real OSS.
+            list(APPEND PAIMON_JINDO_FS_TEST_SOURCES
+                 fs/jindo/jindo_file_system_factory_test.cpp
+                 fs/jindo/jindo_file_system_test.cpp)
+        endif()
+        list(APPEND PAIMON_JINDO_FS_TEST_LINK_LIBS
+             ${PAIMON_JINDO_FILE_SYSTEM_STATIC_LINK_LIBS})
     endif()
 
     add_paimon_test(fs_test
@@ -805,16 +812,18 @@ if(PAIMON_BUILD_TESTS)
                     common/fs/file_system_test.cpp
                     common/fs/resolving_file_system_test.cpp
                     fs/local/local_file_test.cpp
-                    ${FS_TEST_JINDO_SOURCES}
-                    # fs/jindo/jindo_file_system_factory_test.cpp
-                    # fs/jindo/jindo_file_system_test.cpp
+                    ${PAIMON_JINDO_FS_TEST_SOURCES}
                     STATIC_LINK_LIBS
                     paimon_shared
                     ${PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS}
-                    ${PAIMON_JINDO_FILE_SYSTEM_STATIC_LINK_LIBS}
+                    ${PAIMON_JINDO_FS_TEST_LINK_LIBS}
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN}
                     EXTRA_INCLUDES
                     ${JINDOSDK_INCLUDE_DIR})
+
+    if(PAIMON_ENABLE_NETWORK_TESTS)
+        target_compile_definitions(paimon-fs-test PRIVATE PAIMON_ENABLE_NETWORK_TESTS)
+    endif()
 
 endif()

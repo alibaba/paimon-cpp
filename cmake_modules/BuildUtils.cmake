@@ -183,11 +183,13 @@ function(add_paimon_lib LIB_NAME)
         if(NOT APPLE)
             set(SHARED_LINK_OPTIONS -Wl,--exclude-libs,ALL -Wl,-Bsymbolic
                                     -Wl,--gc-sections)
-            # -z defs (--no-undefined) rejects the __asan_*/__ubsan_* symbols that
+            # -z defs (--no-undefined) rejects the __asan_*/__tsan_*/__ubsan_* symbols that
             # sanitizer-instrumented shared libraries legitimately leave undefined
             # (they are resolved at load time from the executable's sanitizer
             # runtime). Only enforce it for non-sanitizer builds.
-            if(NOT PAIMON_USE_ASAN AND NOT PAIMON_USE_UBSAN)
+            if(NOT PAIMON_USE_ASAN
+               AND NOT PAIMON_USE_TSAN
+               AND NOT PAIMON_USE_UBSAN)
                 list(APPEND SHARED_LINK_OPTIONS -Wl,-z,defs)
             endif()
             target_link_options(${LIB_NAME}_shared PRIVATE ${SHARED_LINK_OPTIONS})
