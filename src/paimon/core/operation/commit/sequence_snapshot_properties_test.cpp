@@ -105,7 +105,7 @@ TEST_F(SequenceSnapshotPropertiesTest, MaxSequenceNumberValid) {
     ASSERT_OK_AND_ASSIGN(std::optional<int64_t> result,
                          SequenceSnapshotProperties::MaxSequenceNumber(MakeSnapshot(properties)));
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(123, result.value());
+    ASSERT_EQ(123, result.value());
 }
 
 TEST_F(SequenceSnapshotPropertiesTest, MaxSequenceNumberTrailingCharacters) {
@@ -123,12 +123,12 @@ TEST_F(SequenceSnapshotPropertiesTest, MaxSequenceNumberNotANumber) {
 }
 
 TEST_F(SequenceSnapshotPropertiesTest, MaxSequenceNumberFromFilesEmpty) {
-    EXPECT_FALSE(SequenceSnapshotProperties::MaxSequenceNumberFromFiles({}).has_value());
+    ASSERT_FALSE(SequenceSnapshotProperties::MaxSequenceNumberFromFiles({}).has_value());
 }
 
 TEST_F(SequenceSnapshotPropertiesTest, MaxSequenceNumberFromFilesOnlyDelete) {
     std::vector<ManifestEntry> files{CreateEntry(FileKind::Delete(), 100)};
-    EXPECT_FALSE(SequenceSnapshotProperties::MaxSequenceNumberFromFiles(files).has_value());
+    ASSERT_FALSE(SequenceSnapshotProperties::MaxSequenceNumberFromFiles(files).has_value());
 }
 
 TEST_F(SequenceSnapshotPropertiesTest, MaxSequenceNumberFromFilesSkipsDelete) {
@@ -137,40 +137,40 @@ TEST_F(SequenceSnapshotPropertiesTest, MaxSequenceNumberFromFilesSkipsDelete) {
                                      CreateEntry(FileKind::Add(), 42)};
     std::optional<int64_t> result = SequenceSnapshotProperties::MaxSequenceNumberFromFiles(files);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(42, result.value());
+    ASSERT_EQ(42, result.value());
 }
 
 TEST_F(SequenceSnapshotPropertiesTest, MergeMaxSequenceNumberNoInput) {
     std::map<std::string, std::string> properties{{"existing", "value"}};
     std::map<std::string, std::string> merged = SequenceSnapshotProperties::MergeMaxSequenceNumber(
         properties, /*latest_max_sequence_number=*/std::nullopt, /*delta_files=*/{});
-    EXPECT_EQ(properties, merged);
-    EXPECT_EQ(0u, merged.count(SequenceSnapshotProperties::kMaxSequenceNumberKey));
+    ASSERT_EQ(properties, merged);
+    ASSERT_EQ(0u, merged.count(SequenceSnapshotProperties::kMaxSequenceNumberKey));
 }
 
 TEST_F(SequenceSnapshotPropertiesTest, MergeMaxSequenceNumberLatestOnly) {
     std::map<std::string, std::string> merged = SequenceSnapshotProperties::MergeMaxSequenceNumber(
         /*properties=*/{}, /*latest_max_sequence_number=*/50, /*delta_files=*/{});
-    EXPECT_EQ("50", merged.at(SequenceSnapshotProperties::kMaxSequenceNumberKey));
+    ASSERT_EQ("50", merged.at(SequenceSnapshotProperties::kMaxSequenceNumberKey));
 }
 
 TEST_F(SequenceSnapshotPropertiesTest, MergeMaxSequenceNumberDeltaOnly) {
     std::vector<ManifestEntry> delta_files{CreateEntry(FileKind::Add(), 77)};
     std::map<std::string, std::string> merged = SequenceSnapshotProperties::MergeMaxSequenceNumber(
         /*properties=*/{}, /*latest_max_sequence_number=*/std::nullopt, delta_files);
-    EXPECT_EQ("77", merged.at(SequenceSnapshotProperties::kMaxSequenceNumberKey));
+    ASSERT_EQ("77", merged.at(SequenceSnapshotProperties::kMaxSequenceNumberKey));
 }
 
 TEST_F(SequenceSnapshotPropertiesTest, MergeMaxSequenceNumberTakesMaximum) {
     std::vector<ManifestEntry> delta_files{CreateEntry(FileKind::Add(), 30)};
     std::map<std::string, std::string> merged = SequenceSnapshotProperties::MergeMaxSequenceNumber(
         /*properties=*/{}, /*latest_max_sequence_number=*/90, delta_files);
-    EXPECT_EQ("90", merged.at(SequenceSnapshotProperties::kMaxSequenceNumberKey));
+    ASSERT_EQ("90", merged.at(SequenceSnapshotProperties::kMaxSequenceNumberKey));
 
     std::vector<ManifestEntry> larger_delta{CreateEntry(FileKind::Add(), 150)};
     std::map<std::string, std::string> merged2 = SequenceSnapshotProperties::MergeMaxSequenceNumber(
         /*properties=*/{}, /*latest_max_sequence_number=*/90, larger_delta);
-    EXPECT_EQ("150", merged2.at(SequenceSnapshotProperties::kMaxSequenceNumberKey));
+    ASSERT_EQ("150", merged2.at(SequenceSnapshotProperties::kMaxSequenceNumberKey));
 }
 
 }  // namespace paimon::test
