@@ -797,7 +797,8 @@ if(PAIMON_BUILD_TESTS)
     # OSS access and stay disabled.
     set(FS_TEST_JINDO_SOURCES)
     if(PAIMON_ENABLE_JINDO)
-        list(APPEND FS_TEST_JINDO_SOURCES fs/jindo/jindo_utils_test.cpp)
+        list(APPEND FS_TEST_JINDO_SOURCES fs/jindo/jindo_file_system_unit_test.cpp
+             fs/jindo/jindo_utils_test.cpp)
     endif()
 
     add_paimon_test(fs_test
