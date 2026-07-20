@@ -845,8 +845,7 @@ TEST_F(FileStoreCommitImplTest, TestRollbackToAsLatest) {
     ASSERT_TRUE(snapshot4.GetCommitKind() == Snapshot::CommitKind::Overwrite());
     ASSERT_EQ(snapshot4.SchemaId(), snapshot1.SchemaId());
     ASSERT_EQ(snapshot4.TotalRecordCount(), snapshot1.TotalRecordCount());
-    ASSERT_EQ(snapshot4.NextRowId(),
-              FileStoreCommitImpl::MaxNextRowId(snapshot3.NextRowId(), snapshot1.NextRowId()));
+    ASSERT_EQ(snapshot4.NextRowId(), std::max(snapshot3.NextRowId(), snapshot1.NextRowId()));
     ASSERT_EQ(snapshot4.IndexManifest(), snapshot1.IndexManifest());
     ASSERT_OK_AND_ASSIGN(std::vector<ManifestEntry> snapshot4_entries,
                          commit_impl->ReadAddManifestEntries(snapshot4));
