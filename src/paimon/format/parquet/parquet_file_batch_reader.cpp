@@ -177,9 +177,27 @@ Status ParquetFileBatchReader::SetReadSchema(
             // workaround: page index filter does not support nested fields for now, skip page index
             // bitmap pushdown if there is any nested field in the schema
             if (!has_nested_field && enable_page_index_filter) {
-                PAIMON_ASSIGN_OR_RAISE(target_row_groups,
-                                       FilterPagesByBitmap(selection_bitmap.value(),
-                                                           target_row_groups, column_indices));
+                // To decide which strategy to use, "trim" or "coalesce". "Coalesce" By default.
+                PAIMON_ASSIGN_OR_RAISE(
+                    std::string strategy,
+                    OptionsUtils::GetValueFromMap<std::string>(
+                        options_, PARQUET_READ_BITMAP_ROW_RANGE_REFINING_STRATEGY,
+                        DEFAULT_PARQUET_READ_BITMAP_STRATEGY));
+                if (strategy == "trim") {
+                    PAIMON_ASSIGN_OR_RAISE(
+                        target_row_groups,
+                        RefineRowRangesByTrimming(selection_bitmap.value(), target_row_groups,
+                                                  column_indices));
+                } else if (strategy == "coalesce") {
+                    PAIMON_ASSIGN_OR_RAISE(
+                        target_row_groups,
+                        RefineRowRangesByCoalescing(selection_bitmap.value(), target_row_groups));
+                } else {
+                    return Status::Invalid(
+                        fmt::format("Invalid row range refining strategy :{}, valid strategies "
+                                    "are: trim, coalesce",
+                                    strategy));
+                }
             }
         }
         // Apply page-level filtering after bitmap pruning so we don't read page index
@@ -295,7 +313,96 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterRowGroupsByBitmap(
     return target_row_groups;
 }
 
-Result<TargetRowGroups> ParquetFileBatchReader::FilterPagesByBitmap(
+RowRanges ParquetFileBatchReader::CoalesceNearbyRanges(const RowRanges& input,
+                                                       uint64_t hole_size_limit) {
+    if (input.IsEmpty()) {
+        return RowRanges();
+    }
+
+    const auto& ranges = input.GetRanges();
+    RowRanges result;
+    int64_t merge_start = ranges.front().from;
+    int64_t merge_end = ranges.front().to;
+
+    for (size_t i = 1; i < ranges.size(); ++i) {
+        // Gap between [merge_start, merge_end] and [ranges[i].from, ranges[i].to]
+        int64_t gap = ranges[i].from - merge_end - 1;
+        if (static_cast<uint64_t>(gap) > hole_size_limit) {
+            result.Add(RowRanges::Range(merge_start, merge_end));
+            merge_start = ranges[i].from;
+        }
+        merge_end = ranges[i].to;
+    }
+    result.Add(RowRanges::Range(merge_start, merge_end));
+    return result;
+}
+
+RowRanges ParquetFileBatchReader::BitmapToContiguousRanges(const RoaringBitmap32& bitmap,
+                                                           uint64_t start_row, uint64_t end_row) {
+    RowRanges ranges;
+    if (bitmap.IsEmpty() || start_row >= end_row) {
+        return ranges;
+    }
+
+    auto it = bitmap.EqualOrLarger(static_cast<int32_t>(start_row));
+    const auto end = bitmap.End();
+    if (it == end || static_cast<uint64_t>(*it) >= end_row) {
+        return ranges;
+    }
+
+    auto run_start = static_cast<int64_t>(*it);
+    auto prev = run_start;
+
+    for (++it; it != end; ++it) {
+        auto current = static_cast<int64_t>(*it);
+        if (current >= static_cast<int64_t>(end_row)) {
+            break;
+        }
+        if (current != prev + 1) {
+            ranges.Add(RowRanges::Range(run_start - start_row, prev - start_row));
+            run_start = current;
+        }
+        prev = current;
+    }
+    ranges.Add(RowRanges::Range(run_start - start_row, prev - start_row));
+    return ranges;
+}
+
+Result<TargetRowGroups> ParquetFileBatchReader::RefineRowRangesByCoalescing(
+    const RoaringBitmap32& bitmap, const TargetRowGroups& src_row_groups) const {
+    PAIMON_ASSIGN_OR_RAISE(const uint64_t hole_size_limit,
+                           OptionsUtils::GetValueFromMap<uint64_t>(
+                               options_, PARQUET_READ_ROW_RANGES_COALESCE_HOLE_SIZE_LIMIT,
+                               DEFAULT_PARQUET_READ_ROW_RANGES_COALESCE_HOLE_SIZE_LIMIT));
+
+    const auto& all_row_group_ranges = reader_->GetAllRowGroupRanges();
+    TargetRowGroups target_row_groups;
+    target_row_groups.reserve(src_row_groups.size());
+
+    for (const auto& row_group : src_row_groups) {
+        int32_t rg_index = row_group.GetRowGroupIndex();
+        uint64_t rg_start_row = all_row_group_ranges[rg_index].first;
+        uint64_t rg_end_row = all_row_group_ranges[rg_index].second;
+
+        // Step 1: bitmap -> contiguous ranges (relative to row group start).
+        // Step 2: coalesce ranges with small gaps to reduce range count.
+        RowRanges contiguous = BitmapToContiguousRanges(bitmap, rg_start_row, rg_end_row);
+        RowRanges coalesced = CoalesceNearbyRanges(contiguous, hole_size_limit);
+
+        auto rg_row_count = static_cast<int64_t>(rg_end_row - rg_start_row);
+        if (coalesced.IsEmpty()) {
+            continue;
+        }
+        if (coalesced.RowCount() == rg_row_count) {
+            target_row_groups.emplace_back(row_group);
+        } else {
+            target_row_groups.emplace_back(rg_index, true, std::move(coalesced));
+        }
+    }
+    return target_row_groups;
+}
+
+Result<TargetRowGroups> ParquetFileBatchReader::RefineRowRangesByTrimming(
     const RoaringBitmap32& bitmap, const TargetRowGroups& src_row_groups,
     const std::vector<int32_t>& column_indices) const {
     auto page_index_reader = reader_->GetPageIndexReader();
@@ -306,13 +413,16 @@ Result<TargetRowGroups> ParquetFileBatchReader::FilterPagesByBitmap(
     TargetRowGroups target_row_groups;
     target_row_groups.reserve(src_row_groups.size());
     for (const auto& row_group : src_row_groups) {
-        target_row_groups.emplace_back(
-            FilterRowGroupPagesByBitmap(bitmap, row_group, column_indices, page_index_reader));
+        auto filtered =
+            TrimRowGroupPageRanges(bitmap, row_group, column_indices, page_index_reader);
+        if (!filtered.GetRowRanges().IsEmpty()) {
+            target_row_groups.emplace_back(std::move(filtered));
+        }
     }
     return target_row_groups;
 }
 
-TargetRowGroup ParquetFileBatchReader::FilterRowGroupPagesByBitmap(
+TargetRowGroup ParquetFileBatchReader::TrimRowGroupPageRanges(
     const RoaringBitmap32& bitmap, const TargetRowGroup& row_group,
     const std::vector<int32_t>& column_indices,
     const std::shared_ptr<::parquet::PageIndexReader>& page_index_reader) const {
