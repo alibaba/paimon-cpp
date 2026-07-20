@@ -440,13 +440,14 @@ struct PAIMON_EXPORT Options {
     /// path and requires manual configuration by the user. No default value.
     static const char BLOB_VIEW_UPSTREAM_WAREHOUSE[];
     /// "blob-write-null-on-missing-file" - Whether to write NULL for a descriptor BLOB value when
-    /// the referenced file does not exist at write time. When false, the write fails when the
-    /// descriptor is read. Default value is "false".
+    /// the referenced file does not exist at write time. When false, a missing file is treated
+    /// like any other fetch failure, following "blob-write-null-on-fetch-failure". Default value
+    /// is "false".
     static const char BLOB_WRITE_NULL_ON_MISSING_FILE[];
     /// "blob-write-null-on-fetch-failure" - Whether to write NULL for a descriptor BLOB value when
     /// the referenced data cannot be fetched at write time (e.g. invalid descriptor or invalid
-    /// offset). A missing file is handled by "blob-write-null-on-missing-file". When false, the
-    /// write fails when the descriptor is read. Default value is "false".
+    /// offset). A missing file is handled by "blob-write-null-on-missing-file" when that option is
+    /// enabled. When false, the write fails when the descriptor is read. Default value is "false".
     static const char BLOB_WRITE_NULL_ON_FETCH_FAILURE[];
     /// "global-index.enabled" - Whether to enable global index for scan. Default value is "true".
     static const char GLOBAL_INDEX_ENABLED[];

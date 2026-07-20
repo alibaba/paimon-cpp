@@ -38,7 +38,6 @@ if(PAIMON_ENABLE_AVRO)
                    fmt
                    avro
                    tbb
-                   ${CMAKE_DL_LIBS}
                    Threads::Threads
                    SHARED_LINK_LIBS
                    paimon_shared

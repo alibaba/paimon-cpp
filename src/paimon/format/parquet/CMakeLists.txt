@@ -38,7 +38,6 @@ add_paimon_lib(paimon_parquet_file_format
                arrow
                glog
                fmt
-               ${CMAKE_DL_LIBS}
                Threads::Threads
                SHARED_LINK_LIBS
                paimon_shared
