@@ -32,7 +32,7 @@ class PAIMON_EXPORT GlobalIndexerFactory : public Factory {
  public:
     ~GlobalIndexerFactory() override = default;
 
-    /// Suffix used to distinguish global index identifiers (e.g., "bitmap-global").
+    /// Suffix used to distinguish global index identifiers (e.g., "btree-global").
     static const char GLOBAL_INDEX_IDENTIFIER_SUFFIX[];
 
     /// Creates a `GlobalIndexer` instance by looking up a registered factory using an identifier.
@@ -41,11 +41,11 @@ class PAIMON_EXPORT GlobalIndexerFactory : public Factory {
     /// (e.g., "-global") to form the full key used for factory lookup. This ensures namespace
     /// separation between file and global index types.
     ///
-    /// @param identifier The base name of the index type (e.g., "bitmap").
+    /// @param identifier The base name of the index type (e.g., "btree").
     /// @param options    Configuration parameters for the indexer.
     /// @return A `Result` containing a unique pointer to the created `GlobalIndexer`,
     ///         or an error if creation fails.
-    /// @return nullptr if no matching factory.
+    /// @return nullptr if no matching factory exists or the index type is temporarily unsupported.
     static Result<std::unique_ptr<GlobalIndexer>> Get(
         const std::string& identifier, const std::map<std::string, std::string>& options);
 
