@@ -320,7 +320,6 @@ TEST_F(KeyValueFileStoreWriteTest, TestSharedShreddingMapRestoreInitializesNextW
         {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
         {"write-only", "true"},
         {"bucket", "1"},
-        {"enable-pk-commit-in-inte-test", ""},
     };
     auto logical_schema = arrow::schema({
         arrow::field("id", arrow::int32(), /*nullable=*/false),

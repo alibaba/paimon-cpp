@@ -59,19 +59,16 @@ class TestHelper {
         const std::vector<std::string>& primary_keys,
         const std::map<std::string, std::string>& options, bool is_streaming_mode,
         bool ignore_if_exists = false, const std::string& temp_directory = "") {
-        // only for test && only check the key
-        auto new_options = options;
-        new_options["enable-object-store-catalog-in-inte-test"] = "";
-        PAIMON_ASSIGN_OR_RAISE(auto catalog, Catalog::Create(root_path, new_options));
-        PAIMON_RETURN_NOT_OK(catalog->CreateDatabase("foo", new_options, ignore_if_exists));
+        PAIMON_ASSIGN_OR_RAISE(auto catalog, Catalog::Create(root_path, options));
+        PAIMON_RETURN_NOT_OK(catalog->CreateDatabase("foo", options, ignore_if_exists));
         ::ArrowSchema c_schema;
         ScopeGuard guard([schema = &c_schema]() { ArrowSchemaRelease(schema); });
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schema, &c_schema));
         PAIMON_RETURN_NOT_OK(catalog->CreateTable(Identifier("foo", "bar"), &c_schema,
-                                                  partition_keys, primary_keys, new_options,
+                                                  partition_keys, primary_keys, options,
                                                   ignore_if_exists));
         std::string table_path = PathUtil::JoinPath(root_path, "foo.db/bar");
-        return Create(table_path, new_options, is_streaming_mode, temp_directory);
+        return Create(table_path, options, is_streaming_mode, temp_directory);
     }
 
     static Result<std::unique_ptr<TestHelper>> Create(
@@ -96,14 +93,10 @@ class TestHelper {
                                    .Finish());
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStoreWrite> write,
                                FileStoreWrite::Create(std::move(write_context)));
-        std::map<std::string, std::string> new_options = options;
-        // only for test && only check the key
-        new_options["enable-pk-commit-in-inte-test"] = "";
-        new_options["enable-object-store-commit-in-inte-test"] = "";
         CommitContextBuilder commit_context_builder(table_path, commit_user);
         PAIMON_ASSIGN_OR_RAISE(
             std::unique_ptr<CommitContext> commit_context,
-            commit_context_builder.SetOptions(new_options).IgnoreEmptyCommit(false).Finish());
+            commit_context_builder.SetOptions(options).IgnoreEmptyCommit(false).Finish());
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStoreCommit> commit,
                                FileStoreCommit::Create(std::move(commit_context)));
         return std::unique_ptr<TestHelper>(new TestHelper(std::move(file_system), std::move(write),

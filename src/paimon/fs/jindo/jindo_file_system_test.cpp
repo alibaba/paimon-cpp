@@ -14,10 +14,19 @@
  * limitations under the License.
  */
 
+#include <chrono>
+#include <cstdint>
+#include <future>
+#include <string>
+#include <unordered_set>
+#include <vector>
+
 #include "gtest/gtest.h"
 #include "paimon/fs/jindo/jindo_file_system_factory.h"
 #include "paimon/testing/utils/testharness.h"
+
 namespace paimon::jindo::test {
+
 // This test shows inconsistent behavior with the local file system in some abnormal scenarios.
 class JindoFileSystemTest : public ::testing::Test {
  public:
@@ -122,6 +131,75 @@ TEST_F(JindoFileSystemTest, TestSeek) {
     ASSERT_OK_AND_ASSIGN(pos, in_stream->GetPos());
     ASSERT_EQ(pos, 11);
     ASSERT_OK(in_stream->Close());
+}
+
+TEST(JindoFileSystemPaginationTest, TestListDirAcrossOssPageBoundary) {
+    constexpr int32_t kFileCount = 1234;
+    const std::string test_dir = "oss://paimon-unittest/test_data/jindo_listdir_truncated_1234/";
+    std::map<std::string, std::string> options = paimon::test::GetJindoTestOptions();
+
+    auto fs_factory = std::make_shared<JindoFileSystemFactory>();
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FileSystem> fs, fs_factory->Create(test_dir, options));
+
+    std::vector<std::unique_ptr<BasicFileStatus>> file_statuses;
+    ASSERT_OK(fs->ListDir(test_dir, &file_statuses));
+    ASSERT_EQ(file_statuses.size(), kFileCount);
+
+    std::unordered_set<std::string> actual_paths;
+    for (const std::unique_ptr<BasicFileStatus>& file_status : file_statuses) {
+        ASSERT_TRUE(actual_paths.insert(file_status->GetPath()).second)
+            << "duplicate path: " << file_status->GetPath();
+    }
+    for (int32_t i = 0; i < kFileCount; ++i) {
+        std::string index = std::to_string(i);
+        index.insert(/*pos=*/0, /*count=*/4 - index.size(), /*ch=*/'0');
+        ASSERT_NE(actual_paths.find(test_dir + "file-" + index + ".txt"), actual_paths.end());
+    }
+}
+
+TEST(JindoFileSystemAsyncReadTest, TestConcurrentReadAsyncAndReadFromOss) {
+    constexpr int32_t kConcurrentReads = 64;
+    constexpr int64_t kAsyncReadSize = 7;
+    const std::string file_path = "oss://paimon-unittest/test_data/jindo_read_async_128mb.bin";
+    std::map<std::string, std::string> options = paimon::test::GetJindoTestOptions();
+    auto fs_factory = std::make_shared<JindoFileSystemFactory>();
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FileSystem> fs, fs_factory->Create(file_path, options));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<InputStream> input_stream, fs->Open(file_path));
+
+    std::vector<std::vector<char>> async_buffers(kConcurrentReads,
+                                                 std::vector<char>(kAsyncReadSize));
+    std::vector<std::promise<Status>> promises(kConcurrentReads);
+    std::vector<std::future<Status>> futures;
+    futures.reserve(kConcurrentReads);
+    for (std::promise<Status>& promise : promises) {
+        futures.push_back(promise.get_future());
+    }
+
+    std::vector<Status> sync_read_statuses;
+    std::vector<int64_t> sync_read_sizes;
+    sync_read_statuses.reserve(kConcurrentReads);
+    sync_read_sizes.reserve(kConcurrentReads);
+    for (int32_t i = 0; i < kConcurrentReads; ++i) {
+        input_stream->ReadAsync(
+            async_buffers[i].data(), async_buffers[i].size(), /*offset=*/0,
+            [&promises, i](Status status) { promises[i].set_value(std::move(status)); });
+
+        char sync_buffer = 0;
+        Result<int64_t> sync_read_result =
+            input_stream->Read(&sync_buffer, /*size=*/1, /*offset=*/i);
+        sync_read_statuses.push_back(sync_read_result.status());
+        sync_read_sizes.push_back(sync_read_result.ok() ? sync_read_result.value() : -1);
+    }
+
+    for (int32_t i = 0; i < kConcurrentReads; ++i) {
+        ASSERT_EQ(futures[i].wait_for(std::chrono::seconds(60)), std::future_status::ready)
+            << "async read=" << i;
+        ASSERT_OK(futures[i].get());
+    }
+    for (int32_t i = 0; i < kConcurrentReads; ++i) {
+        ASSERT_OK(sync_read_statuses[i]) << "sync read=" << i;
+        ASSERT_EQ(sync_read_sizes[i], 1) << "sync read=" << i;
+    }
 }
 
 }  // namespace paimon::jindo::test

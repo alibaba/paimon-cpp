@@ -12,6 +12,11 @@
 
 add_library(paimon_sanitizer_flags INTERFACE)
 
+if(PAIMON_USE_ASAN AND PAIMON_USE_TSAN)
+    message(FATAL_ERROR "Address Sanitizer and Thread Sanitizer cannot be enabled together"
+    )
+endif()
+
 if(PAIMON_USE_ASAN)
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(paimon_sanitizer_flags INTERFACE -fsanitize=address
@@ -20,6 +25,19 @@ if(PAIMON_USE_ASAN)
         message(STATUS "Address Sanitizer enabled")
     else()
         message(WARNING "Address Sanitizer is only supported for GCC and Clang compilers")
+    endif()
+endif()
+
+if(PAIMON_USE_TSAN)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        # Bundled dependencies are linked statically into Paimon. Instrument them too so TSAN can
+        # observe their synchronization primitives and does not report false races at the boundary.
+        string(APPEND CMAKE_C_FLAGS " -fsanitize=thread -fno-omit-frame-pointer")
+        string(APPEND CMAKE_CXX_FLAGS " -fsanitize=thread -fno-omit-frame-pointer")
+        target_link_options(paimon_sanitizer_flags INTERFACE -fsanitize=thread)
+        message(STATUS "Thread Sanitizer enabled")
+    else()
+        message(WARNING "Thread Sanitizer is only supported for GCC and Clang compilers")
     endif()
 endif()
 

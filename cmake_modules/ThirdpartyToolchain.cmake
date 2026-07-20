@@ -23,6 +23,8 @@ set(THIRDPARTY_LOG_OPTIONS
     LOG_INSTALL
     1
     LOG_DOWNLOAD
+    1
+    LOG_OUTPUT_ON_FAILURE
     1)
 set(THIRDPARTY_CONFIGURE_COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}")
 if(CMAKE_GENERATOR_TOOLSET)
@@ -366,7 +368,7 @@ if(NOT MSVC_TOOLCHAIN)
     # Set -fPIC on all external projects
     string(APPEND EP_CXX_FLAGS
            " -fPIC -Wno-error -Wno-sign-compare -Wno-ignored-attributes")
-    string(APPEND EP_C_FLAGS " -fPIC")
+    string(APPEND EP_C_FLAGS " -fPIC -Wno-error")
 endif()
 
 if(PAIMON_USE_CXX11_ABI)
@@ -734,19 +736,12 @@ macro(build_lucene)
 
     set(LUCENE_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/lucene_ep-install")
 
-    set(LUCENE_CMAKE_CXX_FLAGS "-pthread")
-    if(PAIMON_USE_CXX11_ABI)
-        string(APPEND LUCENE_CMAKE_CXX_FLAGS " -D_GLIBCXX_USE_CXX11_ABI=1")
-    else()
-        string(APPEND LUCENE_CMAKE_CXX_FLAGS " -D_GLIBCXX_USE_CXX11_ABI=0")
-    endif()
-
     set(LUCENE_CMAKE_ARGS
         ${EP_COMMON_CMAKE_ARGS}
         "-DLUCENE_BUILD_SHARED=OFF"
         "-DENABLE_TEST=OFF"
-        "-DCMAKE_C_FLAGS=-pthread"
-        "-DCMAKE_CXX_FLAGS=${LUCENE_CMAKE_CXX_FLAGS}"
+        "-DCMAKE_C_FLAGS=${EP_C_FLAGS} -pthread"
+        "-DCMAKE_CXX_FLAGS=${EP_CXX_FLAGS} -pthread"
         "-DCMAKE_EXE_LINKER_FLAGS=-pthread"
         "-DBoost_NO_BOOST_CMAKE=ON"
         "-DBoost_NO_SYSTEM_PATHS=ON"
@@ -814,6 +809,8 @@ macro(build_jieba)
     externalproject_add(limonp_ep
                         URL ${LIMONP_SOURCE_URL}
                         URL_HASH "SHA256=${PAIMON_LIMONP_BUILD_SHA256_CHECKSUM}"
+                        CONFIGURE_COMMAND ""
+                        BUILD_COMMAND ""
                         INSTALL_COMMAND "")
 
     message(STATUS "Building jieba from source")
@@ -890,17 +887,9 @@ macro(build_fmt)
         "${FMT_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}${FMT_STATIC_LIB_NAME}${FMT_LIB_SUFFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}"
     )
     set(FMT_LIBRARIES ${FMT_STATIC_LIB})
-    set(FMT_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} -Wno-error")
-    set(FMT_CMAKE_C_FLAGS "${EP_C_FLAGS} -Wno-error")
-    string(REPLACE "-Werror" "" FMT_CMAKE_CXX_FLAGS ${FMT_CMAKE_CXX_FLAGS})
 
-    set(FMT_CMAKE_ARGS
-        ${EP_COMMON_CMAKE_ARGS}
-        -DCMAKE_INSTALL_PREFIX=${FMT_PREFIX}
-        "-DCMAKE_CXX_FLAGS=${FMT_CMAKE_CXX_FLAGS}"
-        "-DCMAKE_C_FLAGS=${FMT_CMAKE_C_FLAGS}"
-        -DFMT_TEST=OFF
-        -DFMT_DOC=OFF)
+    set(FMT_CMAKE_ARGS ${EP_COMMON_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${FMT_PREFIX}
+                       -DFMT_TEST=OFF -DFMT_DOC=OFF)
     set(FMT_CONFIGURE CMAKE_ARGS ${FMT_CMAKE_ARGS})
     externalproject_add(fmt_ep
                         URL ${FMT_SOURCE_URL}
@@ -936,12 +925,16 @@ macro(build_boost)
         ${BOOST_LIBRARY_DIR}/libboost_chrono.a
         ${BOOST_LIBRARY_DIR}/libboost_iostreams.a)
 
-    set(BOOST_CXX_FLAGS "-fPIC")
-    if(PAIMON_USE_CXX11_ABI)
-        string(APPEND BOOST_CXX_FLAGS " -D_GLIBCXX_USE_CXX11_ABI=1")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        set(BOOST_TOOLSET clang)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        set(BOOST_TOOLSET gcc)
     else()
-        string(APPEND BOOST_CXX_FLAGS " -D_GLIBCXX_USE_CXX11_ABI=0")
+        message(FATAL_ERROR "Unsupported compiler for Boost: ${CMAKE_CXX_COMPILER_ID}")
     endif()
+    set(BOOST_USER_CONFIG "${CMAKE_CURRENT_BINARY_DIR}/boost-user-config.jam")
+    file(WRITE ${BOOST_USER_CONFIG}
+         "using ${BOOST_TOOLSET} : : \"${CMAKE_CXX_COMPILER}\" ;\n")
 
     externalproject_add(boost_ep
                         URL "${THIRDPARTY_DIR}/boost/${PAIMON_BOOST_PKG_NAME}"
@@ -955,14 +948,17 @@ macro(build_boost)
                                       -sZLIB_INCLUDE=${ZLIB_INCLUDE_DIR}
                                       -sZLIB_LIBRARY_PATH=${ZLIB_PREFIX}/lib
                                       runtime-link=shared threading=multi variant=release
-                                      cxxflags=${BOOST_CXX_FLAGS} install
+                                      --user-config=${BOOST_USER_CONFIG}
+                                      toolset=${BOOST_TOOLSET} cxxflags=${EP_CXX_FLAGS}
+                                      linkflags=${EP_CXX_FLAGS} install
                         INSTALL_COMMAND bash -c
                                         "mkdir -p ${BOOST_INSTALL}/include/boost && cp -r ${BOOST_PREFIX}/src/boost_ep/libs/*/include/boost/* ${BOOST_INSTALL}/include/boost && cp -r ${BOOST_PREFIX}/src/boost_ep/libs/*/*/include/boost/* ${BOOST_INSTALL}/include/boost"
                         DEPENDS zlib
                         BUILD_BYPRODUCTS ${BOOST_BYPRODUCTS}
                         LOG_DOWNLOAD ON
                         LOG_CONFIGURE ON
-                        LOG_BUILD ON)
+                        LOG_BUILD ON
+                        LOG_OUTPUT_ON_FAILURE ON)
 
     include_directories(SYSTEM ${BOOST_INCLUDE_DIR})
 
@@ -1106,17 +1102,9 @@ macro(build_zstd)
         "${ZSTD_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}${ZSTD_STATIC_LIB_NAME}${CMAKE_STATIC_LIBRARY_SUFFIX}"
     )
     set(ZSTD_LIBRARIES ${ZSTD_STATIC_LIB})
-    set(ZSTD_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} -Wno-error")
-    set(ZSTD_CMAKE_C_FLAGS "${EP_C_FLAGS} -Wno-error")
-    string(REPLACE "-Werror" "" ZSTD_CMAKE_CXX_FLAGS ${ZSTD_CMAKE_CXX_FLAGS})
 
-    set(ZSTD_CMAKE_ARGS
-        ${EP_COMMON_CMAKE_ARGS}
-        -DCMAKE_INSTALL_PREFIX=${ZSTD_PREFIX}
-        "-DCMAKE_CXX_FLAGS=${ZSTD_CMAKE_CXX_FLAGS}"
-        "-DCMAKE_C_FLAGS=${ZSTD_CMAKE_C_FLAGS}"
-        -DZSTD_BUILD_SHARED=OFF
-        -DZSTD_BUILD_PROGRAMS=OFF)
+    set(ZSTD_CMAKE_ARGS ${EP_COMMON_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${ZSTD_PREFIX}
+                        -DZSTD_BUILD_SHARED=OFF -DZSTD_BUILD_PROGRAMS=OFF)
 
     set(ZSTD_CONFIGURE SOURCE_SUBDIR "build/cmake" CMAKE_ARGS ${ZSTD_CMAKE_ARGS})
     externalproject_add(zstd_ep
@@ -1256,14 +1244,8 @@ macro(build_jindosdk_nextarch)
     get_target_property(JINDOSDK_C_LIBRARY_LOCATION jindosdk::c_sdk IMPORTED_LOCATION)
     get_filename_component(JINDOSDK_C_DIR_ROOT "${JINDOSDK_C_INCLUDE_DIR}" DIRECTORY)
 
-    # Compile flags for jindosdk-nextarch
-    set(JINDOSDK_NEXTARCH_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS}")
-    set(JINDOSDK_NEXTARCH_CMAKE_C_FLAGS "${EP_C_FLAGS}")
     set(JINDOSDK_NEXTARCH_CMAKE_ARGS
-        ${EP_COMMON_CMAKE_ARGS}
-        "-DCMAKE_INSTALL_PREFIX=${JINDOSDK_NEXTARCH_PREFIX}"
-        "-DCMAKE_CXX_FLAGS=${JINDOSDK_NEXTARCH_CMAKE_CXX_FLAGS}"
-        "-DCMAKE_C_FLAGS=${JINDOSDK_NEXTARCH_CMAKE_C_FLAGS}"
+        ${EP_COMMON_CMAKE_ARGS} "-DCMAKE_INSTALL_PREFIX=${JINDOSDK_NEXTARCH_PREFIX}"
         -DJINDOSDK_ROOT=${JINDOSDK_C_DIR_ROOT}
         -DJINDOSDK_LIBRARY_NAME=${JINDOSDK_C_DYNAMIC_LIB_NAME})
 
@@ -1394,14 +1376,9 @@ macro(build_avro)
     get_target_property(AVRO_FMT_INCLUDE_DIR fmt INTERFACE_INCLUDE_DIRECTORIES)
     get_filename_component(AVRO_FMT_ROOT "${AVRO_FMT_INCLUDE_DIR}" DIRECTORY)
 
-    set(AVRO_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} -Wno-error")
-    set(AVRO_CMAKE_C_FLAGS "${EP_C_FLAGS} -Wno-error")
-
     set(AVRO_CMAKE_ARGS
         ${EP_COMMON_CMAKE_ARGS}
         "-DCMAKE_INSTALL_PREFIX=${AVRO_PREFIX}"
-        "-DCMAKE_CXX_FLAGS=${AVRO_CMAKE_CXX_FLAGS}"
-        "-DCMAKE_C_FLAGS=${AVRO_CMAKE_C_FLAGS}"
         "-DAVRO_BUILD_TESTS=OFF"
         "-DAVRO_BUILD_EXECUTABLES=OFF"
         "-DZLIB_ROOT=${AVRO_ZLIB_ROOT}"
@@ -1458,13 +1435,6 @@ macro(build_orc)
              "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}")
     endif()
 
-    string(REPLACE "-Werror" "" EP_CXX_FLAGS ${EP_CXX_FLAGS})
-
-    set(ORC_CMAKE_CXX_FLAGS
-        "${EP_CXX_FLAGS} -fPIC -Wno-error ${CMAKE_CXX_FLAGS_${UPPERCASE_BUILD_TYPE}}")
-    set(ORC_CMAKE_C_FLAGS
-        "${EP_C_FLAGS} -fPIC -Wno-error ${CMAKE_CXX_FLAGS_${UPPERCASE_BUILD_TYPE}}")
-
     set(ORC_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/orc_ep-prefix")
     set(ORC_INCLUDE_DIR "${ORC_PREFIX}/include")
     set(ORC_SOURCE_DIR "${ORC_PREFIX}/cpp")
@@ -1472,16 +1442,9 @@ macro(build_orc)
 
     set(ORC_STATIC_LIB "${ORC_PREFIX}/lib/liborc.a")
 
-    message("ORC_STATIC_LIB IS ${ORC_STATIC_LIB}")
-    message("ORC_CMAKE_CXX_FLAGS ${ORC_CMAKE_CXX_FLAGS}")
-    message("ORC_CMAKE_C_FLAGS ${ORC_CMAKE_C_FLAGS}")
-
     set(ORC_CMAKE_ARGS
         ${EP_COMMON_CMAKE_ARGS}
         "-DCMAKE_INSTALL_PREFIX=${ORC_PREFIX}"
-        "-DCMAKE_CXX_FLAGS=${ORC_CMAKE_CXX_FLAGS}"
-        "-DCMAKE_C_FLAGS=${ORC_CMAKE_C_FLAGS}"
-        "-DCMAKE_CXX_FLAGS_${UPPERCASE_BUILD_TYPE}=${ORC_CMAKE_CXX_FLAGS}"
         ${ORC_LINKER_FLAGS}
         "-DSNAPPY_HOME=${ORC_SNAPPY_ROOT}"
         "-DLZ4_HOME=${ORC_LZ4_ROOT}"
@@ -1547,9 +1510,7 @@ macro(build_arrow)
     get_target_property(ARROW_RE2_INCLUDE_DIR re2::re2 INTERFACE_INCLUDE_DIRECTORIES)
     get_filename_component(ARROW_RE2_ROOT "${ARROW_RE2_INCLUDE_DIR}" DIRECTORY)
 
-    set(ARROW_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} -Wno-error")
-    set(ARROW_CMAKE_C_FLAGS "${EP_C_FLAGS} -Wno-error")
-    string(REPLACE "-Werror" "" ARROW_CMAKE_CXX_FLAGS ${ARROW_CMAKE_CXX_FLAGS})
+    set(ARROW_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS}")
     # Fix for thrift Mutex.h missing #include <cstdint> (GCC 15 strictness)
     # Use -include to force include cstdint for all C++ files
     string(APPEND ARROW_CMAKE_CXX_FLAGS " -include cstdint")
@@ -1584,8 +1545,6 @@ macro(build_arrow)
         ${EP_COMMON_CMAKE_ARGS}
         "-DCMAKE_INSTALL_PREFIX=${ARROW_PREFIX}"
         "-DCMAKE_CXX_FLAGS=${ARROW_CMAKE_CXX_FLAGS}"
-        "-DCMAKE_C_FLAGS=${ARROW_CMAKE_C_FLAGS}"
-        "-DCMAKE_CXX_FLAGS_${UPPERCASE_BUILD_TYPE}=${ARROW_CMAKE_CXX_FLAGS}"
         -DARROW_DEPENDENCY_SOURCE=BUNDLED
         -DARROW_DEPENDENCY_USE_SHARED=OFF
         -DARROW_BUILD_SHARED=OFF
@@ -1706,9 +1665,6 @@ endmacro(build_arrow)
 macro(build_gtest)
     message(STATUS "Building gtest from source")
 
-    set(GTEST_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} -Wno-error")
-    string(REPLACE "-Werror" "" GTEST_CMAKE_CXX_FLAGS ${GTEST_CMAKE_CXX_FLAGS})
-
     set(GTEST_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/googletest_ep-install")
     set(GTEST_INCLUDE_DIR "${GTEST_PREFIX}/include")
 
@@ -1729,10 +1685,7 @@ macro(build_gtest)
             "${GTEST_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main.a")
     endif()
     set(GTEST_CMAKE_ARGS
-        ${EP_COMMON_CMAKE_ARGS}
-        "-DCMAKE_INSTALL_PREFIX=${GTEST_PREFIX}"
-        "-DCMAKE_CXX_FLAGS=${GTEST_CMAKE_CXX_FLAGS}"
-        "-DCMAKE_CXX_FLAGS_${UPPERCASE_BUILD_TYPE}=${GTEST_CMAKE_CXX_FLAGS}"
+        ${EP_COMMON_CMAKE_ARGS} "-DCMAKE_INSTALL_PREFIX=${GTEST_PREFIX}"
         "-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=${_GTEST_RUNTIME_DIR}"
         "-DCMAKE_RUNTIME_OUTPUT_DIRECTORY_${CMAKE_BUILD_TYPE}=${_GTEST_RUNTIME_DIR}")
 
@@ -1771,9 +1724,8 @@ endmacro()
 macro(build_tbb)
     message(STATUS "Building Tbb from source")
 
-    set(TBB_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} -Wno-error")
-    set(TBB_CMAKE_C_FLAGS "${EP_C_FLAGS} -Wno-error")
-    string(REPLACE "-Werror" "" TBB_CMAKE_CXX_FLAGS ${TBB_CMAKE_CXX_FLAGS})
+    set(TBB_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS}")
+    set(TBB_CMAKE_C_FLAGS "${EP_C_FLAGS}")
 
     string(REPLACE "-Wdocumentation" "" TBB_CMAKE_CXX_FLAGS ${TBB_CMAKE_CXX_FLAGS})
     string(REPLACE "-Wdocumentation" "" TBB_CMAKE_C_FLAGS ${TBB_CMAKE_C_FLAGS})
@@ -1796,7 +1748,6 @@ macro(build_tbb)
         "-DCMAKE_INSTALL_PREFIX=${TBB_PREFIX}"
         "-DCMAKE_CXX_FLAGS=${TBB_CMAKE_CXX_FLAGS}"
         "-DCMAKE_C_FLAGS=${TBB_CMAKE_C_FLAGS}"
-        "-DCMAKE_CXX_FLAGS_${UPPERCASE_BUILD_TYPE}=${TBB_CMAKE_CXX_FLAGS}"
         -DTBB_TEST=OFF)
 
     externalproject_add(tbb_ep
@@ -1868,20 +1819,9 @@ macro(build_glog)
         set(GLOG_LIB_SUFFIX "")
     endif()
     set(GLOG_STATIC_LIB "${GLOG_PREFIX}/lib/libglog${GLOG_LIB_SUFFIX}.a")
-    set(GLOG_CMAKE_CXX_FLAGS " -Wno-error ${EP_CXX_FLAGS}")
-    set(GLOG_CMAKE_C_FLAGS " -Wno-error ${EP_C_FLAGS}")
-    if(CMAKE_THREAD_LIBS_INIT)
-        string(APPEND GLOG_CMAKE_CXX_FLAGS " ${CMAKE_THREAD_LIBS_INIT}")
-        string(APPEND GLOG_CMAKE_C_FLAGS " ${CMAKE_THREAD_LIBS_INIT}")
-    endif()
 
-    set(GLOG_CMAKE_ARGS
-        ${EP_COMMON_CMAKE_ARGS}
-        -DCMAKE_INSTALL_PREFIX=${GLOG_PREFIX}
-        -DWITH_GFLAGS=OFF
-        -DWITH_GTEST=OFF
-        -DCMAKE_CXX_FLAGS=${GLOG_CMAKE_CXX_FLAGS}
-        -DCMAKE_C_FLAGS=${GLOG_CMAKE_C_FLAGS})
+    set(GLOG_CMAKE_ARGS ${EP_COMMON_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${GLOG_PREFIX}
+                        -DWITH_GFLAGS=OFF -DWITH_GTEST=OFF)
     if(NOT LIBUNWIND_LIBRARY)
         list(APPEND GLOG_CMAKE_ARGS -DWITH_UNWIND=none)
     endif()

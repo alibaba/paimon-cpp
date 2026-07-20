@@ -105,6 +105,8 @@ std::map<std::string, std::string> GetJindoTestOptions() {
         {"fs.oss.bucket.paimon-unittest.accessKeyId", access_key_id},
         {"fs.oss.bucket.paimon-unittest.accessKeySecret", access_key_secret},
         {"fs.oss.user", "paimon"},
+        {"enable-object-store-catalog-in-inte-test", ""},
+        {"enable-object-store-commit-in-inte-test", ""},
     };
     return options;
 }
