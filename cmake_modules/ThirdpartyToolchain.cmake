@@ -293,6 +293,16 @@ else()
     endif()
 endif()
 
+if(DEFINED ENV{PAIMON_LUMINA_URL})
+    set(LUMINA_SOURCE_URL "$ENV{PAIMON_LUMINA_URL}")
+elseif(EXISTS "${THIRDPARTY_DIR}/${PAIMON_LUMINA_PKG_NAME}")
+    set_urls(LUMINA_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_LUMINA_PKG_NAME}")
+else()
+    set_urls(LUMINA_SOURCE_URL
+             "https://paimon-cpp.oss-cn-beijing.aliyuncs.com/thirdparty/lumina/lumina_release-${PAIMON_LUMINA_BUILD_VERSION}.tar.gz"
+    )
+endif()
+
 if(APPLE)
     set(JINDOSDK_C_DYNAMIC_LIB_NAME "jindosdk_c.${PAIMON_JINDOSDK_C_BUILD_VERSION}")
     set(JINDOSDK_C_DYNAMIC_LIB_FILE "lib${JINDOSDK_C_DYNAMIC_LIB_NAME}.dylib")
@@ -1192,6 +1202,42 @@ macro(build_jindosdk_c)
 
 endmacro()
 
+macro(build_lumina)
+    message(STATUS "Installing Lumina from precompiled package")
+
+    set(LUMINA_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/lumina_ep-install")
+    set(LUMINA_INCLUDE_DIR "${LUMINA_PREFIX}/include")
+    set(LUMINA_LIB_DIR "${LUMINA_PREFIX}/lib")
+    set(LUMINA_DYNAMIC_LIB "${LUMINA_LIB_DIR}/liblumina.so")
+
+    externalproject_add(lumina_ep
+                        URL ${LUMINA_SOURCE_URL}
+                        URL_HASH "SHA256=${PAIMON_LUMINA_BUILD_SHA256_CHECKSUM}"
+                        ${THIRDPARTY_LOG_OPTIONS}
+                        CONFIGURE_COMMAND ""
+                        BUILD_COMMAND ""
+                        INSTALL_COMMAND ${CMAKE_COMMAND} -E copy_directory
+                                        <SOURCE_DIR>/artifacts/cpp/linux-x86_64/install-root/usr/local/include
+                                        ${LUMINA_INCLUDE_DIR}
+                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                                <SOURCE_DIR>/artifacts/cpp/linux-x86_64/install-root/usr/local/lib/liblumina.so
+                                ${LUMINA_DYNAMIC_LIB}
+                        BUILD_BYPRODUCTS "${LUMINA_DYNAMIC_LIB}")
+
+    file(MAKE_DIRECTORY "${LUMINA_INCLUDE_DIR}")
+    file(MAKE_DIRECTORY "${LUMINA_LIB_DIR}")
+
+    add_library(lumina::interface SHARED IMPORTED GLOBAL)
+    set_target_properties(lumina::interface
+                          PROPERTIES IMPORTED_LOCATION "${LUMINA_DYNAMIC_LIB}"
+                                     IMPORTED_NO_SONAME TRUE
+                                     INTERFACE_INCLUDE_DIRECTORIES
+                                     "${LUMINA_INCLUDE_DIR}")
+    add_dependencies(lumina::interface lumina_ep)
+
+    install(FILES "${LUMINA_DYNAMIC_LIB}" DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endmacro()
+
 macro(build_jindosdk_nextarch)
     message(STATUS "Building jindosdk-nextarch from local source")
 
@@ -1887,6 +1933,9 @@ endif()
 if(PAIMON_ENABLE_JINDO)
     build_jindosdk_c()
     build_jindosdk_nextarch()
+endif()
+if(PAIMON_ENABLE_LUMINA)
+    build_lumina()
 endif()
 if(PAIMON_ENABLE_LUCENE)
     build_boost()

@@ -20,6 +20,7 @@ if(PAIMON_ENABLE_LUMINA)
                    ${PAIMON_LUMINA_INDEX}
                    DEPENDENCIES
                    paimon_shared
+                   lumina::interface
                    STATIC_LINK_LIBS
                    arrow
                    glog
