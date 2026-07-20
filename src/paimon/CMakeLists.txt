@@ -794,8 +794,11 @@ if(PAIMON_BUILD_TESTS)
     set(PAIMON_JINDO_FS_TEST_SOURCES)
     set(PAIMON_JINDO_FS_TEST_LINK_LIBS)
     if(PAIMON_ENABLE_JINDO)
-        list(APPEND PAIMON_JINDO_FS_TEST_SOURCES fs/jindo/jindo_utils_test.cpp)
+        # These unit tests do not access remote OSS.
+        list(APPEND PAIMON_JINDO_FS_TEST_SOURCES fs/jindo/jindo_file_system_unit_test.cpp
+             fs/jindo/jindo_utils_test.cpp)
         if(PAIMON_ENABLE_NETWORK_TESTS)
+            # Factory and integration tests access real OSS.
             list(APPEND PAIMON_JINDO_FS_TEST_SOURCES
                  fs/jindo/jindo_file_system_factory_test.cpp
                  fs/jindo/jindo_file_system_test.cpp)

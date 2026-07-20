@@ -56,6 +56,9 @@ class JindoFileSystem : public FileSystem {
 
     Result<bool> Exists(const std::string& path) const override;
 
+ protected:
+    virtual Result<std::unique_ptr<OutputStream>> OpenWriter(const std::string& path) const;
+
  private:
     std::shared_ptr<JindoFileSystemImpl> impl_;
 };
