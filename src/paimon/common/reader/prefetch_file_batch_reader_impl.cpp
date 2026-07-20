@@ -467,6 +467,8 @@ Status PrefetchFileBatchReaderImpl::HandleReadResult(
             global_row_ids =
                 std::vector<uint64_t>(global_row_ids.begin(), global_row_ids.begin() + slice_end);
         } else {
+            // all within the range, data before readers_[reader_idx]->GetNextRowToRead() has been
+            // effectively consumed
             readers_pos_[reader_idx]->store(readers_[reader_idx]->GetNextRowToRead());
         }
         if (bitmap.IsEmpty()) {

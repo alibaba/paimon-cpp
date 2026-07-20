@@ -221,8 +221,8 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     // row ranges, stored relative to start_row.
     static RowRanges BitmapToContiguousRanges(const RoaringBitmap32& bitmap, uint64_t start_row,
                                               uint64_t end_row);
-    // Merge ranges whose inter-range gap is <= max_hole_size.
-    static RowRanges CoalesceNearbyRanges(const RowRanges& input, uint64_t max_hole_size);
+    // Merge ranges whose inter-range gap is <= hole_size_limit.
+    static RowRanges CoalesceNearbyRanges(const RowRanges& input, uint64_t hole_size_limit);
 
     // Compute the set of row ranges within a single column's pages that
     // overlap with the given bitmap. For each page, the bitmap is queried to

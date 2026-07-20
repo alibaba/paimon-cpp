@@ -188,10 +188,15 @@ Status ParquetFileBatchReader::SetReadSchema(
                         target_row_groups,
                         RefineRowRangesByTrimming(selection_bitmap.value(), target_row_groups,
                                                   column_indices));
-                } else {
+                } else if (strategy == "coalesce") {
                     PAIMON_ASSIGN_OR_RAISE(
                         target_row_groups,
                         RefineRowRangesByCoalescing(selection_bitmap.value(), target_row_groups));
+                } else {
+                    return Status::Invalid(
+                        fmt::format("Invalid row range refining strategy :{}, valid strategies "
+                                    "are: trim, coalesce",
+                                    strategy));
                 }
             }
         }
