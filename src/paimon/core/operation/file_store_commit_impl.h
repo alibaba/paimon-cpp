@@ -129,6 +129,8 @@ class FileStoreCommitImpl : public FileStoreCommit {
 
     Status Abort(const std::vector<std::shared_ptr<CommitMessage>>& commit_messages) override;
 
+    Result<bool> RollbackToAsLatest(int64_t target_snapshot_id) override;
+
     FileStoreCommit& RowIdCheckConflict(std::optional<int64_t> row_id_check_from_snapshot) override;
 
     std::shared_ptr<Metrics> GetCommitMetrics() const override {
@@ -199,6 +201,11 @@ class FileStoreCommitImpl : public FileStoreCommit {
 
     Result<bool> CommitSnapshotImpl(const Snapshot& new_snapshot,
                                     const std::vector<PartitionEntry>& delta_statistics);
+
+    Result<std::vector<ManifestEntry>> ReadAddManifestEntries(const Snapshot& snapshot) const;
+
+    static std::optional<int64_t> MaxNextRowId(const std::optional<int64_t>& left,
+                                               const std::optional<int64_t>& right);
 
     void CleanUpTmpManifests(const std::string& previous_changes_list_name,
                              const std::string& new_changes_list_name,

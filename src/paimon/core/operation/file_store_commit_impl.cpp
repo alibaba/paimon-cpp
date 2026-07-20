@@ -258,6 +258,128 @@ Status FileStoreCommitImpl::Abort(
     return Status::OK();
 }
 
+Result<std::vector<ManifestEntry>> FileStoreCommitImpl::ReadAddManifestEntries(
+    const Snapshot& snapshot) const {
+    std::vector<ManifestFileMeta> data_manifests;
+    PAIMON_RETURN_NOT_OK(manifest_list_->ReadDataManifests(snapshot, &data_manifests));
+    std::vector<ManifestEntry> unmerged_entries;
+    for (const auto& meta : data_manifests) {
+        std::vector<ManifestEntry> entries;
+        PAIMON_RETURN_NOT_OK(manifest_file_->Read(
+            meta.FileName(), [](const ManifestEntry&) -> Result<bool> { return true; }, &entries));
+        unmerged_entries.insert(unmerged_entries.end(), std::make_move_iterator(entries.begin()),
+                                std::make_move_iterator(entries.end()));
+    }
+    std::vector<ManifestEntry> merged_entries;
+    PAIMON_RETURN_NOT_OK(FileEntry::MergeEntries(unmerged_entries, &merged_entries));
+    std::vector<ManifestEntry> add_entries;
+    for (auto& entry : merged_entries) {
+        if (entry.Kind() == FileKind::Add()) {
+            add_entries.push_back(std::move(entry));
+        }
+    }
+    return add_entries;
+}
+
+std::optional<int64_t> FileStoreCommitImpl::MaxNextRowId(const std::optional<int64_t>& left,
+                                                         const std::optional<int64_t>& right) {
+    if (!left) {
+        return right;
+    }
+    if (!right) {
+        return left;
+    }
+    return std::max(left.value(), right.value());
+}
+
+Result<bool> FileStoreCommitImpl::RollbackToAsLatest(int64_t target_snapshot_id) {
+    PAIMON_ASSIGN_OR_RAISE(std::optional<Snapshot> latest_opt, snapshot_manager_->LatestSnapshot());
+    if (!latest_opt) {
+        return Status::Invalid("Latest snapshot is null, can not roll back.");
+    }
+    const Snapshot& latest = latest_opt.value();
+    PAIMON_ASSIGN_OR_RAISE(Snapshot target_snapshot,
+                           snapshot_manager_->LoadSnapshot(target_snapshot_id));
+
+    PAIMON_ASSIGN_OR_RAISE(std::vector<ManifestEntry> latest_entries,
+                           ReadAddManifestEntries(latest));
+    PAIMON_ASSIGN_OR_RAISE(std::vector<ManifestEntry> target_entries,
+                           ReadAddManifestEntries(target_snapshot));
+
+    std::unordered_set<FileEntry::Identifier> latest_identifiers;
+    latest_identifiers.reserve(latest_entries.size());
+    for (const auto& entry : latest_entries) {
+        latest_identifiers.insert(entry.CreateIdentifier());
+    }
+    std::unordered_set<FileEntry::Identifier> target_identifiers;
+    target_identifiers.reserve(target_entries.size());
+    for (const auto& entry : target_entries) {
+        target_identifiers.insert(entry.CreateIdentifier());
+    }
+
+    std::vector<ManifestEntry> delta_files;
+    for (const auto& entry : latest_entries) {
+        if (target_identifiers.find(entry.CreateIdentifier()) == target_identifiers.end()) {
+            delta_files.emplace_back(FileKind::Delete(), entry.Partition(), entry.Bucket(),
+                                     entry.TotalBuckets(), entry.File());
+        }
+    }
+    for (const auto& entry : target_entries) {
+        if (latest_identifiers.find(entry.CreateIdentifier()) == latest_identifiers.end()) {
+            delta_files.emplace_back(FileKind::Add(), entry.Partition(), entry.Bucket(),
+                                     entry.TotalBuckets(), entry.File());
+        }
+    }
+
+    std::pair<std::string, int64_t> base_manifest_list;
+    std::pair<std::string, int64_t> delta_manifest_list;
+    PAIMON_ASSIGN_OR_RAISE(std::vector<ManifestFileMeta> base_manifests,
+                           manifest_file_->Write(latest_entries));
+    PAIMON_ASSIGN_OR_RAISE(base_manifest_list, manifest_list_->Write(base_manifests));
+    PAIMON_ASSIGN_OR_RAISE(std::vector<ManifestFileMeta> delta_manifests,
+                           manifest_file_->Write(delta_files));
+    PAIMON_ASSIGN_OR_RAISE(delta_manifest_list, manifest_list_->Write(delta_manifests));
+
+    // For row-tracking tables nextRowId must stay monotonic: a rollback to an older snapshot must
+    // not move it backwards, otherwise new appends would reuse row ids already assigned by the
+    // snapshots between the target and the previous latest, breaking the global uniqueness of
+    // _ROW_ID. Keep the larger of the previous latest and the target nextRowId.
+    std::optional<int64_t> next_row_id =
+        MaxNextRowId(latest.NextRowId(), target_snapshot.NextRowId());
+
+    int64_t delta_record_count =
+        ManifestEntry::RecordCountAdd(delta_files) - ManifestEntry::RecordCountDelete(delta_files);
+    Snapshot new_snapshot(
+        latest.Id() + 1, target_snapshot.SchemaId(), base_manifest_list.first,
+        base_manifest_list.second, delta_manifest_list.first, delta_manifest_list.second,
+        /*changelog_manifest_list=*/std::nullopt, /*changelog_manifest_list_size=*/std::nullopt,
+        target_snapshot.IndexManifest(), commit_user_,
+        /*commit_identifier=*/std::numeric_limits<int64_t>::max(),
+        Snapshot::CommitKind::Overwrite(), DateTimeUtils::GetCurrentUTCTimeUs() / 1000,
+        target_snapshot.TotalRecordCount(), delta_record_count,
+        /*changelog_record_count=*/std::nullopt, target_snapshot.Watermark(),
+        target_snapshot.Statistics(), target_snapshot.Properties(), next_row_id);
+
+    std::unordered_map<BinaryRow, PartitionEntry> partition_entry_map;
+    PAIMON_RETURN_NOT_OK(PartitionEntry::Merge(delta_files, &partition_entry_map));
+    std::vector<PartitionEntry> delta_statistics;
+    delta_statistics.reserve(partition_entry_map.size());
+    for (const auto& [_, partition_entry] : partition_entry_map) {
+        delta_statistics.push_back(partition_entry);
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(bool success, CommitSnapshotImpl(new_snapshot, delta_statistics));
+    if (success) {
+        PAIMON_LOG_INFO(logger_,
+                        "Successfully rolled back table %s to snapshot %ld as new snapshot %ld by "
+                        "user %s.",
+                        root_path_.c_str(), target_snapshot_id, new_snapshot.Id(),
+                        commit_user_.c_str());
+        last_committed_snapshot_id_ = new_snapshot.Id();
+    }
+    return success;
+}
+
 FileStoreCommit& FileStoreCommitImpl::RowIdCheckConflict(
     std::optional<int64_t> row_id_check_from_snapshot) {
     conflict_detection_.SetRowIdCheckFromSnapshot(row_id_check_from_snapshot);

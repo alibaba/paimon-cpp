@@ -37,14 +37,20 @@
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
 #include "paimon/common/factories/io_hook.h"
+#include "paimon/common/utils/linked_hash_map.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/catalog/commit_table_request.h"
 #include "paimon/core/core_options.h"
+#include "paimon/core/deletionvectors/deletion_vectors_index_file.h"
+#include "paimon/core/index/deletion_vector_meta.h"
 #include "paimon/core/index/global_index_meta.h"
+#include "paimon/core/index/index_file_meta.h"
 #include "paimon/core/index/index_path_factory.h"
+#include "paimon/core/io/compact_increment.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/io/data_file_path_factory.h"
+#include "paimon/core/io/data_increment.h"
 #include "paimon/core/manifest/file_kind.h"
 #include "paimon/core/manifest/file_source.h"
 #include "paimon/core/manifest/index_manifest_entry.h"
@@ -781,6 +787,172 @@ TEST_F(FileStoreCommitImplTest, TestCommitMultipleTimes) {
         ASSERT_TRUE(snapshot3.value().Watermark());
         ASSERT_EQ(10, snapshot3.value().Watermark().value());
     }
+}
+
+TEST_F(FileStoreCommitImplTest, TestRollbackToAsLatest) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = dynamic_cast<FileStoreCommitImpl*>(commit.get());
+    ASSERT_TRUE(commit_impl);
+
+    // Append three times so the latest snapshot (3) is a superset of snapshot 1.
+    const std::string base_path = paimon::test::GetDataDir() +
+                                  "/orc/append_09.db/append_09/commit_messages/commit_messages-0";
+    for (int32_t i = 1; i <= 3; ++i) {
+        std::vector<std::shared_ptr<CommitMessage>> msgs =
+            GetCommitMessages(base_path + std::to_string(i), /*version=*/3);
+        ASSERT_GT(msgs.size(), 0);
+        ASSERT_OK(commit->Commit(msgs, /*commit_identifier=*/i));
+    }
+
+    ASSERT_OK_AND_ASSIGN(Snapshot snapshot1, commit_impl->snapshot_manager_->LoadSnapshot(1));
+    ASSERT_OK_AND_ASSIGN(Snapshot snapshot3, commit_impl->snapshot_manager_->LoadSnapshot(3));
+    ASSERT_OK_AND_ASSIGN(std::vector<ManifestEntry> snapshot1_entries,
+                         commit_impl->ReadAddManifestEntries(snapshot1));
+    ASSERT_OK_AND_ASSIGN(std::vector<ManifestEntry> snapshot3_entries,
+                         commit_impl->ReadAddManifestEntries(snapshot3));
+
+    // Roll back to snapshot 1: the delta only removes files (DELETE branch).
+    ASSERT_OK_AND_ASSIGN(bool rolled_back, commit->RollbackToAsLatest(/*target_snapshot_id=*/1));
+    ASSERT_TRUE(rolled_back);
+    ASSERT_OK_AND_ASSIGN(bool snapshot4_exist, file_system_->Exists(PathUtil::JoinPath(
+                                                   table_path_, "snapshot/snapshot-4")));
+    ASSERT_TRUE(snapshot4_exist);
+    ASSERT_OK_AND_ASSIGN(Snapshot snapshot4, commit_impl->snapshot_manager_->LoadSnapshot(4));
+    ASSERT_EQ(snapshot4.Id(), 4);
+    ASSERT_TRUE(snapshot4.GetCommitKind() == Snapshot::CommitKind::Overwrite());
+    ASSERT_EQ(snapshot4.SchemaId(), snapshot1.SchemaId());
+    ASSERT_EQ(snapshot4.TotalRecordCount(), snapshot1.TotalRecordCount());
+    ASSERT_EQ(snapshot4.NextRowId(),
+              FileStoreCommitImpl::MaxNextRowId(snapshot3.NextRowId(), snapshot1.NextRowId()));
+    ASSERT_EQ(snapshot4.IndexManifest(), snapshot1.IndexManifest());
+    ASSERT_OK_AND_ASSIGN(std::vector<ManifestEntry> snapshot4_entries,
+                         commit_impl->ReadAddManifestEntries(snapshot4));
+    ASSERT_EQ(CollectFileNames(snapshot4_entries), CollectFileNames(snapshot1_entries));
+
+    // Roll back forward to snapshot 3: the delta only adds files (ADD branch).
+    ASSERT_OK_AND_ASSIGN(bool rolled_forward, commit->RollbackToAsLatest(/*target_snapshot_id=*/3));
+    ASSERT_TRUE(rolled_forward);
+    ASSERT_OK_AND_ASSIGN(Snapshot snapshot5, commit_impl->snapshot_manager_->LoadSnapshot(5));
+    ASSERT_EQ(snapshot5.Id(), 5);
+    ASSERT_TRUE(snapshot5.GetCommitKind() == Snapshot::CommitKind::Overwrite());
+    ASSERT_EQ(snapshot5.TotalRecordCount(), snapshot3.TotalRecordCount());
+    ASSERT_EQ(snapshot5.IndexManifest(), snapshot3.IndexManifest());
+    ASSERT_OK_AND_ASSIGN(std::vector<ManifestEntry> snapshot5_entries,
+                         commit_impl->ReadAddManifestEntries(snapshot5));
+    ASSERT_EQ(CollectFileNames(snapshot5_entries), CollectFileNames(snapshot3_entries));
+}
+
+TEST_F(FileStoreCommitImplTest, TestRollbackToAsLatestNoLatestSnapshotReturnsError) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    ASSERT_NOK_WITH_MSG(commit->RollbackToAsLatest(/*target_snapshot_id=*/1),
+                        "Latest snapshot is null, can not roll back.");
+}
+
+TEST_F(FileStoreCommitImplTest, TestRollbackToAsLatestTargetNotExistReturnsError) {
+    CommitContextBuilder context_builder(table_path_, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    std::vector<std::shared_ptr<CommitMessage>> msgs =
+        GetCommitMessages(paimon::test::GetDataDir() +
+                              "/orc/append_09.db/append_09/commit_messages/commit_messages-01",
+                          /*version=*/3);
+    ASSERT_GT(msgs.size(), 0);
+    ASSERT_OK(commit->Commit(msgs, /*commit_identifier=*/1));
+    ASSERT_FALSE(commit->RollbackToAsLatest(/*target_snapshot_id=*/999).ok());
+}
+
+TEST_F(FileStoreCommitImplTest, TestRollbackToAsLatestDeletionVectorOnlyChange) {
+    // Mirror Java testRollbackToAsLatestDeletionVectorChangeIsInvisibleToStreaming: when the target
+    // and the latest snapshot share identical data files and differ only in the index (deletion
+    // vector) manifest, the rollback produces an empty data delta and the new snapshot inherits the
+    // target's index manifest.
+    std::map<std::string, std::string> table_options = {{Options::FILE_FORMAT, "orc"},
+                                                        {Options::FILE_SYSTEM, "local"},
+                                                        {Options::BUCKET, "2"},
+                                                        {Options::BUCKET_KEY, "f2"}};
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(test_root_, table_options));
+    arrow::Schema typed_schema(fields_);
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+    ASSERT_OK(catalog->CreateTable(Identifier("foo", "dv_bar"), &schema,
+                                   /*partition_keys=*/{"f1"},
+                                   /*primary_keys=*/{}, table_options,
+                                   /*ignore_if_exists=*/false));
+    std::string dv_table_path = PathUtil::JoinPath(test_root_, "foo.db/dv_bar");
+
+    CommitContextBuilder context_builder(dv_table_path, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
+                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                             .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
+                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
+    auto commit_impl = dynamic_cast<FileStoreCommitImpl*>(commit.get());
+    ASSERT_TRUE(commit_impl);
+
+    BinaryRow partition = BinaryRowGenerator::GenerateRow({10}, GetDefaultPool().get());
+
+    // snapshot 1 (target): a single data file, no deletion vectors.
+    std::vector<std::shared_ptr<DataFileMeta>> new_files;
+    new_files.push_back(CreateAppendDataFileMeta("data-file-1", /*row_count=*/10));
+    DataIncrement data_increment(std::move(new_files), {}, {});
+    std::shared_ptr<CommitMessage> data_msg = std::make_shared<CommitMessageImpl>(
+        partition, /*bucket=*/0, /*total_buckets=*/2, data_increment, CompactIncrement({}, {}, {}));
+    ASSERT_OK(commit->Commit({data_msg}, /*commit_identifier=*/1));
+    ASSERT_OK_AND_ASSIGN(Snapshot target_snapshot, commit_impl->snapshot_manager_->LoadSnapshot(1));
+
+    // snapshot 2 (latest): a deletion-vector-only change on the same data file. The data file is
+    // unchanged, only the index manifest gains a deletion vector.
+    LinkedHashMap<std::string, DeletionVectorMeta> dv_ranges;
+    dv_ranges.insert_or_assign("data-file-1",
+                               DeletionVectorMeta(/*data_file_name=*/"data-file-1", /*offset=*/0,
+                                                  /*length=*/10, /*cardinality=*/1));
+    std::vector<std::shared_ptr<IndexFileMeta>> new_index_files;
+    new_index_files.push_back(std::make_shared<IndexFileMeta>(
+        DeletionVectorsIndexFile::DELETION_VECTORS_INDEX, "dv-index-1", /*file_size=*/100,
+        /*row_count=*/1, /*dv_ranges=*/dv_ranges, /*external_path=*/std::nullopt));
+    DataIncrement dv_increment({}, {}, {}, std::move(new_index_files), {});
+    std::shared_ptr<CommitMessage> dv_msg = std::make_shared<CommitMessageImpl>(
+        partition, /*bucket=*/0, /*total_buckets=*/2, dv_increment, CompactIncrement({}, {}, {}));
+    ASSERT_OK(commit->Commit({dv_msg}, /*commit_identifier=*/2));
+    ASSERT_OK_AND_ASSIGN(Snapshot latest_snapshot, commit_impl->snapshot_manager_->LoadSnapshot(2));
+    ASSERT_TRUE(latest_snapshot.IndexManifest().has_value());
+
+    // Roll back to snapshot 1: the data files are identical, so the delta carries no data change
+    // and the new snapshot inherits the target's (empty) index manifest, dropping the deletion
+    // vector.
+    ASSERT_OK_AND_ASSIGN(bool rolled_back, commit->RollbackToAsLatest(/*target_snapshot_id=*/1));
+    ASSERT_TRUE(rolled_back);
+    ASSERT_OK_AND_ASSIGN(Snapshot rolled_back_snapshot,
+                         commit_impl->snapshot_manager_->LoadSnapshot(3));
+    ASSERT_EQ(rolled_back_snapshot.Id(), 3);
+    ASSERT_TRUE(rolled_back_snapshot.GetCommitKind() == Snapshot::CommitKind::Overwrite());
+    // Empty data delta: no records are added or removed by the rollback.
+    ASSERT_EQ(rolled_back_snapshot.DeltaRecordCount(), 0);
+    // The new snapshot points back to the target's index manifest.
+    ASSERT_EQ(rolled_back_snapshot.IndexManifest(), target_snapshot.IndexManifest());
+    // The surviving data files are unchanged relative to the target.
+    ASSERT_OK_AND_ASSIGN(std::vector<ManifestEntry> target_entries,
+                         commit_impl->ReadAddManifestEntries(target_snapshot));
+    ASSERT_OK_AND_ASSIGN(std::vector<ManifestEntry> rolled_back_entries,
+                         commit_impl->ReadAddManifestEntries(rolled_back_snapshot));
+    ASSERT_EQ(CollectFileNames(rolled_back_entries), CollectFileNames(target_entries));
 }
 
 TEST_F(FileStoreCommitImplTest, TestCommitAndOverwriteWithNoPartitionKey) {

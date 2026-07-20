@@ -149,6 +149,16 @@ class PAIMON_EXPORT FileStoreCommit {
     /// @return Status indicating the success or failure of the abort operation.
     virtual Status Abort(const std::vector<std::shared_ptr<CommitMessage>>& commit_messages) = 0;
 
+    /// Roll back to the target snapshot and materialize it as the latest snapshot.
+    ///
+    /// Reads the surviving files of both the current latest snapshot and the target
+    /// snapshot, then commits an OVERWRITE snapshot whose visible state equals the target.
+    ///
+    /// @param target_snapshot_id The snapshot id to roll back to.
+    /// @return Result<bool>; true if the atomic commit succeeded. Returns an error status if
+    ///     there is no latest snapshot or the target snapshot does not exist.
+    virtual Result<bool> RollbackToAsLatest(int64_t target_snapshot_id) = 0;
+
     /// Configure row-id conflict checking from a specific snapshot id.
     ///
     /// If set to a snapshot id, commit conflict detection will additionally validate row-id
