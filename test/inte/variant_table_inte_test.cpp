@@ -17,6 +17,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "arrow/api.h"
@@ -110,6 +111,34 @@ class VariantTableInteTest : public ::testing::Test {
             ASSERT_OK_AND_ASSIGN(std::string expected_json, expected->ToJson());
             ASSERT_EQ(actual_json, expected_json);
         }
+    }
+
+    // Builds a variant-access projection field via the public builder.
+    std::shared_ptr<arrow::Field> BuildAccessField(
+        const std::vector<std::pair<std::shared_ptr<arrow::DataType>, std::string>>& accesses,
+        const std::string& field_name) {
+        VariantAccessBuilder builder;
+        for (const auto& [type, path] : accesses) {
+            auto target = std::make_unique<ArrowSchema>();
+            EXPECT_TRUE(arrow::ExportField(arrow::Field("t", type), target.get()).ok());
+            EXPECT_OK(builder.AddField(target.get(), path, /*fail_on_error=*/false));
+        }
+        auto c_field = builder.Build(field_name);
+        EXPECT_TRUE(c_field.ok()) << c_field.status().ToString();
+        auto imported = arrow::ImportField(c_field.value().get());
+        EXPECT_TRUE(imported.ok()) << imported.status().ToString();
+        return imported.ValueOrDie();
+    }
+
+    // Reads `splits` back with `read_schema` projected and returns the single result chunk.
+    void ReadWithSchema(TestHelper* helper, const std::vector<std::shared_ptr<Split>>& splits,
+                        const std::shared_ptr<arrow::Schema>& read_schema,
+                        std::shared_ptr<arrow::StructArray>* result_struct) {
+        auto c_read_schema = std::make_unique<ArrowSchema>();
+        ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_read_schema.get()).ok());
+        ASSERT_OK_AND_ASSIGN(auto result, helper->ReadResult(splits, std::move(c_read_schema)));
+        ASSERT_EQ(result->num_chunks(), 1);
+        *result_struct = std::static_pointer_cast<arrow::StructArray>(result->chunk(0));
     }
 
  protected:
@@ -214,23 +243,11 @@ TEST_F(VariantTableInteTest, TestVariantAccessRead) {
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt,
                                          /*is_streaming=*/false));
 
-    VariantAccessBuilder access_builder;
-    auto age_target = std::make_unique<ArrowSchema>();
-    ASSERT_TRUE(arrow::ExportField(arrow::Field("t", arrow::int64()), age_target.get()).ok());
-    ASSERT_OK(access_builder.AddField(age_target.get(), "$.age", /*fail_on_error=*/false));
-    auto other_target = std::make_unique<ArrowSchema>();
-    ASSERT_TRUE(arrow::ExportField(arrow::Field("t", arrow::utf8()), other_target.get()).ok());
-    ASSERT_OK(access_builder.AddField(other_target.get(), "$.other", /*fail_on_error=*/false));
-    ASSERT_OK_AND_ASSIGN(auto c_access_field, access_builder.Build("v"));
-    auto imported_access = arrow::ImportField(c_access_field.get());
-    ASSERT_TRUE(imported_access.ok()) << imported_access.status().ToString();
-    auto read_schema = arrow::schema({fields_[0], imported_access.ValueOrDie()});
-    auto c_read_schema = std::make_unique<ArrowSchema>();
-    ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_read_schema.get()).ok());
-
-    ASSERT_OK_AND_ASSIGN(auto result, helper->ReadResult(splits, std::move(c_read_schema)));
-    ASSERT_EQ(result->num_chunks(), 1);
-    auto result_struct = std::static_pointer_cast<arrow::StructArray>(result->chunk(0));
+    auto access_field =
+        BuildAccessField({{arrow::int64(), "$.age"}, {arrow::utf8(), "$.other"}}, "v");
+    auto read_schema = arrow::schema({fields_[0], access_field});
+    std::shared_ptr<arrow::StructArray> result_struct;
+    ReadWithSchema(helper.get(), splits, read_schema, &result_struct);
     ASSERT_EQ(result_struct->length(), 3);
     auto struct_type = std::static_pointer_cast<arrow::StructType>(result_struct->type());
     auto v_column = std::static_pointer_cast<arrow::StructArray>(
@@ -242,6 +259,132 @@ TEST_F(VariantTableInteTest, TestVariantAccessRead) {
     ASSERT_TRUE(v_column->IsNull(2));
     ASSERT_TRUE(other.IsNull(0));
     ASSERT_EQ(other.GetString(1), "Hello");
+}
+
+// The two tests below read a variant nested inside a ROW and inside an ARRAY column as a
+// variant-access projection. Unlike the format-level tests they go through the whole table read
+// path, where the read schema is resolved against the table schema before the read plans see it.
+TEST_F(VariantTableInteTest, TestNestedRowVariantAccessRead) {
+    // Table: [id, s: ROW<nv: VARIANT, t: STRING>]
+    auto struct_field = arrow::field("s", arrow::struct_({VariantTypeUtils::ToArrowField("nv"),
+                                                          arrow::field("t", arrow::utf8())}));
+    auto table_schema = arrow::schema({fields_[0], struct_field});
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, "parquet"},
+        {Options::BUCKET, "-1"},
+    };
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
+                                            /*primary_keys=*/{}, options,
+                                            /*is_streaming_mode=*/false));
+
+    std::vector<const char*> jsons = {R"({"age": 35, "city": "Chicago"})",
+                                      R"({"age": 25, "other": "Hello"})", nullptr};
+    auto variant_batch = BuildArray(jsons);
+    arrow::StringBuilder sibling_builder;
+    for (size_t i = 0; i < jsons.size(); ++i) {
+        ASSERT_TRUE(sibling_builder.Append("t" + std::to_string(i)).ok());
+    }
+    std::shared_ptr<arrow::Array> sibling;
+    ASSERT_TRUE(sibling_builder.Finish(&sibling).ok());
+    auto struct_data = arrow::ArrayData::Make(
+        struct_field->type(), static_cast<int64_t>(jsons.size()), {nullptr},
+        {variant_batch->field(1)->data(), sibling->data()}, /*null_count=*/0);
+    auto batch_data = arrow::ArrayData::Make(
+        arrow::struct_({fields_[0], struct_field}), static_cast<int64_t>(jsons.size()), {nullptr},
+        {variant_batch->field(0)->data(), struct_data}, /*null_count=*/0);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch,
+                         MakeBatch(std::make_shared<arrow::StructArray>(batch_data)));
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                                /*expected_commit_messages=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt,
+                                         /*is_streaming=*/false));
+
+    auto access_field =
+        BuildAccessField({{arrow::int64(), "$.age"}, {arrow::utf8(), "$.other"}}, "nv");
+    auto read_schema = arrow::schema(
+        {fields_[0],
+         struct_field->WithType(arrow::struct_({access_field, struct_field->type()->field(1)}))});
+    std::shared_ptr<arrow::StructArray> result_struct;
+    ReadWithSchema(helper.get(), splits, read_schema, &result_struct);
+
+    auto struct_type = std::static_pointer_cast<arrow::StructType>(result_struct->type());
+    auto s_column = std::static_pointer_cast<arrow::StructArray>(
+        result_struct->field(struct_type->GetFieldIndex("s")));
+    const auto& nv = static_cast<const arrow::StructArray&>(*s_column->field(0));
+    const auto& age = static_cast<const arrow::Int64Array&>(*nv.field(0));
+    const auto& other = static_cast<const arrow::StringArray&>(*nv.field(1));
+    const auto& kept_sibling = static_cast<const arrow::StringArray&>(*s_column->field(1));
+    ASSERT_EQ(age.Value(0), 35);
+    ASSERT_EQ(age.Value(1), 25);
+    ASSERT_TRUE(nv.IsNull(2));
+    ASSERT_TRUE(other.IsNull(0));
+    ASSERT_EQ(other.GetString(1), "Hello");
+    for (size_t i = 0; i < jsons.size(); ++i) {
+        EXPECT_EQ(kept_sibling.GetString(static_cast<int64_t>(i)), "t" + std::to_string(i));
+    }
+}
+
+TEST_F(VariantTableInteTest, TestArrayVariantAccessRead) {
+    // Table: [id, arr: ARRAY<VARIANT>]
+    auto list_field = arrow::field("arr", arrow::list(VariantTypeUtils::ToArrowField("element")));
+    auto table_schema = arrow::schema({fields_[0], list_field});
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, "parquet"},
+        {Options::BUCKET, "-1"},
+    };
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(test_dir_, table_schema, /*partition_keys=*/{},
+                                            /*primary_keys=*/{}, options,
+                                            /*is_streaming_mode=*/false));
+
+    // Row 0 holds two elements, row 1 is empty and row 2 holds one.
+    std::vector<const char*> flat = {R"({"x": 1, "y": 2})", R"({"x": 3})", R"({"x": 5})"};
+    std::vector<int32_t> offsets = {0, 2, 2, 3};
+    arrow::Int32Builder offset_builder;
+    ASSERT_TRUE(offset_builder.AppendValues(offsets).ok());
+    std::shared_ptr<arrow::Array> offset_array;
+    ASSERT_TRUE(offset_builder.Finish(&offset_array).ok());
+    auto elements = BuildArray(flat);
+    arrow::Int32Builder id_builder;
+    ASSERT_TRUE(id_builder.AppendValues({0, 1, 2}).ok());
+    std::shared_ptr<arrow::Array> ids;
+    ASSERT_TRUE(id_builder.Finish(&ids).ok());
+    auto list_data = arrow::ArrayData::Make(list_field->type(), /*length=*/3,
+                                            {nullptr, offset_array->data()->buffers[1]},
+                                            {elements->field(1)->data()}, /*null_count=*/0);
+    auto batch_data = arrow::ArrayData::Make(arrow::struct_({fields_[0], list_field}), /*length=*/3,
+                                             {nullptr}, {ids->data(), list_data}, /*null_count=*/0);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch,
+                         MakeBatch(std::make_shared<arrow::StructArray>(batch_data)));
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                                /*expected_commit_messages=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt,
+                                         /*is_streaming=*/false));
+
+    auto access_field = BuildAccessField({{arrow::int64(), "$.x"}}, "element");
+    auto read_schema = arrow::schema({fields_[0], list_field->WithType(arrow::list(access_field))});
+    std::shared_ptr<arrow::StructArray> result_struct;
+    ReadWithSchema(helper.get(), splits, read_schema, &result_struct);
+
+    auto struct_type = std::static_pointer_cast<arrow::StructType>(result_struct->type());
+    const auto& list = static_cast<const arrow::ListArray&>(
+        *result_struct->field(struct_type->GetFieldIndex("arr")));
+    ASSERT_EQ(list.length(), 3);
+    ASSERT_EQ(list.value_length(0), 2);
+    ASSERT_EQ(list.value_length(1), 0);
+    ASSERT_EQ(list.value_length(2), 1);
+    const auto& x = static_cast<const arrow::Int64Array&>(
+        *static_cast<const arrow::StructArray&>(*list.values()).field(0));
+    ASSERT_EQ(x.Value(list.value_offset(0)), 1);
+    ASSERT_EQ(x.Value(list.value_offset(0) + 1), 3);
+    ASSERT_EQ(x.Value(list.value_offset(2)), 5);
 }
 
 TEST_F(VariantTableInteTest, TestReadWithIOException) {
