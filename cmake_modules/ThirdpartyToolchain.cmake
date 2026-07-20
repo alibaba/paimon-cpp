@@ -1636,13 +1636,16 @@ macro(build_arrow)
 
     target_link_libraries(arrow_dataset INTERFACE arrow_acero)
 
+    # libarrow.a calls dlsym; keep ${CMAKE_DL_LIBS} in the interface so -ldl is placed
+    # after libarrow.a on linkers that resolve symbols strictly left-to-right.
     target_link_libraries(arrow
                           INTERFACE zstd
                                     snappy
                                     lz4
                                     zlib
                                     re2::re2
-                                    arrow_bundled_dependencies)
+                                    arrow_bundled_dependencies
+                                    ${CMAKE_DL_LIBS})
 
     target_link_libraries(parquet
                           INTERFACE zstd

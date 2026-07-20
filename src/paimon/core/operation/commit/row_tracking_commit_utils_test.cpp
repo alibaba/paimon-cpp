@@ -23,6 +23,7 @@
 #include "gtest/gtest.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
+#include "paimon/common/table/special_fields.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/manifest/file_kind.h"
 #include "paimon/core/manifest/file_source.h"
@@ -58,6 +59,26 @@ class RowTrackingCommitUtilsTest : public testing::Test {
             /*value_stats_cols=*/std::nullopt,
             /*external_path=*/std::nullopt,
             /*first_row_id=*/std::nullopt, write_cols);
+        return ManifestEntry(FileKind::Add(), CreateIntRow(1), /*bucket=*/0, /*total_buckets=*/1,
+                             file_meta);
+    }
+
+    ManifestEntry CreateEntryWithFirstRowId(
+        const std::string& file_name, int64_t row_count, int64_t min_seq_number,
+        int64_t max_seq_number, const std::optional<FileSource>& file_source,
+        const std::optional<std::vector<std::string>>& write_cols,
+        const std::optional<int64_t>& first_row_id) const {
+        auto file_meta = std::make_shared<DataFileMeta>(
+            file_name, /*file_size=*/row_count, row_count, DataFileMeta::EmptyMinKey(),
+            DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
+            min_seq_number, max_seq_number,
+            /*schema_id=*/1, /*level=*/0,
+            /*extra_files=*/std::vector<std::optional<std::string>>(),
+            /*creation_time=*/Timestamp(0, 0),
+            /*delete_row_count=*/std::nullopt,
+            /*embedded_index=*/nullptr, file_source,
+            /*value_stats_cols=*/std::nullopt,
+            /*external_path=*/std::nullopt, first_row_id, write_cols);
         return ManifestEntry(FileKind::Add(), CreateIntRow(1), /*bucket=*/0, /*total_buckets=*/1,
                              file_meta);
     }
@@ -211,6 +232,107 @@ TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingReassignsOnRetryWithAdva
     EXPECT_EQ(0, input[0].File()->min_sequence_number);
     EXPECT_EQ(0, input[0].File()->max_sequence_number);
     EXPECT_EQ(std::nullopt, input[0].File()->first_row_id);
+}
+
+TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingEmptyInput) {
+    std::vector<ManifestEntry> input;
+    ASSERT_OK_AND_ASSIGN(RowTrackingCommitUtils::RowTrackingAssigned assigned,
+                         RowTrackingCommitUtils::AssignRowTracking(
+                             /*new_snapshot_id=*/100, /*first_row_id_start=*/42, input));
+    EXPECT_TRUE(assigned.assigned_entries.empty());
+    EXPECT_EQ(42, assigned.next_row_id_start);
+}
+
+TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingSkipsFilesWithRowIdColumn) {
+    std::vector<ManifestEntry> input;
+    input.push_back(
+        CreateEntry("has-row-id-column", /*row_count=*/10, /*min_seq_number=*/0,
+                    /*max_seq_number=*/0, FileSource::Append(),
+                    std::vector<std::string>{std::string(SpecialFields::RowId().Name())}));
+
+    ASSERT_OK_AND_ASSIGN(RowTrackingCommitUtils::RowTrackingAssigned assigned,
+                         RowTrackingCommitUtils::AssignRowTracking(
+                             /*new_snapshot_id=*/100, /*first_row_id_start=*/0, input));
+
+    ASSERT_EQ(1u, assigned.assigned_entries.size());
+    // Sequence numbers are still stamped for a new file.
+    EXPECT_EQ(100, assigned.assigned_entries[0].File()->min_sequence_number);
+    EXPECT_EQ(100, assigned.assigned_entries[0].File()->max_sequence_number);
+    // But a file already carrying the row-id column must not be assigned a first row id.
+    EXPECT_EQ(std::nullopt, assigned.assigned_entries[0].File()->first_row_id);
+    EXPECT_EQ(0, assigned.next_row_id_start);
+}
+
+TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingKeepsExistingFirstRowId) {
+    std::vector<ManifestEntry> input;
+    input.push_back(CreateEntryWithFirstRowId("already-assigned", /*row_count=*/10,
+                                              /*min_seq_number=*/0, /*max_seq_number=*/0,
+                                              FileSource::Append(), std::vector<std::string>{"f0"},
+                                              /*first_row_id=*/500));
+
+    ASSERT_OK_AND_ASSIGN(RowTrackingCommitUtils::RowTrackingAssigned assigned,
+                         RowTrackingCommitUtils::AssignRowTracking(
+                             /*new_snapshot_id=*/100, /*first_row_id_start=*/0, input));
+
+    ASSERT_EQ(1u, assigned.assigned_entries.size());
+    // The existing first row id is preserved and start is not advanced.
+    ASSERT_TRUE(assigned.assigned_entries[0].File()->first_row_id.has_value());
+    EXPECT_EQ(500, assigned.assigned_entries[0].File()->first_row_id.value());
+    EXPECT_EQ(0, assigned.next_row_id_start);
+}
+
+TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingCompactFileKeepsNoFirstRowId) {
+    std::vector<ManifestEntry> input;
+    input.push_back(CreateEntry("compact-file", /*row_count=*/6, /*min_seq_number=*/3,
+                                /*max_seq_number=*/5, FileSource::Compact(),
+                                std::vector<std::string>{"f0"}));
+
+    ASSERT_OK_AND_ASSIGN(RowTrackingCommitUtils::RowTrackingAssigned assigned,
+                         RowTrackingCommitUtils::AssignRowTracking(
+                             /*new_snapshot_id=*/100, /*first_row_id_start=*/7, input));
+
+    ASSERT_EQ(1u, assigned.assigned_entries.size());
+    // Pure compact file keeps its original sequence numbers and gets no first row id.
+    EXPECT_EQ(3, assigned.assigned_entries[0].File()->min_sequence_number);
+    EXPECT_EQ(5, assigned.assigned_entries[0].File()->max_sequence_number);
+    EXPECT_EQ(std::nullopt, assigned.assigned_entries[0].File()->first_row_id);
+    EXPECT_EQ(7, assigned.next_row_id_start);
+}
+
+TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingBlobBeforeNormalFileFails) {
+    std::vector<ManifestEntry> input;
+    input.push_back(CreateEntry("blob-a.blob", /*row_count=*/3, /*min_seq_number=*/0,
+                                /*max_seq_number=*/0, FileSource::Append(),
+                                std::vector<std::string>{"blob_a"}));
+
+    ASSERT_NOK_WITH_MSG(RowTrackingCommitUtils::AssignRowTracking(
+                            /*new_snapshot_id=*/100, /*first_row_id_start=*/0, input),
+                        "blobStart");
+}
+
+TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingVectorStoreBeforeNormalFileFails) {
+    std::vector<ManifestEntry> input;
+    input.push_back(CreateEntry("vector-1.vector.data", /*row_count=*/4, /*min_seq_number=*/0,
+                                /*max_seq_number=*/0, FileSource::Append(),
+                                std::vector<std::string>{"vec"}));
+
+    ASSERT_NOK_WITH_MSG(RowTrackingCommitUtils::AssignRowTracking(
+                            /*new_snapshot_id=*/100, /*first_row_id_start=*/0, input),
+                        "vectorStoreStart");
+}
+
+TEST_F(RowTrackingCommitUtilsTest, TestAssignRowTrackingBlobWithoutWriteColsFails) {
+    std::vector<ManifestEntry> input;
+    input.push_back(CreateEntry("normal-file", /*row_count=*/10, /*min_seq_number=*/0,
+                                /*max_seq_number=*/0, FileSource::Append(),
+                                std::vector<std::string>{"f0"}));
+    input.push_back(CreateEntry("blob-a.blob", /*row_count=*/3, /*min_seq_number=*/0,
+                                /*max_seq_number=*/0, FileSource::Append(),
+                                std::vector<std::string>{}));
+
+    ASSERT_NOK_WITH_MSG(RowTrackingCommitUtils::AssignRowTracking(
+                            /*new_snapshot_id=*/100, /*first_row_id_start=*/0, input),
+                        "does not have write_cols");
 }
 
 }  // namespace paimon::test

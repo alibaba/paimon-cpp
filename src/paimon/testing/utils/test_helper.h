@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+#include "arrow/api.h"
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/api.h"
 #include "paimon/api.h"
@@ -173,6 +174,27 @@ class TestHelper {
         }
         PAIMON_ASSIGN_OR_RAISE(auto result_plan, scan_->CreatePlan());
         return result_plan->Splits();
+    }
+
+    /// Builds a one-row struct array holding the serialized descriptor of the blob.
+    static Result<std::shared_ptr<arrow::Array>> MakeBlobDescriptorArray(
+        const std::shared_ptr<arrow::DataType>& struct_type, const std::shared_ptr<Blob>& blob,
+        const std::shared_ptr<MemoryPool>& pool) {
+        if (struct_type->num_fields() != 1 ||
+            struct_type->field(0)->type()->id() != arrow::Type::LARGE_BINARY) {
+            return Status::Invalid("struct_type must have a single large binary field");
+        }
+        arrow::StructBuilder struct_builder(struct_type, arrow::default_memory_pool(),
+                                            {std::make_shared<arrow::LargeBinaryBuilder>()});
+        auto blob_builder =
+            static_cast<arrow::LargeBinaryBuilder*>(struct_builder.field_builder(0));
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder.Append());
+        PAIMON_UNIQUE_PTR<Bytes> descriptor = blob->ToDescriptor(pool);
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(
+            blob_builder->Append(descriptor->data(), descriptor->size()));
+        std::shared_ptr<arrow::Array> array;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder.Finish(&array));
+        return array;
     }
 
     static Result<bool> CheckBlobsEqual(const std::vector<std::shared_ptr<Blob>>& result_blobs,
