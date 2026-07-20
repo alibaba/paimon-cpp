@@ -4055,7 +4055,7 @@ TEST(SystemTableReadInteTest, TestGlobalSystemTablesPropagateCorruptSchema) {
     ASSERT_OK(fs->WriteFile(PathUtil::JoinPath(table_path, "schema/schema-0"), "{invalid-json",
                             /*overwrite=*/true));
 
-    for (const std::string& system_table : {"all_table_options", "tables", "partitions"}) {
+    for (const std::string system_table : {"all_table_options", "tables", "partitions"}) {
         ASSERT_NOK(ReadGlobalSystemTable(system_table, catalog.get(), fs, warehouse, options));
     }
 }
