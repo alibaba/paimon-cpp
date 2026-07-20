@@ -50,16 +50,16 @@ class CompactionMetrics {
             : metrics_(metrics), partition_(partition), bucket_(bucket) {}
 
         void ReportLevel0FileCount(int64_t count) {
-            level0_file_count_ = count;
+            level0_file_count_.store(count, std::memory_order_relaxed);
         }
         void ReportCompactionInputSize(int64_t bytes) {
-            compaction_input_size_ = bytes;
+            compaction_input_size_.store(bytes, std::memory_order_relaxed);
         }
         void ReportCompactionOutputSize(int64_t bytes) {
-            compaction_output_size_ = bytes;
+            compaction_output_size_.store(bytes, std::memory_order_relaxed);
         }
         void ReportTotalFileSize(int64_t bytes) {
-            total_file_size_ = bytes;
+            total_file_size_.store(bytes, std::memory_order_relaxed);
         }
         void ReportCompactionTime(int64_t time) {
             metrics_->ReportCompactionTime(time);
@@ -82,19 +82,19 @@ class CompactionMetrics {
         }
 
         int64_t Level0FileCount() const {
-            return level0_file_count_;
+            return level0_file_count_.load(std::memory_order_relaxed);
         }
 
         int64_t CompactionInputSize() const {
-            return compaction_input_size_;
+            return compaction_input_size_.load(std::memory_order_relaxed);
         }
 
         int64_t CompactionOutputSize() const {
-            return compaction_output_size_;
+            return compaction_output_size_.load(std::memory_order_relaxed);
         }
 
         int64_t TotalFileSize() const {
-            return total_file_size_;
+            return total_file_size_.load(std::memory_order_relaxed);
         }
 
      private:
@@ -103,10 +103,10 @@ class CompactionMetrics {
         int32_t bucket_;
 
         // Data fields for metrics.
-        int64_t level0_file_count_ = 0;
-        int64_t compaction_input_size_ = 0;
-        int64_t compaction_output_size_ = 0;
-        int64_t total_file_size_ = 0;
+        std::atomic<int64_t> level0_file_count_ = {0};
+        std::atomic<int64_t> compaction_input_size_ = {0};
+        std::atomic<int64_t> compaction_output_size_ = {0};
+        std::atomic<int64_t> total_file_size_ = {0};
     };
 
     std::shared_ptr<Reporter> CreateReporter(const BinaryRow& partition, int32_t bucket) {
