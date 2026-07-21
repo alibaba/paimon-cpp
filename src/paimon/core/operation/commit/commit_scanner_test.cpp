@@ -112,8 +112,8 @@ TEST_F(CommitScannerTest, TestReadAllEntriesFromChangedPartitionsEmptyFastExit) 
     ASSERT_OK_AND_ASSIGN(std::vector<ManifestEntry> entries,
                          scanner.ReadAllEntriesFromChangedPartitions(MakeSnapshot(),
                                                                      /*changed_partitions=*/{}));
-    EXPECT_TRUE(entries.empty());
-    EXPECT_FALSE(supplier_called);
+    ASSERT_TRUE(entries.empty());
+    ASSERT_FALSE(supplier_called);
 }
 
 TEST_F(CommitScannerTest, TestReadAllEntriesFromPartitionsRequiresSupplier) {
@@ -144,7 +144,7 @@ TEST_F(CommitScannerTest, TestReadAllEntriesFromChangedPartitionsBuildsScanFilte
     ASSERT_TRUE(supplier_called);
     ASSERT_EQ(1u, captured_partition_filters.size());
     ASSERT_EQ(1u, captured_partition_filters[0].size());
-    EXPECT_EQ("42", captured_partition_filters[0]["pt"]);
+    ASSERT_EQ("42", captured_partition_filters[0]["pt"]);
 }
 
 }  // namespace paimon::test

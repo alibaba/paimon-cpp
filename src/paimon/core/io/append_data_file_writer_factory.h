@@ -57,6 +57,11 @@ class AppendDataFileWriterFactory
     CreateWriter() const override;
 
  protected:
+    // Resolves the sequence-number counter for a newly created writer. When data evolution is
+    // enabled each file gets a fresh counter starting at 0; otherwise the factory's shared counter
+    // is reused.
+    std::shared_ptr<LongCounter> ResolveSeqNumCounter() const;
+
     std::shared_ptr<arrow::Schema> write_schema_;
     std::optional<std::vector<std::string>> write_cols_;
     std::shared_ptr<LongCounter> seq_num_counter_;

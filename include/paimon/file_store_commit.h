@@ -135,6 +135,30 @@ class PAIMON_EXPORT FileStoreCommit {
     virtual Status DropPartition(const std::vector<std::map<std::string, std::string>>& partitions,
                                  int64_t commit_identifier) = 0;
 
+    /// Truncate the whole table by overwriting all partitions with empty data. The generated
+    /// snapshot has commit kind OVERWRITE.
+    ///
+    /// @param commit_identifier An identifier for the commit operation.
+    /// @return Status indicating the success or failure of the truncate operation.
+    virtual Status TruncateTable(int64_t commit_identifier) = 0;
+
+    /// Abort an unsuccessful commit. The data and index files described by the given commit
+    /// messages will be deleted on a best-effort basis (delete failures are ignored).
+    ///
+    /// @param commit_messages A vector of commit messages whose files should be cleaned up.
+    /// @return Status indicating the success or failure of the abort operation.
+    virtual Status Abort(const std::vector<std::shared_ptr<CommitMessage>>& commit_messages) = 0;
+
+    /// Roll back to the target snapshot and materialize it as the latest snapshot.
+    ///
+    /// Reads the surviving files of both the current latest snapshot and the target
+    /// snapshot, then commits an OVERWRITE snapshot whose visible state equals the target.
+    ///
+    /// @param target_snapshot_id The snapshot id to roll back to.
+    /// @return Result<bool>; true if the atomic commit succeeded. Returns an error status if
+    ///     there is no latest snapshot or the target snapshot does not exist.
+    virtual Result<bool> RollbackToAsLatest(int64_t target_snapshot_id) = 0;
+
     /// Configure row-id conflict checking from a specific snapshot id.
     ///
     /// If set to a snapshot id, commit conflict detection will additionally validate row-id

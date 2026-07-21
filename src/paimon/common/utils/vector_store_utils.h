@@ -1,5 +1,5 @@
 /*
- * Copyright 2025-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,23 @@
  */
 
 #pragma once
-#include <cstdint>
 
-namespace lumina::core {
+#include <string>
 
-// Unified external identifier types
-using vector_id_t = std::uint64_t;
-using dimension_t = std::uint32_t;
-using label_id_t = std::uint64_t;
+namespace paimon {
 
-} // namespace lumina::core
+/// Utils for vector-store files.
+///
+/// A vector-store file is identified by the `.vector.` marker in its name.
+class VectorStoreUtils {
+ public:
+    VectorStoreUtils() = delete;
+    ~VectorStoreUtils() = delete;
+
+    /// Returns true if `file_name` is a vector-store file (contains the `.vector.` marker).
+    static bool IsVectorStoreFile(const std::string& file_name) {
+        return file_name.find(".vector.") != std::string::npos;
+    }
+};
+
+}  // namespace paimon
