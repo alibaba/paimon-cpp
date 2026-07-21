@@ -225,4 +225,43 @@ TEST_F(BTreeFileMetaSelectorTest, TestOnlyNullsFileExcludedFromRangeQueries) {
     ASSERT_EQ(names.count("file6"), 1u);
 }
 
+TEST_F(BTreeFileMetaSelectorTest, TestEmptyStringKeyDoesNotCrash) {
+    std::shared_ptr<MemoryPool> pool = GetDefaultPool();
+    std::shared_ptr<arrow::DataType> key_type = arrow::utf8();
+    auto serialize = [&](const char* value, size_t size) {
+        Literal literal(FieldType::STRING, value, size);
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<Bytes> result,
+                             KeySerializer::SerializeKey(literal, key_type, pool.get()));
+        return result;
+    };
+
+    auto empty_meta =
+        std::make_shared<BTreeIndexMeta>(serialize("", 0), serialize("www.example.com", 15), false);
+    auto normal_meta =
+        std::make_shared<BTreeIndexMeta>(serialize("aaa.com", 7), serialize("zzz.com", 7), false);
+    auto null_meta = std::make_shared<BTreeIndexMeta>(nullptr, nullptr, true);
+    std::vector<GlobalIndexIOMeta> files = {
+        GlobalIndexIOMeta("file_empty", 1, empty_meta->Serialize(pool.get())),
+        GlobalIndexIOMeta("file_normal", 1, normal_meta->Serialize(pool.get())),
+        GlobalIndexIOMeta("file_nulls", 1, null_meta->Serialize(pool.get())),
+    };
+
+    BTreeFileMetaSelector selector(files, key_type, pool);
+
+    ASSERT_OK_AND_ASSIGN(std::vector<GlobalIndexIOMeta> result,
+                         selector.VisitEqual(Literal(FieldType::STRING, "www.example.com", 15)));
+    CheckResult(result, {"file_empty", "file_normal"});
+
+    ASSERT_OK_AND_ASSIGN(result, selector.VisitLessThan(Literal(FieldType::STRING, "bbb.com", 7)));
+    CheckResult(result, {"file_empty", "file_normal"});
+
+    ASSERT_OK_AND_ASSIGN(
+        result, selector.VisitGreaterThan(Literal(FieldType::STRING, "www.example.com", 15)));
+    CheckResult(result, {"file_normal"});
+
+    ASSERT_OK_AND_ASSIGN(result, selector.VisitIn({Literal(FieldType::STRING, "", 0),
+                                                   Literal(FieldType::STRING, "zzz.com", 7)}));
+    CheckResult(result, {"file_empty", "file_normal"});
+}
+
 }  // namespace paimon::test

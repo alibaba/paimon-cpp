@@ -23,13 +23,19 @@
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
-TEST(GlobalIndexerFactoryTest, TestSimple) {
+TEST(GlobalIndexerFactoryTest, TestBitmapUnsupported) {
     std::map<std::string, std::string> options;
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<GlobalIndexer> indexer,
                          GlobalIndexerFactory::Get("bitmap", options));
+    ASSERT_FALSE(indexer);
+}
 
-    auto bitmap_global_index = dynamic_cast<BitmapGlobalIndex*>(indexer.get());
-    ASSERT_TRUE(bitmap_global_index);
+TEST(GlobalIndexerFactoryTest, TestLegacyBitmapEnabledForTesting) {
+    std::map<std::string, std::string> options = {
+        {"bitmap-global-index.legacy-format.enabled-for-testing", "true"}};
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<GlobalIndexer> indexer,
+                         GlobalIndexerFactory::Get("bitmap", options));
+    ASSERT_TRUE(dynamic_cast<BitmapGlobalIndex*>(indexer.get()));
 }
 
 TEST(GlobalIndexerFactoryTest, TestNonExist) {

@@ -57,7 +57,6 @@ if(PAIMON_BUILD_BENCHMARKS)
                          ${PAIMON_BENCHMARK_STATIC_LINK_LIBS}
                          test_utils_static
                          Threads::Threads
-                         ${CMAKE_DL_LIBS}
                          ${PAIMON_BENCHMARK_PLATFORM_LINK_LIBS}
                          ${PAIMON_BENCHMARK_LINK_TOOLCHAIN}
                          EXTRA_INCLUDES

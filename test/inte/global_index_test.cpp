@@ -45,6 +45,12 @@ namespace paimon::test {
 using ParamType = std::tuple<std::string, bool>;
 /// This is a sdk end-to-end test for global index.
 class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInterface<ParamType> {
+    static const std::map<std::string, std::string>& LegacyBitmapTestOptions() {
+        static const std::map<std::string, std::string> options = {
+            {"bitmap-global-index.legacy-format.enabled-for-testing", "true"}};
+        return options;
+    }
+
     void SetUp() override {
         file_format_ = std::get<0>(GetParam());
         dir_ = UniqueTestDirectory::Create("local");
@@ -61,13 +67,17 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
     void CreateTable(const std::vector<std::string>& partition_keys,
                      const std::shared_ptr<arrow::Schema>& schema,
                      const std::map<std::string, std::string>& options) const {
+        std::map<std::string, std::string> test_options = options;
+        for (const auto& [key, value] : LegacyBitmapTestOptions()) {
+            test_options[key] = value;
+        }
         ::ArrowSchema c_schema;
         ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
 
         ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir_->Str(), {}, fs_));
         ASSERT_OK(catalog->CreateDatabase("foo", {}, /*ignore_if_exists=*/false));
         ASSERT_OK(catalog->CreateTable(Identifier("foo", "bar"), &c_schema, partition_keys,
-                                       /*primary_keys=*/{}, options,
+                                       /*primary_keys=*/{}, test_options,
                                        /*ignore_if_exists=*/false));
     }
 
@@ -537,10 +547,11 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
 
     std::string table_path = paimon::test::GetDataDir() + "/" + file_format_ +
                              "/append_with_global_index.db/append_with_global_index";
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
-                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
-                                                 /*executor=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<GlobalIndexScan> global_index_scan,
+        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                /*partitions=*/std::nullopt, LegacyBitmapTestOptions(), fs_,
+                                /*executor=*/nullptr, pool_));
     // test index reader
     // test f0 field
     ASSERT_OK_AND_ASSIGN(auto index_readers, global_index_scan->CreateReaders("f0", std::nullopt));
@@ -707,10 +718,11 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
     std::string table_path = paimon::test::GetDataDir() + "/" + file_format_ +
                              "/append_with_global_index.db/append_with_global_index";
     // snapshot 2 has f0 index
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
-                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/2l,
-                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
-                                                 /*executor=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<GlobalIndexScan> global_index_scan,
+        GlobalIndexScan::Create(table_path, /*snapshot_id=*/2l,
+                                /*partitions=*/std::nullopt, LegacyBitmapTestOptions(), fs_,
+                                /*executor=*/nullptr, pool_));
     // test index reader
     // test f0 field
     ASSERT_OK_AND_ASSIGN(auto index_readers, global_index_scan->CreateReaders("f0", std::nullopt));
@@ -756,10 +768,11 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshotWithNoIndex) {
     std::string table_path = paimon::test::GetDataDir() + "/" + file_format_ +
                              "/append_with_global_index.db/append_with_global_index";
     // snapshot 1 has no index
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
-                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/1l,
-                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
-                                                 /*executor=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<GlobalIndexScan> global_index_scan,
+        GlobalIndexScan::Create(table_path, /*snapshot_id=*/1l,
+                                /*partitions=*/std::nullopt, LegacyBitmapTestOptions(), fs_,
+                                /*executor=*/nullptr, pool_));
     // test index reader
     ASSERT_OK_AND_ASSIGN(auto index_readers, global_index_scan->CreateReaders("f0", std::nullopt));
     ASSERT_EQ(index_readers.size(), 0u);
@@ -780,10 +793,11 @@ TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
 
     std::string table_path = paimon::test::GetDataDir() + "/" + file_format_ +
                              "/append_with_global_index.db/append_with_global_index";
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
-                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
-                                                 /*executor=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<GlobalIndexScan> global_index_scan,
+        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                /*partitions=*/std::nullopt, LegacyBitmapTestOptions(), fs_,
+                                /*executor=*/nullptr, pool_));
     auto global_index_scan_impl = std::dynamic_pointer_cast<GlobalIndexScanImpl>(global_index_scan);
     {
         // test index reader
@@ -820,10 +834,10 @@ TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
         "/append_with_global_index_with_partition.db/append_with_global_index_with_partition";
     auto check_result =
         [&](const std::optional<std::vector<std::map<std::string, std::string>>>& partitions) {
-            ASSERT_OK_AND_ASSIGN(
-                std::shared_ptr<GlobalIndexScan> global_index_scan,
-                GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt, partitions,
-                                        /*options=*/{}, fs_, /*executor=*/nullptr, pool_));
+            ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
+                                 GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                         partitions, LegacyBitmapTestOptions(), fs_,
+                                                         /*executor=*/nullptr, pool_));
             // test index reader
             ASSERT_OK_AND_ASSIGN(RowRangeIndex row_range_index,
                                  RowRangeIndex::Create({Range(0, 4)}));
@@ -876,10 +890,11 @@ TEST_P(GlobalIndexTest, TestScanUnregisteredIndex) {
 
     std::string table_path = paimon::test::GetDataDir() + "/" + file_format_ +
                              "/append_with_global_index.db/append_with_global_index";
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
-                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
-                                                 /*executor=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<GlobalIndexScan> global_index_scan,
+        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                /*partitions=*/std::nullopt, LegacyBitmapTestOptions(), fs_,
+                                /*executor=*/nullptr, pool_));
     ASSERT_OK_AND_ASSIGN(auto index_readers, global_index_scan->CreateReaders("f0", std::nullopt));
     ASSERT_EQ(index_readers.size(), 0u);
 
@@ -2630,6 +2645,100 @@ TEST_P(GlobalIndexTest, TestBTreeWriteCommitScanReadIndex) {
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr,
                                                                /*options=*/{}, index_result));
         ASSERT_OK(ReadData(table_path, write_cols, expected_array, /*predicate=*/nullptr, plan));
+    }
+}
+
+TEST_P(GlobalIndexTest, TestBTreeEmptyStringKeyPredicates) {
+    CreateTable();
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    auto schema = arrow::schema(fields_);
+    std::vector<std::string> write_cols = schema->field_names();
+
+    // Null keys are tracked separately. The non-null keys remain monotonically increasing.
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+[null, 10, 0, 10.0],
+["", 20, 1, 20.0],
+["abc", 30, 2, 30.0]
+    ])")
+                         .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+    ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f0", "btree",
+                         /*options=*/{}, Range(0, 2)));
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                 /*partitions=*/std::nullopt, /*options=*/{}, fs_,
+                                                 /*executor=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(auto index_readers,
+                         global_index_scan->CreateReaders("f0", /*row_range_index=*/std::nullopt));
+    ASSERT_EQ(index_readers.size(), 1u);
+    auto index_reader = index_readers[0];
+
+    Literal empty(FieldType::STRING, "", 0);
+    Literal abc(FieldType::STRING, "abc", 3);
+    Literal missing(FieldType::STRING, "missing", 7);
+
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitEqual(empty));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{1}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitEqual(abc));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{2}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitEqual(missing));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitNotEqual(empty));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{2}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitIsNull());
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{0}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitIsNotNull());
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{1,2}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitIn({empty, abc, missing}));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{1,2}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitNotIn({empty, missing}));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{2}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitLessThan(abc));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{1}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitLessOrEqual(empty));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{1}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitGreaterThan(empty));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{2}");
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, index_reader->VisitGreaterOrEqual(abc));
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result->ToString(), "{2}");
     }
 }
 
