@@ -325,8 +325,76 @@ TEST_P(GlobalIndexTest, TestWriteLuminaIndexWithMismatchedDimension) {
     ASSERT_NOK_WITH_MSG(
         WriteIndex(table_path, /*partition_filters=*/{}, "f1", "lumina",
                    /*options=*/lumina_options, Range(0, 1)),
-        "invalid input array in LuminaIndexWriter, length of field array [1] multiplied "
-        "dimension [3] must match length of field value array [4]");
+        "invalid input array in LuminaIndexWriter, vector at row [0] has length [4], "
+        "expected dimension [3]");
+}
+
+TEST_P(GlobalIndexTest, TestWriteAndQueryLuminaIndexWithOrcDictionaryStringTags) {
+    if (file_format_ != "orc") {
+        GTEST_SKIP() << "ORC-only dictionary encoding case";
+    }
+
+    arrow::FieldVector fields = {arrow::field("embedding", arrow::list(arrow::float32())),
+                                 arrow::field("color", arrow::utf8()),
+                                 arrow::field("labels", arrow::list(arrow::utf8()))};
+    std::shared_ptr<arrow::Schema> schema = arrow::schema(fields);
+    std::map<std::string, std::string> lumina_options = {
+        {"lumina.index.dimension", "4"},
+        {"lumina.index.type", "bruteforce"},
+        {"lumina.distance.metric", "l2"},
+        {"lumina.encoding.type", "rawf32"},
+        {"lumina.search.parallel_number", "10"},
+        {"lumina.extension.build.tag.tag_schema",
+         R"([{"key_name":"color","type":"enum","value_type":"string"},)"
+         R"({"key_name":"labels","type":"enum","value_type":"string"}])"}};
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "orc"},         {Options::FILE_FORMAT, file_format_},
+        {Options::FILE_SYSTEM, "local"},           {Options::ROW_TRACKING_ENABLED, "true"},
+        {Options::DATA_EVOLUTION_ENABLED, "true"}, {"orc.dictionary-key-size-threshold", "1"},
+        {"orc.read.enable-lazy-decoding", "true"}};
+    CreateTable(/*partition_keys=*/{}, schema, options);
+
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    std::shared_ptr<arrow::Array> src_array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+[[0.0, 0.0, 0.0, 0.0], "red", ["hot", "common"]],
+[[0.0, 1.0, 0.0, 1.0], "blue", ["cold", "common"]],
+[[1.0, 0.0, 1.0, 0.0], "red", ["cold"]],
+[[1.0, 1.0, 1.0, 1.0], "blue", ["hot"]]
+    ])")
+            .ValueOrDie();
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> commit_msgs,
+                         WriteArray(table_path, schema->field_names(), src_array));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+    ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "embedding", "lumina",
+                         lumina_options, Range(0, 3)));
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<GlobalIndexScan> global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                 /*partitions=*/std::nullopt, lumina_options, fs_,
+                                                 /*executor=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<GlobalIndexReader>> lumina_readers,
+                         global_index_scan->CreateReaders("embedding", std::nullopt));
+    ASSERT_EQ(lumina_readers.size(), 1u);
+
+    std::vector<float> query = {1.0f, 1.0f, 1.0f, 1.1f};
+    auto search_and_check = [&](const std::shared_ptr<Predicate>& predicate,
+                                const std::string& expected) {
+        std::shared_ptr<VectorSearch> vector_search = std::make_shared<VectorSearch>(
+            "embedding", /*limit=*/4, query, /*filter=*/nullptr, predicate,
+            /*distance_type=*/std::nullopt, /*options=*/lumina_options);
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<ScoredGlobalIndexResult> scored_result,
+                             lumina_readers[0]->VisitVectorSearch(vector_search));
+        ASSERT_EQ(scored_result->ToString(), expected);
+    };
+    search_and_check(
+        PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"color", FieldType::STRING,
+                                Literal(FieldType::STRING, "red", 3)),
+        "row ids: {0,2}, scores: {4.21,2.21}");
+    search_and_check(
+        PredicateBuilder::In(/*field_index=*/2, /*field_name=*/"labels", FieldType::STRING,
+                             {Literal(FieldType::STRING, "hot", 3)}),
+        "row ids: {0,3}, scores: {4.21,0.01}");
 }
 
 TEST_P(GlobalIndexTest, TestWriteIndex) {

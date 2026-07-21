@@ -862,11 +862,15 @@ Status LuminaIndexWriter::AddBatch(::ArrowArray* arrow_array,
                 return Status::Invalid(
                     "field value array in LuminaIndexWriter is invalid, must not null");
             }
-            if (sliced_values->length() != segment_len * static_cast<int64_t>(dimension_)) {
-                return Status::Invalid(fmt::format(
-                    "invalid input array in LuminaIndexWriter, length of field array [{}] "
-                    "multiplied dimension [{}] must match length of field value array [{}]",
-                    segment_len, dimension_, sliced_values->length()));
+            for (int64_t row = segment_start; row < segment_start + segment_len; row++) {
+                int64_t vector_length =
+                    list_field_array->value_offset(row + 1) - list_field_array->value_offset(row);
+                if (vector_length != static_cast<int64_t>(dimension_)) {
+                    return Status::Invalid(fmt::format(
+                        "invalid input array in LuminaIndexWriter, vector at row [{}] has length "
+                        "[{}], expected dimension [{}]",
+                        row, vector_length, dimension_));
+                }
             }
             if (!tag_fields_.empty()) {
                 PAIMON_ASSIGN_OR_RAISE(std::vector<TagDimensionData> tag_data,
