@@ -20,6 +20,7 @@
 #include "paimon/common/factories/io_hook.h"
 #include "paimon/common/global_index/btree/btree_global_index_writer.h"
 #include "paimon/common/global_index/btree/btree_global_indexer.h"
+#include "paimon/common/global_index/btree/btree_index_meta.h"
 #include "paimon/common/global_index/btree/lazy_filtered_btree_reader.h"
 #include "paimon/common/options/memory_size.h"
 #include "paimon/common/utils/scope_guard.h"
@@ -455,6 +456,50 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadStringData) {
         ASSERT_OK_AND_ASSIGN(result, reader->VisitLike(lit_underscore));
         CheckResult(result, {0, 1, 3, 4, 6, 7, 8});
     }
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteEmptyStringKeyMetadata) {
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("str_field", arrow::utf8());
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         indexer->CreateWriter("str_field", c_schema.get(), file_writer, pool_));
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        [null],
+        [""],
+        ["abc"]
+    ])")
+                     .ValueOrDie();
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+    std::vector<int64_t> row_ids(array->length());
+    std::iota(row_ids.begin(), row_ids.end(), 0);
+    ASSERT_OK(writer->AddBatch(&c_array, std::move(row_ids)));
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
+    ASSERT_EQ(metas.size(), 1);
+
+    std::shared_ptr<BTreeIndexMeta> meta =
+        BTreeIndexMeta::Deserialize(metas[0].metadata, pool_.get());
+    ASSERT_TRUE(meta->FirstKey());
+    ASSERT_EQ(meta->FirstKey()->size(), 0);
+    ASSERT_TRUE(meta->LastKey());
+    ASSERT_EQ(std::string(meta->LastKey()->data(), meta->LastKey()->size()), "abc");
+    ASSERT_TRUE(meta->HasNulls());
+    ASSERT_FALSE(meta->OnlyNulls());
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+    Literal empty(FieldType::STRING, "", 0);
+    ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(empty));
+    CheckResult(result, {1});
 }
 
 TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadBigIntData) {
