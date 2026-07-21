@@ -25,7 +25,6 @@ if(PAIMON_ENABLE_LANCE)
                    arrow
                    glog
                    fmt
-                   ${CMAKE_DL_LIBS}
                    Threads::Threads
                    SHARED_LINK_LIBS
                    paimon_shared

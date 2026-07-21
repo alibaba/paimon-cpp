@@ -412,7 +412,6 @@ add_paimon_lib(paimon
                arrow
                tbb
                glog
-               ${CMAKE_DL_LIBS}
                fmt
                roaring_bitmap
                xxhash

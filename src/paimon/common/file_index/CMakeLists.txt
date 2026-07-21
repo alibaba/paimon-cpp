@@ -42,7 +42,6 @@ add_paimon_lib(paimon_file_index
                arrow
                fmt
                xxhash
-               ${CMAKE_DL_LIBS}
                Threads::Threads
                SHARED_LINK_LIBS
                paimon_shared
