@@ -36,7 +36,6 @@ if(PAIMON_ENABLE_LUCENE)
                    lucene
                    arrow
                    fmt
-                   ${CMAKE_DL_LIBS}
                    Threads::Threads
                    SHARED_LINK_LIBS
                    paimon_shared

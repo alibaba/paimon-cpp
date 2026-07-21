@@ -38,7 +38,6 @@ add_paimon_lib(paimon_global_index
                STATIC_LINK_LIBS
                arrow
                fmt
-               ${CMAKE_DL_LIBS}
                Threads::Threads
                SHARED_LINK_LIBS
                paimon_shared
