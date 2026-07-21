@@ -34,7 +34,7 @@
 namespace paimon::lumina {
 /// @note When enabling the lumina global index in `paimon-cpp`, all configuration parameters
 ///       specific to Lumina **must be prefixed with `lumina.`**.
-///       More options refer to OptionsReference.md in third_party/lumina.
+///       See `docs/reference/OptionsReference.md` in the Lumina release package for more options.
 ///
 ///       Example configurations:
 ///
