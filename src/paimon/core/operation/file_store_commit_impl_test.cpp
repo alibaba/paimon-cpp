@@ -276,8 +276,8 @@ class FileStoreCommitImplTest : public testing::Test {
             /*creation_time=*/Timestamp(0, 0),
             /*delete_row_count=*/std::nullopt,
             /*embedded_index=*/nullptr, FileSource::Append(),
-            /*external_path=*/std::nullopt,
-            /*value_stats_cols=*/std::nullopt, /*first_row_id=*/std::nullopt,
+            /*value_stats_cols=*/std::nullopt,
+            /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt,
             /*write_cols=*/std::nullopt);
     }
 
@@ -292,8 +292,8 @@ class FileStoreCommitImplTest : public testing::Test {
             /*creation_time=*/Timestamp(0, 0),
             /*delete_row_count=*/std::nullopt,
             /*embedded_index=*/nullptr, FileSource::Append(),
-            /*external_path=*/std::nullopt,
-            /*value_stats_cols=*/std::nullopt, /*first_row_id=*/std::nullopt,
+            /*value_stats_cols=*/std::nullopt,
+            /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt,
             /*write_cols=*/std::nullopt);
     }
 
@@ -638,12 +638,7 @@ TEST_F(FileStoreCommitImplTest, TestCommitWithAtomicWriteSnapshotTimeoutAndActua
                               "/orc/append_09.db/append_09/commit_messages/commit_messages-01",
                           /*version=*/3);
     ASSERT_GT(msgs.size(), 0);
-    ASSERT_OK(commit->Commit(msgs, /*commit_identifier=*/1));
-    std::shared_ptr<Metrics> metrics = commit->GetCommitMetrics();
-    ASSERT_TRUE(metrics);
-    ASSERT_OK_AND_ASSIGN(uint64_t counter,
-                         metrics->GetCounter(CommitMetrics::LAST_COMMIT_ATTEMPTS));
-    ASSERT_EQ(2u, counter);
+    ASSERT_NOK(commit->Commit(msgs, /*commit_identifier=*/1));
     ASSERT_OK_AND_ASSIGN(
         bool exist, file_system_->Exists(PathUtil::JoinPath(table_path, "snapshot/snapshot-6")));
     ASSERT_TRUE(exist);
@@ -656,6 +651,8 @@ TEST_F(FileStoreCommitImplTest, TestCommitWithAtomicWriteSnapshotTimeoutAndActua
                              .Finish());
 
     ASSERT_OK_AND_ASSIGN(auto commit_2, FileStoreCommit::Create(std::move(commit_context_2)));
+    ASSERT_OK_AND_ASSIGN(int32_t num_committed, commit_2->FilterAndCommit({{1, msgs}}));
+    ASSERT_EQ(0, num_committed);
     std::string new_snapshot_7 = PathUtil::JoinPath(table_path, "snapshot/snapshot-7");
     EXPECT_CALL(*mock_fs, AtomicStore(testing::StrEq(new_snapshot_7), testing::_))
         .WillOnce(testing::Invoke([&](const std::string& path, const std::string& content) {

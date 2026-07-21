@@ -892,7 +892,6 @@ Result<int32_t> FileStoreCommitImpl::TryCommit(
     Snapshot::CommitKind commit_kind, bool detect_conflicts) {
     int32_t retry_count = 0;
     int64_t start_millis = DateTimeUtils::GetCurrentUTCTimeUs() / 1000;
-    std::optional<int64_t> retry_start_snapshot_id;
     while (true) {
         PAIMON_ASSIGN_OR_RAISE(std::optional<Snapshot> latest_snapshot,
                                snapshot_manager_->LatestSnapshot());
@@ -902,13 +901,10 @@ Result<int32_t> FileStoreCommitImpl::TryCommit(
             bool commit_success,
             TryCommitOnce(commit_changes->delta_files, commit_changes->changelog_files,
                           commit_changes->index_entries, identifier, watermark, properties,
-                          commit_kind, latest_snapshot, detect_conflicts, retry_start_snapshot_id));
+                          commit_kind, latest_snapshot, detect_conflicts));
         if (commit_success) {
             break;
         }
-        retry_start_snapshot_id = latest_snapshot
-                                      ? std::optional<int64_t>(latest_snapshot.value().Id() + 1)
-                                      : std::optional<int64_t>(Snapshot::FIRST_SNAPSHOT_ID);
         int64_t current_millis = DateTimeUtils::GetCurrentUTCTimeUs() / 1000;
         if (current_millis - start_millis > options_.GetCommitTimeout() ||
             retry_count >= options_.GetCommitMaxRetries()) {
@@ -921,26 +917,6 @@ Result<int32_t> FileStoreCommitImpl::TryCommit(
         retry_count++;
     }
     return retry_count + 1;
-}
-
-Result<bool> FileStoreCommitImpl::CheckCommitted(const std::optional<Snapshot>& latest_snapshot,
-                                                 std::optional<int64_t> retry_start_snapshot_id,
-                                                 int64_t identifier,
-                                                 const Snapshot::CommitKind& commit_kind) const {
-    if (!latest_snapshot || !retry_start_snapshot_id ||
-        retry_start_snapshot_id.value() > latest_snapshot.value().Id()) {
-        return false;
-    }
-
-    for (int64_t snapshot_id = retry_start_snapshot_id.value();
-         snapshot_id <= latest_snapshot.value().Id(); ++snapshot_id) {
-        PAIMON_ASSIGN_OR_RAISE(Snapshot snapshot, snapshot_manager_->LoadSnapshot(snapshot_id));
-        if (snapshot.CommitUser() == commit_user_ && snapshot.CommitIdentifier() == identifier &&
-            snapshot.GetCommitKind() == commit_kind) {
-            return true;
-        }
-    }
-    return false;
 }
 
 Status FileStoreCommitImpl::CheckSameBucketFromSnapshot(
@@ -1015,13 +991,7 @@ Result<bool> FileStoreCommitImpl::TryCommitOnce(
     const std::vector<IndexManifestEntry>& index_entries, int64_t identifier,
     std::optional<int64_t> watermark, const std::map<std::string, std::string>& properties,
     Snapshot::CommitKind commit_kind, const std::optional<Snapshot>& latest_snapshot,
-    bool detect_conflicts, std::optional<int64_t> retry_start_snapshot_id) {
-    PAIMON_ASSIGN_OR_RAISE(bool committed, CheckCommitted(latest_snapshot, retry_start_snapshot_id,
-                                                          identifier, commit_kind));
-    if (committed) {
-        return true;
-    }
-
+    bool detect_conflicts) {
     std::vector<ManifestEntry> delta_files = delta_entries;
     int64_t start_millis = DateTimeUtils::GetCurrentUTCTimeUs() / 1000;
 
@@ -1250,11 +1220,20 @@ Result<bool> FileStoreCommitImpl::TryCommitOnce(
 
     Result<bool> commit_result = CommitSnapshotImpl(new_snapshot, delta_statistics);
     if (!commit_result.ok()) {
-        // commit exception is uncertain; retry after checking whether this commit already exists.
-        PAIMON_LOG_WARN(logger_, "Retry commit for exception. %s",
+        // commit exception, not sure about the situation and should not clean up the files.
+        PAIMON_LOG_WARN(logger_, "You need call FilterAndCommit to retry commit for exception. %s",
                         commit_result.status().ToString().c_str());
+
+        // To prevent the case where an atomic write times out but actually succeeds,
+        // retrying the commit could lead to the snapshot file being committed multiple times.
+        // Therefore, retries should be handled by the upper layer,
+        // which should call FilterAndCommit to avoid duplicate commits.
+        // Therefore, we should not trigger cleanup here,
+        // as it may delete meta files from a snapshot that was just written by ourselves,
+        // leading to an incomplete or corrupted snapshot.
         guard.Release();
-        return false;
+        return Status::Invalid("You need call FilterAndCommit to retry commit for exception. ",
+                               commit_result.status().ToString());
     }
     bool commit_success = commit_result.value();
     if (commit_success) {

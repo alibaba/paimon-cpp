@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 
@@ -49,12 +50,21 @@ class PAIMON_EXPORT ArrowInputStreamAdapter : public arrow::io::RandomAccessFile
     }
     bool closed() const override;
 
+    // Accumulated bytes handed back to the reader (rawInputBytes). The counter is owned by this
+    // adapter and initialized to 0; callers may retain the returned shared_ptr to read the value
+    // after the adapter is closed or destroyed.
+    const std::shared_ptr<std::atomic<uint64_t>>& RawInputBytes() const {
+        return raw_input_bytes_;
+    }
+
  private:
     arrow::Status DoClose();
 
     std::shared_ptr<paimon::InputStream> input_stream_;
     std::shared_ptr<arrow::MemoryPool> pool_;
     int64_t file_size_;
+    // Accumulates the number of bytes handed back to the reader (rawInputBytes).
+    std::shared_ptr<std::atomic<uint64_t>> raw_input_bytes_;
     bool closed_ = false;
 };
 

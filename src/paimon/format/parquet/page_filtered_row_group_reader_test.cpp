@@ -121,7 +121,8 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
         options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] = "true";
         ASSERT_OK_AND_ASSIGN(auto batch_reader, ParquetFileBatchReader::Create(
                                                     std::move(in_stream), options, batch_size,
-                                                    /*file_metadata=*/nullptr, arrow_pool_));
+                                                    /*file_metadata=*/nullptr, arrow_pool_,
+                                                    /*raw_input_bytes=*/nullptr));
         auto c_schema = std::make_unique<ArrowSchema>();
         ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
         ASSERT_OK(batch_reader->SetReadSchema(c_schema.get(), predicate,
@@ -144,7 +145,8 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
 
         ASSERT_OK_AND_ASSIGN(auto batch_reader,
                              ParquetFileBatchReader::Create(std::move(in_stream), options,
-                                                            batch_size, nullptr, arrow_pool_));
+                                                            batch_size, nullptr, arrow_pool_,
+                                                            /*raw_input_bytes=*/nullptr));
         auto c_schema = std::make_unique<ArrowSchema>();
         ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
         ASSERT_OK(batch_reader->SetReadSchema(c_schema.get(), predicate, bitmap));

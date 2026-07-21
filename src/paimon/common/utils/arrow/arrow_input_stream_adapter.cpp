@@ -45,7 +45,10 @@ arrow::Status ValidateArrowIoRange(int64_t value, const char* name) {
 ArrowInputStreamAdapter::ArrowInputStreamAdapter(
     const std::shared_ptr<paimon::InputStream>& input_stream,
     const std::shared_ptr<arrow::MemoryPool>& pool, int64_t file_size)
-    : input_stream_(input_stream), pool_(pool), file_size_(file_size) {
+    : input_stream_(input_stream),
+      pool_(pool),
+      file_size_(file_size),
+      raw_input_bytes_(std::make_shared<std::atomic<uint64_t>>(0)) {
     assert(file_size >= 0);
 }
 
@@ -62,6 +65,9 @@ arrow::Result<int64_t> ArrowInputStreamAdapter::Read(int64_t nbytes, void* out) 
     Result<int64_t> read_bytes = input_stream_->Read(static_cast<char*>(out), nbytes);
     if (!read_bytes.ok()) {
         return ToArrowStatus(read_bytes.status());
+    }
+    if (raw_input_bytes_) {
+        raw_input_bytes_->fetch_add(static_cast<uint64_t>(read_bytes.value()));
     }
     return read_bytes.value();
 }
@@ -83,6 +89,9 @@ arrow::Result<int64_t> ArrowInputStreamAdapter::ReadAt(int64_t position, int64_t
     Result<int64_t> read_bytes = input_stream_->Read(static_cast<char*>(out), nbytes, position);
     if (!read_bytes.ok()) {
         return ToArrowStatus(read_bytes.status());
+    }
+    if (raw_input_bytes_) {
+        raw_input_bytes_->fetch_add(static_cast<uint64_t>(read_bytes.value()));
     }
     return read_bytes.value();
 }
@@ -119,14 +128,19 @@ arrow::Future<std::shared_ptr<arrow::Buffer>> ArrowInputStreamAdapter::ReadAsync
         return fut;
     }
     std::shared_ptr<arrow::Buffer> buffer = std::move(buffer_result).ValueUnsafe();
-    input_stream_->ReadAsync(reinterpret_cast<char*>(buffer->mutable_data()), nbytes, position,
-                             [fut, buffer](Status callback_status) mutable {
-                                 if (callback_status.ok()) {
-                                     fut.MarkFinished(std::move(buffer));
-                                 } else {
-                                     fut.MarkFinished(ToArrowStatus(callback_status));
-                                 }
-                             });
+    std::shared_ptr<std::atomic<uint64_t>> raw_input_bytes = raw_input_bytes_;
+    input_stream_->ReadAsync(
+        reinterpret_cast<char*>(buffer->mutable_data()), nbytes, position,
+        [fut, buffer, raw_input_bytes, nbytes](Status callback_status) mutable {
+            if (callback_status.ok()) {
+                if (raw_input_bytes) {
+                    raw_input_bytes->fetch_add(static_cast<uint64_t>(nbytes));
+                }
+                fut.MarkFinished(std::move(buffer));
+            } else {
+                fut.MarkFinished(ToArrowStatus(callback_status));
+            }
+        });
     return fut;
 }
 

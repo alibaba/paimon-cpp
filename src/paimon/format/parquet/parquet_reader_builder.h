@@ -71,12 +71,14 @@ class ParquetReaderBuilder : public ReaderBuilder {
             std::shared_ptr<arrow::MemoryPool> arrow_pool = GetArrowPool(pool_);
             auto unique_input_stream =
                 std::make_unique<ArrowInputStreamAdapter>(path, arrow_pool, file_length);
+            auto raw_input_bytes = unique_input_stream->RawInputBytes();
             std::shared_ptr<arrow::io::RandomAccessFile> input_stream(
                 std::move(unique_input_stream));
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<::parquet::FileMetaData> file_metadata,
                                    GetCachedParquetMetadata(input_stream, file_uri, arrow_pool));
             return ParquetFileBatchReader::Create(std::move(input_stream), options_, batch_size_,
-                                                  std::move(file_metadata), arrow_pool);
+                                                  std::move(file_metadata), arrow_pool,
+                                                  std::move(raw_input_bytes));
         }
         PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetReaderBuilder::Build")
     }
