@@ -40,10 +40,13 @@ AppendDataFileWriterFactory::AppendDataFileWriterFactory(
       file_source_(file_source),
       path_factory_(path_factory) {}
 
+std::shared_ptr<LongCounter> AppendDataFileWriterFactory::ResolveSeqNumCounter() const {
+    return options_.DataEvolutionEnabled() ? std::make_shared<LongCounter>(0) : seq_num_counter_;
+}
+
 Result<std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>>
 AppendDataFileWriterFactory::CreateWriter() const {
-    std::shared_ptr<LongCounter> seq_num_counter =
-        options_.DataEvolutionEnabled() ? std::make_shared<LongCounter>(0) : seq_num_counter_;
+    std::shared_ptr<LongCounter> seq_num_counter = ResolveSeqNumCounter();
     PAIMON_ASSIGN_OR_RAISE(WriterResources resources,
                            CreateWriterResources(*options_.GetFileFormat(), write_schema_,
                                                  /*create_stats_extractor=*/true));

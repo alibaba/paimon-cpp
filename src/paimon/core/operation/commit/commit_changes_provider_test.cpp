@@ -99,9 +99,9 @@ TEST(CommitChangesProviderTest, TestProvideReturnsGivenEntries) {
     ASSERT_EQ(delta_files.size(), provided_delta.size());
     ASSERT_EQ(changelog_files.size(), provided_changelog.size());
     ASSERT_EQ(index_entries.size(), provided_index.size());
-    EXPECT_EQ("delta-1", provided_delta[0].FileName());
-    EXPECT_EQ("changelog-1", provided_changelog[0].FileName());
-    EXPECT_EQ("index-1", provided_index[0].index_file->FileName());
+    ASSERT_EQ("delta-1", provided_delta[0].FileName());
+    ASSERT_EQ("changelog-1", provided_changelog[0].FileName());
+    ASSERT_EQ("index-1", provided_index[0].index_file->FileName());
 }
 
 TEST(CommitChangesProviderTest, TestProvideUsesCopiedInputs) {
@@ -123,7 +123,7 @@ TEST(CommitChangesProviderTest, TestProvideUsesCopiedInputs) {
     ASSERT_EQ(1u, provided->delta_files.size());
     ASSERT_EQ(0u, provided->changelog_files.size());
     ASSERT_EQ(0u, provided->index_entries.size());
-    EXPECT_EQ("delta-1", provided->delta_files[0].FileName());
+    ASSERT_EQ("delta-1", provided->delta_files[0].FileName());
 }
 
 }  // namespace paimon::test

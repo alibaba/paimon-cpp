@@ -125,6 +125,12 @@ class FileStoreCommitImpl : public FileStoreCommit {
     Status DropPartition(const std::vector<std::map<std::string, std::string>>& partitions,
                          int64_t commit_identifier) override;
 
+    Status TruncateTable(int64_t commit_identifier) override;
+
+    Status Abort(const std::vector<std::shared_ptr<CommitMessage>>& commit_messages) override;
+
+    Result<bool> RollbackToAsLatest(int64_t target_snapshot_id) override;
+
     FileStoreCommit& RowIdCheckConflict(std::optional<int64_t> row_id_check_from_snapshot) override;
 
     std::shared_ptr<Metrics> GetCommitMetrics() const override {
@@ -195,6 +201,8 @@ class FileStoreCommitImpl : public FileStoreCommit {
 
     Result<bool> CommitSnapshotImpl(const Snapshot& new_snapshot,
                                     const std::vector<PartitionEntry>& delta_statistics);
+
+    Result<std::vector<ManifestEntry>> ReadAddManifestEntries(const Snapshot& snapshot) const;
 
     void CleanUpTmpManifests(const std::string& previous_changes_list_name,
                              const std::string& new_changes_list_name,

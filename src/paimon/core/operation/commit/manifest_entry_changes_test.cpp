@@ -109,18 +109,18 @@ TEST_F(ManifestEntryChangesTest, TestCollectAndSummary) {
     ASSERT_EQ(1u, changes.compact_changelog.size());
     ASSERT_EQ(2u, changes.compact_index_files.size());
 
-    EXPECT_TRUE(changes.HasAppendChanges());
-    EXPECT_FALSE(changes.HasGlobalIndexFileAdditions());
-    EXPECT_TRUE(changes.HasCompactChanges());
+    ASSERT_TRUE(changes.HasAppendChanges());
+    ASSERT_FALSE(changes.HasGlobalIndexFileAdditions());
+    ASSERT_TRUE(changes.HasCompactChanges());
 
-    EXPECT_EQ(FileKind::Add(), changes.append_table_files[0].Kind());
-    EXPECT_EQ(FileKind::Delete(), changes.append_table_files[1].Kind());
-    EXPECT_EQ(4, changes.append_table_files[0].TotalBuckets());
+    ASSERT_EQ(FileKind::Add(), changes.append_table_files[0].Kind());
+    ASSERT_EQ(FileKind::Delete(), changes.append_table_files[1].Kind());
+    ASSERT_EQ(4, changes.append_table_files[0].TotalBuckets());
 
     std::string summary = changes.ToString();
-    EXPECT_NE(std::string::npos, summary.find("2 append table files"));
-    EXPECT_NE(std::string::npos, summary.find("1 append Changelogs"));
-    EXPECT_NE(std::string::npos, summary.find("2 compact index files"));
+    ASSERT_NE(std::string::npos, summary.find("2 append table files"));
+    ASSERT_NE(std::string::npos, summary.find("1 append Changelogs"));
+    ASSERT_NE(std::string::npos, summary.find("2 compact index files"));
 }
 
 TEST_F(ManifestEntryChangesTest, TestHasGlobalIndexFileAdditions) {
@@ -141,7 +141,7 @@ TEST_F(ManifestEntryChangesTest, TestHasGlobalIndexFileAdditions) {
     ManifestEntryChanges changes(/*default_num_bucket=*/8);
     ASSERT_OK(changes.Collect(message));
 
-    EXPECT_TRUE(changes.HasGlobalIndexFileAdditions());
+    ASSERT_TRUE(changes.HasGlobalIndexFileAdditions());
 }
 
 TEST_F(ManifestEntryChangesTest, TestCollectInvalidCommitMessageType) {
@@ -176,10 +176,10 @@ TEST_F(ManifestEntryChangesTest, TestChangedPartitionsIncludesDvAndGlobalIndex) 
         return std::find(changed.begin(), changed.end(), target) != changed.end();
     };
 
-    EXPECT_TRUE(contains(partition_data));
-    EXPECT_TRUE(contains(partition_dv));
-    EXPECT_TRUE(contains(partition_global));
-    EXPECT_FALSE(contains(partition_plain_index));
+    ASSERT_TRUE(contains(partition_data));
+    ASSERT_TRUE(contains(partition_dv));
+    ASSERT_TRUE(contains(partition_global));
+    ASSERT_FALSE(contains(partition_plain_index));
 }
 
 }  // namespace paimon::test
