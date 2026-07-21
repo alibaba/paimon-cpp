@@ -257,7 +257,7 @@ TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithTagFilter) {
 
     std::map<std::string, std::string> tag_options = options_;
     tag_options["lumina.extension.build.tag.tag_schema"] =
-        R"([{"key_name":"color","type":"enum","value_type":"string"}])";
+        R"({"key_name":"color","type":"enum","value_type":"string"})";
 
     std::shared_ptr<arrow::DataType> tag_data_type = arrow::struct_(
         {arrow::field("f0", arrow::list(arrow::float32())), arrow::field("color", arrow::utf8())});
