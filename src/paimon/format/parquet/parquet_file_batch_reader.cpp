@@ -65,18 +65,21 @@ namespace paimon::parquet {
 ParquetFileBatchReader::ParquetFileBatchReader(
     std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
     std::unique_ptr<FileReaderWrapper>&& reader, const std::map<std::string, std::string>& options,
-    const std::shared_ptr<arrow::MemoryPool>& arrow_pool)
+    const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
+    std::shared_ptr<std::atomic<uint64_t>> storage_read_bytes)
     : options_(options),
       arrow_pool_(arrow_pool),
       input_stream_(std::move(input_stream)),
       reader_(std::move(reader)),
       metrics_(std::make_shared<MetricsImpl>()),
+      storage_read_bytes_(std::move(storage_read_bytes)),
       logger_(Logger::GetLogger("ParquetFileBatchReader")) {}
 
 Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
     std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
     const std::map<std::string, std::string>& options, int32_t batch_size,
     std::shared_ptr<::parquet::FileMetaData> file_metadata,
+    std::shared_ptr<std::atomic<uint64_t>> storage_read_bytes,
     const std::shared_ptr<arrow::MemoryPool>& pool) {
     try {
         assert(input_stream);
@@ -98,7 +101,8 @@ Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
                                FileReaderWrapper::Create(std::move(file_reader),
                                                          static_cast<int64_t>(batch_size), pool));
         auto parquet_file_batch_reader = std::unique_ptr<ParquetFileBatchReader>(
-            new ParquetFileBatchReader(std::move(input_stream), std::move(reader), options, pool));
+            new ParquetFileBatchReader(std::move(input_stream), std::move(reader), options, pool,
+                                       std::move(storage_read_bytes)));
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::ArrowSchema> file_schema,
                                parquet_file_batch_reader->GetFileSchema());
         PAIMON_RETURN_NOT_OK(parquet_file_batch_reader->SetReadSchema(

@@ -59,7 +59,7 @@ TEST(ArrowStreamAdapterTest, TestInputAndOutputStream) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, file_system->Open(file_name));
     ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
     auto in_stream =
-        std::make_unique<ArrowInputStreamAdapter>(in, GetArrowPool(GetDefaultPool()), length);
+        std::make_unique<ArrowInputStreamAdapter>(in, length, GetArrowPool(GetDefaultPool()));
     ASSERT_EQ(in_stream->GetSize().ValueOrDie(), static_cast<int64_t>(data.length()));
     ASSERT_EQ(in_stream->Tell().ValueOrDie(), 0);
     ASSERT_FALSE(in_stream->closed());

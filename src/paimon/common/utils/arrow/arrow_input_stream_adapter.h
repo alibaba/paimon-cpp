@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 
@@ -30,7 +31,7 @@ class InputStream;
 class PAIMON_EXPORT ArrowInputStreamAdapter : public arrow::io::RandomAccessFile {
  public:
     ArrowInputStreamAdapter(const std::shared_ptr<paimon::InputStream>& input_stream,
-                            const std::shared_ptr<arrow::MemoryPool>& pool, int64_t file_size);
+                            int64_t file_size, const std::shared_ptr<arrow::MemoryPool>& pool);
     ~ArrowInputStreamAdapter() override;
 
     // NOTE: In paimon file system definition, position + nbytes should not exceed file_size_.
@@ -49,12 +50,21 @@ class PAIMON_EXPORT ArrowInputStreamAdapter : public arrow::io::RandomAccessFile
     }
     bool closed() const override;
 
+    // Accumulated bytes read from the underlying stream (storageReadBytes). The counter is owned
+    // by this adapter and initialized to 0; callers may retain the returned shared_ptr to read the
+    // value after the adapter is closed or destroyed.
+    const std::shared_ptr<std::atomic<uint64_t>>& StorageReadBytes() const {
+        return storage_read_bytes_;
+    }
+
  private:
     arrow::Status DoClose();
 
     std::shared_ptr<paimon::InputStream> input_stream_;
     std::shared_ptr<arrow::MemoryPool> pool_;
     int64_t file_size_;
+    // Accumulates the number of bytes read from the underlying stream (storageReadBytes).
+    std::shared_ptr<std::atomic<uint64_t>> storage_read_bytes_;
     bool closed_ = false;
 };
 
