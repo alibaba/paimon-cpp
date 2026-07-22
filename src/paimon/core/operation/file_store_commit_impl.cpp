@@ -1221,7 +1221,8 @@ Result<bool> FileStoreCommitImpl::TryCommitOnce(
     Result<bool> commit_result = CommitSnapshotImpl(new_snapshot, delta_statistics);
     if (!commit_result.ok()) {
         // commit exception, not sure about the situation and should not clean up the files.
-        PAIMON_LOG_WARN(logger_, "You need call FilterAndCommit to retry commit for exception. %s",
+        PAIMON_LOG_WARN(logger_,
+                        "You need to call FilterAndCommit to retry commit for exception. %s",
                         commit_result.status().ToString().c_str());
 
         // To prevent the case where an atomic write times out but actually succeeds,
@@ -1232,7 +1233,7 @@ Result<bool> FileStoreCommitImpl::TryCommitOnce(
         // as it may delete meta files from a snapshot that was just written by ourselves,
         // leading to an incomplete or corrupted snapshot.
         guard.Release();
-        return Status::Invalid("You need call FilterAndCommit to retry commit for exception. ",
+        return Status::Invalid("You need to call FilterAndCommit to retry commit for exception. ",
                                commit_result.status().ToString());
     }
     bool commit_success = commit_result.value();

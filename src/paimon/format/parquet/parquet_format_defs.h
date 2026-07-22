@@ -112,11 +112,7 @@ class ParquetMetrics {
         "parquet.read.row-groups.after-filter";
     static inline const char READ_ROWS[] = "parquet.read.rows";
     static inline const char READ_BATCH_COUNT[] = "parquet.read.batch-count";
-    // Byte-level read metrics.
-    // raw-input-bytes: logical bytes requested by the reader (top-of-stack demand).
-    // storage-read-bytes: physical bytes read from storage. This layer is not cache-aware,
-    // so it currently equals raw-input-bytes.
-    static inline const char READ_RAW_INPUT_BYTES[] = "parquet.read.raw-input-bytes";
+    // Byte-level read metric. storage-read-bytes: physical bytes read from storage.
     static inline const char READ_STORAGE_BYTES[] = "parquet.read.storage-read-bytes";
 };
 

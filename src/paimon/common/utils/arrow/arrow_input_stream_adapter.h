@@ -50,11 +50,11 @@ class PAIMON_EXPORT ArrowInputStreamAdapter : public arrow::io::RandomAccessFile
     }
     bool closed() const override;
 
-    // Accumulated bytes handed back to the reader (rawInputBytes). The counter is owned by this
-    // adapter and initialized to 0; callers may retain the returned shared_ptr to read the value
-    // after the adapter is closed or destroyed.
-    const std::shared_ptr<std::atomic<uint64_t>>& RawInputBytes() const {
-        return raw_input_bytes_;
+    // Accumulated bytes read from the underlying stream (storageReadBytes). The counter is owned
+    // by this adapter and initialized to 0; callers may retain the returned shared_ptr to read the
+    // value after the adapter is closed or destroyed.
+    const std::shared_ptr<std::atomic<uint64_t>>& StorageReadBytes() const {
+        return storage_read_bytes_;
     }
 
  private:
@@ -63,8 +63,8 @@ class PAIMON_EXPORT ArrowInputStreamAdapter : public arrow::io::RandomAccessFile
     std::shared_ptr<paimon::InputStream> input_stream_;
     std::shared_ptr<arrow::MemoryPool> pool_;
     int64_t file_size_;
-    // Accumulates the number of bytes handed back to the reader (rawInputBytes).
-    std::shared_ptr<std::atomic<uint64_t>> raw_input_bytes_;
+    // Accumulates the number of bytes read from the underlying stream (storageReadBytes).
+    std::shared_ptr<std::atomic<uint64_t>> storage_read_bytes_;
     bool closed_ = false;
 };
 

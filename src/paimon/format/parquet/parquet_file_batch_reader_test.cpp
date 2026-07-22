@@ -203,13 +203,13 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
         auto length = fs_->GetFileStatus(file_name).value()->GetLen();
         auto in_stream =
             std::make_unique<ArrowInputStreamAdapter>(std::move(input_stream), pool_, length);
-        auto raw_input_bytes = in_stream->RawInputBytes();
+        auto storage_read_bytes = in_stream->StorageReadBytes();
         std::map<std::string, std::string> options;
         options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] =
             enable_page_level_filter ? "true" : "false";
         return PrepareParquetFileBatchReader(std::move(in_stream), options, read_schema, predicate,
                                              selection_bitmap, batch_size,
-                                             std::move(raw_input_bytes));
+                                             std::move(storage_read_bytes));
     }
 
     std::unique_ptr<paimon::parquet::ParquetFileBatchReader> PrepareParquetFileBatchReader(
@@ -218,11 +218,11 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
         const std::shared_ptr<arrow::Schema>& read_schema,
         const std::shared_ptr<Predicate>& predicate,
         const std::optional<RoaringBitmap32>& selection_bitmap, int32_t batch_size,
-        std::shared_ptr<std::atomic<uint64_t>> raw_input_bytes = nullptr) const {
+        std::shared_ptr<std::atomic<uint64_t>> storage_read_bytes = nullptr) const {
         EXPECT_OK_AND_ASSIGN(auto parquet_batch_reader,
                              ParquetFileBatchReader::Create(
                                  std::move(in_stream), options, batch_size,
-                                 /*file_metadata=*/nullptr, std::move(raw_input_bytes), pool_));
+                                 /*file_metadata=*/nullptr, std::move(storage_read_bytes), pool_));
         std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
         auto arrow_status = arrow::ExportSchema(*read_schema, c_schema.get());
         EXPECT_TRUE(arrow_status.ok());
@@ -389,7 +389,7 @@ TEST_F(ParquetFileBatchReaderTest, TestSetReadSchema) {
     ASSERT_OK_AND_ASSIGN(auto parquet_batch_reader,
                          ParquetFileBatchReader::Create(std::move(in_stream), options, batch_size_,
                                                         /*file_metadata=*/nullptr,
-                                                        /*raw_input_bytes=*/nullptr, pool_));
+                                                        /*storage_read_bytes=*/nullptr, pool_));
     // test GetFileSchema()
     ASSERT_OK_AND_ASSIGN(auto c_file_schema, parquet_batch_reader->GetFileSchema());
     auto arrow_file_schema = arrow::ImportSchema(c_file_schema.get()).ValueOrDie();
@@ -478,14 +478,9 @@ TEST_F(ParquetFileBatchReaderTest, TestNextBatchSimple) {
         // test metrics
         auto read_metrics = parquet_batch_reader->GetReaderMetrics();
         ASSERT_TRUE(read_metrics);
-        ASSERT_OK_AND_ASSIGN(uint64_t raw_input_bytes,
-                             read_metrics->GetCounter(ParquetMetrics::READ_RAW_INPUT_BYTES));
         ASSERT_OK_AND_ASSIGN(uint64_t storage_read_bytes,
                              read_metrics->GetCounter(ParquetMetrics::READ_STORAGE_BYTES));
-        ASSERT_GT(raw_input_bytes, 0u);
-        // storageReadBytes is not cache-aware at the Parquet format layer, so it equals
-        // rawInputBytes.
-        ASSERT_EQ(storage_read_bytes, raw_input_bytes);
+        ASSERT_GT(storage_read_bytes, 0u);
     }
 }
 

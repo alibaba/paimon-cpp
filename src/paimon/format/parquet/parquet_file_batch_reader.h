@@ -73,7 +73,7 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
         const std::map<std::string, std::string>& options, int32_t batch_size,
         std::shared_ptr<::parquet::FileMetaData> file_metadata,
-        std::shared_ptr<std::atomic<uint64_t>> raw_input_bytes,
+        std::shared_ptr<std::atomic<uint64_t>> storage_read_bytes,
         const std::shared_ptr<arrow::MemoryPool>& pool);
 
     static Result<::parquet::ReaderProperties> CreateReaderProperties(
@@ -133,11 +133,8 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     }
 
     std::shared_ptr<Metrics> GetReaderMetrics() const override {
-        // storageReadBytes is not cache-aware at the Parquet format layer, so it mirrors
-        // rawInputBytes (physical/logical read boundaries are indistinguishable here).
-        uint64_t raw = raw_input_bytes_ ? raw_input_bytes_->load() : 0;
-        metrics_->SetCounter(ParquetMetrics::READ_RAW_INPUT_BYTES, raw);
-        metrics_->SetCounter(ParquetMetrics::READ_STORAGE_BYTES, raw);
+        uint64_t storage = storage_read_bytes_ ? storage_read_bytes_->load() : 0;
+        metrics_->SetCounter(ParquetMetrics::READ_STORAGE_BYTES, storage);
         return metrics_;
     }
 
@@ -159,7 +156,7 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
                            std::unique_ptr<FileReaderWrapper>&& reader,
                            const std::map<std::string, std::string>& options,
                            const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
-                           std::shared_ptr<std::atomic<uint64_t>> raw_input_bytes);
+                           std::shared_ptr<std::atomic<uint64_t>> storage_read_bytes);
 
     static Result<::parquet::ArrowReaderProperties> CreateArrowReaderProperties(
         const std::shared_ptr<arrow::MemoryPool>& pool,
@@ -260,8 +257,8 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     std::shared_ptr<arrow::DataType> read_data_type_;
 
     std::shared_ptr<Metrics> metrics_;
-    // rawInputBytes counter shared with the underlying ArrowInputStreamAdapter.
-    std::shared_ptr<std::atomic<uint64_t>> raw_input_bytes_;
+    // storageReadBytes counter shared with the underlying ArrowInputStreamAdapter.
+    std::shared_ptr<std::atomic<uint64_t>> storage_read_bytes_;
     std::unique_ptr<Logger> logger_;
 
     uint64_t read_rows_ = 0;
