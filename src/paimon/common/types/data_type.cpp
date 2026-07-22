@@ -23,6 +23,7 @@
 #include "arrow/util/checked_cast.h"
 #include "fmt/format.h"
 #include "paimon/common/data/blob_utils.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/types/array_type.h"
 #include "paimon/common/types/map_type.h"
 #include "paimon/common/types/row_type.h"
@@ -49,6 +50,11 @@ std::unique_ptr<DataType> DataType::Create(
         case arrow::Type::type::LIST:
             return std::make_unique<ArrayType>(type, nullable, metadata);
         case arrow::Type::type::STRUCT:
+            if (VariantTypeUtils::IsVariantMetadata(metadata)) {
+                // A variant field is physically a struct<value, metadata> but is a scalar
+                // VARIANT type in the paimon type system, not a ROW type.
+                return std::unique_ptr<DataType>(new DataType(type, nullable, metadata));
+            }
             return std::make_unique<RowType>(type, nullable, metadata);
         default:
             return std::unique_ptr<DataType>(new DataType(type, nullable, metadata));
@@ -116,16 +122,23 @@ std::string DataType::DataTypeToString(const std::shared_ptr<arrow::DataType>& t
                 arrow::internal::checked_pointer_cast<arrow::TimestampType>(type);
             return TimestampToString(timestamp_type);
         }
+        case arrow::Type::type::STRUCT: {
+            if (VariantTypeUtils::IsVariantMetadata(metadata_)) {
+                return "VARIANT";
+            }
+            break;
+        }
         case arrow::Type::type::LARGE_BINARY: {
             // TODO(xinyu): change binary to large binary?
             if (BlobUtils::IsBlobMetadata(metadata_)) {
                 return "BLOB";
             }
-            [[fallthrough]];
+            break;
         }
         default:
-            throw std::invalid_argument(fmt::format("unknown type {}", type->ToString()));
+            break;
     }
+    throw std::invalid_argument(fmt::format("unknown type {}", type->ToString()));
 }
 
 }  // namespace paimon

@@ -24,6 +24,8 @@
 #include "arrow/memory_pool.h"
 #include "arrow/type.h"
 #include "gtest/gtest.h"
+#include "paimon/common/data/variant/variant_access_utils.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/testing/utils/testharness.h"
 
@@ -35,6 +37,17 @@ static std::shared_ptr<arrow::Field> MakeField(const std::string& name,
                                                int32_t paimon_id) {
     DataField data_field(paimon_id, arrow::field(name, type));
     return DataField::ConvertDataFieldToArrowField(data_field);
+}
+
+// Helper: a variant-access projection, i.e. a struct whose children carry `__VARIANT_METADATA`
+// descriptions.
+static std::shared_ptr<arrow::DataType> MakeVariantAccessType() {
+    auto child = arrow::field(
+        "0", arrow::int64(), /*nullable=*/true,
+        arrow::KeyValueMetadata::Make(
+            {DataField::DESCRIPTION},
+            {VariantAccessUtils::BuildVariantMetadata("$.x", /*fail_on_error=*/false, "UTC")}));
+    return arrow::struct_({child});
 }
 
 // ============== GetPaimonFieldId ==============
@@ -157,6 +170,56 @@ TEST(NestedProjectionUtilsTest, PruneDataTypeMapWithStructValue) {
 
     ASSERT_NOK_WITH_MSG(NestedProjectionUtils::PruneDataType(read_type, data_type),
                         "partial projection inside map");
+}
+
+TEST(NestedProjectionUtilsTest, PruneDataTypeListWithVariantAccessElement) {
+    // data: LIST<VARIANT>, read: LIST<variant-access projection>
+    // Not a projection of the list itself, so it must pass through to the variant read plans.
+    auto data_type = arrow::list(arrow::field("element", VariantTypeUtils::UnshreddedStructType()));
+    auto read_type = arrow::list(arrow::field("element", MakeVariantAccessType()));
+
+    ASSERT_OK_AND_ASSIGN(std::optional<std::shared_ptr<arrow::DataType>> pruned,
+                         NestedProjectionUtils::PruneDataType(read_type, data_type));
+    ASSERT_TRUE(pruned.has_value());
+    ASSERT_TRUE(pruned.value()->Equals(*read_type)) << pruned.value()->ToString();
+}
+
+TEST(NestedProjectionUtilsTest, PruneDataTypeMapWithVariantAccessValue) {
+    auto data_type = arrow::map(arrow::utf8(), VariantTypeUtils::UnshreddedStructType());
+    auto read_type = arrow::map(arrow::utf8(), MakeVariantAccessType());
+
+    ASSERT_OK_AND_ASSIGN(std::optional<std::shared_ptr<arrow::DataType>> pruned,
+                         NestedProjectionUtils::PruneDataType(read_type, data_type));
+    ASSERT_TRUE(pruned.has_value());
+    ASSERT_TRUE(pruned.value()->Equals(*read_type)) << pruned.value()->ToString();
+}
+
+TEST(NestedProjectionUtilsTest, PruneDataTypeListWithVariantAccessInsideStruct) {
+    // The variant sits one struct level below the list, next to a plain sibling that is kept.
+    auto data_inner = arrow::struct_({MakeField("v", VariantTypeUtils::UnshreddedStructType(), 10),
+                                      MakeField("t", arrow::utf8(), 11)});
+    auto read_inner = arrow::struct_(
+        {MakeField("v", MakeVariantAccessType(), 10), MakeField("t", arrow::utf8(), 11)});
+    auto data_type = arrow::list(arrow::field("element", data_inner));
+    auto read_type = arrow::list(arrow::field("element", read_inner));
+
+    ASSERT_OK_AND_ASSIGN(std::optional<std::shared_ptr<arrow::DataType>> pruned,
+                         NestedProjectionUtils::PruneDataType(read_type, data_type));
+    ASSERT_TRUE(pruned.has_value());
+    ASSERT_TRUE(pruned.value()->Equals(*read_type)) << pruned.value()->ToString();
+}
+
+TEST(NestedProjectionUtilsTest, PruneDataTypeListDroppingSiblingOfVariantStillFails) {
+    // Dropping the plain sibling is a real partial projection inside the list and must keep
+    // failing fast, variant access or not.
+    auto data_inner = arrow::struct_({MakeField("v", VariantTypeUtils::UnshreddedStructType(), 10),
+                                      MakeField("t", arrow::utf8(), 11)});
+    auto read_inner = arrow::struct_({MakeField("v", MakeVariantAccessType(), 10)});
+    auto data_type = arrow::list(arrow::field("element", data_inner));
+    auto read_type = arrow::list(arrow::field("element", read_inner));
+
+    ASSERT_NOK_WITH_MSG(NestedProjectionUtils::PruneDataType(read_type, data_type),
+                        "partial projection inside list");
 }
 
 TEST(NestedProjectionUtilsTest, HasNestedSubfieldProjectionNoProjection) {
