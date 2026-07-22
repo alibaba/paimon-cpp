@@ -77,8 +77,8 @@ class ParquetReaderBuilder : public ReaderBuilder {
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<::parquet::FileMetaData> file_metadata,
                                    GetCachedParquetMetadata(input_stream, file_uri, arrow_pool));
             return ParquetFileBatchReader::Create(std::move(input_stream), options_, batch_size_,
-                                                  std::move(file_metadata), arrow_pool,
-                                                  std::move(raw_input_bytes));
+                                                  std::move(file_metadata),
+                                                  std::move(raw_input_bytes), arrow_pool);
         }
         PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetReaderBuilder::Build")
     }

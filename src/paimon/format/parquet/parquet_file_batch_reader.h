@@ -73,8 +73,8 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
         const std::map<std::string, std::string>& options, int32_t batch_size,
         std::shared_ptr<::parquet::FileMetaData> file_metadata,
-        const std::shared_ptr<arrow::MemoryPool>& pool,
-        std::shared_ptr<std::atomic<uint64_t>> raw_input_bytes);
+        std::shared_ptr<std::atomic<uint64_t>> raw_input_bytes,
+        const std::shared_ptr<arrow::MemoryPool>& pool);
 
     static Result<::parquet::ReaderProperties> CreateReaderProperties(
         const std::shared_ptr<arrow::MemoryPool>& pool,

@@ -222,7 +222,7 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
         EXPECT_OK_AND_ASSIGN(auto parquet_batch_reader,
                              ParquetFileBatchReader::Create(
                                  std::move(in_stream), options, batch_size,
-                                 /*file_metadata=*/nullptr, pool_, std::move(raw_input_bytes)));
+                                 /*file_metadata=*/nullptr, std::move(raw_input_bytes), pool_));
         std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
         auto arrow_status = arrow::ExportSchema(*read_schema, c_schema.get());
         EXPECT_TRUE(arrow_status.ok());
@@ -388,8 +388,8 @@ TEST_F(ParquetFileBatchReaderTest, TestSetReadSchema) {
     std::map<std::string, std::string> options;
     ASSERT_OK_AND_ASSIGN(auto parquet_batch_reader,
                          ParquetFileBatchReader::Create(std::move(in_stream), options, batch_size_,
-                                                        /*file_metadata=*/nullptr, pool_,
-                                                        /*raw_input_bytes=*/nullptr));
+                                                        /*file_metadata=*/nullptr,
+                                                        /*raw_input_bytes=*/nullptr, pool_));
     // test GetFileSchema()
     ASSERT_OK_AND_ASSIGN(auto c_file_schema, parquet_batch_reader->GetFileSchema());
     auto arrow_file_schema = arrow::ImportSchema(c_file_schema.get()).ValueOrDie();
