@@ -27,6 +27,7 @@
 #include "paimon/common/data/shredding/map_shared_shredding_column_allocator.h"
 #include "paimon/common/data/shredding/map_shared_shredding_field_dict.h"
 #include "paimon/common/data/shredding/map_shredding_defs.h"
+#include "paimon/common/data/shredding/shredding_batch_converter.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -44,7 +45,7 @@ class MapSharedShreddingContext;
 ///
 /// Non-shared-shredding columns are passed through unchanged.
 /// Each shared-shredding column has its own FieldDict and ColumnAllocator.
-class MapSharedShreddingBatchConverter {
+class MapSharedShreddingBatchConverter : public ShreddingBatchConverter {
  public:
     /// Creates a converter for one file write cycle.
     /// Computes per-file K from context, builds physical schema, and constructs the converter.
@@ -59,12 +60,12 @@ class MapSharedShreddingBatchConverter {
         const std::shared_ptr<MemoryPool>& pool);
 
     /// Returns the physical schema produced for this converter.
-    const std::shared_ptr<arrow::Schema>& GetPhysicalSchema() const;
+    const std::shared_ptr<arrow::Schema>& GetPhysicalSchema() const override;
 
     /// Converts a logical batch to a physical batch.
     /// @param logical_batch Input ArrowArray (C ABI) with logical schema. Consumed on success.
     /// @return Owned physical ArrowArray (C ABI) with physical schema.
-    Result<std::unique_ptr<ArrowArray>> Convert(ArrowArray* logical_batch);
+    Result<std::unique_ptr<ArrowArray>> Convert(ArrowArray* logical_batch) override;
 
     /// Builds MapSharedShreddingFieldMeta for one shredding column (by field name).
     /// Called at file close to serialize metadata.

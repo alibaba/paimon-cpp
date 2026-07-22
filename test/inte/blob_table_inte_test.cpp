@@ -766,9 +766,9 @@ TEST_P(BlobTableInteTest, TestWriteNullOnFetchFailure) {
         << "expected:" << expected_with_rk->ToString();
 }
 
-TEST_P(BlobTableInteTest, TestWriteNullOnFetchFailureKeepsMissingFileFailing) {
-    // blob-write-null-on-fetch-failure only converts non-NotExist open failures; a missing
-    // descriptor file still fails the write when only this option is enabled.
+TEST_P(BlobTableInteTest, TestWriteNullOnFetchFailureCoversMissingFile) {
+    // The existence check runs only under blob-write-null-on-missing-file, so with only
+    // blob-write-null-on-fetch-failure a missing file is converted as an ordinary fetch failure.
     arrow::FieldVector fields = {arrow::field("f0", arrow::utf8()),
                                  arrow::field("f1", arrow::int32()),
                                  BlobUtils::ToArrowField("blob", true)};
@@ -788,7 +788,8 @@ TEST_P(BlobTableInteTest, TestWriteNullOnFetchFailureKeepsMissingFileFailing) {
 
     std::string raw_json = R"([
         ["str_0", 0, "blob_data_0"],
-        ["str_1", 1, "blob_data_1"]
+        ["str_1", 1, "blob_data_1"],
+        ["str_2", 2, "blob_data_2"]
     ])";
     auto raw_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), raw_json).ValueOrDie());
@@ -796,8 +797,35 @@ TEST_P(BlobTableInteTest, TestWriteNullOnFetchFailureKeepsMissingFileFailing) {
     ASSERT_OK(DeleteDescriptorTarget(desc_array, "blob", /*row=*/1));
 
     auto schema = arrow::schema(fields);
-    ASSERT_NOK_WITH_MSG(WriteArray(table_path, {}, schema->field_names(), {desc_array}),
-                        "not exists");
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         WriteArray(table_path, {}, schema->field_names(), {desc_array}));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+
+    ASSERT_OK_AND_ASSIGN(auto plan, ScanTable(table_path));
+    VerifyDataFileMetas(plan, /*expected_file_count=*/2, /*expected_row_counts=*/{3, 3},
+                        /*expected_min_seqs=*/{1, 1}, /*expected_max_seqs=*/{1, 1},
+                        /*expected_first_row_ids=*/{0, 0},
+                        /*expected_write_cols=*/
+                        {std::vector<std::string>{"f0", "f1"}, std::vector<std::string>{"blob"}});
+
+    ASSERT_OK_AND_ASSIGN(auto result, ReadTable(table_path, schema->field_names(), plan));
+    ASSERT_TRUE(result.chunked_array);
+    auto read_concat = arrow::Concatenate(result.chunked_array->chunks()).ValueOrDie();
+    auto read_struct = std::dynamic_pointer_cast<arrow::StructArray>(read_concat);
+    ASSERT_OK_AND_ASSIGN(auto resolved, ConvertDescriptorToRawBlob(read_struct, {"blob"}));
+
+    std::string expected_json = R"([
+        ["str_0", 0, "blob_data_0"],
+        ["str_1", 1, null],
+        ["str_2", 2, "blob_data_2"]
+    ])";
+    auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), expected_json)
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(expected_array));
+    ASSERT_TRUE(resolved->Equals(expected_with_rk))
+        << "result:" << resolved->ToString() << std::endl
+        << "expected:" << expected_with_rk->ToString();
 }
 
 TEST_P(BlobTableInteTest, TestBasic) {

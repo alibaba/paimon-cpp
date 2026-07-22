@@ -25,7 +25,6 @@ if(PAIMON_ENABLE_LUMINA)
                    arrow
                    glog
                    fmt
-                   ${CMAKE_DL_LIBS}
                    Threads::Threads
                    SHARED_LINK_LIBS
                    lumina::interface

@@ -1653,6 +1653,9 @@ macro(build_arrow)
 
     # libarrow.a calls dlsym; keep ${CMAKE_DL_LIBS} in the interface so -ldl is placed
     # after libarrow.a on linkers that resolve symbols strictly left-to-right.
+    # Every library that uses dl itself (arrow here; also lucene and jindosdk::nextarch)
+    # declares it on its own interface the same way; consumers inherit it transitively
+    # and must not list ${CMAKE_DL_LIBS} again themselves.
     target_link_libraries(arrow
                           INTERFACE zstd
                                     snappy

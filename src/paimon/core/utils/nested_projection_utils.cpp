@@ -28,6 +28,8 @@
 #include "arrow/array/concatenate.h"
 #include "arrow/type.h"
 #include "fmt/format.h"
+#include "paimon/common/data/variant/variant_access_utils.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/status.h"
 
@@ -81,6 +83,11 @@ Result<bool> NestedProjectionUtils::HasNestedSubfieldProjectionType(
     const std::shared_ptr<arrow::DataType>& read_type) {
     switch (file_type->id()) {
         case arrow::Type::STRUCT: {
+            if (VariantAccessUtils::IsVariantAccessType(read_type)) {
+                // A variant-access projection is resolved by the variant read plans, not by
+                // nested subfield projection.
+                return false;
+            }
             if (read_type->id() != arrow::Type::STRUCT) {
                 return Status::Invalid(fmt::format(
                     "HasNestedSubfieldProjectionType requires same nested type kind, but file "
@@ -141,6 +148,41 @@ Result<bool> NestedProjectionUtils::HasNestedSubfieldProjectionType(
     }
 }
 
+namespace {
+
+/// Whether `read_type` is `data_type` with variant columns replaced by their variant-access
+/// projections and nothing else changed. Such a read drops no field, so it is not a partial
+/// projection of an enclosing repeated group and may pass through where a real one must fail.
+bool IsVariantAccessSubstitution(const std::shared_ptr<arrow::DataType>& read_type,
+                                 const std::shared_ptr<arrow::DataType>& data_type) {
+    if (read_type->Equals(data_type)) {
+        return true;
+    }
+    if (VariantAccessUtils::IsVariantAccessType(read_type) &&
+        VariantTypeUtils::IsUnshreddedVariantType(data_type)) {
+        return true;
+    }
+    // Any other difference in shape, including a dropped field, is a real projection.
+    if (read_type->id() != data_type->id() || read_type->num_fields() != data_type->num_fields()) {
+        return false;
+    }
+    for (int32_t i = 0; i < read_type->num_fields(); ++i) {
+        const std::shared_ptr<arrow::Field>& read_child = read_type->field(i);
+        const std::shared_ptr<arrow::Field>& data_child = data_type->field(i);
+        // LIST and MAP name their children by format convention, so only STRUCT is matched
+        // by name.
+        if (read_type->id() == arrow::Type::STRUCT && read_child->name() != data_child->name()) {
+            return false;
+        }
+        if (!IsVariantAccessSubstitution(read_child->type(), data_child->type())) {
+            return false;
+        }
+    }
+    return true;
+}
+
+}  // namespace
+
 Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::PruneDataType(
     const std::shared_ptr<arrow::DataType>& read_type,
     const std::shared_ptr<arrow::DataType>& data_type) {
@@ -151,6 +193,12 @@ Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::P
 
     switch (read_type->id()) {
         case arrow::Type::STRUCT: {
+            if (VariantAccessUtils::IsVariantAccessType(read_type) &&
+                VariantTypeUtils::IsUnshreddedVariantType(data_type)) {
+                // A variant-access projection replaces the variant column type; pass it through
+                // so the read path extracts the described paths.
+                return std::optional<std::shared_ptr<arrow::DataType>>(read_type);
+            }
             arrow::FieldVector pruned_fields;
             for (const auto& read_child : read_type->fields()) {
                 PAIMON_ASSIGN_OR_RAISE(int32_t read_child_id, GetPaimonFieldId(read_child));
@@ -184,6 +232,9 @@ Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::P
             return std::optional<std::shared_ptr<arrow::DataType>>(arrow::struct_(pruned_fields));
         }
         case arrow::Type::LIST: {
+            if (IsVariantAccessSubstitution(read_type, data_type)) {
+                return std::optional<std::shared_ptr<arrow::DataType>>(read_type);
+            }
             // Keep behavior aligned with format readers: partial projection inside
             // LIST is unsupported and must fail fast.
             return Status::Invalid(
@@ -192,6 +243,9 @@ Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::P
                             data_type->ToString(), read_type->ToString()));
         }
         case arrow::Type::MAP: {
+            if (IsVariantAccessSubstitution(read_type, data_type)) {
+                return std::optional<std::shared_ptr<arrow::DataType>>(read_type);
+            }
             // Keep behavior aligned with format readers: partial projection inside
             // MAP is unsupported and must fail fast.
             return Status::Invalid(fmt::format(
