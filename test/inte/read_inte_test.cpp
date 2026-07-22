@@ -3905,6 +3905,17 @@ TEST(SystemTableReadInteTest, TestReadGlobalTables) {
                                    /*ignore_if_exists=*/false));
     ArrowSchemaRelease(&schema);
 
+    ASSERT_OK_AND_ASSIGN(std::string table_path,
+                         catalog->GetTableLocation(Identifier("test_db", "test_tbl")));
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(table_path, options,
+                                                         /*is_streaming_mode=*/true));
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<RecordBatch> batch,
+        TestHelper::MakeRecordBatch(arrow::struct_(typed_schema->fields()), R"([["k", 1]])",
+                                    /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
     std::map<std::string, std::string> no_pk_options = options;
     no_pk_options[Options::BUCKET_KEY] = "pk";
     ::ArrowSchema no_pk_schema;
@@ -3936,6 +3947,10 @@ TEST(SystemTableReadInteTest, TestReadGlobalTables) {
     auto updated_at_array = std::dynamic_pointer_cast<arrow::Int64Array>(struct_array->field(8));
     auto updated_by_array = std::dynamic_pointer_cast<arrow::StringArray>(struct_array->field(9));
     auto record_count_array = std::dynamic_pointer_cast<arrow::Int64Array>(struct_array->field(10));
+    auto file_size_array = std::dynamic_pointer_cast<arrow::Int64Array>(struct_array->field(11));
+    auto file_count_array = std::dynamic_pointer_cast<arrow::Int64Array>(struct_array->field(12));
+    auto last_creation_time_array =
+        std::dynamic_pointer_cast<arrow::Int64Array>(struct_array->field(13));
     ASSERT_TRUE(db_array);
     ASSERT_TRUE(tbl_array);
     ASSERT_TRUE(type_array);
@@ -3947,6 +3962,9 @@ TEST(SystemTableReadInteTest, TestReadGlobalTables) {
     ASSERT_TRUE(updated_at_array);
     ASSERT_TRUE(updated_by_array);
     ASSERT_TRUE(record_count_array);
+    ASSERT_TRUE(file_size_array);
+    ASSERT_TRUE(file_count_array);
+    ASSERT_TRUE(last_creation_time_array);
 
     // Find our table by table name
     bool found = false;
@@ -3954,7 +3972,7 @@ TEST(SystemTableReadInteTest, TestReadGlobalTables) {
     for (int64_t i = 0; i < struct_array->length(); ++i) {
         if (std::string(tbl_array->GetString(i)) == "test_tbl") {
             EXPECT_EQ(std::string(db_array->GetString(i)), "test_db");
-            EXPECT_EQ(std::string(type_array->GetString(i)), "TABLE");
+            EXPECT_EQ(std::string(type_array->GetString(i)), "table");
             EXPECT_FALSE(part_array->Value(i));
             EXPECT_TRUE(pk_array->Value(i));
             EXPECT_EQ(owner_array->GetString(i), "alice");
@@ -3963,6 +3981,9 @@ TEST(SystemTableReadInteTest, TestReadGlobalTables) {
             EXPECT_EQ(updated_at_array->Value(i), 2000);
             EXPECT_EQ(updated_by_array->GetString(i), "updater");
             EXPECT_TRUE(record_count_array->IsNull(i));
+            EXPECT_TRUE(file_size_array->IsNull(i));
+            EXPECT_TRUE(file_count_array->IsNull(i));
+            EXPECT_TRUE(last_creation_time_array->IsNull(i));
             found = true;
         } else if (std::string(tbl_array->GetString(i)) == "test_no_pk_tbl") {
             EXPECT_FALSE(pk_array->Value(i));
@@ -4060,7 +4081,7 @@ TEST(SystemTableReadInteTest, TestGlobalSystemTablesPropagateCorruptSchema) {
     }
 }
 
-TEST(SystemTableReadInteTest, TestGlobalSystemTablesPropagateCorruptSnapshot) {
+TEST(SystemTableReadInteTest, TestPartitionsSystemTablePropagatesCorruptSnapshot) {
     std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
                                                   {Options::FILE_FORMAT, "orc"},
                                                   {Options::MANIFEST_FORMAT, "orc"},
@@ -4092,11 +4113,10 @@ TEST(SystemTableReadInteTest, TestGlobalSystemTablesPropagateCorruptSnapshot) {
     ASSERT_OK(fs->WriteFile(PathUtil::JoinPath(table_path, "snapshot/snapshot-1"), "{invalid-json",
                             /*overwrite=*/true));
 
-    ASSERT_NOK(ReadGlobalSystemTable("tables", catalog.get(), fs, warehouse, options));
     ASSERT_NOK(ReadGlobalSystemTable("partitions", catalog.get(), fs, warehouse, options));
 }
 
-TEST(SystemTableReadInteTest, TestGlobalSystemTablesPropagateCorruptManifest) {
+TEST(SystemTableReadInteTest, TestPartitionsSystemTablePropagatesCorruptManifest) {
     std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"},
                                                   {Options::FILE_FORMAT, "orc"},
                                                   {Options::MANIFEST_FORMAT, "orc"},
@@ -4132,7 +4152,6 @@ TEST(SystemTableReadInteTest, TestGlobalSystemTablesPropagateCorruptManifest) {
         PathUtil::JoinPath(table_path, "manifest/" + snapshot->BaseManifestList()), "corrupt",
         /*overwrite=*/true));
 
-    ASSERT_NOK(ReadGlobalSystemTable("tables", catalog.get(), fs, warehouse, options));
     ASSERT_NOK(ReadGlobalSystemTable("partitions", catalog.get(), fs, warehouse, options));
 }
 

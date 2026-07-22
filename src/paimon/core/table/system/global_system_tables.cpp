@@ -421,11 +421,10 @@ Result<std::vector<GenericRow>> TablesSystemTable::BuildRows() const {
                            LoadAllDataTables(*context_.catalog));
     for (const CatalogTableInfo& table : tables) {
         const std::shared_ptr<DataSchema>& data_schema = table.schema;
-        Identifier id(table.database_name, table.table_name);
 
         const auto& opts = data_schema->Options();
         auto table_type = opts.find("type");
-        const std::string table_type_str = table_type == opts.end() ? "TABLE" : table_type->second;
+        const std::string table_type_str = table_type == opts.end() ? "table" : table_type->second;
 
         bool partitioned = !data_schema->PartitionKeys().empty();
 
@@ -443,38 +442,13 @@ Result<std::vector<GenericRow>> TablesSystemTable::BuildRows() const {
         row.SetField(8, std::move(updated_at));
         row.SetField(9, OptionalStringValue(opts, "updatedBy"));
 
-        // Get table path and aggregate file stats from manifest entries. Ignore only concurrent
-        // table deletion; corrupted metadata, unsupported aggregation, and I/O errors must fail the
-        // query.
-        PAIMON_ASSIGN_OR_RAISE(std::string table_path, context_.catalog->GetTableLocation(id));
-
-        Result<AggregatedFileStats> file_stats_result =
-            AggregateFileStats(context_.fs, table_path, *data_schema);
-        if (!file_stats_result.ok() && !file_stats_result.status().IsNotExist()) {
-            return file_stats_result.status();
-        }
-        if (file_stats_result.ok() && file_stats_result.value().has_snapshot) {
-            auto& all_stats = file_stats_result.value().by_partition;
-            int64_t total_record = 0, total_size = 0, total_files = 0, max_creation = 0;
-            for (const auto& [key, stats] : all_stats) {
-                total_record += stats.record_count;
-                total_size += stats.file_size_in_bytes;
-                total_files += stats.file_count;
-                if (stats.last_file_creation_time_millis > max_creation) {
-                    max_creation = stats.last_file_creation_time_millis;
-                }
-            }
-            row.SetField(10, VariantType(total_record));
-            row.SetField(11, VariantType(total_size));
-            row.SetField(12, VariantType(total_files));
-            row.SetField(13,
-                         max_creation > 0 ? VariantType(max_creation) : VariantType(NullType()));
-        } else {
-            row.SetField(10, NullType());
-            row.SetField(11, NullType());
-            row.SetField(12, NullType());
-            row.SetField(13, NullType());
-        }
+        // Match Java CatalogUtils::toTableAndSnapshots when version management is unsupported.
+        // The C++ Catalog API currently has no version-management capability, so leave snapshot
+        // statistics null instead of deriving different live-file semantics from manifests.
+        row.SetField(10, NullType());
+        row.SetField(11, NullType());
+        row.SetField(12, NullType());
+        row.SetField(13, NullType());
 
         rows.push_back(std::move(row));
     }
