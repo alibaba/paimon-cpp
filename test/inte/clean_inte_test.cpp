@@ -405,7 +405,7 @@ TEST_F(CleanInteTest, TestDropPartitionAndExpireSnapshot) {
     ASSERT_EQ(3u, manifests[1].NumAddedFiles());
 }
 
-TEST_F(CleanInteTest, DISABLED_TestDropPartitionAndExpireSnapshotWithIOException) {
+TEST_F(CleanInteTest, TestDropPartitionAndExpireSnapshotWithIOException) {
     auto string_field = arrow::field("f0", arrow::utf8());
     auto int_field = arrow::field("f1", arrow::int32());
     auto int_field1 = arrow::field("f2", arrow::int32());

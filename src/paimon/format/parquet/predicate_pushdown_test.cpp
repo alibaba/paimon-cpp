@@ -105,14 +105,15 @@ class PredicatePushdownTest : public ::testing::Test {
                          paimon::parquet::DEFAULT_PARQUET_READ_PREDICATE_NODE_COUNT_LIMIT) {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name_));
         ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
-        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
 
         std::map<std::string, std::string> options;
         options[paimon::parquet::PARQUET_READ_PREDICATE_NODE_COUNT_LIMIT] =
             std::to_string(predicate_node_count_limit);
         ASSERT_OK_AND_ASSIGN(auto batch_reader, ParquetFileBatchReader::Create(
                                                     std::move(in_stream), options, batch_size_,
-                                                    /*file_metadata=*/nullptr, arrow_pool_));
+                                                    /*file_metadata=*/nullptr,
+                                                    /*storage_read_bytes=*/nullptr, arrow_pool_));
         std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
         auto arrow_status = arrow::ExportSchema(*read_schema, c_schema.get());
         ASSERT_TRUE(arrow_status.ok());

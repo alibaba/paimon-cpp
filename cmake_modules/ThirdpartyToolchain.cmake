@@ -305,6 +305,16 @@ else()
     )
 endif()
 
+if(DEFINED ENV{PAIMON_BOOST_URL})
+    set(BOOST_SOURCE_URL "$ENV{PAIMON_BOOST_URL}")
+elseif(EXISTS "${THIRDPARTY_DIR}/${PAIMON_BOOST_PKG_NAME}")
+    set_urls(BOOST_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_BOOST_PKG_NAME}")
+else()
+    set_urls(BOOST_SOURCE_URL
+             "https://paimon-cpp.oss-cn-beijing.aliyuncs.com/thirdparty/boost/${PAIMON_BOOST_PKG_NAME}"
+    )
+endif()
+
 if(APPLE)
     set(JINDOSDK_C_DYNAMIC_LIB_NAME "jindosdk_c.${PAIMON_JINDOSDK_C_BUILD_VERSION}")
     set(JINDOSDK_C_DYNAMIC_LIB_FILE "lib${JINDOSDK_C_DYNAMIC_LIB_NAME}.dylib")
@@ -937,7 +947,7 @@ macro(build_boost)
          "using ${BOOST_TOOLSET} : : \"${CMAKE_CXX_COMPILER}\" ;\n")
 
     externalproject_add(boost_ep
-                        URL "${THIRDPARTY_DIR}/boost/${PAIMON_BOOST_PKG_NAME}"
+                        URL ${BOOST_SOURCE_URL}
                         URL_HASH "SHA256=${PAIMON_BOOST_BUILD_SHA256_CHECKSUM}"
                         CONFIGURE_COMMAND ${BOOST_PREFIX}/src/boost_ep/bootstrap.sh
                                           --with-libraries=date_time,filesystem,iostreams,regex,system,thread,chrono,atomic

@@ -851,8 +851,4 @@ if(PAIMON_BUILD_TESTS)
                     EXTRA_INCLUDES
                     ${JINDOSDK_INCLUDE_DIR})
 
-    if(PAIMON_ENABLE_NETWORK_TESTS)
-        target_compile_definitions(paimon-fs-test PRIVATE PAIMON_ENABLE_NETWORK_TESTS)
-    endif()
-
 endif()

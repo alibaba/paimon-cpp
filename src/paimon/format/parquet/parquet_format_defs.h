@@ -112,6 +112,8 @@ class ParquetMetrics {
         "parquet.read.row-groups.after-filter";
     static inline const char READ_ROWS[] = "parquet.read.rows";
     static inline const char READ_BATCH_COUNT[] = "parquet.read.batch-count";
+    // Byte-level read metric. storage-read-bytes: physical bytes read from storage.
+    static inline const char READ_STORAGE_BYTES[] = "parquet.read.storage-read-bytes";
 };
 
 }  // namespace paimon::parquet
