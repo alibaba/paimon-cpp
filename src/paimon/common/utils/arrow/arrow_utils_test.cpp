@@ -528,7 +528,10 @@ TEST(ArrowUtilsTest, TestGetCompressionType) {
         ASSERT_OK_AND_ASSIGN(auto type, ArrowUtils::GetCompressionType("gzip"));
         ASSERT_EQ(type, arrow::Compression::GZIP);
     }
-    { ASSERT_NOK(ArrowUtils::GetCompressionType("invalid_codec")); }
+    {
+        // test invalid codec
+        ASSERT_NOK(ArrowUtils::GetCompressionType("invalid_codec"));
+    }
 }
 
 }  // namespace paimon::test
