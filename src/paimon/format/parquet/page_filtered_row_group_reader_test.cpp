@@ -659,14 +659,13 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesMultiplePages) {
     ASSERT_LT(ranges[0].offset, ranges[1].offset);
 }
 
-/// Test: variable-length columns are streamed across multiple zero-copy-sliced
+/// Test: variable-length columns are streamed across multiple offset-normalized
 /// RecordBatches when batch_size is smaller than the matched row count, instead of
 /// being concatenated into a single RecordBatch via CombineChunks.
 ///
 /// This verifies the alignment with Arrow's standard TableBatchReader path:
-/// multi-chunk binary/string columns split along chunk + batch_size boundaries,
-/// with no deep copy. Asserts both correctness (total rows + full content order) and
-/// the multi-batch shape (more than one chunk in the collected ChunkedArray).
+/// multi-chunk binary/string columns split along chunk + batch_size boundaries. It
+/// asserts correctness and the multi-batch shape.
 TEST_F(PageFilteredRowGroupReaderTest, StringColumnMultiBatchStreaming) {
     std::string file_name = dir_->Str() + "/string_multi_batch.parquet";
 
@@ -717,6 +716,23 @@ TEST_F(PageFilteredRowGroupReaderTest, StringColumnMultiBatchStreaming) {
         }
     }
     ASSERT_EQ(40, seen);
+}
+
+TEST_F(PageFilteredRowGroupReaderTest, NormalizesSlicedBatchOffsets) {
+    std::string file_name = dir_->Str() + "/normalized_sliced_offsets.parquet";
+    std::shared_ptr<arrow::StructArray> data = MakeSequentialIntData(60);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/60);
+
+    std::shared_ptr<arrow::Schema> read_schema =
+        arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<Predicate> predicate = PredicateBuilder::GreaterOrEqual(
+        /*field_index=*/0, /*field_name=*/"val", FieldType::INT, Literal(20));
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateImpl(file_name, read_schema, predicate, &result, /*batch_size=*/7);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(40, result->length());
+    ASSERT_GT(result->num_chunks(), 1);
 }
 
 /// Test: end-to-end page-filtered read produces correct results when using page-level PreBuffer.

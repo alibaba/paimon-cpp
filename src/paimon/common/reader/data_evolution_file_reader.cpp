@@ -165,8 +165,8 @@ Result<std::shared_ptr<arrow::Array>> DataEvolutionFileReader::NextBatchForSingl
     if (concat_array_vec.empty()) {
         return std::shared_ptr<arrow::Array>();
     }
-    if (concat_array_vec.size() == 1) {
-        // avoid data copy
+    if (concat_array_vec.size() == 1 && concat_array_vec[0]->offset() == 0) {
+        // Avoid data copy when the array is already normalized.
         return concat_array_vec[0];
     }
     // TODO(xinyu.lxy) remove data copy for efficiency
