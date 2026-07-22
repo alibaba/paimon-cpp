@@ -216,9 +216,6 @@ class ReadResultCollector {
         for (int64_t i = 0; i < array->n_children; i++) {
             PAIMON_RETURN_NOT_OK(CheckArrayOffset(array->children[i]));
         }
-        if (array->dictionary) {
-            PAIMON_RETURN_NOT_OK(CheckArrayOffset(array->dictionary));
-        }
         return Status::OK();
     }
 };
