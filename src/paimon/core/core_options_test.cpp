@@ -1066,4 +1066,54 @@ TEST(CoreOptionsTest, TestMapStorageLayout) {
     }
 }
 
+TEST(CoreOptionsTest, TestVariantOptions) {
+    {
+        // Defaults.
+        ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
+        ASSERT_EQ(options.GetVariantShreddingSchema(), std::nullopt);
+        ASSERT_FALSE(options.VariantInferShreddingSchemaEnabled());
+        ASSERT_EQ(options.GetVariantShreddingMaxSchemaWidth(), 300);
+        ASSERT_EQ(options.GetVariantShreddingMaxSchemaDepth(), 50);
+        ASSERT_DOUBLE_EQ(options.GetVariantShreddingMinFieldCardinalityRatio(), 0.1);
+        ASSERT_EQ(options.GetVariantShreddingMaxInferBufferRow(), 4096);
+    }
+    {
+        // Configured values.
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{"variant.shreddingSchema", "{\"type\": \"ROW\"}"},
+                                  {"variant.inferShreddingSchema", "true"},
+                                  {"variant.shredding.maxSchemaWidth", "20"},
+                                  {"variant.shredding.maxSchemaDepth", "5"},
+                                  {"variant.shredding.minFieldCardinalityRatio", "0.25"},
+                                  {"variant.shredding.maxInferBufferRow", "128"}}));
+        ASSERT_EQ(options.GetVariantShreddingSchema(), "{\"type\": \"ROW\"}");
+        ASSERT_TRUE(options.VariantInferShreddingSchemaEnabled());
+        ASSERT_EQ(options.GetVariantShreddingMaxSchemaWidth(), 20);
+        ASSERT_EQ(options.GetVariantShreddingMaxSchemaDepth(), 5);
+        ASSERT_DOUBLE_EQ(options.GetVariantShreddingMinFieldCardinalityRatio(), 0.25);
+        ASSERT_EQ(options.GetVariantShreddingMaxInferBufferRow(), 128);
+    }
+    {
+        // The legacy parquet-prefixed key is a fallback for the shredding schema.
+        ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                             CoreOptions::FromMap({{"parquet.variant.shreddingSchema", "{}"}}));
+        ASSERT_EQ(options.GetVariantShreddingSchema(), "{}");
+    }
+    // Invalid values fail when the options are parsed, not when they are used.
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{"variant.inferShreddingSchema", "not_a_bool"}}),
+                        "variant.inferShreddingSchema");
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{"variant.shredding.maxSchemaWidth", "abc"}}),
+                        "variant.shredding.maxSchemaWidth");
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{"variant.shredding.maxSchemaWidth", "0"}}),
+                        "should be positive");
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{"variant.shredding.maxSchemaDepth", "-1"}}),
+                        "should be positive");
+    ASSERT_NOK_WITH_MSG(
+        CoreOptions::FromMap({{"variant.shredding.minFieldCardinalityRatio", "1.5"}}),
+        "should be in the range [0, 1]");
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{"variant.shredding.maxInferBufferRow", "0"}}),
+                        "should be positive");
+}
+
 }  // namespace paimon::test

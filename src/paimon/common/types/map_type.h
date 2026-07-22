@@ -49,13 +49,15 @@ class MapType : public DataType {
             *allocator);
         auto type = arrow::internal::checked_cast<arrow::MapType*>(type_.get());
         auto key_field = type->key_field();
+        // The key and value metadata is load-bearing: it is what marks an extension type such as
+        // VARIANT.
         std::shared_ptr<DataType> key_data_type =
-            DataType::Create(key_field->type(), key_field->nullable(), /*metadata=*/nullptr);
+            DataType::Create(key_field->type(), key_field->nullable(), key_field->metadata());
         obj.AddMember(rapidjson::StringRef("key"),
                       RapidJsonUtil::SerializeValue(*key_data_type, allocator).Move(), *allocator);
         auto value_field = type->item_field();
         std::shared_ptr<DataType> value_data_type =
-            DataType::Create(value_field->type(), value_field->nullable(), /*metadata=*/nullptr);
+            DataType::Create(value_field->type(), value_field->nullable(), value_field->metadata());
         obj.AddMember(rapidjson::StringRef("value"),
                       RapidJsonUtil::SerializeValue(*value_data_type, allocator).Move(),
                       *allocator);

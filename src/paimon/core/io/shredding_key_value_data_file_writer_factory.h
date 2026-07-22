@@ -20,14 +20,17 @@
 #include <string>
 #include <vector>
 
+#include "paimon/common/data/shredding/shredding_write_plan_factory.h"
 #include "paimon/core/io/key_value_data_file_writer_factory.h"
 
 namespace paimon {
 
 class DataFilePathFactory;
-class MapSharedShreddingContext;
 class MemoryPool;
 
+/// Creates key-value data file writers that rewrite logical batches into a physical (shredded)
+/// layout as planned by a `ShreddingWritePlanFactory` (MAP shared-shredding or VARIANT
+/// shredding, configured or inferred).
 class ShreddingKeyValueDataFileWriterFactory : public KeyValueDataFileWriterFactory {
  public:
     ShreddingKeyValueDataFileWriterFactory(
@@ -35,14 +38,17 @@ class ShreddingKeyValueDataFileWriterFactory : public KeyValueDataFileWriterFact
         const std::shared_ptr<arrow::Schema>& write_schema, int32_t level, FileSource file_source,
         const std::vector<std::string>& primary_keys,
         const std::shared_ptr<DataFilePathFactory>& path_factory, bool create_stats_extractor,
-        const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
+        const std::shared_ptr<ShreddingWritePlanFactory>& plan_factory,
         const std::shared_ptr<MemoryPool>& pool);
 
     Result<std::unique_ptr<SingleFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>>
     CreateWriter() const override;
 
  private:
-    std::shared_ptr<MapSharedShreddingContext> shredding_context_;
+    Result<std::unique_ptr<SingleFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>>
+    CreateShreddedWriter(const std::shared_ptr<ShreddingBatchConverter>& converter) const;
+
+    std::shared_ptr<ShreddingWritePlanFactory> plan_factory_;
 };
 
 }  // namespace paimon

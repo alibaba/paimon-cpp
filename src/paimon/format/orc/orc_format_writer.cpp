@@ -36,6 +36,7 @@
 #include "orc/Type.hh"
 #include "orc/Vector.hh"
 #include "orc/Writer.hh"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/options/memory_size.h"
 #include "paimon/common/utils/arrow/status_utils.h"
@@ -78,6 +79,9 @@ Result<std::unique_ptr<OrcFormatWriter>> OrcFormatWriter::Create(
     const std::map<std::string, std::string>& options, const std::string& compression,
     int32_t batch_size, const std::shared_ptr<MemoryPool>& pool) {
     assert(output_stream);
+    if (VariantTypeUtils::ContainsVariantField(arrow::schema(schema.fields()))) {
+        return Status::NotImplemented("ORC format does not support the VARIANT type");
+    }
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::orc::Type> orc_type, OrcAdapter::GetOrcType(schema));
     auto data_type = arrow::struct_(schema.fields());
     try {

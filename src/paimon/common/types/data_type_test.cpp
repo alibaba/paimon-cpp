@@ -21,7 +21,10 @@
 #include "arrow/api.h"
 #include "gtest/gtest.h"
 #include "paimon/common/data/blob_utils.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
+#include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/date_time_utils.h"
+#include "paimon/common/utils/rapidjson_util.h"
 
 namespace paimon::test {
 
@@ -62,6 +65,19 @@ TEST(DataTypeTest, DataTypeToString) {
         DataType blob_type(blob_field->type(), blob_field->nullable(), blob_field->metadata());
         ASSERT_EQ(blob_type.DataTypeToString(blob_field->type()), "BLOB");
     }
+    {
+        std::shared_ptr<arrow::Field> variant_field = VariantTypeUtils::ToArrowField("f3_variant");
+        DataType variant_type(variant_field->type(), variant_field->nullable(),
+                              variant_field->metadata());
+        ASSERT_EQ(variant_type.DataTypeToString(variant_field->type()), "VARIANT");
+        // A variant field is a scalar VARIANT type, not a ROW type.
+        auto created = DataType::Create(variant_field->type(), variant_field->nullable(),
+                                        variant_field->metadata());
+        rapidjson::Document doc;
+        auto json_value = created->ToJson(&doc.GetAllocator());
+        ASSERT_TRUE(json_value.IsString());
+        ASSERT_EQ(std::string(json_value.GetString()), "VARIANT");
+    }
     ASSERT_EQ(dummy_data_type.DataTypeToString(arrow::date32()), "DATE");
 
     auto decimal_type1 = arrow::decimal128(10, 2);
@@ -93,6 +109,40 @@ TEST(DataTypeTest, DataTypeToString) {
 
     auto unknown_type = arrow::date64();
     ASSERT_THROW(dummy_data_type.DataTypeToString(unknown_type), std::invalid_argument);
+}
+
+TEST(DataTypeTest, NestedTypeSerializationUsesChildMetadata) {
+    // ARRAY and MAP must carry their children's metadata into the serialized type, because that
+    // is what marks an extension type. Dropping it serialized a VARIANT as its physical
+    // `struct<value, metadata>` ROW, whose fixed child ids 0/1 then broke reading the schema back.
+    auto to_json = [](const std::shared_ptr<arrow::Field>& field) {
+        auto data_type = DataType::Create(field->type(), field->nullable(), field->metadata());
+        rapidjson::Document doc;
+        auto value = data_type->ToJson(&doc.GetAllocator());
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        value.Accept(writer);
+        return std::string(buffer.GetString());
+    };
+
+    auto variant_field = VariantTypeUtils::ToArrowField("element");
+    auto array_field = arrow::field("arr", arrow::list(variant_field));
+    ASSERT_EQ(to_json(array_field), R"({"type":"ARRAY","element":"VARIANT"})");
+
+    auto map_field =
+        arrow::field("m", arrow::map(arrow::utf8(), VariantTypeUtils::ToArrowField("value")));
+    ASSERT_EQ(to_json(map_field), R"({"type":"MAP","key":"STRING NOT NULL","value":"VARIANT"})");
+
+    // BLOB is marked the same way and was degraded to its physical BYTES the same way.
+    auto blob_array = arrow::field("b", arrow::list(BlobUtils::ToArrowField("element", true)));
+    ASSERT_EQ(to_json(blob_array), R"({"type":"ARRAY","element":"BLOB"})");
+
+    // Child metadata only ever selects an extension type, so ordinary elements are unaffected by
+    // it being carried over.
+    auto plain_child = arrow::field("element", arrow::int32(), /*nullable=*/true,
+                                    arrow::KeyValueMetadata::Make({DataField::FIELD_ID}, {"7"}));
+    ASSERT_EQ(to_json(arrow::field("a", arrow::list(plain_child))),
+              R"({"type":"ARRAY","element":"INT"})");
 }
 
 }  // namespace paimon::test
