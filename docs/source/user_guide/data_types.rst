@@ -217,3 +217,44 @@ and `Arrow DataTypes <https://arrow.apache.org/docs/format/Columnar.html#data-ty
 
        The type can be declared using ``ROW<n0 t0 'd0', n1 t1 'd1', ...>`` where n
        is the unique name of a field, t is the logical type of a field, d is the description of a field.
+
+   * - ``VARIANT``
+     - Struct
+     - Data type of semi-structured data (e.g. JSON). A variant value contains one of:
+       a primitive (e.g. integer, string), an array of variant values, or an object
+       mapping string keys to variant values.
+
+       Variant values are encoded with two binaries following the parquet-format
+       `Variant Binary Encoding <https://github.com/apache/parquet-format/blob/master/VariantEncoding.md>`_
+       specification (compatible with the Java Paimon / Spark implementation). In
+       C++ Paimon, a variant field is represented in an Arrow schema as
+       ``Struct{value: Binary NOT NULL, metadata: Binary NOT NULL}`` marked with
+       Paimon-specific field metadata; use ``paimon::Variant::ArrowField`` to
+       construct such a field, and ``paimon::Variant`` (``FromJson``/``ToJson``/
+       ``VariantGet``) to build and inspect values.
+
+       Only the parquet file format supports VARIANT columns. VARIANT cannot be
+       used as a primary key, partition key or bucket key, and no predicate
+       pushdown applies to it.
+
+       When writing, variant columns can optionally be *shredded* into typed
+       parquet columns per the parquet-format
+       `Variant Shredding <https://github.com/apache/parquet-format/blob/master/VariantShredding.md>`_
+       specification by setting ``variant.shreddingSchema`` to a ROW type JSON
+       whose fields map top-level variant column names to their shredding
+       types. Alternatively, setting ``variant.inferShreddingSchema`` to
+       ``true`` infers a shredding schema per file from the first written rows
+       (tuned by ``variant.shredding.maxSchemaWidth``, which bounds the total
+       number of shredded fields across all variant columns of the schema,
+       ``variant.shredding.maxSchemaDepth``,
+       ``variant.shredding.minFieldCardinalityRatio`` and
+       ``variant.shredding.maxInferBufferRow``). Inference also covers variant
+       columns nested inside ROW columns (variants inside arrays or maps stay
+       unshredded, as in Java Paimon). Readers reassemble shredded columns
+       transparently.
+
+       When reading, instead of the full variant, specific paths can be
+       extracted by replacing the variant column in the read schema with a
+       projection built by ``paimon::VariantAccessBuilder`` (e.g. ``$.a.b`` as
+       BIGINT). For shredded files only the required typed sub-columns are
+       read.

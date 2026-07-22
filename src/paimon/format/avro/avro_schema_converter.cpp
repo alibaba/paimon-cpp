@@ -29,6 +29,7 @@
 #include "avro/Types.hh"
 #include "avro/ValidSchema.hh"
 #include "fmt/format.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/format/avro/avro_file_format_factory.h"
 #include "paimon/format/avro/avro_utils.h"
@@ -378,6 +379,9 @@ Result<::avro::Schema> AvroSchemaConverter::ArrowTypeToAvroSchema(
 
 Result<::avro::ValidSchema> AvroSchemaConverter::ArrowSchemaToAvroSchema(
     const std::shared_ptr<arrow::Schema>& arrow_schema) {
+    if (VariantTypeUtils::ContainsVariantField(arrow_schema)) {
+        return Status::NotImplemented("Avro format does not support the VARIANT type");
+    }
     // top level row name of avro record, the same as java paimon
     static const std::string kTopLevelRowName = "org.apache.paimon.avro.generated.record";
     ::avro::RecordSchema record_schema(kTopLevelRowName);

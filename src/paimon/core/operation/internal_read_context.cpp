@@ -23,6 +23,8 @@
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "fmt/format.h"
+#include "paimon/common/data/variant/variant_access_utils.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/predicate/predicate_validator.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
@@ -37,6 +39,14 @@ Result<std::shared_ptr<arrow::Field>> InternalReadContext::AlignReadFieldWithTab
     const std::shared_ptr<arrow::Field>& read_field,
     const std::shared_ptr<arrow::Field>& table_field) {
     static const std::vector<std::string> kReadMetadataWhitelist = {DataField::MAP_SELECTED_KEYS};
+
+    if (VariantTypeUtils::IsVariantField(table_field) &&
+        VariantAccessUtils::IsVariantAccessType(read_field->type())) {
+        // A variant column may be read as a variant-access projection: a struct whose children
+        // each carry a `__VARIANT_METADATA` description. Keep the projection type (including
+        // the children's descriptions) on the aligned field.
+        return table_field->WithType(read_field->type());
+    }
 
     if (read_field->type()->id() != table_field->type()->id()) {
         return Status::Invalid(fmt::format(

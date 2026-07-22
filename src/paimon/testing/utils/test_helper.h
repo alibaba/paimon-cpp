@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "arrow/api.h"
+#include "arrow/array/concatenate.h"
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/api.h"
 #include "paimon/api.h"
@@ -255,6 +256,40 @@ class TestHelper {
             result_blobs.emplace_back(blob);
         }
         return result_blobs;
+    }
+
+    /// Reads all rows of the given splits and returns the raw result (including the leading
+    /// `_VALUE_KIND` column). Useful when the expected data cannot be expressed as JSON, e.g.
+    /// binary-encoded VARIANT columns.
+    Result<std::shared_ptr<arrow::ChunkedArray>> ReadResult(
+        const std::vector<std::shared_ptr<Split>>& splits) {
+        return ReadResult(splits, /*read_schema=*/nullptr);
+    }
+
+    /// Reads all rows of the given splits with an optional projected read schema.
+    Result<std::shared_ptr<arrow::ChunkedArray>> ReadResult(
+        const std::vector<std::shared_ptr<Split>>& splits,
+        std::unique_ptr<::ArrowSchema> read_schema) {
+        ReadContextBuilder read_context_builder(table_path_);
+        read_context_builder.SetOptions(options_);
+        if (read_schema != nullptr) {
+            read_context_builder.SetReadSchema(std::move(read_schema));
+        }
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
+                               read_context_builder.Finish());
+        PAIMON_ASSIGN_OR_RAISE(auto table_read, TableRead::Create(std::move(read_context)));
+        PAIMON_ASSIGN_OR_RAISE(auto batch_reader, table_read->CreateReader(splits));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::ChunkedArray> collected,
+                               ReadResultCollector::CollectResult(batch_reader.get()));
+        if (collected->num_chunks() == 0) {
+            return collected;
+        }
+        // The collected batches borrow reader-owned buffers; copy them into the process pool
+        // while the reader is still alive so the returned result may outlive it.
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+            std::shared_ptr<arrow::Array> copied,
+            arrow::Concatenate(collected->chunks(), arrow::default_memory_pool()));
+        return std::make_shared<arrow::ChunkedArray>(copied);
     }
 
     Result<bool> ReadAndCheckResult(const std::shared_ptr<arrow::DataType>& data_type,
