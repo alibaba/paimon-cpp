@@ -36,6 +36,7 @@
 #include "paimon/core/schema/arrow_schema_validator.h"
 #include "paimon/defs.h"
 #include "paimon/status.h"
+#include "paimon/utils/special_field_ids.h"
 #include "rapidjson/allocators.h"
 #include "rapidjson/document.h"
 #include "rapidjson/rapidjson.h"
@@ -235,6 +236,67 @@ Result<std::unique_ptr<TableSchema>> TableSchema::CreateFromJson(const std::stri
     return InitSchema(table_schema.id_, table_schema.fields_, table_schema.highest_field_id_,
                       table_schema.partition_keys_, table_schema.primary_keys_,
                       table_schema.options_, table_schema.comment_, table_schema.time_millis_);
+}
+
+namespace {
+
+Status CollectFieldIds(const rapidjson::Value& fields, std::set<int32_t>* seen_ids,
+                       int32_t* max_id);
+
+Status CollectTypeFieldIds(const rapidjson::Value& type, std::set<int32_t>* seen_ids,
+                           int32_t* max_id) {
+    if (!type.IsObject()) {
+        return Status::OK();
+    }
+    // ROW nests its fields under "fields", ARRAY/MULTISET under "element", MAP under "key"/"value".
+    if (type.HasMember("fields") && type["fields"].IsArray()) {
+        PAIMON_RETURN_NOT_OK(CollectFieldIds(type["fields"], seen_ids, max_id));
+    }
+    if (type.HasMember("element")) {
+        PAIMON_RETURN_NOT_OK(CollectTypeFieldIds(type["element"], seen_ids, max_id));
+    }
+    if (type.HasMember("key")) {
+        PAIMON_RETURN_NOT_OK(CollectTypeFieldIds(type["key"], seen_ids, max_id));
+    }
+    if (type.HasMember("value")) {
+        PAIMON_RETURN_NOT_OK(CollectTypeFieldIds(type["value"], seen_ids, max_id));
+    }
+    return Status::OK();
+}
+
+Status CollectFieldIds(const rapidjson::Value& fields, std::set<int32_t>* seen_ids,
+                       int32_t* max_id) {
+    for (const auto& field : fields.GetArray()) {
+        if (!field.IsObject()) {
+            return Status::Invalid("Broken schema, a field must be an object.");
+        }
+        if (!field.HasMember("id") || !field["id"].IsInt()) {
+            return Status::Invalid("Broken schema, a field misses an integer id.");
+        }
+        int32_t id = field["id"].GetInt();
+        if (!seen_ids->insert(id).second) {
+            return Status::Invalid(fmt::format("Broken schema, field id {} is duplicated.", id));
+        }
+        if (id < SpecialFieldIds::SYSTEM_FIELD_ID_START) {
+            *max_id = std::max(*max_id, id);
+        }
+        if (field.HasMember("type")) {
+            PAIMON_RETURN_NOT_OK(CollectTypeFieldIds(field["type"], seen_ids, max_id));
+        }
+    }
+    return Status::OK();
+}
+
+}  // namespace
+
+Result<int32_t> TableSchema::ComputeHighestFieldId(const rapidjson::Value& fields) {
+    if (!fields.IsArray()) {
+        return Status::Invalid("Broken schema, 'fields' must be an array.");
+    }
+    int32_t max_id = -1;
+    std::set<int32_t> seen_ids;
+    PAIMON_RETURN_NOT_OK(CollectFieldIds(fields, &seen_ids, &max_id));
+    return max_id;
 }
 
 Result<std::unique_ptr<TableSchema>> TableSchema::InitSchema(

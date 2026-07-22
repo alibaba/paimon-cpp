@@ -56,7 +56,9 @@ class PAIMON_EXPORT Catalog {
 
     /// %Factory method for creating a `Catalog` instance.
     ///
-    /// @param root_path Path to the root directory where the catalog is located.
+    /// @param root_path Path to the root directory where the catalog is located. For the
+    ///                  REST catalog (`CatalogOptions::METASTORE` set to "rest") this is
+    ///                  instead the warehouse (instance) name registered on the server.
     /// @param options Configuration options for catalog initialization.
     /// @param file_system Specifies the file system for file operations.
     ///                    If not set, use default file system (configured in

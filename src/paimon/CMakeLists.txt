@@ -13,6 +13,7 @@
 # limitations under the License.
 
 set(PAIMON_COMMON_SRCS
+    common/catalog_options.cpp
     common/compression/block_compression_factory.cpp
     common/compression/block_compressor.cpp
     common/compression/block_decompressor.cpp
@@ -177,13 +178,20 @@ set(PAIMON_COMMON_SRCS
     common/utils/roaring_bitmap32.cpp
     common/utils/roaring_bitmap64.cpp
     common/utils/row_range_index.cpp
+    common/utils/sensitive_config_utils.cpp
     common/utils/status.cpp
-    common/utils/string_utils.cpp)
+    common/utils/string_utils.cpp
+    common/utils/url_utils.cpp)
 
+# The shared HTTP client is used by both the object store file systems and the
+# rest catalog.
+set(PAIMON_CURL_LINK_LIBS)
+if(PAIMON_ENABLE_S3 OR PAIMON_ENABLE_REST)
+    list(APPEND PAIMON_COMMON_SRCS common/utils/http_client.cpp)
+    set(PAIMON_CURL_LINK_LIBS CURL::libcurl)
+endif()
 if(PAIMON_ENABLE_S3)
-    list(APPEND PAIMON_COMMON_SRCS common/fs/http_client.cpp
-         common/fs/object_store_file_system.cpp)
-    set(PAIMON_OBJECT_STORE_LINK_LIBS CURL::libcurl)
+    list(APPEND PAIMON_COMMON_SRCS common/fs/object_store_file_system.cpp)
 endif()
 
 set(PAIMON_CORE_SRCS
@@ -226,6 +234,7 @@ set(PAIMON_CORE_SRCS
     core/casting/timestamp_to_timestamp_cast_executor.cpp
     core/casting/casting_utils.cpp
     core/catalog/catalog.cpp
+    core/catalog/catalog_utils.cpp
     core/catalog/file_system_catalog.cpp
     core/catalog/identifier.cpp
     core/core_options.cpp
@@ -404,6 +413,18 @@ set(PAIMON_CORE_SRCS
     core/utils/special_field_ids.cpp
     core/utils/tag_manager.cpp)
 
+if(PAIMON_ENABLE_REST)
+    list(APPEND
+         PAIMON_CORE_SRCS
+         rest/rest_http_client.cpp
+         rest/resource_paths.cpp
+         rest/rest_api.cpp
+         rest/rest_auth.cpp
+         rest/rest_catalog.cpp
+         rest/rest_messages.cpp
+         rest/rest_util.cpp)
+endif()
+
 add_paimon_lib(paimon
                SOURCES
                ${PAIMON_COMMON_SRCS}
@@ -417,7 +438,7 @@ add_paimon_lib(paimon
                xxhash
                Threads::Threads
                RapidJSON
-               ${PAIMON_OBJECT_STORE_LINK_LIBS}
+               ${PAIMON_CURL_LINK_LIBS}
                STATIC_LINK_LIBS
                arrow
                tbb
@@ -427,7 +448,7 @@ add_paimon_lib(paimon
                xxhash
                Threads::Threads
                RapidJSON
-               ${PAIMON_OBJECT_STORE_LINK_LIBS}
+               ${PAIMON_CURL_LINK_LIBS}
                SHARED_LINK_FLAGS
                ${PAIMON_VERSION_SCRIPT_FLAGS})
 
@@ -435,6 +456,13 @@ add_subdirectory(common/file_index)
 add_subdirectory(common/global_index)
 
 if(PAIMON_BUILD_TESTS)
+    # The shared HTTP client is compiled only for the components that need libcurl,
+    # so its test follows the same gate.
+    set(PAIMON_COMMON_HTTP_CLIENT_TEST_SRCS)
+    if(PAIMON_ENABLE_S3 OR PAIMON_ENABLE_REST)
+        set(PAIMON_COMMON_HTTP_CLIENT_TEST_SRCS common/utils/http_client_test.cpp)
+    endif()
+
     add_paimon_test(memory_test
                     SOURCES
                     common/memory/memory_pool_test.cpp
@@ -592,10 +620,13 @@ if(PAIMON_BUILD_TESTS)
                     common/io/cache/lru_cache_test.cpp
                     common/utils/byte_range_combiner_test.cpp
                     common/utils/scope_guard_test.cpp
+                    common/utils/sensitive_config_utils_test.cpp
                     common/utils/serialization_utils_test.cpp
                     common/utils/status_test.cpp
                     common/utils/stream_utils_test.cpp
                     common/utils/string_utils_test.cpp
+                    common/utils/url_utils_test.cpp
+                    ${PAIMON_COMMON_HTTP_CLIENT_TEST_SRCS}
                     common/utils/range_test.cpp
                     common/utils/uuid_test.cpp
                     common/utils/decimal_utils_test.cpp
@@ -872,5 +903,21 @@ if(PAIMON_BUILD_TESTS)
                     ${GTEST_LINK_TOOLCHAIN}
                     EXTRA_INCLUDES
                     ${JINDOSDK_INCLUDE_DIR})
+
+    if(PAIMON_ENABLE_REST)
+        add_paimon_test(rest_test
+                        SOURCES
+                        rest/rest_http_client_test.cpp
+                        rest/mock_rest_server.cpp
+                        rest/resource_paths_test.cpp
+                        rest/rest_catalog_test.cpp
+                        rest/rest_messages_test.cpp
+                        rest/rest_util_test.cpp
+                        STATIC_LINK_LIBS
+                        paimon_shared
+                        test_utils_static
+                        ${TEST_STATIC_LINK_LIBS}
+                        ${GTEST_LINK_TOOLCHAIN})
+    endif()
 
 endif()

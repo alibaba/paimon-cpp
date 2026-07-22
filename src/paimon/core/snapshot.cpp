@@ -313,4 +313,27 @@ Result<Snapshot> Snapshot::FromPath(const std::shared_ptr<FileSystem>& fs,
     return snapshot;
 }
 
+SnapshotInfo Snapshot::ToSnapshotInfo() const {
+    SnapshotInfo info;
+    info.snapshot_id = Id();
+    info.schema_id = SchemaId();
+    info.commit_user = CommitUser();
+    if (commit_kind_ == CommitKind::Append()) {
+        info.commit_kind = SnapshotInfo::CommitKind::APPEND;
+    } else if (commit_kind_ == CommitKind::Compact()) {
+        info.commit_kind = SnapshotInfo::CommitKind::COMPACT;
+    } else if (commit_kind_ == CommitKind::Overwrite()) {
+        info.commit_kind = SnapshotInfo::CommitKind::OVERWRITE;
+    } else if (commit_kind_ == CommitKind::Analyze()) {
+        info.commit_kind = SnapshotInfo::CommitKind::ANALYZE;
+    } else {
+        info.commit_kind = SnapshotInfo::CommitKind::UNKNOWN;
+    }
+    info.time_millis = TimeMillis();
+    info.total_record_count = TotalRecordCount();
+    info.delta_record_count = DeltaRecordCount();
+    info.watermark = Watermark();
+    return info;
+}
+
 }  // namespace paimon

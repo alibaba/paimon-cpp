@@ -91,7 +91,7 @@ TEST(FileSystemCatalogTest, TestCreateSystemDatabaseAndTable) {
         FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
         ASSERT_NOK_WITH_MSG(catalog.CreateDatabase(Catalog::SYSTEM_DATABASE_NAME, options,
                                                    /*ignore_if_exists=*/true),
-                            "Cannot create database for system database");
+                            "Cannot 'createDatabase' for system database 'sys'.");
     }
     /// Do not support create system table.
     {
@@ -114,7 +114,7 @@ TEST(FileSystemCatalogTest, TestCreateSystemDatabaseAndTable) {
         ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
         ASSERT_NOK_WITH_MSG(
             catalog.CreateTable(Identifier("db1", "ta$ble"), &schema, {"f1"}, {}, options, false),
-            "Cannot create table for system table");
+            "Cannot 'createTable' for system table");
         ArrowSchemaRelease(&schema);
     }
 }
@@ -206,11 +206,51 @@ TEST(FileSystemCatalogTest, TestOptionsSystemTableCatalog) {
     ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &system_create_schema).ok());
     ASSERT_NOK_WITH_MSG(
         catalog.CreateTable(options_identifier, &system_create_schema, {}, {}, options, false),
-        "Cannot create table for system table");
+        "Cannot 'createTable' for system table");
     ArrowSchemaRelease(&system_create_schema);
-    ASSERT_NOK_WITH_MSG(catalog.DropTable(options_identifier, false), "Cannot drop system table");
+    ASSERT_NOK_WITH_MSG(catalog.DropTable(options_identifier, false),
+                        "Cannot 'dropTable' for system table");
     ASSERT_NOK_WITH_MSG(catalog.RenameTable(options_identifier, Identifier("db1", "tbl2"), false),
-                        "Cannot rename system table");
+                        "Cannot 'renameTable' for system table");
+}
+
+TEST(FileSystemCatalogTest, TestBranchIdentifierRejectedForTableOperations) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
+    ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
+
+    auto typed_schema =
+        arrow::schema({arrow::field("f0", arrow::int32()), arrow::field("f1", arrow::utf8())});
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &schema).ok());
+    ASSERT_OK(catalog.CreateTable(Identifier("db1", "tbl1"), &schema,
+                                  /*partition_keys=*/{}, /*primary_keys=*/{}, options,
+                                  /*ignore_if_exists=*/false));
+    ArrowSchemaRelease(&schema);
+
+    // A branch identifier resolves to the main table directory, so create, drop and rename
+    // must reject it: dropping "tbl1$branch_b1" would otherwise delete the whole "tbl1".
+    Identifier branch_identifier("db1", "tbl1$branch_b1");
+    ::ArrowSchema branch_create_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &branch_create_schema).ok());
+    ASSERT_NOK_WITH_MSG(
+        catalog.CreateTable(branch_identifier, &branch_create_schema, {}, {}, options, false),
+        "Cannot 'createTable' for branch table");
+    ArrowSchemaRelease(&branch_create_schema);
+    ASSERT_NOK_WITH_MSG(catalog.DropTable(branch_identifier, false),
+                        "Cannot 'dropTable' for branch table");
+    ASSERT_NOK_WITH_MSG(catalog.RenameTable(branch_identifier, Identifier("db1", "tbl2"), false),
+                        "Cannot 'renameTable' for branch table");
+    ASSERT_NOK_WITH_MSG(catalog.RenameTable(Identifier("db1", "tbl1"), branch_identifier, false),
+                        "Cannot 'renameTable' for branch table");
+    // the table itself is untouched by the rejected operations
+    ASSERT_OK_AND_ASSIGN(bool exists, catalog.TableExists(Identifier("db1", "tbl1")));
+    ASSERT_TRUE(exists);
 }
 
 TEST(FileSystemCatalogTest, TestAuditLogAndBinlogSystemTableCatalog) {
@@ -277,11 +317,12 @@ TEST(FileSystemCatalogTest, TestAuditLogAndBinlogSystemTableCatalog) {
     ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &system_create_schema).ok());
     ASSERT_NOK_WITH_MSG(
         catalog.CreateTable(audit_log_identifier, &system_create_schema, {}, {}, options, false),
-        "Cannot create table for system table");
+        "Cannot 'createTable' for system table");
     ArrowSchemaRelease(&system_create_schema);
-    ASSERT_NOK_WITH_MSG(catalog.DropTable(binlog_identifier, false), "Cannot drop system table");
+    ASSERT_NOK_WITH_MSG(catalog.DropTable(binlog_identifier, false),
+                        "Cannot 'dropTable' for system table");
     ASSERT_NOK_WITH_MSG(catalog.RenameTable(audit_log_identifier, Identifier("db1", "tbl2"), false),
-                        "Cannot rename system table");
+                        "Cannot 'renameTable' for system table");
 }
 
 TEST(FileSystemCatalogTest, TestMetadataSystemTableCatalog) {
@@ -420,11 +461,12 @@ TEST(FileSystemCatalogTest, TestMetadataSystemTableCatalog) {
     ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &system_create_schema).ok());
     ASSERT_NOK_WITH_MSG(
         catalog.CreateTable(snapshots_identifier, &system_create_schema, {}, {}, options, false),
-        "Cannot create table for system table");
+        "Cannot 'createTable' for system table");
     ArrowSchemaRelease(&system_create_schema);
-    ASSERT_NOK_WITH_MSG(catalog.DropTable(snapshots_identifier, false), "Cannot drop system table");
+    ASSERT_NOK_WITH_MSG(catalog.DropTable(snapshots_identifier, false),
+                        "Cannot 'dropTable' for system table");
     ASSERT_NOK_WITH_MSG(catalog.RenameTable(snapshots_identifier, Identifier("db1", "tbl2"), false),
-                        "Cannot rename system table");
+                        "Cannot 'renameTable' for system table");
 }
 
 TEST(FileSystemCatalogTest, TestCreateTableWithBlob) {
@@ -746,7 +788,7 @@ TEST(FileSystemCatalogTest, TestDropDatabase) {
     ASSERT_NOK_WITH_MSG(catalog.DropDatabase(Catalog::SYSTEM_DATABASE_NAME,
                                              /*ignore_if_not_exists=*/false,
                                              /*cascade=*/false),
-                        "Cannot drop system database sys.");
+                        "Cannot 'dropDatabase' for system database 'sys'.");
 
     ArrowSchemaRelease(&schema);
 }
@@ -785,10 +827,10 @@ TEST(FileSystemCatalogTest, TestDropTable) {
     ASSERT_FALSE(exist);
 
     /// Test 4: Drop system table.
-    ASSERT_NOK_WITH_MSG(
-        catalog.DropTable(Identifier("test_db", "tbl$system"),
-                          /*ignore_if_not_exists=*/false),
-        "Cannot drop system table Identifier{database='test_db', table='tbl$system'}.");
+    ASSERT_NOK_WITH_MSG(catalog.DropTable(Identifier("test_db", "tbl$system"),
+                                          /*ignore_if_not_exists=*/false),
+                        "Cannot 'dropTable' for system table 'Identifier{database='test_db', "
+                        "table='tbl$system'}', please use data table.");
 
     ArrowSchemaRelease(&schema);
 }
@@ -854,7 +896,7 @@ TEST(FileSystemCatalogTest, TestRenameTable) {
     ASSERT_NOK_WITH_MSG(catalog.RenameTable(Identifier("test_db", "tbl$system"),
                                             Identifier("test_db", "new_system_tbl"),
                                             /*ignore_if_not_exists=*/false),
-                        "Cannot rename system table");
+                        "Cannot 'renameTable' for system table");
 
     ArrowSchemaRelease(&schema1);
     ArrowSchemaRelease(&schema2);

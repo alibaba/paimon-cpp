@@ -51,6 +51,13 @@ class TableSchema : public DataSchema, public Jsonizable<TableSchema> {
 
     static Result<std::unique_ptr<TableSchema>> CreateFromJson(const std::string& json_str);
 
+    /// Computes the highest non-system field id across all nesting levels of a "fields" JSON
+    /// array, or -1 when there is none; ids at or above `SpecialFieldIds::SYSTEM_FIELD_ID_START`
+    /// are excluded. A non-object field or a missing, non-integer or duplicated field id fails
+    /// the computation. Used when the schema source (e.g. a rest catalog server) does not
+    /// report the "highestFieldId" itself.
+    static Result<int32_t> ComputeHighestFieldId(const rapidjson::Value& fields);
+
     rapidjson::Value ToJson(rapidjson::Document::AllocatorType* allocator) const
         noexcept(false) override;
 

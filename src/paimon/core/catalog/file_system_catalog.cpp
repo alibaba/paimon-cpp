@@ -29,6 +29,7 @@
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
+#include "paimon/core/catalog/catalog_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/core/table/system/global_system_tables.h"
@@ -58,10 +59,7 @@ FileSystemCatalog::FileSystemCatalog(const std::shared_ptr<FileSystem>& fs,
 Status FileSystemCatalog::CreateDatabase(const std::string& db_name,
                                          const std::map<std::string, std::string>& options,
                                          bool ignore_if_exists) {
-    if (IsSystemDatabase(db_name)) {
-        return Status::Invalid(
-            fmt::format("Cannot create database for system database {}.", db_name));
-    }
+    PAIMON_RETURN_NOT_OK(CatalogUtils::CheckNotSystemDatabase(db_name, "createDatabase"));
     PAIMON_ASSIGN_OR_RAISE(bool exist, DatabaseExists(db_name));
     if (exist) {
         if (ignore_if_exists) {
@@ -92,7 +90,7 @@ Status FileSystemCatalog::CreateDatabaseImpl(const std::string& db_name,
 }
 
 Result<bool> FileSystemCatalog::DatabaseExists(const std::string& db_name) const {
-    if (IsSystemDatabase(db_name)) {
+    if (CatalogUtils::IsSystemDatabase(db_name)) {
         return true;
     }
     return fs_->Exists(NewDatabasePath(warehouse_, db_name));
@@ -100,7 +98,7 @@ Result<bool> FileSystemCatalog::DatabaseExists(const std::string& db_name) const
 
 Result<bool> FileSystemCatalog::TableExists(const Identifier& identifier) const {
     // Handle sys database global tables
-    if (IsSystemDatabase(identifier.GetDatabaseName())) {
+    if (CatalogUtils::IsSystemDatabase(identifier.GetDatabaseName())) {
         return GlobalSystemTableLoader::IsSupported(identifier.GetTableName(), catalog_options_);
     }
     PAIMON_ASSIGN_OR_RAISE(bool is_system_table, identifier.IsSystemTable());
@@ -134,12 +132,8 @@ Status FileSystemCatalog::CreateTable(const Identifier& identifier, ArrowSchema*
                                       const std::vector<std::string>& primary_keys,
                                       const std::map<std::string, std::string>& options,
                                       bool ignore_if_exists) {
-    PAIMON_ASSIGN_OR_RAISE(bool is_system_table, IsSystemTable(identifier));
-    if (is_system_table) {
-        return Status::Invalid(
-            fmt::format("Cannot create table for system table {}, please use data table.",
-                        identifier.ToString()));
-    }
+    PAIMON_RETURN_NOT_OK(CatalogUtils::CheckNotBranch(identifier, "createTable"));
+    PAIMON_RETURN_NOT_OK(CatalogUtils::CheckNotSystemTable(identifier, "createTable"));
     PAIMON_ASSIGN_OR_RAISE(bool db_exist, DatabaseExists(identifier.GetDatabaseName()));
     if (!db_exist) {
         return Status::Invalid(
@@ -196,16 +190,12 @@ const std::map<std::string, std::string>& FileSystemCatalog::GetOptions() const 
     return catalog_options_;
 }
 
-bool FileSystemCatalog::IsSystemDatabase(const std::string& db_name) {
-    return db_name == SYSTEM_DATABASE_NAME;
-}
-
 Result<bool> FileSystemCatalog::IsSpecifiedSystemTable(const Identifier& identifier) {
     return identifier.IsSystemTable();
 }
 
 Result<bool> FileSystemCatalog::IsSystemTable(const Identifier& identifier) {
-    if (IsSystemDatabase(identifier.GetDatabaseName())) {
+    if (CatalogUtils::IsSystemDatabase(identifier.GetDatabaseName())) {
         return true;
     }
     return IsSpecifiedSystemTable(identifier);
@@ -239,7 +229,7 @@ Result<std::vector<std::string>> FileSystemCatalog::ListDatabases() const {
 }
 
 Result<std::vector<std::string>> FileSystemCatalog::ListTables(const std::string& db_name) const {
-    if (IsSystemDatabase(db_name)) {
+    if (CatalogUtils::IsSystemDatabase(db_name)) {
         return GlobalSystemTableLoader::GetSupportedTableNames(catalog_options_);
     }
     std::string database_path = NewDatabasePath(warehouse_, db_name);
@@ -274,7 +264,7 @@ Result<bool> FileSystemCatalog::TableExistsInFileSystem(const std::string& table
 Result<std::shared_ptr<Schema>> FileSystemCatalog::LoadTableSchema(
     const Identifier& identifier) const {
     // Handle sys database global tables
-    if (IsSystemDatabase(identifier.GetDatabaseName())) {
+    if (CatalogUtils::IsSystemDatabase(identifier.GetDatabaseName())) {
         PAIMON_ASSIGN_OR_RAISE(bool supported, GlobalSystemTableLoader::IsSupported(
                                                    identifier.GetTableName(), catalog_options_));
         if (!supported) {
@@ -339,10 +329,7 @@ Result<std::shared_ptr<Table>> FileSystemCatalog::GetTable(const Identifier& ide
 
 Status FileSystemCatalog::DropDatabase(const std::string& name, bool ignore_if_not_exists,
                                        bool cascade) {
-    if (IsSystemDatabase(name)) {
-        return Status::Invalid(fmt::format("Cannot drop system database {}.", name));
-    }
-
+    PAIMON_RETURN_NOT_OK(CatalogUtils::CheckNotSystemDatabase(name, "dropDatabase"));
     PAIMON_ASSIGN_OR_RAISE(bool exist, DatabaseExists(name));
     if (!exist) {
         if (ignore_if_not_exists) {
@@ -425,10 +412,10 @@ Status FileSystemCatalog::DropTableImpl(const Identifier& identifier,
 }
 
 Status FileSystemCatalog::DropTable(const Identifier& identifier, bool ignore_if_not_exists) {
-    PAIMON_ASSIGN_OR_RAISE(bool is_system_table, IsSystemTable(identifier));
-    if (is_system_table) {
-        return Status::Invalid(fmt::format("Cannot drop system table {}.", identifier.ToString()));
-    }
+    // A branch identifier resolves to the main table directory, so without this check
+    // dropping "t$branch_b" would delete the whole table "t".
+    PAIMON_RETURN_NOT_OK(CatalogUtils::CheckNotBranch(identifier, "dropTable"));
+    PAIMON_RETURN_NOT_OK(CatalogUtils::CheckNotSystemTable(identifier, "dropTable"));
     PAIMON_ASSIGN_OR_RAISE(std::string table_path, GetTableLocation(identifier));
     PAIMON_ASSIGN_OR_RAISE(bool exist, fs_->Exists(table_path));
     if (!exist) {
@@ -488,12 +475,10 @@ Status FileSystemCatalog::DropTable(const Identifier& identifier, bool ignore_if
 
 Status FileSystemCatalog::RenameTable(const Identifier& from_table, const Identifier& to_table,
                                       bool ignore_if_not_exists) {
-    PAIMON_ASSIGN_OR_RAISE(bool is_from_system_table, IsSystemTable(from_table));
-    PAIMON_ASSIGN_OR_RAISE(bool is_to_system_table, IsSystemTable(to_table));
-    if (is_from_system_table || is_to_system_table) {
-        return Status::Invalid(fmt::format("Cannot rename system table {} or {}.",
-                                           from_table.ToString(), to_table.ToString()));
-    }
+    PAIMON_RETURN_NOT_OK(CatalogUtils::CheckNotBranch(from_table, "renameTable"));
+    PAIMON_RETURN_NOT_OK(CatalogUtils::CheckNotBranch(to_table, "renameTable"));
+    PAIMON_RETURN_NOT_OK(CatalogUtils::CheckNotSystemTable(from_table, "renameTable"));
+    PAIMON_RETURN_NOT_OK(CatalogUtils::CheckNotSystemTable(to_table, "renameTable"));
 
     if (from_table.GetDatabaseName() != to_table.GetDatabaseName()) {
         return Status::Invalid(
@@ -521,24 +506,6 @@ Status FileSystemCatalog::RenameTable(const Identifier& from_table, const Identi
     return Status::OK();
 }
 
-namespace {
-SnapshotInfo::CommitKind ConvertCommitKind(Snapshot::CommitKind internal) {
-    if (internal == Snapshot::CommitKind::Append()) {
-        return SnapshotInfo::CommitKind::APPEND;
-    }
-    if (internal == Snapshot::CommitKind::Compact()) {
-        return SnapshotInfo::CommitKind::COMPACT;
-    }
-    if (internal == Snapshot::CommitKind::Overwrite()) {
-        return SnapshotInfo::CommitKind::OVERWRITE;
-    }
-    if (internal == Snapshot::CommitKind::Analyze()) {
-        return SnapshotInfo::CommitKind::ANALYZE;
-    }
-    return SnapshotInfo::CommitKind::UNKNOWN;
-}
-}  // namespace
-
 Result<std::vector<SnapshotInfo>> FileSystemCatalog::ListSnapshots(
     const Identifier& identifier, const std::string& branch) const {
     PAIMON_ASSIGN_OR_RAISE(bool exists, TableExists(identifier));
@@ -553,20 +520,9 @@ Result<std::vector<SnapshotInfo>> FileSystemCatalog::ListSnapshots(
 
     std::vector<SnapshotInfo> result;
     result.reserve(snapshots.size());
-
     for (const auto& snap : snapshots) {
-        SnapshotInfo info;
-        info.snapshot_id = snap.Id();
-        info.schema_id = snap.SchemaId();
-        info.commit_user = snap.CommitUser();
-        info.commit_kind = ConvertCommitKind(snap.GetCommitKind());
-        info.time_millis = snap.TimeMillis();
-        info.total_record_count = snap.TotalRecordCount();
-        info.delta_record_count = snap.DeltaRecordCount();
-        info.watermark = snap.Watermark();
-        result.push_back(std::move(info));
+        result.push_back(snap.ToSnapshotInfo());
     }
-
     return result;
 }
 

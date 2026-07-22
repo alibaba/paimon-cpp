@@ -327,6 +327,38 @@ TEST_F(SnapshotTest, TestSnapshotInfoCommitKindToString) {
     ASSERT_EQ("UNKNOWN", SnapshotInfo::CommitKindToString(SnapshotInfo::CommitKind::UNKNOWN));
 }
 
+TEST_F(SnapshotTest, TestToSnapshotInfo) {
+    auto make_snapshot = [](const Snapshot::CommitKind& kind) {
+        return Snapshot(
+            /*id=*/10, /*schema_id=*/15, /*base_manifest_list=*/"bml",
+            /*base_manifest_list_size=*/10,
+            /*delta_manifest_list=*/"dml", /*delta_manifest_list_size=*/20,
+            /*changelog_manifest_list=*/std::nullopt, /*changelog_manifest_list_size=*/std::nullopt,
+            /*index_manifest=*/std::nullopt, /*commit_user=*/"user1", /*commit_identifier=*/20,
+            kind, /*time_millis=*/1234, /*total_record_count=*/35, /*delta_record_count=*/40,
+            /*changelog_record_count=*/std::nullopt, /*watermark=*/50,
+            /*statistics=*/std::nullopt, /*properties=*/std::nullopt,
+            /*next_row_id=*/std::nullopt);
+    };
+    SnapshotInfo info = make_snapshot(Snapshot::CommitKind::Append()).ToSnapshotInfo();
+    ASSERT_EQ(10, info.snapshot_id);
+    ASSERT_EQ(15, info.schema_id);
+    ASSERT_EQ("user1", info.commit_user);
+    ASSERT_EQ(SnapshotInfo::CommitKind::APPEND, info.commit_kind);
+    ASSERT_EQ(1234, info.time_millis);
+    ASSERT_EQ(35, info.total_record_count.value());
+    ASSERT_EQ(40, info.delta_record_count.value());
+    ASSERT_EQ(50, info.watermark.value());
+    ASSERT_EQ(SnapshotInfo::CommitKind::COMPACT,
+              make_snapshot(Snapshot::CommitKind::Compact()).ToSnapshotInfo().commit_kind);
+    ASSERT_EQ(SnapshotInfo::CommitKind::OVERWRITE,
+              make_snapshot(Snapshot::CommitKind::Overwrite()).ToSnapshotInfo().commit_kind);
+    ASSERT_EQ(SnapshotInfo::CommitKind::ANALYZE,
+              make_snapshot(Snapshot::CommitKind::Analyze()).ToSnapshotInfo().commit_kind);
+    ASSERT_EQ(SnapshotInfo::CommitKind::UNKNOWN,
+              make_snapshot(Snapshot::CommitKind::Unknown()).ToSnapshotInfo().commit_kind);
+}
+
 TEST_F(SnapshotTest, TestChangelogManifestListSerialization) {
     // Test with changelog_manifest_list set to a non-null value
     {

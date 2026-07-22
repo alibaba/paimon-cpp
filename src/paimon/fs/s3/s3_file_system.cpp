@@ -42,52 +42,22 @@
 #include <utility>
 
 #include "fmt/format.h"
-#include "paimon/common/fs/http_client.h"
+#include "paimon/common/utils/http_client.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/common/utils/string_utils.h"
+#include "paimon/common/utils/url_utils.h"
 #include "paimon/executor.h"
 
 namespace paimon::s3 {
 namespace {
 
-Result<std::string> PercentEncode(std::string_view value, bool preserve_slash) {
-    if (value.size() > std::numeric_limits<int>::max()) {
-        return Status::IOError("S3 URL component is too large to encode");
-    }
-    char* encoded = curl_easy_escape(nullptr, value.data(), static_cast<int>(value.size()));
-    if (encoded == nullptr) {
-        return Status::IOError("failed to URL encode S3 component");
-    }
-    ScopeGuard free_encoded([encoded] { curl_free(encoded); });
-    std::string result(encoded);
-    if (preserve_slash) {
-        result = StringUtils::Replace(result, "%2F", "/");
-    }
-    return result;
-}
-
 Result<std::string> PercentDecode(std::string_view value, const std::string& field) {
-    for (size_t position = 0; position < value.size(); ++position) {
-        if (value[position] == '%' &&
-            (position + 2 >= value.size() ||
-             !std::isxdigit(static_cast<unsigned char>(value[position + 1])) ||
-             !std::isxdigit(static_cast<unsigned char>(value[position + 2])))) {
-            return Status::IOError(fmt::format("invalid URL encoding in S3 {}", field));
-        }
+    Result<std::string> decoded = UrlUtils::PercentDecode(value);
+    if (!decoded.ok()) {
+        return Status::IOError(fmt::format("invalid URL encoding in S3 {}", field));
     }
-    if (value.size() > std::numeric_limits<int>::max()) {
-        return Status::IOError(fmt::format("S3 {} is too large to URL decode", field));
-    }
-    int decoded_size = 0;
-    char* decoded =
-        curl_easy_unescape(nullptr, value.data(), static_cast<int>(value.size()), &decoded_size);
-    if (decoded == nullptr) {
-        return Status::IOError(fmt::format("failed to URL decode S3 {}", field));
-    }
-    ScopeGuard free_decoded([decoded] { curl_free(decoded); });
-    std::string result(decoded, decoded_size);
-    return result;
+    return decoded;
 }
 
 Result<int64_t> ParseNonNegativeInt64(const std::string& value, const std::string& field) {
@@ -704,13 +674,10 @@ class S3ObjectStoreClient : public ObjectStoreClient,
                                           int32_t max_keys) const override {
         std::string query = "list-type=2&delimiter=%2F&encoding-type=url";
         if (!path.key.empty()) {
-            PAIMON_ASSIGN_OR_RAISE(std::string encoded_prefix, PercentEncode(path.key, false));
-            query += "&prefix=" + encoded_prefix;
+            query += "&prefix=" + UrlUtils::PercentEncode(path.key);
         }
         if (!continuation_token.empty()) {
-            PAIMON_ASSIGN_OR_RAISE(std::string encoded_token,
-                                   PercentEncode(continuation_token, false));
-            query += "&continuation-token=" + encoded_token;
+            query += "&continuation-token=" + UrlUtils::PercentEncode(continuation_token);
         }
         if (max_keys > 0) {
             query += "&max-keys=" + std::to_string(max_keys);
@@ -847,13 +814,11 @@ class S3ObjectStoreClient : public ObjectStoreClient,
                  : endpoint_.scheme != "http" || IsIpAddressAuthority(endpoint_.authority) ||
                        !IsVirtualHostableS3Bucket(object.bucket, true));
         if (use_path_style) {
-            PAIMON_ASSIGN_OR_RAISE(std::string encoded_bucket, PercentEncode(object.bucket, false));
-            request_path += encoded_bucket + "/";
+            request_path += UrlUtils::PercentEncode(object.bucket) + "/";
         } else {
             authority = object.bucket + "." + authority;
         }
-        PAIMON_ASSIGN_OR_RAISE(std::string encoded_key, PercentEncode(object.key, true));
-        request_path += encoded_key;
+        request_path += UrlUtils::PercentEncode(object.key, /*preserve_slash=*/true);
         if (!query.empty()) {
             request_path += "?" + query;
         }

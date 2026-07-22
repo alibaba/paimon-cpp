@@ -17,6 +17,7 @@
 #include "paimon/core/table/system/global_system_tables.h"
 
 #include <functional>
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -30,6 +31,7 @@
 #include "paimon/common/data/generic_row.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/path_util.h"
+#include "paimon/common/utils/sensitive_config_utils.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
@@ -333,9 +335,14 @@ Result<std::shared_ptr<arrow::Schema>> CatalogOptionsSystemTable::ArrowSchema() 
 
 Result<std::vector<GenericRow>> CatalogOptionsSystemTable::BuildRows() const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> schema, ArrowSchema());
+    // Catalog options may carry credentials (e.g. the REST token), which must never reach
+    // anyone able to query this table; a secret is masked as a whole, an identifier-like
+    // value keeps at most a short tail.
+    const std::map<std::string, std::string> masked_options =
+        SensitiveConfigUtils::RedactMap(context_.catalog_options);
     std::vector<GenericRow> rows;
-    rows.reserve(context_.catalog_options.size());
-    for (const auto& [key, value] : context_.catalog_options) {
+    rows.reserve(masked_options.size());
+    for (const auto& [key, value] : masked_options) {
         GenericRow row(schema->num_fields());
         row.SetField(0, StringValue(key));
         row.SetField(1, StringValue(value));

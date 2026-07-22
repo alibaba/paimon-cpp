@@ -3913,7 +3913,14 @@ TEST(SystemTableReadInteTest, TestReadGlobalCatalogOptions) {
         {Options::FILE_SYSTEM, "local"},
         {Options::FILE_FORMAT, "orc"},
         {CatalogOptionsSystemTable::kEnabledOption, "true"},
-        {"custom.catalog.option", "test-value"}};
+        {"custom.catalog.option", "test-value"},
+        {"token", "bearer-credential-1"},
+        {"dlf.access-key-secret", "aksecret-1"},
+        {"fs.s3a.access.key", "s3akey-1"},
+        {"fs.azure.account-key.store1", "azkey-1"},
+        {"client.credential", "cred-1"},
+        {"fs.azure.sas.container", "sas-1"},
+        {"dlf.access-key-id", "an-access-key-id-1"}};
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
     std::string warehouse = PathUtil::JoinPath(dir->Str(), "warehouse");
@@ -3935,6 +3942,26 @@ TEST(SystemTableReadInteTest, TestReadGlobalCatalogOptions) {
     }
     ASSERT_EQ(result_map["file-system"], "local");
     ASSERT_EQ(result_map["file.format"], "orc");
+    // credential-carrying options stay listed but their values are masked; the key match
+    // ignores separators, so "fs.s3a.access.key" hits the "accesskey" marker
+    ASSERT_EQ(result_map["token"], "******");
+    ASSERT_EQ(result_map["dlf.access-key-secret"], "******");
+    ASSERT_EQ(result_map["fs.s3a.access.key"], "******");
+    ASSERT_EQ(result_map["fs.azure.account-key.store1"], "******");
+    ASSERT_EQ(result_map["client.credential"], "******");
+    ASSERT_EQ(result_map["fs.azure.sas.container"], "******");
+    // an identifier-like key keeps a four character tail, which names the credential in a
+    // support case without disclosing it
+    ASSERT_EQ(result_map["dlf.access-key-id"], "****id-1");
+    for (const auto& [key, value] : result_map) {
+        ASSERT_EQ(std::string::npos, value.find("bearer-credential-1")) << key;
+        ASSERT_EQ(std::string::npos, value.find("aksecret-1")) << key;
+        ASSERT_EQ(std::string::npos, value.find("s3akey-1")) << key;
+        ASSERT_EQ(std::string::npos, value.find("azkey-1")) << key;
+        ASSERT_EQ(std::string::npos, value.find("cred-1")) << key;
+        ASSERT_EQ(std::string::npos, value.find("sas-1")) << key;
+        ASSERT_EQ(std::string::npos, value.find("an-access-key-id-1")) << key;
+    }
 }
 
 TEST(SystemTableReadInteTest, TestReadGlobalAllTableOptions) {

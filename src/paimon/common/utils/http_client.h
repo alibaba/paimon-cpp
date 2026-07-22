@@ -31,6 +31,14 @@ enum class HttpMethod { HEAD, GET };
 using HttpHeaders = std::map<std::string, std::string>;
 using HttpBodyConsumer = std::function<Status(const char*, int64_t)>;
 
+/// Ensures libcurl's global state is initialized; the returned guard keeps it alive.
+PAIMON_EXPORT std::shared_ptr<void> EnsureCurlGlobalInit();
+
+/// Parses one raw HTTP header line into `headers`, lower-casing the name and trimming
+/// HTTP whitespace around the name and value; lines without a ':' or with an empty
+/// name are ignored.
+PAIMON_EXPORT void ParseHttpHeaderLine(const char* data, size_t size, HttpHeaders* headers);
+
 struct HttpRequest {
     HttpMethod method = HttpMethod::GET;
     std::string url;

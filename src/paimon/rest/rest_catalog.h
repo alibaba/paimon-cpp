@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,30 +18,37 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "paimon/catalog/catalog.h"
-#include "paimon/catalog/table.h"
-#include "paimon/core/schema/schema_manager.h"
 #include "paimon/logging.h"
+#include "paimon/rest/rest_api.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 
 struct ArrowSchema;
 
 namespace paimon {
-class TableSchema;
 class FileSystem;
-class Identifier;
-class Logger;
+class TableSchema;
 
-class FileSystemCatalog : public Catalog {
+/// A catalog backed by a REST catalog server. Metadata operations are delegated to
+/// `RestApi`; table data is accessed through the file system configured by the
+/// server-merged options.
+class RestCatalog : public Catalog {
  public:
-    FileSystemCatalog(const std::shared_ptr<FileSystem>& fs, const std::string& warehouse,
-                      const std::map<std::string, std::string>& catalog_options);
+    /// Creates the catalog: fetches and merges "/v1/config" from the server configured
+    /// by `CatalogOptions::URI`, then builds the file system from the merged options.
+    ///
+    /// @param warehouse The warehouse identifier sent to the server; may be empty.
+    static Result<std::unique_ptr<RestCatalog>> Create(
+        const std::string& warehouse, const std::map<std::string, std::string>& options,
+        const std::shared_ptr<FileSystem>& file_system,
+        const RestHttpClient::Config& http_config = RestHttpClient::Config());
 
-    Status CreateDatabase(const std::string& db_name,
+    Status CreateDatabase(const std::string& name,
                           const std::map<std::string, std::string>& options,
                           bool ignore_if_exists) override;
     Status CreateTable(const Identifier& identifier, ArrowSchema* c_schema,
@@ -62,39 +69,32 @@ class FileSystemCatalog : public Catalog {
     Result<std::shared_ptr<Schema>> LoadTableSchema(const Identifier& identifier) const override;
     std::string GetRootPath() const override;
     std::shared_ptr<FileSystem> GetFileSystem() const override;
-    const std::map<std::string, std::string>& GetOptions() const override;
     Result<std::shared_ptr<Table>> GetTable(const Identifier& identifier) const override;
     Result<std::vector<SnapshotInfo>> ListSnapshots(const Identifier& identifier,
                                                     const std::string& branch) const override;
 
+    /// Options merged with the server side config.
+    const std::map<std::string, std::string>& GetOptions() const override;
+
  private:
-    static std::string NewDatabasePath(const std::string& warehouse, const std::string& db_name);
-    static Result<std::string> NewDataTablePath(const std::string& warehouse,
-                                                const Identifier& identifier);
-    static Result<bool> IsSpecifiedSystemTable(const Identifier& identifier);
-    static Result<bool> IsSystemTable(const Identifier& identifier);
-    Result<std::optional<std::shared_ptr<TableSchema>>> TableSchemaExists(
-        const Identifier& identifier) const;
+    RestCatalog(std::unique_ptr<RestApi> api, const std::shared_ptr<FileSystem>& fs,
+                const std::string& warehouse);
 
-    Status CreateDatabaseImpl(const std::string& db_name,
-                              const std::map<std::string, std::string>& options);
-    Result<bool> TableExistsInFileSystem(const std::string& table_path) const;
+    /// Loads the table from the server and converts the response to a `TableSchema`
+    /// (options are enriched with the table path, audit info and branch).
+    Result<std::shared_ptr<TableSchema>> LoadDataTableSchema(
+        const Identifier& data_identifier, const std::optional<std::string>& branch,
+        std::string* table_path) const;
 
-    // Get all external paths from a list of schemas
-    Result<std::vector<std::string>> GetSchemaExternalPaths(
-        const std::vector<std::shared_ptr<TableSchema>>& schemas) const;
+    static Result<std::unique_ptr<TableSchema>> ToTableSchema(
+        const GetTableResponse& response, const std::optional<std::string>& branch);
 
-    // Get all branch names for a table
-    Result<std::vector<std::string>> GetTableBranches(const std::string& table_path) const;
-
-    // Drop table implementation with external paths cleanup
-    Status DropTableImpl(const Identifier& identifier,
-                         const std::vector<std::string>& external_paths);
-
+    std::unique_ptr<RestApi> api_;
     std::shared_ptr<FileSystem> fs_;
     std::string warehouse_;
-    std::map<std::string, std::string> catalog_options_;
-
+    /// The "table-default." options of the merged config, applied to `CreateTable`
+    /// options when absent.
+    std::map<std::string, std::string> table_default_options_;
     std::shared_ptr<Logger> logger_;
 };
 

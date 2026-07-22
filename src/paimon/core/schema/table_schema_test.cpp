@@ -27,6 +27,8 @@
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
+#include "paimon/utils/special_field_ids.h"
+#include "rapidjson/document.h"
 
 namespace paimon::test {
 
@@ -146,6 +148,43 @@ TEST_F(TableSchemaTest, TestGetFieldTypeForVariant) {
     // The variant marker must disambiguate the physical struct into FieldType::VARIANT.
     ASSERT_OK_AND_ASSIGN(FieldType variant_type, table_schema->GetFieldType("v"));
     ASSERT_EQ(variant_type, FieldType::VARIANT);
+}
+
+TEST_F(TableSchemaTest, TestComputeHighestFieldId) {
+    auto compute = [](const std::string& fields_json) -> Result<int32_t> {
+        rapidjson::Document doc;
+        doc.Parse(fields_json.c_str());
+        EXPECT_FALSE(doc.HasParseError()) << fields_json;
+        return TableSchema::ComputeHighestFieldId(doc);
+    };
+    // ids inside nested rows are included
+    ASSERT_OK_AND_ASSIGN(int32_t highest, compute(R"([
+        {"id": 0, "name": "f0", "type": "INT"},
+        {"id": 1, "name": "s", "type": {"type": "ROW",
+            "fields": [{"id": 5, "name": "inner", "type": "INT"}]}}
+    ])"));
+    ASSERT_EQ(5, highest);
+    // system field ids are reserved and excluded from the highest field id
+    ASSERT_OK_AND_ASSIGN(highest, compute(R"([{"id": 3, "name": "f0", "type": "INT"},
+                                     {"id": )" +
+                                          std::to_string(SpecialFieldIds::SEQUENCE_NUMBER) +
+                                          R"(, "name": "_SEQUENCE_NUMBER", "type": "BIGINT"}])"));
+    ASSERT_EQ(3, highest);
+    ASSERT_OK_AND_ASSIGN(highest, compute("[]"));
+    ASSERT_EQ(-1, highest);
+    // broken schemas fail instead of being silently skipped
+    ASSERT_NOK_WITH_MSG(compute(R"([{"id": 0, "name": "a", "type": "INT"},
+                                    {"id": 0, "name": "b", "type": "INT"}])")
+                            .status(),
+                        "duplicated");
+    ASSERT_NOK_WITH_MSG(compute(R"([{"name": "a", "type": "INT"}])").status(), "integer id");
+    ASSERT_NOK_WITH_MSG(compute(R"([{"id": "0", "name": "a", "type": "INT"}])").status(),
+                        "integer id");
+    ASSERT_NOK_WITH_MSG(compute("[1]").status(), "must be an object");
+    rapidjson::Document not_an_array;
+    not_an_array.Parse("{}");
+    ASSERT_NOK_WITH_MSG(TableSchema::ComputeHighestFieldId(not_an_array).status(),
+                        "must be an array");
 }
 
 TEST_F(TableSchemaTest, TestInvalidCreate) {

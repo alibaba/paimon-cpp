@@ -39,6 +39,10 @@ class SpecialFieldIds {
 
     /// Special field ID reserved for index score. Value: CPP_FIELD_ID_END - 1
     static const int32_t INDEX_SCORE = CPP_FIELD_ID_END - 1;
+
+    /// Lowest field ID reserved for system fields; IDs at or above it are excluded from the
+    /// highest field ID of a schema. Value: INT32_MAX / 2
+    static const int32_t SYSTEM_FIELD_ID_START = std::numeric_limits<int32_t>::max() / 2;
 };
 
 }  // namespace paimon

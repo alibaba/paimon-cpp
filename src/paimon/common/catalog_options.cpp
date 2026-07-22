@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-#include "paimon/utils/special_field_ids.h"
+#include "paimon/catalog_options.h"
 
 namespace paimon {
 
-const int32_t SpecialFieldIds::CPP_FIELD_ID_END;
-const int32_t SpecialFieldIds::SEQUENCE_NUMBER;
-const int32_t SpecialFieldIds::VALUE_KIND;
-const int32_t SpecialFieldIds::ROW_KIND;
-const int32_t SpecialFieldIds::ROW_ID;
-const int32_t SpecialFieldIds::INDEX_SCORE;
-const int32_t SpecialFieldIds::SYSTEM_FIELD_ID_START;
+const char CatalogOptions::METASTORE[] = "metastore";
+const char CatalogOptions::URI[] = "uri";
+const char CatalogOptions::TOKEN[] = "token";
+const char CatalogOptions::TOKEN_PROVIDER[] = "token.provider";
+const char CatalogOptions::TABLE_DEFAULT_OPTION_PREFIX[] = "table-default.";
 
 }  // namespace paimon

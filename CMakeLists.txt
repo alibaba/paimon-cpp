@@ -66,8 +66,16 @@ option(PAIMON_ENABLE_LUMINA "Whether to enable lumina vector index" OFF)
 option(PAIMON_ENABLE_LUCENE "Whether to enable lucene index" OFF)
 option(PAIMON_ENABLE_TANTIVY
        "Whether to enable tantivy-fulltext global index (Rust FFI, experimental)" OFF)
+option(PAIMON_ENABLE_REST "Whether to enable the rest catalog (requires libcurl)" OFF)
 if(PAIMON_ENABLE_ORC)
     add_definitions(-DPAIMON_ENABLE_ORC)
+endif()
+if(PAIMON_ENABLE_REST)
+    add_definitions(-DPAIMON_ENABLE_REST)
+endif()
+# libcurl backs the HTTP client shared by the S3 file system and the rest catalog.
+if(PAIMON_ENABLE_S3 OR PAIMON_ENABLE_REST)
+    find_package(CURL REQUIRED)
 endif()
 if(PAIMON_ENABLE_AVRO)
     add_definitions(-DPAIMON_ENABLE_AVRO)
@@ -487,9 +495,6 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/PaimonConfig.cmake"
 
 config_summary_message()
 
-if(PAIMON_ENABLE_S3)
-    find_package(CURL REQUIRED)
-endif()
 add_subdirectory(src/paimon)
 add_subdirectory(src/paimon/fs/local)
 add_subdirectory(src/paimon/fs/jindo)

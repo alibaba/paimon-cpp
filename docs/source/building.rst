@@ -145,6 +145,7 @@ boolean flags to ``cmake``.
 * ``-DPAIMON_ENABLE_AVRO=ON``: Apache Avro libraries and Paimon integration
 * ``-DPAIMON_ENABLE_JINDO=ON``: Support for Alibaba Jindo filesystems
 * ``-DPAIMON_ENABLE_LUMINA=ON``: Support for Lumina vector index, lumina is only supported on gcc9 or higher.
+* ``-DPAIMON_ENABLE_REST=ON``: Support for the REST catalog (``metastore=rest``), requires the libcurl development package.
 
 Third-party dependency source
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
