@@ -68,6 +68,34 @@ TEST(StatusTest, TestToStringWithDetail) {
     ASSERT_EQ(status.ToString(), ss.str());
 }
 
+TEST(StatusTest, TestCodeAsString) {
+    ASSERT_EQ("OK", Status::CodeAsString(StatusCode::OK));
+    ASSERT_EQ("Out of memory", Status::CodeAsString(StatusCode::OutOfMemory));
+    ASSERT_EQ("Key error", Status::CodeAsString(StatusCode::KeyError));
+    ASSERT_EQ("Type error", Status::CodeAsString(StatusCode::TypeError));
+    ASSERT_EQ("Invalid", Status::CodeAsString(StatusCode::Invalid));
+    ASSERT_EQ("IOError", Status::CodeAsString(StatusCode::IOError));
+    ASSERT_EQ("Capacity error", Status::CodeAsString(StatusCode::CapacityError));
+    ASSERT_EQ("Index error", Status::CodeAsString(StatusCode::IndexError));
+    ASSERT_EQ("Cancelled", Status::CodeAsString(StatusCode::Cancelled));
+    ASSERT_EQ("Unknown error", Status::CodeAsString(StatusCode::UnknownError));
+    ASSERT_EQ("NotImplemented", Status::CodeAsString(StatusCode::NotImplemented));
+    ASSERT_EQ("Serialization error", Status::CodeAsString(StatusCode::SerializationError));
+    ASSERT_EQ("Not exist", Status::CodeAsString(StatusCode::NotExist));
+    ASSERT_EQ("Exist", Status::CodeAsString(StatusCode::Exist));
+
+    // An out-of-range code falls into the default branch.
+    ASSERT_EQ("Unknown", Status::CodeAsString(static_cast<StatusCode>(99)));
+
+    // The instance overload returns "OK" for a success status.
+    ASSERT_EQ("OK", Status::OK().CodeAsString());
+}
+
+TEST(StatusDeathTest, TestAbort) {
+    ASSERT_DEATH(Status::IOError("boom").Abort(), "Paimon Fatal Error");
+    ASSERT_DEATH(Status::IOError("boom").Abort("custom prefix"), "custom prefix");
+}
+
 TEST(StatusTest, TestWithDetail) {
     Status status(StatusCode::IOError, "summary");
     auto detail = std::make_shared<TestStatusDetail>();
