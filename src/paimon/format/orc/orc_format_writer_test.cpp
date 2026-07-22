@@ -37,6 +37,7 @@
 #include "orc/Type.hh"
 #include "orc/Vector.hh"
 #include "orc/Writer.hh"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/format/orc/orc_format_defs.h"
 #include "paimon/format/orc/orc_input_stream_impl.h"
 #include "paimon/format/orc/orc_metrics.h"
@@ -295,6 +296,23 @@ TEST_F(OrcFormatWriterTest, TestPrepareWriterOptions) {
             "invalid config, do not support writing timestamp with timezone in legacy format");
     }
 }
+TEST_F(OrcFormatWriterTest, TestVariantNotSupported) {
+    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    std::string test_root = test_root_dir->Str();
+    std::string file_name = test_root + "/variant.orc";
+    auto arrow_schema =
+        arrow::schema({arrow::field("id", arrow::int32()), VariantTypeUtils::ToArrowField("v")});
+    std::map<std::string, std::string> options = {};
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
+                         file_system_->Create(file_name, /*overwrite=*/true));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<OrcOutputStreamImpl> output_stream,
+                         OrcOutputStreamImpl::Create(out));
+    auto result = OrcFormatWriter::Create(std::move(output_stream), *arrow_schema, options,
+                                          /*compression=*/"lz4", /*batch_size=*/16, pool_);
+    ASSERT_TRUE(result.status().IsNotImplemented()) << result.status().ToString();
+}
+
 // TODO(liancheng.lsz): add tests for GetEstimateLength
 
 }  // namespace paimon::orc::test

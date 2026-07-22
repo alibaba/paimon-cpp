@@ -22,6 +22,7 @@
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
 #include "paimon/common/data/binary_row.h"
+#include "paimon/common/data/shredding/shredding_write_plan_factories.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/core/append/append_only_writer.h"
@@ -227,10 +228,11 @@ AppendOnlyFileStoreWrite::WriterFactory AppendOnlyFileStoreWrite::GetDataFileWri
     const std::vector<std::shared_ptr<DataFileMeta>>& to_compact,
     const std::shared_ptr<MapSharedShreddingContext>& shredding_context) const {
     auto seq_num_counter = std::make_shared<LongCounter>(to_compact[0]->min_sequence_number);
-    if (shredding_context) {
+    if (auto plan_factory =
+            ShreddingWritePlanFactories::SelectActive(options_, schema, shredding_context, pool_)) {
         return std::make_shared<ShreddingAppendDataFileWriterFactory>(
             options_, table_schema_->Id(), schema, write_cols, seq_num_counter,
-            FileSource::Compact(), data_file_path_factory, shredding_context, pool_);
+            FileSource::Compact(), data_file_path_factory, plan_factory, pool_);
     }
     return std::make_shared<AppendDataFileWriterFactory>(
         options_, table_schema_->Id(), schema, write_cols, seq_num_counter, FileSource::Compact(),

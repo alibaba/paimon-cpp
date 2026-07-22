@@ -105,21 +105,4 @@ class RowRanges {
  private:
     std::vector<Range> ranges_;
 };
-
-struct TargetRowGroup {
-    int32_t row_group_index{-1};
-    bool is_partially_matched{false};
-
-    RowRanges row_ranges;
-    // Whether this row group has been excluded by ApplyReadRanges.
-    // When true, this row group is logically skipped during iteration
-    // but retained so that a subsequent wider ApplyReadRanges can restore it.
-    bool excluded_by_read_range{false};
-
-    TargetRowGroup() = default;
-    TargetRowGroup(int32_t rg_index, bool is_partially_matched, RowRanges ranges)
-        : row_group_index(rg_index),
-          is_partially_matched(is_partially_matched),
-          row_ranges(std::move(ranges)) {}
-};
 }  // namespace paimon::parquet

@@ -29,28 +29,6 @@ namespace paimon::test {
 
 class ManifestCommittableTest : public testing::Test {
  private:
-    bool IsEqualMap(const std::map<int32_t, int64_t>& actual_map,
-                    const std::map<int32_t, int64_t>& expected_map) {
-        if (expected_map.size() != actual_map.size()) {
-            return false;
-        }
-        for (const auto& kv : expected_map) {
-            const auto& key = kv.first;
-            const auto& value = kv.second;
-            auto iter = actual_map.find(key);
-            if (iter != actual_map.end()) {
-                if (iter->second == value) {
-                    continue;
-                } else {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        }
-        return true;
-    }
-
     std::vector<std::shared_ptr<CommitMessage>> GetCommitMessages(const std::string& path,
                                                                   int32_t version) const {
         auto file_system = std::make_shared<LocalFileSystem>();
@@ -99,26 +77,22 @@ TEST_F(ManifestCommittableTest, TestSimple) {
         ASSERT_EQ(committable.Watermark().value(), 456);
     }
     {
-        std::map<int32_t, int64_t> log_offsets = {{123, 444}, {234, 555}};
         std::map<std::string, std::string> properties = {};
         std::vector<std::shared_ptr<CommitMessage>> msgs =
             GetCommitMessages(paimon::test::GetDataDir() +
                                   "/orc/append_09.db/append_09/commit_messages/commit_messages-01",
                               /*version=*/3);
-        ManifestCommittable committable(/*identifier=*/123, /*watermark=*/456, log_offsets,
-                                        properties, msgs);
-        ASSERT_TRUE(IsEqualMap(committable.LogOffsets(), log_offsets));
+        ManifestCommittable committable(/*identifier=*/123, /*watermark=*/456, properties, msgs);
+        ASSERT_EQ(committable.Properties(), properties);
         ASSERT_TRUE(IsEqualMsgs(msgs, committable.FileCommittables()));
     }
     {
-        std::map<int32_t, int64_t> log_offsets = {};
         std::map<std::string, std::string> properties = {{"key1", "value1"}, {"key2", "value2"}};
         std::vector<std::shared_ptr<CommitMessage>> msgs =
             GetCommitMessages(paimon::test::GetDataDir() +
                                   "/orc/append_09.db/append_09/commit_messages/commit_messages-01",
                               /*version=*/3);
-        ManifestCommittable committable(/*identifier=*/123, /*watermark=*/456,
-                                        /*log_offsets=*/{}, properties, msgs);
+        ManifestCommittable committable(/*identifier=*/123, /*watermark=*/456, properties, msgs);
         ASSERT_EQ(committable.Properties(), properties);
         ASSERT_TRUE(IsEqualMsgs(msgs, committable.FileCommittables()));
     }

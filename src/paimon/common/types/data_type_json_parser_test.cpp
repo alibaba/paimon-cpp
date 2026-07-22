@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
@@ -133,6 +134,17 @@ TEST(DataTypeJsonParserTest, ParseTypeAtomicTypeSuccess) {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Field> field,
                              DataTypeJsonParser::ParseType("field_name", value));
         ASSERT_TRUE(field->type()->Equals(test_case.second));
+    }
+
+    // VARIANT parses to a variant-marked struct<value, metadata> field.
+    for (const char* variant_str : {"VARIANT", "VARIANT NOT NULL"}) {
+        rapidjson::Document doc;
+        rapidjson::Value value(variant_str, doc.GetAllocator());
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Field> field,
+                             DataTypeJsonParser::ParseType("variant_field", value));
+        ASSERT_TRUE(VariantTypeUtils::IsVariantField(field));
+        ASSERT_EQ(field->nullable(), std::string(variant_str) == "VARIANT");
+        ASSERT_TRUE(field->type()->Equals(VariantTypeUtils::UnshreddedStructType()));
     }
 
     // Invalid case

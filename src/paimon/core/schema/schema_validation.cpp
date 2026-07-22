@@ -31,6 +31,7 @@
 #include "fmt/ranges.h"
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/data/shredding/map_shared_shredding_utils.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/object_utils.h"
@@ -104,13 +105,9 @@ Status SchemaValidation::ValidateTableSchema(const TableSchema& schema) {
     // TODO(yonghao.fyh): check changelog num retain
     // TODO(yonghao.fyh): support file format validate data fields
     for (const auto& field_name : field_names) {
-        if (SpecialFields::IsSpecialFieldName(field_name)) {
+        if (SpecialFields::IsSystemField(field_name)) {
             return Status::Invalid(
                 fmt::format("field name '{}' in schema cannot be special field.", field_name));
-        }
-        if (StringUtils::StartsWith(field_name, SpecialFields::KEY_FIELD_PREFIX)) {
-            return Status::Invalid(fmt::format("field name '{}' in schema cannot start with '{}'.",
-                                               field_name, SpecialFields::KEY_FIELD_PREFIX));
         }
     }
     // TODO(yonghao.fyh): check streaming read overwrite
@@ -535,6 +532,12 @@ Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
         PAIMON_ASSIGN_OR_RAISE(MapStorageLayout layout, options.GetMapStorageLayout(field_name));
         if (layout != MapStorageLayout::SHARED_SHREDDING) {
             continue;
+        }
+        for (const auto& field : schema.Fields()) {
+            if (VariantTypeUtils::ContainsVariantField(field.ArrowField())) {
+                return Status::Invalid(
+                    "MAP shared-shredding currently cannot be used with Variant fields.");
+            }
         }
         // Column configured with shared-shredding must be MAP<STRING, T>
         if (!MapSharedShreddingUtils::IsShreddingKeyMap(field_type)) {

@@ -20,7 +20,6 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "JdoFileSystem.hpp"  // NOLINT(build/include_subdir)
@@ -57,6 +56,9 @@ class JindoFileSystem : public FileSystem {
 
     Result<bool> Exists(const std::string& path) const override;
 
+ protected:
+    virtual Result<std::unique_ptr<OutputStream>> OpenWriter(const std::string& path) const;
+
  private:
     std::shared_ptr<JindoFileSystemImpl> impl_;
 };
@@ -80,7 +82,6 @@ class JindoInputStream : public InputStream {
     // the Jindo Reader.
     std::shared_ptr<JindoFileSystemImpl> fs_;
     std::unique_ptr<JdoReader> reader_;
-    std::string_view result_;
 };
 
 class JindoOutputStream : public OutputStream {

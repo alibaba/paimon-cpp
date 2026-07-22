@@ -56,6 +56,13 @@ class BTreeFileMetaSelector : public FunctionVisitor<std::vector<GlobalIndexIOMe
 
     Result<std::vector<GlobalIndexIOMeta>> Filter(const MetaPredicate& predicate) const;
 
+    Result<bool> Overlaps(const BTreeIndexMeta& meta, const MemorySlice& from,
+                          const MemorySlice& to) const;
+
+    Result<int32_t> CompareFirstKey(const BTreeIndexMeta& meta, const MemorySlice& literal) const;
+
+    Result<int32_t> CompareLastKey(const BTreeIndexMeta& meta, const MemorySlice& literal) const;
+
     Result<MemorySlice> SerializeLiteral(const Literal& literal) const;
 
     /// Create a non-owning MemorySlice view over the raw bytes of a key,

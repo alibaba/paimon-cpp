@@ -70,12 +70,13 @@ class LinkedHashMap {
     }
 
     IteratorType erase(const K& key) {
-        if (!map_.count(key)) {
+        auto map_iter = map_.find(key);
+        if (map_iter == map_.end()) {
             return order_.end();
         }
-        auto iter = order_.erase(map_[key]);
-        map_.erase(key);
-        return iter;
+        IteratorType order_iter = map_iter->second;
+        map_.erase(map_iter);
+        return order_.erase(order_iter);
     }
 
     IteratorType insert(const K& key, const V& value) {

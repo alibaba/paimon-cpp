@@ -254,6 +254,25 @@ TEST(RoaringBitmap32Test, TestIterator) {
     ASSERT_EQ(iter, roaring.End());
 }
 
+TEST(RoaringBitmap32Test, TestNextAndPreviousValue) {
+    RoaringBitmap32 roaring = RoaringBitmap32::From({10, 20, 30});
+
+    ASSERT_EQ(roaring.NextValue(5), std::optional<int32_t>(10));
+    ASSERT_EQ(roaring.NextValue(10), std::optional<int32_t>(10));
+    ASSERT_EQ(roaring.NextValue(25), std::optional<int32_t>(30));
+    ASSERT_EQ(roaring.NextValue(31), std::nullopt);
+
+    ASSERT_EQ(roaring.PreviousValue(10), std::nullopt);
+    ASSERT_EQ(roaring.PreviousValue(11), std::optional<int32_t>(10));
+    ASSERT_EQ(roaring.PreviousValue(20), std::optional<int32_t>(10));
+    ASSERT_EQ(roaring.PreviousValue(21), std::optional<int32_t>(20));
+    ASSERT_EQ(roaring.PreviousValue(100), std::optional<int32_t>(30));
+
+    RoaringBitmap32 empty;
+    ASSERT_EQ(empty.NextValue(0), std::nullopt);
+    ASSERT_EQ(empty.PreviousValue(0), std::nullopt);
+}
+
 TEST(RoaringBitmap32Test, TestIteratorAssignAndMove) {
     RoaringBitmap32 roaring = RoaringBitmap32::From({10, 100, 200});
 

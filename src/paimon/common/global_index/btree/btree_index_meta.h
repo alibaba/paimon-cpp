@@ -16,14 +16,16 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
 
 #include "paimon/common/memory/memory_slice_input.h"
 #include "paimon/memory/bytes.h"
 
 namespace paimon {
-/// Index Meta of each BTree index file. The first key and last key of this meta could be null if
-/// the entire btree index file only contains nulls.
+/// Index metadata for each BTree index file.
+///
+/// Empty serialized keys are valid, so null boundary keys are encoded separately with flags.
 class BTreeIndexMeta {
  public:
     static std::shared_ptr<BTreeIndexMeta> Deserialize(const std::shared_ptr<Bytes>& meta,
@@ -53,11 +55,15 @@ class BTreeIndexMeta {
 
  private:
     int32_t Size() const {
-        // 9 bytes => first_key_len(4 byte) + last_key_len(4 byte) + has_null(1 byte)
-        return (first_key_ ? first_key_->size() : 0) + (last_key_ ? last_key_->size() : 0) + 9;
+        // 11 bytes => key lengths (8) + has_nulls (1) + format version (1) + null flags (1).
+        return (first_key_ ? first_key_->size() : 0) + (last_key_ ? last_key_->size() : 0) + 11;
     }
 
  private:
+    static constexpr int8_t kFormatVersionWithNullFlags = 1;
+    static constexpr int8_t kFirstKeyIsNull = 1;
+    static constexpr int8_t kLastKeyIsNull = 1 << 1;
+
     std::shared_ptr<Bytes> first_key_;
     std::shared_ptr<Bytes> last_key_;
     bool has_nulls_;

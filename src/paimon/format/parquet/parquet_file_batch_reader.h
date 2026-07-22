@@ -18,6 +18,7 @@
 
 #include <fmt/format.h>
 
+#include <atomic>
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -38,7 +39,9 @@
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/format/parquet/file_reader_wrapper.h"
+#include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/row_ranges.h"
+#include "paimon/format/parquet/target_row_group.h"
 #include "paimon/logging.h"
 #include "paimon/reader/prefetch_file_batch_reader.h"
 #include "paimon/result.h"
@@ -70,6 +73,7 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
         const std::map<std::string, std::string>& options, int32_t batch_size,
         std::shared_ptr<::parquet::FileMetaData> file_metadata,
+        std::shared_ptr<std::atomic<uint64_t>> storage_read_bytes,
         const std::shared_ptr<arrow::MemoryPool>& pool);
 
     static Result<::parquet::ReaderProperties> CreateReaderProperties(
@@ -129,6 +133,8 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     }
 
     std::shared_ptr<Metrics> GetReaderMetrics() const override {
+        uint64_t storage = storage_read_bytes_ ? storage_read_bytes_->load() : 0;
+        metrics_->SetCounter(ParquetMetrics::READ_STORAGE_BYTES, storage);
         return metrics_;
     }
 
@@ -149,7 +155,8 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     ParquetFileBatchReader(std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
                            std::unique_ptr<FileReaderWrapper>&& reader,
                            const std::map<std::string, std::string>& options,
-                           const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
+                           const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
+                           std::shared_ptr<std::atomic<uint64_t>> storage_read_bytes);
 
     static Result<::parquet::ArrowReaderProperties> CreateArrowReaderProperties(
         const std::shared_ptr<arrow::MemoryPool>& pool,
@@ -191,20 +198,51 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     Status UpdateAllTargetRowRanges(const std::vector<TargetRowGroup>& target_row_groups);
 
     // precondition: predicate supposed not be empty
-    Result<std::vector<int32_t>> FilterRowGroupsByPredicate(
+    Result<TargetRowGroups> FilterRowGroupsByPredicate(
         const std::shared_ptr<Predicate>& predicate,
         const std::shared_ptr<arrow::Schema> file_schema,
-        const std::vector<int32_t>& src_row_groups) const;
+        const TargetRowGroups& src_row_groups) const;
 
-    Result<std::vector<int32_t>> FilterRowGroupsByBitmap(
-        const RoaringBitmap32& bitmap, const std::vector<int32_t>& src_row_groups) const;
+    Result<TargetRowGroups> FilterRowGroupsByBitmap(const RoaringBitmap32& bitmap,
+                                                    const TargetRowGroups& src_row_groups) const;
+
+    // Apply bitmap filtering to row ranges by trimming start and end rows in pages.
+    // Then apply intersection among all target columns.
+    Result<TargetRowGroups> RefineRowRangesByTrimming(
+        const RoaringBitmap32& bitmap, const TargetRowGroups& src_row_groups,
+        const std::vector<int32_t>& column_indices) const;
+
+    // Apply page-level bitmap filtering to a single row group across all
+    // requested columns. Intersects the row group's existing ranges with the
+    // per-column page ranges derived from the bitmap.
+    TargetRowGroup TrimRowGroupPageRanges(
+        const RoaringBitmap32& bitmap, const TargetRowGroup& row_group,
+        const std::vector<int32_t>& column_indices,
+        const std::shared_ptr<::parquet::PageIndexReader>& page_index_reader) const;
+
+    // Apply bitmap filtering to row ranges by coalescing nearby ranges.
+    Result<TargetRowGroups> RefineRowRangesByCoalescing(
+        const RoaringBitmap32& bitmap, const TargetRowGroups& src_row_groups) const;
+    // Convert bitmap set bits within [start_row, end_row) to contiguous
+    // row ranges, stored relative to start_row.
+    static RowRanges BitmapToContiguousRanges(const RoaringBitmap32& bitmap, uint64_t start_row,
+                                              uint64_t end_row);
+    // Merge ranges whose inter-range gap is <= hole_size_limit.
+    static RowRanges CoalesceNearbyRanges(const RowRanges& input, uint64_t hole_size_limit);
+
+    // Compute the set of row ranges within a single column's pages that
+    // overlap with the given bitmap. For each page, the bitmap is queried to
+    // find the first/last matching row in each page, used to trim the page head/tail
+    static RowRanges ComputeColumnPageRanges(
+        const RoaringBitmap32& bitmap, const std::vector<::parquet::PageLocation>& page_locations,
+        uint64_t rg_start_row, uint64_t rg_row_count);
 
     // Apply page-level filtering using column index.
     // Returns (filtered row groups, per-row-group RowRanges for partial matches).
-    Result<std::pair<std::vector<int32_t>, std::map<int32_t, RowRanges>>>
-    FilterRowGroupsByPageIndex(const std::shared_ptr<Predicate>& predicate,
-                               const std::map<std::string, int32_t>& column_name_to_index,
-                               const std::vector<int32_t>& src_row_groups);
+    Result<TargetRowGroups> FilterRowGroupsByPageIndex(
+        const std::shared_ptr<Predicate>& predicate,
+        const std::map<std::string, int32_t>& column_name_to_index,
+        const TargetRowGroups& src_row_groups) const;
 
     Status GenerateRowMapping(int64_t batch_length);
 
@@ -219,6 +257,8 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     std::shared_ptr<arrow::DataType> read_data_type_;
 
     std::shared_ptr<Metrics> metrics_;
+    // storageReadBytes counter shared with the underlying ArrowInputStreamAdapter.
+    std::shared_ptr<std::atomic<uint64_t>> storage_read_bytes_;
     std::unique_ptr<Logger> logger_;
 
     uint64_t read_rows_ = 0;

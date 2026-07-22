@@ -17,6 +17,7 @@
 #include "paimon/core/operation/metrics/compaction_metrics.h"
 
 #include <cstdint>
+#include <thread>
 
 #include "gtest/gtest.h"
 #include "paimon/testing/utils/testharness.h"
@@ -145,6 +146,40 @@ TEST(CompactionMetricsTest, TestCompactionTimeWindow) {
 
     // Only the last kCompactionTimeWindow values are kept.
     EXPECT_DOUBLE_EQ(60.5, avg_time);
+}
+
+TEST(CompactionMetricsTest, TestConcurrentReporterUpdateAndMetricsSnapshot) {
+    CompactionMetrics metrics;
+    std::shared_ptr<CompactionMetrics::Reporter> reporter =
+        metrics.CreateReporter(BinaryRow::EmptyRow(), 0);
+
+    constexpr int64_t kLastValue = 9999;
+    std::thread writer([&reporter]() {
+        for (int64_t value = 0; value <= kLastValue; ++value) {
+            reporter->ReportLevel0FileCount(value);
+            reporter->ReportCompactionInputSize(value);
+            reporter->ReportCompactionOutputSize(value);
+            reporter->ReportTotalFileSize(value);
+        }
+    });
+    for (int64_t i = 0; i <= kLastValue; ++i) {
+        metrics.GetMetrics();
+    }
+    writer.join();
+
+    std::shared_ptr<MetricsImpl> snapshot = metrics.GetMetrics();
+    ASSERT_OK_AND_ASSIGN(double level0_file_count,
+                         snapshot->GetGauge(CompactionMetrics::MAX_LEVEL0_FILE_COUNT));
+    ASSERT_OK_AND_ASSIGN(double compaction_input_size,
+                         snapshot->GetGauge(CompactionMetrics::MAX_COMPACTION_INPUT_SIZE));
+    ASSERT_OK_AND_ASSIGN(double compaction_output_size,
+                         snapshot->GetGauge(CompactionMetrics::MAX_COMPACTION_OUTPUT_SIZE));
+    ASSERT_OK_AND_ASSIGN(double total_file_size,
+                         snapshot->GetGauge(CompactionMetrics::MAX_TOTAL_FILE_SIZE));
+    ASSERT_DOUBLE_EQ(static_cast<double>(kLastValue), level0_file_count);
+    ASSERT_DOUBLE_EQ(static_cast<double>(kLastValue), compaction_input_size);
+    ASSERT_DOUBLE_EQ(static_cast<double>(kLastValue), compaction_output_size);
+    ASSERT_DOUBLE_EQ(static_cast<double>(kLastValue), total_file_size);
 }
 
 }  // namespace paimon::test

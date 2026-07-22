@@ -40,15 +40,13 @@ class ManifestCommittable {
         : ManifestCommittable(identifier, std::nullopt) {}
 
     ManifestCommittable(int64_t identifier, std::optional<int64_t> watermark)
-        : ManifestCommittable(identifier, watermark, {}, {}, {}) {}
+        : ManifestCommittable(identifier, watermark, {}, {}) {}
 
     ManifestCommittable(int64_t identifier, std::optional<int64_t> watermark,
-                        const std::map<int32_t, int64_t>& log_offsets,
                         const std::map<std::string, std::string>& properties,
                         const std::vector<std::shared_ptr<CommitMessage>>& commit_messages)
         : identifier_(identifier),
           watermark_(watermark),
-          log_offsets_(log_offsets),
           properties_(properties),
           commit_messages_(commit_messages) {}
 
@@ -58,10 +56,6 @@ class ManifestCommittable {
 
     std::optional<int64_t> Watermark() const {
         return watermark_;
-    }
-
-    const std::map<int32_t, int64_t>& LogOffsets() const {
-        return log_offsets_;
     }
 
     const std::map<std::string, std::string>& Properties() const {
@@ -86,12 +80,6 @@ class ManifestCommittable {
         std::string watermark_str =
             watermark_ == std::nullopt ? "null" : std::to_string(watermark_.value());
 
-        std::vector<std::string> log_offsets_str;
-        log_offsets_str.reserve(log_offsets_.size());
-        for (const auto& [key, value] : log_offsets_) {
-            log_offsets_str.emplace_back(fmt::format("{}: {}", key, value));
-        }
-
         std::vector<std::string> properties_str;
         properties_str.reserve(properties_.size());
         for (const auto& [key, value] : properties_) {
@@ -99,16 +87,15 @@ class ManifestCommittable {
         }
 
         return fmt::format(
-            "ManifestCommittable {{identifier = {}, watermark = {}, logOffsets = {}, "
+            "ManifestCommittable {{identifier = {}, watermark = {}, "
             "commitMessages = {}, properties = {}}}",
-            identifier_, watermark_str, fmt::join(log_offsets_str, ", "),
-            fmt::join(commit_messages_str, ", "), fmt::join(properties_str, ", "));
+            identifier_, watermark_str, fmt::join(commit_messages_str, ", "),
+            fmt::join(properties_str, ", "));
     }
 
  private:
     int64_t identifier_;
     std::optional<int64_t> watermark_;
-    std::map<int32_t, int64_t> log_offsets_;
     std::map<std::string, std::string> properties_;
     std::vector<std::shared_ptr<CommitMessage>> commit_messages_;
 };

@@ -23,6 +23,8 @@
 #include "arrow/util/checked_cast.h"
 #include "fmt/format.h"
 #include "paimon/common/data/blob_utils.h"
+#include "paimon/common/data/variant/variant_access_utils.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/decimal_utils.h"
 #include "paimon/common/utils/string_utils.h"
@@ -116,6 +118,11 @@ Status ArrowSchemaValidator::ValidateDataTypeWithFieldId(
             break;
         }
         case arrow::Type::type::STRUCT: {
+            if (VariantTypeUtils::IsVariantMetadata(key_value_metadata)) {
+                // A variant struct is a leaf type: its value/metadata children carry fixed
+                // paimon field ids 0/1 which must not join the global field id uniqueness check.
+                break;
+            }
             arrow::FieldVector sub_fields =
                 arrow::internal::checked_cast<arrow::StructType*>(type.get())->fields();
             for (const auto& sub_field : sub_fields) {
@@ -182,6 +189,16 @@ Status ArrowSchemaValidator::ValidateField(const std::shared_ptr<arrow::Field>& 
             break;
         }
         case arrow::Type::type::STRUCT: {
+            if (VariantTypeUtils::IsVariantField(field)) {
+                if (VariantAccessUtils::IsVariantAccessType(field->type())) {
+                    // A variant column read as a variant-access projection keeps the variant
+                    // marker but replaces the type with the projection struct; its children are
+                    // cast targets validated by the variant read plans.
+                    break;
+                }
+                PAIMON_RETURN_NOT_OK(VariantTypeUtils::ValidateVariantShape(field));
+                break;
+            }
             arrow::FieldVector arrow_fields =
                 arrow::internal::checked_cast<const arrow::StructType&>(*field->type()).fields();
             for (const auto& sub_field : arrow_fields) {

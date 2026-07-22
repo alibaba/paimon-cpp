@@ -65,6 +65,23 @@ static inline const char PARQUET_READ_CACHE_OPTION_PREFETCH_LIMIT[] =
     "parquet.read.cache-option.prefetch-limit";
 static inline const char PARQUET_READ_CACHE_OPTION_RANGE_SIZE_LIMIT[] =
     "parquet.read.cache-option.range-size-limit";
+// Strategy for refining row ranges using the selection bitmap produced by pushed-down
+// predicates. Two options:
+//   * "coalesce" (default): build row-level ranges from the bitmap, then merge nearby
+//     ranges whose gap is small enough (see PARQUET_READ_ROW_RANGES_COALESCE_HOLE_SIZE_LIMIT).
+//   * "trim": for each page with selected rows, trim its leading/trailing non-selected
+//     rows (and skip pages with no selected rows). Requires page index. Its advantage
+//     is stable, page-bounded ranges. After collected trimmed ranges for each column,
+//     the intersection of all columns' ranges is taken to produce the final row ranges.
+static inline const char PARQUET_READ_BITMAP_ROW_RANGE_REFINING_STRATEGY[] =
+    "parquet.read.bitmap.row-range-refining-strategy";
+// When strategy = "coalesce", adjacent bitmap row ranges whose gap (in rows) is
+// <= this limit are merged into one range; larger gaps are kept as real holes.
+// A larger limit means fewer (larger) ranges and more wasted rows read; a smaller
+// limit keeps the selection tighter at the cost of more (smaller) ranges.
+// Only takes effect when PARQUET_READ_BITMAP_ROW_RANGE_REFINING_STRATEGY = "coalesce".
+static inline const char PARQUET_READ_ROW_RANGES_COALESCE_HOLE_SIZE_LIMIT[] =
+    "parquet.read.bitmap.coalesce-hole-size-limit";
 
 // stack-overflow may happen while the number of predicate node is too large, limit the number of
 // predicate nodes. Predicate will not be pushdown when exceed limit.
@@ -82,6 +99,8 @@ static constexpr uint32_t DEFAULT_PARQUET_READ_CACHE_OPTION_PREFETCH_LIMIT = 0;
 static constexpr uint32_t DEFAULT_PARQUET_READ_CACHE_OPTION_RANGE_SIZE_LIMIT = 32 * 1024 * 1024;
 static constexpr uint32_t DEFAULT_PARQUET_READ_PREDICATE_NODE_COUNT_LIMIT = 512;
 static constexpr bool DEFAULT_PARQUET_READ_ENABLE_PAGE_INDEX_FILTER = true;
+static constexpr char DEFAULT_PARQUET_READ_BITMAP_STRATEGY[] = "coalesce";
+static constexpr uint32_t DEFAULT_PARQUET_READ_ROW_RANGES_COALESCE_HOLE_SIZE_LIMIT = 32;
 
 class ParquetMetrics {
  public:
@@ -93,6 +112,8 @@ class ParquetMetrics {
         "parquet.read.row-groups.after-filter";
     static inline const char READ_ROWS[] = "parquet.read.rows";
     static inline const char READ_BATCH_COUNT[] = "parquet.read.batch-count";
+    // Byte-level read metric. storage-read-bytes: physical bytes read from storage.
+    static inline const char READ_STORAGE_BYTES[] = "parquet.read.storage-read-bytes";
 };
 
 }  // namespace paimon::parquet

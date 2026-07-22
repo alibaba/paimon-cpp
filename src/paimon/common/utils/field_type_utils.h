@@ -23,6 +23,7 @@
 #include "arrow/api.h"
 #include "arrow/type_fwd.h"
 #include "fmt/format.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/defs.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -44,6 +45,15 @@ class FieldTypeUtils {
         return (type == FieldType::SMALLINT && other_type == FieldType::TINYINT) ||
                (type == FieldType::INT && other_type != FieldType::BIGINT) ||
                (type == FieldType::BIGINT);
+    }
+
+    /// Converts an arrow field to a `FieldType`, disambiguating metadata-marked extension types
+    /// (a VARIANT field is physically a STRUCT with the variant metadata marker).
+    static Result<FieldType> ConvertToFieldType(const std::shared_ptr<arrow::Field>& field) {
+        if (VariantTypeUtils::IsVariantField(field)) {
+            return FieldType::VARIANT;
+        }
+        return ConvertToFieldType(field->type()->id());
     }
 
     static Result<FieldType> ConvertToFieldType(const arrow::Type::type& arrow_type) {
@@ -120,6 +130,8 @@ class FieldTypeUtils {
                 return "MAP";
             case FieldType::STRUCT:
                 return "STRUCT";
+            case FieldType::VARIANT:
+                return "VARIANT";
             default:
                 return "UNKNOWN, type id:" + std::to_string(static_cast<int32_t>(type));
         }

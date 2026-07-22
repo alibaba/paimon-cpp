@@ -22,8 +22,9 @@ namespace paimon::test {
 
 // ======================== Create ========================
 
-TEST(RowRangeIndexTest, CreateWithEmptyRangesReturnsError) {
-    ASSERT_NOK_WITH_MSG(RowRangeIndex::Create({}), "Ranges cannot be empty in RowRangeIndex");
+TEST(RowRangeIndexTest, CreateWithEmptyRangesReturnsEmptyIndex) {
+    ASSERT_OK_AND_ASSIGN(auto index, RowRangeIndex::Create({}));
+    ASSERT_TRUE(index.Ranges().empty());
 }
 
 TEST(RowRangeIndexTest, CreateWithSingleRange) {
@@ -160,6 +161,66 @@ TEST(RowRangeIndexTest, IntersectsSinglePointMatch) {
 TEST(RowRangeIndexTest, IntersectsSinglePointNoMatch) {
     ASSERT_OK_AND_ASSIGN(auto index, RowRangeIndex::Create({Range(10, 10)}));
     ASSERT_FALSE(index.Intersects(11, 11));
+}
+
+// ======================== Contains ========================
+
+TEST(RowRangeIndexTest, ContainsAndContainsExactlyExactRange) {
+    ASSERT_OK_AND_ASSIGN(auto index, RowRangeIndex::Create({Range(10, 20), Range(30, 40)}));
+    Range query(10, 20);
+
+    ASSERT_TRUE(index.Contains(query));
+    ASSERT_TRUE(index.ContainsExactly(query));
+}
+
+TEST(RowRangeIndexTest, ContainsAndContainsExactlyBoundarySubRanges) {
+    ASSERT_OK_AND_ASSIGN(auto index, RowRangeIndex::Create({Range(10, 20)}));
+
+    ASSERT_TRUE(index.Contains(Range(10, 19)));
+    ASSERT_FALSE(index.ContainsExactly(Range(10, 19)));
+
+    ASSERT_TRUE(index.Contains(Range(11, 20)));
+    ASSERT_FALSE(index.ContainsExactly(Range(11, 20)));
+}
+
+TEST(RowRangeIndexTest, ContainsAndContainsExactlyOutOfBoundaryRanges) {
+    ASSERT_OK_AND_ASSIGN(auto index, RowRangeIndex::Create({Range(10, 20)}));
+
+    ASSERT_FALSE(index.Contains(Range(9, 20)));
+    ASSERT_FALSE(index.ContainsExactly(Range(9, 20)));
+
+    ASSERT_FALSE(index.Contains(Range(10, 21)));
+    ASSERT_FALSE(index.ContainsExactly(Range(10, 21)));
+}
+
+TEST(RowRangeIndexTest, ContainsAndContainsExactlyRangeAcrossTwoDisjointRanges) {
+    ASSERT_OK_AND_ASSIGN(auto index, RowRangeIndex::Create({Range(0, 10), Range(11, 20)}, false));
+
+    ASSERT_FALSE(index.Contains(Range(10, 11)));
+    ASSERT_FALSE(index.ContainsExactly(Range(10, 11)));
+    ASSERT_FALSE(index.ContainsExactly(Range(0, 20)));
+}
+
+TEST(RowRangeIndexTest, ContainsAndContainsExactlyAdjacentMergeFlagDifference) {
+    ASSERT_OK_AND_ASSIGN(auto merged_index,
+                         RowRangeIndex::Create({Range(0, 10), Range(11, 20)}, true));
+    ASSERT_OK_AND_ASSIGN(auto non_merged_index,
+                         RowRangeIndex::Create({Range(0, 10), Range(11, 20)}, false));
+
+    Range query(10, 11);
+    ASSERT_TRUE(merged_index.Contains(query));
+    ASSERT_FALSE(merged_index.ContainsExactly(query));
+
+    ASSERT_FALSE(non_merged_index.Contains(query));
+    ASSERT_FALSE(non_merged_index.ContainsExactly(query));
+}
+
+// ======================== merge_adjacent ========================
+
+TEST(RowRangeIndexTest, CreateDoesNotMergeAdjacentRangesWhenDisabled) {
+    ASSERT_OK_AND_ASSIGN(auto index, RowRangeIndex::Create({Range(0, 10), Range(11, 20)}, false));
+    std::vector<Range> expected = {Range(0, 10), Range(11, 20)};
+    ASSERT_EQ(index.Ranges(), expected);
 }
 
 // ======================== IntersectedRanges ========================

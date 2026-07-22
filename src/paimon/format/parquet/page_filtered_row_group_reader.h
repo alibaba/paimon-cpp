@@ -27,6 +27,7 @@
 #include "arrow/record_batch.h"
 #include "arrow/type.h"
 #include "paimon/format/parquet/row_ranges.h"
+#include "paimon/format/parquet/target_row_group.h"
 #include "paimon/result.h"
 #include "parquet/arrow/reader.h"
 #include "parquet/column_reader.h"

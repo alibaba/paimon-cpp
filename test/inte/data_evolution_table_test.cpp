@@ -135,6 +135,19 @@ class DataEvolutionTableTest : public ::testing::Test,
         return file_store_commit->Commit(commit_msgs);
     }
 
+    Status CommitWithRowIdCheckFromSnapshot(
+        const std::string& table_path,
+        const std::vector<std::shared_ptr<CommitMessage>>& commit_msgs,
+        std::optional<int64_t> row_id_check_from_snapshot) const {
+        CommitContextBuilder commit_builder(table_path, "commit_user_1");
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<CommitContext> commit_context,
+                               commit_builder.Finish());
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStoreCommit> file_store_commit,
+                               FileStoreCommit::Create(std::move(commit_context)));
+        file_store_commit->RowIdCheckConflict(row_id_check_from_snapshot);
+        return file_store_commit->Commit(commit_msgs);
+    }
+
     Status ScanAndRead(const std::string& table_path, const std::vector<std::string>& read_schema,
                        const std::shared_ptr<arrow::StructArray>& expected_array,
                        const std::shared_ptr<Predicate>& predicate = nullptr,
@@ -340,6 +353,46 @@ TEST_P(DataEvolutionTableTest, TestBasic) {
                         /*row_ranges=*/{}),
             "Invalid read schema, read _INDEX_SCORE while split cannot cast to IndexedSplit");
     }
+}
+
+TEST_P(DataEvolutionTableTest, TestCommitConflictOnOverlappedRowIdAndWriteColumns) {
+    CreateTable();
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+
+    // Snapshot 1: initialize row id range [0, 0].
+    std::vector<std::string> init_write_cols = {"f0", "f1", "f2"};
+    auto init_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+        [1, "a", "b"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto init_msgs, WriteArray(table_path, init_write_cols, init_array));
+    ASSERT_OK(Commit(table_path, init_msgs));
+
+    // Snapshot 2: update f2 at row id 0.
+    std::vector<std::string> write_cols = {"f2"};
+    auto src_array_1 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields_[2]}), R"([
+        ["c"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs_1, WriteArray(table_path, write_cols, src_array_1));
+    SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs_1);
+    ASSERT_OK(Commit(table_path, commit_msgs_1));
+
+    // Snapshot 3 attempt: update f2 at row id 0 again, and check history from snapshot 1.
+    // This should conflict with snapshot 2 because row-id range and write columns overlap.
+    auto src_array_2 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields_[2]}), R"([
+        ["d"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs_2, WriteArray(table_path, write_cols, src_array_2));
+    SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs_2);
+    ASSERT_NOK_WITH_MSG(
+        CommitWithRowIdCheckFromSnapshot(table_path, commit_msgs_2,
+                                         /*row_id_check_from_snapshot=*/1),
+        "multiple 'MERGE INTO' operations have encountered conflicts, updating the same file");
 }
 
 TEST_P(DataEvolutionTableTest, TestMultipleAppends) {

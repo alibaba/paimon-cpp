@@ -83,7 +83,7 @@ class PAIMON_EXPORT FileStoreCommit {
 
     /// Overwrite from manifest committable and partition.
     ///
-    /// @param partitions A single partition maps each partition key to a partition value. Depending
+    /// @param partition A single partition maps each partition key to a partition value. Depending
     ///     on the user-defined statement, the partition might not include all partition keys. Also
     ///     note that this partition does not necessarily equal to the partitions of the newly added
     ///     key-values. This is just the partition to be cleaned up.
@@ -92,7 +92,7 @@ class PAIMON_EXPORT FileStoreCommit {
     /// @param watermark An optional event-time watermark used to indicate the progress of data
     ///     processing. Default is std::nullopt.
     /// @return Result of the operation.
-    virtual Status Overwrite(const std::vector<std::map<std::string, std::string>>& partitions,
+    virtual Status Overwrite(const std::map<std::string, std::string>& partition,
                              const std::vector<std::shared_ptr<CommitMessage>>& commit_messages,
                              int64_t commit_identifier,
                              std::optional<int64_t> watermark = std::nullopt) = 0;
@@ -100,14 +100,14 @@ class PAIMON_EXPORT FileStoreCommit {
     /// This is a temporary interface for internal use. It will be removed in a future version.
     /// Please do not rely on it for long-term use.
     ///
-    /// @param partitions Description of the partitions.
+    /// @param partition Description of the partition.
     /// @param commit_messages Description of the commit messages.
     /// @param commit_identifier Unique identifier.
     /// @param watermark An optional event-time watermark used to indicate the progress of data
     ///     processing. Default is std::nullopt.
     /// @return Result of the operation.
     virtual Result<int32_t> FilterAndOverwrite(
-        const std::vector<std::map<std::string, std::string>>& partitions,
+        const std::map<std::string, std::string>& partition,
         const std::vector<std::shared_ptr<CommitMessage>>& commit_messages,
         int64_t commit_identifier, std::optional<int64_t> watermark = std::nullopt) = 0;
 
@@ -134,6 +134,41 @@ class PAIMON_EXPORT FileStoreCommit {
     /// @return Status indicating the success or failure of the drop partition operation.
     virtual Status DropPartition(const std::vector<std::map<std::string, std::string>>& partitions,
                                  int64_t commit_identifier) = 0;
+
+    /// Truncate the whole table by overwriting all partitions with empty data. The generated
+    /// snapshot has commit kind OVERWRITE.
+    ///
+    /// @param commit_identifier An identifier for the commit operation.
+    /// @return Status indicating the success or failure of the truncate operation.
+    virtual Status TruncateTable(int64_t commit_identifier) = 0;
+
+    /// Abort an unsuccessful commit. The data and index files described by the given commit
+    /// messages will be deleted on a best-effort basis (delete failures are ignored).
+    ///
+    /// @param commit_messages A vector of commit messages whose files should be cleaned up.
+    /// @return Status indicating the success or failure of the abort operation.
+    virtual Status Abort(const std::vector<std::shared_ptr<CommitMessage>>& commit_messages) = 0;
+
+    /// Roll back to the target snapshot and materialize it as the latest snapshot.
+    ///
+    /// Reads the surviving files of both the current latest snapshot and the target
+    /// snapshot, then commits an OVERWRITE snapshot whose visible state equals the target.
+    ///
+    /// @param target_snapshot_id The snapshot id to roll back to.
+    /// @return Result<bool>; true if the atomic commit succeeded. Returns an error status if
+    ///     there is no latest snapshot or the target snapshot does not exist.
+    virtual Result<bool> RollbackToAsLatest(int64_t target_snapshot_id) = 0;
+
+    /// Configure row-id conflict checking from a specific snapshot id.
+    ///
+    /// If set to a snapshot id, commit conflict detection will additionally validate row-id
+    /// conflicts against snapshots after that id. Passing std::nullopt disables this behavior.
+    ///
+    /// @param row_id_check_from_snapshot Snapshot id to start row-id conflict checks from, or
+    ///     std::nullopt to disable.
+    /// @return Current commit object for chaining.
+    virtual FileStoreCommit& RowIdCheckConflict(
+        std::optional<int64_t> row_id_check_from_snapshot) = 0;
 
     /// Retrieve metrics related to commit operations.
     ///

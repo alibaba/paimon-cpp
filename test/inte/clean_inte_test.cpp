@@ -342,8 +342,8 @@ TEST_F(CleanInteTest, TestDropPartitionAndExpireSnapshot) {
     ASSERT_TRUE(snapshot_exist);
     ASSERT_OK_AND_ASSIGN(Snapshot snapshot_3, commit_impl->snapshot_manager_->LoadSnapshot(3));
     ASSERT_EQ(30, snapshot_3.Watermark().value());
-    ASSERT_EQ(-7, snapshot_3.DeltaRecordCount().value());
-    ASSERT_EQ(2, snapshot_3.TotalRecordCount().value());
+    ASSERT_EQ(-7, snapshot_3.DeltaRecordCount());
+    ASSERT_EQ(2, snapshot_3.TotalRecordCount());
     ASSERT_EQ(Snapshot::CommitKind::Overwrite(), snapshot_3.GetCommitKind());
     ASSERT_EQ(2, snapshot_3.CommitIdentifier());
     ASSERT_OK_AND_ASSIGN(bool f1_10_bucket_0_exist,
@@ -506,8 +506,8 @@ TEST_F(CleanInteTest, TestDropPartitionAndExpireSnapshotWithIOException) {
         ASSERT_OK_AND_ASSIGN(snapshot_exist, commit_impl->snapshot_manager_->SnapshotExists(3));
         ASSERT_TRUE(snapshot_exist);
         ASSERT_OK_AND_ASSIGN(Snapshot snapshot_3, commit_impl->snapshot_manager_->LoadSnapshot(3));
-        ASSERT_EQ(-7, snapshot_3.DeltaRecordCount().value());
-        ASSERT_EQ(2, snapshot_3.TotalRecordCount().value());
+        ASSERT_EQ(-7, snapshot_3.DeltaRecordCount());
+        ASSERT_EQ(2, snapshot_3.TotalRecordCount());
         ASSERT_EQ(Snapshot::CommitKind::Overwrite(), snapshot_3.GetCommitKind());
         ASSERT_EQ(2, snapshot_3.CommitIdentifier());
         io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);

@@ -1,0 +1,85 @@
+# Copyright 2025-present Alibaba Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - '**'
+  pull_request:
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.head_ref || github.sha }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: gcc-release
+            cc: gcc-14
+            cxx: g++-14
+            build_args: --build_type Release
+          - name: clang-release
+            build_args: --build_type Release
+          - name: gcc-debug
+            cc: gcc-14
+            cxx: g++-14
+          - name: clang-debug
+            fetch_depth: '0' # fetch the PR target branch history for clang-tidy
+            build_args: >-
+              --check_clang_tidy
+              --lint_git_target_commit "origin/${{ github.base_ref || github.event.repository.default_branch }}"
+          - name: asan-ubsan
+            build_args: --enable_asan --enable_ubsan
+          - name: tsan
+            skip_rust: true
+            build_args: --enable_tsan
+    steps:
+      - name: Checkout paimon-cpp
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          lfs: true
+          fetch-depth: ${{ matrix.fetch_depth || '1' }}
+      - name: Setup ccache
+        uses: ./.github/actions/setup-ccache
+        with:
+          cache-key-prefix: ccache-${{ matrix.name }}
+      - name: Install Rust toolchain (tantivy-fts)
+        if: ${{ !matrix.skip_rust }}
+        shell: bash
+        run: ci/scripts/setup_rust.sh
+      - name: Build Paimon
+        shell: bash
+        env:
+          CC: ${{ matrix.cc || 'clang' }}
+          CXX: ${{ matrix.cxx || 'clang++' }}
+        run: >-
+          ci/scripts/build_paimon.sh
+          --source_dir "$(pwd)"
+          ${{ matrix.build_args }}
+      - name: Show ccache statistics
+        if: always()
+        run: ccache -s

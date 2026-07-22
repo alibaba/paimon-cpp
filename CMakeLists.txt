@@ -57,6 +57,8 @@ option(PAIMON_ENABLE_AVRO "Whether to enable avro file format" ON)
 option(PAIMON_ENABLE_ORC "Whether to enable orc file format" ON)
 option(PAIMON_ENABLE_LANCE "Whether to enable lance file format" OFF)
 option(PAIMON_ENABLE_JINDO "Whether to enable jindo file system" OFF)
+option(PAIMON_ENABLE_NETWORK_TESTS
+       "Whether to enable tests that access real remote services over the network" OFF)
 option(PAIMON_ENABLE_LUMINA "Whether to enable lumina vector index" OFF)
 option(PAIMON_ENABLE_LUCENE "Whether to enable lucene index" OFF)
 option(PAIMON_ENABLE_TANTIVY
@@ -69,6 +71,9 @@ if(PAIMON_ENABLE_AVRO)
 endif()
 if(PAIMON_ENABLE_JINDO)
     add_definitions(-DPAIMON_ENABLE_JINDO)
+endif()
+if(PAIMON_ENABLE_NETWORK_TESTS)
+    add_definitions(-DPAIMON_ENABLE_NETWORK_TESTS)
 endif()
 if(PAIMON_USE_CXX11_ABI)
     add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
@@ -306,13 +311,6 @@ if(PAIMON_ENABLE_LANCE)
             DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
 
-if(PAIMON_ENABLE_LUMINA)
-    add_subdirectory(third_party/lumina EXCLUDE_FROM_ALL)
-    link_directories(third_party/lumina/lib)
-    install(FILES ${PROJECT_SOURCE_DIR}/third_party/lumina/lib/liblumina.so
-            DESTINATION ${CMAKE_INSTALL_LIBDIR})
-endif()
-
 # ---- tantivy-fulltext Rust FFI via Corrosion-rs --------------------------------
 # See docs/dev/tantivy_fts_migration_plan.md Stage 1.
 #
@@ -358,10 +356,6 @@ include_directories("${CMAKE_SOURCE_DIR}/third_party/xxhash")
 
 if(PAIMON_ENABLE_LANCE)
     include_directories("${CMAKE_SOURCE_DIR}/third_party/lance")
-endif()
-
-if(PAIMON_ENABLE_LUMINA)
-    include_directories("${CMAKE_SOURCE_DIR}/third_party/lumina/include")
 endif()
 
 include_directories(SYSTEM ${ARROW_INCLUDE_DIR})

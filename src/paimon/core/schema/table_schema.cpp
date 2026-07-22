@@ -25,6 +25,7 @@
 #include "arrow/c/bridge.h"
 #include "arrow/util/checked_cast.h"
 #include "fmt/format.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
@@ -93,6 +94,11 @@ Result<std::shared_ptr<arrow::Field>> TableSchema::AssignFieldIdsRecursively(
     }
     auto type = field->type();
     if (type->id() == arrow::Type::STRUCT) {
+        if (VariantTypeUtils::IsVariantField(field)) {
+            // A variant struct is a leaf type: its value/metadata children keep their fixed
+            // paimon field ids 0/1 (mapped to parquet field ids on write).
+            return metadata ? field->WithMergedMetadata(metadata) : field;
+        }
         auto struct_type = arrow::internal::checked_pointer_cast<arrow::StructType>(field->type());
         arrow::FieldVector new_childs;
         for (const auto& child : struct_type->fields()) {
@@ -187,7 +193,7 @@ std::vector<std::string> TableSchema::FieldNames() const {
 
 Result<FieldType> TableSchema::GetFieldType(const std::string& field_name) const {
     PAIMON_ASSIGN_OR_RAISE(DataField field, GetField(field_name));
-    return FieldTypeUtils::ConvertToFieldType(field.Type()->id());
+    return FieldTypeUtils::ConvertToFieldType(field.ArrowField());
 }
 
 Result<DataField> TableSchema::GetField(const std::string& field_name) const {

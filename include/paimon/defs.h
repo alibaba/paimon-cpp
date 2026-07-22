@@ -46,6 +46,7 @@ enum class FieldType {
     MAP = 14,
     STRUCT = 15,
     BLOB = 16,
+    VARIANT = 17,
     UNKNOWN = 128,
 };
 
@@ -117,6 +118,10 @@ struct PAIMON_EXPORT Options {
 
     /// "blob.target-file-size" - Target size of a blob file. Default is TARGET_FILE_SIZE.
     static const char BLOB_TARGET_FILE_SIZE[];
+
+    /// "blob.split-by-file-size" - Whether to consider blob file size as a factor when performing
+    /// scan splitting. When unset, defaults to the negation of BLOB_AS_DESCRIPTOR.
+    static const char BLOB_SPLIT_BY_FILE_SIZE[];
 
     /// "partition.default-name" - The default partition name in case the dynamic partition column
     /// value is null/empty string. Default is "__DEFAULT_PARTITION__".
@@ -235,6 +240,16 @@ struct PAIMON_EXPORT Options {
     /// "commit.max-retries" - Maximum number of retries when commit failed. Default value is 10.
     static const char COMMIT_MAX_RETRIES[];
 
+    /// "commit.min-retry-wait" - Min retry wait time when commit failed. Default value is 10ms.
+    static const char COMMIT_MIN_RETRY_WAIT[];
+
+    /// "commit.max-retry-wait" - Max retry wait time when commit failed. Default value is 10s.
+    static const char COMMIT_MAX_RETRY_WAIT[];
+
+    /// "commit.discard-duplicate-files" - Whether to discard duplicate files in commit.
+    /// Default value is "false".
+    static const char COMMIT_DISCARD_DUPLICATE_FILES[];
+
     /// "compaction.max-size-amplification-percent" - The size amplification is defined as the
     /// amount (in percentage) of additional storage needed to store a single byte of data in the
     /// merge tree for changelog mode table. Default value is 200.
@@ -269,6 +284,15 @@ struct PAIMON_EXPORT Options {
     /// "compaction.force-up-level-0" - If set to true, compaction strategy will always include all
     /// level 0 files in candidates. Default value is false.
     static const char COMPACTION_FORCE_UP_LEVEL_0[];
+
+    /// "overwrite-upgrade" - Whether to try upgrading the data files after overwriting a
+    /// primary key table. Default value is true.
+    static const char OVERWRITE_UPGRADE[];
+
+    /// "dynamic-partition-overwrite" - Whether only overwrite dynamic partition when
+    /// overwriting a partitioned table with dynamic partition columns. Works only when
+    /// the table has partition keys. Default value is true.
+    static const char DYNAMIC_PARTITION_OVERWRITE[];
 
     /// "lookup-compact.max-interval" - The max interval for a gentle mode lookup compaction to be
     /// triggered. For every interval, a forced lookup compaction will be performed to flush L0
@@ -391,6 +415,28 @@ struct PAIMON_EXPORT Options {
     /// Only effective when map.storage-layout = shared-shredding.
     static const char MAP_SHARED_SHREDDING_COLUMN_PLACEMENT_POLICY[];
 
+    /// "variant.shreddingSchema" - The Variant shredding schema for writing: a ROW type JSON
+    /// whose fields map variant column names to their shredding types. No default value.
+    static const char VARIANT_SHREDDING_SCHEMA[];
+    /// "parquet.variant.shreddingSchema" - Fallback key of "variant.shreddingSchema".
+    static const char PARQUET_VARIANT_SHREDDING_SCHEMA[];
+    /// "variant.inferShreddingSchema" - Whether to automatically infer the shredding schema when
+    /// writing Variant columns. Default value is "false".
+    static const char VARIANT_INFER_SHREDDING_SCHEMA[];
+    /// "variant.shredding.maxSchemaWidth" - Maximum number of shredded fields allowed in an
+    /// inferred schema. Default value is 300.
+    static const char VARIANT_SHREDDING_MAX_SCHEMA_WIDTH[];
+    /// "variant.shredding.maxSchemaDepth" - Maximum traversal depth in Variant values during
+    /// schema inference. Default value is 50.
+    static const char VARIANT_SHREDDING_MAX_SCHEMA_DEPTH[];
+    /// "variant.shredding.minFieldCardinalityRatio" - Minimum fraction of rows that must contain
+    /// a field for it to be shredded. Fields below this threshold stay in the un-shredded
+    /// Variant binary. Default value is 0.1.
+    static const char VARIANT_SHREDDING_MIN_FIELD_CARDINALITY_RATIO[];
+    /// "variant.shredding.maxInferBufferRow" - Maximum number of rows to buffer for schema
+    /// inference. Default value is 4096.
+    static const char VARIANT_SHREDDING_MAX_INFER_BUFFER_ROW[];
+
     /// "blob-as-descriptor" - Read blob field using blob descriptor rather than blob
     /// bytes. Default value is "false".
     static const char BLOB_AS_DESCRIPTOR[];
@@ -408,10 +454,24 @@ struct PAIMON_EXPORT Options {
     /// serialized BlobViewStruct bytes inline in data files and resolve from upstream tables at
     /// read time. No default value.
     static const char BLOB_VIEW_FIELD[];
+    /// "blob-view.resolve.enabled" - Whether to resolve blob-view-field values from upstream
+    /// tables at read time. Set to false to preserve serialized BlobViewStruct bytes when
+    /// forwarding blob view values to another blob-view table. Default value is "true".
+    static const char BLOB_VIEW_RESOLVE_ENABLED[];
     /// "blob-view-upstream-warehouse" - Since the catalog capabilities are partially missing, when
     /// Blob View is enabled, cpp paimon cannot automatically obtain the upstream table warehouse
     /// path and requires manual configuration by the user. No default value.
     static const char BLOB_VIEW_UPSTREAM_WAREHOUSE[];
+    /// "blob-write-null-on-missing-file" - Whether to write NULL for a descriptor BLOB value when
+    /// the referenced file does not exist at write time. When false, a missing file is treated
+    /// like any other fetch failure, following "blob-write-null-on-fetch-failure". Default value
+    /// is "false".
+    static const char BLOB_WRITE_NULL_ON_MISSING_FILE[];
+    /// "blob-write-null-on-fetch-failure" - Whether to write NULL for a descriptor BLOB value when
+    /// the referenced data cannot be fetched at write time (e.g. invalid descriptor or invalid
+    /// offset). A missing file is handled by "blob-write-null-on-missing-file" when that option is
+    /// enabled. When false, the write fails when the descriptor is read. Default value is "false".
+    static const char BLOB_WRITE_NULL_ON_FETCH_FAILURE[];
     /// "global-index.enabled" - Whether to enable global index for scan. Default value is "true".
     static const char GLOBAL_INDEX_ENABLED[];
     /// "global-index.thread-num" - The maximum number of concurrent scanner for global index. No
@@ -449,6 +509,12 @@ struct PAIMON_EXPORT Options {
     /// "write-only" - If set to "true", compactions and snapshot expiration will be skipped. This
     /// option is used along with dedicated compact jobs. Default value is "false".
     static const char WRITE_ONLY[];
+    /// "bucket-append-ordered" - Whether append writes in fixed bucket mode are ordered. This
+    /// option is used by commit conflict checks. Default value is "false".
+    static const char BUCKET_APPEND_ORDERED[];
+    /// "write.sequence-number-init-mode" - Specify how to initialize the next sequence number for
+    /// primary key table writers. Values can be: "scan", "snapshot". Default value is "scan".
+    static const char WRITE_SEQUENCE_NUMBER_INIT_MODE[];
     /// "compaction.min.file-num" - For file set [f_0,...,f_N], the minimum file number to trigger a
     /// compaction for append-only table. Default value is 5.
     static const char COMPACTION_MIN_FILE_NUM[];

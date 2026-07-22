@@ -28,6 +28,17 @@ const char GlobalIndexerFactory::GLOBAL_INDEX_IDENTIFIER_SUFFIX[] = "-global";
 
 Result<std::unique_ptr<GlobalIndexer>> GlobalIndexerFactory::Get(
     const std::string& identifier, const std::map<std::string, std::string>& options) {
+    // Java now uses a dedicated bitmap global index format instead of the previously shared
+    // wrapped file index format. Keep the legacy implementation registered for a future migration,
+    // but do not expose it as a compatible global index.
+    static constexpr const char* kEnableLegacyBitmapForTesting =
+        "bitmap-global-index.legacy-format.enabled-for-testing";
+    auto enable_legacy_bitmap = options.find(kEnableLegacyBitmapForTesting);
+    if (identifier == "bitmap" &&
+        (enable_legacy_bitmap == options.end() || enable_legacy_bitmap->second != "true")) {
+        return std::unique_ptr<GlobalIndexer>();
+    }
+
     // Compatibility: "lumina-vector-ann" was the old identifier for lumina global index.
     std::string final_identifier = (identifier == "lumina-vector-ann" ? "lumina" : identifier);
     std::string global_index_identifier = final_identifier + GLOBAL_INDEX_IDENTIFIER_SUFFIX;

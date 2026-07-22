@@ -21,6 +21,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <utility>
 
 #include "paimon/cache/cache.h"
@@ -45,16 +46,23 @@ class CountingRoutingCache : public Cache {
         const std::shared_ptr<CacheKey>& key,
         std::function<Result<std::shared_ptr<CacheValue>>(const std::shared_ptr<CacheKey>&)>
             supplier) override {
-        ++get_count_;
-        last_kind_ = key->GetKind();
-        ++get_count_by_kind_[key->GetKind()];
+        CacheKind kind = key->GetKind();
+        {
+            std::lock_guard<std::mutex> lock(count_mutex_);
+            ++get_count_;
+            last_kind_ = kind;
+            ++get_count_by_kind_[kind];
+        }
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Cache> cache, GetCache(key));
         return cache->Get(
             key,
             [this, supplier = std::move(supplier)](const std::shared_ptr<CacheKey>& supplier_key)
                 -> Result<std::shared_ptr<CacheValue>> {
-                ++supplier_call_count_;
-                ++supplier_call_count_by_kind_[supplier_key->GetKind()];
+                {
+                    std::lock_guard<std::mutex> lock(count_mutex_);
+                    ++supplier_call_count_;
+                    ++supplier_call_count_by_kind_[supplier_key->GetKind()];
+                }
                 return supplier(supplier_key);
             });
     }
@@ -87,22 +95,27 @@ class CountingRoutingCache : public Cache {
     }
 
     int64_t GetCount() const {
+        std::lock_guard<std::mutex> lock(count_mutex_);
         return get_count_;
     }
 
     int64_t GetCount(CacheKind kind) const {
+        std::lock_guard<std::mutex> lock(count_mutex_);
         return GetCount(get_count_by_kind_, kind);
     }
 
     int64_t SupplierCallCount() const {
+        std::lock_guard<std::mutex> lock(count_mutex_);
         return supplier_call_count_;
     }
 
     int64_t SupplierCallCount(CacheKind kind) const {
+        std::lock_guard<std::mutex> lock(count_mutex_);
         return GetCount(supplier_call_count_by_kind_, kind);
     }
 
     CacheKind LastKind() const {
+        std::lock_guard<std::mutex> lock(count_mutex_);
         return last_kind_;
     }
 
@@ -129,6 +142,7 @@ class CountingRoutingCache : public Cache {
     int64_t get_count_ = 0;
     int64_t supplier_call_count_ = 0;
     CacheKind last_kind_ = CacheKind::DEFAULT;
+    mutable std::mutex count_mutex_;
 };
 
 }  // namespace paimon::test

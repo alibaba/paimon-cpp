@@ -286,8 +286,8 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
 std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRanges(
     ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
     const std::vector<int32_t>& column_indices) {
-    int32_t row_group_index = target_row_group.row_group_index;
-    const auto& row_ranges = target_row_group.row_ranges;
+    int32_t row_group_index = target_row_group.GetRowGroupIndex();
+    const auto& row_ranges = target_row_group.GetRowRanges();
 
     std::vector<::arrow::io::ReadRange> ranges;
     auto file_metadata = parquet_reader->metadata();

@@ -32,9 +32,16 @@ Paimon C++ is a high-performance C++ implementation of [Apache Paimon](https://p
 - **File systems**: file system abstraction with built-in local and Jindo file system support.
 - **File formats**: file format abstraction with built-in ORC, Parquet, and Avro support.
 - **Runtime utilities**: memory pool and thread pool abstractions with default implementations.
-- **AI-Oriented Features**: supports RowTracking and DataEvolution mode and provides Global Index capabilities including bitmap index, B-tree index, DiskANN-based vector search with Lumina, and Lucene-based full-text search.
+- **AI-Oriented Features**: supports RowTracking and DataEvolution mode and provides Global Index
+  capabilities including B-tree index, DiskANN-based vector search with Lumina, and Lucene-based
+  full-text search.
 - **Compatibility**: compatibility with Apache Paimon Java format and communication protocols,
   including commit messages, data splits, and manifests.
+
+> **Bitmap global index compatibility:** Java Paimon now uses a dedicated bitmap global index
+> format instead of the previously shared wrapped bitmap file index format.
+> Paimon C++ therefore currently treats the `bitmap` global index type as unsupported. The legacy
+> implementation remains in the codebase pending migration to the Java-compatible format.
 
 Note: Linux x86_64 and macOS arm64 builds are currently verified.
 

@@ -115,17 +115,41 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
                                int32_t batch_size = 1024) {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
         ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
-        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
 
         std::map<std::string, std::string> options;
         options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] = "true";
         ASSERT_OK_AND_ASSIGN(auto batch_reader, ParquetFileBatchReader::Create(
                                                     std::move(in_stream), options, batch_size,
-                                                    /*file_metadata=*/nullptr, arrow_pool_));
+                                                    /*file_metadata=*/nullptr,
+                                                    /*storage_read_bytes=*/nullptr, arrow_pool_));
         auto c_schema = std::make_unique<ArrowSchema>();
         ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
         ASSERT_OK(batch_reader->SetReadSchema(c_schema.get(), predicate,
                                               /*selection_bitmap=*/std::nullopt));
+        ASSERT_OK_AND_ASSIGN(*out,
+                             paimon::test::ReadResultCollector::CollectResult(batch_reader.get()));
+    }
+
+    /// Read back a Parquet file with a predicate, a bitmap, and page index filter enabled.
+    void ReadWithPredicateAndBitmapImpl(const std::string& file_name,
+                                        const std::shared_ptr<arrow::Schema>& read_schema,
+                                        const std::shared_ptr<Predicate>& predicate,
+                                        const RoaringBitmap32& bitmap,
+                                        std::shared_ptr<arrow::ChunkedArray>* out,
+                                        const std::map<std::string, std::string> options = {},
+                                        int32_t batch_size = 1024) {
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
+        ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
+        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
+
+        ASSERT_OK_AND_ASSIGN(
+            auto batch_reader,
+            ParquetFileBatchReader::Create(std::move(in_stream), options, batch_size, nullptr,
+                                           /*storage_read_bytes=*/nullptr, arrow_pool_));
+        auto c_schema = std::make_unique<ArrowSchema>();
+        ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
+        ASSERT_OK(batch_reader->SetReadSchema(c_schema.get(), predicate, bitmap));
         ASSERT_OK_AND_ASSIGN(*out,
                              paimon::test::ReadResultCollector::CollectResult(batch_reader.get()));
     }
@@ -518,7 +542,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesPartialMatch) {
     // Open as raw ParquetFileReader
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
     ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
-    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
     ASSERT_TRUE(parquet_reader);
 
@@ -545,7 +569,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesAllMatch) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
     ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
-    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
 
     // All rows match
@@ -572,7 +596,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesNoMatch) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
     ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
-    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
 
     RowRanges row_ranges;  // empty
@@ -592,7 +616,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesMultiColumn) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
     ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
-    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
 
     // Match page 5 only (rows 50-59)
@@ -620,7 +644,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesMultiplePages) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
     ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
-    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
 
     RowRanges row_ranges;
@@ -769,7 +793,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
     // Open the file and verify metadata confirms dictionary page presence
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
     ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
-    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
     ASSERT_TRUE(parquet_reader);
 
@@ -944,14 +968,14 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnRowGroupFilter) {
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
 
-/// Test: Page-level filtering reading the nested struct column along with the predicate column.
+/// Test: Page-level filtering reading only the predicate column (no nested column in read schema).
 ///
-/// This verifies that when reading a subset of columns that includes a nested column
-/// and the predicate column, the schema mapping and column assembly work correctly.
+/// This verifies that when reading only the "id" column (without the nested struct),
+/// page-level filtering works correctly since the read schema contains no nested types.
 ///
 /// Schema: { id: int32, info: struct<x: int32, y: int32> }
-/// Read schema: { id: int32, info: struct<x: int32, y: int32> }
-/// Predicate on "id": id >= 70.
+/// Read schema: { id: int32 }
+/// Predicate on "id": id >= 70. Page-level filtering active → rows 70-99 (30 rows).
 TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnOnlyReadIdField) {
     std::string file_name = dir_->Str() + "/nested_struct_only_nested.parquet";
 
@@ -1079,6 +1103,95 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnRowGroupFilter) {
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
 
+/// Test: nested map projection falls back to row-group-level filtering when page index filter is
+/// unavailable for nested read schemas.
+///
+/// Schema: { id: int32, props: map<utf8, int32> }
+/// 100 rows, 10 per page, 2 row group.
+/// Bitmap: {70..99} hits the second row group (50..99).
+/// Because nested schema disables page-level filtering, the entire row group 1 (50..99) is read,
+/// so rows [50, 99] should all be returned.
+TEST_F(PageFilteredRowGroupReaderTest, NestedMapBitmapFallback) {
+    std::string file_name = dir_->Str() + "/nested_map_projection_fallback.parquet";
+    auto data = MakeMapColumnData(100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
+
+    auto field_props = arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()));
+    auto read_schema = arrow::schema({arrow::field("id", arrow::int32()), field_props});
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(70, 100);
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, nullptr, bitmap, &result);
+
+    ASSERT_TRUE(result);
+    // Because page-level filtering is skipped for nested schemas, we read full row groups.
+    ASSERT_EQ(50, result->length());
+
+    auto expected = data->Slice(50, 50);
+    ASSERT_TRUE(expected->Equals(result->chunk(0)));
+}
+
+/// Test: nested list projection falls back to row-group-level filtering when page index filter is
+/// unavailable for nested read schemas.
+///
+/// Schema: { id: int32, tags: list<item: int32> }
+/// 100 rows, 10 per page, 2 row group.
+/// Bitmap: {70..99} hits the second row group (50..99).
+/// Because nested schema disables page-level filtering, the entire row group 1 (50..99) is read,
+/// so rows [50, 99] should all be returned.
+TEST_F(PageFilteredRowGroupReaderTest, NestedListBitmapFallback) {
+    std::string file_name = dir_->Str() + "/nested_list_projection_fallback.parquet";
+    auto data = MakeListColumnData(100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
+
+    auto field_tags = arrow::field("tags", arrow::list(arrow::field("item", arrow::int32())));
+    auto read_schema = arrow::schema({arrow::field("id", arrow::int32()), field_tags});
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(70, 100);
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, nullptr, bitmap, &result);
+
+    ASSERT_TRUE(result);
+    ASSERT_EQ(50, result->length());
+
+    auto expected = data->Slice(50, 50);
+    ASSERT_TRUE(expected->Equals(result->chunk(0)));
+}
+
+/// Test: nested struct projection falls back to row-group-level filtering when page index filter is
+/// unavailable for nested read schemas.
+///
+/// Schema: { id: int32, info: struct<x: int32, y: int32> }
+/// Bitmap: {70..99} hits the second row group (50..99).
+/// Because nested schema disables page-level filtering, the entire second row group (50..99) is
+/// read.
+TEST_F(PageFilteredRowGroupReaderTest, NestedStructBitmapFallback) {
+    std::string file_name = dir_->Str() + "/nested_struct_projection_fallback.parquet";
+    auto data = MakeNestedStructData(100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
+
+    auto field_x = arrow::field("x", arrow::int32());
+    auto field_y = arrow::field("y", arrow::int32());
+    auto field_info = arrow::field("info", arrow::struct_({field_x, field_y}));
+    auto read_schema = arrow::schema({arrow::field("id", arrow::int32()), field_info});
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(70, 100);
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, nullptr, bitmap, &result);
+
+    ASSERT_TRUE(result);
+    ASSERT_EQ(50, result->length());
+
+    auto expected = data->Slice(50, 50);
+    ASSERT_TRUE(expected->Equals(result->chunk(0)));
+}
+
 /// Test: rowgroup-level filtering with multiple adjacent nested columns (struct + list).
 ///
 /// Schema: { id: int32, info: struct<x: int32, y: int32>, tags: list<item: int32> }
@@ -1115,6 +1228,451 @@ TEST_F(PageFilteredRowGroupReaderTest, MultipleAdjacentNestedColumns) {
     // Build expected result: rows 50-99 from the original data
     auto expected = data->Slice(70, 30);
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
+}
+/// Test: bitmap hits all pages of a subset of row groups (no predicate).
+///
+/// 200 rows, 10 rows per page, 100 rows per row group → 2 row groups.
+/// RG0: rows 0-99, RG1: rows 100-199.
+/// Bitmap: {0..99} hits all pages of RG0, RG1 is excluded entirely.
+/// Expected: 100 rows (0-99).
+TEST_F(PageFilteredRowGroupReaderTest, BitmapAllPagesSomeRowGroups) {
+    std::string file_name = dir_->Str() + "/bitmap_all_pages_rg.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 100);  // hits all of RG0
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(100, result->length());
+
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    for (int32_t i = 0; i < 100; ++i) {
+        ASSERT_EQ(i, val_arr->Value(i));
+    }
+}
+
+/// Test: bitmap hits partial pages of a row group (no predicate).
+///
+/// 200 rows, 10 rows per page, 100 rows per row group → 2 row groups.
+/// Bitmap: {90..109} hits page 9 of RG0 (rows 90-99), and page 0 of RG1 (rows 100-109).
+/// Expected: 20 rows (90-109).
+TEST_F(PageFilteredRowGroupReaderTest, BitmapPartialPagesAcrossRowGroups) {
+    std::string file_name = dir_->Str() + "/bitmap_partial_pages_rg.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    // {90..109} hits page 9 of RG0 (rows 90-99), and page 0 of RG1 (rows 100-109).
+    bitmap.AddRange(90, 110);
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(20, result->length());
+
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    for (int32_t i = 0; i < 20; ++i) {
+        ASSERT_EQ(90 + i, val_arr->Value(i));
+    }
+}
+
+/// Test: bitmap hits all pages of some row groups and partial pages of others.
+///
+/// 200 rows, 10 rows per page, 100 rows per row group → 2 row groups.
+/// Bitmap: {0..99} hits all of RG0 + {120..149} hits pages 2-4 of RG1.
+/// Expected: 100 (RG0) + 30 (RG1 partial) = 130 rows.
+TEST_F(PageFilteredRowGroupReaderTest, BitmapAllAndPartialPagesMixed) {
+    std::string file_name = dir_->Str() + "/bitmap_all_and_partial.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 100);    // all of RG0
+    bitmap.AddRange(120, 150);  // pages 2-4 of RG1
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(130, result->length());
+
+    // Verify: rows 0-99 + 120-149
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    for (int32_t i = 0; i < 100; ++i) {
+        ASSERT_EQ(i, val_arr->Value(i));
+    }
+    for (int32_t i = 0; i < 30; ++i) {
+        ASSERT_EQ(120 + i, val_arr->Value(100 + i));
+    }
+}
+
+/// Test: bitmap hits partial pages of a row group, with page-filtered option disabled.
+///
+/// 200 rows, 10 rows per page, 100 rows per row group → 2 row groups.
+/// Bitmap: {120..149} hits pages 2-4 of RG1.
+/// Expected: 100 rows (100-199) because page-filtered option is disabled, so page-level bitmap is
+/// ignored.
+TEST_F(PageFilteredRowGroupReaderTest, BitmapWithPageFilteredOptionDisabled) {
+    std::string file_name = dir_->Str() + "/bitmap_all_and_partial.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(120, 150);  // pages 2-4 of RG1
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    std::map<std::string, std::string> options;
+    options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] = "false";
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result,
+                                   options);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(100, result->length());
+
+    // Verify: 100-199
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    for (int32_t i = 0; i < 100; ++i) {
+        ASSERT_EQ(100 + i, val_arr->Value(i));
+    }
+}
+
+/// Test: bitmap + predicate both applied, bitmap hits all pages of some row groups.
+///
+/// 200 rows, 10 rows per page, 100 rows per row group → 2 row groups.
+/// Bitmap: {0..99} hits all of RG0.
+/// Predicate: val >= 50. Page-level filtering on RG0: pages 5-9.
+/// Expected: 50 rows (50-99).
+TEST_F(PageFilteredRowGroupReaderTest, BitmapAllPagesWithPredicate) {
+    std::string file_name = dir_->Str() + "/bitmap_all_predicate.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 100);  // hits all of RG0
+
+    auto predicate = PredicateBuilder::GreaterOrEqual(
+        /*field_index=*/0, /*field_name=*/"val", FieldType::INT, Literal(50));
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, predicate, bitmap, &result);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(50, result->length());
+
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    for (int32_t i = 0; i < 50; ++i) {
+        ASSERT_EQ(50 + i, val_arr->Value(i));
+    }
+}
+
+/// Test: bitmap + predicate both applied, bitmap hits partial pages of a row group.
+///
+/// 200 rows, 10 rows per page, 100 rows per row group → 2 row groups.
+/// Bitmap: {30..59} hits pages 3-5 of RG0 (rows 30-59).
+/// Predicate: val >= 40. Page-level filtering further narrows to pages 4-5 (rows 40-59).
+/// Expected: 20 rows (40-59).
+TEST_F(PageFilteredRowGroupReaderTest, BitmapPartialPagesWithPredicate) {
+    std::string file_name = dir_->Str() + "/bitmap_partial_predicate.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(30, 60);  // hits pages 3-5 of RG0
+
+    auto predicate = PredicateBuilder::GreaterOrEqual(
+        /*field_index=*/0, /*field_name=*/"val", FieldType::INT, Literal(40));
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, predicate, bitmap, &result);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(20, result->length());
+
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    for (int32_t i = 0; i < 20; ++i) {
+        ASSERT_EQ(40 + i, val_arr->Value(i));
+    }
+}
+
+/// Test: bitmap + predicate both applied, bitmap hits all pages of some RG and
+/// partial pages of another.
+///
+/// 200 rows, 10 rows per page, 100 rows per row group → 2 row groups.
+/// Bitmap: {0..99} (all of RG0) + {120..149} (pages 2-4 of RG1).
+/// Predicate: val >= 50 AND val < 160.
+///   RG0: all pages → page-filtered to val>=50 → rows 50-99 (50 rows)
+///   RG1: pages 2-4 (120-149) → page-filtered to val>=50 AND val<160 → all match (30 rows)
+/// Expected: 80 rows (50-99 + 120-149).
+TEST_F(PageFilteredRowGroupReaderTest, BitmapMixedWithPredicate) {
+    std::string file_name = dir_->Str() + "/bitmap_mixed_predicate.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 100);    // all of RG0
+    bitmap.AddRange(120, 150);  // pages 2-4 of RG1
+
+    ASSERT_OK_AND_ASSIGN(
+        auto predicate,
+        PredicateBuilder::And(
+            {PredicateBuilder::GreaterOrEqual(/*field_index=*/0, /*field_name=*/"val",
+                                              FieldType::INT, Literal(50)),
+             PredicateBuilder::LessThan(/*field_index=*/0, /*field_name=*/"val", FieldType::INT,
+                                        Literal(160))}));
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, predicate, bitmap, &result);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(80, result->length());
+
+    // Verify: rows 50-99 + 120-149
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    for (int32_t i = 0; i < 50; ++i) {
+        ASSERT_EQ(50 + i, val_arr->Value(i));
+    }
+    for (int32_t i = 0; i < 30; ++i) {
+        ASSERT_EQ(120 + i, val_arr->Value(50 + i));
+    }
+}
+
+/// Test: coalesce strategy with default hole_size_limit (32).
+///
+/// 200 rows, 50 rows per page, 100 rows per row group → 2 row groups.
+/// Bitmap: [0,10), [45, 50), [60, 70).
+/// - [0,10) and [45,50) are both in RG0 page 0 ([0,49]); gap = 35 > 32, NOT merged.
+/// - [45,50) and [60,70) straddle RG0 page 0 ([0,49]) and page 1 ([50,99]); gap = 10 <= 32,
+///   merged across the page boundary, so rows 50-59 are read even though not in the bitmap.
+/// Expected: 35 rows ([0,10) + [45, 70)).
+TEST_F(PageFilteredRowGroupReaderTest, BitmapCoalesceTest) {
+    std::string file_name = dir_->Str() + "/scattered_bitmap.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/50, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 10);
+    bitmap.AddRange(45, 50);
+    bitmap.AddRange(60, 70);
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(35, result->length());
+
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    // [0, 9] — not merged (gap to next range = 35 > 32)
+    for (int32_t i = 0; i < 10; ++i) {
+        ASSERT_EQ(0 + i, val_arr->Value(i));
+    }
+    // [45, 69] — merged across page boundary (gap = 10 <= 32)
+    for (int32_t i = 0; i < 25; ++i) {
+        ASSERT_EQ(45 + i, val_arr->Value(10 + i));
+    }
+}
+
+/// Test: coalesce strategy with hole_size_limit=5 (instead of default 32).
+///
+/// Same bitmap as BitmapCoalesceTest: [0,10), [45, 50), [60, 70).
+/// Both gaps (35 and 10) exceed 5, so no ranges are merged.
+/// Expected: 25 rows (exact bitmap selection, no holes filled).
+/// Compare with BitmapCoalesceTest which gets 35 rows (gap of 10 is filled with default limit=32).
+TEST_F(PageFilteredRowGroupReaderTest, BitmapCoalesceSmallHoleSizeTest) {
+    std::string file_name = dir_->Str() + "/coalesce_small_hole.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/50, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 10);
+    bitmap.AddRange(45, 50);
+    bitmap.AddRange(60, 70);
+
+    std::map<std::string, std::string> options;
+    options[PARQUET_READ_ROW_RANGES_COALESCE_HOLE_SIZE_LIMIT] = "5";
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result,
+                                   options);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(25, result->length());
+
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    ASSERT_TRUE(val_arr);
+    // [0, 9] — not merged (gap = 35 > 5)
+    for (int32_t i = 0; i < 10; ++i) {
+        ASSERT_EQ(0 + i, val_arr->Value(i));
+    }
+    // [45, 49] — not merged (gap = 10 > 5)
+    for (int32_t i = 0; i < 5; ++i) {
+        ASSERT_EQ(45 + i, val_arr->Value(10 + i));
+    }
+    // [60, 69] — not merged
+    for (int32_t i = 0; i < 10; ++i) {
+        ASSERT_EQ(60 + i, val_arr->Value(15 + i));
+    }
+}
+
+/// Test: trim strategy for bitmap row filtering.
+///
+/// Same bitmap as BitmapCoalesceTest: [0,10), [45, 50), [60, 70).
+/// Trim produces one range per page (trimmed to first/last selected row in that page):
+/// - RG0 page 0 ([0,49]): first selected = 0, last selected = 49 → [0, 49] (50 rows, includes
+///   the 35-row gap 10-44 that coalesce keeps as a hole because gap = 35 > 32).
+/// - RG0 page 1 ([50,99]): first selected = 60, last selected = 69 → [60, 69] (10 rows; rows
+///   50-59 are NOT read, unlike coalesce which merges across the page boundary).
+/// Expected: 60 rows ([0, 50) + [60, 70)).
+/// Compare with BitmapCoalesceTest which gets 35 rows.
+TEST_F(PageFilteredRowGroupReaderTest, BitmapTrimStrategyTest) {
+    std::string file_name = dir_->Str() + "/trim_strategy.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/50, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 10);
+    bitmap.AddRange(45, 50);
+    bitmap.AddRange(60, 70);
+
+    std::map<std::string, std::string> options;
+    options[PARQUET_READ_BITMAP_ROW_RANGE_REFINING_STRATEGY] = "trim";
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result,
+                                   options);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(60, result->length());
+
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    ASSERT_TRUE(val_arr);
+    // RG0 page 0 trimmed to [0, 49] — includes gap 10-44 that coalesce skips
+    for (int32_t i = 0; i < 50; ++i) {
+        ASSERT_EQ(0 + i, val_arr->Value(i));
+    }
+    // RG0 page 1 trimmed to [60, 69] — rows 50-59 not read (unlike coalesce)
+    for (int32_t i = 0; i < 10; ++i) {
+        ASSERT_EQ(60 + i, val_arr->Value(50 + i));
+    }
+}
+
+/// Test: invalid strategy value returns Status::Invalid.
+///
+/// 200 rows, 50 rows per page, 100 rows per row group → 2 row groups.
+/// Bitmap: [0,10), [45, 50), [60, 70) — same as BitmapCoalesceTest.
+/// Strategy: "invalid" (not one of "coalesce", "trim", "none").
+/// Expected: SetReadSchema returns Status::Invalid.
+TEST_F(PageFilteredRowGroupReaderTest, BitmapInvalidStrategyTest) {
+    std::string file_name = dir_->Str() + "/invalid_strategy.parquet";
+    auto data = MakeSequentialIntData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/50, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 10);
+    bitmap.AddRange(45, 50);
+    bitmap.AddRange(60, 70);
+
+    std::map<std::string, std::string> options;
+    options[PARQUET_READ_BITMAP_ROW_RANGE_REFINING_STRATEGY] = "invalid";
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
+    ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
+
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, ParquetFileBatchReader::Create(
+                                                std::move(in_stream), options, 1024, nullptr,
+                                                /*storage_read_bytes=*/nullptr, arrow_pool_));
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    auto c_schema = std::make_unique<ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
+
+    auto status = batch_reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr, bitmap);
+    ASSERT_FALSE(status.ok());
+    ASSERT_TRUE(status.IsInvalid());
+}
+
+/// Test: trim strategy with multiple columns — intersection of per-column trimmed ranges.
+///
+/// 200 rows, 50 rows per page, 100 rows per row group → 2 row groups.
+/// Two columns: a[i] = i, b[i] = i * 10.
+/// Bitmap: [0,10), [45, 50), [60, 70) — same as BitmapTrimStrategyTest.
+/// Both columns share the same page boundaries, so their trimmed ranges are identical.
+/// The intersection is the same as either column alone:
+/// - RG0 page 0 ([0,49]): trimmed to [0, 49] (50 rows)
+/// - RG0 page 1 ([50,99]): trimmed to [60, 69] (10 rows)
+/// Expected: 60 rows. Both columns must remain aligned after trimming.
+TEST_F(PageFilteredRowGroupReaderTest, BitmapTrimMultiColumnTest) {
+    std::string file_name = dir_->Str() + "/trim_multi_col.parquet";
+    auto data = MakeTwoColumnData(200);
+    WriteTestFile(file_name, data, /*write_batch_size=*/50, /*max_row_group_length=*/100);
+
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 10);
+    bitmap.AddRange(45, 50);
+    bitmap.AddRange(60, 70);
+
+    std::map<std::string, std::string> options;
+    options[PARQUET_READ_BITMAP_ROW_RANGE_REFINING_STRATEGY] = "trim";
+
+    auto read_schema =
+        arrow::schema({arrow::field("a", arrow::int32()), arrow::field("b", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result,
+                                   options);
+    ASSERT_TRUE(result);
+    ASSERT_EQ(60, result->length());
+
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto a_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    auto b_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(1));
+    ASSERT_TRUE(a_arr);
+    ASSERT_TRUE(b_arr);
+    // RG0 page 0 trimmed to [0, 49]
+    for (int32_t i = 0; i < 50; ++i) {
+        ASSERT_EQ(i, a_arr->Value(i));
+        ASSERT_EQ(i * 10, b_arr->Value(i));
+    }
+    // RG0 page 1 trimmed to [60, 69]
+    for (int32_t i = 0; i < 10; ++i) {
+        ASSERT_EQ(60 + i, a_arr->Value(50 + i));
+        ASSERT_EQ((60 + i) * 10, b_arr->Value(50 + i));
+    }
 }
 
 /// Test: predicate pushdown with all nested column types (struct, list, map).

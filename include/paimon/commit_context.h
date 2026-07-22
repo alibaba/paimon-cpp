@@ -37,7 +37,7 @@ class PAIMON_EXPORT CommitContext {
  public:
     CommitContext(const std::string& root_path, const std::string& commit_user,
                   bool ignore_empty_commit, bool use_rest_catalog_commit,
-                  const std::shared_ptr<MemoryPool>& memory_pool,
+                  bool append_commit_check_conflict, const std::shared_ptr<MemoryPool>& memory_pool,
                   const std::shared_ptr<Executor>& executor,
                   const std::shared_ptr<FileSystem>& specific_file_system,
                   const std::map<std::string, std::string>& options);
@@ -57,6 +57,10 @@ class PAIMON_EXPORT CommitContext {
 
     bool UseRESTCatalogCommit() const {
         return use_rest_catalog_commit_;
+    }
+
+    bool AppendCommitCheckConflict() const {
+        return append_commit_check_conflict_;
     }
 
     std::shared_ptr<MemoryPool> GetMemoryPool() const {
@@ -80,6 +84,7 @@ class PAIMON_EXPORT CommitContext {
     std::string commit_user_;
     bool ignore_empty_commit_;
     bool use_rest_catalog_commit_;
+    bool append_commit_check_conflict_;
     std::shared_ptr<MemoryPool> memory_pool_;
     std::shared_ptr<Executor> executor_;
     std::shared_ptr<FileSystem> specific_file_system_;
@@ -124,6 +129,11 @@ class PAIMON_EXPORT CommitContextBuilder {
     /// @param use_rest_catalog_commit True to use REST catalog commit, false otherwise.
     /// @return Reference to this builder for method chaining.
     CommitContextBuilder& UseRESTCatalogCommit(bool use_rest_catalog_commit);
+
+    /// Sets whether append commits should perform conflict checking (default is false).
+    /// @param append_commit_check_conflict True to enable append conflict checks.
+    /// @return Reference to this builder for method chaining.
+    CommitContextBuilder& AppendCommitCheckConflict(bool append_commit_check_conflict);
 
     /// Sets the memory pool to be used for memory allocation during commit operations.
     /// @param memory_pool Shared pointer to the memory pool instance.

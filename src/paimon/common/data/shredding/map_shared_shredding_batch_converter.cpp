@@ -65,8 +65,9 @@ Result<std::shared_ptr<MapSharedShreddingBatchConverter>> MapSharedShreddingBatc
     const std::shared_ptr<MapSharedShreddingContext>& context, const CoreOptions& options,
     const std::shared_ptr<MemoryPool>& pool) {
     std::map<std::string, int32_t> field_to_num_columns = context->ComputeNextK();
-    std::shared_ptr<arrow::Schema> physical_schema =
-        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, field_to_num_columns);
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<arrow::Schema> physical_schema,
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, field_to_num_columns));
     std::vector<ColumnContext> contexts;
     std::vector<std::string> shredding_field_names;
     contexts.reserve(field_to_num_columns.size());

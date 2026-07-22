@@ -27,6 +27,7 @@
 #include "paimon/common/predicate/predicate_validator.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/fields_comparator.h"
+#include "paimon/common/utils/options_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/index/index_file_handler.h"
 #include "paimon/core/manifest/index_manifest_file.h"
@@ -47,6 +48,7 @@
 #include "paimon/core/table/source/data_table_batch_scan.h"
 #include "paimon/core/table/source/data_table_stream_scan.h"
 #include "paimon/core/table/source/merge_tree_split_generator.h"
+#include "paimon/core/table/source/read_optimized_scan_options.h"
 #include "paimon/core/table/source/snapshot/snapshot_reader.h"
 #include "paimon/core/table/source/split_generator.h"
 #include "paimon/core/table/system/system_table.h"
@@ -134,8 +136,9 @@ class TableScanImpl {
         auto source_split_open_file_cost = core_options.GetSourceSplitOpenFileCost();
         if (table_schema->PrimaryKeys().empty()) {
             if (core_options.DataEvolutionEnabled()) {
-                return std::make_unique<DataEvolutionSplitGenerator>(source_split_target_size,
-                                                                     source_split_open_file_cost);
+                return std::make_unique<DataEvolutionSplitGenerator>(
+                    source_split_target_size, source_split_open_file_cost,
+                    core_options.BlobSplitByFileSize());
             }
             BucketMode bucket_mode = (core_options.GetBucket() == -1 ? BucketMode::BUCKET_UNAWARE
                                                                      : BucketMode::HASH_FIXED);
@@ -225,6 +228,9 @@ Result<std::unique_ptr<TableScan>> NewDataTableScan(const std::shared_ptr<ScanCo
         }
         table_schema = latest_table_schema.value();
     }
+    PAIMON_ASSIGN_OR_RAISE(bool read_optimized,
+                           OptionsUtils::GetValueFromMap<bool>(context->GetOptions(),
+                                                               kReadOptimizedScanOption, false));
     // merge options
     auto options = table_schema->Options();
     for (const auto& [key, value] : context->GetOptions()) {
@@ -280,12 +286,16 @@ Result<std::unique_ptr<TableScan>> NewDataTableScan(const std::shared_ptr<ScanCo
                                                                  context->GetMemoryPool()));
     auto snapshot_reader = std::make_shared<SnapshotReader>(
         file_store_scan, path_factory, std::move(split_generator), std::move(index_file_handler));
+    const bool pk_table = !table_schema->PrimaryKeys().empty();
+    if (read_optimized && pk_table && context->IsStreamingMode()) {
+        return Status::NotImplemented(
+            "read-optimized system table does not support streaming scan for primary key table");
+    }
     if (context->IsStreamingMode()) {
         return std::make_unique<DataTableStreamScan>(core_options, snapshot_reader);
     }
-    auto batch_scan =
-        std::make_unique<DataTableBatchScan>(/*pk_table=*/!table_schema->PrimaryKeys().empty(),
-                                             core_options, snapshot_reader, context->GetLimit());
+    auto batch_scan = std::make_unique<DataTableBatchScan>(
+        /*pk_table=*/pk_table, core_options, snapshot_reader, read_optimized, context->GetLimit());
     if (!core_options.DataEvolutionEnabled()) {
         return batch_scan;
     }

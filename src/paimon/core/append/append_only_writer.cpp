@@ -26,6 +26,7 @@
 #include "arrow/c/helpers.h"
 #include "arrow/type.h"
 #include "arrow/util/key_value_metadata.h"
+#include "paimon/common/data/shredding/shredding_write_plan_factories.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/types/row_kind.h"
 #include "paimon/common/utils/arrow/status_utils.h"
@@ -194,10 +195,11 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingRowWrit
 AppendOnlyWriter::WriterFactory AppendOnlyWriter::GetDataFileWriterFactory(
     const std::shared_ptr<arrow::Schema>& schema,
     const std::optional<std::vector<std::string>>& write_cols) const {
-    if (shredding_context_) {
+    if (auto plan_factory = ShreddingWritePlanFactories::SelectActive(
+            options_, schema, shredding_context_, memory_pool_)) {
         return std::make_shared<ShreddingAppendDataFileWriterFactory>(
             options_, schema_id_, schema, write_cols, seq_num_counter_, FileSource::Append(),
-            path_factory_, shredding_context_, memory_pool_);
+            path_factory_, plan_factory, memory_pool_);
     }
     return std::make_shared<AppendDataFileWriterFactory>(options_, schema_id_, schema, write_cols,
                                                          seq_num_counter_, FileSource::Append(),

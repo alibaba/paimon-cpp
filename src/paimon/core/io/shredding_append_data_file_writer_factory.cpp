@@ -19,13 +19,11 @@
 #include <utility>
 
 #include "arrow/c/helpers.h"
-#include "paimon/common/data/shredding/map_shared_shredding_batch_converter.h"
-#include "paimon/common/data/shredding/map_shared_shredding_context.h"
-#include "paimon/common/data/shredding/map_shared_shredding_utils.h"
-#include "paimon/common/data/shredding/map_shredding_defs.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_path_factory.h"
 #include "paimon/core/io/data_file_writer.h"
+#include "paimon/core/io/infer_shredding_file_writer.h"
+#include "paimon/format/file_format.h"
 #include "paimon/fs/file_system.h"
 
 namespace paimon {
@@ -36,20 +34,40 @@ ShreddingAppendDataFileWriterFactory::ShreddingAppendDataFileWriterFactory(
     const std::optional<std::vector<std::string>>& write_cols,
     const std::shared_ptr<LongCounter>& seq_num_counter, FileSource file_source,
     const std::shared_ptr<DataFilePathFactory>& path_factory,
-    const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
+    const std::shared_ptr<ShreddingWritePlanFactory>& plan_factory,
     const std::shared_ptr<MemoryPool>& pool)
     : AppendDataFileWriterFactory(options, schema_id, write_schema, write_cols, seq_num_counter,
                                   file_source, path_factory, pool),
-      shredding_context_(shredding_context) {}
+      plan_factory_(plan_factory) {}
 
 Result<std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>>
 ShreddingAppendDataFileWriterFactory::CreateWriter() const {
-    if (!shredding_context_) {
-        return Status::Invalid("Shared-shredding append writer requires a shredding context.");
+    if (!plan_factory_) {
+        return Status::Invalid("Shredding append writer requires a write-plan factory.");
     }
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<MapSharedShreddingBatchConverter> converter,
-                           MapSharedShreddingBatchConverter::Create(
-                               write_schema_, shredding_context_, options_, pool_));
+    const std::string format_identifier = options_.GetFileFormat()->Identifier();
+    if (plan_factory_->ShouldInferWritePlan()) {
+        auto create_inner = [this](const std::shared_ptr<ShreddingBatchConverter>& converter) {
+            return CreateShreddedWriter(converter);
+        };
+        return std::make_unique<
+            InferShreddingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
+            write_schema_, plan_factory_, format_identifier, std::move(create_inner));
+    }
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<ShreddingBatchConverter> converter,
+        plan_factory_->CreateConverter(format_identifier, /*sample_batches=*/{}));
+    return CreateShreddedWriter(converter);
+}
+
+Result<std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>>
+ShreddingAppendDataFileWriterFactory::CreateShreddedWriter(
+    const std::shared_ptr<ShreddingBatchConverter>& converter) const {
+    if (converter == nullptr) {
+        // No conversion is useful for this file; fall back to the plain writer.
+        return AppendDataFileWriterFactory::CreateWriter();
+    }
+    std::shared_ptr<LongCounter> seq_num_counter = ResolveSeqNumCounter();
     std::shared_ptr<arrow::Schema> file_schema = converter->GetPhysicalSchema();
     std::function<Status(::ArrowArray*, ::ArrowArray*)> batch_converter =
         [converter](::ArrowArray* input, ::ArrowArray* output) -> Status {
@@ -61,14 +79,16 @@ ShreddingAppendDataFileWriterFactory::CreateWriter() const {
                            CreateWriterResources(*options_.GetFileFormat(), file_schema,
                                                  /*create_stats_extractor=*/true));
     auto writer = std::make_unique<DataFileWriter>(
-        options_.GetFileCompression(), std::move(batch_converter), schema_id_, seq_num_counter_,
+        options_.GetFileCompression(), std::move(batch_converter), schema_id_, seq_num_counter,
         file_source_, resources.stats_extractor, path_factory_->IsExternalPath(), write_cols_,
         pool_);
     PAIMON_RETURN_NOT_OK(
         writer->Init(options_.GetFileSystem(), path_factory_->NewPath(), resources.writer_builder));
-    writer->SetMetadataFinalizer(MapSharedShreddingUtils::BuildMetadataFinalizer(
-        converter, MapSharedShreddingDefine::kDefaultDictCompression, shredding_context_,
-        file_schema));
+    ShreddingWritePlanFactory::MetadataFinalizer finalizer =
+        plan_factory_->CreateMetadataFinalizer(converter);
+    if (finalizer) {
+        writer->SetMetadataFinalizer(std::move(finalizer));
+    }
     return std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
         std::move(writer));
 }
