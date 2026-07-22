@@ -47,10 +47,6 @@ if(PAIMON_BUILD_TESTS)
                     ${TEST_STATIC_LINK_LIBS}
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
-    if(PAIMON_ENABLE_NETWORK_TESTS)
-        target_compile_definitions(paimon-write-and-read-inte-test
-                                   PRIVATE PAIMON_ENABLE_NETWORK_TESTS)
-    endif()
 
     add_paimon_test(clean_inte_test
                     STATIC_LINK_LIBS
