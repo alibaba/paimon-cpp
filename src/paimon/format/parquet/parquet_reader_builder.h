@@ -70,7 +70,7 @@ class ParquetReaderBuilder : public ReaderBuilder {
             }
             std::shared_ptr<arrow::MemoryPool> arrow_pool = GetArrowPool(pool_);
             auto unique_input_stream =
-                std::make_unique<ArrowInputStreamAdapter>(path, arrow_pool, file_length);
+                std::make_unique<ArrowInputStreamAdapter>(path, file_length, arrow_pool);
             auto storage_read_bytes = unique_input_stream->StorageReadBytes();
             std::shared_ptr<arrow::io::RandomAccessFile> input_stream(
                 std::move(unique_input_stream));

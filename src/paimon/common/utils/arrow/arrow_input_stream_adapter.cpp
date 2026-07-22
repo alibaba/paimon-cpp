@@ -43,8 +43,8 @@ arrow::Status ValidateArrowIoRange(int64_t value, const char* name) {
 }  // namespace
 
 ArrowInputStreamAdapter::ArrowInputStreamAdapter(
-    const std::shared_ptr<paimon::InputStream>& input_stream,
-    const std::shared_ptr<arrow::MemoryPool>& pool, int64_t file_size)
+    const std::shared_ptr<paimon::InputStream>& input_stream, int64_t file_size,
+    const std::shared_ptr<arrow::MemoryPool>& pool)
     : input_stream_(input_stream),
       pool_(pool),
       file_size_(file_size),

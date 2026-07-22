@@ -360,12 +360,13 @@ class VariantParquetTest : public ::testing::Test {
         ASSERT_OK_AND_ASSIGN(auto input_stream, fs_->Open(file_path_));
         auto length = fs_->GetFileStatus(file_path_).value()->GetLen();
         auto in_stream =
-            std::make_unique<ArrowInputStreamAdapter>(std::move(input_stream), arrow_pool_, length);
+            std::make_unique<ArrowInputStreamAdapter>(std::move(input_stream), length, arrow_pool_);
         std::map<std::string, std::string> options = {};
         ASSERT_OK_AND_ASSIGN(auto parquet_reader, ParquetFileBatchReader::Create(
                                                       std::move(in_stream), options,
                                                       /*batch_size=*/1024,
-                                                      /*file_metadata=*/nullptr, arrow_pool_));
+                                                      /*file_metadata=*/nullptr,
+                                                      /*storage_read_bytes=*/nullptr, arrow_pool_));
         *file_reader = std::move(parquet_reader);
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<::ArrowSchema> c_file_schema,
                              (*file_reader)->GetFileSchema());
@@ -546,12 +547,13 @@ TEST_F(VariantParquetTest, WriteAndReadRoundTrip) {
     ASSERT_OK_AND_ASSIGN(auto input_stream, fs_->Open(file_path_));
     auto length = fs_->GetFileStatus(file_path_).value()->GetLen();
     auto in_stream =
-        std::make_unique<ArrowInputStreamAdapter>(std::move(input_stream), arrow_pool_, length);
+        std::make_unique<ArrowInputStreamAdapter>(std::move(input_stream), length, arrow_pool_);
     std::map<std::string, std::string> options = {};
-    ASSERT_OK_AND_ASSIGN(auto batch_reader,
-                         ParquetFileBatchReader::Create(std::move(in_stream), options,
-                                                        /*batch_size=*/1024,
-                                                        /*file_metadata=*/nullptr, arrow_pool_));
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, ParquetFileBatchReader::Create(
+                                                std::move(in_stream), options,
+                                                /*batch_size=*/1024,
+                                                /*file_metadata=*/nullptr,
+                                                /*storage_read_bytes=*/nullptr, arrow_pool_));
     auto c_schema = std::make_unique<ArrowSchema>();
     ASSERT_TRUE(arrow::ExportSchema(*paimon_schema_, c_schema.get()).ok());
     ASSERT_OK(batch_reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr,

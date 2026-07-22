@@ -115,7 +115,7 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
                                int32_t batch_size = 1024) {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
         ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
-        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
 
         std::map<std::string, std::string> options;
         options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] = "true";
@@ -141,7 +141,7 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
                                         int32_t batch_size = 1024) {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
         ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
-        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
 
         ASSERT_OK_AND_ASSIGN(
             auto batch_reader,
@@ -542,7 +542,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesPartialMatch) {
     // Open as raw ParquetFileReader
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
     ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
-    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
     ASSERT_TRUE(parquet_reader);
 
@@ -569,7 +569,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesAllMatch) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
     ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
-    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
 
     // All rows match
@@ -596,7 +596,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesNoMatch) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
     ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
-    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
 
     RowRanges row_ranges;  // empty
@@ -616,7 +616,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesMultiColumn) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
     ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
-    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
 
     // Match page 5 only (rows 50-59)
@@ -644,7 +644,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesMultiplePages) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
     ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
-    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
 
     RowRanges row_ranges;
@@ -793,7 +793,7 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
     // Open the file and verify metadata confirms dictionary page presence
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
     ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
-    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
     auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
     ASSERT_TRUE(parquet_reader);
 
@@ -1638,7 +1638,7 @@ TEST_F(PageFilteredRowGroupReaderTest, BitmapInvalidStrategyTest) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
     ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
-    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
 
     ASSERT_OK_AND_ASSIGN(auto batch_reader, ParquetFileBatchReader::Create(
                                                 std::move(in_stream), options, 1024, nullptr,

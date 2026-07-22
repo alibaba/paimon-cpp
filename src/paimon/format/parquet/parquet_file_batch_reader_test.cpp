@@ -202,7 +202,7 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
         EXPECT_OK_AND_ASSIGN(auto input_stream, fs_->Open(file_name));
         auto length = fs_->GetFileStatus(file_name).value()->GetLen();
         auto in_stream =
-            std::make_unique<ArrowInputStreamAdapter>(std::move(input_stream), pool_, length);
+            std::make_unique<ArrowInputStreamAdapter>(std::move(input_stream), length, pool_);
         auto storage_read_bytes = in_stream->StorageReadBytes();
         std::map<std::string, std::string> options;
         options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] =
@@ -384,7 +384,7 @@ TEST_F(ParquetFileBatchReaderTest, TestSetReadSchema) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream, fs_->Open(file_name));
     auto length = fs_->GetFileStatus(file_name).value()->GetLen();
     auto in_stream =
-        std::make_unique<ArrowInputStreamAdapter>(std::move(input_stream), pool_, length);
+        std::make_unique<ArrowInputStreamAdapter>(std::move(input_stream), length, pool_);
     std::map<std::string, std::string> options;
     ASSERT_OK_AND_ASSIGN(auto parquet_batch_reader,
                          ParquetFileBatchReader::Create(std::move(in_stream), options, batch_size_,
