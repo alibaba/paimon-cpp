@@ -281,10 +281,9 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
 
     int64_t expected_rows = row_ranges.RowCount();
 
-    if (!row_ranges.IsEmpty())
-    {
+    if (!row_ranges.IsEmpty()) {
         PAIMON_RETURN_NOT_OK(WaitForPreBuffer(parquet_reader, row_group_index, column_indices,
-                                          cache_options, pre_buffered, page_ranges, pool));
+                                              cache_options, pre_buffered, page_ranges, pool));
     }
 
     auto rg_metadata = parquet_reader->metadata()->RowGroup(row_group_index);
