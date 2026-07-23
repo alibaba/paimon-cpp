@@ -172,7 +172,9 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
         [row_group_index, &rg_page_index_reader, &row_ranges, row_group_row_count](
             int col_idx,
             ::parquet::ParquetFileReader* reader) -> ::parquet::arrow::FileColumnIterator* {
-        auto* iter = new ::parquet::arrow::FileColumnIterator(col_idx, reader, {row_group_index});
+        // Hold sole ownership locally so the iterator is released if GetOffsetIndex()
+        auto iter = std::make_unique<::parquet::arrow::FileColumnIterator>(
+            col_idx, reader, std::vector<int>{row_group_index});
         if (rg_page_index_reader) {
             auto offset_index = rg_page_index_reader->GetOffsetIndex(col_idx);
             if (offset_index) {
@@ -180,7 +182,7 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
                     MakePageFilter(row_ranges, offset_index, row_group_row_count));
             }
         }
-        return iter;
+        return iter.release();
     };
 
     // Build reader tree with leaf column filtering
@@ -226,8 +228,8 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
     bool pre_buffered, const std::vector<::arrow::io::ReadRange>& page_ranges,
     int64_t max_chunksize, std::shared_ptr<::arrow::MemoryPool> pool) {
     auto parquet_reader = arrow_file_reader->parquet_reader();
-    const auto& row_ranges = target_row_group.row_ranges;
-    int32_t row_group_index = target_row_group.row_group_index;
+    const auto& row_ranges = target_row_group.GetRowRanges();
+    int32_t row_group_index = target_row_group.GetRowGroupIndex();
 
     int64_t expected_rows = row_ranges.RowCount();
 
