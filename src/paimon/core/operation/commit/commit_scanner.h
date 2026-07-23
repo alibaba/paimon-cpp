@@ -50,7 +50,7 @@ class Snapshot;
 class SnapshotManager;
 class TableSchema;
 
-// Manifest entries scanner for commit operations.
+/// Manifest entries scanner for commit operations.
 class CommitScanner {
  public:
     using ScanSupplier =

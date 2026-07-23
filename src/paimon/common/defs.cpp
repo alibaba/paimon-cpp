@@ -101,6 +101,15 @@ const char Options::MAP_STORAGE_LAYOUT[] = "map.storage-layout";
 const char Options::MAP_SHARED_SHREDDING_MAX_COLUMNS[] = "map.shared-shredding.max-columns";
 const char Options::MAP_SHARED_SHREDDING_COLUMN_PLACEMENT_POLICY[] =
     "map.shared-shredding.column-placement-policy";
+const char Options::VARIANT_SHREDDING_SCHEMA[] = "variant.shreddingSchema";
+const char Options::PARQUET_VARIANT_SHREDDING_SCHEMA[] = "parquet.variant.shreddingSchema";
+const char Options::VARIANT_INFER_SHREDDING_SCHEMA[] = "variant.inferShreddingSchema";
+const char Options::VARIANT_SHREDDING_MAX_SCHEMA_WIDTH[] = "variant.shredding.maxSchemaWidth";
+const char Options::VARIANT_SHREDDING_MAX_SCHEMA_DEPTH[] = "variant.shredding.maxSchemaDepth";
+const char Options::VARIANT_SHREDDING_MIN_FIELD_CARDINALITY_RATIO[] =
+    "variant.shredding.minFieldCardinalityRatio";
+const char Options::VARIANT_SHREDDING_MAX_INFER_BUFFER_ROW[] =
+    "variant.shredding.maxInferBufferRow";
 const char Options::BLOB_AS_DESCRIPTOR[] = "blob-as-descriptor";
 const char Options::BLOB_FIELD[] = "blob-field";
 const char Options::BLOB_DESCRIPTOR_FIELD[] = "blob-descriptor-field";

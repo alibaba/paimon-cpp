@@ -74,7 +74,7 @@ TEST_F(RowIdColumnConflictCheckerTest, TestAllowsDisjointWriteColumns) {
     auto historical = CreateFile("historical", /*first_row_id=*/0, /*row_count=*/10,
                                  /*schema_id=*/0, std::vector<std::string>{"c"});
     ASSERT_OK_AND_ASSIGN(bool conflicts, checker->ConflictsWith(historical));
-    EXPECT_FALSE(conflicts);
+    ASSERT_FALSE(conflicts);
 }
 
 TEST_F(RowIdColumnConflictCheckerTest, TestDetectsSameWriteColumns) {
@@ -85,7 +85,7 @@ TEST_F(RowIdColumnConflictCheckerTest, TestDetectsSameWriteColumns) {
     auto historical = CreateFile("historical", /*first_row_id=*/0, /*row_count=*/10,
                                  /*schema_id=*/0, std::vector<std::string>{"b"});
     ASSERT_OK_AND_ASSIGN(bool conflicts, checker->ConflictsWith(historical));
-    EXPECT_TRUE(conflicts);
+    ASSERT_TRUE(conflicts);
 }
 
 TEST_F(RowIdColumnConflictCheckerTest, TestUsesFieldIdAcrossRename) {
@@ -96,7 +96,7 @@ TEST_F(RowIdColumnConflictCheckerTest, TestUsesFieldIdAcrossRename) {
     auto historical = CreateFile("historical", /*first_row_id=*/0, /*row_count=*/10,
                                  /*schema_id=*/0, std::vector<std::string>{"b"});
     ASSERT_OK_AND_ASSIGN(bool conflicts, checker->ConflictsWith(historical));
-    EXPECT_TRUE(conflicts);
+    ASSERT_TRUE(conflicts);
 }
 
 TEST_F(RowIdColumnConflictCheckerTest, TestTreatsNullWriteColumnsAsFullSchemaWrite) {
@@ -107,7 +107,7 @@ TEST_F(RowIdColumnConflictCheckerTest, TestTreatsNullWriteColumnsAsFullSchemaWri
     auto historical = CreateFile("historical", /*first_row_id=*/0, /*row_count=*/10,
                                  /*schema_id=*/0, std::vector<std::string>{"b"});
     ASSERT_OK_AND_ASSIGN(bool conflicts, checker->ConflictsWith(historical));
-    EXPECT_TRUE(conflicts);
+    ASSERT_TRUE(conflicts);
 }
 
 TEST_F(RowIdColumnConflictCheckerTest, TestMergesOverlappedDeltaRangesAndWriteColumns) {
@@ -123,8 +123,8 @@ TEST_F(RowIdColumnConflictCheckerTest, TestMergesOverlappedDeltaRangesAndWriteCo
                                    /*schema_id=*/0, std::vector<std::string>{"c"});
     ASSERT_OK_AND_ASSIGN(bool conflicts_b, checker->ConflictsWith(historical_b));
     ASSERT_OK_AND_ASSIGN(bool conflicts_c, checker->ConflictsWith(historical_c));
-    EXPECT_TRUE(conflicts_b);
-    EXPECT_TRUE(conflicts_c);
+    ASSERT_TRUE(conflicts_b);
+    ASSERT_TRUE(conflicts_c);
 }
 
 TEST_F(RowIdColumnConflictCheckerTest, TestScansAllOverlappedRangesAfterBinarySearch) {
@@ -137,7 +137,7 @@ TEST_F(RowIdColumnConflictCheckerTest, TestScansAllOverlappedRangesAfterBinarySe
     auto historical = CreateFile("historical", /*first_row_id=*/3, /*row_count=*/10,
                                  /*schema_id=*/0, std::vector<std::string>{"c"});
     ASSERT_OK_AND_ASSIGN(bool conflicts, checker->ConflictsWith(historical));
-    EXPECT_TRUE(conflicts);
+    ASSERT_TRUE(conflicts);
 }
 
 TEST_F(RowIdColumnConflictCheckerTest, TestIgnoreUnknownNonSystemWriteColumn) {
@@ -148,7 +148,7 @@ TEST_F(RowIdColumnConflictCheckerTest, TestIgnoreUnknownNonSystemWriteColumn) {
     auto historical = CreateFile("historical", /*first_row_id=*/0, /*row_count=*/10,
                                  /*schema_id=*/0, std::vector<std::string>{"missing"});
     auto conflicts = checker->ConflictsWith(historical);
-    EXPECT_FALSE(conflicts.ok());
+    ASSERT_FALSE(conflicts.ok());
 }
 
 }  // namespace paimon::test

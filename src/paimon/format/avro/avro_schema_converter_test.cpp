@@ -20,6 +20,7 @@
 #include "avro/Compiler.hh"
 #include "avro/ValidSchema.hh"
 #include "gtest/gtest.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/core/manifest/manifest_file_meta.h"
 #include "paimon/core/utils/versioned_object_serializer.h"
@@ -242,6 +243,13 @@ TEST(AvroSchemaConverterTest, TestAvroSchemaToArrowDataTypeWithTimestampType) {
         arrow::field("ts_nano_tz", arrow::timestamp(arrow::TimeUnit::NANO, timezone), false),
     };
     ASSERT_TRUE(arrow_type->Equals(arrow::struct_(expected_fields))) << arrow_type->ToString();
+}
+
+TEST(AvroSchemaConverterTest, TestVariantNotSupported) {
+    auto arrow_schema =
+        arrow::schema({arrow::field("id", arrow::int32()), VariantTypeUtils::ToArrowField("v")});
+    auto result = AvroSchemaConverter::ArrowSchemaToAvroSchema(arrow_schema);
+    ASSERT_TRUE(result.status().IsNotImplemented()) << result.status().ToString();
 }
 
 }  // namespace paimon::avro::test

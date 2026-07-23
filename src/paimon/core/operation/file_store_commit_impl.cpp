@@ -202,6 +202,172 @@ Status FileStoreCommitImpl::DropPartition(
     return Status::OK();
 }
 
+Status FileStoreCommitImpl::TruncateTable(int64_t commit_identifier) {
+    // An empty partition list means "all partitions", so this overwrites the whole table with
+    // no new files, effectively truncating it. Mirrors Java tryOverwritePartition(null, ...).
+    PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] int32_t attempt,
+                           TryOverwrite(/*partition=*/{}, /*changes=*/{}, /*index_entries=*/{},
+                                        commit_identifier, std::nullopt, /*properties=*/{}));
+    return Status::OK();
+}
+
+Status FileStoreCommitImpl::Abort(
+    const std::vector<std::shared_ptr<CommitMessage>>& commit_messages) {
+    for (const auto& message : commit_messages) {
+        auto* msg = dynamic_cast<CommitMessageImpl*>(message.get());
+        if (msg == nullptr) {
+            return Status::Invalid("fail to cast commit message to impl");
+        }
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<DataFilePathFactory> data_file_path_factory,
+            path_factory_->CreateDataFilePathFactory(msg->Partition(), msg->Bucket()));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::unique_ptr<IndexPathFactory> index_file_path_factory,
+            path_factory_->CreateIndexFileFactory(msg->Partition(), msg->Bucket()));
+
+        const DataIncrement& new_files_increment = msg->GetNewFilesIncrement();
+        const CompactIncrement& compact_increment = msg->GetCompactIncrement();
+
+        std::vector<std::shared_ptr<DataFileMeta>> data_files_to_delete;
+        auto append_data_files =
+            [&data_files_to_delete](const std::vector<std::shared_ptr<DataFileMeta>>& files) {
+                data_files_to_delete.insert(data_files_to_delete.end(), files.begin(), files.end());
+            };
+        append_data_files(new_files_increment.NewFiles());
+        append_data_files(new_files_increment.ChangelogFiles());
+        append_data_files(compact_increment.CompactAfter());
+        append_data_files(compact_increment.ChangelogFiles());
+        for (const auto& file : data_files_to_delete) {
+            // Best-effort cleanup: ignore delete failures, aligning with Java deleteQuietly.
+            [[maybe_unused]] Status status =
+                fs_->Delete(data_file_path_factory->ToPath(file), /*recursive=*/false);
+        }
+
+        std::vector<std::shared_ptr<IndexFileMeta>> index_files_to_delete;
+        auto append_index_files = [&index_files_to_delete](
+                                      const std::vector<std::shared_ptr<IndexFileMeta>>& files) {
+            index_files_to_delete.insert(index_files_to_delete.end(), files.begin(), files.end());
+        };
+        append_index_files(new_files_increment.NewIndexFiles());
+        append_index_files(compact_increment.NewIndexFiles());
+        for (const auto& file : index_files_to_delete) {
+            [[maybe_unused]] Status status =
+                fs_->Delete(index_file_path_factory->ToPath(file), /*recursive=*/false);
+        }
+    }
+    return Status::OK();
+}
+
+Result<std::vector<ManifestEntry>> FileStoreCommitImpl::ReadAddManifestEntries(
+    const Snapshot& snapshot) const {
+    std::vector<ManifestFileMeta> data_manifests;
+    PAIMON_RETURN_NOT_OK(manifest_list_->ReadDataManifests(snapshot, &data_manifests));
+    std::vector<ManifestEntry> unmerged_entries;
+    for (const auto& meta : data_manifests) {
+        std::vector<ManifestEntry> entries;
+        PAIMON_RETURN_NOT_OK(manifest_file_->Read(
+            meta.FileName(), [](const ManifestEntry&) -> Result<bool> { return true; }, &entries));
+        unmerged_entries.insert(unmerged_entries.end(), std::make_move_iterator(entries.begin()),
+                                std::make_move_iterator(entries.end()));
+    }
+    std::vector<ManifestEntry> merged_entries;
+    PAIMON_RETURN_NOT_OK(FileEntry::MergeEntries(unmerged_entries, &merged_entries));
+    std::vector<ManifestEntry> add_entries;
+    for (auto& entry : merged_entries) {
+        if (entry.Kind() == FileKind::Add()) {
+            add_entries.push_back(std::move(entry));
+        }
+    }
+    return add_entries;
+}
+
+Result<bool> FileStoreCommitImpl::RollbackToAsLatest(int64_t target_snapshot_id) {
+    PAIMON_ASSIGN_OR_RAISE(std::optional<Snapshot> latest_opt, snapshot_manager_->LatestSnapshot());
+    if (!latest_opt) {
+        return Status::Invalid("Latest snapshot is null, can not roll back.");
+    }
+    const Snapshot& latest = latest_opt.value();
+    PAIMON_ASSIGN_OR_RAISE(Snapshot target_snapshot,
+                           snapshot_manager_->LoadSnapshot(target_snapshot_id));
+
+    PAIMON_ASSIGN_OR_RAISE(std::vector<ManifestEntry> latest_entries,
+                           ReadAddManifestEntries(latest));
+    PAIMON_ASSIGN_OR_RAISE(std::vector<ManifestEntry> target_entries,
+                           ReadAddManifestEntries(target_snapshot));
+
+    std::unordered_set<FileEntry::Identifier> latest_identifiers;
+    latest_identifiers.reserve(latest_entries.size());
+    for (const auto& entry : latest_entries) {
+        latest_identifiers.insert(entry.CreateIdentifier());
+    }
+    std::unordered_set<FileEntry::Identifier> target_identifiers;
+    target_identifiers.reserve(target_entries.size());
+    for (const auto& entry : target_entries) {
+        target_identifiers.insert(entry.CreateIdentifier());
+    }
+
+    std::vector<ManifestEntry> delta_files;
+    for (const auto& entry : latest_entries) {
+        if (target_identifiers.find(entry.CreateIdentifier()) == target_identifiers.end()) {
+            delta_files.emplace_back(FileKind::Delete(), entry.Partition(), entry.Bucket(),
+                                     entry.TotalBuckets(), entry.File());
+        }
+    }
+    for (const auto& entry : target_entries) {
+        if (latest_identifiers.find(entry.CreateIdentifier()) == latest_identifiers.end()) {
+            delta_files.emplace_back(FileKind::Add(), entry.Partition(), entry.Bucket(),
+                                     entry.TotalBuckets(), entry.File());
+        }
+    }
+
+    std::pair<std::string, int64_t> base_manifest_list;
+    std::pair<std::string, int64_t> delta_manifest_list;
+    PAIMON_ASSIGN_OR_RAISE(std::vector<ManifestFileMeta> base_manifests,
+                           manifest_file_->Write(latest_entries));
+    PAIMON_ASSIGN_OR_RAISE(base_manifest_list, manifest_list_->Write(base_manifests));
+    PAIMON_ASSIGN_OR_RAISE(std::vector<ManifestFileMeta> delta_manifests,
+                           manifest_file_->Write(delta_files));
+    PAIMON_ASSIGN_OR_RAISE(delta_manifest_list, manifest_list_->Write(delta_manifests));
+
+    // For row-tracking tables nextRowId must stay monotonic: a rollback to an older snapshot must
+    // not move it backwards, otherwise new appends would reuse row ids already assigned by the
+    // snapshots between the target and the previous latest, breaking the global uniqueness of
+    // _ROW_ID. Keep the larger of the previous latest and the target nextRowId.
+    std::optional<int64_t> next_row_id = std::max(latest.NextRowId(), target_snapshot.NextRowId());
+
+    int64_t delta_record_count =
+        ManifestEntry::RecordCountAdd(delta_files) - ManifestEntry::RecordCountDelete(delta_files);
+    Snapshot new_snapshot(
+        latest.Id() + 1, target_snapshot.SchemaId(), base_manifest_list.first,
+        base_manifest_list.second, delta_manifest_list.first, delta_manifest_list.second,
+        /*changelog_manifest_list=*/std::nullopt, /*changelog_manifest_list_size=*/std::nullopt,
+        target_snapshot.IndexManifest(), commit_user_,
+        /*commit_identifier=*/std::numeric_limits<int64_t>::max(),
+        Snapshot::CommitKind::Overwrite(), DateTimeUtils::GetCurrentUTCTimeUs() / 1000,
+        target_snapshot.TotalRecordCount(), delta_record_count,
+        /*changelog_record_count=*/std::nullopt, target_snapshot.Watermark(),
+        target_snapshot.Statistics(), target_snapshot.Properties(), next_row_id);
+
+    std::unordered_map<BinaryRow, PartitionEntry> partition_entry_map;
+    PAIMON_RETURN_NOT_OK(PartitionEntry::Merge(delta_files, &partition_entry_map));
+    std::vector<PartitionEntry> delta_statistics;
+    delta_statistics.reserve(partition_entry_map.size());
+    for (const auto& [_, partition_entry] : partition_entry_map) {
+        delta_statistics.push_back(partition_entry);
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(bool success, CommitSnapshotImpl(new_snapshot, delta_statistics));
+    if (success) {
+        PAIMON_LOG_INFO(logger_,
+                        "Successfully rolled back table %s to snapshot %ld as new snapshot %ld by "
+                        "user %s.",
+                        root_path_.c_str(), target_snapshot_id, new_snapshot.Id(),
+                        commit_user_.c_str());
+        last_committed_snapshot_id_ = new_snapshot.Id();
+    }
+    return success;
+}
+
 FileStoreCommit& FileStoreCommitImpl::RowIdCheckConflict(
     std::optional<int64_t> row_id_check_from_snapshot) {
     conflict_detection_.SetRowIdCheckFromSnapshot(row_id_check_from_snapshot);
@@ -726,7 +892,6 @@ Result<int32_t> FileStoreCommitImpl::TryCommit(
     Snapshot::CommitKind commit_kind, bool detect_conflicts) {
     int32_t retry_count = 0;
     int64_t start_millis = DateTimeUtils::GetCurrentUTCTimeUs() / 1000;
-    std::optional<int64_t> retry_start_snapshot_id;
     while (true) {
         PAIMON_ASSIGN_OR_RAISE(std::optional<Snapshot> latest_snapshot,
                                snapshot_manager_->LatestSnapshot());
@@ -736,13 +901,10 @@ Result<int32_t> FileStoreCommitImpl::TryCommit(
             bool commit_success,
             TryCommitOnce(commit_changes->delta_files, commit_changes->changelog_files,
                           commit_changes->index_entries, identifier, watermark, properties,
-                          commit_kind, latest_snapshot, detect_conflicts, retry_start_snapshot_id));
+                          commit_kind, latest_snapshot, detect_conflicts));
         if (commit_success) {
             break;
         }
-        retry_start_snapshot_id = latest_snapshot
-                                      ? std::optional<int64_t>(latest_snapshot.value().Id() + 1)
-                                      : std::optional<int64_t>(Snapshot::FIRST_SNAPSHOT_ID);
         int64_t current_millis = DateTimeUtils::GetCurrentUTCTimeUs() / 1000;
         if (current_millis - start_millis > options_.GetCommitTimeout() ||
             retry_count >= options_.GetCommitMaxRetries()) {
@@ -755,26 +917,6 @@ Result<int32_t> FileStoreCommitImpl::TryCommit(
         retry_count++;
     }
     return retry_count + 1;
-}
-
-Result<bool> FileStoreCommitImpl::CheckCommitted(const std::optional<Snapshot>& latest_snapshot,
-                                                 std::optional<int64_t> retry_start_snapshot_id,
-                                                 int64_t identifier,
-                                                 const Snapshot::CommitKind& commit_kind) const {
-    if (!latest_snapshot || !retry_start_snapshot_id ||
-        retry_start_snapshot_id.value() > latest_snapshot.value().Id()) {
-        return false;
-    }
-
-    for (int64_t snapshot_id = retry_start_snapshot_id.value();
-         snapshot_id <= latest_snapshot.value().Id(); ++snapshot_id) {
-        PAIMON_ASSIGN_OR_RAISE(Snapshot snapshot, snapshot_manager_->LoadSnapshot(snapshot_id));
-        if (snapshot.CommitUser() == commit_user_ && snapshot.CommitIdentifier() == identifier &&
-            snapshot.GetCommitKind() == commit_kind) {
-            return true;
-        }
-    }
-    return false;
 }
 
 Status FileStoreCommitImpl::CheckSameBucketFromSnapshot(
@@ -849,13 +991,7 @@ Result<bool> FileStoreCommitImpl::TryCommitOnce(
     const std::vector<IndexManifestEntry>& index_entries, int64_t identifier,
     std::optional<int64_t> watermark, const std::map<std::string, std::string>& properties,
     Snapshot::CommitKind commit_kind, const std::optional<Snapshot>& latest_snapshot,
-    bool detect_conflicts, std::optional<int64_t> retry_start_snapshot_id) {
-    PAIMON_ASSIGN_OR_RAISE(bool committed, CheckCommitted(latest_snapshot, retry_start_snapshot_id,
-                                                          identifier, commit_kind));
-    if (committed) {
-        return true;
-    }
-
+    bool detect_conflicts) {
     std::vector<ManifestEntry> delta_files = delta_entries;
     int64_t start_millis = DateTimeUtils::GetCurrentUTCTimeUs() / 1000;
 
@@ -1084,11 +1220,21 @@ Result<bool> FileStoreCommitImpl::TryCommitOnce(
 
     Result<bool> commit_result = CommitSnapshotImpl(new_snapshot, delta_statistics);
     if (!commit_result.ok()) {
-        // commit exception is uncertain; retry after checking whether this commit already exists.
-        PAIMON_LOG_WARN(logger_, "Retry commit for exception. %s",
+        // commit exception, not sure about the situation and should not clean up the files.
+        PAIMON_LOG_WARN(logger_,
+                        "You need to call FilterAndCommit to retry commit for exception. %s",
                         commit_result.status().ToString().c_str());
+
+        // To prevent the case where an atomic write times out but actually succeeds,
+        // retrying the commit could lead to the snapshot file being committed multiple times.
+        // Therefore, retries should be handled by the upper layer,
+        // which should call FilterAndCommit to avoid duplicate commits.
+        // Therefore, we should not trigger cleanup here,
+        // as it may delete meta files from a snapshot that was just written by ourselves,
+        // leading to an incomplete or corrupted snapshot.
         guard.Release();
-        return false;
+        return Status::Invalid("You need to call FilterAndCommit to retry commit for exception. ",
+                               commit_result.status().ToString());
     }
     bool commit_success = commit_result.value();
     if (commit_success) {

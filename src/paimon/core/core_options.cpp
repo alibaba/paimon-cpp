@@ -447,6 +447,11 @@ struct CoreOptions::Impl {
     bool row_tracking_enabled = false;
     bool row_tracking_partition_group_on_commit = true;
     bool data_evolution_enabled = false;
+    bool variant_infer_shredding_schema = false;
+    int32_t variant_shredding_max_schema_width = 300;
+    int32_t variant_shredding_max_schema_depth = 50;
+    double variant_shredding_min_field_cardinality_ratio = 0.1;
+    int32_t variant_shredding_max_infer_buffer_row = 4096;
     bool blob_view_resolve_enabled = true;
     bool blob_as_descriptor = false;
     std::optional<bool> blob_split_by_file_size;
@@ -686,7 +691,7 @@ struct CoreOptions::Impl {
             Options::SEQUENCE_FIELD, Options::FIELDS_SEPARATOR, &sequence_field));
         // Parse sequence.field.sort-order - order of sequence field, default "ascending"
         PAIMON_RETURN_NOT_OK(parser.ParseSortOrder(&sequence_field_sort_order));
-        // Parse write-sequence-number-init-mode - sequence init mode for write path
+        // Parse write.sequence-number-init-mode - sequence init mode for write path
         std::string write_sequence_init_mode_str = "scan";
         PAIMON_RETURN_NOT_OK(
             parser.Parse(Options::WRITE_SEQUENCE_NUMBER_INIT_MODE, &write_sequence_init_mode_str));
@@ -846,6 +851,51 @@ struct CoreOptions::Impl {
     }
 
     // Parse lookup configurations: compact mode, bloom filter, remote file, cache, compression.
+    Status ParseVariantOptions(const ConfigParser& parser) {
+        // Parse variant.inferShreddingSchema - infer the shredding schema from sampled rows
+        PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::VARIANT_INFER_SHREDDING_SCHEMA,
+                                                &variant_infer_shredding_schema));
+        // Parse variant.shredding.maxSchemaWidth - max number of shredded fields, default 300
+        PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::VARIANT_SHREDDING_MAX_SCHEMA_WIDTH,
+                                                   &variant_shredding_max_schema_width));
+        // Parse variant.shredding.maxSchemaDepth - max shredded nesting depth, default 50
+        PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::VARIANT_SHREDDING_MAX_SCHEMA_DEPTH,
+                                                   &variant_shredding_max_schema_depth));
+        // Parse variant.shredding.minFieldCardinalityRatio - min occurrence ratio for a field to
+        // be shredded, default 0.1
+        PAIMON_RETURN_NOT_OK(
+            parser.Parse<double>(Options::VARIANT_SHREDDING_MIN_FIELD_CARDINALITY_RATIO,
+                                 &variant_shredding_min_field_cardinality_ratio));
+        // Parse variant.shredding.maxInferBufferRow - rows buffered per file for inference,
+        // default 4096
+        PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::VARIANT_SHREDDING_MAX_INFER_BUFFER_ROW,
+                                                   &variant_shredding_max_infer_buffer_row));
+        if (variant_shredding_max_schema_width <= 0) {
+            return Status::Invalid(fmt::format(
+                "The option '{}' should be positive, while input is {}",
+                Options::VARIANT_SHREDDING_MAX_SCHEMA_WIDTH, variant_shredding_max_schema_width));
+        }
+        if (variant_shredding_max_schema_depth <= 0) {
+            return Status::Invalid(fmt::format(
+                "The option '{}' should be positive, while input is {}",
+                Options::VARIANT_SHREDDING_MAX_SCHEMA_DEPTH, variant_shredding_max_schema_depth));
+        }
+        if (variant_shredding_min_field_cardinality_ratio < 0.0 ||
+            variant_shredding_min_field_cardinality_ratio > 1.0) {
+            return Status::Invalid(
+                fmt::format("The option '{}' should be in the range [0, 1], while input is {}",
+                            Options::VARIANT_SHREDDING_MIN_FIELD_CARDINALITY_RATIO,
+                            variant_shredding_min_field_cardinality_ratio));
+        }
+        if (variant_shredding_max_infer_buffer_row <= 0) {
+            return Status::Invalid(
+                fmt::format("The option '{}' should be positive, while input is {}",
+                            Options::VARIANT_SHREDDING_MAX_INFER_BUFFER_ROW,
+                            variant_shredding_max_infer_buffer_row));
+        }
+        return Status::OK();
+    }
+
     Status ParseLookupOptions(const ConfigParser& parser) {
         // Parse force-lookup - whether to force lookup for compaction, default false
         PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::FORCE_LOOKUP, &force_lookup));
@@ -920,6 +970,7 @@ Result<CoreOptions> CoreOptions::FromMap(
     PAIMON_RETURN_NOT_OK(impl->ParseIndexOptions(parser));
     PAIMON_RETURN_NOT_OK(impl->ParseCompactionOptions(parser));
     PAIMON_RETURN_NOT_OK(impl->ParseLookupOptions(parser));
+    PAIMON_RETURN_NOT_OK(impl->ParseVariantOptions(parser));
     return options;
 }
 
@@ -1272,6 +1323,37 @@ Result<bool> CoreOptions::FieldCollectAggDistinct(const std::string& field_name)
                       std::string(Options::DISTINCT);
     PAIMON_RETURN_NOT_OK(parser.Parse<bool>(key, &distinct));
     return distinct;
+}
+
+std::optional<std::string> CoreOptions::GetVariantShreddingSchema() const {
+    auto it = impl_->raw_options.find(Options::VARIANT_SHREDDING_SCHEMA);
+    if (it == impl_->raw_options.end()) {
+        it = impl_->raw_options.find(Options::PARQUET_VARIANT_SHREDDING_SCHEMA);
+    }
+    if (it == impl_->raw_options.end() || it->second.empty()) {
+        return std::nullopt;
+    }
+    return it->second;
+}
+
+bool CoreOptions::VariantInferShreddingSchemaEnabled() const {
+    return impl_->variant_infer_shredding_schema;
+}
+
+int32_t CoreOptions::GetVariantShreddingMaxSchemaWidth() const {
+    return impl_->variant_shredding_max_schema_width;
+}
+
+int32_t CoreOptions::GetVariantShreddingMaxSchemaDepth() const {
+    return impl_->variant_shredding_max_schema_depth;
+}
+
+double CoreOptions::GetVariantShreddingMinFieldCardinalityRatio() const {
+    return impl_->variant_shredding_min_field_cardinality_ratio;
+}
+
+int32_t CoreOptions::GetVariantShreddingMaxInferBufferRow() const {
+    return impl_->variant_shredding_max_infer_buffer_row;
 }
 
 Result<MapStorageLayout> CoreOptions::GetMapStorageLayout(const std::string& field_name) const {

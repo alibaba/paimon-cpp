@@ -104,16 +104,16 @@ class SingleFileWriter : public FileWriter<T, R> {
         return nullptr;
     }
 
-    Result<bool> ReachTargetSize(bool suggested_check, int64_t target_size);
+    virtual Result<bool> ReachTargetSize(bool suggested_check, int64_t target_size);
 
-    Result<AbortExecutor> GetAbortExecutor() const {
+    virtual Result<AbortExecutor> GetAbortExecutor() const {
         if (closed_ == false) {
             return Status::Invalid("Writer should be closed!");
         }
         return AbortExecutor(fs_, path_);
     }
 
-    std::string GetPath() const {
+    virtual std::string GetPath() const {
         return path_;
     }
 

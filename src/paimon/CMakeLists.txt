@@ -38,6 +38,23 @@ set(PAIMON_COMMON_SRCS
     common/data/serializer/row_compacted_serializer.cpp
     common/data/serializer/binary_serializer_utils.cpp
     common/data/timestamp.cpp
+    common/data/variant/generic_variant.cpp
+    common/data/variant/infer_variant_shredding_schema.cpp
+    common/data/variant/variant.cpp
+    common/data/variant/variant_binary_util.cpp
+    common/data/variant/variant_builder.cpp
+    common/data/variant/variant_get.cpp
+    common/data/variant/variant_json_utils.cpp
+    common/data/variant/variant_path_segment.cpp
+    common/data/variant/variant_reassembler.cpp
+    common/data/variant/variant_shredding_batch_converter.cpp
+    common/data/variant/variant_access_utils.cpp
+    common/data/variant/variant_shredding_read_plan_factory.cpp
+    common/data/variant/variant_shredding_utils.cpp
+    common/data/variant/variant_shredding_write_plan.cpp
+    common/data/variant/variant_shredding_write_plan_factory.cpp
+    common/data/variant/variant_shredding_writer.cpp
+    common/data/variant/variant_type_utils.cpp
     common/defs.cpp
     common/executor/executor.cpp
     common/factories/singleton.cpp
@@ -140,11 +157,14 @@ set(PAIMON_COMMON_SRCS
     common/utils/decimal_utils.cpp
     common/data/shredding/map_shared_shredding_utils.cpp
     common/data/shredding/map_shared_shredding_schema_utils.cpp
+    common/data/shredding/map_shared_shredding_write_plan_factory.cpp
+    common/data/shredding/shredding_write_plan_factories.cpp
     common/data/shredding/map_shared_shredding_context.cpp
     common/data/shredding/map_shared_shredding_batch_converter.cpp
     common/data/shredding/map_shared_shredding_column_allocator.cpp
     common/data/shredding/lru_map_shared_shredding_column_allocator.cpp
     common/data/shredding/map_shared_shredding_file_reader.cpp
+    common/data/shredding/shredding_file_reader.cpp
     common/utils/delta_varint_compressor.cpp
     common/utils/fields_comparator.cpp
     common/utils/path_util.cpp
@@ -392,7 +412,6 @@ add_paimon_lib(paimon
                arrow
                tbb
                glog
-               ${CMAKE_DL_LIBS}
                fmt
                roaring_bitmap
                xxhash
@@ -442,6 +461,14 @@ if(PAIMON_BUILD_TESTS)
                     common/data/blob_descriptor_test.cpp
                     common/data/blob_view_struct_test.cpp
                     common/data/blob_utils_test.cpp
+                    common/data/variant/generic_variant_test.cpp
+                    common/data/variant/infer_variant_shredding_schema_test.cpp
+                    common/data/variant/variant_shredding_write_plan_factory_test.cpp
+                    common/data/variant/variant_get_test.cpp
+                    common/data/variant/variant_json_utils_test.cpp
+                    common/data/variant/variant_shredding_test.cpp
+                    common/data/variant/variant_test.cpp
+                    common/data/variant/variant_type_utils_test.cpp
                     common/executor/default_executor_test.cpp
                     common/format/column_stats_test.cpp
                     common/fs/external_path_provider_test.cpp
@@ -635,6 +662,7 @@ if(PAIMON_BUILD_TESTS)
                     core/index/index_file_meta_serializer_test.cpp
                     core/index/index_file_handler_test.cpp
                     core/io/compact_increment_test.cpp
+                    core/io/infer_shredding_file_writer_test.cpp
                     core/io/concat_key_value_record_reader_test.cpp
                     core/io/data_file_meta_serializer_test.cpp
                     core/io/data_file_path_factory_test.cpp
@@ -720,6 +748,7 @@ if(PAIMON_BUILD_TESTS)
                     core/operation/commit/overwrite_changes_provider_test.cpp
                     core/operation/commit/row_id_column_conflict_checker_test.cpp
                     core/operation/commit/row_tracking_commit_utils_test.cpp
+                    core/operation/commit/sequence_snapshot_properties_test.cpp
                     core/operation/commit/retry_waiter_test.cpp
                     core/operation/key_value_file_store_write_test.cpp
                     core/operation/internal_read_context_test.cpp
@@ -821,9 +850,5 @@ if(PAIMON_BUILD_TESTS)
                     ${GTEST_LINK_TOOLCHAIN}
                     EXTRA_INCLUDES
                     ${JINDOSDK_INCLUDE_DIR})
-
-    if(PAIMON_ENABLE_NETWORK_TESTS)
-        target_compile_definitions(paimon-fs-test PRIVATE PAIMON_ENABLE_NETWORK_TESTS)
-    endif()
 
 endif()

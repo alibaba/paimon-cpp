@@ -18,6 +18,7 @@
 
 #include <fmt/format.h>
 
+#include <atomic>
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -38,6 +39,7 @@
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/format/parquet/file_reader_wrapper.h"
+#include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/row_ranges.h"
 #include "paimon/format/parquet/target_row_group.h"
 #include "paimon/logging.h"
@@ -71,6 +73,7 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
         const std::map<std::string, std::string>& options, int32_t batch_size,
         std::shared_ptr<::parquet::FileMetaData> file_metadata,
+        std::shared_ptr<std::atomic<uint64_t>> storage_read_bytes,
         const std::shared_ptr<arrow::MemoryPool>& pool);
 
     static Result<::parquet::ReaderProperties> CreateReaderProperties(
@@ -130,6 +133,8 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     }
 
     std::shared_ptr<Metrics> GetReaderMetrics() const override {
+        uint64_t storage = storage_read_bytes_ ? storage_read_bytes_->load() : 0;
+        metrics_->SetCounter(ParquetMetrics::READ_STORAGE_BYTES, storage);
         return metrics_;
     }
 
@@ -150,7 +155,8 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     ParquetFileBatchReader(std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
                            std::unique_ptr<FileReaderWrapper>&& reader,
                            const std::map<std::string, std::string>& options,
-                           const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
+                           const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
+                           std::shared_ptr<std::atomic<uint64_t>> storage_read_bytes);
 
     static Result<::parquet::ArrowReaderProperties> CreateArrowReaderProperties(
         const std::shared_ptr<arrow::MemoryPool>& pool,
@@ -251,6 +257,8 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     std::shared_ptr<arrow::DataType> read_data_type_;
 
     std::shared_ptr<Metrics> metrics_;
+    // storageReadBytes counter shared with the underlying ArrowInputStreamAdapter.
+    std::shared_ptr<std::atomic<uint64_t>> storage_read_bytes_;
     std::unique_ptr<Logger> logger_;
 
     uint64_t read_rows_ = 0;

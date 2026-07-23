@@ -43,8 +43,10 @@ class ArrayType : public DataType {
         auto type = arrow::internal::checked_cast<arrow::ListType*>(type_.get());
         auto value_field = type->value_field();
 
+        // The element metadata is load-bearing: it is what marks an extension type such as
+        // VARIANT.
         std::shared_ptr<DataType> data_type =
-            DataType::Create(value_field->type(), value_field->nullable(), /*metadata=*/nullptr);
+            DataType::Create(value_field->type(), value_field->nullable(), value_field->metadata());
         obj.AddMember(rapidjson::StringRef("element"),
                       RapidJsonUtil::SerializeValue(*data_type, allocator).Move(), *allocator);
         return obj;

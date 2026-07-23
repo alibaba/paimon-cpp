@@ -73,9 +73,7 @@ if(PAIMON_ENABLE_JINDO)
     add_definitions(-DPAIMON_ENABLE_JINDO)
 endif()
 if(PAIMON_ENABLE_NETWORK_TESTS)
-    if(NOT PAIMON_BUILD_TESTS)
-        message(FATAL_ERROR "PAIMON_ENABLE_NETWORK_TESTS requires PAIMON_BUILD_TESTS=ON")
-    endif()
+    add_definitions(-DPAIMON_ENABLE_NETWORK_TESTS)
 endif()
 if(PAIMON_USE_CXX11_ABI)
     add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
@@ -313,13 +311,6 @@ if(PAIMON_ENABLE_LANCE)
             DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
 
-if(PAIMON_ENABLE_LUMINA)
-    add_subdirectory(third_party/lumina EXCLUDE_FROM_ALL)
-    link_directories(third_party/lumina/lib)
-    install(FILES ${PROJECT_SOURCE_DIR}/third_party/lumina/lib/liblumina.so
-            DESTINATION ${CMAKE_INSTALL_LIBDIR})
-endif()
-
 # ---- tantivy-fulltext Rust FFI via Corrosion-rs --------------------------------
 # See docs/dev/tantivy_fts_migration_plan.md Stage 1.
 #
@@ -365,10 +356,6 @@ include_directories("${CMAKE_SOURCE_DIR}/third_party/xxhash")
 
 if(PAIMON_ENABLE_LANCE)
     include_directories("${CMAKE_SOURCE_DIR}/third_party/lance")
-endif()
-
-if(PAIMON_ENABLE_LUMINA)
-    include_directories("${CMAKE_SOURCE_DIR}/third_party/lumina/include")
 endif()
 
 include_directories(SYSTEM ${ARROW_INCLUDE_DIR})

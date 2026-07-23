@@ -32,6 +32,7 @@
 #include "paimon/common/utils/binary_row_partition_computer.h"
 #include "paimon/common/utils/fields_comparator.h"
 #include "paimon/common/utils/range_helper.h"
+#include "paimon/common/utils/vector_store_utils.h"
 #include "paimon/core/deletionvectors/deletion_vectors_index_file.h"
 #include "paimon/core/manifest/file_entry.h"
 #include "paimon/core/manifest/file_kind.h"
@@ -55,12 +56,8 @@ namespace paimon {
 
 namespace {
 
-bool IsVectorStoreFile(const std::string& file_name) {
-    return file_name.find(".vector.") != std::string::npos;
-}
-
 bool IsDedicatedStorageFile(const std::string& file_name) {
-    return BlobUtils::IsBlobFile(file_name) || IsVectorStoreFile(file_name);
+    return BlobUtils::IsBlobFile(file_name) || VectorStoreUtils::IsVectorStoreFile(file_name);
 }
 
 struct PartitionBucketKey {

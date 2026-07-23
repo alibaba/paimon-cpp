@@ -89,4 +89,4 @@ Vector Index (Lumina)
 
 An approximate nearest neighbor (ANN) index powered by Lumina for vector similarity search.
 Supports high-dimensional vector search with configurable distance metrics and encoding strategies.
-For more configurations, please refer to the third_party/lumina/reference directory.
+For more configurations, refer to the ``docs/reference`` directory in the Lumina release package.

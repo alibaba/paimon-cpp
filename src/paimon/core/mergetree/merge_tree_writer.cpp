@@ -25,6 +25,7 @@
 #include "arrow/api.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/helpers.h"
+#include "paimon/common/data/shredding/shredding_write_plan_factories.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/arrow/status_utils.h"
@@ -321,11 +322,12 @@ Result<CommitIncrement> MergeTreeWriter::DrainIncrement() {
 std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>
 MergeTreeWriter::CreateRollingRowWriter() const {
     std::shared_ptr<SingleFileWriterFactory<KeyValueBatch, std::shared_ptr<DataFileMeta>>> factory;
-    if (shredding_context_) {
+    if (auto plan_factory = ShreddingWritePlanFactories::SelectActive(options_, write_schema_,
+                                                                      shredding_context_, pool_)) {
         factory = std::make_shared<ShreddingKeyValueDataFileWriterFactory>(
             options_, schema_id_, write_schema_, /*level=*/0, FileSource::Append(),
-            trimmed_primary_keys_, path_factory_, /*create_stats_extractor=*/true,
-            shredding_context_, pool_);
+            trimmed_primary_keys_, path_factory_, /*create_stats_extractor=*/true, plan_factory,
+            pool_);
     } else {
         factory = std::make_shared<KeyValueDataFileWriterFactory>(
             options_, schema_id_, write_schema_, /*level=*/0, FileSource::Append(),
