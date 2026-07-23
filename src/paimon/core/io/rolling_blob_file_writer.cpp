@@ -16,6 +16,7 @@
 
 #include "paimon/core/io/rolling_blob_file_writer.h"
 
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -27,7 +28,6 @@
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
 #include "fmt/format.h"
-#include "fmt/ranges.h"
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/scope_guard.h"
@@ -97,9 +97,6 @@ Status RollingBlobFileWriter::Write(::ArrowArray* record) {
 }
 
 Status RollingBlobFileWriter::CloseCurrentWriter() {
-    if (current_writer_ == nullptr && blob_writer_ == nullptr) {
-        return Status::OK();
-    }
     if (blob_writer_ == nullptr) {
         return Status::OK();
     }
@@ -111,8 +108,7 @@ Status RollingBlobFileWriter::CloseCurrentWriter() {
                            CloseBlobWriter());
 
     if (main_data_file_meta != nullptr) {
-        PAIMON_RETURN_NOT_OK(
-            ValidateFileConsistency(main_data_file_meta, blob_metas, blob_schema_->num_fields()));
+        PAIMON_RETURN_NOT_OK(ValidateFileConsistency(main_data_file_meta, blob_metas));
         results_.push_back(main_data_file_meta);
     }
     results_.insert(results_.end(), blob_metas.begin(), blob_metas.end());
@@ -146,29 +142,25 @@ Result<std::vector<std::shared_ptr<DataFileMeta>>> RollingBlobFileWriter::CloseB
 
 Status RollingBlobFileWriter::ValidateFileConsistency(
     const std::shared_ptr<DataFileMeta>& main_data_file_meta,
-    const std::vector<std::shared_ptr<DataFileMeta>>& blob_tagged_metas, int32_t blob_field_count) {
-    if (blob_tagged_metas.empty()) {
-        return Status::OK();
-    }
-    // With multiple blob fields, each blob field produces its own set of files.
-    // total_blob_row_count should be exactly main_row_count * blob_field_count.
-    int64_t main_row_count = main_data_file_meta->row_count;
-    int64_t expected_blob_row_count = main_row_count * blob_field_count;
-    int64_t total_blob_row_count = 0;
+    const std::vector<std::shared_ptr<DataFileMeta>>& blob_tagged_metas) {
+    std::map<std::string, int64_t> blob_field_row_counts;
     for (const auto& blob_tagged_meta : blob_tagged_metas) {
-        total_blob_row_count += blob_tagged_meta->row_count;
-    }
-    if (total_blob_row_count != expected_blob_row_count) {
-        std::vector<std::string> blob_file_names;
-        for (const auto& blob_tagged_meta : blob_tagged_metas) {
-            blob_file_names.push_back(blob_tagged_meta->file_name);
+        if (!blob_tagged_meta->write_cols || blob_tagged_meta->write_cols->empty()) {
+            return Status::Invalid(
+                fmt::format("This is a bug: Blob file {} must contain a write column.",
+                            blob_tagged_meta->file_name));
         }
-        return Status::Invalid(fmt::format(
-            "This is a bug: The row count of main file and blob files does not match. "
-            "Main file: {} (row count: {}), blob field count: {}, "
-            "expected blob row count: {}, blob files: {} (actual total row count: {})",
-            main_data_file_meta->file_name, main_row_count, blob_field_count,
-            expected_blob_row_count, fmt::join(blob_file_names, ", "), total_blob_row_count));
+        blob_field_row_counts[blob_tagged_meta->write_cols->at(0)] += blob_tagged_meta->row_count;
+    }
+
+    int64_t main_row_count = main_data_file_meta->row_count;
+    for (const auto& [field_name, row_count] : blob_field_row_counts) {
+        if (row_count != main_row_count) {
+            return Status::Invalid(fmt::format(
+                "This is a bug: The row count of main file and blob file does not match. Main "
+                "file: {} (row count: {}), blob field name: {} (row count: {})",
+                main_data_file_meta->file_name, main_row_count, field_name, row_count));
+        }
     }
     return Status::OK();
 }

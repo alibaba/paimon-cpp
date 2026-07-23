@@ -763,6 +763,7 @@ TEST_F(AppendOnlyWriterTest, TestWriteWithOnlyBlobField) {
 
     ASSERT_OK(writer->Write(CreateStructBatch(schema, {blob_array})));
     ASSERT_OK_AND_ASSIGN(CommitIncrement inc, writer->PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_OK(writer->Close());
 
     const auto& new_files = inc.GetNewFilesIncrement().NewFiles();
     ASSERT_EQ(new_files.size(), 1);
@@ -770,9 +771,21 @@ TEST_F(AppendOnlyWriterTest, TestWriteWithOnlyBlobField) {
     ASSERT_EQ(new_files[0]->row_count, 2);
     ASSERT_TRUE(new_files[0]->write_cols.has_value());
     ASSERT_EQ(new_files[0]->write_cols.value(), std::vector<std::string>({"blob"}));
-    ASSERT_TRUE(
-        options.GetFileSystem()->Exists(path_factory->ToPath(new_files[0]->file_name)).value());
-    ASSERT_OK(writer->Close());
+    std::string blob_file_path = path_factory->ToPath(new_files[0]->file_name);
+    ASSERT_TRUE(options.GetFileSystem()->Exists(blob_file_path).value());
+
+    auto blob_reader = OpenFormatReader(blob_file_path, "blob");
+    ::ArrowSchema c_blob_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*schema, &c_blob_schema).ok());
+    ASSERT_OK(blob_reader->SetReadSchema(&c_blob_schema, /*predicate=*/nullptr,
+                                         /*selection_bitmap=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(auto actual_array, ReadResultCollector::CollectResult(blob_reader.get()));
+    auto expected_struct_array =
+        arrow::StructArray::Make({blob_array}, {blob_field->name()}).ValueOrDie();
+    auto expected_array = std::make_shared<arrow::ChunkedArray>(expected_struct_array);
+    ASSERT_TRUE(expected_array->Equals(actual_array)) << "Expected:\n"
+                                                      << expected_array->ToString() << "\nActual:\n"
+                                                      << actual_array->ToString();
 }
 
 TEST_F(AppendOnlyWriterTest, TestWriteWithMultipleBlobFields) {

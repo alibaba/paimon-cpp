@@ -77,8 +77,7 @@ class RollingBlobFileWriter
  private:
     static Status ValidateFileConsistency(
         const std::shared_ptr<DataFileMeta>& main_data_file_meta,
-        const std::vector<std::shared_ptr<DataFileMeta>>& blob_tagged_metas,
-        int32_t blob_field_count);
+        const std::vector<std::shared_ptr<DataFileMeta>>& blob_tagged_metas);
 
     Status CloseCurrentWriter();
 
