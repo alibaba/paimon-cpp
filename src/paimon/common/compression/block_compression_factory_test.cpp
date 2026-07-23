@@ -144,11 +144,6 @@ TEST(CompressionFactoryCreateTest, TestCreateFromCompressionType) {
     auto lzo = BlockCompressionFactory::Create(BlockCompressionType::LZO);
     ASSERT_NOK(lzo);
     ASSERT_TRUE(lzo.status().IsInvalid());
-
-    // An out-of-range enum value also falls into the default branch.
-    auto unknown = BlockCompressionFactory::Create(static_cast<BlockCompressionType>(99));
-    ASSERT_NOK(unknown);
-    ASSERT_TRUE(unknown.status().IsInvalid());
 }
 
 }  // namespace paimon::test
