@@ -74,6 +74,10 @@ struct PAIMON_EXPORT VectorSearch {
     /// context-aware filtering at query time.
     /// @note All fields referenced in the predicate must have been materialized
     ///       in the index during build to ensure availability.
+    /// @note For tag-based vector indexes, fields referenced by the predicate
+    ///       must keep the same names and types as the fields used during index
+    ///       construction. Indexes built with tag fields must not be reused across
+    ///       schema evolution that renames or changes those tag fields.
     std::shared_ptr<Predicate> predicate;
     /// The distance metric to use for this query, if explicitly specified.
     /// If set, this value must match the distance type used by the index (e.g., EUCLIDEAN, COSINE).

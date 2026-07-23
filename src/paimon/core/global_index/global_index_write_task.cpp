@@ -16,11 +16,18 @@
 
 #include "paimon/global_index/global_index_write_task.h"
 
+#include <set>
+
+#include "arrow/array/array_nested.h"
 #include "arrow/c/bridge.h"
+#include "arrow/c/helpers.h"
+#include "arrow/type.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/scope_guard.h"
+#include "paimon/core/casting/casting_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/global_index/global_index_file_manager.h"
 #include "paimon/core/io/data_increment.h"
@@ -35,6 +42,17 @@
 #include "paimon/table/source/table_read.h"
 namespace paimon {
 namespace {
+Result<std::unique_ptr<GlobalIndexer>> CreateGlobalIndexer(const std::string& index_type,
+                                                           const CoreOptions& core_options) {
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<GlobalIndexer> indexer,
+                           GlobalIndexerFactory::Get(index_type, core_options.ToMap()));
+    if (!indexer) {
+        return Status::Invalid(
+            fmt::format("Unknown index type {}, may not registered", index_type));
+    }
+    return indexer;
+}
+
 Result<std::shared_ptr<GlobalIndexFileManager>> CreateGlobalIndexFileManager(
     const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
     const CoreOptions& core_options, const std::shared_ptr<MemoryPool>& pool) {
@@ -58,25 +76,81 @@ Result<std::shared_ptr<GlobalIndexFileManager>> CreateGlobalIndexFileManager(
 }
 
 Result<std::shared_ptr<GlobalIndexWriter>> CreateGlobalIndexWriter(
-    const std::string& index_type, const DataField& field,
+    const GlobalIndexer& indexer, const DataField& field,
+    const std::vector<DataField>& extra_fields,
     const std::shared_ptr<GlobalIndexFileManager>& index_file_manager,
-    const CoreOptions& core_options, const std::shared_ptr<MemoryPool>& pool) {
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<GlobalIndexer> indexer,
-                           GlobalIndexerFactory::Get(index_type, core_options.ToMap()));
-    if (!indexer) {
-        return Status::Invalid(
-            fmt::format("Unknown index type {}, may not registered", index_type));
+    const std::shared_ptr<MemoryPool>& pool) {
+    arrow::FieldVector arrow_fields;
+    arrow_fields.reserve(extra_fields.size() + 1);
+    arrow_fields.push_back(DataField::ConvertDataFieldToArrowField(field));
+    for (const auto& extra_field : extra_fields) {
+        arrow_fields.push_back(DataField::ConvertDataFieldToArrowField(extra_field));
     }
-    // TODO(xinyu.lxy): may add additional fields to read for index write
-    auto arrow_field = DataField::ConvertDataFieldToArrowField(field);
-    auto arrow_schema = arrow::schema({arrow_field});
+    auto arrow_schema = arrow::schema(arrow_fields);
     ArrowSchema c_arrow_schema;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*arrow_schema, &c_arrow_schema));
-    return indexer->CreateWriter(field.Name(), &c_arrow_schema, index_file_manager, pool);
+    ScopeGuard guard([&]() { ArrowSchemaRelease(&c_arrow_schema); });
+    return indexer.CreateWriter(field.Name(), &c_arrow_schema, index_file_manager, pool);
+}
+
+Result<std::vector<DataField>> GetExtraFields(const TableSchema& table_schema,
+                                              const std::string& field_name,
+                                              const std::vector<std::string>& extra_field_names) {
+    std::vector<DataField> extra_fields;
+    extra_fields.reserve(extra_field_names.size());
+    std::set<std::string> dedup_field_names;
+    for (const auto& extra_field_name : extra_field_names) {
+        if (extra_field_name == field_name) {
+            return Status::Invalid(fmt::format(
+                "global index extra field {} must not be the indexed field", extra_field_name));
+        }
+        if (!dedup_field_names.insert(extra_field_name).second) {
+            return Status::Invalid(fmt::format("global index extra field {} must not be duplicated",
+                                               extra_field_name));
+        }
+        PAIMON_ASSIGN_OR_RAISE(DataField extra_field, table_schema.GetField(extra_field_name));
+        extra_fields.push_back(extra_field);
+    }
+    return extra_fields;
+}
+
+std::vector<std::string> BuildReadFieldNames(const std::string& field_name,
+                                             const std::vector<DataField>& extra_fields) {
+    std::vector<std::string> read_field_names;
+    read_field_names.reserve(extra_fields.size() + 2);
+    read_field_names.push_back(field_name);
+    for (const auto& extra_field : extra_fields) {
+        read_field_names.push_back(extra_field.Name());
+    }
+    read_field_names.push_back(SpecialFields::RowId().Name());
+    return read_field_names;
+}
+
+std::vector<std::string> BuildWriterFieldNames(const std::string& field_name,
+                                               const std::vector<DataField>& extra_fields) {
+    std::vector<std::string> writer_field_names;
+    writer_field_names.reserve(extra_fields.size() + 1);
+    writer_field_names.push_back(field_name);
+    for (const auto& extra_field : extra_fields) {
+        writer_field_names.push_back(extra_field.Name());
+    }
+    return writer_field_names;
+}
+
+std::optional<std::vector<int32_t>> GetExtraFieldIds(const std::vector<DataField>& extra_fields) {
+    if (extra_fields.empty()) {
+        return std::nullopt;
+    }
+    std::vector<int32_t> extra_field_ids;
+    extra_field_ids.reserve(extra_fields.size());
+    for (const auto& extra_field : extra_fields) {
+        extra_field_ids.push_back(extra_field.Id());
+    }
+    return extra_field_ids;
 }
 
 Result<std::unique_ptr<BatchReader>> CreateBatchReader(
-    const std::string& table_path, const std::string& field_name,
+    const std::string& table_path, const std::vector<std::string>& read_field_names,
     const std::shared_ptr<IndexedSplit>& indexed_split, const CoreOptions& core_options,
     const std::shared_ptr<MemoryPool>& pool) {
     ReadContextBuilder read_context_builder(table_path);
@@ -84,7 +158,7 @@ Result<std::unique_ptr<BatchReader>> CreateBatchReader(
         .WithFileSystem(core_options.GetFileSystem())
         .EnablePrefetch(true)
         .WithMemoryPool(pool)
-        .SetReadFieldNames({field_name, SpecialFields::RowId().Name()});
+        .SetReadFieldNames(read_field_names);
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
                            read_context_builder.Finish());
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> table_read,
@@ -92,9 +166,99 @@ Result<std::unique_ptr<BatchReader>> CreateBatchReader(
     return table_read->CreateReader(indexed_split);
 }
 
-Result<std::vector<GlobalIndexIOMeta>> BuildIndex(const std::string& field_name, const Range& range,
-                                                  BatchReader* batch_reader,
-                                                  GlobalIndexWriter* global_index_writer) {
+Result<std::shared_ptr<arrow::Array>> CastDictionaryArrayToString(
+    const std::shared_ptr<arrow::Array>& array, arrow::MemoryPool* pool) {
+    arrow::Type::type type_id = array->type_id();
+    if (type_id == arrow::Type::DICTIONARY) {
+        const auto* dictionary_type =
+            static_cast<const arrow::DictionaryType*>(array->type().get());
+        arrow::Type::type value_type = dictionary_type->value_type()->id();
+        if (value_type != arrow::Type::STRING && value_type != arrow::Type::LARGE_STRING) {
+            return Status::Invalid(fmt::format(
+                "GlobalIndexWriteTask cannot decode dictionary array with value type {}",
+                dictionary_type->value_type()->ToString()));
+        }
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<arrow::Array> casted_array,
+            CastingUtils::Cast(array, arrow::utf8(), arrow::compute::CastOptions::Safe(), pool));
+        return casted_array;
+    }
+    if (type_id != arrow::Type::STRUCT && type_id != arrow::Type::MAP &&
+        type_id != arrow::Type::LIST) {
+        return array;
+    }
+
+    if (type_id == arrow::Type::STRUCT) {
+        std::shared_ptr<arrow::StructArray> struct_array =
+            std::static_pointer_cast<arrow::StructArray>(array);
+        arrow::ArrayVector children;
+        for (int32_t i = 0; i < struct_array->num_fields(); i++) {
+            std::shared_ptr<arrow::Array> child = struct_array->field(i);
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> casted_child,
+                                   CastDictionaryArrayToString(child, pool));
+            if (casted_child != child && children.empty()) {
+                children = struct_array->fields();
+            }
+            if (!children.empty()) {
+                children[i] = std::move(casted_child);
+            }
+        }
+        if (children.empty()) {
+            return array;
+        }
+        std::vector<std::string> field_names;
+        field_names.reserve(struct_array->num_fields());
+        for (int32_t i = 0; i < struct_array->num_fields(); i++) {
+            field_names.push_back(struct_array->struct_type()->field(i)->name());
+        }
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+            std::shared_ptr<arrow::StructArray> casted_array,
+            arrow::StructArray::Make(children, field_names, struct_array->null_bitmap(),
+                                     struct_array->null_count(), struct_array->offset()));
+        return casted_array;
+    }
+
+    if (type_id == arrow::Type::MAP) {
+        std::shared_ptr<arrow::MapArray> map_array =
+            std::static_pointer_cast<arrow::MapArray>(array);
+        std::shared_ptr<arrow::Array> original_keys = map_array->keys();
+        std::shared_ptr<arrow::Array> original_items = map_array->items();
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> keys,
+                               CastDictionaryArrayToString(original_keys, pool));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> items,
+                               CastDictionaryArrayToString(original_items, pool));
+        if (keys == original_keys && items == original_items) {
+            return array;
+        }
+        const auto* map_type = static_cast<const arrow::MapType*>(map_array->type().get());
+        std::shared_ptr<arrow::MapType> casted_type = std::make_shared<arrow::MapType>(
+            map_type->key_field()->WithType(keys->type()),
+            map_type->item_field()->WithType(items->type()), map_type->keys_sorted());
+        return std::make_shared<arrow::MapArray>(
+            casted_type, map_array->length(), map_array->value_offsets(), keys, items,
+            map_array->null_bitmap(), map_array->null_count(), map_array->offset());
+    }
+
+    std::shared_ptr<arrow::ListArray> list_array =
+        std::static_pointer_cast<arrow::ListArray>(array);
+    std::shared_ptr<arrow::Array> original_values = list_array->values();
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> values,
+                           CastDictionaryArrayToString(original_values, pool));
+    if (values == original_values) {
+        return array;
+    }
+    const auto* list_type = static_cast<const arrow::ListType*>(list_array->type().get());
+    std::shared_ptr<arrow::DataType> casted_type =
+        arrow::list(list_type->value_field()->WithType(values->type()));
+    return std::make_shared<arrow::ListArray>(
+        casted_type, list_array->length(), list_array->value_offsets(), values,
+        list_array->null_bitmap(), list_array->null_count(), list_array->offset());
+}
+
+Result<std::vector<GlobalIndexIOMeta>> BuildIndex(
+    const std::string& field_name, const Range& range,
+    const std::vector<std::string>& writer_field_names, BatchReader* batch_reader,
+    GlobalIndexWriter* global_index_writer, arrow::MemoryPool* arrow_pool) {
     while (true) {
         PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatch read_batch, batch_reader->NextBatch());
         if (BatchReader::IsEofBatch(read_batch)) {
@@ -107,11 +271,6 @@ Result<std::vector<GlobalIndexIOMeta>> BuildIndex(const std::string& field_name,
         if (!struct_array) {
             return Status::Invalid(
                 "array read from batch reader is not a struct array in GlobalIndexWriteTask");
-        }
-        auto indexed_array = struct_array->GetFieldByName(field_name);
-        if (!indexed_array) {
-            return Status::Invalid(fmt::format(
-                "read array does not contain {} field in GlobalIndexWriteTask", field_name));
         }
         auto row_id_array = struct_array->GetFieldByName(SpecialFields::RowId().Name());
         auto typed_row_id_array = std::dynamic_pointer_cast<arrow::Int64Array>(row_id_array);
@@ -131,8 +290,22 @@ Result<std::vector<GlobalIndexIOMeta>> BuildIndex(const std::string& field_name,
             }
             relative_row_ids.push_back(row_id - range.from);
         }
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::StructArray> new_array,
-                                          arrow::StructArray::Make({indexed_array}, {field_name}));
+        std::vector<std::shared_ptr<arrow::Array>> writer_arrays;
+        writer_arrays.reserve(writer_field_names.size());
+        for (const auto& writer_field_name : writer_field_names) {
+            auto writer_array = struct_array->GetFieldByName(writer_field_name);
+            if (!writer_array) {
+                return Status::Invalid(
+                    fmt::format("read array does not contain {} field in GlobalIndexWriteTask",
+                                writer_field_name));
+            }
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> decoded_writer_array,
+                                   CastDictionaryArrayToString(writer_array, arrow_pool));
+            writer_arrays.push_back(std::move(decoded_writer_array));
+        }
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+            std::shared_ptr<arrow::StructArray> new_array,
+            arrow::StructArray::Make(writer_arrays, writer_field_names));
         ::ArrowArray c_new_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*new_array, &c_new_array));
         PAIMON_RETURN_NOT_OK(
@@ -144,7 +317,8 @@ Result<std::vector<GlobalIndexIOMeta>> BuildIndex(const std::string& field_name,
 Result<std::shared_ptr<CommitMessage>> ToCommitMessage(
     const std::string& index_type, int32_t field_id, const Range& range,
     const std::vector<GlobalIndexIOMeta>& global_index_io_metas, const BinaryRow& partition,
-    int32_t bucket, const std::shared_ptr<GlobalIndexFileManager>& file_manager) {
+    int32_t bucket, const std::shared_ptr<GlobalIndexFileManager>& file_manager,
+    const std::optional<std::vector<int32_t>>& extra_field_ids) {
     std::vector<std::shared_ptr<IndexFileMeta>> index_file_metas;
     index_file_metas.reserve(global_index_io_metas.size());
     bool is_external_path = file_manager->IsExternalPath();
@@ -157,8 +331,7 @@ Result<std::shared_ptr<CommitMessage>> ToCommitMessage(
         index_file_metas.push_back(std::make_shared<IndexFileMeta>(
             index_type, PathUtil::GetName(io_meta.file_path), io_meta.file_size, range.Count(),
             /*dv_ranges=*/std::nullopt, external_path,
-            GlobalIndexMeta(range.from, range.to, field_id,
-                            /*extra_field_ids=*/std::nullopt, io_meta.metadata)));
+            GlobalIndexMeta(range.from, range.to, field_id, extra_field_ids, io_meta.metadata)));
     }
     DataIncrement data_increment(std::move(index_file_metas));
     return std::make_shared<CommitMessageImpl>(partition, bucket,
@@ -182,6 +355,7 @@ Result<std::shared_ptr<CommitMessage>> GlobalIndexWriteTask::WriteIndex(
     }
     const auto& range = ranges[0];
     std::shared_ptr<MemoryPool> pool = memory_pool ? memory_pool : GetDefaultPool();
+    std::unique_ptr<arrow::MemoryPool> arrow_pool = GetArrowPool(pool);
 
     // load schema
     PAIMON_ASSIGN_OR_RAISE(CoreOptions tmp_options, CoreOptions::FromMap(options, file_system));
@@ -199,6 +373,17 @@ Result<std::shared_ptr<CommitMessage>> GlobalIndexWriteTask::WriteIndex(
     }
     PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options,
                            CoreOptions::FromMap(final_options, file_system));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<GlobalIndexer> indexer,
+                           CreateGlobalIndexer(index_type, core_options));
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::vector<std::string>> extra_field_names,
+                           indexer->GetExtraFieldNames());
+    PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema->GetField(field_name));
+    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> extra_fields,
+                           GetExtraFields(*table_schema, field_name,
+                                          extra_field_names.value_or(std::vector<std::string>())));
+    std::optional<std::vector<int32_t>> extra_field_ids = GetExtraFieldIds(extra_fields);
+    std::vector<std::string> writer_field_names = BuildWriterFieldNames(field_name, extra_fields);
+    std::vector<std::string> read_field_names = BuildReadFieldNames(field_name, extra_fields);
 
     // create index file manager
     PAIMON_ASSIGN_OR_RAISE(
@@ -208,13 +393,12 @@ Result<std::shared_ptr<CommitMessage>> GlobalIndexWriteTask::WriteIndex(
     // create batch reader
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<BatchReader> batch_reader,
-        CreateBatchReader(table_path, field_name, indexed_split, core_options, pool));
+        CreateBatchReader(table_path, read_field_names, indexed_split, core_options, pool));
 
     // create global index writer
-    PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema->GetField(field_name));
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<GlobalIndexWriter> global_index_writer,
-        CreateGlobalIndexWriter(index_type, field, index_file_manager, core_options, pool));
+        CreateGlobalIndexWriter(*indexer, field, extra_fields, index_file_manager, pool));
 
     ScopeGuard guard([&]() {
         global_index_writer.reset();
@@ -222,13 +406,14 @@ Result<std::shared_ptr<CommitMessage>> GlobalIndexWriteTask::WriteIndex(
     });
 
     // read from data split and write to index writer
-    PAIMON_ASSIGN_OR_RAISE(
-        std::vector<GlobalIndexIOMeta> global_index_io_metas,
-        BuildIndex(field_name, range, batch_reader.get(), global_index_writer.get()));
+    PAIMON_ASSIGN_OR_RAISE(std::vector<GlobalIndexIOMeta> global_index_io_metas,
+                           BuildIndex(field_name, range, writer_field_names, batch_reader.get(),
+                                      global_index_writer.get(), arrow_pool.get()));
 
     // generate commit message
     return ToCommitMessage(index_type, field.Id(), range, global_index_io_metas,
-                           data_split->Partition(), data_split->Bucket(), index_file_manager);
+                           data_split->Partition(), data_split->Bucket(), index_file_manager,
+                           extra_field_ids);
 }
 
 }  // namespace paimon

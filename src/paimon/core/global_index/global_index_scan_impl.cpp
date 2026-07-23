@@ -20,6 +20,7 @@
 #include <utility>
 
 #include "arrow/c/bridge.h"
+#include "arrow/c/helpers.h"
 #include "paimon/common/global_index/offset_global_index_reader.h"
 #include "paimon/common/global_index/union_global_index_reader.h"
 #include "paimon/common/utils/scope_guard.h"
@@ -185,7 +186,6 @@ Result<std::vector<std::shared_ptr<GlobalIndexReader>>> GlobalIndexScanImpl::Cre
             if (row_range_index && !row_range_index->Intersects(range.from, range.to)) {
                 continue;
             }
-            // TODO(xinyu.lxy): c_arrow_schema may contains additional associated fields.
             auto arrow_field = DataField::ConvertDataFieldToArrowField(field);
             auto arrow_schema = arrow::schema({arrow_field});
 

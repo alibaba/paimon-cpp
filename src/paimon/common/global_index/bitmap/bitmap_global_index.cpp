@@ -19,6 +19,10 @@
 #include "paimon/common/global_index/wrap/file_index_writer_wrapper.h"
 
 namespace paimon {
+Result<std::optional<std::vector<std::string>>> BitmapGlobalIndex::GetExtraFieldNames() const {
+    return std::optional<std::vector<std::string>>(std::nullopt);
+}
+
 Result<std::shared_ptr<GlobalIndexWriter>> BitmapGlobalIndex::CreateWriter(
     const std::string& field_name, ::ArrowSchema* arrow_schema,
     const std::shared_ptr<GlobalIndexFileWriter>& file_writer,

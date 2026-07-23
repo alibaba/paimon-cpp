@@ -18,6 +18,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -33,6 +34,8 @@ namespace paimon::tantivy {
 class TantivyGlobalIndex : public GlobalIndexer {
  public:
     explicit TantivyGlobalIndex(const std::map<std::string, std::string>& options);
+
+    Result<std::optional<std::vector<std::string>>> GetExtraFieldNames() const override;
 
     Result<std::shared_ptr<GlobalIndexWriter>> CreateWriter(
         const std::string& field_name, ::ArrowSchema* arrow_schema,
