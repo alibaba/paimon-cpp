@@ -16,6 +16,7 @@
 
 #include "paimon/common/data/variant/variant_get.h"
 
+#include <functional>
 #include <string>
 
 #include "arrow/api.h"
@@ -74,6 +75,18 @@ class VariantGetTest : public ::testing::Test {
         const std::string& path, const std::shared_ptr<arrow::Field>& target_field) {
         return VariantGetExecutor::GetAsArrow(variant_, path, target_field, cast_args_, pool_,
                                               arrow_pool_);
+    }
+
+    // Builds a single-scalar variant using the direct append API, which can encode types that
+    // JSON parsing never produces (uuid/date/float/binary/timestamp).
+    std::shared_ptr<GenericVariant> BuildScalar(
+        const std::function<Status(VariantBuilder&)>& append) {
+        VariantBuilder builder(/*allow_duplicate_keys=*/false);
+        Status st = append(builder);
+        EXPECT_TRUE(st.ok()) << st.ToString();
+        auto result = builder.Build(pool_);
+        EXPECT_TRUE(result.ok()) << result.status().ToString();
+        return result.value();
     }
 
  protected:
@@ -330,6 +343,123 @@ TEST_F(VariantGetTest, NestedTargetNullSemantics) {
     cast_args_.fail_on_error = true;
     ASSERT_OK_AND_ASSIGN(array, GetAsArrow("$.nullField", target));
     ASSERT_TRUE(array->IsNull(0));
+}
+
+TEST_F(VariantGetTest, UuidSourceCastsToStringOnly) {
+    std::string uuid_bytes(16, '\0');
+    for (int i = 0; i < 16; ++i) {
+        uuid_bytes[i] = static_cast<char>(i);
+    }
+    std::shared_ptr<GenericVariant> variant =
+        BuildScalar([&](VariantBuilder& b) { return b.AppendUuid(uuid_bytes); });
+    // A UUID has no Paimon type, so it can only be rendered as its canonical string.
+    ASSERT_OK_AND_ASSIGN(std::optional<Literal> as_string,
+                         VariantGetExecutor::Get(variant, "$", arrow::utf8(), cast_args_));
+    ASSERT_TRUE(as_string.has_value());
+    ASSERT_EQ(as_string->GetValue<std::string>(), "00010203-0405-0607-0809-0a0b0c0d0e0f");
+    // Any non-string target is an invalid cast, which is SQL NULL when fail_on_error is false.
+    ASSERT_OK_AND_ASSIGN(std::optional<Literal> as_long,
+                         VariantGetExecutor::Get(variant, "$", arrow::int64(), cast_args_));
+    ASSERT_FALSE(as_long.has_value());
+    cast_args_.fail_on_error = true;
+    ASSERT_NOK(VariantGetExecutor::Get(variant, "$", arrow::int64(), cast_args_));
+}
+
+TEST_F(VariantGetTest, FloatingPointToStringMatchesJava) {
+    // Doubles and floats are stringified via the Java formatting, not the arrow cast.
+    ASSERT_EQ(GetString("$.double", arrow::utf8()), "1.0123456789012346");
+    std::shared_ptr<GenericVariant> f =
+        BuildScalar([](VariantBuilder& b) { return b.AppendFloat(1.5f); });
+    ASSERT_OK_AND_ASSIGN(std::optional<Literal> as_string,
+                         VariantGetExecutor::Get(f, "$", arrow::utf8(), cast_args_));
+    ASSERT_TRUE(as_string.has_value());
+    ASSERT_EQ(as_string->GetValue<std::string>(), "1.5");
+    ASSERT_OK_AND_ASSIGN(std::optional<Literal> as_float,
+                         VariantGetExecutor::Get(f, "$", arrow::float32(), cast_args_));
+    ASSERT_TRUE(as_float.has_value());
+    ASSERT_EQ(as_float->GetValue<float>(), 1.5f);
+}
+
+TEST_F(VariantGetTest, DateSource) {
+    std::shared_ptr<GenericVariant> d =
+        BuildScalar([](VariantBuilder& b) { return b.AppendDate(19000); });
+    ASSERT_OK_AND_ASSIGN(std::optional<Literal> as_date,
+                         VariantGetExecutor::Get(d, "$", arrow::date32(), cast_args_));
+    ASSERT_TRUE(as_date.has_value());
+    ASSERT_EQ(as_date->GetValue<int32_t>(), 19000);
+}
+
+TEST_F(VariantGetTest, MissingCastExecutorYieldsNull) {
+    // No binary->int64 cast executor exists, so the cast is treated as invalid (SQL NULL).
+    std::shared_ptr<GenericVariant> bin = BuildScalar(
+        [](VariantBuilder& b) { return b.AppendBinary(std::string_view("\x01\x02", 2)); });
+    ASSERT_OK_AND_ASSIGN(std::optional<Literal> as_long,
+                         VariantGetExecutor::Get(bin, "$", arrow::int64(), cast_args_));
+    ASSERT_FALSE(as_long.has_value());
+}
+
+TEST_F(VariantGetTest, ScalarArrowBuilders) {
+    auto build_array = [&](const std::shared_ptr<GenericVariant>& variant, const std::string& path,
+                           const std::shared_ptr<arrow::DataType>& type) {
+        auto result = VariantGetExecutor::GetAsArrow(variant, path, arrow::field("x", type),
+                                                     cast_args_, pool_, arrow_pool_);
+        EXPECT_TRUE(result.ok()) << result.status().ToString();
+        return result.value();
+    };
+
+    std::shared_ptr<arrow::Array> boolean = build_array(variant_, "$.boolean1", arrow::boolean());
+    ASSERT_TRUE(static_cast<const arrow::BooleanArray&>(*boolean).Value(0));
+
+    // INT8/INT16/INT32 each require a narrowing cast from the int64 source.
+    std::shared_ptr<arrow::Array> int8 = build_array(variant_, "$.object.age", arrow::int8());
+    ASSERT_EQ(static_cast<const arrow::Int8Array&>(*int8).Value(0), 2);
+    std::shared_ptr<arrow::Array> int16 = build_array(variant_, "$.object.age", arrow::int16());
+    ASSERT_EQ(static_cast<const arrow::Int16Array&>(*int16).Value(0), 2);
+    std::shared_ptr<arrow::Array> int32 = build_array(variant_, "$.object.age", arrow::int32());
+    ASSERT_EQ(static_cast<const arrow::Int32Array&>(*int32).Value(0), 2);
+
+    std::shared_ptr<arrow::Array> float64 = build_array(variant_, "$.double", arrow::float64());
+    ASSERT_DOUBLE_EQ(static_cast<const arrow::DoubleArray&>(*float64).Value(0), 1.0123456789012346);
+
+    std::shared_ptr<GenericVariant> f =
+        BuildScalar([](VariantBuilder& b) { return b.AppendFloat(1.5f); });
+    std::shared_ptr<arrow::Array> float32 = build_array(f, "$", arrow::float32());
+    ASSERT_EQ(static_cast<const arrow::FloatArray&>(*float32).Value(0), 1.5f);
+
+    std::shared_ptr<arrow::Array> decimal =
+        build_array(variant_, "$.decimal", arrow::decimal128(5, 2));
+    ASSERT_EQ(static_cast<const arrow::Decimal128Array&>(*decimal).FormatValue(0), "100.99");
+
+    std::shared_ptr<GenericVariant> bin = BuildScalar(
+        [](VariantBuilder& b) { return b.AppendBinary(std::string_view("\x01\x02\x03", 3)); });
+    std::shared_ptr<arrow::Array> binary = build_array(bin, "$", arrow::binary());
+    ASSERT_EQ(static_cast<const arrow::BinaryArray&>(*binary).GetView(0),
+              std::string_view("\x01\x02\x03", 3));
+
+    std::shared_ptr<GenericVariant> d =
+        BuildScalar([](VariantBuilder& b) { return b.AppendDate(19000); });
+    std::shared_ptr<arrow::Array> date = build_array(d, "$", arrow::date32());
+    ASSERT_EQ(static_cast<const arrow::Date32Array&>(*date).Value(0), 19000);
+
+    // Only the microsecond unit matches the variant's internal timestamp representation; other
+    // units require a timestamp->timestamp literal cast that is intentionally unsupported.
+    std::shared_ptr<GenericVariant> ts =
+        BuildScalar([](VariantBuilder& b) { return b.AppendTimestamp(1700000000123456); });
+    std::shared_ptr<arrow::Array> timestamp =
+        build_array(ts, "$", arrow::timestamp(arrow::TimeUnit::MICRO, "UTC"));
+    ASSERT_EQ(static_cast<const arrow::TimestampArray&>(*timestamp).Value(0), 1700000000123456);
+}
+
+TEST_F(VariantGetTest, ListFromNonArrayIsNull) {
+    auto target = arrow::field("l", arrow::list(arrow::int64()));
+    // An object cannot cast to a list: SQL NULL when fail_on_error is false ...
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Array> array, GetAsArrow("$.object", target));
+    ASSERT_TRUE(array->IsNull(0));
+    // ... and an error when fail_on_error is true.
+    cast_args_.fail_on_error = true;
+    auto result = VariantGetExecutor::GetAsArrow(variant_, "$.object", target, cast_args_, pool_,
+                                                 arrow_pool_);
+    ASSERT_NOK(result);
 }
 
 }  // namespace paimon::test

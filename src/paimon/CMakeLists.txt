@@ -463,6 +463,8 @@ if(PAIMON_BUILD_TESTS)
                     common/data/blob_utils_test.cpp
                     common/data/variant/generic_variant_test.cpp
                     common/data/variant/infer_variant_shredding_schema_test.cpp
+                    common/data/variant/variant_access_utils_test.cpp
+                    common/data/variant/variant_shredding_read_plan_factory_test.cpp
                     common/data/variant/variant_shredding_write_plan_factory_test.cpp
                     common/data/variant/variant_get_test.cpp
                     common/data/variant/variant_json_utils_test.cpp
