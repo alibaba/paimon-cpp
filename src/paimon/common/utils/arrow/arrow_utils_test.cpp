@@ -379,6 +379,54 @@ TEST(ArrowUtilsTest, TestRemoveFieldFromStructArraySuccess) {
     ASSERT_TRUE(result->Equals(expected_struct_array));
 }
 
+TEST(ArrowUtilsTest, TestNormalizeRecordBatchOffsets) {
+    auto value_field = arrow::field("value", arrow::int32());
+    auto nested_field = arrow::field("nested", arrow::struct_({value_field}));
+    auto text_field = arrow::field("text", arrow::utf8());
+    auto clean_field = arrow::field("clean", arrow::boolean());
+    auto schema = arrow::schema({nested_field, text_field, clean_field});
+
+    std::shared_ptr<arrow::Array> values =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[0, 1, 2, 3, 4]").ValueOrDie();
+    std::shared_ptr<arrow::Array> sliced_values = values->Slice(1, 3);
+    std::shared_ptr<arrow::StructArray> nested_column =
+        arrow::StructArray::Make({sliced_values}, {value_field->name()}).ValueOrDie();
+    std::shared_ptr<arrow::Array> text =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::utf8(), R"(["a", "b", "c", "d", "e"])")
+            .ValueOrDie();
+    std::shared_ptr<arrow::Array> sliced_text = text->Slice(1, 3);
+    std::shared_ptr<arrow::Array> clean_column =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::boolean(), "[true, false, true]")
+            .ValueOrDie();
+    std::shared_ptr<arrow::RecordBatch> record_batch = arrow::RecordBatch::Make(
+        schema, /*num_rows=*/3, {nested_column, sliced_text, clean_column});
+
+    ASSERT_EQ(nested_column->offset(), 0);
+    ASSERT_EQ(nested_column->field(0)->offset(), 1);
+    ASSERT_EQ(sliced_text->offset(), 1);
+    ASSERT_EQ(clean_column->offset(), 0);
+
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<arrow::RecordBatch> normalized_batch,
+        ArrowUtils::NormalizeRecordBatchOffsets(record_batch, arrow::default_memory_pool()));
+    ASSERT_NE(normalized_batch.get(), record_batch.get());
+    ASSERT_TRUE(normalized_batch->Equals(*record_batch));
+    std::shared_ptr<arrow::StructArray> normalized_nested =
+        std::static_pointer_cast<arrow::StructArray>(normalized_batch->column(0));
+    ASSERT_EQ(normalized_nested->offset(), 0);
+    ASSERT_EQ(normalized_nested->field(0)->offset(), 0);
+    ASSERT_EQ(normalized_batch->column(1)->offset(), 0);
+    ASSERT_EQ(normalized_batch->column(2)->offset(), 0);
+    ASSERT_NE(normalized_batch->column_data(0).get(), record_batch->column_data(0).get());
+    ASSERT_NE(normalized_batch->column_data(1).get(), record_batch->column_data(1).get());
+    ASSERT_EQ(normalized_batch->column_data(2).get(), record_batch->column_data(2).get());
+
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<arrow::RecordBatch> unchanged_batch,
+        ArrowUtils::NormalizeRecordBatchOffsets(normalized_batch, arrow::default_memory_pool()));
+    ASSERT_EQ(unchanged_batch.get(), normalized_batch.get());
+}
+
 TEST(ArrowUtilsTest, TestEqualsIgnoreNullable) {
     {
         // test simple
@@ -481,6 +529,7 @@ TEST(ArrowUtilsTest, TestGetCompressionType) {
         ASSERT_EQ(type, arrow::Compression::GZIP);
     }
     {
+        // test invalid codec
         ASSERT_NOK(ArrowUtils::GetCompressionType("invalid_codec"));
     }
 }
