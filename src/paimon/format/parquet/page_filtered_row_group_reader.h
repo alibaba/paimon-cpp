@@ -39,7 +39,6 @@ namespace paimon::parquet {
 /// Reads a single row group using page-level filtering.
 /// Non-matching rows are skipped at the decoding level via RecordReader::SkipRecords,
 /// using RowRanges computed from the page index (ColumnIndex + OffsetIndex).
-/// MakePageFilter is available for future I/O-level page skipping optimization.
 class PageFilteredRowGroupReader {
  public:
     PageFilteredRowGroupReader() = delete;

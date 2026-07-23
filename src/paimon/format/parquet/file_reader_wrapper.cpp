@@ -24,6 +24,7 @@
 #include "arrow/record_batch.h"
 #include "arrow/util/range.h"
 #include "fmt/format.h"
+#include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/format/parquet/column_index_filter.h"
 #include "paimon/format/parquet/page_filtered_row_group_reader.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
@@ -273,6 +274,10 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::NextFullyMatched(
     if (!record_batch) {
         return std::shared_ptr<arrow::RecordBatch>();
     }
+    // Large binary columns (exceed 2GB) may split at different row boundaries. TableBatchReader
+    // aligns their chunks by slicing columns, which may leave non-zero child offsets.
+    PAIMON_ASSIGN_OR_RAISE(record_batch,
+                           ArrowUtils::NormalizeRecordBatchOffsets(record_batch, pool_.get()));
 
     int32_t rg_id = target_row_groups_[current_row_group_idx_].GetRowGroupIndex();
     uint64_t rg_end = all_row_group_ranges_[rg_id].second;

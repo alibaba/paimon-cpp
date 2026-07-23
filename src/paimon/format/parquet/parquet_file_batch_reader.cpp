@@ -171,8 +171,6 @@ Status ParquetFileBatchReader::SetReadSchema(
             PAIMON_ASSIGN_OR_RAISE(
                 target_row_groups,
                 FilterRowGroupsByBitmap(selection_bitmap.value(), target_row_groups));
-            // workaround: page index filter does not support nested fields for now, skip page index
-            // bitmap pushdown if there is any nested field in the schema
             if (enable_page_index_filter) {
                 // To decide which strategy to use, "trim" or "coalesce". "Coalesce" By default.
                 PAIMON_ASSIGN_OR_RAISE(
