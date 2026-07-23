@@ -270,6 +270,22 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
 
     int64_t expected_rows = row_ranges.RowCount();
 
+    if (expected_rows == 0) {
+        const auto& manifest = arrow_file_reader->manifest();
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::vector<int> field_indices,
+                                          manifest.GetFieldIndices(std::vector<int>(
+                                              column_indices.begin(), column_indices.end())));
+        std::vector<std::shared_ptr<arrow::Field>> result_fields;
+        result_fields.reserve(field_indices.size());
+        for (int field_idx : field_indices) {
+            result_fields.push_back(manifest.schema_fields[field_idx].field);
+        }
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+            std::shared_ptr<arrow::Table> empty_table,
+            arrow::Table::MakeEmpty(arrow::schema(result_fields), pool.get()));
+        return std::make_unique<TableRecordBatchReader>(std::move(empty_table), max_chunksize);
+    }
+
     PAIMON_RETURN_NOT_OK(WaitForPreBuffer(parquet_reader, row_group_index, column_indices,
                                           cache_options, pre_buffered, page_ranges, pool));
 

@@ -201,8 +201,6 @@ Status ParquetFileBatchReader::SetReadSchema(
         // pages for row groups that the bitmap already excluded.
         // If no predicate is provided, skip page-level filtering
         if (predicate && !target_row_groups.empty()) {
-            // workaround: page index filter does not support nested fields for now, skip page index
-            // filter if there is any nested field in the schema
             if (enable_page_index_filter) {
                 // Build column name to index map for page-level filtering.
                 // For leaf columns, indices[0] is the correct leaf column index in Parquet.

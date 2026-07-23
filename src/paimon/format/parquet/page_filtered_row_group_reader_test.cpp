@@ -1795,7 +1795,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedColumnsMisalignedPages) {
         ASSERT_EQ(77 + i, key_arr->Value(15 + i));
     }
 
-    ASSERT_GE(total, 25);
+    ASSERT_EQ(total, 25);
 }
 
 }  // namespace paimon::parquet::test
