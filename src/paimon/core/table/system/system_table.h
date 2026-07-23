@@ -42,6 +42,8 @@ struct SystemTablePath {
     std::optional<std::string> branch;
     /// System table name, for example `options` or `snapshots`.
     std::string system_table_name;
+    /// Whether this is a global system table under the `sys` database.
+    bool is_global = false;
 };
 
 /// Base interface for table-scoped system tables such as `T$options` and `T$snapshots`.

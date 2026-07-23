@@ -16,6 +16,8 @@
 
 #include "paimon/core/catalog/file_system_catalog.h"
 
+#include <algorithm>
+
 #include "arrow/api.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
@@ -26,6 +28,7 @@
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/schema/table_schema.h"
+#include "paimon/core/table/system/global_system_tables.h"
 #include "paimon/core/table/system/system_table_schema.h"
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
@@ -42,7 +45,7 @@ TEST(FileSystemCatalogTest, TestDatabaseExists) {
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
 
     ASSERT_OK_AND_ASSIGN(auto exist, catalog.DatabaseExists("db1"));
     ASSERT_FALSE(exist);
@@ -68,7 +71,7 @@ TEST(FileSystemCatalogTest, TestInvalidCreateDatabase) {
         ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
         auto dir = UniqueTestDirectory::Create();
         ASSERT_TRUE(dir);
-        FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+        FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
 
         ASSERT_NOK_WITH_MSG(
             catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true),
@@ -85,7 +88,7 @@ TEST(FileSystemCatalogTest, TestCreateSystemDatabaseAndTable) {
         ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
         auto dir = UniqueTestDirectory::Create();
         ASSERT_TRUE(dir);
-        FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+        FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
         ASSERT_NOK_WITH_MSG(catalog.CreateDatabase(Catalog::SYSTEM_DATABASE_NAME, options,
                                                    /*ignore_if_exists=*/true),
                             "Cannot create database for system database");
@@ -98,7 +101,7 @@ TEST(FileSystemCatalogTest, TestCreateSystemDatabaseAndTable) {
         ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
         auto dir = UniqueTestDirectory::Create();
         ASSERT_TRUE(dir);
-        FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+        FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
         ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
         arrow::FieldVector fields = {
             arrow::field("f0", arrow::boolean()),
@@ -123,7 +126,7 @@ TEST(FileSystemCatalogTest, TestCreateTable) {
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
     ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
 
     arrow::FieldVector fields = {
@@ -159,7 +162,7 @@ TEST(FileSystemCatalogTest, TestOptionsSystemTableCatalog) {
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
     ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
 
     auto typed_schema = arrow::schema({arrow::field("f0", arrow::int32())});
@@ -217,7 +220,7 @@ TEST(FileSystemCatalogTest, TestAuditLogAndBinlogSystemTableCatalog) {
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
     ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
 
     auto typed_schema =
@@ -288,7 +291,7 @@ TEST(FileSystemCatalogTest, TestMetadataSystemTableCatalog) {
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
     ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
 
     auto typed_schema =
@@ -433,7 +436,7 @@ TEST(FileSystemCatalogTest, TestCreateTableWithBlob) {
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
     ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
 
     arrow::FieldVector fields = {arrow::field("f0", arrow::boolean()),
@@ -489,7 +492,7 @@ TEST(FileSystemCatalogTest, TestInvalidCreateTable) {
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
     ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::boolean()), arrow::field("f1", arrow::int8()),
@@ -514,7 +517,7 @@ TEST(FileSystemCatalogTest, TestCreateTableWhileDbNotExist) {
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::boolean()),
         arrow::field("f1", arrow::int8()),
@@ -537,7 +540,7 @@ TEST(FileSystemCatalogTest, TestCreateTableWhileTableExist) {
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
     {
         ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
         arrow::FieldVector fields = {
@@ -598,16 +601,29 @@ TEST(FileSystemCatalogTest, TestCreateTableWhileTableExist) {
     }
 }
 
-TEST(FileSystemCatalogTest, TestInvalidList) {
+TEST(FileSystemCatalogTest, TestSystemList) {
     std::map<std::string, std::string> options;
     options[Options::FILE_SYSTEM] = "local";
     options[Options::FILE_FORMAT] = "orc";
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
-    ASSERT_NOK_WITH_MSG(catalog.ListTables("sys"),
-                        "do not support listing tables for system database.");
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
+    ASSERT_OK_AND_ASSIGN(auto sys_tables, catalog.ListTables("sys"));
+    ASSERT_FALSE(sys_tables.empty());
+    // catalog_options is disabled by default, matching Java Paimon.
+    ASSERT_TRUE(std::find(sys_tables.begin(), sys_tables.end(), "catalog_options") ==
+                sys_tables.end());
+    ASSERT_TRUE(std::find(sys_tables.begin(), sys_tables.end(), "all_table_options") !=
+                sys_tables.end());
+    ASSERT_TRUE(std::find(sys_tables.begin(), sys_tables.end(), "tables") != sys_tables.end());
+    ASSERT_TRUE(std::find(sys_tables.begin(), sys_tables.end(), "partitions") != sys_tables.end());
+
+    options[CatalogOptionsSystemTable::kEnabledOption] = "true";
+    FileSystemCatalog enabled_catalog(core_options.GetFileSystem(), dir->Str(), options);
+    ASSERT_OK_AND_ASSIGN(auto enabled_sys_tables, enabled_catalog.ListTables("sys"));
+    ASSERT_TRUE(std::find(enabled_sys_tables.begin(), enabled_sys_tables.end(),
+                          "catalog_options") != enabled_sys_tables.end());
 }
 
 TEST(FileSystemCatalogTest, TestValidateTableSchema) {
@@ -617,7 +633,7 @@ TEST(FileSystemCatalogTest, TestValidateTableSchema) {
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
     ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()),
@@ -686,7 +702,7 @@ TEST(FileSystemCatalogTest, TestDropDatabase) {
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
 
     // Test 1: Drop non-existent database with ignore_if_not_exists=true
     ASSERT_OK(catalog.DropDatabase("non_existent_db", /*ignore_if_not_exists=*/true,
@@ -742,7 +758,7 @@ TEST(FileSystemCatalogTest, TestDropTable) {
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
     ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
 
     // Test 1: Drop non-existent table with ignore_if_not_exists=true
@@ -784,7 +800,7 @@ TEST(FileSystemCatalogTest, TestRenameTable) {
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
     ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
 
     // Test 1: Rename non-existent table with ignore_if_not_exists=true
@@ -851,7 +867,7 @@ TEST(FileSystemCatalogTest, TestDropTableWithExternalPath) {
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
     ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
 
     // Create external path directory
@@ -913,7 +929,7 @@ TEST(FileSystemCatalogTest, TestDropTableWithMultipleExternalPaths) {
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
     ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
 
     // Create multiple external path directories
@@ -970,7 +986,7 @@ TEST(FileSystemCatalogTest, TestDropTableWithGlobalIndexExternalPathOnMainBranch
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
     ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
 
     // Create external path directory for global index
@@ -1074,7 +1090,7 @@ TEST(FileSystemCatalogTest, TestDropTableWithGlobalIndexExternalPathOnBranch) {
     ASSERT_TRUE(external_exists);
 
     // Drop the table via catalog
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
     Identifier identifier("test_db", "append_table_with_rt_branch");
     ASSERT_OK_AND_ASSIGN(bool table_exists, catalog.TableExists(identifier));
     ASSERT_TRUE(table_exists);
@@ -1102,7 +1118,7 @@ TEST(FileSystemCatalogTest, TestListSnapshots) {
     std::string db_path = dir->Str() + "/test_db.db";
     ASSERT_TRUE(TestUtil::CopyDirectory(test_data_path, db_path));
 
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
 
     Identifier id("test_db", "append_table_with_multiple_file_format");
     ASSERT_OK_AND_ASSIGN(std::vector<SnapshotInfo> snapshots, catalog.ListSnapshots(id, ""));
@@ -1136,7 +1152,7 @@ TEST(FileSystemCatalogTest, TestListSnapshotsTableNotExist) {
     ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
 
     ASSERT_NOK_WITH_MSG(
         catalog.ListSnapshots(Identifier("non_existent_db", "non_existent_table"), ""),
@@ -1194,7 +1210,7 @@ TEST(FileSystemCatalogTest, TestDropTableWithBranchExternalPaths) {
     ASSERT_TRUE(external_exists);
 
     // Drop the table via catalog
-    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str(), options);
     Identifier identifier("test_db", "append_table_with_rt_branch");
     ASSERT_OK_AND_ASSIGN(bool table_exists, catalog.TableExists(identifier));
     ASSERT_TRUE(table_exists);
