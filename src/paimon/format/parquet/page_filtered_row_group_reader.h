@@ -95,13 +95,15 @@ class PageFilteredRowGroupReader {
         const RowRanges& original_ranges,
         const std::shared_ptr<::parquet::OffsetIndex>& offset_index, int64_t row_group_row_count);
 
-    /// Convert RowRanges to skip/read pattern. Each pair is (skip, read).
-    static std::vector<std::pair<int64_t, int64_t>> RowRangesToSkipReadPattern(
-        const RowRanges& ranges);
+    /// Reset the given leaf and replay the skip/read pattern derived from `ranges`
+    /// directly against the ColumnReader (ResetLeaf + SkipRecords/ReadRecords).
+    static Status ExecuteSkipReadPattern(::parquet::arrow::ColumnReader* column_reader, int col_idx,
+                                         const RowRanges& ranges, int64_t total);
 
     /// Read a field (flat or nested) using ColumnReader tree.
-    /// Sets data_page_filter on all leaves via factory, then uses
-    /// LoadBatchWithRowFilter with per-leaf compressed_ranges.
+    /// Sets data_page_filter on all leaves via factory, then drives each leaf
+    /// independently via ResetLeaf/SkipRecords/ReadRecords using its own
+    /// compressed_ranges.
     static Result<std::shared_ptr<arrow::ChunkedArray>> ReadFilteredField(
         ::parquet::arrow::FileReader* arrow_file_reader,
         const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,

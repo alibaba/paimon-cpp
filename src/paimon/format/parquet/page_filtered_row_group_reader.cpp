@@ -60,6 +60,29 @@ class TableRecordBatchReader : public arrow::RecordBatchReader {
     arrow::TableBatchReader inner_;
 };
 
+/// A FileColumnIterator that installs a data_page_filter on every PageReader it
+/// produces, enabling I/O-level page skipping. The base class handles row group
+/// iteration; this subclass only decorates the PageReader returned by NextChunk().
+class PageFilteringColumnIterator : public ::parquet::arrow::FileColumnIterator {
+ public:
+    PageFilteringColumnIterator(
+        int column_index, ::parquet::ParquetFileReader* reader, std::vector<int> row_groups,
+        std::function<bool(const ::parquet::DataPageStats&)> data_page_filter)
+        : FileColumnIterator(column_index, reader, std::move(row_groups)),
+          data_page_filter_(std::move(data_page_filter)) {}
+
+    std::unique_ptr<::parquet::PageReader> NextChunk() override {
+        std::unique_ptr<::parquet::PageReader> page_reader = FileColumnIterator::NextChunk();
+        if (page_reader && data_page_filter_) {
+            page_reader->set_data_page_filter(data_page_filter_);
+        }
+        return page_reader;
+    }
+
+ private:
+    std::function<bool(const ::parquet::DataPageStats&)> data_page_filter_;
+};
+
 }  // namespace
 
 std::pair<int64_t, int64_t> PageFilteredRowGroupReader::GetPageRowRange(
@@ -124,16 +147,29 @@ std::pair<RowRanges, int64_t> PageFilteredRowGroupReader::ComputeCompressedRowRa
     return {compressed, compressed_offset};
 }
 
-std::vector<std::pair<int64_t, int64_t>> PageFilteredRowGroupReader::RowRangesToSkipReadPattern(
-    const RowRanges& ranges) {
-    std::vector<std::pair<int64_t, int64_t>> pattern;
+Status PageFilteredRowGroupReader::ExecuteSkipReadPattern(
+    ::parquet::arrow::ColumnReader* column_reader, int col_idx, const RowRanges& ranges,
+    int64_t total) {
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(column_reader->ResetLeaf(col_idx, total));
     int64_t current = 0;
     for (const auto& range : ranges.GetRanges()) {
         int64_t skip = range.from > current ? range.from - current : 0;
-        pattern.emplace_back(skip, range.Count());
+        int64_t skipped = column_reader->SkipRecords(col_idx, skip);
+        if (skipped != skip) {
+            return Status::Invalid(fmt::format(
+                "PageFilteredRowGroupReader: leaf {} expected to skip {} records but skipped {}",
+                col_idx, skip, skipped));
+        }
+        int64_t to_read = range.Count();
+        int64_t read = column_reader->ReadRecords(col_idx, to_read);
+        if (read != to_read) {
+            return Status::Invalid(fmt::format(
+                "PageFilteredRowGroupReader: leaf {} expected to read {} records but read {}",
+                col_idx, to_read, read));
+        }
         current = range.to + 1;
     }
-    return pattern;
+    return Status::OK();
 }
 
 Status PageFilteredRowGroupReader::WaitForPreBuffer(
@@ -172,17 +208,17 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
         [row_group_index, &rg_page_index_reader, &row_ranges, row_group_row_count](
             int col_idx,
             ::parquet::ParquetFileReader* reader) -> ::parquet::arrow::FileColumnIterator* {
-        // Hold sole ownership locally so the iterator is released if GetOffsetIndex()
-        auto iter = std::make_unique<::parquet::arrow::FileColumnIterator>(
-            col_idx, reader, std::vector<int>{row_group_index});
+        // Build the page filter first; the iterator is constructed last, so nothing
+        // can throw between `new` and the return and the raw pointer never leaks.
+        std::function<bool(const ::parquet::DataPageStats&)> data_page_filter;
         if (rg_page_index_reader) {
             auto offset_index = rg_page_index_reader->GetOffsetIndex(col_idx);
             if (offset_index) {
-                iter->set_data_page_filter(
-                    MakePageFilter(row_ranges, offset_index, row_group_row_count));
+                data_page_filter = MakePageFilter(row_ranges, offset_index, row_group_row_count);
             }
         }
-        return iter.release();
+        return new PageFilteringColumnIterator(col_idx, reader, std::vector<int>{row_group_index},
+                                               std::move(data_page_filter));
     };
 
     // Build reader tree with leaf column filtering
@@ -194,10 +230,12 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
         return std::shared_ptr<arrow::ChunkedArray>();
     }
 
-    // Per-leaf callback: each leaf gets its own skip/read pattern + total.
-    auto get_leaf_filter =
-        [&rg_page_index_reader, &row_ranges, row_group_row_count](
-            int col_idx) -> std::pair<std::vector<std::pair<int64_t, int64_t>>, int64_t> {
+    // Drive each leaf independently: after data_page_filter skips non-matching
+    // pages, every leaf lives in its own compressed coordinate space, so segment
+    // counts may differ across leaves and cannot be driven in lockstep. For each
+    // leaf we compute its compressed skip/read pattern and replay it via the
+    // ResetLeaf/SkipRecords/ReadRecords primitives.
+    for (int col_idx : column_reader->LeafColumnIndices()) {
         RowRanges effective_ranges = row_ranges;
         int64_t effective_total = row_group_row_count;
         if (rg_page_index_reader) {
@@ -209,11 +247,10 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
                 effective_total = total;
             }
         }
-        return {RowRangesToSkipReadPattern(effective_ranges), effective_total};
-    };
 
-    // Load + filter + transfer (per-leaf, via tree delegation)
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(column_reader->LoadBatchWithRowFilter(get_leaf_filter));
+        PAIMON_RETURN_NOT_OK(ExecuteSkipReadPattern(column_reader.get(), col_idx, effective_ranges,
+                                                    effective_total));
+    }
 
     // Build the Arrow array (TransferColumnData for leaves + assemble for nested)
     std::shared_ptr<arrow::ChunkedArray> chunked_array;
