@@ -76,7 +76,7 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
     void WriteTestFile(const std::string& file_name,
                        const std::shared_ptr<arrow::StructArray>& struct_array,
                        int32_t write_batch_size, int64_t max_row_group_length,
-                       bool enable_dictionary = false) {
+                       bool enable_dictionary = false, int64_t data_page_size = 1) {
         auto data_type = struct_array->struct_type();
         auto data_schema = arrow::schema(data_type->fields());
         auto data_arrow_array = std::make_unique<ArrowArray>();
@@ -92,10 +92,12 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
             builder.disable_dictionary();  // Ensure page index min/max are meaningful
         }
         builder.enable_write_page_index();  // Enable page index for page-level filtering
-        // Set data page size to 1 byte to force a new page after every write_batch_size rows.
-        // The writer flushes a page when accumulated data exceeds data_pagesize, so setting
-        // it to 1 ensures each batch of write_batch_size rows becomes exactly one page.
-        builder.data_pagesize(1);
+        // Data page size controls when a page is flushed. The default of 1 byte forces a new
+        // page after every write_batch_size rows (each batch becomes one page), giving pages
+        // aligned across columns. A larger byte-based value combined with write_batch_size=1
+        // instead lets columns of different physical widths flush pages at different row
+        // counts, producing intentionally misaligned pages across leaves.
+        builder.data_pagesize(data_page_size);
         auto writer_properties = builder.build();
         ASSERT_OK_AND_ASSIGN(
             auto format_writer,
@@ -1693,6 +1695,107 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructSubColumnProjection) {
     for (int32_t i = 0; i < 30; ++i) {
         ASSERT_EQ((70 + i) * 100, x_arr->Value(i)) << "Mismatch at index " << i;
     }
+}
+
+/// Helper: build a struct with a flat key plus several nested columns of different
+/// physical widths / repetition, so that with a byte-based data page size their
+/// leaves flush pages at different row counts (misaligned pages):
+///   key:   int64            (fixed 8B  -> ~5 rows/page)
+///   s:     struct<x:int32, y:int64>   (x ~10 rows/page, y ~5 rows/page)
+///   tags:  list<int32>       (2 values/row -> ~5 rows/page)
+///   props: map<utf8,int32>   (variable-width utf8 key -> irregular rows/page)
+/// key/s.x/s.y encode the row index (= i); tags/props reuse the shared list/map
+/// helpers. Correctness is verified per row by deep-comparing against this array.
+static std::shared_ptr<arrow::StructArray> MakeMisalignedNestedData(int32_t num_rows) {
+    arrow::Int64Builder key_builder;
+    arrow::Int32Builder x_builder;
+    arrow::Int64Builder y_builder;
+    EXPECT_TRUE(key_builder.Reserve(num_rows).ok());
+    EXPECT_TRUE(x_builder.Reserve(num_rows).ok());
+    EXPECT_TRUE(y_builder.Reserve(num_rows).ok());
+    for (int32_t i = 0; i < num_rows; ++i) {
+        key_builder.UnsafeAppend(i);
+        x_builder.UnsafeAppend(i);
+        y_builder.UnsafeAppend(i);
+    }
+    auto key_array = key_builder.Finish().ValueOrDie();
+    auto x_array = x_builder.Finish().ValueOrDie();
+    auto y_array = y_builder.Finish().ValueOrDie();
+
+    auto field_x = arrow::field("x", arrow::int32());
+    auto field_y = arrow::field("y", arrow::int64());
+    auto s_array = arrow::StructArray::Make({x_array, y_array}, {field_x, field_y}).ValueOrDie();
+
+    // Repeated nested leaves (list<int32> and map<utf8,int32>) paginate on value
+    // bytes, so they misalign with the struct's fixed-width leaves too.
+    auto tags_array = MakeListColumnData(num_rows);
+    auto props_array = MakeMapColumnData(num_rows);
+
+    auto field_key = arrow::field("key", arrow::int64());
+    auto field_s = arrow::field("s", arrow::struct_({field_x, field_y}));
+    auto field_tags = arrow::field("tags", arrow::list(arrow::field("item", arrow::int32())));
+    auto field_props = arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()));
+    return arrow::StructArray::Make({key_array, s_array, tags_array, props_array},
+                                    {field_key, field_s, field_tags, field_props})
+        .ValueOrDie();
+}
+
+/// Test: page-level filtering across multiple nested columns whose leaf pages are
+/// MISALIGNED. The file mixes a flat key, a struct<int32,int64>, a list<int32> and
+/// a map<utf8,int32>; with write_batch_size=1 and a byte-based data page size every
+/// leaf flushes pages at a different (and, for the utf8 map key, irregular) row
+/// count.
+/// Bitmap: [0,15), [77, 87) (to avoid bitmap hole filling)
+/// Expected: 25 rows
+TEST_F(PageFilteredRowGroupReaderTest, NestedColumnsMisalignedPages) {
+    std::string file_name = dir_->Str() + "/nested_misaligned.parquet";
+    constexpr int32_t kNumRows = 100;
+    auto data = MakeMisalignedNestedData(kNumRows);
+
+    // write_batch_size=1 + a byte-based data page size makes the int32 and int64 leaves
+    // flush pages at different row counts, i.e. deliberately misaligned pages.
+    WriteTestFile(file_name, data, /*write_batch_size=*/1, /*max_row_group_length=*/kNumRows,
+                  /*enable_dictionary=*/false, /*data_page_size=*/40);
+
+    auto read_schema =
+        arrow::schema({arrow::field("key", arrow::int64()),
+                       arrow::field("s", arrow::struct_({arrow::field("x", arrow::int32()),
+                                                         arrow::field("y", arrow::int64())})),
+                       arrow::field("tags", arrow::list(arrow::field("item", arrow::int32()))),
+                       arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()))});
+
+    // bitmap: [0,15), [77, 87)
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 15);
+    bitmap.AddRange(77, 87);
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, nullptr, bitmap, &result);
+    ASSERT_TRUE(result);
+
+    int64_t total = 0;
+    auto top = std::dynamic_pointer_cast<arrow::StructArray>(result->chunk(0));
+    ASSERT_TRUE(top);
+    auto key_arr = std::dynamic_pointer_cast<arrow::Int64Array>(top->field(0));
+    for (int64_t i = 0; i < key_arr->length(); ++i) {
+        int64_t k = key_arr->Value(i);
+        // Full-row deep compare across ALL columns (struct + list + map): the returned
+        // row must equal the original row identified by key k. This is what catches a
+        // desync in the repeated list/map leaves, whose reassembly also relies on the
+        // per-leaf skip/read staying row-consistent.
+        ASSERT_TRUE(data->Slice(k, 1)->Equals(*top->Slice(i, 1)))
+            << "row content mismatch at key " << k;
+        ++total;
+    }
+
+    for (int64_t i = 0; i < 15; ++i) {
+        ASSERT_EQ(i, key_arr->Value(i));
+    }
+    for (int64_t i = 0; i < 10; ++i) {
+        ASSERT_EQ(77 + i, key_arr->Value(15 + i));
+    }
+
+    ASSERT_GE(total, 25);
 }
 
 }  // namespace paimon::parquet::test
