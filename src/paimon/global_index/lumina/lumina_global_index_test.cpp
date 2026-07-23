@@ -250,6 +250,443 @@ TEST_F(LuminaGlobalIndexTest, TestWithFilter) {
     }
 }
 
+TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithTagFilter) {
+    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    std::string test_root = test_root_dir->Str();
+
+    std::map<std::string, std::string> tag_options = options_;
+    tag_options["lumina.extension.build.tag.tag_schema"] =
+        R"({"key_name":"color","type":"enum","value_type":"string"})";
+
+    std::shared_ptr<arrow::DataType> tag_data_type = arrow::struct_(
+        {arrow::field("f0", arrow::list(arrow::float32())), arrow::field("color", arrow::utf8())});
+    std::shared_ptr<arrow::Array> tag_array =
+        arrow::ipc::internal::json::ArrayFromJSON(tag_data_type,
+                                                  R"([
+        [[0.0, 0.0, 0.0, 0.0], "cold"],
+        [[0.0, 1.0, 0.0, 1.0], "warm"],
+        [[1.0, 0.0, 1.0, 0.0], "cold"],
+        [[1.0, 1.0, 1.0, 1.0], "warm"]
+    ])")
+            .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(
+        GlobalIndexIOMeta meta,
+        WriteGlobalIndex(test_root, tag_data_type, tag_options, tag_array, Range(0, 3)));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexReader> reader,
+                         CreateGlobalIndexReader(test_root, data_type_, tag_options, meta));
+
+    std::shared_ptr<Predicate> predicate = PredicateBuilder::Equal(
+        /*field_index=*/1, /*field_name=*/"color", FieldType::STRING,
+        Literal(FieldType::STRING, "warm", 4));
+    {
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<ScoredGlobalIndexResult> scored_result,
+            reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+                /*field_name=*/"f0", /*limit=*/4, query_, /*filter=*/nullptr, predicate,
+                /*distance_type=*/std::nullopt, /*options=*/tag_options)));
+        CheckResult(scored_result, {3l, 1l}, {0.01f, 2.01f});
+    }
+    {
+        auto pre_filter = [](int64_t id) -> bool { return id < 3; };
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<ScoredGlobalIndexResult> filtered_scored_result,
+                             reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+                                 /*field_name=*/"f0", /*limit=*/4, query_, pre_filter, predicate,
+                                 /*distance_type=*/std::nullopt, /*options=*/tag_options)));
+        CheckResult(filtered_scored_result, {1l}, {2.01f});
+    }
+}
+
+TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithMixedTagPredicates) {
+    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    std::string test_root = test_root_dir->Str();
+
+    std::map<std::string, std::string> tag_options = options_;
+    tag_options["lumina.extension.build.tag.tag_schema"] =
+        R"([{"key_name":"color","type":"enum","value_type":"string"},)"
+        R"({"key_name":"price","type":"range","value_type":"float"}])";
+
+    std::shared_ptr<arrow::DataType> tag_data_type = arrow::struct_(
+        {arrow::field("f0", arrow::list(arrow::float32())), arrow::field("color", arrow::utf8()),
+         arrow::field("price", arrow::float32())});
+    std::shared_ptr<arrow::Array> tag_array =
+        arrow::ipc::internal::json::ArrayFromJSON(tag_data_type,
+                                                  R"([
+        [[0.0, 0.0, 0.0, 0.0], "cold", 5.0],
+        [[0.0, 1.0, 0.0, 1.0], "warm", 10.0],
+        [[1.0, 0.0, 1.0, 0.0], "warm", 20.0],
+        [[1.0, 1.0, 1.0, 1.0], "warm", 30.0]
+    ])")
+            .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(
+        GlobalIndexIOMeta meta,
+        WriteGlobalIndex(test_root, tag_data_type, tag_options, tag_array, Range(0, 3)));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexReader> reader,
+                         CreateGlobalIndexReader(test_root, data_type_, tag_options, meta));
+
+    std::shared_ptr<Predicate> color_predicate = PredicateBuilder::Equal(
+        /*field_index=*/1, /*field_name=*/"color", FieldType::STRING,
+        Literal(FieldType::STRING, "warm", 4));
+    std::shared_ptr<Predicate> low_price_predicate = PredicateBuilder::LessOrEqual(
+        /*field_index=*/2, /*field_name=*/"price", FieldType::FLOAT, Literal(10.0f));
+    std::shared_ptr<Predicate> high_price_predicate = PredicateBuilder::GreaterOrEqual(
+        /*field_index=*/2, /*field_name=*/"price", FieldType::FLOAT, Literal(30.0f));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Predicate> price_predicate,
+                         PredicateBuilder::Or({low_price_predicate, high_price_predicate}));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Predicate> predicate,
+                         PredicateBuilder::And({color_predicate, price_predicate}));
+
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<ScoredGlobalIndexResult> scored_result,
+        reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+            /*field_name=*/"f0", /*limit=*/4, query_, /*filter=*/nullptr, predicate,
+            /*distance_type=*/std::nullopt, /*options=*/tag_options)));
+    CheckResult(scored_result, {3l, 1l}, {0.01f, 2.01f});
+}
+
+TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithIntegerListTagFilter) {
+    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    std::string test_root = test_root_dir->Str();
+
+    std::map<std::string, std::string> tag_options = options_;
+    tag_options["lumina.extension.build.tag.tag_schema"] =
+        R"([{"key_name":"category_ids","type":"enum","value_type":"int32"}])";
+
+    std::shared_ptr<arrow::DataType> tag_data_type =
+        arrow::struct_({arrow::field("f0", arrow::list(arrow::float32())),
+                        arrow::field("category_ids", arrow::list(arrow::int32()))});
+    std::shared_ptr<arrow::Array> tag_array =
+        arrow::ipc::internal::json::ArrayFromJSON(tag_data_type,
+                                                  R"([
+        [[0.0, 0.0, 0.0, 0.0], [1, 2]],
+        [[0.0, 1.0, 0.0, 1.0], [3, 8]],
+        [[1.0, 0.0, 1.0, 0.0], [4, 5]],
+        [[1.0, 1.0, 1.0, 1.0], [6, 9]]
+    ])")
+            .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(
+        GlobalIndexIOMeta meta,
+        WriteGlobalIndex(test_root, tag_data_type, tag_options, tag_array, Range(0, 3)));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexReader> reader,
+                         CreateGlobalIndexReader(test_root, data_type_, tag_options, meta));
+
+    std::shared_ptr<Predicate> predicate = PredicateBuilder::In(
+        /*field_index=*/1, /*field_name=*/"category_ids", FieldType::INT, {Literal(8), Literal(9)});
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<ScoredGlobalIndexResult> scored_result,
+        reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+            /*field_name=*/"f0", /*limit=*/4, query_, /*filter=*/nullptr, predicate,
+            /*distance_type=*/std::nullopt, /*options=*/tag_options)));
+    CheckResult(scored_result, {3l, 1l}, {0.01f, 2.01f});
+}
+
+TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithCompatibleTagArrowTypes) {
+    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    std::string test_root = test_root_dir->Str();
+
+    std::map<std::string, std::string> tag_options = options_;
+    tag_options["lumina.extension.build.tag.tag_schema"] =
+        R"([{"key_name":"tag_i8","type":"enum","value_type":"int32"},)"
+        R"({"key_name":"tag_i16","type":"enum","value_type":"int32"},)"
+        R"({"key_name":"tag_i32","type":"range","value_type":"int32"},)"
+        R"({"key_name":"tag_i64","type":"enum","value_type":"int64"},)"
+        R"({"key_name":"tag_f32","type":"range","value_type":"float"},)"
+        R"({"key_name":"tag_f64","type":"enum","value_type":"double"}])";
+
+    std::shared_ptr<arrow::DataType> tag_data_type = arrow::struct_(
+        {arrow::field("f0", arrow::list(arrow::float32())), arrow::field("tag_i8", arrow::int8()),
+         arrow::field("tag_i16", arrow::int16()), arrow::field("tag_i32", arrow::int32()),
+         arrow::field("tag_i64", arrow::int64()), arrow::field("tag_f32", arrow::float32()),
+         arrow::field("tag_f64", arrow::float64())});
+    std::shared_ptr<arrow::Array> tag_array =
+        arrow::ipc::internal::json::ArrayFromJSON(tag_data_type,
+                                                  R"([
+        [[0.0, 0.0, 0.0, 0.0], 1, 10, 100, 10000000001, 1.5, 1.25],
+        [[0.0, 1.0, 0.0, 1.0], 2, 20, 200, 10000000002, 2.5, 2.25],
+        [[1.0, 0.0, 1.0, 0.0], 3, 30, 300, 10000000003, 3.5, 3.25],
+        [[1.0, 1.0, 1.0, 1.0], 4, 40, 400, 10000000004, 4.5, 4.25]
+    ])")
+            .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(
+        GlobalIndexIOMeta meta,
+        WriteGlobalIndex(test_root, tag_data_type, tag_options, tag_array, Range(0, 3)));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexReader> reader,
+                         CreateGlobalIndexReader(test_root, data_type_, tag_options, meta));
+
+    auto search_and_check = [&](const std::shared_ptr<Predicate>& predicate,
+                                const std::vector<int64_t>& expected_ids,
+                                const std::vector<float>& expected_scores) {
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<ScoredGlobalIndexResult> scored_result,
+            reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+                /*field_name=*/"f0", /*limit=*/4, query_, /*filter=*/nullptr, predicate,
+                /*distance_type=*/std::nullopt, /*options=*/tag_options)));
+        CheckResult(scored_result, expected_ids, expected_scores);
+    };
+
+    search_and_check(PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"tag_i8",
+                                             FieldType::TINYINT, Literal(static_cast<int8_t>(2))),
+                     {1l}, {2.01f});
+    search_and_check(
+        PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"tag_i16", FieldType::SMALLINT,
+                                Literal(static_cast<int16_t>(30))),
+        {2l}, {2.21f});
+    search_and_check(PredicateBuilder::GreaterThan(/*field_index=*/3, /*field_name=*/"tag_i32",
+                                                   FieldType::INT, Literal(250)),
+                     {3l, 2l}, {0.01f, 2.21f});
+    search_and_check(PredicateBuilder::Equal(
+                         /*field_index=*/4, /*field_name=*/"tag_i64", FieldType::BIGINT,
+                         Literal(static_cast<int64_t>(10000000003))),
+                     {2l}, {2.21f});
+    search_and_check(PredicateBuilder::In(
+                         /*field_index=*/4, /*field_name=*/"tag_i64", FieldType::BIGINT,
+                         {Literal(static_cast<int64_t>(10000000001)),
+                          Literal(static_cast<int64_t>(10000000004))}),
+                     {3l, 0l}, {0.01f, 4.21f});
+    search_and_check(PredicateBuilder::GreaterThan(/*field_index=*/5, /*field_name=*/"tag_f32",
+                                                   FieldType::FLOAT, Literal(4.0f)),
+                     {3l}, {0.01f});
+    search_and_check(PredicateBuilder::Equal(/*field_index=*/6, /*field_name=*/"tag_f64",
+                                             FieldType::DOUBLE, Literal(3.25)),
+                     {2l}, {2.21f});
+    search_and_check(PredicateBuilder::In(/*field_index=*/6, /*field_name=*/"tag_f64",
+                                          FieldType::DOUBLE, {Literal(2.25), Literal(4.25)}),
+                     {3l, 1l}, {0.01f, 2.01f});
+}
+
+TEST_F(LuminaGlobalIndexTest, TestWriteAndReadWithTagNullAndEmptyValues) {
+    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    std::string test_root = test_root_dir->Str();
+
+    std::map<std::string, std::string> tag_options = options_;
+    tag_options["lumina.extension.build.tag.tag_schema"] =
+        R"([{"key_name":"color","type":"enum","value_type":"string"},)"
+        R"({"key_name":"labels","type":"enum","value_type":"string"},)"
+        R"({"key_name":"price","type":"range","value_type":"float"},)"
+        R"({"key_name":"scores","type":"enum","value_type":"float"},)"
+        R"({"key_name":"category","type":"enum","value_type":"int32"},)"
+        R"({"key_name":"category_ids","type":"enum","value_type":"int32"}])";
+
+    std::shared_ptr<arrow::DataType> tag_data_type = arrow::struct_(
+        {arrow::field("f0", arrow::list(arrow::float32())), arrow::field("color", arrow::utf8()),
+         arrow::field("labels", arrow::list(arrow::utf8())),
+         arrow::field("price", arrow::float32()),
+         arrow::field("scores", arrow::list(arrow::float32())),
+         arrow::field("category", arrow::int32()),
+         arrow::field("category_ids", arrow::list(arrow::int32()))});
+    std::shared_ptr<arrow::Array> tag_array =
+        arrow::ipc::internal::json::ArrayFromJSON(tag_data_type,
+                                                  R"([
+        [[0.0, 0.0, 0.0, 0.0], "red", ["hot"], 5.0, [0.25], 7, [1, 2]],
+        [null, "red", ["vip"], 8.0, [0.8], 7, [9]],
+        [[0.0, 1.0, 0.0, 1.0], null, null, null, null, null, null],
+        [[1.0, 0.0, 1.0, 0.0], " ", [], 20.0, [], 0, []],
+        [[1.0, 1.0, 1.0, 1.0], "blue", ["vip", null], 30.0, [null, 0.75], 3, [null, 9]]
+    ])")
+            .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(
+        GlobalIndexIOMeta meta,
+        WriteGlobalIndex(test_root, tag_data_type, tag_options, tag_array, Range(0, 4)));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexReader> reader,
+                         CreateGlobalIndexReader(test_root, data_type_, tag_options, meta));
+    auto search_and_check_with_filter =
+        [&](VectorSearch::PreFilter pre_filter, const std::shared_ptr<Predicate>& predicate,
+            const std::vector<int64_t>& expected_ids, const std::vector<float>& expected_scores) {
+            std::shared_ptr<VectorSearch> vector_search = std::make_shared<VectorSearch>(
+                /*field_name=*/"f0", /*limit=*/5, query_, pre_filter, predicate,
+                /*distance_type=*/std::nullopt, /*options=*/tag_options);
+            ASSERT_OK_AND_ASSIGN(std::shared_ptr<ScoredGlobalIndexResult> scored_result,
+                                 reader->VisitVectorSearch(vector_search));
+            CheckResult(scored_result, expected_ids, expected_scores);
+        };
+    auto search_and_check = [&](const std::shared_ptr<Predicate>& predicate,
+                                const std::vector<int64_t>& expected_ids,
+                                const std::vector<float>& expected_scores) {
+        search_and_check_with_filter(/*pre_filter=*/nullptr, predicate, expected_ids,
+                                     expected_scores);
+    };
+    auto search_and_check_error = [&](const std::shared_ptr<Predicate>& predicate,
+                                      const std::string& expected_message) {
+        ASSERT_NOK_WITH_MSG(
+            reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+                /*field_name=*/"f0", /*limit=*/5, query_, /*filter=*/nullptr, predicate,
+                /*distance_type=*/std::nullopt, /*options=*/tag_options)),
+            expected_message);
+    };
+
+    search_and_check(/*predicate=*/nullptr, {4l, 2l, 3l, 0l}, {0.01f, 2.01f, 2.21f, 4.21f});
+    search_and_check(
+        PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"color", FieldType::STRING,
+                                Literal(FieldType::STRING, "red", 3)),
+        {0l}, {4.21f});
+    search_and_check(PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"color",
+                                             FieldType::STRING, Literal(FieldType::STRING, " ", 1)),
+                     {3l}, {2.21f});
+    search_and_check(
+        PredicateBuilder::In(/*field_index=*/2, /*field_name=*/"labels", FieldType::STRING,
+                             {Literal(FieldType::STRING, "vip", 3)}),
+        {4l}, {0.01f});
+    search_and_check(PredicateBuilder::LessOrEqual(/*field_index=*/3, /*field_name=*/"price",
+                                                   FieldType::FLOAT, Literal(10.0f)),
+                     {0l}, {4.21f});
+    search_and_check(PredicateBuilder::LessThan(/*field_index=*/3, /*field_name=*/"price",
+                                                FieldType::FLOAT, Literal(10.0f)),
+                     {0l}, {4.21f});
+    search_and_check(PredicateBuilder::GreaterThan(/*field_index=*/3, /*field_name=*/"price",
+                                                   FieldType::FLOAT, Literal(10.0f)),
+                     {4l, 3l}, {0.01f, 2.21f});
+    search_and_check(PredicateBuilder::In(/*field_index=*/4, /*field_name=*/"scores",
+                                          FieldType::FLOAT, {Literal(0.25f), Literal(0.75f)}),
+                     {4l, 0l}, {0.01f, 4.21f});
+    search_and_check(PredicateBuilder::Equal(/*field_index=*/5, /*field_name=*/"category",
+                                             FieldType::INT, Literal(7)),
+                     {0l}, {4.21f});
+    search_and_check(PredicateBuilder::In(/*field_index=*/6, /*field_name=*/"category_ids",
+                                          FieldType::INT, {Literal(9)}),
+                     {4l}, {0.01f});
+    search_and_check(
+        PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"color", FieldType::STRING,
+                                Literal(FieldType::STRING, "green", 5)),
+        {}, {});
+    search_and_check_error(
+        PredicateBuilder::NotIn(/*field_index=*/1, /*field_name=*/"color", FieldType::STRING,
+                                {Literal(FieldType::STRING, "red", 3)}),
+        "lumina tag predicate does not support leaf function NotIn");
+    search_and_check_error(
+        PredicateBuilder::NotEqual(/*field_index=*/1, /*field_name=*/"color", FieldType::STRING,
+                                   Literal(FieldType::STRING, "red", 3)),
+        "lumina tag predicate does not support leaf function NotEqual");
+    search_and_check_error(
+        PredicateBuilder::Equal(/*field_index=*/7, /*field_name=*/"unknown", FieldType::STRING,
+                                Literal(FieldType::STRING, "red", 3)),
+        "unknown tag key 'unknown' in label filter");
+    search_and_check_error(PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"color",
+                                                   FieldType::INT, Literal(1)),
+                           "tag value type mismatch for key 'color'");
+    search_and_check_error(
+        PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"price", FieldType::STRING,
+                                Literal(FieldType::STRING, "x", 1)),
+        "tag value type mismatch for key 'price'");
+    {
+        std::shared_ptr<Predicate> predicate = PredicateBuilder::Equal(
+            /*field_index=*/1, /*field_name=*/"color", FieldType::STRING,
+            Literal(FieldType::STRING, "red", 3));
+        search_and_check_with_filter([](int64_t id) { return id == 0 || id == 4; }, predicate, {0l},
+                                     {4.21f});
+        search_and_check_with_filter([](int64_t id) { return id == 4; }, predicate, {}, {});
+    }
+    {
+        std::shared_ptr<Predicate> red_predicate = PredicateBuilder::Equal(
+            /*field_index=*/1, /*field_name=*/"color", FieldType::STRING,
+            Literal(FieldType::STRING, "red", 3));
+        std::shared_ptr<Predicate> blue_predicate = PredicateBuilder::Equal(
+            /*field_index=*/1, /*field_name=*/"color", FieldType::STRING,
+            Literal(FieldType::STRING, "blue", 4));
+        std::shared_ptr<Predicate> high_price_predicate = PredicateBuilder::GreaterOrEqual(
+            /*field_index=*/3, /*field_name=*/"price", FieldType::FLOAT, Literal(30.0f));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Predicate> blue_high_price_predicate,
+                             PredicateBuilder::And({blue_predicate, high_price_predicate}));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Predicate> compound_predicate,
+                             PredicateBuilder::Or({red_predicate, blue_high_price_predicate}));
+        search_and_check(compound_predicate, {0l, 4l}, {4.21f, 0.01f});
+        search_and_check_with_filter([](int64_t id) { return id == 4; }, compound_predicate, {4l},
+                                     {0.01f});
+    }
+}
+
+TEST_F(LuminaGlobalIndexTest, TestTagSchemaValidation) {
+    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    std::string index_root = test_root_dir->Str();
+
+    std::shared_ptr<arrow::DataType> tag_data_type = arrow::struct_(
+        {arrow::field("f0", arrow::list(arrow::float32())), arrow::field("color", arrow::utf8())});
+
+    {
+        std::map<std::string, std::string> tag_options = options_;
+        tag_options["lumina.extension.build.tag.tag_schema"] =
+            R"([{"key_name":"color","type":"range","value_type":"string"}])";
+        ASSERT_NOK_WITH_MSG(
+            WriteGlobalIndex(index_root, tag_data_type, tag_options, array_, Range(0, 3)),
+            "Option extension.build.tag.tag_schema tag[0] range type does not support value_type "
+            "'string'");
+    }
+    {
+        std::map<std::string, std::string> tag_options = options_;
+        tag_options["lumina.extension.build.tag.tag_schema"] =
+            R"([{"key_name":"color","type":"enum","value_type":"int32"}])";
+        ASSERT_NOK_WITH_MSG(
+            WriteGlobalIndex(index_root, tag_data_type, tag_options, array_, Range(0, 3)),
+            "lumina tag field color type string is not compatible with tag_schema value_type");
+    }
+    {
+        std::shared_ptr<arrow::DataType> int64_tag_data_type =
+            arrow::struct_({arrow::field("f0", arrow::list(arrow::float32())),
+                            arrow::field("category", arrow::int64())});
+        std::map<std::string, std::string> tag_options = options_;
+        tag_options["lumina.extension.build.tag.tag_schema"] =
+            R"([{"key_name":"category","type":"enum","value_type":"int32"}])";
+        ASSERT_NOK_WITH_MSG(
+            WriteGlobalIndex(index_root, int64_tag_data_type, tag_options, array_, Range(0, 3)),
+            "lumina tag field category type int64 is not compatible with tag_schema value_type");
+    }
+    {
+        std::shared_ptr<arrow::DataType> double_tag_data_type =
+            arrow::struct_({arrow::field("f0", arrow::list(arrow::float32())),
+                            arrow::field("price", arrow::float64())});
+        std::map<std::string, std::string> tag_options = options_;
+        tag_options["lumina.extension.build.tag.tag_schema"] =
+            R"([{"key_name":"price","type":"range","value_type":"double"}])";
+        ASSERT_NOK_WITH_MSG(
+            WriteGlobalIndex(index_root, double_tag_data_type, tag_options, array_, Range(0, 3)),
+            "Option extension.build.tag.tag_schema tag[0] range type does not support value_type "
+            "'double'");
+    }
+    {
+        std::shared_ptr<arrow::DataType> int64_tag_data_type =
+            arrow::struct_({arrow::field("f0", arrow::list(arrow::float32())),
+                            arrow::field("price", arrow::int64())});
+        std::map<std::string, std::string> tag_options = options_;
+        tag_options["lumina.extension.build.tag.tag_schema"] =
+            R"([{"key_name":"price","type":"range","value_type":"int64"}])";
+        ASSERT_NOK_WITH_MSG(
+            WriteGlobalIndex(index_root, int64_tag_data_type, tag_options, array_, Range(0, 3)),
+            "Option extension.build.tag.tag_schema tag[0] range type does not support value_type "
+            "'int64'");
+    }
+}
+
+TEST_F(LuminaGlobalIndexTest, TestGetExtraFieldNames) {
+    {
+        LuminaGlobalIndex global_index(options_);
+        ASSERT_OK_AND_ASSIGN(std::optional<std::vector<std::string>> field_names,
+                             global_index.GetExtraFieldNames());
+        ASSERT_FALSE(field_names);
+    }
+    {
+        std::map<std::string, std::string> tag_options = options_;
+        tag_options["lumina.extension.build.tag.tag_schema"] =
+            R"([{"key_name":"color","type":"enum","value_type":"string"},)"
+            R"({"key_name":"price","type":"range","value_type":"float"},)"
+            R"({"key_name":"category_ids","type":"enum","value_type":"int32"}])";
+        LuminaGlobalIndex global_index(tag_options);
+        ASSERT_OK_AND_ASSIGN(std::optional<std::vector<std::string>> field_names,
+                             global_index.GetExtraFieldNames());
+        ASSERT_TRUE(field_names);
+        ASSERT_EQ(field_names.value(),
+                  std::vector<std::string>({"color", "price", "category_ids"}));
+    }
+}
+
 TEST_F(LuminaGlobalIndexTest, TestInvalidInputs) {
     auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
     ASSERT_TRUE(test_root_dir);
@@ -304,8 +741,20 @@ TEST_F(LuminaGlobalIndexTest, TestInvalidInputs) {
                                                   .ValueOrDie();
         ASSERT_NOK_WITH_MSG(
             WriteGlobalIndex(index_root, data_type_, options_, array, Range(0, 2)),
-            "invalid input array in LuminaIndexWriter, length of field array [2] multiplied "
-            "dimension [4] must match length of field value array [7]");
+            "invalid input array in LuminaIndexWriter, vector at row [1] has length [3], "
+            "expected dimension [4]");
+    }
+    {
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(data_type_,
+                                                                                        R"([
+               [[0.0, 0.0, 0.0]],
+               [[0.0, 1.0, 0.0, 1.0, 0.0]]
+            ])")
+                                                  .ValueOrDie();
+        ASSERT_NOK_WITH_MSG(
+            WriteGlobalIndex(index_root, data_type_, options_, array, Range(0, 2)),
+            "invalid input array in LuminaIndexWriter, vector at row [0] has length [3], "
+            "expected dimension [4]");
     }
 
     {
@@ -372,10 +821,10 @@ TEST_F(LuminaGlobalIndexTest, TestInvalidInputs) {
                                     "f1",
                                     /*limit=*/2, query_, /*filter=*/nullptr,
                                     PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f0",
-                                                            FieldType::BIGINT, Literal(5l)),
+                                                            FieldType::INT, Literal(5)),
                                     /*distance_type=*/std::nullopt,
                                     /*options=*/std::map<std::string, std::string>())),
-                                "lumina index not support predicate in VisitVectorSearch");
+                                "lumina index was not built with tag");
         }
         {
             ASSERT_OK_AND_ASSIGN(auto reader,

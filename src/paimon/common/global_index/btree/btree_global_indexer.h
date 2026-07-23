@@ -53,6 +53,8 @@ class BTreeGlobalIndexer : public GlobalIndexer {
     static Result<std::unique_ptr<BTreeGlobalIndexer>> Create(
         const std::map<std::string, std::string>& options);
 
+    Result<std::optional<std::vector<std::string>>> GetExtraFieldNames() const override;
+
     Result<std::shared_ptr<GlobalIndexWriter>> CreateWriter(
         const std::string& field_name, ::ArrowSchema* arrow_schema,
         const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
