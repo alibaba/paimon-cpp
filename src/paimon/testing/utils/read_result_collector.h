@@ -180,6 +180,7 @@ class ReadResultCollector {
                 if (BatchReader::IsEofBatch(batch_with_bitmap)) {
                     return std::shared_ptr<arrow::Array>();
                 }
+                PAIMON_RETURN_NOT_OK(CheckBatchOffset(batch_with_bitmap.first));
                 assert(!batch_with_bitmap.second.IsEmpty());
                 PAIMON_ASSIGN_OR_RAISE(
                     batch, ReaderUtils::ApplyBitmapToReadBatch(std::move(batch_with_bitmap),
@@ -192,12 +193,30 @@ class ReadResultCollector {
             if (BatchReader::IsEofBatch(batch)) {
                 return std::shared_ptr<arrow::Array>();
             }
+            PAIMON_RETURN_NOT_OK(CheckBatchOffset(batch));
         }
         auto& [c_array, c_schema] = batch;
         assert(c_array->length > 0);
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto result_array,
                                           arrow::ImportArray(c_array.get(), c_schema.get()));
         return result_array;
+    }
+
+    static Status CheckBatchOffset(const BatchReader::ReadBatch& batch) {
+        assert(!BatchReader::IsEofBatch(batch));
+        return CheckArrayOffset(batch.first.get());
+    }
+
+    static Status CheckArrayOffset(const ArrowArray* array) {
+        assert(array);
+        if (array->offset != 0) {
+            return Status::Invalid("BatchReader returned an array with non-zero offset " +
+                                   std::to_string(array->offset));
+        }
+        for (int64_t i = 0; i < array->n_children; i++) {
+            PAIMON_RETURN_NOT_OK(CheckArrayOffset(array->children[i]));
+        }
+        return Status::OK();
     }
 };
 }  // namespace paimon::test

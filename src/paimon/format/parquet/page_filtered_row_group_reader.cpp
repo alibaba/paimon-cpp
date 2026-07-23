@@ -26,6 +26,7 @@
 #include "arrow/table.h"
 #include "arrow/util/future.h"
 #include "fmt/format.h"
+#include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "parquet/arrow/reader_internal.h"
 #include "parquet/metadata.h"
@@ -36,12 +37,13 @@ namespace paimon::parquet {
 namespace {
 
 /// Wraps an arrow::Table + TableBatchReader as a RecordBatchReader so the caller can
-/// stream zero-copy-sliced batches without deep-copying multi-chunk columns. The Table
-/// is held to keep its ChunkedArrays alive for the inner TableBatchReader.
+/// stream batches while ensuring every returned array offset is zero. The Table is held
+/// to keep its ChunkedArrays alive for the inner TableBatchReader.
 class TableRecordBatchReader : public arrow::RecordBatchReader {
  public:
-    TableRecordBatchReader(std::shared_ptr<arrow::Table> table, int64_t chunksize)
-        : table_(std::move(table)), inner_(*table_) {
+    TableRecordBatchReader(std::shared_ptr<arrow::Table> table, int64_t chunksize,
+                           std::shared_ptr<arrow::MemoryPool> pool)
+        : table_(std::move(table)), inner_(*table_), pool_(std::move(pool)) {
         inner_.set_chunksize(chunksize);
     }
 
@@ -50,12 +52,26 @@ class TableRecordBatchReader : public arrow::RecordBatchReader {
     }
 
     arrow::Status ReadNext(std::shared_ptr<arrow::RecordBatch>* out) override {
-        return inner_.ReadNext(out);
+        ARROW_RETURN_NOT_OK(inner_.ReadNext(out));
+        if (!*out) {
+            return arrow::Status::OK();
+        }
+
+        // Page filtering may produce columns with different chunk boundaries. TableBatchReader
+        // aligns them by slicing columns, which may leave non-zero child offsets.
+        Result<std::shared_ptr<arrow::RecordBatch>> normalized_result =
+            ArrowUtils::NormalizeRecordBatchOffsets(*out, pool_.get());
+        if (!normalized_result.ok()) {
+            return ToArrowStatus(normalized_result.status());
+        }
+        *out = std::move(normalized_result).value();
+        return arrow::Status::OK();
     }
 
  private:
     std::shared_ptr<arrow::Table> table_;
     arrow::TableBatchReader inner_;
+    std::shared_ptr<arrow::MemoryPool> pool_;
 };
 
 }  // namespace
@@ -240,7 +256,8 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
     if (row_ranges.IsEmpty()) {
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Table> empty_table,
                                           arrow::Table::MakeEmpty(arrow_schema, pool.get()));
-        return std::make_unique<TableRecordBatchReader>(std::move(empty_table), max_chunksize);
+        return std::make_unique<TableRecordBatchReader>(std::move(empty_table), max_chunksize,
+                                                        pool);
     }
 
     int64_t expected_rows = row_ranges.RowCount();
@@ -283,7 +300,8 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
     }
 
     auto table = arrow::Table::Make(arrow_schema, std::move(columns), expected_rows);
-    return std::make_unique<TableRecordBatchReader>(std::move(table), max_chunksize);
+    return std::make_unique<TableRecordBatchReader>(std::move(table), max_chunksize,
+                                                    std::move(pool));
 }
 
 std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRanges(

@@ -18,12 +18,29 @@
 
 #include "arrow/array/array_base.h"
 #include "arrow/array/array_nested.h"
+#include "arrow/array/concatenate.h"
 #include "arrow/util/compression.h"
 #include "fmt/format.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/string_utils.h"
 
 namespace paimon {
+
+namespace {
+
+bool HasNonZeroOffset(const std::shared_ptr<arrow::ArrayData>& data) {
+    if (data->offset != 0) {
+        return true;
+    }
+    for (const auto& child : data->child_data) {
+        if (HasNonZeroOffset(child)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+}  // namespace
 
 const char* ArrowUtils::kArrowSchemaMetadataKey = "ARROW:schema";
 
@@ -165,6 +182,28 @@ Result<std::shared_ptr<arrow::StructArray>> ArrowUtils::RemoveFieldFromStructArr
         arrow::StructArray::Make(new_arrays, new_fields, struct_array->null_bitmap(),
                                  struct_array->null_count(), struct_array->offset()));
     return array;
+}
+
+Result<std::shared_ptr<arrow::RecordBatch>> ArrowUtils::NormalizeRecordBatchOffsets(
+    const std::shared_ptr<arrow::RecordBatch>& record_batch, arrow::MemoryPool* pool) {
+    arrow::ArrayVector normalized_columns;
+    for (int32_t i = 0; i < record_batch->num_columns(); ++i) {
+        const std::shared_ptr<arrow::Array>& column = record_batch->column(i);
+        if (!HasNonZeroOffset(column->data())) {
+            continue;
+        }
+        if (normalized_columns.empty()) {
+            normalized_columns = record_batch->columns();
+        }
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> normalized_column,
+                                          arrow::Concatenate({column}, pool));
+        normalized_columns[i] = std::move(normalized_column);
+    }
+    if (normalized_columns.empty()) {
+        return record_batch;
+    }
+    return arrow::RecordBatch::Make(record_batch->schema(), record_batch->num_rows(),
+                                    std::move(normalized_columns));
 }
 
 Result<arrow::Compression::type> ArrowUtils::GetCompressionType(const std::string& compression) {
