@@ -30,8 +30,8 @@
 #include "paimon/testing/mock/mock_file_batch_reader.h"
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/testharness.h"
-namespace paimon::test {
 
+namespace paimon::test {
 class DataEvolutionFileReaderTest : public ::testing::Test,
                                     public ::testing::WithParamInterface<bool> {
  public:
@@ -117,6 +117,7 @@ class DataEvolutionFileReaderTest : public ::testing::Test,
             if (result_array == nullptr) {
                 break;
             }
+            ASSERT_EQ(result_array->offset(), 0);
             result_array_vec.push_back(result_array);
         }
         ASSERT_EQ(result_array_vec.size(),

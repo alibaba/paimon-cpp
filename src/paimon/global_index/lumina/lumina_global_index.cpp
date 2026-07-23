@@ -16,6 +16,10 @@
 
 #include "paimon/global_index/lumina/lumina_global_index.h"
 
+#include <cstring>
+#include <numeric>
+#include <type_traits>
+#include <unordered_set>
 #include <utility>
 
 #include "arrow/c/bridge.h"
@@ -27,6 +31,7 @@
 #include "lumina/core/Constants.h"
 #include "lumina/core/Status.h"
 #include "lumina/core/Types.h"
+#include "lumina/extensions/experimental/BuildCombinedExtensionV0.h"
 #include "paimon/common/global_index/global_index_utils.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/rapidjson_util.h"
@@ -35,6 +40,9 @@
 #include "paimon/global_index/lumina/lumina_file_reader.h"
 #include "paimon/global_index/lumina/lumina_file_writer.h"
 #include "paimon/global_index/lumina/lumina_utils.h"
+#include "paimon/predicate/compound_predicate.h"
+#include "paimon/predicate/leaf_predicate.h"
+#include "rapidjson/document.h"
 namespace paimon::lumina {
 #define CHECK_NOT_NULL(pointer, error_msg)     \
     do {                                       \
@@ -42,6 +50,502 @@ namespace paimon::lumina {
             return Status::Invalid(error_msg); \
         }                                      \
     } while (0)
+
+namespace {
+using TagDimensionData = ::lumina::extensions::experimental::TagDimensionData;
+using TagFilter = ::lumina::extensions::experimental::TagFilter;
+using TagValue = ::lumina::extensions::experimental::TagValue;
+using TagValues = ::lumina::extensions::experimental::TagValues;
+
+Result<std::string> GetRequiredStringMember(const rapidjson::Value& obj,
+                                            const std::string& field_name,
+                                            const std::string& tag_label) {
+    auto iter = obj.FindMember(field_name.c_str());
+    if (iter == obj.MemberEnd()) {
+        return Status::Invalid(
+            fmt::format("lumina tag_schema {} missing required field: {}", tag_label, field_name));
+    }
+    if (!iter->value.IsString()) {
+        return Status::Invalid(
+            fmt::format("lumina tag_schema {} field {} must be string", tag_label, field_name));
+    }
+    return std::string(iter->value.GetString(), iter->value.GetStringLength());
+}
+
+Result<LuminaTagField> ParseTagField(const rapidjson::Value& obj, const std::string& tag_label) {
+    if (!obj.IsObject()) {
+        return Status::Invalid(fmt::format("lumina tag_schema {} must be object", tag_label));
+    }
+    if (obj.MemberCount() != 3) {
+        return Status::Invalid(fmt::format(
+            "lumina tag_schema {} must have exactly 3 fields: key_name, type, value_type",
+            tag_label));
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(
+        std::string key_name,
+        GetRequiredStringMember(obj, std::string(::lumina::core::kExtensionTagKName), tag_label));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::string type,
+        GetRequiredStringMember(obj, std::string(::lumina::core::kExtensionTagType), tag_label));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::string value_type,
+        GetRequiredStringMember(obj, std::string(::lumina::core::kExtensionTagVType), tag_label));
+
+    if (key_name.empty()) {
+        return Status::Invalid(
+            fmt::format("lumina tag_schema {} key_name must not be empty", tag_label));
+    }
+    LuminaTagField::Type parsed_type;
+    if (type == std::string(::lumina::core::kExtensionTagTypeEnum)) {
+        parsed_type = LuminaTagField::Type::ENUM;
+    } else if (type == std::string(::lumina::core::kExtensionTagTypeRange)) {
+        parsed_type = LuminaTagField::Type::RANGE;
+    } else {
+        return Status::Invalid(
+            fmt::format("lumina tag_schema {} has unsupported type: {}", tag_label, type));
+    }
+
+    LuminaTagField::ValueType parsed_value_type;
+    if (value_type == std::string(::lumina::core::kExtensionTagVTypeInt32)) {
+        parsed_value_type = LuminaTagField::ValueType::INT32;
+    } else if (value_type == std::string(::lumina::core::kExtensionTagVTypeInt64)) {
+        parsed_value_type = LuminaTagField::ValueType::INT64;
+    } else if (value_type == std::string(::lumina::core::kExtensionTagVTypeFloat)) {
+        parsed_value_type = LuminaTagField::ValueType::FLOAT;
+    } else if (value_type == std::string(::lumina::core::kExtensionTagVTypeDouble)) {
+        parsed_value_type = LuminaTagField::ValueType::DOUBLE;
+    } else if (value_type == std::string(::lumina::core::kExtensionTagVTypeString)) {
+        parsed_value_type = LuminaTagField::ValueType::STRING;
+    } else {
+        return Status::Invalid(fmt::format("lumina tag_schema {} has unsupported value_type: {}",
+                                           tag_label, value_type));
+    }
+    return LuminaTagField{key_name, parsed_type, parsed_value_type};
+}
+
+Status ValidateTagArrowType(const LuminaTagField& tag_field,
+                            const std::shared_ptr<arrow::DataType>& field_type) {
+    auto value_type = field_type;
+    if (auto list_type = std::dynamic_pointer_cast<arrow::ListType>(field_type)) {
+        value_type = list_type->value_type();
+    }
+
+    bool compatible = false;
+    switch (tag_field.value_type) {
+        case LuminaTagField::ValueType::INT32:
+            compatible = value_type->id() == arrow::Type::INT8 ||
+                         value_type->id() == arrow::Type::INT16 ||
+                         value_type->id() == arrow::Type::INT32;
+            break;
+        case LuminaTagField::ValueType::INT64:
+            compatible = value_type->id() == arrow::Type::INT64;
+            break;
+        case LuminaTagField::ValueType::FLOAT:
+            compatible = value_type->id() == arrow::Type::FLOAT;
+            break;
+        case LuminaTagField::ValueType::DOUBLE:
+            compatible = value_type->id() == arrow::Type::DOUBLE;
+            break;
+        case LuminaTagField::ValueType::STRING:
+            compatible = value_type->id() == arrow::Type::STRING;
+            break;
+    }
+    if (!compatible) {
+        return Status::Invalid(
+            fmt::format("lumina tag field {} type {} is not compatible with tag_schema value_type",
+                        tag_field.name, field_type->ToString()));
+    }
+    return Status::OK();
+}
+
+template <typename ValueType, typename ArrayType>
+void AppendPrimitiveTagValue(const std::shared_ptr<arrow::Array>& array, int64_t index,
+                             std::vector<ValueType>* values) {
+    values->push_back(
+        static_cast<ValueType>(static_cast<const ArrayType*>(array.get())->Value(index)));
+}
+
+template <typename ValueType>
+Status AppendTagValue(const std::shared_ptr<arrow::Array>& array, int64_t index,
+                      std::vector<ValueType>* values) {
+    if (array->IsNull(index)) {
+        return Status::OK();
+    }
+
+    auto validate_array_type = [&](arrow::Type::type expected_type,
+                                   const char* value_type_name) -> Status {
+        if (array->type_id() != expected_type) {
+            return Status::Invalid(fmt::format("lumina {} tag field has unsupported arrow type {}",
+                                               value_type_name, array->type()->ToString()));
+        }
+        return Status::OK();
+    };
+
+    if constexpr (std::is_same_v<ValueType, int32_t>) {
+        switch (array->type_id()) {
+            case arrow::Type::INT8:
+                AppendPrimitiveTagValue<ValueType, arrow::Int8Array>(array, index, values);
+                break;
+            case arrow::Type::INT16:
+                AppendPrimitiveTagValue<ValueType, arrow::Int16Array>(array, index, values);
+                break;
+            case arrow::Type::INT32:
+                AppendPrimitiveTagValue<ValueType, arrow::Int32Array>(array, index, values);
+                break;
+            default:
+                return Status::Invalid(
+                    fmt::format("lumina integer tag field has unsupported arrow type {}",
+                                array->type()->ToString()));
+        }
+    } else if constexpr (std::is_same_v<ValueType, int64_t>) {
+        PAIMON_RETURN_NOT_OK(validate_array_type(arrow::Type::INT64, "int64"));
+        AppendPrimitiveTagValue<ValueType, arrow::Int64Array>(array, index, values);
+    } else if constexpr (std::is_same_v<ValueType, float>) {
+        PAIMON_RETURN_NOT_OK(validate_array_type(arrow::Type::FLOAT, "float"));
+        AppendPrimitiveTagValue<ValueType, arrow::FloatArray>(array, index, values);
+    } else if constexpr (std::is_same_v<ValueType, double>) {
+        PAIMON_RETURN_NOT_OK(validate_array_type(arrow::Type::DOUBLE, "double"));
+        AppendPrimitiveTagValue<ValueType, arrow::DoubleArray>(array, index, values);
+    } else if constexpr (std::is_same_v<ValueType, std::string>) {
+        PAIMON_RETURN_NOT_OK(validate_array_type(arrow::Type::STRING, "string"));
+        auto string_array = static_cast<const arrow::StringArray*>(array.get());
+        auto view = string_array->GetView(index);
+        values->emplace_back(view.data(), view.size());
+    } else {
+        return Status::Invalid("lumina tag field has unsupported value type");
+    }
+    return Status::OK();
+}
+
+template <typename ValueType>
+Status ExtractTagValues(const std::shared_ptr<arrow::Array>& field_array, int64_t segment_start,
+                        int64_t segment_len, std::vector<std::vector<ValueType>>* values) {
+    values->resize(segment_len);
+    auto list_array = std::dynamic_pointer_cast<arrow::ListArray>(field_array);
+    if (list_array) {
+        auto child_values = list_array->values();
+        for (int64_t i = 0; i < segment_len; i++) {
+            int64_t row = segment_start + i;
+            if (list_array->IsNull(row)) {
+                continue;
+            }
+            auto value_start = list_array->value_offset(row);
+            auto value_end = list_array->value_offset(row + 1);
+            auto& row_values = (*values)[i];
+            row_values.reserve(value_end - value_start);
+            for (int64_t value_index = value_start; value_index < value_end; value_index++) {
+                PAIMON_RETURN_NOT_OK(AppendTagValue(child_values, value_index, &row_values));
+            }
+        }
+        return Status::OK();
+    }
+
+    for (int64_t i = 0; i < segment_len; i++) {
+        PAIMON_RETURN_NOT_OK(AppendTagValue(field_array, segment_start + i, &(*values)[i]));
+    }
+    return Status::OK();
+}
+
+Result<TagValue> LiteralToTagValue(const Literal& literal) {
+    if (literal.IsNull()) {
+        return Status::Invalid("lumina tag predicate does not support null literal");
+    }
+    switch (literal.GetType()) {
+        case FieldType::TINYINT:
+            return TagValue(static_cast<int32_t>(literal.GetValue<int8_t>()));
+        case FieldType::SMALLINT:
+            return TagValue(static_cast<int32_t>(literal.GetValue<int16_t>()));
+        case FieldType::INT:
+            return TagValue(literal.GetValue<int32_t>());
+        case FieldType::BIGINT:
+            return TagValue(literal.GetValue<int64_t>());
+        case FieldType::FLOAT:
+            return TagValue(literal.GetValue<float>());
+        case FieldType::DOUBLE:
+            return TagValue(literal.GetValue<double>());
+        case FieldType::STRING:
+            return TagValue(literal.GetValue<std::string>());
+        default:
+            return Status::Invalid(
+                fmt::format("lumina tag predicate does not support literal type {}",
+                            static_cast<int32_t>(literal.GetType())));
+    }
+}
+
+Result<const Literal*> GetSingleLiteral(const std::vector<Literal>& literals,
+                                        const std::string& function_name) {
+    if (literals.size() != 1) {
+        return Status::Invalid(
+            fmt::format("lumina tag {} predicate requires one literal", function_name));
+    }
+    return &literals[0];
+}
+
+Result<TagValues> LiteralsToTagValues(const std::vector<Literal>& literals) {
+    if (literals.empty()) {
+        return Status::Invalid("lumina tag predicate IN requires at least one literal");
+    }
+
+    switch (literals[0].GetType()) {
+        case FieldType::TINYINT:
+        case FieldType::SMALLINT:
+        case FieldType::INT: {
+            std::vector<int32_t> values;
+            values.reserve(literals.size());
+            for (const auto& literal : literals) {
+                PAIMON_ASSIGN_OR_RAISE(TagValue value, LiteralToTagValue(literal));
+                auto typed_value = std::get_if<int32_t>(&value);
+                CHECK_NOT_NULL(typed_value,
+                               "lumina tag predicate IN literals must have the same value type");
+                values.push_back(*typed_value);
+            }
+            return TagValues(std::move(values));
+        }
+        case FieldType::BIGINT: {
+            std::vector<int64_t> values;
+            values.reserve(literals.size());
+            for (const auto& literal : literals) {
+                PAIMON_ASSIGN_OR_RAISE(TagValue value, LiteralToTagValue(literal));
+                auto typed_value = std::get_if<int64_t>(&value);
+                CHECK_NOT_NULL(typed_value,
+                               "lumina tag predicate IN literals must have the same value type");
+                values.push_back(*typed_value);
+            }
+            return TagValues(std::move(values));
+        }
+        case FieldType::FLOAT: {
+            std::vector<float> values;
+            values.reserve(literals.size());
+            for (const auto& literal : literals) {
+                PAIMON_ASSIGN_OR_RAISE(TagValue value, LiteralToTagValue(literal));
+                auto typed_value = std::get_if<float>(&value);
+                CHECK_NOT_NULL(typed_value,
+                               "lumina tag predicate IN literals must have the same value type");
+                values.push_back(*typed_value);
+            }
+            return TagValues(std::move(values));
+        }
+        case FieldType::DOUBLE: {
+            std::vector<double> values;
+            values.reserve(literals.size());
+            for (const auto& literal : literals) {
+                PAIMON_ASSIGN_OR_RAISE(TagValue value, LiteralToTagValue(literal));
+                auto typed_value = std::get_if<double>(&value);
+                CHECK_NOT_NULL(typed_value,
+                               "lumina tag predicate IN literals must have the same value type");
+                values.push_back(*typed_value);
+            }
+            return TagValues(std::move(values));
+        }
+        case FieldType::STRING: {
+            std::vector<std::string> values;
+            values.reserve(literals.size());
+            for (const auto& literal : literals) {
+                PAIMON_ASSIGN_OR_RAISE(TagValue value, LiteralToTagValue(literal));
+                auto typed_value = std::get_if<std::string>(&value);
+                CHECK_NOT_NULL(typed_value,
+                               "lumina tag predicate IN literals must have the same value type");
+                values.push_back(std::move(*typed_value));
+            }
+            return TagValues(std::move(values));
+        }
+        default:
+            return Status::Invalid(
+                fmt::format("lumina tag predicate IN does not support literal type {}",
+                            static_cast<int32_t>(literals[0].GetType())));
+    }
+}
+
+}  // namespace
+
+Result<std::vector<TagDimensionData>> LuminaIndexWriter::ExtractTagDataForSegment(
+    const std::shared_ptr<arrow::StructArray>& struct_array,
+    const std::vector<LuminaTagField>& tag_fields, int64_t segment_start, int64_t segment_len) {
+    std::vector<TagDimensionData> tag_dimensions_data;
+    tag_dimensions_data.reserve(tag_fields.size());
+    for (const auto& tag_field : tag_fields) {
+        auto field_array = struct_array->GetFieldByName(tag_field.name);
+        CHECK_NOT_NULL(field_array,
+                       fmt::format("lumina tag field {} not in input array", tag_field.name));
+
+        TagDimensionData tag_dimension_data;
+        tag_dimension_data.tagkName = tag_field.name;
+        switch (tag_field.value_type) {
+            case LuminaTagField::ValueType::INT32: {
+                std::vector<std::vector<int32_t>> values;
+                PAIMON_RETURN_NOT_OK(
+                    ExtractTagValues<int32_t>(field_array, segment_start, segment_len, &values));
+                tag_dimension_data.values = std::move(values);
+                break;
+            }
+            case LuminaTagField::ValueType::INT64: {
+                std::vector<std::vector<int64_t>> values;
+                PAIMON_RETURN_NOT_OK(
+                    ExtractTagValues<int64_t>(field_array, segment_start, segment_len, &values));
+                tag_dimension_data.values = std::move(values);
+                break;
+            }
+            case LuminaTagField::ValueType::FLOAT: {
+                std::vector<std::vector<float>> values;
+                PAIMON_RETURN_NOT_OK(
+                    ExtractTagValues<float>(field_array, segment_start, segment_len, &values));
+                tag_dimension_data.values = std::move(values);
+                break;
+            }
+            case LuminaTagField::ValueType::DOUBLE: {
+                std::vector<std::vector<double>> values;
+                PAIMON_RETURN_NOT_OK(
+                    ExtractTagValues<double>(field_array, segment_start, segment_len, &values));
+                tag_dimension_data.values = std::move(values);
+                break;
+            }
+            case LuminaTagField::ValueType::STRING: {
+                std::vector<std::vector<std::string>> values;
+                PAIMON_RETURN_NOT_OK(ExtractTagValues<std::string>(field_array, segment_start,
+                                                                   segment_len, &values));
+                tag_dimension_data.values = std::move(values);
+                break;
+            }
+        }
+        tag_dimensions_data.push_back(std::move(tag_dimension_data));
+    }
+    return tag_dimensions_data;
+}
+
+Result<std::vector<LuminaTagField>> LuminaGlobalIndex::ParseTagSchema(
+    const std::map<std::string, std::string>& lumina_options) {
+    auto iter = lumina_options.find(std::string(::lumina::core::kExtensionTagSchema));
+    if (iter == lumina_options.end()) {
+        return std::vector<LuminaTagField>();
+    }
+
+    rapidjson::Document document;
+    document.Parse(iter->second.c_str());
+    if (document.HasParseError()) {
+        return Status::Invalid("lumina tag_schema must be a valid JSON string");
+    }
+
+    std::vector<LuminaTagField> tag_fields;
+    if (document.IsArray()) {
+        if (document.Empty()) {
+            return Status::Invalid("lumina tag_schema must contain at least one tag definition");
+        }
+        tag_fields.reserve(document.Size());
+        for (rapidjson::SizeType i = 0; i < document.Size(); i++) {
+            PAIMON_ASSIGN_OR_RAISE(LuminaTagField field,
+                                   ParseTagField(document[i], fmt::format("tag[{}]", i)));
+            tag_fields.push_back(std::move(field));
+        }
+    } else if (document.IsObject()) {
+        PAIMON_ASSIGN_OR_RAISE(LuminaTagField field, ParseTagField(document, "tag[0]"));
+        tag_fields.push_back(std::move(field));
+    } else {
+        return Status::Invalid("lumina tag_schema must be an object or array of objects");
+    }
+
+    std::unordered_set<std::string> seen_names;
+    for (const auto& field : tag_fields) {
+        if (!seen_names.insert(field.name).second) {
+            return Status::Invalid(
+                fmt::format("lumina tag_schema has duplicate key_name: {}", field.name));
+        }
+    }
+    return tag_fields;
+}
+
+Status LuminaGlobalIndex::ValidateTagFields(const arrow::StructType& struct_type,
+                                            const std::vector<LuminaTagField>& tag_fields) {
+    for (const auto& tag_field : tag_fields) {
+        auto field = struct_type.GetFieldByName(tag_field.name);
+        CHECK_NOT_NULL(
+            field, fmt::format("lumina tag field {} not exist in arrow schema", tag_field.name));
+        PAIMON_RETURN_NOT_OK(ValidateTagArrowType(tag_field, field->type()));
+    }
+    return Status::OK();
+}
+
+Result<::lumina::extensions::experimental::TagFilter> LuminaIndexReader::PredicateToTagFilter(
+    const std::shared_ptr<Predicate>& predicate) {
+    if (!predicate) {
+        return Status::Invalid("lumina tag predicate must not be null");
+    }
+
+    auto compound_predicate = std::dynamic_pointer_cast<CompoundPredicate>(predicate);
+    if (compound_predicate) {
+        std::vector<::lumina::extensions::experimental::TagFilter> children;
+        children.reserve(compound_predicate->Children().size());
+        for (const auto& child : compound_predicate->Children()) {
+            PAIMON_ASSIGN_OR_RAISE(::lumina::extensions::experimental::TagFilter tag_filter,
+                                   PredicateToTagFilter(child));
+            children.push_back(std::move(tag_filter));
+        }
+        if (children.empty()) {
+            return Status::Invalid("lumina tag compound predicate must have at least one child");
+        }
+        if (children.size() == 1) {
+            return std::move(children.front());
+        }
+        switch (compound_predicate->GetFunction().GetType()) {
+            case Function::Type::AND:
+                return ::lumina::extensions::experimental::TagFilter::And(std::move(children));
+            case Function::Type::OR:
+                return ::lumina::extensions::experimental::TagFilter::Or(std::move(children));
+            default:
+                return Status::NotImplemented(
+                    fmt::format("lumina tag predicate does not support compound function {}",
+                                compound_predicate->GetFunction().ToString()));
+        }
+    }
+
+    auto leaf_predicate = std::dynamic_pointer_cast<LeafPredicate>(predicate);
+    if (!leaf_predicate) {
+        return Status::Invalid(
+            fmt::format("cannot cast predicate {} to CompoundPredicate or LeafPredicate",
+                        predicate->ToString()));
+    }
+
+    const auto& literals = leaf_predicate->Literals();
+    const auto& field_name = leaf_predicate->FieldName();
+    switch (leaf_predicate->GetFunction().GetType()) {
+        case Function::Type::EQUAL: {
+            PAIMON_ASSIGN_OR_RAISE(const Literal* literal, GetSingleLiteral(literals, "equal"));
+            PAIMON_ASSIGN_OR_RAISE(TagValue value, LiteralToTagValue(*literal));
+            return ::lumina::extensions::experimental::TagFilter::Eq(field_name, std::move(value));
+        }
+        case Function::Type::GREATER_THAN: {
+            PAIMON_ASSIGN_OR_RAISE(const Literal* literal,
+                                   GetSingleLiteral(literals, "greater than"));
+            PAIMON_ASSIGN_OR_RAISE(TagValue value, LiteralToTagValue(*literal));
+            return ::lumina::extensions::experimental::TagFilter::Gt(field_name, std::move(value));
+        }
+        case Function::Type::GREATER_OR_EQUAL: {
+            PAIMON_ASSIGN_OR_RAISE(const Literal* literal,
+                                   GetSingleLiteral(literals, "greater or equal"));
+            PAIMON_ASSIGN_OR_RAISE(TagValue value, LiteralToTagValue(*literal));
+            return ::lumina::extensions::experimental::TagFilter::Gte(field_name, std::move(value));
+        }
+        case Function::Type::LESS_THAN: {
+            PAIMON_ASSIGN_OR_RAISE(const Literal* literal, GetSingleLiteral(literals, "less than"));
+            PAIMON_ASSIGN_OR_RAISE(TagValue value, LiteralToTagValue(*literal));
+            return ::lumina::extensions::experimental::TagFilter::Lt(field_name, std::move(value));
+        }
+        case Function::Type::LESS_OR_EQUAL: {
+            PAIMON_ASSIGN_OR_RAISE(const Literal* literal,
+                                   GetSingleLiteral(literals, "less or equal"));
+            PAIMON_ASSIGN_OR_RAISE(TagValue value, LiteralToTagValue(*literal));
+            return ::lumina::extensions::experimental::TagFilter::Lte(field_name, std::move(value));
+        }
+        case Function::Type::IN: {
+            PAIMON_ASSIGN_OR_RAISE(TagValues values, LiteralsToTagValues(literals));
+            return ::lumina::extensions::experimental::TagFilter::In(field_name, std::move(values));
+        }
+        default:
+            return Status::NotImplemented(
+                fmt::format("lumina tag predicate does not support leaf function {}",
+                            leaf_predicate->GetFunction().ToString()));
+    }
+}
 
 Result<std::shared_ptr<GlobalIndexWriter>> LuminaGlobalIndex::CreateWriter(
     const std::string& field_name, ::ArrowSchema* arrow_schema,
@@ -65,6 +569,8 @@ Result<std::shared_ptr<GlobalIndexWriter>> LuminaGlobalIndex::CreateWriter(
     // check options
     auto lumina_options =
         OptionsUtils::FetchOptionsWithPrefix(LuminaDefines::kOptionKeyPrefix, options_);
+    PAIMON_ASSIGN_OR_RAISE(std::vector<LuminaTagField> tag_fields, ParseTagSchema(lumina_options));
+    PAIMON_RETURN_NOT_OK(ValidateTagFields(*struct_type, tag_fields));
     PAIMON_ASSIGN_OR_RAISE(uint32_t dimension,
                            OptionsUtils::GetValueFromMap<uint32_t>(
                                lumina_options, std::string(::lumina::core::kDimension)));
@@ -76,7 +582,7 @@ Result<std::shared_ptr<GlobalIndexWriter>> LuminaGlobalIndex::CreateWriter(
     auto lumina_pool = std::make_shared<LuminaMemoryPool>(pool);
     return std::make_shared<LuminaIndexWriter>(
         field_name, arrow_type, dimension, file_writer, std::move(builder_options),
-        ::lumina::api::IOOptions(), lumina_options, lumina_pool);
+        ::lumina::api::IOOptions(), lumina_options, std::move(tag_fields), lumina_pool);
 }
 
 Result<LuminaIndexReader::IndexInfo> LuminaIndexReader::GetIndexInfo(
@@ -111,7 +617,9 @@ Result<LuminaIndexReader::IndexInfo> LuminaIndexReader::GetIndexInfo(
         return Status::Invalid(
             fmt::format("invalid distance type {} for lumina", distance_type_str));
     }
-    return LuminaIndexReader::IndexInfo({dimension, index_type, distance_type});
+    bool has_tag = lumina_write_options.find(std::string(::lumina::core::kExtensionTagSchema)) !=
+                   lumina_write_options.end();
+    return LuminaIndexReader::IndexInfo({dimension, index_type, distance_type, has_tag});
 }
 
 Result<std::shared_ptr<GlobalIndexReader>> LuminaGlobalIndex::CreateReader(
@@ -170,8 +678,30 @@ Result<std::shared_ptr<GlobalIndexReader>> LuminaGlobalIndex::CreateReader(
     }
     auto searcher_with_filter = std::make_unique<::lumina::extensions::SearchWithFilterExtension>();
     PAIMON_RETURN_NOT_OK_FROM_LUMINA(searcher->Attach(*searcher_with_filter));
+    std::unique_ptr<::lumina::extensions::experimental::SearchWithTagExtension> searcher_with_tag;
+    if (index_info.has_tag) {
+        searcher_with_tag =
+            std::make_unique<::lumina::extensions::experimental::SearchWithTagExtension>();
+        PAIMON_RETURN_NOT_OK_FROM_LUMINA(searcher->Attach(*searcher_with_tag));
+    }
     return std::make_shared<LuminaIndexReader>(index_info, std::move(searcher),
-                                               std::move(searcher_with_filter), lumina_pool);
+                                               std::move(searcher_with_filter),
+                                               std::move(searcher_with_tag), lumina_pool);
+}
+
+Result<std::optional<std::vector<std::string>>> LuminaGlobalIndex::GetExtraFieldNames() const {
+    auto lumina_options =
+        OptionsUtils::FetchOptionsWithPrefix(LuminaDefines::kOptionKeyPrefix, options_);
+    PAIMON_ASSIGN_OR_RAISE(std::vector<LuminaTagField> tag_fields, ParseTagSchema(lumina_options));
+    if (tag_fields.empty()) {
+        return std::optional<std::vector<std::string>>(std::nullopt);
+    }
+    std::vector<std::string> field_names;
+    field_names.reserve(tag_fields.size());
+    for (const auto& tag_field : tag_fields) {
+        field_names.push_back(tag_field.name);
+    }
+    return std::optional<std::vector<std::string>>(std::move(field_names));
 }
 
 class LuminaDataset : public ::lumina::api::Dataset {
@@ -199,18 +729,18 @@ class LuminaDataset : public ::lumina::api::Dataset {
         }
         auto& value_array = array_vec_[cursor_];
         int64_t value_array_length = value_array->length();
-        int64_t element_count = value_array_length / dimension_;
+        int64_t batch_element_count = value_array_length / dimension_;
         const float* value_ptr = value_array->raw_values();
         vector_buffer.resize(value_array_length);
         memcpy(vector_buffer.data(), value_ptr, sizeof(float) * value_array_length);
-        id_buffer.resize(element_count);
+        id_buffer.resize(batch_element_count);
         std::iota(id_buffer.begin(), id_buffer.end(),
                   static_cast<::lumina::core::vector_id_t>(start_ids_[cursor_]));
 
         // release the array when copy to vector_buffer
         value_array.reset();
         cursor_++;
-        return ::lumina::core::Result<uint64_t>::Ok(static_cast<uint64_t>(element_count));
+        return ::lumina::core::Result<uint64_t>::Ok(static_cast<uint64_t>(batch_element_count));
     }
 
  private:
@@ -221,14 +751,62 @@ class LuminaDataset : public ::lumina::api::Dataset {
     size_t cursor_ = 0;
 };
 
-LuminaIndexWriter::LuminaIndexWriter(const std::string& field_name,
-                                     const std::shared_ptr<arrow::DataType>& arrow_type,
-                                     uint32_t dimension,
-                                     const std::shared_ptr<GlobalIndexFileWriter>& file_manager,
-                                     ::lumina::api::BuilderOptions&& builder_options,
-                                     ::lumina::api::IOOptions&& io_options,
-                                     const std::map<std::string, std::string>& lumina_options,
-                                     const std::shared_ptr<LuminaMemoryPool>& pool)
+class LuminaDatasetWithTag : public ::lumina::extensions::experimental::DatasetWithTag {
+ public:
+    LuminaDatasetWithTag(int64_t element_count, uint32_t dimension,
+                         const std::vector<std::shared_ptr<arrow::FloatArray>>& array_vec,
+                         const std::vector<int64_t>& start_ids,
+                         const std::vector<std::vector<TagDimensionData>>& tag_data_vec)
+        : element_count_(element_count),
+          dimension_(dimension),
+          array_vec_(array_vec),
+          start_ids_(start_ids),
+          tag_data_vec_(tag_data_vec) {}
+
+    uint32_t Dim() const noexcept override {
+        return dimension_;
+    }
+    uint64_t TotalSize() const noexcept override {
+        return element_count_;
+    }
+
+    ::lumina::core::Result<uint64_t> GetNextBatch(
+        std::vector<float>& vector_buffer, std::vector<::lumina::core::vector_id_t>& id_buffer,
+        std::vector<TagDimensionData>& tag_dimensions_data) noexcept override {
+        if (cursor_ >= array_vec_.size()) {
+            return ::lumina::core::Result<uint64_t>::Ok(0);
+        }
+        auto& value_array = array_vec_[cursor_];
+        int64_t value_array_length = value_array->length();
+        int64_t batch_element_count = value_array_length / dimension_;
+        const float* value_ptr = value_array->raw_values();
+        vector_buffer.resize(value_array_length);
+        memcpy(vector_buffer.data(), value_ptr, sizeof(float) * value_array_length);
+        id_buffer.resize(batch_element_count);
+        std::iota(id_buffer.begin(), id_buffer.end(),
+                  static_cast<::lumina::core::vector_id_t>(start_ids_[cursor_]));
+        tag_dimensions_data = std::move(tag_data_vec_[cursor_]);
+
+        value_array.reset();
+        cursor_++;
+        return ::lumina::core::Result<uint64_t>::Ok(static_cast<uint64_t>(batch_element_count));
+    }
+
+ private:
+    int64_t element_count_;
+    uint32_t dimension_;
+    std::vector<std::shared_ptr<arrow::FloatArray>> array_vec_;
+    std::vector<int64_t> start_ids_;
+    std::vector<std::vector<TagDimensionData>> tag_data_vec_;
+    size_t cursor_ = 0;
+};
+
+LuminaIndexWriter::LuminaIndexWriter(
+    const std::string& field_name, const std::shared_ptr<arrow::DataType>& arrow_type,
+    uint32_t dimension, const std::shared_ptr<GlobalIndexFileWriter>& file_manager,
+    ::lumina::api::BuilderOptions&& builder_options, ::lumina::api::IOOptions&& io_options,
+    const std::map<std::string, std::string>& lumina_options,
+    std::vector<LuminaTagField>&& tag_fields, const std::shared_ptr<LuminaMemoryPool>& pool)
     : pool_(pool),
       field_name_(field_name),
       arrow_type_(arrow_type),
@@ -236,7 +814,8 @@ LuminaIndexWriter::LuminaIndexWriter(const std::string& field_name,
       file_manager_(file_manager),
       builder_options_(std::move(builder_options)),
       io_options_(std::move(io_options)),
-      lumina_options_(lumina_options) {}
+      lumina_options_(lumina_options),
+      tag_fields_(std::move(tag_fields)) {}
 
 Status LuminaIndexWriter::AddBatch(::ArrowArray* arrow_array,
                                    std::vector<int64_t>&& relative_row_ids) {
@@ -283,11 +862,21 @@ Status LuminaIndexWriter::AddBatch(::ArrowArray* arrow_array,
                 return Status::Invalid(
                     "field value array in LuminaIndexWriter is invalid, must not null");
             }
-            if (sliced_values->length() != segment_len * static_cast<int64_t>(dimension_)) {
-                return Status::Invalid(fmt::format(
-                    "invalid input array in LuminaIndexWriter, length of field array [{}] "
-                    "multiplied dimension [{}] must match length of field value array [{}]",
-                    segment_len, dimension_, sliced_values->length()));
+            for (int64_t row = segment_start; row < segment_start + segment_len; row++) {
+                int64_t vector_length =
+                    list_field_array->value_offset(row + 1) - list_field_array->value_offset(row);
+                if (vector_length != static_cast<int64_t>(dimension_)) {
+                    return Status::Invalid(fmt::format(
+                        "invalid input array in LuminaIndexWriter, vector at row [{}] has length "
+                        "[{}], expected dimension [{}]",
+                        row, vector_length, dimension_));
+                }
+            }
+            if (!tag_fields_.empty()) {
+                PAIMON_ASSIGN_OR_RAISE(std::vector<TagDimensionData> tag_data,
+                                       ExtractTagDataForSegment(struct_array, tag_fields_,
+                                                                segment_start, segment_len));
+                tag_data_vec_.push_back(std::move(tag_data));
             }
             array_vec_.push_back(std::move(sliced_values));
             array_start_ids_.push_back(count_ + segment_start);
@@ -313,9 +902,19 @@ Result<std::vector<GlobalIndexIOMeta>> LuminaIndexWriter::Finish() {
     PAIMON_RETURN_NOT_OK_FROM_LUMINA(builder.PretrainFrom(dataset1));
 
     // insert data
-    LuminaDataset dataset2(indexed_count_, dimension_, array_vec_, array_start_ids_);
-    std::vector<std::shared_ptr<arrow::FloatArray>>().swap(array_vec_);
-    PAIMON_RETURN_NOT_OK_FROM_LUMINA(builder.InsertFrom(dataset2));
+    if (tag_fields_.empty()) {
+        LuminaDataset dataset2(indexed_count_, dimension_, array_vec_, array_start_ids_);
+        std::vector<std::shared_ptr<arrow::FloatArray>>().swap(array_vec_);
+        PAIMON_RETURN_NOT_OK_FROM_LUMINA(builder.InsertFrom(dataset2));
+    } else {
+        ::lumina::extensions::experimental::BuildWithTagExtension tag_extension;
+        PAIMON_RETURN_NOT_OK_FROM_LUMINA(builder.Attach(tag_extension));
+        LuminaDatasetWithTag dataset2(indexed_count_, dimension_, array_vec_, array_start_ids_,
+                                      tag_data_vec_);
+        std::vector<std::shared_ptr<arrow::FloatArray>>().swap(array_vec_);
+        std::vector<std::vector<TagDimensionData>>().swap(tag_data_vec_);
+        PAIMON_RETURN_NOT_OK_FROM_LUMINA(tag_extension.InsertFromWithTag(dataset2));
+    }
 
     // dump index
     PAIMON_ASSIGN_OR_RAISE(std::string index_file_name,
@@ -338,17 +937,16 @@ LuminaIndexReader::LuminaIndexReader(
     const LuminaIndexReader::IndexInfo& index_info,
     std::unique_ptr<::lumina::api::LuminaSearcher>&& searcher,
     std::unique_ptr<::lumina::extensions::SearchWithFilterExtension>&& searcher_with_filter,
+    std::unique_ptr<::lumina::extensions::experimental::SearchWithTagExtension>&& searcher_with_tag,
     const std::shared_ptr<LuminaMemoryPool>& pool)
     : index_info_(index_info),
       pool_(pool),
       searcher_(std::move(searcher)),
-      searcher_with_filter_(std::move(searcher_with_filter)) {}
+      searcher_with_filter_(std::move(searcher_with_filter)),
+      searcher_with_tag_(std::move(searcher_with_tag)) {}
 
 Result<std::shared_ptr<ScoredGlobalIndexResult>> LuminaIndexReader::VisitVectorSearch(
     const std::shared_ptr<VectorSearch>& vector_search) {
-    if (vector_search->predicate) {
-        return Status::NotImplemented("lumina index not support predicate in VisitVectorSearch");
-    }
     if (vector_search->distance_type &&
         vector_search->distance_type.value() != index_info_.distance_type) {
         return Status::Invalid("distance type for index and search not match");
@@ -375,7 +973,25 @@ Result<std::shared_ptr<ScoredGlobalIndexResult>> LuminaIndexReader::VisitVectorS
 
     ::lumina::api::Query lumina_query(vector_search->query.data(), vector_search->query.size());
     ::lumina::api::LuminaSearcher::SearchResult search_result;
-    if (!vector_search->pre_filter) {
+    if (vector_search->predicate) {
+        if (!searcher_with_tag_) {
+            return Status::Invalid("lumina index was not built with tag");
+        }
+        PAIMON_ASSIGN_OR_RAISE(::lumina::extensions::experimental::TagFilter tag_filter,
+                               PredicateToTagFilter(vector_search->predicate));
+        if (!vector_search->pre_filter) {
+            PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(
+                search_result, searcher_with_tag_->SearchWithTag(lumina_query, tag_filter,
+                                                                 search_options, *pool_));
+        } else {
+            auto lumina_filter = [filter = vector_search->pre_filter](
+                                     ::lumina::core::vector_id_t id) -> bool { return filter(id); };
+            PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(
+                search_result,
+                searcher_with_tag_->SearchWithTagAndFilter(lumina_query, tag_filter, lumina_filter,
+                                                           search_options, *pool_));
+        }
+    } else if (!vector_search->pre_filter) {
         PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(search_result,
                                            searcher_->Search(lumina_query, search_options, *pool_));
     } else {

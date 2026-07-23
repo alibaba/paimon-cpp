@@ -335,8 +335,76 @@ TEST_P(GlobalIndexTest, TestWriteLuminaIndexWithMismatchedDimension) {
     ASSERT_NOK_WITH_MSG(
         WriteIndex(table_path, /*partition_filters=*/{}, "f1", "lumina",
                    /*options=*/lumina_options, Range(0, 1)),
-        "invalid input array in LuminaIndexWriter, length of field array [1] multiplied "
-        "dimension [3] must match length of field value array [4]");
+        "invalid input array in LuminaIndexWriter, vector at row [0] has length [4], "
+        "expected dimension [3]");
+}
+
+TEST_P(GlobalIndexTest, TestWriteAndQueryLuminaIndexWithOrcDictionaryStringTags) {
+    if (file_format_ != "orc") {
+        GTEST_SKIP() << "ORC-only dictionary encoding case";
+    }
+
+    arrow::FieldVector fields = {arrow::field("embedding", arrow::list(arrow::float32())),
+                                 arrow::field("color", arrow::utf8()),
+                                 arrow::field("labels", arrow::list(arrow::utf8()))};
+    std::shared_ptr<arrow::Schema> schema = arrow::schema(fields);
+    std::map<std::string, std::string> lumina_options = {
+        {"lumina.index.dimension", "4"},
+        {"lumina.index.type", "bruteforce"},
+        {"lumina.distance.metric", "l2"},
+        {"lumina.encoding.type", "rawf32"},
+        {"lumina.search.parallel_number", "10"},
+        {"lumina.extension.build.tag.tag_schema",
+         R"([{"key_name":"color","type":"enum","value_type":"string"},)"
+         R"({"key_name":"labels","type":"enum","value_type":"string"}])"}};
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "orc"},         {Options::FILE_FORMAT, file_format_},
+        {Options::FILE_SYSTEM, "local"},           {Options::ROW_TRACKING_ENABLED, "true"},
+        {Options::DATA_EVOLUTION_ENABLED, "true"}, {"orc.dictionary-key-size-threshold", "1"},
+        {"orc.read.enable-lazy-decoding", "true"}};
+    CreateTable(/*partition_keys=*/{}, schema, options);
+
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    std::shared_ptr<arrow::Array> src_array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+[[0.0, 0.0, 0.0, 0.0], "red", ["hot", "common"]],
+[[0.0, 1.0, 0.0, 1.0], "blue", ["cold", "common"]],
+[[1.0, 0.0, 1.0, 0.0], "red", ["cold"]],
+[[1.0, 1.0, 1.0, 1.0], "blue", ["hot"]]
+    ])")
+            .ValueOrDie();
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> commit_msgs,
+                         WriteArray(table_path, schema->field_names(), src_array));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+    ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "embedding", "lumina",
+                         lumina_options, Range(0, 3)));
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<GlobalIndexScan> global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                 /*partitions=*/std::nullopt, lumina_options, fs_,
+                                                 /*executor=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<GlobalIndexReader>> lumina_readers,
+                         global_index_scan->CreateReaders("embedding", std::nullopt));
+    ASSERT_EQ(lumina_readers.size(), 1u);
+
+    std::vector<float> query = {1.0f, 1.0f, 1.0f, 1.1f};
+    auto search_and_check = [&](const std::shared_ptr<Predicate>& predicate,
+                                const std::string& expected) {
+        std::shared_ptr<VectorSearch> vector_search = std::make_shared<VectorSearch>(
+            "embedding", /*limit=*/4, query, /*filter=*/nullptr, predicate,
+            /*distance_type=*/std::nullopt, /*options=*/lumina_options);
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<ScoredGlobalIndexResult> scored_result,
+                             lumina_readers[0]->VisitVectorSearch(vector_search));
+        ASSERT_EQ(scored_result->ToString(), expected);
+    };
+    search_and_check(
+        PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"color", FieldType::STRING,
+                                Literal(FieldType::STRING, "red", 3)),
+        "row ids: {0,2}, scores: {4.21,2.21}");
+    search_and_check(
+        PredicateBuilder::In(/*field_index=*/2, /*field_name=*/"labels", FieldType::STRING,
+                             {Literal(FieldType::STRING, "hot", 3)}),
+        "row ids: {0,3}, scores: {4.21,0.01}");
 }
 
 TEST_P(GlobalIndexTest, TestWriteIndex) {
@@ -1146,6 +1214,158 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithScore) {
         // Null row ids 4 and 7 must not be in the result
         ASSERT_FALSE(typed_result->bitmap_.Contains(4));
         ASSERT_FALSE(typed_result->bitmap_.Contains(7));
+    }
+}
+
+TEST_P(GlobalIndexTest, TestWriteAndQueryLuminaIndexWithTagNullAndEmptyValues) {
+    arrow::FieldVector fields = {arrow::field("name", arrow::utf8()),
+                                 arrow::field("embedding", arrow::list(arrow::float32())),
+                                 arrow::field("color", arrow::utf8()),
+                                 arrow::field("labels", arrow::list(arrow::utf8())),
+                                 arrow::field("price", arrow::float32()),
+                                 arrow::field("scores", arrow::list(arrow::float32())),
+                                 arrow::field("category", arrow::int32()),
+                                 arrow::field("category_ids", arrow::list(arrow::int32()))};
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> lumina_options = {
+        {"lumina.index.dimension", "4"},
+        {"lumina.index.type", "bruteforce"},
+        {"lumina.distance.metric", "l2"},
+        {"lumina.encoding.type", "rawf32"},
+        {"lumina.search.parallel_number", "10"},
+        {"lumina.extension.build.tag.tag_schema",
+         R"([{"key_name":"color","type":"enum","value_type":"string"},)"
+         R"({"key_name":"labels","type":"enum","value_type":"string"},)"
+         R"({"key_name":"price","type":"range","value_type":"float"},)"
+         R"({"key_name":"scores","type":"range","value_type":"float"},)"
+         R"({"key_name":"category","type":"enum","value_type":"int32"},)"
+         R"({"key_name":"category_ids","type":"enum","value_type":"int32"}])"}};
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, file_format_},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(/*partition_keys=*/{}, schema, options);
+
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    std::vector<std::string> write_cols = schema->field_names();
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+["row0", [0.0, 0.0, 0.0, 0.0], "red", ["hot"], 5.0, [0.25], 7, [1, 2]],
+["row1", null, "red", ["vip"], 8.0, [0.8], 7, [9]],
+["row2", [0.0, 1.0, 0.0, 1.0], null, null, null, null, null, null],
+["row3", [1.0, 0.0, 1.0, 0.0], " ", [], 20.0, [], 0, []],
+["row4", [1.0, 1.0, 1.0, 1.0], "blue", ["vip", null], 30.0, [null, 0.75], 3, [null, 9]]
+    ])")
+                         .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<DataSplitImpl> split,
+                         ScanData(table_path, /*partition_filters=*/{}));
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<CommitMessage> index_commit_msg,
+        GlobalIndexWriteTask::WriteIndex(
+            table_path, "embedding", "lumina",
+            std::make_shared<IndexedSplitImpl>(split, std::vector<Range>({Range(0, 4)})),
+            /*options=*/lumina_options, pool_, fs_));
+
+    std::shared_ptr<CommitMessageImpl> index_commit_msg_impl =
+        std::dynamic_pointer_cast<CommitMessageImpl>(index_commit_msg);
+    ASSERT_TRUE(index_commit_msg_impl);
+    const auto& new_index_files = index_commit_msg_impl->GetNewFilesIncrement().NewIndexFiles();
+    ASSERT_EQ(new_index_files.size(), 1u);
+    ASSERT_EQ(new_index_files[0]->IndexType(), "lumina");
+    ASSERT_EQ(new_index_files[0]->RowCount(), 5);
+    const std::optional<GlobalIndexMeta>& global_index_meta =
+        new_index_files[0]->GetGlobalIndexMeta();
+    ASSERT_TRUE(global_index_meta);
+    std::string expected_index_meta_json =
+        R"({"distance.metric":"l2","encoding.type":"rawf32","extension.build.tag.tag_schema":"[{\"key_name\":\"color\",\"type\":\"enum\",\"value_type\":\"string\"},{\"key_name\":\"labels\",\"type\":\"enum\",\"value_type\":\"string\"},{\"key_name\":\"price\",\"type\":\"range\",\"value_type\":\"float\"},{\"key_name\":\"scores\",\"type\":\"range\",\"value_type\":\"float\"},{\"key_name\":\"category\",\"type\":\"enum\",\"value_type\":\"int32\"},{\"key_name\":\"category_ids\",\"type\":\"enum\",\"value_type\":\"int32\"}]","index.dimension":"4","index.type":"bruteforce","search.parallel_number":"10"})";
+    GlobalIndexMeta expected_global_index_meta(
+        /*row_range_start=*/0, /*row_range_end=*/4, /*index_field_id=*/1,
+        /*extra_field_ids=*/std::optional<std::vector<int32_t>>({2, 3, 4, 5, 6, 7}),
+        std::make_shared<Bytes>(expected_index_meta_json, pool_.get()));
+    ASSERT_EQ(global_index_meta.value(), expected_global_index_meta);
+
+    ASSERT_OK(Commit(table_path, {index_commit_msg}));
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexScan> global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                 /*partitions=*/std::nullopt, lumina_options, fs_,
+                                                 /*executor=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(auto lumina_readers,
+                         global_index_scan->CreateReaders("embedding", std::nullopt));
+    ASSERT_EQ(lumina_readers.size(), 1u);
+
+    std::vector<float> query = {1.0f, 1.0f, 1.0f, 1.1f};
+    auto search_and_check_with_filter = [&](VectorSearch::PreFilter pre_filter,
+                                            const std::shared_ptr<Predicate>& predicate,
+                                            const std::string& expected) {
+        std::shared_ptr<VectorSearch> vector_search = std::make_shared<VectorSearch>(
+            "embedding", /*limit=*/5, query, pre_filter, predicate,
+            /*distance_type=*/std::nullopt, /*options=*/lumina_options);
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<ScoredGlobalIndexResult> scored_result,
+                             lumina_readers[0]->VisitVectorSearch(vector_search));
+        ASSERT_EQ(scored_result->ToString(), expected);
+    };
+    auto search_and_check = [&](const std::shared_ptr<Predicate>& predicate,
+                                const std::string& expected) {
+        search_and_check_with_filter(/*pre_filter=*/nullptr, predicate, expected);
+    };
+
+    search_and_check(/*predicate=*/nullptr, "row ids: {0,2,3,4}, scores: {4.21,2.01,2.21,0.01}");
+    search_and_check(
+        PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"color", FieldType::STRING,
+                                Literal(FieldType::STRING, "red", 3)),
+        "row ids: {0}, scores: {4.21}");
+    search_and_check(PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"color",
+                                             FieldType::STRING, Literal(FieldType::STRING, " ", 1)),
+                     "row ids: {3}, scores: {2.21}");
+    search_and_check(
+        PredicateBuilder::In(/*field_index=*/3, /*field_name=*/"labels", FieldType::STRING,
+                             {Literal(FieldType::STRING, "vip", 3)}),
+        "row ids: {4}, scores: {0.01}");
+    search_and_check(PredicateBuilder::LessOrEqual(/*field_index=*/4, /*field_name=*/"price",
+                                                   FieldType::FLOAT, Literal(10.0f)),
+                     "row ids: {0}, scores: {4.21}");
+    search_and_check(PredicateBuilder::GreaterOrEqual(/*field_index=*/5, /*field_name=*/"scores",
+                                                      FieldType::FLOAT, Literal(0.5f)),
+                     "row ids: {4}, scores: {0.01}");
+    search_and_check(PredicateBuilder::Equal(/*field_index=*/6, /*field_name=*/"category",
+                                             FieldType::INT, Literal(7)),
+                     "row ids: {0}, scores: {4.21}");
+    search_and_check(PredicateBuilder::In(/*field_index=*/7, /*field_name=*/"category_ids",
+                                          FieldType::INT, {Literal(9)}),
+                     "row ids: {4}, scores: {0.01}");
+    search_and_check(
+        PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"color", FieldType::STRING,
+                                Literal(FieldType::STRING, "green", 5)),
+        "row ids: {}, scores: {}");
+    {
+        std::shared_ptr<Predicate> predicate = PredicateBuilder::Equal(
+            /*field_index=*/2, /*field_name=*/"color", FieldType::STRING,
+            Literal(FieldType::STRING, "red", 3));
+        search_and_check_with_filter([](int64_t id) { return id == 0 || id == 4; }, predicate,
+                                     "row ids: {0}, scores: {4.21}");
+        search_and_check_with_filter([](int64_t id) { return id == 4; }, predicate,
+                                     "row ids: {}, scores: {}");
+    }
+    {
+        std::shared_ptr<Predicate> red_predicate = PredicateBuilder::Equal(
+            /*field_index=*/2, /*field_name=*/"color", FieldType::STRING,
+            Literal(FieldType::STRING, "red", 3));
+        std::shared_ptr<Predicate> blue_predicate = PredicateBuilder::Equal(
+            /*field_index=*/2, /*field_name=*/"color", FieldType::STRING,
+            Literal(FieldType::STRING, "blue", 4));
+        std::shared_ptr<Predicate> high_price_predicate = PredicateBuilder::GreaterOrEqual(
+            /*field_index=*/4, /*field_name=*/"price", FieldType::FLOAT, Literal(30.0f));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Predicate> blue_high_price_predicate,
+                             PredicateBuilder::And({blue_predicate, high_price_predicate}));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Predicate> compound_predicate,
+                             PredicateBuilder::Or({red_predicate, blue_high_price_predicate}));
+        search_and_check(compound_predicate, "row ids: {0,4}, scores: {4.21,0.01}");
+        search_and_check_with_filter([](int64_t id) { return id == 4; }, compound_predicate,
+                                     "row ids: {4}, scores: {0.01}");
     }
 }
 #endif

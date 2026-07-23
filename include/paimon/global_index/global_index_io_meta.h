@@ -16,11 +16,11 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string>
 
 #include "paimon/memory/bytes.h"
-#include "paimon/utils/range.h"
 
 namespace paimon {
 /// Metadata describing a single file entry in a global index.

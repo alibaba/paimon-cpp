@@ -23,6 +23,7 @@
 #include "paimon/common/reader/reader_utils.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
+
 namespace paimon {
 Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionFileReader::Create(
     std::vector<std::unique_ptr<BatchReader>>&& readers,
@@ -169,7 +170,6 @@ Result<std::shared_ptr<arrow::Array>> DataEvolutionFileReader::NextBatchForSingl
         // Avoid data copy when the array is already normalized.
         return concat_array_vec[0];
     }
-    // TODO(xinyu.lxy) remove data copy for efficiency
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> concat_array,
                                       arrow::Concatenate(concat_array_vec, arrow_pool_.get()));
     assert(concat_array->length() == total_array_length);

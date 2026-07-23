@@ -34,6 +34,10 @@ namespace paimon::tantivy {
 TantivyGlobalIndex::TantivyGlobalIndex(const std::map<std::string, std::string>& options)
     : options_(OptionsUtils::FetchOptionsWithPrefix(kOptionKeyPrefix, options)) {}
 
+Result<std::optional<std::vector<std::string>>> TantivyGlobalIndex::GetExtraFieldNames() const {
+    return std::optional<std::vector<std::string>>(std::nullopt);
+}
+
 Result<std::shared_ptr<GlobalIndexWriter>> TantivyGlobalIndex::CreateWriter(
     const std::string& field_name, ::ArrowSchema* arrow_schema,
     const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
