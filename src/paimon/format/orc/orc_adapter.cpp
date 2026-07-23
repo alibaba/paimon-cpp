@@ -16,7 +16,7 @@
 // under the License.
 
 // Adapted from Apache Arrow
-// https://github.com/apache/arrow/blob/main/cpp/src/arrow/adapters/orc/util.cc
+// https://github.com/apache/arrow/blob/apache-arrow-17.0.0/cpp/src/arrow/adapters/orc/util.cc
 
 #include "paimon/format/orc/orc_adapter.h"
 

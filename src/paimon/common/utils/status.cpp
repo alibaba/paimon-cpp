@@ -27,7 +27,7 @@
 // external synchronization.
 
 // Adapted from Apache Arrow
-// https://github.com/apache/arrow/blob/main/cpp/src/arrow/status.cc
+// https://github.com/apache/arrow/blob/apache-arrow-17.0.0/cpp/src/arrow/status.cc
 
 #include "paimon/status.h"
 

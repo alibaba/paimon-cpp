@@ -28,9 +28,8 @@
 namespace paimon {
 /// A collection of static utility methods to validate input.
 ///
-/// This class is based on Google Guava's Preconditions class, and partly
-/// takes code from that class. We add this code to the Paimon code base in order
-/// to reduce external dependencies.
+/// This class is modelled after Google Guava's Preconditions class and partly
+/// takes code from that class to reduce external dependencies.
 class Preconditions {
  public:
     Preconditions() = delete;

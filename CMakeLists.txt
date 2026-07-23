@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Adapted from Apache Arrow:
+# https://github.com/apache/arrow/blob/apache-arrow-17.0.0/cpp/CMakeLists.txt
+
 cmake_minimum_required(VERSION 3.22)
 # 3.22 is the minimum required by Corrosion-rs (used for the Rust<->C++ FFI
 # integration, see crates/tantivy_ffi). Ubuntu 24.04 ships CMake 3.28 and

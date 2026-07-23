@@ -15,7 +15,7 @@
  */
 
 // Adapted from Apache Iceberg C++
-// https://github.com/apache/iceberg-cpp/blob/main/src/iceberg/avro/avro_stream_internal.cc
+// https://github.com/apache/iceberg-cpp/blob/v0.2.0/src/iceberg/avro/avro_stream_internal.cc
 
 #include "paimon/format/avro/avro_input_stream_impl.h"
 
