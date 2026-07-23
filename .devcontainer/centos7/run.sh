@@ -125,7 +125,6 @@ case "${cmd}" in
                 -DPAIMON_BUILD_TESTS=ON \
                 -DPAIMON_ENABLE_FSLIB=OFF \
                 -DPAIMON_ENABLE_LUMINA=OFF \
-                -DPAIMON_ENABLE_LANCE=OFF \
                 -DPAIMON_ENABLE_JINDO=OFF \
                 -DPAIMON_ENABLE_LUCENE=ON \
                 -DPAIMON_ENABLE_ORC=ON \

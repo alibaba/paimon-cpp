@@ -196,10 +196,10 @@ class WriteInteTest : public testing::Test, public ::testing::WithParamInterface
 
     std::shared_ptr<DataFileMeta> ReconstructDataFileMeta(
         const std::shared_ptr<DataFileMeta>& file_meta) const {
-        if (GetParam() != "lance" && GetParam() != "avro") {
+        if (GetParam() != "avro") {
             return file_meta;
         }
-        // for lance and avro format, all stats is null
+        // For Avro format, all stats are null.
         auto new_meta = std::make_shared<DataFileMeta>(
             file_meta->file_name, file_meta->file_size, file_meta->row_count, file_meta->min_key,
             file_meta->max_key, file_meta->key_stats, file_meta->value_stats,
@@ -384,9 +384,6 @@ std::vector<std::string> GetTestValuesForWriteInteTest() {
     values.emplace_back("parquet");
 #ifdef PAIMON_ENABLE_ORC
     values.emplace_back("orc");
-#endif
-#ifdef PAIMON_ENABLE_LANCE
-    values.emplace_back("lance");
 #endif
 #ifdef PAIMON_ENABLE_AVRO
     values.emplace_back("avro");
@@ -807,10 +804,6 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithPartitionAndMultiBuckets) {
 }
 
 TEST_P(WriteInteTest, TestAppendTableWriteWithComplexType) {
-    if (GetParam() == "lance") {
-        // lance do not support map
-        return;
-    }
     auto dir = UniqueTestDirectory::Create();
     arrow::FieldVector fields = {
         arrow::field("f1", arrow::map(arrow::int8(), arrow::int16())),
@@ -1632,10 +1625,6 @@ TEST_P(WriteInteTest, TestPkTableWriteWithNoPartitionKey) {
 }
 
 TEST_P(WriteInteTest, TestPkTableWriteWithComplexType) {
-    if (GetParam() == "lance") {
-        // lance do not support map
-        return;
-    }
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
     arrow::FieldVector fields = {
@@ -1953,7 +1942,7 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
 
     // Loop bound must exceed the workflow's total IO operations so the loop can
     // naturally terminate at the iteration where injection position falls past
-    // the last IO. Measured IO counts: orc=310, parquet=506, avro=195, lance=69.
+    // the last IO. Measured IO counts: orc=310, parquet=506, avro=195.
     // 1000 leaves headroom for future format/workflow changes.
     for (size_t i = 0; i < 1000; i++) {
         auto dir = UniqueTestDirectory::Create();
@@ -2483,7 +2472,7 @@ TEST_P(WriteInteTest, TestWriteAndCommitIOException) {
 
 TEST_P(WriteInteTest, TestWriteWithFieldId) {
     auto file_format = GetParam();
-    if (file_format == "lance" || file_format == "avro") {
+    if (file_format == "avro") {
         return;
     }
     // prepare write schema and write data
@@ -3345,10 +3334,6 @@ TEST_P(WriteInteTest, TestWriteMemoryUse) {
 }
 
 TEST_P(WriteInteTest, TestAppendTableWithAllNull) {
-    if (GetParam() == "lance") {
-        // lance do not support map
-        return;
-    }
     auto dir = UniqueTestDirectory::Create();
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::boolean()),

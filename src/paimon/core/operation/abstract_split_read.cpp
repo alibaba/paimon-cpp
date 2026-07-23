@@ -133,10 +133,6 @@ Result<std::unique_ptr<ReaderBuilder>> AbstractSplitRead::PrepareReaderBuilder(
 Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFileBatchReader(
     const std::string& file_format_identifier, const std::string& data_file_path,
     const ReaderBuilder* reader_builder) const {
-    if (file_format_identifier == "lance") {
-        // lance do not support stream build with input stream
-        return reader_builder->Build(data_file_path);
-    }
     if (context_->EnablePrefetch() && file_format_identifier != "blob" &&
         file_format_identifier != "avro") {
         PAIMON_ASSIGN_OR_RAISE(

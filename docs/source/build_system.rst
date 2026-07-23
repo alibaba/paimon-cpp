@@ -79,7 +79,6 @@ Paimon provides a set of built-in optional plugins that you can link to as neede
   - ``Paimon::paimon_orc_file_format_shared`` / ``Paimon::paimon_orc_file_format_static``
   - ``Paimon::paimon_avro_file_format_shared`` / ``Paimon::paimon_avro_file_format_static``
   - ``Paimon::paimon_blob_file_format_shared`` / ``Paimon::paimon_blob_file_format_static``
-  - ``Paimon::paimon_lance_file_format_shared`` / ``Paimon::paimon_lance_file_format_static``
 
 - File system plugins:
 
