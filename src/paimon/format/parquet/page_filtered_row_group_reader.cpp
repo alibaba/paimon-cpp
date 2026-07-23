@@ -208,8 +208,6 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
         [row_group_index, &rg_page_index_reader, &row_ranges, row_group_row_count](
             int col_idx,
             ::parquet::ParquetFileReader* reader) -> ::parquet::arrow::FileColumnIterator* {
-        // Build the page filter first; the iterator is constructed last, so nothing
-        // can throw between `new` and the return and the raw pointer never leaks.
         std::function<bool(const ::parquet::DataPageStats&)> data_page_filter;
         if (rg_page_index_reader) {
             auto offset_index = rg_page_index_reader->GetOffsetIndex(col_idx);
@@ -230,11 +228,8 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
         return std::shared_ptr<arrow::ChunkedArray>();
     }
 
-    // Drive each leaf independently: after data_page_filter skips non-matching
-    // pages, every leaf lives in its own compressed coordinate space, so segment
-    // counts may differ across leaves and cannot be driven in lockstep. For each
-    // leaf we compute its compressed skip/read pattern and replay it via the
-    // ResetLeaf/SkipRecords/ReadRecords primitives.
+    // Since leaf columns may have misaligned pages, we compute compressed row ranges and drive each
+    // leaf column independently
     for (int col_idx : column_reader->LeafColumnIndices()) {
         RowRanges effective_ranges = row_ranges;
         int64_t effective_total = row_group_row_count;
@@ -300,13 +295,11 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
         rg_page_index_reader = page_index_reader->RowGroup(row_group_index);
     }
 
-    // Group leaf column indices by top-level field using SchemaManifest
     const auto& manifest = arrow_file_reader->manifest();
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
         std::vector<int> field_indices,
         manifest.GetFieldIndices(std::vector<int>(column_indices.begin(), column_indices.end())));
 
-    // Read each field with page filtering (unified path for flat and nested)
     std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
     columns.reserve(field_indices.size());
 
@@ -326,7 +319,6 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
         columns.push_back(std::move(chunked_array));
     }
 
-    // Build schema from actual column types
     std::vector<std::shared_ptr<arrow::Field>> result_fields;
     for (size_t i = 0; i < columns.size(); ++i) {
         const auto& field_name = manifest.schema_fields[field_indices[i]].field->name();

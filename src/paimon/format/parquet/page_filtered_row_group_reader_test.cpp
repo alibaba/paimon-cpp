@@ -930,14 +930,10 @@ static std::shared_ptr<arrow::StructArray> MakeNestedStructData(int32_t num_rows
 
 /// Test: rowgroup-level filtering on a file with nested struct columns.
 ///
-/// This test exposes the bug where BuildPageFilteredSchema fails to correctly map
-/// Parquet leaf column indices to Arrow fields for nested types, and
-/// ReadFilteredRowGroup cannot correctly assemble nested column results.
-///
 /// Schema: { id: int32, info: struct<x: int32, y: int32> }
 /// Parquet leaf columns: [id=0, info.x=1, info.y=2]
 /// 100 rows, 10 per page, 2 row groups.
-/// Predicate: id >= 70 → row groups 0 skipped, row groups 1 read → 50 rows expected.
+/// Predicate: id >= 70 → page 0-7 skipped, paged 8-9 read → 30 rows expected.
 /// The read schema requests both "id" and "info" columns.
 TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnRowGroupFilter) {
     std::string file_name = dir_->Str() + "/nested_struct_filter.parquet";
@@ -961,7 +957,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnRowGroupFilter) {
     std::shared_ptr<arrow::ChunkedArray> result;
     ReadWithPredicateImpl(file_name, read_schema, predicate, &result);
 
-    // Should get rows 50-99 = 50 rows
+    // Should get rows 70-99 = 30 rows
     ASSERT_TRUE(result);
     ASSERT_EQ(30, result->length());
 
@@ -972,8 +968,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnRowGroupFilter) {
 
 /// Test: Page-level filtering reading only the predicate column (no nested column in read schema).
 ///
-/// This verifies that when reading only the "id" column (without the nested struct),
-/// page-level filtering works correctly since the read schema contains no nested types.
+/// This verifies that when reading only the "id" column (without the nested struct)
 ///
 /// Schema: { id: int32, info: struct<x: int32, y: int32> }
 /// Read schema: { id: int32 }
@@ -1043,7 +1038,7 @@ static std::shared_ptr<arrow::Array> MakeMapColumnData(int32_t num_rows) {
 ///
 /// Schema: { id: int32, tags: list<item: int32> }
 /// 100 rows, 10 per page, 2 row groups.
-/// Predicate: id >= 70 → row groups 0 skipped, row groups 1 read → 50 rows expected.
+/// Predicate: id >= 70 → page 0-7 skipped, page 8-9 read → 30 rows expected.
 TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnRowGroupFilter) {
     std::string file_name = dir_->Str() + "/nested_list_filter.parquet";
 
@@ -1067,7 +1062,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnRowGroupFilter) {
     ASSERT_TRUE(result);
     ASSERT_EQ(30, result->length());
 
-    // Build expected result: rows 50-99 from the original data
+    // Build expected result: rows 70-99 from the original data
     auto expected = data->Slice(70, 30);
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
@@ -1076,7 +1071,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnRowGroupFilter) {
 ///
 /// Schema: { id: int32, props: map<utf8, int32> }
 /// 100 rows, 10 per page, 2 row groups.
-/// Predicate: id >= 70 → row groups 0 skipped, row groups 1 read → 50 rows expected.
+/// Predicate: id >= 70 → page 0-7 skipped, page 8-9 read → 30 rows expected.
 TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnRowGroupFilter) {
     std::string file_name = dir_->Str() + "/nested_map_filter.parquet";
 
@@ -1100,7 +1095,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnRowGroupFilter) {
     ASSERT_TRUE(result);
     ASSERT_EQ(30, result->length());
 
-    // Build expected result: rows 50-99 from the original data
+    // Build expected result: rows 70-99 from the original data
     auto expected = data->Slice(70, 30);
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
@@ -1109,7 +1104,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnRowGroupFilter) {
 ///
 /// Schema: { id: int32, info: struct<x: int32, y: int32>, tags: list<item: int32> }
 /// This tests the boundary handling when two nested fields are adjacent in the schema.
-/// Predicate: id >= 70 → row groups 0 skipped, row groups 1 read → 50 rows expected.
+/// Predicate: id >= 70 → page 0-7 skipped, page 8-9 read → 30 rows expected.
 TEST_F(PageFilteredRowGroupReaderTest, MultipleAdjacentNestedColumns) {
     std::string file_name = dir_->Str() + "/multi_nested.parquet";
 
@@ -1138,7 +1133,7 @@ TEST_F(PageFilteredRowGroupReaderTest, MultipleAdjacentNestedColumns) {
     ASSERT_TRUE(result);
     ASSERT_EQ(30, result->length());
 
-    // Build expected result: rows 50-99 from the original data
+    // Build expected result: rows 70-99 from the original data
     auto expected = data->Slice(70, 30);
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
