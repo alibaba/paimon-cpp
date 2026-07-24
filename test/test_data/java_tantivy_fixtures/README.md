@@ -1,6 +1,6 @@
 # Java -> C++ tantivy cross-read fixtures
 
-> Generated on **2026-04-23** for the J6 `paimon-tantivy-java-compat-test`.
+> Generated on **2026-04-23** for `paimon-tantivy-java-compat-test`.
 
 ## Contents
 
@@ -15,7 +15,7 @@
 |---|---|
 | tantivy crate | **0.22.1** |
 | paimon-tantivy-jni | latest git sha at generation time (commit lives in the paimon repo) |
-| schema | B1: `row_id` u64 stored+indexed+fast + `text` TEXT |
+| schema | `row_id` u64 stored+indexed+fast + `text` TEXT |
 | archive byte format | Java-compatible, big-endian, no version header |
 
 Upgrading any component (especially the **tantivy version**) can make the segment
@@ -44,8 +44,8 @@ xxd english_simple.archive | head -1
 #                                force-merge, so multiple segments)
 ```
 
-## Related docs
+## Related code
 
-- `docs/dev/tantivy_java_cross_read_plan.md` — overall J6 plan
-- `docs/dev/test_execute.md` — J6 execution log
-- `docs/dev/tantivy_java_compat_plan.md` — overall paimon-cpp <-> paimon-java alignment plan
+- [`tantivy_java_compat_test.cpp`](../../../src/paimon/global_index/tantivy/tantivy_java_compat_test.cpp)
+- [`tantivy CMakeLists.txt`](../../../src/paimon/global_index/tantivy/CMakeLists.txt)
+- [`tantivy_ffi writer.rs`](../../../crates/tantivy_ffi/src/writer.rs)

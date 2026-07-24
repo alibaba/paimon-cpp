@@ -61,4 +61,4 @@ FlameGraph
 third_party/*.tar.gz
 
 # Rust / Cargo build artifacts
-third_party/tantivy_ffi/target/
+crates/tantivy_ffi/target/

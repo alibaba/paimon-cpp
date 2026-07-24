@@ -34,7 +34,8 @@
 #   source /opt/paimon-env.sh                           # PATH for rust, cmake
 #   cd /workspaces/paimon-cpp
 #   git lfs install --local && git lfs pull             # critical: boost & friends are LFS
-#   ./scripts/tantivy_smoke.sh
+#
+# Run ./.devcontainer/centos7/run.sh smoke from the host for the full check.
 
 # ---------- Base ----------
 # CentOS 7 reached EOL 2024-06-30; its default mirrorlist.centos.org is down.
@@ -236,4 +237,4 @@ CMD ["bash", "-lc", "\
     echo '--- rust  ---'; rustc --version; \
     echo '--- cargo ---'; cargo --version; \
     echo '--- cbindgen ---'; cbindgen --version; \
-    echo 'Ready. Mount paimon-cpp at /workspaces/paimon-cpp and run ./scripts/tantivy_smoke.sh'"]
+    echo 'Ready. From the host repository, run ./.devcontainer/centos7/run.sh smoke'"]
