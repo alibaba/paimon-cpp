@@ -1849,7 +1849,8 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedColumnsMisalignedPagesMultiRowGroup
 
     std::vector<int64_t> keys;
 
-    auto top = std::dynamic_pointer_cast<arrow::StructArray>(result->chunk(0));
+    auto concated = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto top = std::dynamic_pointer_cast<arrow::StructArray>(concated);
     ASSERT_TRUE(top);
     auto key_arr = std::dynamic_pointer_cast<arrow::Int64Array>(top->field(0));
     ASSERT_TRUE(key_arr);
@@ -1986,7 +1987,8 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedColumnsWithNullsMisalignedPagesMult
 
     std::vector<int64_t> keys;
 
-    auto top = std::dynamic_pointer_cast<arrow::StructArray>(result->chunk(0));
+    auto concated = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto top = std::dynamic_pointer_cast<arrow::StructArray>(concated);
     ASSERT_TRUE(top);
     auto key_arr = std::dynamic_pointer_cast<arrow::Int64Array>(top->field(0));
     ASSERT_TRUE(key_arr);
