@@ -327,8 +327,9 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
 
     std::vector<std::shared_ptr<arrow::Field>> result_fields;
     for (size_t i = 0; i < columns.size(); ++i) {
-        const auto& field_name = manifest.schema_fields[field_indices[i]].field->name();
-        result_fields.push_back(arrow::field(field_name, columns[i]->type()));
+        const auto& field = manifest.schema_fields[field_indices[i]].field;
+        result_fields.push_back(
+            arrow::field(field->name(), columns[i]->type(), field->nullable(), field->metadata()));
     }
     auto result_schema = arrow::schema(result_fields);
 
