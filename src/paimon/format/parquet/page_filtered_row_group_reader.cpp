@@ -306,8 +306,8 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
         std::vector<int> field_indices,
         manifest.GetFieldIndices(std::vector<int>(column_indices.begin(), column_indices.end())));
 
-    std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
-    columns.reserve(field_indices.size());
+    std::vector<std::shared_ptr<arrow::ChunkedArray>> result_arrays;
+    result_arrays.reserve(field_indices.size());
 
     for (int field_idx : field_indices) {
         PAIMON_ASSIGN_OR_RAISE(
@@ -322,18 +322,18 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
                             field_idx, chunked_array->length(), expected_rows, row_group_index));
         }
 
-        columns.push_back(std::move(chunked_array));
+        result_arrays.push_back(std::move(chunked_array));
     }
 
     std::vector<std::shared_ptr<arrow::Field>> result_fields;
-    for (size_t i = 0; i < columns.size(); ++i) {
+    for (size_t i = 0; i < result_arrays.size(); ++i) {
         const auto& field = manifest.schema_fields[field_indices[i]].field;
-        result_fields.push_back(
-            arrow::field(field->name(), columns[i]->type(), field->nullable(), field->metadata()));
+        result_fields.push_back(arrow::field(field->name(), result_arrays[i]->type(),
+                                             field->nullable(), field->metadata()));
     }
     auto result_schema = arrow::schema(result_fields);
 
-    auto table = arrow::Table::Make(result_schema, std::move(columns), expected_rows);
+    auto table = arrow::Table::Make(result_schema, std::move(result_arrays), expected_rows);
     return std::make_unique<TableRecordBatchReader>(std::move(table), max_chunksize, pool);
 }
 

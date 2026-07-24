@@ -955,7 +955,7 @@ static std::shared_ptr<arrow::StructArray> MakeNestedStructData(int32_t num_rows
 /// 100 rows, 10 per page, 2 row groups.
 /// Predicate: id >= 70 → page 0-7 skipped, paged 8-9 read → 30 rows expected.
 /// The read schema requests both "id" and "info" columns.
-TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnRowGroupFilter) {
+TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnPageFilter) {
     std::string file_name = dir_->Str() + "/nested_struct_filter.parquet";
 
     auto field_x = arrow::field("x", arrow::int32());
@@ -1059,7 +1059,7 @@ static std::shared_ptr<arrow::Array> MakeMapColumnData(int32_t num_rows) {
 /// Schema: { id: int32, tags: list<item: int32> }
 /// 100 rows, 10 per page, 2 row groups.
 /// Predicate: id >= 70 → page 0-7 skipped, page 8-9 read → 30 rows expected.
-TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnRowGroupFilter) {
+TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnPageFilter) {
     std::string file_name = dir_->Str() + "/nested_list_filter.parquet";
 
     auto field_id = arrow::field("id", arrow::int32());
@@ -1092,7 +1092,7 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnRowGroupFilter) {
 /// Schema: { id: int32, props: map<utf8, int32> }
 /// 100 rows, 10 per page, 2 row groups.
 /// Predicate: id >= 70 → page 0-7 skipped, page 8-9 read → 30 rows expected.
-TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnRowGroupFilter) {
+TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnPageFilter) {
     std::string file_name = dir_->Str() + "/nested_map_filter.parquet";
 
     auto field_id = arrow::field("id", arrow::int32());
