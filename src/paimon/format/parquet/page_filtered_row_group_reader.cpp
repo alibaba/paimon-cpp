@@ -216,8 +216,7 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
     ::parquet::arrow::FileReader* arrow_file_reader,
     const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
     int32_t row_group_index, int32_t field_index, const std::vector<int32_t>& column_indices,
-    const RowRanges& row_ranges, int64_t row_group_row_count,
-    std::shared_ptr<::arrow::MemoryPool> pool) {
+    const RowRanges& row_ranges, int64_t row_group_row_count) {
     // Factory: set data_page_filter on every leaf (per-leaf OffsetIndex).
     // data_page_filter enables I/O-level page skipping for all leaves.
     auto factory =
@@ -241,14 +240,17 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
         arrow_file_reader->GetColumn(field_index, column_indices, factory, &column_reader));
 
     if (!column_reader) {
-        return std::shared_ptr<arrow::ChunkedArray>();
+        return Status::Invalid(
+            fmt::format("PageFilteredRowGroupReader: field {} has no matching leaf columns "
+                        "(row_group={})",
+                        field_index, row_group_index));
     }
 
     // Since leaf columns may have misaligned pages, we compute compressed row ranges and drive each
     // leaf column independently
+    int64_t effective_total = row_group_row_count;
     for (int col_idx : column_reader->LeafColumnIndices()) {
         RowRanges effective_ranges = row_ranges;
-        int64_t effective_total = row_group_row_count;
         if (rg_page_index_reader) {
             auto offset_index = rg_page_index_reader->GetOffsetIndex(col_idx);
             if (offset_index) {
@@ -265,7 +267,7 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
 
     // Build the Arrow array (TransferColumnData for leaves + assemble for nested)
     std::shared_ptr<arrow::ChunkedArray> chunked_array;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(column_reader->BuildArray(row_group_row_count, &chunked_array));
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(column_reader->BuildArray(effective_total, &chunked_array));
 
     return chunked_array;
 }

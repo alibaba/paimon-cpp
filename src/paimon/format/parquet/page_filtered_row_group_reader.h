@@ -107,8 +107,7 @@ class PageFilteredRowGroupReader {
         ::parquet::arrow::FileReader* arrow_file_reader,
         const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
         int32_t row_group_index, int32_t field_index, const std::vector<int32_t>& column_indices,
-        const RowRanges& row_ranges, int64_t row_group_row_count,
-        std::shared_ptr<::arrow::MemoryPool> pool);
+        const RowRanges& row_ranges, int64_t row_group_row_count);
 };
 
 }  // namespace paimon::parquet
