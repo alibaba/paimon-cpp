@@ -30,6 +30,7 @@
 #include "paimon/core/table/system/read_optimized_system_table.h"
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
+#include "paimon/fs/file_system_factory.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
@@ -94,6 +95,13 @@ TEST(SystemTableTest, TestReadOptimizedSystemTablePathParsing) {
     ASSERT_TRUE(parsed->branch.has_value());
     ASSERT_EQ(parsed->branch.value(), "audit");
     ASSERT_EQ(parsed->system_table_name, ReadOptimizedSystemTable::kName);
+}
+
+TEST(SystemTableTest, TestGlobalSystemTableWithoutCatalogReturnsNotImplemented) {
+    ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", "/tmp", {}));
+    std::shared_ptr<FileSystem> shared_fs(std::move(fs));
+    ASSERT_NOK_WITH_MSG(SystemTableLoader::LoadFromPath(shared_fs, "/tmp/warehouse/sys/tables", {}),
+                        "global system table requires catalog context: tables");
 }
 
 }  // namespace paimon::test
