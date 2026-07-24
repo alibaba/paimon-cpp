@@ -17,6 +17,7 @@
 #include "paimon/format/parquet/page_filtered_row_group_reader.h"
 
 #include <cstdint>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <optional>
@@ -30,6 +31,8 @@
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
+#include "paimon/common/data/variant/generic_variant.h"
+#include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/utils/arrow/arrow_input_stream_adapter.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/defs.h"
@@ -44,6 +47,7 @@
 #include "paimon/status.h"
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/testharness.h"
+#include "paimon/testing/utils/variant_test_data.h"
 #include "paimon/utils/roaring_bitmap32.h"
 #include "parquet/arrow/reader.h"
 #include "parquet/file_reader.h"
@@ -1752,19 +1756,20 @@ static std::shared_ptr<arrow::StructArray> MakeMisalignedNestedData(int32_t num_
 }
 
 /// Test: page-level filtering across multiple nested columns whose leaf pages are
-/// MISALIGNED. The file mixes a flat key, a struct<int32,int64>, a list<int32> and
-/// a map<utf8,int32>; with write_batch_size=1 and a byte-based data page size every
-/// leaf flushes pages at a different (and, for the utf8 map key, irregular) row
-/// count.
+/// MISALIGNED, within a SINGLE row group. The file mixes a flat key, a
+/// struct<int32,int64>, a list<int32> and a map<utf8,int32>; with write_batch_size=1
+/// and a byte-based data page size every leaf flushes pages at a different (and, for
+/// the utf8 map key, irregular) row count.
 /// Bitmap: [0,15), [77, 87) (to avoid bitmap hole filling)
 /// Expected: 25 rows
-TEST_F(PageFilteredRowGroupReaderTest, NestedColumnsMisalignedPages) {
-    std::string file_name = dir_->Str() + "/nested_misaligned.parquet";
+TEST_F(PageFilteredRowGroupReaderTest, NestedColumnsMisalignedPagesSingleRowGroup) {
+    std::string file_name = dir_->Str() + "/nested_misaligned_single_rg.parquet";
     constexpr int32_t kNumRows = 100;
     auto data = MakeMisalignedNestedData(kNumRows);
 
     // write_batch_size=1 + a byte-based data page size makes the int32 and int64 leaves
     // flush pages at different row counts, i.e. deliberately misaligned pages.
+    // max_row_group_length=kNumRows keeps all rows in a single row group.
     WriteTestFile(file_name, data, /*write_batch_size=*/1, /*max_row_group_length=*/kNumRows,
                   /*enable_dictionary=*/false, /*data_page_size=*/40);
 
@@ -1807,6 +1812,201 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedColumnsMisalignedPages) {
     }
 
     ASSERT_EQ(total, 25);
+}
+
+/// Test: same misaligned nested layout as the single-row-group case above, but split
+/// across MULTIPLE row groups (max_row_group_length=40 -> row groups of 40/40/20).
+/// The selection bitmap spans row-group boundaries so the reader must keep the
+/// per-leaf skip/read row-consistent both across misaligned pages and across row
+/// groups.
+/// Bitmap: [0,15), [77, 87) (to avoid bitmap hole filling)
+/// Expected: 25 rows -> keys 0..14 and 77..86
+TEST_F(PageFilteredRowGroupReaderTest, NestedColumnsMisalignedPagesMultiRowGroup) {
+    std::string file_name = dir_->Str() + "/nested_misaligned_multi_rg.parquet";
+    constexpr int32_t kNumRows = 100;
+    auto data = MakeMisalignedNestedData(kNumRows);
+
+    // write_batch_size=1 + byte-based data page size -> misaligned leaf pages.
+    // max_row_group_length=40 -> 3 row groups (40, 40, 20).
+    WriteTestFile(file_name, data, /*write_batch_size=*/1, /*max_row_group_length=*/40,
+                  /*enable_dictionary=*/false, /*data_page_size=*/40);
+
+    auto read_schema =
+        arrow::schema({arrow::field("key", arrow::int64()),
+                       arrow::field("s", arrow::struct_({arrow::field("x", arrow::int32()),
+                                                         arrow::field("y", arrow::int64())})),
+                       arrow::field("tags", arrow::list(arrow::field("item", arrow::int32()))),
+                       arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()))});
+
+    // bitmap: [0,15), [77, 87) -> spans all three row groups.
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 15);
+    bitmap.AddRange(77, 87);
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, nullptr, bitmap, &result);
+    ASSERT_TRUE(result);
+
+    std::vector<int64_t> keys;
+
+    auto top = std::dynamic_pointer_cast<arrow::StructArray>(result->chunk(0));
+    ASSERT_TRUE(top);
+    auto key_arr = std::dynamic_pointer_cast<arrow::Int64Array>(top->field(0));
+    ASSERT_TRUE(key_arr);
+    for (int64_t i = 0; i < key_arr->length(); ++i) {
+        int64_t k = key_arr->Value(i);
+        ASSERT_TRUE(data->Slice(k, 1)->Equals(*top->Slice(i, 1)))
+            << "row content mismatch at key " << k;
+        keys.push_back(k);
+    }
+
+    std::vector<int64_t> expected;
+    for (int64_t i = 0; i < 15; ++i) {
+        expected.push_back(i);
+    }
+    for (int64_t i = 77; i < 87; ++i) {
+        expected.push_back(i);
+    }
+    ASSERT_EQ(keys, expected);
+}
+
+/// Helper: like MakeMisalignedNestedData but sprinkles nulls into the nested columns
+/// so that definition levels vary per row (which also perturbs page boundaries):
+///   key:   int64, always non-null (= i, used to identify the row)
+///   s:     struct<x:int32, y:int64>; whole struct null when i%11==0, otherwise
+///          x null when i%5==0 and y null when i%7==0
+///   tags:  list<int32>; null when i%6==0, otherwise [i*10, i*10+1]
+///   props: map<utf8,int32>; null when i%8==0, otherwise {"k_i": i*100}
+/// Correctness is verified per row by deep-comparing against this array.
+static std::shared_ptr<arrow::StructArray> MakeMisalignedNestedDataWithNulls(int32_t num_rows) {
+    arrow::Int64Builder key_builder;
+    EXPECT_TRUE(key_builder.Reserve(num_rows).ok());
+    for (int32_t i = 0; i < num_rows; ++i) {
+        key_builder.UnsafeAppend(i);
+    }
+    auto key_array = key_builder.Finish().ValueOrDie();
+
+    // s: struct<x:int32, y:int64> with nulls at both leaf and struct level.
+    auto field_x = arrow::field("x", arrow::int32());
+    auto field_y = arrow::field("y", arrow::int64());
+    auto x_builder = std::make_shared<arrow::Int32Builder>();
+    auto y_builder = std::make_shared<arrow::Int64Builder>();
+    arrow::StructBuilder s_builder(arrow::struct_({field_x, field_y}), arrow::default_memory_pool(),
+                                   {x_builder, y_builder});
+    for (int32_t i = 0; i < num_rows; ++i) {
+        if (i % 11 == 0) {
+            // AppendNull() also appends nulls to the child builders, keeping lengths in sync.
+            EXPECT_TRUE(s_builder.AppendNull().ok());
+            continue;
+        }
+        EXPECT_TRUE(s_builder.Append().ok());
+        if (i % 5 == 0) {
+            EXPECT_TRUE(x_builder->AppendNull().ok());
+        } else {
+            EXPECT_TRUE(x_builder->Append(i).ok());
+        }
+        if (i % 7 == 0) {
+            EXPECT_TRUE(y_builder->AppendNull().ok());
+        } else {
+            EXPECT_TRUE(y_builder->Append(i).ok());
+        }
+    }
+    auto s_array = s_builder.Finish().ValueOrDie();
+
+    // tags: list<int32> with null lists.
+    auto item_builder = std::make_shared<arrow::Int32Builder>();
+    arrow::ListBuilder tags_builder(arrow::default_memory_pool(), item_builder);
+    for (int32_t i = 0; i < num_rows; ++i) {
+        if (i % 6 == 0) {
+            EXPECT_TRUE(tags_builder.AppendNull().ok());
+        } else {
+            EXPECT_TRUE(tags_builder.Append().ok());
+            EXPECT_TRUE(item_builder->Append(i * 10).ok());
+            EXPECT_TRUE(item_builder->Append(i * 10 + 1).ok());
+        }
+    }
+    auto tags_array = tags_builder.Finish().ValueOrDie();
+
+    // props: map<utf8,int32> with null maps.
+    auto map_key_builder = std::make_shared<arrow::StringBuilder>();
+    auto map_val_builder = std::make_shared<arrow::Int32Builder>();
+    arrow::MapBuilder props_builder(arrow::default_memory_pool(), map_key_builder, map_val_builder);
+    for (int32_t i = 0; i < num_rows; ++i) {
+        if (i % 8 == 0) {
+            EXPECT_TRUE(props_builder.AppendNull().ok());
+        } else {
+            EXPECT_TRUE(props_builder.Append().ok());
+            EXPECT_TRUE(map_key_builder->Append("k_" + std::to_string(i)).ok());
+            EXPECT_TRUE(map_val_builder->Append(i * 100).ok());
+        }
+    }
+    auto props_array = props_builder.Finish().ValueOrDie();
+
+    auto field_key = arrow::field("key", arrow::int64());
+    auto field_s = arrow::field("s", arrow::struct_({field_x, field_y}));
+    auto field_tags = arrow::field("tags", arrow::list(arrow::field("item", arrow::int32())));
+    auto field_props = arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()));
+    return arrow::StructArray::Make({key_array, s_array, tags_array, props_array},
+                                    {field_key, field_s, field_tags, field_props})
+        .ValueOrDie();
+}
+
+/// Test: nested columns containing NULLs, with MISALIGNED leaf pages, split across
+/// MULTIPLE row groups. This combines the three stress dimensions: null-driven
+/// definition levels, byte-based misaligned pages, and row-group boundaries that the
+/// selection bitmap crosses. Every returned row is deep-compared (nulls included)
+/// against the original data identified by its non-null key.
+/// Bitmap: [0,15), [77, 87) (to avoid bitmap hole filling)
+/// Expected: 25 rows -> keys 0..14 and 77..86
+TEST_F(PageFilteredRowGroupReaderTest, NestedColumnsWithNullsMisalignedPagesMultiRowGroup) {
+    std::string file_name = dir_->Str() + "/nested_nulls_misaligned_multi_rg.parquet";
+    constexpr int32_t kNumRows = 100;
+    auto data = MakeMisalignedNestedDataWithNulls(kNumRows);
+
+    // write_batch_size=1 + byte-based data page size -> misaligned leaf pages.
+    // max_row_group_length=40 -> 3 row groups (40, 40, 20).
+    WriteTestFile(file_name, data, /*write_batch_size=*/1, /*max_row_group_length=*/40,
+                  /*enable_dictionary=*/false, /*data_page_size=*/40);
+
+    auto read_schema =
+        arrow::schema({arrow::field("key", arrow::int64()),
+                       arrow::field("s", arrow::struct_({arrow::field("x", arrow::int32()),
+                                                         arrow::field("y", arrow::int64())})),
+                       arrow::field("tags", arrow::list(arrow::field("item", arrow::int32()))),
+                       arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()))});
+
+    // bitmap: [0,15), [77, 87) -> spans all three row groups.
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 15);
+    bitmap.AddRange(77, 87);
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, nullptr, bitmap, &result);
+    ASSERT_TRUE(result);
+
+    std::vector<int64_t> keys;
+
+    auto top = std::dynamic_pointer_cast<arrow::StructArray>(result->chunk(0));
+    ASSERT_TRUE(top);
+    auto key_arr = std::dynamic_pointer_cast<arrow::Int64Array>(top->field(0));
+    ASSERT_TRUE(key_arr);
+    for (int64_t i = 0; i < key_arr->length(); ++i) {
+        ASSERT_FALSE(key_arr->IsNull(i)) << "key column must stay non-null";
+        int64_t k = key_arr->Value(i);
+        // Deep compare including nulls across struct/list/map leaves.
+        ASSERT_TRUE(data->Slice(k, 1)->Equals(*top->Slice(i, 1)))
+            << "row content mismatch at key " << k;
+        keys.push_back(k);
+    }
+
+    std::vector<int64_t> expected;
+    for (int64_t i = 0; i < 15; ++i) {
+        expected.push_back(i);
+    }
+    for (int64_t i = 77; i < 87; ++i) {
+        expected.push_back(i);
+    }
+    ASSERT_EQ(keys, expected);
 }
 
 }  // namespace paimon::parquet::test
