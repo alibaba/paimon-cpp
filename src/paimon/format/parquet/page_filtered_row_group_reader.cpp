@@ -311,7 +311,7 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<arrow::ChunkedArray> chunked_array,
             ReadFilteredField(arrow_file_reader, rg_page_index_reader, row_group_index, field_idx,
-                              column_indices, row_ranges, row_group_row_count, pool));
+                              column_indices, row_ranges, row_group_row_count));
 
         if (chunked_array && chunked_array->length() != expected_rows) {
             return Status::Invalid(
