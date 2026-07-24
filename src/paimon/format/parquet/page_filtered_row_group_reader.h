@@ -45,7 +45,6 @@ class PageFilteredRowGroupReader {
     ~PageFilteredRowGroupReader() = delete;
 
     /// Read a row group with page-level filtering.
-    /// @param arrow_file_reader The Arrow FileReader for ColumnReader tree creation
     /// @param target_row_group Target row group with index and row ranges
     /// @param column_indices Leaf column indices to read
     /// @param pool Memory pool
@@ -54,20 +53,21 @@ class PageFilteredRowGroupReader {
     ///        and only waits via WhenBuffered (no redundant PreBuffer).
     /// @param page_ranges If non-empty, wait via WhenBufferedRanges instead of WhenBuffered
     /// @param max_chunksize Per-batch row cap for the returned reader.
+    /// @param arrow_file_reader The Arrow FileReader for ColumnReader tree creation
     /// @return A RecordBatchReader streaming the filtered rows.
     static Result<std::unique_ptr<arrow::RecordBatchReader>> ReadFilteredRowGroup(
-        ::parquet::arrow::FileReader* arrow_file_reader, const TargetRowGroup& target_row_group,
-        const std::vector<int32_t>& column_indices, const ::arrow::io::CacheOptions& cache_options,
-        bool pre_buffered, const std::vector<::arrow::io::ReadRange>& page_ranges,
-        int64_t max_chunksize, std::shared_ptr<::arrow::MemoryPool> pool);
+        const TargetRowGroup& target_row_group, const std::vector<int32_t>& column_indices,
+        const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
+        const std::vector<::arrow::io::ReadRange>& page_ranges, int64_t max_chunksize,
+        std::shared_ptr<::arrow::MemoryPool> pool, ::parquet::arrow::FileReader* arrow_file_reader);
 
     /// Compute the byte ranges of pages that overlap with the given RowRanges.
     /// Uses OffsetIndex to determine per-page file offsets and sizes.
     /// Includes dictionary pages unconditionally.
     /// Falls back to entire column chunk range if OffsetIndex is unavailable.
     static std::vector<::arrow::io::ReadRange> ComputePageRanges(
-        ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
-        const std::vector<int32_t>& column_indices);
+        const TargetRowGroup& target_row_group, const std::vector<int32_t>& column_indices,
+        ::parquet::ParquetFileReader* parquet_reader);
 
  private:
     /// Get the [first_row, last_row] range of a page given page locations.
@@ -76,13 +76,13 @@ class PageFilteredRowGroupReader {
         int64_t row_group_row_count);
 
     /// Wait for pre-buffered data to become available before reading.
-    static Status WaitForPreBuffer(::parquet::ParquetFileReader* parquet_reader,
-                                   int32_t row_group_index,
+    static Status WaitForPreBuffer(int32_t row_group_index,
                                    const std::vector<int32_t>& column_indices,
                                    const ::arrow::io::CacheOptions& cache_options,
                                    bool pre_buffered,
                                    const std::vector<::arrow::io::ReadRange>& page_ranges,
-                                   std::shared_ptr<::arrow::MemoryPool> pool);
+                                   std::shared_ptr<::arrow::MemoryPool> pool,
+                                   ::parquet::ParquetFileReader* parquet_reader);
 
     /// Create a data_page_filter callback for a column based on RowRanges + OffsetIndex.
     static std::function<bool(const ::parquet::DataPageStats&)> MakePageFilter(
@@ -96,18 +96,18 @@ class PageFilteredRowGroupReader {
 
     /// Reset the given leaf and replay the skip/read pattern derived from `ranges`
     /// directly against the ColumnReader (ResetLeaf + SkipRecords/ReadRecords).
-    static Status ExecuteSkipReadPattern(::parquet::arrow::ColumnReader* column_reader, int col_idx,
-                                         const RowRanges& ranges, int64_t total);
+    static Status ExecuteSkipReadPattern(int col_idx, const RowRanges& ranges, int64_t total,
+                                         ::parquet::arrow::ColumnReader* column_reader);
 
     /// Read a field (flat or nested) using ColumnReader tree.
     /// Sets data_page_filter on all leaves via factory, then drives each leaf
     /// independently via ResetLeaf/SkipRecords/ReadRecords using its own
     /// compressed_ranges.
     static Result<std::shared_ptr<arrow::ChunkedArray>> ReadFilteredField(
-        ::parquet::arrow::FileReader* arrow_file_reader,
         const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
         int32_t row_group_index, int32_t field_index, const std::vector<int32_t>& column_indices,
-        const RowRanges& row_ranges, int64_t row_group_row_count);
+        const RowRanges& row_ranges, int64_t row_group_row_count,
+        ::parquet::arrow::FileReader* arrow_file_reader);
 };
 
 }  // namespace paimon::parquet
