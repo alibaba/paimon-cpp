@@ -6,7 +6,7 @@ f1:TIMESTAMP(9):3
 f2:DECIMAL(5, 2):4
 f3:STRING:5
 f4:DATE:6
-f5:BIGINT:7 
+f5:BIGINT:7
 partition key: key0, key1
 bucket count: -1
 
@@ -14,16 +14,16 @@ Msgs:
 write "key0", "key1", "f0", "f1", "f2"
 Add(0, 1, "100", Timestamp(1732603136001l, 1), "0.02")
 Add(0, 1, "110", Timestamp(1732603136011l, 11), "11.12")
-Add(0, 1, "120", Timestamp(1732603136021l, 21), "22.22")           
+Add(0, 1, "120", Timestamp(1732603136021l, 21), "22.22")
 Add(0, 1, "130", Timestamp(1732603136031l, 31), "333.32")
-Add(0, 1, "140", Timestamp(1732603136041l, 41), "444.42")          
+Add(0, 1, "140", Timestamp(1732603136041l, 41), "444.42")
 
 write "key0", "key1", "f3", "f4", "f5"
 Add(0, 1, "True", 4, 5l)
 Add(0, 1, "1", -44, 25l)
 Add(0, 1, "nO", 444, 35l)
 Add(0, 1, "0", -4444, 45l)
-Add(0, 1, "Yes", 44444, 55l)             
+Add(0, 1, "Yes", 44444, 55l)
 
 set first row id to 0
 commit snapshot-1
@@ -31,14 +31,14 @@ NoCompact
 
 schema evolution
 updateColumnType("f0", INT())
-updateColumnType("f1", STRING()) 
+updateColumnType("f1", STRING())
 updateColumnType("f2", DECIMAL(6, 3))
 updateColumnType("f3", BOOLEAN())
 updateColumnType("f4", TIMESTAMP(9))
-dropColumn("f5")                    
+dropColumn("f5")
 renameColumn("f0", "f5")
 renameColumn("f3", "f0")
-renameColumn("f5", "f3")                    
+renameColumn("f5", "f3")
 updateColumnPosition(SchemaChange.Move.first("f4"))
 addColumn("f6", INT())
 
@@ -52,11 +52,11 @@ f0:BOOLEAN:5
 f6:INT:8
 
 write "f4", "key0", "key1", "f3", "f1"
-Add(Timestamp(1732603136054l, 54), 0, 1, 150, "2024-11-26 15:28:31")            
+Add(Timestamp(1732603136054l, 54), 0, 1, 150, "2024-11-26 15:28:31")
 Add(Timestamp(1732603136064l, 64), 0, 1, 160, "2024-11-26 15:28:41")
 Add(Timestamp(1732603136074l, 74), 0, 1, 170, "2024-11-26 15:28:51")
 Add(Timestamp(1732603136084l, 84), 0, 1, 180, "2024-11-26 15:29:01")
-Add(Timestamp(1732603136094l, 94), 0, 1, 190, "I'm strange")                      
+Add(Timestamp(1732603136094l, 94), 0, 1, 190, "I'm strange")
 
 set first row id to 5
 commit snapshot-2
@@ -67,7 +67,7 @@ Add(Timestamp(1732603136054l, 154), 0, 1, "55.002", true, 56)
 Add(Timestamp(1732603136064l, 164), 0, 1, "666.012", false, 66)
 Add(Timestamp(1732603136074l, 174), 0, 1, "-77.022", true, 76)
 Add(Timestamp(1732603136084l, 184), 0, 1, "8.032", true, -86)
-Add(Timestamp(1732603136094l, 194), 0, 1, "-999.420", false, 96)                      
+Add(Timestamp(1732603136094l, 194), 0, 1, "-999.420", false, 96)
 
 set first row id to 5
 commit snapshot-3

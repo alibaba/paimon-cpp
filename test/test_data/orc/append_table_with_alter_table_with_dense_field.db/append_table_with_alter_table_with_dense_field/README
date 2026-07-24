@@ -10,7 +10,7 @@ Add(0, "Alice", 11, 21, 31.1)
 Add(0, "Bob", 12, 22, 32.2)
 
 Add(1, "Cathy", 13, 23, 33.3)
-Add(1, "David", 14, 24, 34.4)                        
+Add(1, "David", 14, 24, 34.4)
 
 NoCompact
 
@@ -24,9 +24,9 @@ key0:int:0 f2:int:2 f1:int:3 f3:double:4 f4:int:5
 
 snapshot-2
 Add(0, 25, 15, 35.5, 45)
-Add(0, 26, 16, 36.6, 46)                        
+Add(0, 26, 16, 36.6, 46)
 
 Add(1, 27, 17, 37.7, 47)
-Add(1, 28, 18, 38.8, 48)                        
+Add(1, 28, 18, 38.8, 48)
 
 NoCompact

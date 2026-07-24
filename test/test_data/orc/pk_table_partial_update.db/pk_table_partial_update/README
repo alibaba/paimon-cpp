@@ -21,10 +21,10 @@ Add(1, 1, null, true, BinaryString.fromString("banana"))
 
 snapshot-2
 Add(0, 1, 100.0, true, BinaryString.fromString("new_apple"));
-Delete(1, 0, 122.0, false, null);             
+Delete(1, 0, 122.0, false, null);
 Add(1, 1, 133.3, false, null);
 Add(2, 1, 144.4, true, BinaryString.fromString("orange"));
-Delete(2, 2, 122.0, false, null);             
+Delete(2, 2, 122.0, false, null);
 
 Recall with snapshot2, result:
 0, 1, 100.0, true, new_apple

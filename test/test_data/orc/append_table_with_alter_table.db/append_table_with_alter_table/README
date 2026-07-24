@@ -1,4 +1,4 @@
-key0:int:0 key1:int:1 a:int:2 b:int:3 c:int:4 d:int:5 k:int:6 
+key0:int:0 key1:int:1 a:int:2 b:int:3 c:int:4 d:int:5 k:int:6
 partition key: key0, key1
 bucket count: -1
 
@@ -9,7 +9,7 @@ Add(0, 1, 22, 23, 24, 25, 26)
 Add(0, 1, 32, 33, 34, 35, 36)
 
 Add(1, 1, 42, 43, 44, 45, 46)
-Add(1, 1, 52, 53, 54, 55, 56)                        
+Add(1, 1, 52, 53, 54, 55, 56)
 
 NoCompact
 
@@ -26,10 +26,10 @@ key0:int:0 key1:int:1 k:int:6 c:int:3 d:int:7 a:int:5 e:int:8
 snapshot-2
 Add(0, 1, 66, 63, 517, 65, 618)
 Add(0, 1, 76, 73, 527, 75, 628)
-Add(0, 1, 86, 83, 537, 85, 638)                        
+Add(0, 1, 86, 83, 537, 85, 638)
 
 Add(1, 1, 96, 93, 547, 95, 648)
-Add(1, 1, 106, 103, 557, 105, 658)                        
+Add(1, 1, 106, 103, 557, 105, 658)
 
 NoCompact
 
