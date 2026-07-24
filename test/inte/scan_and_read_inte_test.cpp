@@ -2282,67 +2282,6 @@ TEST_P(ScanAndReadInteTest, TestPkSchemaEvolutionScanWithRenamedPkPredicate) {
     ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
 }
 
-#ifdef PAIMON_ENABLE_LANCE
-TEST_F(ScanAndReadInteTest, TestScanWithPredicateAndReadWithUnorderedFieldForLance) {
-    auto test_dir = UniqueTestDirectory::Create("local");
-    arrow::FieldVector fields = {arrow::field("f0", arrow::utf8()),
-                                 arrow::field("f1", arrow::int32()),
-                                 arrow::field("f2", arrow::float64())};
-    auto schema = arrow::schema(fields);
-    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
-                                                  {Options::FILE_FORMAT, "lance"},
-                                                  {Options::TARGET_FILE_SIZE, "1024"},
-                                                  {Options::BUCKET, "-1"},
-                                                  {Options::FILE_SYSTEM, "local"}};
-    ASSERT_OK_AND_ASSIGN(auto helper,
-                         TestHelper::Create(test_dir->Str(), schema, /*partition_keys=*/{},
-                                            /*primary_keys=*/{}, options,
-                                            /*is_streaming_mode=*/false));
-    std::string table_path = test_dir->Str() + "/foo.db/bar";
-    int64_t commit_identifier = 0;
-    std::string data = R"([
-            ["banana", 2, 3.5],
-            ["dog", 1, 2000.5],
-            ["lucy", 14, 10000.5],
-            ["mouse", 100, 10.5]
-    ])";
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch,
-                         TestHelper::MakeRecordBatch(arrow::struct_(fields), data,
-                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
-    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
-                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
-                                                /*expected_commit_messages=*/std::nullopt));
-    ScanContextBuilder scan_context_builder(table_path);
-    // predicate does not take effective as lance file does not have stats
-    auto predicate = PredicateBuilder::GreaterThan(
-        /*field_index=*/2, /*field_name=*/"f2", FieldType::DOUBLE, Literal(50000.2));
-    scan_context_builder.SetPredicate(predicate);
-    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
-    ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
-    ASSERT_EQ(result_plan->SnapshotId().value(), 1);
-
-    ReadContextBuilder read_context_builder(table_path);
-    read_context_builder.SetReadFieldNames({"f2", "f0"});
-    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
-    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(result_plan->Splits()));
-    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
-
-    // check result
-    auto expected = std::make_shared<arrow::ChunkedArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(
-            arrow::struct_({arrow::field("_VALUE_KIND", arrow::int8()), fields[2], fields[0]}),
-            R"([[0, 3.5, "banana"],
-                [0, 2000.5, "dog"],
-                [0, 10000.5, "lucy"],
-                [0, 10.5, "mouse"]])")
-            .ValueOrDie());
-    ASSERT_TRUE(expected);
-    ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
-}
-#endif
-
 TEST_P(ScanAndReadInteTest, TestAppendTableWithMultipleFileFormat) {
     auto file_format = FileFormat();
     if (file_format != "parquet") {

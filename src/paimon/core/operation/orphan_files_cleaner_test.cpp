@@ -39,8 +39,6 @@ TEST(OrphanFilesCleanerTest, TestSupportToClean) {
         OrphanFilesCleanerImpl::SupportToClean("data-2d5ea1ea-77c1-47ff-bb87-19a509962a37-0.avro"));
     ASSERT_TRUE(OrphanFilesCleanerImpl::SupportToClean(
         "data-2d5ea1ea-77c1-47ff-bb87-19a509962a37-0.parquet"));
-    ASSERT_TRUE(OrphanFilesCleanerImpl::SupportToClean(
-        "data-2d5ea1ea-77c1-47ff-bb87-19a509962a37-0.lance"));
     ASSERT_TRUE(
         OrphanFilesCleanerImpl::SupportToClean("manifest-3ea5ee21-d399-4f1c-a749-2fc63dbf0852-0"));
     ASSERT_TRUE(OrphanFilesCleanerImpl::SupportToClean(

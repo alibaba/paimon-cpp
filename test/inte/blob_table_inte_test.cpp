@@ -522,9 +522,6 @@ std::vector<std::string> GetTestValuesForBlobTableInteTest() {
 #ifdef PAIMON_ENABLE_ORC
     values.emplace_back("orc");
 #endif
-#ifdef PAIMON_ENABLE_LANCE
-    values.emplace_back("lance");
-#endif
 #ifdef PAIMON_ENABLE_AVRO
     values.emplace_back("avro");
 #endif
@@ -861,20 +858,18 @@ TEST_P(BlobTableInteTest, TestBasic) {
             .ValueOrDie());
     ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_array));
 
-    if (GetParam() != "lance") {
-        // read with row tracking
-        auto expected_row_tracking_array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(
-                arrow::struct_({fields_[1], fields_[0], SpecialFields::SequenceNumber().field_,
-                                SpecialFields::RowId().field_, fields_[2]}),
-                R"([
+    // read with row tracking
+    auto expected_row_tracking_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(
+            arrow::struct_({fields_[1], fields_[0], SpecialFields::SequenceNumber().field_,
+                            SpecialFields::RowId().field_, fields_[2]}),
+            R"([
         ["new_blob", 1, 2, 0, "c"]
     ])")
-                .ValueOrDie());
+            .ValueOrDie());
 
-        ASSERT_OK(ScanAndRead(table_path, {"f1", "f0", "_SEQUENCE_NUMBER", "_ROW_ID", "f2"},
-                              expected_row_tracking_array));
-    }
+    ASSERT_OK(ScanAndRead(table_path, {"f1", "f0", "_SEQUENCE_NUMBER", "_ROW_ID", "f2"},
+                          expected_row_tracking_array));
 }
 
 TEST_P(BlobTableInteTest, TestMultipleAppends) {
@@ -966,17 +961,16 @@ TEST_P(BlobTableInteTest, TestMultipleAppends) {
             .ValueOrDie());
     ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_array));
 
-    if (GetParam() != "lance") {
-        // read with row tracking
-        auto expected_row_tracking_array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({
-                                                          fields_[0],
-                                                          fields_[1],
-                                                          fields_[2],
-                                                          SpecialFields::RowId().field_,
-                                                          SpecialFields::SequenceNumber().field_,
-                                                      }),
-                                                      R"([
+    // read with row tracking
+    auto expected_row_tracking_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({
+                                                      fields_[0],
+                                                      fields_[1],
+                                                      fields_[2],
+                                                      SpecialFields::RowId().field_,
+                                                      SpecialFields::SequenceNumber().field_,
+                                                  }),
+                                                  R"([
         [1, "a", "b", 0, 1],
         [1, "a", "b", 1, 1],
         [1, "a", "b", 2, 1],
@@ -990,11 +984,10 @@ TEST_P(BlobTableInteTest, TestMultipleAppends) {
         [1, "a", "b", 10, 2],
         [2, "c", "d", 11, 4]
     ])")
-                .ValueOrDie());
+            .ValueOrDie());
 
-        ASSERT_OK(ScanAndRead(table_path, {"f0", "f1", "f2", "_ROW_ID", "_SEQUENCE_NUMBER"},
-                              expected_row_tracking_array));
-    }
+    ASSERT_OK(ScanAndRead(table_path, {"f0", "f1", "f2", "_ROW_ID", "_SEQUENCE_NUMBER"},
+                          expected_row_tracking_array));
 }
 
 TEST_P(BlobTableInteTest, TestDataEvolutionBlobOnlyWriteWithFirstRowId) {
@@ -1146,25 +1139,23 @@ TEST_P(BlobTableInteTest, TestMultipleAppendsDifferentFirstRowIds) {
             .ValueOrDie());
     ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_array));
 
-    if (GetParam() != "lance") {
-        // read with row tracking
-        auto expected_row_tracking_array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({
-                                                          fields_[0],
-                                                          fields_[1],
-                                                          fields_[2],
-                                                          SpecialFields::RowId().field_,
-                                                          SpecialFields::SequenceNumber().field_,
-                                                      }),
-                                                      R"([
+    // read with row tracking
+    auto expected_row_tracking_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({
+                                                      fields_[0],
+                                                      fields_[1],
+                                                      fields_[2],
+                                                      SpecialFields::RowId().field_,
+                                                      SpecialFields::SequenceNumber().field_,
+                                                  }),
+                                                  R"([
         [1, "a", "b", 0, 1],
         [2, "c", "d", 1, 3]
     ])")
-                .ValueOrDie());
+            .ValueOrDie());
 
-        ASSERT_OK(ScanAndRead(table_path, {"f0", "f1", "f2", "_ROW_ID", "_SEQUENCE_NUMBER"},
-                              expected_row_tracking_array));
-    }
+    ASSERT_OK(ScanAndRead(table_path, {"f0", "f1", "f2", "_ROW_ID", "_SEQUENCE_NUMBER"},
+                          expected_row_tracking_array));
 }
 
 TEST_P(BlobTableInteTest, TestMoreDataWithDataEvolution) {
@@ -1301,28 +1292,23 @@ TEST_P(BlobTableInteTest, TestExternalPath) {
             .ValueOrDie());
     ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_array));
 
-    if (GetParam() != "lance") {
-        // read with row tracking
-        auto expected_row_tracking_array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(
-                arrow::struct_({fields_[1], fields_[0], fields_[2], SpecialFields::RowId().field_,
-                                SpecialFields::SequenceNumber().field_}),
-                R"([
+    // read with row tracking
+    auto expected_row_tracking_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(
+            arrow::struct_({fields_[1], fields_[0], fields_[2], SpecialFields::RowId().field_,
+                            SpecialFields::SequenceNumber().field_}),
+            R"([
         ["a", 10, "b", 0, 2],
         ["c", 20, "d", 1, 2]
     ])")
-                .ValueOrDie());
+            .ValueOrDie());
 
-        ASSERT_OK(ScanAndRead(table_path, {"f1", "f0", "f2", "_ROW_ID", "_SEQUENCE_NUMBER"},
-                              expected_row_tracking_array));
-    }
+    ASSERT_OK(ScanAndRead(table_path, {"f1", "f0", "f2", "_ROW_ID", "_SEQUENCE_NUMBER"},
+                          expected_row_tracking_array));
 }
 
 TEST_P(BlobTableInteTest, TestPartitionWithPredicate) {
     auto file_format = GetParam();
-    if (file_format == "lance") {
-        return;
-    }
     std::vector<std::string> partition_keys = {"f0"};
     std::map<std::string, std::string> options = {
         {Options::MANIFEST_FORMAT, "orc"},         {Options::FILE_FORMAT, GetParam()},
@@ -1440,8 +1426,8 @@ TEST_P(BlobTableInteTest, TestPartitionWithPredicate) {
 }
 
 TEST_P(BlobTableInteTest, TestPredicate) {
-    if (GetParam() == "lance" || GetParam() == "avro") {
-        // lance and avro do not have stats
+    if (GetParam() == "avro") {
+        // Avro does not have stats.
         return;
     }
     CreateTable();
@@ -1510,9 +1496,6 @@ TEST_P(BlobTableInteTest, TestPredicate) {
 }
 
 TEST_P(BlobTableInteTest, TestIOException) {
-    if (GetParam() == "lance") {
-        return;
-    }
     std::string table_path;
     // write and commit with I/O exception
     bool write_run_complete = false;
@@ -1584,7 +1567,7 @@ TEST_P(BlobTableInteTest, TestIOException) {
 
 TEST_P(BlobTableInteTest, TestReadTableWithDenseStats) {
     auto file_format = GetParam();
-    if (file_format == "lance" || file_format == "avro") {
+    if (file_format == "avro") {
         return;
     }
     std::string table_path =
@@ -1648,7 +1631,7 @@ TEST_P(BlobTableInteTest, TestReadTableWithDenseStats) {
 
 TEST_P(BlobTableInteTest, TestDataEvolutionAndAlterTable) {
     auto file_format = GetParam();
-    if (file_format == "lance" || file_format == "avro") {
+    if (file_format == "avro") {
         return;
     }
     std::string table_path = paimon::test::GetDataDir() + file_format +
@@ -1943,7 +1926,7 @@ TEST_P(BlobTableInteTest, TestAppendWriteWithNullBlob) {
 
 TEST_P(BlobTableInteTest, TestReadTableWithMultiBlobFields) {
     auto file_format = GetParam();
-    if (file_format == "lance" || file_format == "avro") {
+    if (file_format == "avro") {
         return;
     }
     std::string table_path = paimon::test::GetDataDir() + file_format +
@@ -2015,9 +1998,6 @@ TEST_P(BlobTableInteTest, TestReadTableWithMultiBlobFields) {
 }
 
 TEST_P(BlobTableInteTest, TestBlobDescriptorField) {
-    if (GetParam() == "lance") {
-        return;
-    }
     // Two blob fields configured via BLOB_DESCRIPTOR_FIELD and stored inline as descriptors.
     arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
                                  BlobUtils::ToArrowField("b0", true),
@@ -2071,9 +2051,6 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorField) {
 }
 
 TEST_P(BlobTableInteTest, TestBlobDescriptorFieldPartialInline) {
-    if (GetParam() == "lance") {
-        return;
-    }
     // 4 blob fields: b0,b1 are inline descriptors; b2,b3 are regular blob fields written to
     // .blob files.
     arrow::FieldVector fields = {
@@ -2135,9 +2112,6 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorFieldPartialInline) {
 }
 
 TEST_P(BlobTableInteTest, TestBlobDescriptorMultiCommitAndShuffledReadSchema) {
-    if (GetParam() == "lance") {
-        return;
-    }
     // Multiple write+commit rounds with a shuffled read schema: b3, b2, b1, b0, f0.
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::int32()), BlobUtils::ToArrowField("b0", true),
@@ -2508,9 +2482,6 @@ TEST_P(BlobTableInteTest, TestOrcMapStorageLayoutEvolutionWithBlobDataEvolution)
 }
 
 TEST_P(BlobTableInteTest, TestDataEvolutionWithBlobDescriptorField) {
-    if (GetParam() == "lance") {
-        return;
-    }
     // Test DataEvolution (split-column write) combined with blob descriptor fields.
     // Schema: f0(int32), b0/b1(blob descriptor inline), b2/b3(blob).
     // Commit 1: file A writes (f0, b2, b3)
@@ -2632,9 +2603,6 @@ TEST_P(BlobTableInteTest, TestDataEvolutionWithBlobDescriptorField) {
 }
 
 TEST_P(BlobTableInteTest, TestBlobDescriptorFieldWriteRawBytesDirectly) {
-    if (GetParam() == "lance") {
-        return;
-    }
     // Similar to TestBlobDescriptorField but writes raw bytes directly without converting to
     // descriptor first. Descriptor fields reject values without the descriptor magic header.
     arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
@@ -2989,9 +2957,6 @@ TEST_P(BlobTableInteTest, TestForwardBlobViewReference) {
 
 TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamDescriptorBlob) {
     auto file_format = GetParam();
-    if (GetParam() == "lance") {
-        return;
-    }
     // Upstream table has two blob descriptor fields. The downstream view references cells from
     // both b0 (field_id=1) and b1 (field_id=2).
     const std::string upstream_db_name = "upstream_two_blob";
@@ -3278,9 +3243,6 @@ TEST_P(BlobTableInteTest, TestBlobViewFieldWithMultipleUpstreamTables) {
 
 TEST_P(BlobTableInteTest, TestBlobViewFailsWhenBothPathsAbsent) {
     auto file_format = GetParam();
-    if (GetParam() == "lance") {
-        return;
-    }
     auto upstream_dir = UniqueTestDirectory::Create("local");
     const std::string upstream_db_name = "nonexistent_db";
     const std::string upstream_table_name = "nonexistent_table";
@@ -3331,9 +3293,6 @@ TEST_P(BlobTableInteTest, TestBlobViewFailsWhenBothPathsAbsent) {
 
 TEST_P(BlobTableInteTest, TestBlobViewWithFallbackPath) {
     auto file_format = GetParam();
-    if (GetParam() == "lance") {
-        return;
-    }
     const std::string upstream_db_name = "fallback_db";
     const std::string upstream_table_name = "fallback_table";
     arrow::FieldVector upstream_fields = {arrow::field("f0", arrow::int32()),
