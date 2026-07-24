@@ -19,7 +19,7 @@
 
 // x86_64 variant of the Paimon CPP Dev Container.
 // On Apple Silicon hosts this runs under QEMU emulation (5-10x slower).
-// Use it ONLY for cross-architecture verification (Stage 11), not daily dev.
+// Use it only for cross-architecture verification, not daily development.
 //
 // Reuses the same Dockerfile as the default container; only the platform differs.
 //
@@ -54,11 +54,11 @@
 		"source=${localEnv:HOME}/.ssh,target=/home/paimon/.ssh,type=bind,readonly",
 		"source=paimon-cargo-registry-amd64,target=/home/paimon/.cargo/registry,type=volume",
 		"source=paimon-cargo-git-amd64,target=/home/paimon/.cargo/git,type=volume",
-		"source=paimon-rust-target-amd64,target=${containerWorkspaceFolder}/third_party/tantivy_ffi/target,type=volume",
+		"source=paimon-rust-target-amd64,target=${containerWorkspaceFolder}/crates/tantivy_ffi/target,type=volume",
 		"source=paimon-build-amd64,target=${containerWorkspaceFolder}/build,type=volume",
 		"source=paimon-ccache-amd64,target=/home/paimon/.ccache,type=volume"
 	],
-	"postCreateCommand": "sudo chown -R paimon:paimon ${containerWorkspaceFolder}/build ${containerWorkspaceFolder}/third_party/tantivy_ffi/target /home/paimon/.ccache /home/paimon/.cargo/registry /home/paimon/.cargo/git 2>/dev/null || true; cargo install cbindgen --locked || true; rustup component add rust-src rust-analyzer clippy rustfmt || true",
+	"postCreateCommand": "sudo chown -R paimon:paimon ${containerWorkspaceFolder}/build ${containerWorkspaceFolder}/crates/tantivy_ffi/target /home/paimon/.ccache /home/paimon/.cargo/registry /home/paimon/.cargo/git 2>/dev/null || true; cargo install cbindgen --locked || true; rustup component add rust-src rust-analyzer clippy rustfmt || true",
 	"customizations": {
 		"vscode": {
 			"extensions": [

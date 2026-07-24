@@ -435,4 +435,4 @@ Before submitting a PR, please verify:
 - [ ] Tests are added or updated for the changed functionality.
 - [ ] `ASSERT_*` is preferred over `EXPECT_*` in tests.
 - [ ] No raw `new` / `delete` outside factory methods.
-- [ ] PR description follows the [template](.github/PULL_REQUEST_TEMPLATE.md).
+- [ ] PR description follows the [template](../.github/PULL_REQUEST_TEMPLATE.md).

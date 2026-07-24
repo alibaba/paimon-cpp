@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Pull Corrosion-rs via FetchContent so we can import Cargo crates as CMake
-# targets. Used to bring in third_party/tantivy_ffi for the tantivy-fulltext
-# global index (see docs/dev/tantivy_fts_migration_plan.md).
+# Pull Corrosion-rs via FetchContent so we can import crates/tantivy_ffi as
+# CMake targets for the tantivy-fulltext global index.
 #
 # Pinned to v0.5.2 (stable release). Requires CMake >= 3.22.
 

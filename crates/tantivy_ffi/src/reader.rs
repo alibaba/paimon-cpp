@@ -1,3 +1,17 @@
+// Copyright 2026-present Alibaba Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! PaimonTantivyReader: query side of tantivy-fulltext.
 //!
 //! Constructs a tantivy Index from a packed-blob produced by writer.rs (via
@@ -257,8 +271,7 @@ impl PaimonTantivyReader {
         Ok(ids)
     }
 
-    /// 4-path dispatch on `(with_score, limit)` — see `docs/dev/tantivy_bm25_score_contract.md`
-    /// §4.
+    /// Four-path dispatch on `(with_score, limit)`.
     ///
     /// | with_score | limit  | path | collector              | sort           | truncate | output score |
     /// |------------|--------|------|------------------------|----------------|----------|--------------|

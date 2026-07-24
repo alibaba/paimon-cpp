@@ -1,6 +1,20 @@
+// Copyright 2026-present Alibaba Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! PaimonTantivyWriter: Writer for tantivy-fulltext global index.
 //!
-//! Contract (see docs/dev/tantivy_java_compat_plan.md §2.5 + §5.1 J2):
+//! Contract:
 //! - `writer_new(field_name, mode, with_position, dict_dir, out)` — create on a
 //!   private tmp dir backed by MmapDirectory + PaimonJiebaTokenizer.
 //!   `field_name` is **ignored** by the Rust schema (kept for FFI ABI
@@ -12,8 +26,7 @@
 //!   single segment + pack all on-disk index files into a Rust-allocated buffer
 //! - `writer_free(writer)` — destroy (RAII removes tmp dir)
 //!
-//! Packing format (big-endian, **cross-readable with paimon-java archive**;
-//! see `paimon-tantivy-index/README.md` §Archive File Format):
+//! Packing format (big-endian, **cross-readable with paimon-java archives**):
 //!   `[i32 BE file_count |
 //!     (i32 BE name_len | name_bytes | i64 BE file_len | file_bytes)*]`
 
