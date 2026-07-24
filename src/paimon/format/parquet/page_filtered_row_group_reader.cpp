@@ -248,9 +248,10 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
 
     // Since leaf columns may have misaligned pages, we compute compressed row ranges and drive each
     // leaf column independently
-    int64_t effective_total = row_group_row_count;
+
     for (int col_idx : column_reader->LeafColumnIndices()) {
         RowRanges effective_ranges = row_ranges;
+        int64_t effective_total = row_group_row_count;
         if (rg_page_index_reader) {
             auto offset_index = rg_page_index_reader->GetOffsetIndex(col_idx);
             if (offset_index) {
@@ -267,7 +268,8 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
 
     // Build the Arrow array (TransferColumnData for leaves + assemble for nested)
     std::shared_ptr<arrow::ChunkedArray> chunked_array;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(column_reader->BuildArray(effective_total, &chunked_array));
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(
+        column_reader->BuildArray(row_ranges.RowCount(), &chunked_array));
 
     return chunked_array;
 }
@@ -313,7 +315,7 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
             ReadFilteredField(arrow_file_reader, rg_page_index_reader, row_group_index, field_idx,
                               column_indices, row_ranges, row_group_row_count));
 
-        if (chunked_array && chunked_array->length() != expected_rows) {
+        if (chunked_array->length() != expected_rows) {
             return Status::Invalid(
                 fmt::format("PageFilteredRowGroupReader: field {} produced {} rows but expected {} "
                             "(row_group={})",
