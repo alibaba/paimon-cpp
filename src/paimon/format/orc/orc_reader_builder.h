@@ -52,10 +52,6 @@ class OrcReaderBuilder : public ReaderBuilder {
         return OrcFileBatchReader::Create(std::move(input_stream), pool_, options_, batch_size_);
     }
 
-    Result<std::unique_ptr<FileBatchReader>> Build(const std::string& path) const override {
-        return Status::Invalid("do not support build reader with path in orc format");
-    }
-
  private:
     int32_t batch_size_ = -1;
     std::shared_ptr<MemoryPool> pool_;

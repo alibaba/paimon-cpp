@@ -16,10 +16,7 @@
 
 #pragma once
 
-#include <map>
 #include <memory>
-#include <string>
-#include <utility>
 
 #include "avro/DataFile.hh"
 #include "paimon/format/avro/avro_file_batch_reader.h"
@@ -43,10 +40,6 @@ class AvroReaderBuilder : public ReaderBuilder {
     Result<std::unique_ptr<FileBatchReader>> Build(
         const std::shared_ptr<InputStream>& path) const override {
         return AvroFileBatchReader::Create(path, batch_size_, pool_);
-    }
-
-    Result<std::unique_ptr<FileBatchReader>> Build(const std::string& path) const override {
-        return Status::Invalid("do not support build reader with path in avro format");
     }
 
  private:

@@ -181,8 +181,8 @@ Result<std::unique_ptr<FileBatchReader>> RawFileSplitRead::ApplyIndexAndDvReader
 
     std::unique_ptr<FileBatchReader> reader;
     if (!file_reader->SupportPreciseBitmapSelection() && actual_selection) {
-        // several format(e.g. lance, blob) will return accurate batch result, where
-        // ApplyBitmapIndexBatchReader is not necessary
+        // Some formats, such as blob, return accurate batch results, where
+        // ApplyBitmapIndexBatchReader is not necessary.
         reader = std::make_unique<ApplyBitmapIndexBatchReader>(std::move(file_reader),
                                                                std::move(actual_selection).value());
     } else {

@@ -83,10 +83,6 @@ class ParquetReaderBuilder : public ReaderBuilder {
         PAIMON_PARQUET_CATCH_AND_RETURN_STATUS("ParquetReaderBuilder::Build")
     }
 
-    Result<std::unique_ptr<FileBatchReader>> Build(const std::string& path) const override {
-        return Status::Invalid("do not support build reader with path in parquet format");
-    }
-
  private:
     Result<MemorySegment> SerializeParquetMetadataFooter(
         const std::shared_ptr<arrow::io::RandomAccessFile>& input_stream,

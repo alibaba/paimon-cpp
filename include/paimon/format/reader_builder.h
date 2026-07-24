@@ -17,7 +17,6 @@
 #pragma once
 
 #include <memory>
-#include <string>
 
 #include "paimon/memory/memory_pool.h"
 #include "paimon/reader/file_batch_reader.h"
@@ -26,7 +25,7 @@
 namespace paimon {
 class Cache;
 
-/// Create a file batch reader based on the file path. Allows you to specify memory pool.
+/// Create a file batch reader based on an input stream. Allows you to specify memory pool.
 class PAIMON_EXPORT ReaderBuilder {
  public:
     virtual ~ReaderBuilder() = default;
@@ -43,9 +42,6 @@ class PAIMON_EXPORT ReaderBuilder {
     /// Build a file batch reader based on the created `InputStream`.
     virtual Result<std::unique_ptr<FileBatchReader>> Build(
         const std::shared_ptr<InputStream>& path) const = 0;
-
-    /// Build a file batch reader based on the file path.
-    virtual Result<std::unique_ptr<FileBatchReader>> Build(const std::string& path) const = 0;
 };
 
 }  // namespace paimon

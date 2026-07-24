@@ -156,9 +156,6 @@ std::vector<std::string> GetTestValuesForAppendCompactionInteTest() {
 #ifdef PAIMON_ENABLE_ORC
     values.emplace_back("orc");
 #endif
-#ifdef PAIMON_ENABLE_LANCE
-    values.emplace_back("lance");
-#endif
 #ifdef PAIMON_ENABLE_AVRO
     values.emplace_back("avro");
 #endif

@@ -77,8 +77,6 @@ TEST(FileTypeTest, TestDefaultData) {
               FileType::kData);
     ASSERT_EQ(FileTypeUtils::Classify("dfs://cluster/db/p=1/bucket-0/data-a1b2c3d4-0.blob"),
               FileType::kData);
-    ASSERT_EQ(FileTypeUtils::Classify("dfs://cluster/db/p=1/bucket-0/data-a1b2c3d4-0.vector.lance"),
-              FileType::kData);
     ASSERT_EQ(FileTypeUtils::Classify("dfs://cluster/db/random/unknown.bin"), FileType::kData);
 }
 

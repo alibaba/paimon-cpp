@@ -541,7 +541,7 @@ TEST_P(GlobalIndexTest, TestWriteIndexWithPartition) {
 #endif
 
 TEST_P(GlobalIndexTest, TestScanIndex) {
-    if (file_format_ == "lance" || file_format_ == "avro") {
+    if (file_format_ == "avro") {
         return;
     }
 
@@ -711,7 +711,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
 }
 
 TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
-    if (file_format_ == "lance" || file_format_ == "avro") {
+    if (file_format_ == "avro") {
         return;
     }
 
@@ -761,7 +761,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
 }
 
 TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshotWithNoIndex) {
-    if (file_format_ == "lance" || file_format_ == "avro") {
+    if (file_format_ == "avro") {
         return;
     }
 
@@ -787,7 +787,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshotWithNoIndex) {
 }
 
 TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
-    if (file_format_ == "lance" || file_format_ == "avro") {
+    if (file_format_ == "avro") {
         return;
     }
 
@@ -824,7 +824,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
 }
 
 TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
-    if (file_format_ == "lance" || file_format_ == "avro") {
+    if (file_format_ == "avro") {
         return;
     }
 
@@ -879,7 +879,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
 }
 
 TEST_P(GlobalIndexTest, TestScanUnregisteredIndex) {
-    if (file_format_ == "lance" || file_format_ == "avro") {
+    if (file_format_ == "avro") {
         return;
     }
     auto factory_creator = FactoryCreator::GetInstance();
@@ -1969,9 +1969,6 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithExternalPath) {
 }
 
 TEST_P(GlobalIndexTest, TestIOException) {
-    if (file_format_ == "lance") {
-        return;
-    }
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::list(arrow::float32())),
         arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
@@ -3141,7 +3138,7 @@ TEST_P(GlobalIndexTest, TestBTreeAndBitmapCoexist) {
 }
 
 TEST_P(GlobalIndexTest, TestBTreeScanWithPartitionWithMultiMeta) {
-    if (file_format_ == "lance" || file_format_ == "avro") {
+    if (file_format_ == "avro") {
         return;
     }
     std::string table_path =
@@ -3442,10 +3439,6 @@ std::vector<ParamType> GetTestValuesForGlobalIndexTest() {
 #ifdef PAIMON_ENABLE_ORC
     values.emplace_back("orc", false);
     values.emplace_back("orc", true);
-#endif
-#ifdef PAIMON_ENABLE_LANCE
-    values.emplace_back("lance", false);
-    values.emplace_back("lance", true);
 #endif
 #ifdef PAIMON_ENABLE_AVRO
     values.emplace_back("avro", false);
