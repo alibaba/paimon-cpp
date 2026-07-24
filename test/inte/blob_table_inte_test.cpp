@@ -1041,17 +1041,15 @@ TEST_P(BlobTableInteTest, TestDataEvolutionBlobOnlyWriteWithFirstRowId) {
             .ValueOrDie());
     ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_array));
 
-    if (GetParam() != "lance") {
-        auto expected_with_row_id = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(
-                arrow::struct_({fields[0], fields[1], fields[2], SpecialFields::RowId().field_}),
-                R"([
+    auto expected_with_row_id = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(
+            arrow::struct_({fields[0], fields[1], fields[2], SpecialFields::RowId().field_}),
+            R"([
         [1, "a", "new_blob_0", 0],
         [2, "b", "new_blob_1", 1]
     ])")
-                .ValueOrDie());
-        ASSERT_OK(ScanAndRead(table_path, {"f0", "f1", "b0", "_ROW_ID"}, expected_with_row_id));
-    }
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, {"f0", "f1", "b0", "_ROW_ID"}, expected_with_row_id));
 }
 
 TEST_P(BlobTableInteTest, TestDataEvolutionBlobOnlyFirstCommitFailsWithoutFirstRowId) {
