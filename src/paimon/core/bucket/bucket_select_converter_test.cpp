@@ -221,7 +221,7 @@ TEST_F(BucketSelectConverterTest, AndWithExtraPredicateStillWorks) {
 }
 
 TEST_F(BucketSelectConverterTest, HiveBucketFunctionWithDecimal) {
-    constexpr int32_t NUM_BUCKETS = 11;
+    int32_t num_buckets = 11;
     Decimal decimal = Decimal::FromUnscaledLong(12345L, 10, 2);
     auto int_predicate =
         PredicateBuilder::Equal(0, "id", FieldType::INT, Literal(static_cast<int32_t>(7)));
@@ -233,7 +233,7 @@ TEST_F(BucketSelectConverterTest, HiveBucketFunctionWithDecimal) {
         std::optional<int32_t> selected_bucket,
         BucketSelectConverter::Convert(predicate, {"id", "amount"},
                                        {arrow::int32(), arrow::decimal128(10, 2)},
-                                       BucketFunctionType::HIVE, NUM_BUCKETS, pool_.get()));
+                                       BucketFunctionType::HIVE, num_buckets, pool_.get()));
     ASSERT_TRUE(selected_bucket.has_value());
 
     BinaryRow row =
@@ -241,7 +241,7 @@ TEST_F(BucketSelectConverterTest, HiveBucketFunctionWithDecimal) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<HiveBucketFunction> function,
                          HiveBucketFunction::Create({HiveFieldInfo(FieldType::INT),
                                                      HiveFieldInfo(FieldType::DECIMAL, 10, 2)}));
-    ASSERT_EQ(function->Bucket(row, NUM_BUCKETS), selected_bucket.value());
+    ASSERT_EQ(function->Bucket(row, num_buckets), selected_bucket.value());
 }
 
 TEST_F(BucketSelectConverterTest, UnsupportedFieldTypeReturnsError) {
