@@ -1276,9 +1276,9 @@ TEST(SystemTableReadInteTest, TestReadFilesSystemTableForPartitionedPartialWrite
     ASSERT_TRUE(write_cols_array);
 
     ASSERT_EQ(partition_array->GetString(0), "{20260724}");
-    ASSERT_EQ(null_value_counts_array->GetString(0), "{dt=2, id=2, score=0}");
-    ASSERT_EQ(min_value_stats_array->GetString(0), "{dt=null, id=null, score=10}");
-    ASSERT_EQ(max_value_stats_array->GetString(0), "{dt=null, id=null, score=20}");
+    ASSERT_EQ(null_value_counts_array->GetString(0), "{dt=0, id=2, score=0}");
+    ASSERT_EQ(min_value_stats_array->GetString(0), "{dt=20260724, id=null, score=10}");
+    ASSERT_EQ(max_value_stats_array->GetString(0), "{dt=20260724, id=null, score=20}");
     auto write_cols_values =
         std::dynamic_pointer_cast<arrow::StringArray>(write_cols_array->values());
     ASSERT_TRUE(write_cols_values);

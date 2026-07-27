@@ -347,6 +347,42 @@ Result<std::vector<std::string>> RowValueStrings(const std::vector<DataField>& f
     return values;
 }
 
+struct StatsStringOverrides {
+    std::map<std::string, std::string> values;
+    std::map<std::string, std::string> null_counts;
+};
+
+Result<StatsStringOverrides> OmittedPartitionStats(const std::shared_ptr<TableSchema>& table_schema,
+                                                   const DataFileMeta& file,
+                                                   const BinaryRow& partition, int64_t row_count) {
+    StatsStringOverrides overrides;
+    if (!file.write_cols) {
+        return overrides;
+    }
+
+    std::vector<DataField> partition_fields;
+    partition_fields.reserve(table_schema->PartitionKeys().size());
+    for (const auto& partition_key : table_schema->PartitionKeys()) {
+        PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema->GetField(partition_key));
+        partition_fields.push_back(std::move(field));
+    }
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> partition_values,
+                           RowValueStrings(partition_fields, partition));
+
+    size_t length = std::min(partition_fields.size(), partition_values.size());
+    for (size_t i = 0; i < length; ++i) {
+        const std::string& field_name = partition_fields[i].Name();
+        if (std::find(file.write_cols->begin(), file.write_cols->end(), field_name) !=
+            file.write_cols->end()) {
+            continue;
+        }
+        overrides.values.emplace(field_name, std::move(partition_values[i]));
+        overrides.null_counts.emplace(field_name,
+                                      partition.IsNullAt(i) ? std::to_string(row_count) : "0");
+    }
+    return overrides;
+}
+
 Result<std::string> RowValuesString(const std::vector<DataField>& fields, const InternalRow& row,
                                     std::string_view left, std::string_view right) {
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> values, RowValueStrings(fields, row));
@@ -365,13 +401,16 @@ Result<std::optional<std::string>> OptionalRowValuesString(const std::vector<Dat
 }
 
 Result<std::string> FieldsValueMapString(const std::vector<DataField>& fields,
-                                         const InternalRow& row) {
+                                         const InternalRow& row,
+                                         const std::map<std::string, std::string>& overrides) {
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> values, RowValueStrings(fields, row));
     std::vector<std::pair<std::string, std::string>> field_values;
     size_t length = std::min(fields.size(), values.size());
     field_values.reserve(length);
     for (size_t i = 0; i < length; ++i) {
-        field_values.emplace_back(fields[i].Name(), std::move(values[i]));
+        auto iter = overrides.find(fields[i].Name());
+        field_values.emplace_back(fields[i].Name(),
+                                  iter == overrides.end() ? std::move(values[i]) : iter->second);
     }
     std::sort(field_values.begin(), field_values.end(),
               [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
@@ -385,13 +424,17 @@ Result<std::string> FieldsValueMapString(const std::vector<DataField>& fields,
 }
 
 Result<std::string> NullValueCountsString(const std::vector<DataField>& fields,
-                                          const InternalArray& null_counts) {
+                                          const InternalArray& null_counts,
+                                          const std::map<std::string, std::string>& overrides) {
     std::vector<std::pair<std::string, std::string>> field_values;
     int32_t length = std::min<int32_t>(static_cast<int32_t>(fields.size()), null_counts.Size());
     field_values.reserve(length);
     for (int32_t i = 0; i < length; ++i) {
+        auto iter = overrides.find(fields[i].Name());
         std::string value =
-            null_counts.IsNullAt(i) ? "null" : std::to_string(null_counts.GetLong(i));
+            iter == overrides.end()
+                ? (null_counts.IsNullAt(i) ? "null" : std::to_string(null_counts.GetLong(i)))
+                : iter->second;
         field_values.emplace_back(fields[i].Name(), std::move(value));
     }
     std::sort(field_values.begin(), field_values.end(),
@@ -863,6 +906,9 @@ Result<std::vector<GenericRow>> FilesSystemTable::BuildRows() const {
         PAIMON_ASSIGN_OR_RAISE(
             SimpleStatsEvolution::EvolutionStats stats,
             stats_evolution->Evolution(file->value_stats, file->row_count, file->value_stats_cols));
+        PAIMON_ASSIGN_OR_RAISE(StatsStringOverrides stats_overrides,
+                               OmittedPartitionStats(context_.table_schema, *file,
+                                                     entry.Partition(), file->row_count));
 
         GenericRow row(schema->num_fields());
         if (context_.table_schema->PartitionKeys().empty()) {
@@ -888,13 +934,16 @@ Result<std::vector<GenericRow>> FilesSystemTable::BuildRows() const {
         row.SetField(8, OptionalStringValue(min_key));
         row.SetField(9, OptionalStringValue(max_key));
         PAIMON_ASSIGN_OR_RAISE(std::string null_value_counts,
-                               NullValueCountsString(value_stats_fields, *stats.null_counts));
+                               NullValueCountsString(value_stats_fields, *stats.null_counts,
+                                                     stats_overrides.null_counts));
         row.SetField(10, StringValue(null_value_counts));
-        PAIMON_ASSIGN_OR_RAISE(std::string min_value_stats,
-                               FieldsValueMapString(value_stats_fields, *stats.min_values));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::string min_value_stats,
+            FieldsValueMapString(value_stats_fields, *stats.min_values, stats_overrides.values));
         row.SetField(11, StringValue(min_value_stats));
-        PAIMON_ASSIGN_OR_RAISE(std::string max_value_stats,
-                               FieldsValueMapString(value_stats_fields, *stats.max_values));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::string max_value_stats,
+            FieldsValueMapString(value_stats_fields, *stats.max_values, stats_overrides.values));
         row.SetField(12, StringValue(max_value_stats));
         row.SetField(13, file->min_sequence_number);
         row.SetField(14, file->max_sequence_number);
