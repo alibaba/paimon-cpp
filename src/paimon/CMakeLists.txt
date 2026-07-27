@@ -177,6 +177,12 @@ set(PAIMON_COMMON_SRCS
     common/utils/status.cpp
     common/utils/string_utils.cpp)
 
+if(PAIMON_ENABLE_S3)
+    list(APPEND PAIMON_COMMON_SRCS common/fs/http_client.cpp
+         common/fs/object_store_file_system.cpp)
+    set(PAIMON_OBJECT_STORE_LINK_LIBS CURL::libcurl)
+endif()
+
 set(PAIMON_CORE_SRCS
     core/disk/file_io_channel.cpp
     core/mergetree/spill_reader.cpp
@@ -409,6 +415,7 @@ add_paimon_lib(paimon
                xxhash
                Threads::Threads
                RapidJSON
+               ${PAIMON_OBJECT_STORE_LINK_LIBS}
                STATIC_LINK_LIBS
                arrow
                tbb
@@ -418,6 +425,7 @@ add_paimon_lib(paimon
                xxhash
                Threads::Threads
                RapidJSON
+               ${PAIMON_OBJECT_STORE_LINK_LIBS}
                SHARED_LINK_FLAGS
                ${PAIMON_VERSION_SCRIPT_FLAGS})
 
@@ -837,10 +845,17 @@ if(PAIMON_BUILD_TESTS)
              ${PAIMON_JINDO_FILE_SYSTEM_STATIC_LINK_LIBS})
     endif()
 
+    set(PAIMON_OBJECT_STORE_FS_TEST_SOURCES)
+    if(PAIMON_ENABLE_S3)
+        list(APPEND PAIMON_OBJECT_STORE_FS_TEST_SOURCES
+             common/fs/object_store_file_system_test.cpp)
+    endif()
+
     add_paimon_test(fs_test
                     SOURCES
                     common/fs/file_system_test.cpp
                     common/fs/resolving_file_system_test.cpp
+                    ${PAIMON_OBJECT_STORE_FS_TEST_SOURCES}
                     fs/local/local_file_test.cpp
                     ${PAIMON_JINDO_FS_TEST_SOURCES}
                     STATIC_LINK_LIBS
