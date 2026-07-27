@@ -448,6 +448,91 @@ TEST_F(FieldMappingReaderTest, TestDictionaryTypeWithSchemaEvolution) {
                 partition, expected_array);
 }
 
+TEST_F(FieldMappingReaderTest, TestSchemaEvolutionAddedFieldInsideList) {
+    // A field `c`(id=12) was added inside the list's struct after the file was
+    // written. Reading the old file with the new schema must null-fill `c`.
+    auto id_field = [](const std::string& name, const std::shared_ptr<arrow::DataType>& type,
+                       int32_t id) {
+        return DataField::ConvertDataFieldToArrowField(DataField(id, arrow::field(name, type)));
+    };
+    auto data_struct =
+        arrow::struct_({id_field("a", arrow::int32(), 10), id_field("b", arrow::utf8(), 11)});
+    auto read_struct =
+        arrow::struct_({id_field("a", arrow::int32(), 10), id_field("b", arrow::utf8(), 11),
+                        id_field("c", arrow::int32(), 12)});
+    std::vector<DataField> data_fields = {
+        DataField(100, arrow::field("items", arrow::list(arrow::field("item", data_struct))))};
+    std::vector<DataField> read_fields = {
+        DataField(100, arrow::field("items", arrow::list(arrow::field("item", read_struct))))};
+    auto data_schema = DataField::ConvertDataFieldsToArrowSchema(data_fields);
+    auto read_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields);
+
+    auto data_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(data_schema->fields()), R"([
+        [[[1, "x"], [2, "y"]]],
+        [[[3, "z"]]]
+    ])")
+            .ValueOrDie());
+
+    ASSERT_OK_AND_ASSIGN(auto mapping_builder,
+                         FieldMappingBuilder::Create(read_schema, /*partition_keys=*/{},
+                                                     /*predicate=*/nullptr));
+    ASSERT_OK_AND_ASSIGN(auto mapping, mapping_builder->CreateFieldMapping(data_fields));
+    auto mock = std::make_unique<MockFileBatchReader>(
+        data_array, arrow::struct_(data_schema->fields()), /*read_batch_size=*/8);
+    ASSERT_OK_AND_ASSIGN(auto reader, FieldMappingReader::Create(
+                                          read_schema->num_fields(), std::move(mock),
+                                          BinaryRow::EmptyRow(), std::move(mapping),
+                                          /*skip_map_selected_keys_filter_field_ids=*/{}, pool_));
+    ASSERT_OK_AND_ASSIGN(auto result_array, ReadResultCollector::CollectResult(reader.get()));
+
+    auto expect_array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(read_schema->fields()), R"([
+        [[[1, "x", null], [2, "y", null]]],
+        [[[3, "z", null]]]
+    ])")
+            .ValueOrDie();
+    auto expected_chunk = std::make_shared<arrow::ChunkedArray>(arrow::ArrayVector({expect_array}));
+    ASSERT_TRUE(result_array->type()->Equals(expected_chunk->type()))
+        << result_array->type()->ToString() << " vs " << expected_chunk->type()->ToString();
+    ASSERT_TRUE(result_array->Equals(expected_chunk))
+        << result_array->ToString() << " vs " << expected_chunk->ToString();
+}
+
+TEST_F(FieldMappingReaderTest, TestSchemaEvolutionAddedFieldInsideListOrc) {
+    // ORC round-trip: added field inside a list's struct is null-filled.
+    auto id_field = [](const std::string& name, const std::shared_ptr<arrow::DataType>& type,
+                       int32_t id) {
+        return DataField::ConvertDataFieldToArrowField(DataField(id, arrow::field(name, type)));
+    };
+    auto data_struct =
+        arrow::struct_({id_field("a", arrow::int32(), 10), id_field("b", arrow::int32(), 11)});
+    auto read_struct =
+        arrow::struct_({id_field("a", arrow::int32(), 10), id_field("b", arrow::int32(), 11),
+                        id_field("c", arrow::int32(), 12)});
+    std::vector<DataField> data_fields = {
+        DataField(100, arrow::field("items", arrow::list(arrow::field("item", data_struct))))};
+    std::vector<DataField> read_fields = {
+        DataField(100, arrow::field("items", arrow::list(arrow::field("item", read_struct))))};
+    auto data_schema = DataField::ConvertDataFieldsToArrowSchema(data_fields);
+    auto read_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields);
+
+    auto data_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(data_schema->fields()), R"([
+        [[[1, 2], [3, 4]]],
+        [[[5, 6]]]
+    ])")
+            .ValueOrDie());
+    auto expect_array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(read_schema->fields()), R"([
+        [[[1, 2, null], [3, 4, null]]],
+        [[[5, 6, null]]]
+    ])")
+            .ValueOrDie();
+    CheckResult(data_schema, data_array, read_schema, /*predicate=*/nullptr, /*partition_keys=*/{},
+                BinaryRow::EmptyRow(), expect_array);
+}
+
 TEST_F(FieldMappingReaderTest, TestSchemaEvolutionWithModifyType) {
     std::vector<DataField> data_fields = {DataField(0, arrow::field("f0", arrow::utf8())),
                                           DataField(1, arrow::field("f1", arrow::float32())),

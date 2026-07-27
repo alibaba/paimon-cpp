@@ -16,6 +16,8 @@
 
 #include "paimon/common/reader/data_evolution_file_reader.h"
 
+#include "arrow/array/array_nested.h"
+#include "arrow/array/util.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "fmt/format.h"
@@ -25,6 +27,7 @@
 #include "paimon/common/utils/arrow/status_utils.h"
 
 namespace paimon {
+
 Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionFileReader::Create(
     std::vector<std::unique_ptr<BatchReader>>&& readers,
     const std::shared_ptr<arrow::Schema>& read_schema, int32_t read_batch_size,
@@ -82,6 +85,7 @@ Result<BatchReader::ReadBatchWithBitmap> DataEvolutionFileReader::NextBatchWithB
         }
         const auto& sub_array = array_for_each_reader[reader_offsets_[i]];
         assert(sub_array->num_fields() > field_offsets_[i]);
+        // Each file is already aligned to its read schema by its FieldMappingReader.
         target_sub_array_vec.push_back(sub_array->field(field_offsets_[i]));
     }
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(

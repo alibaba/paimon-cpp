@@ -55,7 +55,8 @@ class PAIMON_EXPORT ArrowSchemaValidator {
  private:
     static Status ValidateDataTypeWithFieldId(
         const std::shared_ptr<arrow::DataType>& type,
-        const std::shared_ptr<const arrow::KeyValueMetadata>& key_value_metadata,
+        const std::shared_ptr<const arrow::KeyValueMetadata>& key_value_metadata, bool allow_blob,
         std::set<int32_t>* field_id_set);
+    static Status ValidateField(const std::shared_ptr<arrow::Field>& field, bool allow_blob);
 };
 }  // namespace paimon
