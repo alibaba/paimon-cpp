@@ -55,7 +55,7 @@ the corresponding snapshot.
 Data Files
 ---------------------------
 Data files are grouped by partitions. Currently, Paimon supports using parquet
-(default), orc and lance as data file’s format.
+(default) and orc as data file formats.
 
 .. note::
    avro write as a data file format is not supported yet.

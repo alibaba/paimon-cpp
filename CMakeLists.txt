@@ -14,9 +14,9 @@
 
 cmake_minimum_required(VERSION 3.22)
 # 3.22 is the minimum required by Corrosion-rs (used for the Rust<->C++ FFI
-# integration, see third_party/tantivy_ffi). Ubuntu 24.04 ships CMake 3.28 and
-# CentOS 8+/RHEL 9+ ship 3.20+. To build on older distros, see
-# docs/dev/tantivy_fts_migration_plan.md.
+# integration, see crates/tantivy_ffi). Ubuntu 24.04 ships CMake 3.28 and
+# CentOS 8+/RHEL 9+ ship 3.20+, so older distributions need a newer CMake
+# installation.
 message(STATUS "Building using CMake version: ${CMAKE_VERSION}")
 
 # https://cmake.org/cmake/help/latest/policy/CMP0135.html
@@ -55,7 +55,6 @@ option(PAIMON_USE_UBSAN "Use Undefined Behavior Sanitizer" OFF)
 option(PAIMON_USE_CXX11_ABI "Use C++11 ABI" ON)
 option(PAIMON_ENABLE_AVRO "Whether to enable avro file format" ON)
 option(PAIMON_ENABLE_ORC "Whether to enable orc file format" ON)
-option(PAIMON_ENABLE_LANCE "Whether to enable lance file format" OFF)
 option(PAIMON_ENABLE_JINDO "Whether to enable jindo file system" OFF)
 option(PAIMON_ENABLE_NETWORK_TESTS
        "Whether to enable tests that access real remote services over the network" OFF)
@@ -78,17 +77,11 @@ endif()
 if(PAIMON_USE_CXX11_ABI)
     add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
 else()
-    # lance and lumina are provided in so file, cannot be recompiled with C++11 ABI off.
-    if(PAIMON_ENABLE_LANCE)
-        message(FATAL_ERROR "Lance cannot be enabled with C++11 ABI off")
-    endif()
+    # Lumina is provided in a shared library and cannot be recompiled with C++11 ABI off.
     if(PAIMON_ENABLE_LUMINA)
         message(FATAL_ERROR "Lumina cannot be enabled with C++11 ABI off")
     endif()
     add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
-endif()
-if(PAIMON_ENABLE_LANCE)
-    add_definitions(-DPAIMON_ENABLE_LANCE)
 endif()
 if(PAIMON_ENABLE_LUMINA)
     add_definitions(-DPAIMON_ENABLE_LUMINA)
@@ -304,23 +297,14 @@ set(PAIMON_SHARED_PRIVATE_LINK_LIBS ${PAIMON_STATIC_LINK_LIBS})
 add_subdirectory(third_party/roaring_bitmap EXCLUDE_FROM_ALL)
 add_subdirectory(third_party/xxhash EXCLUDE_FROM_ALL)
 
-if(PAIMON_ENABLE_LANCE)
-    add_subdirectory(third_party/lance EXCLUDE_FROM_ALL)
-    link_directories(third_party/lance/lance_lib/target/release)
-    install(FILES ${PROJECT_SOURCE_DIR}/third_party/lance/lance_lib/target/release/liblance_lib_rc.so
-            DESTINATION ${CMAKE_INSTALL_LIBDIR})
-endif()
-
 # ---- tantivy-fulltext Rust FFI via Corrosion-rs --------------------------------
-# See docs/dev/tantivy_fts_migration_plan.md Stage 1.
-#
 # Corrosion wraps the Cargo crate as a CMake target named `paimon_tantivy_ffi`.
 # `corrosion_experimental_cbindgen` runs cbindgen from CMake and writes the
 # header to a stable path; it also adds that path to the target's INTERFACE
 # include dirs so C++ consumers pick it up via target_link_libraries.
 if(PAIMON_ENABLE_TANTIVY)
     include(CorrosionFetch)
-    corrosion_import_crate(MANIFEST_PATH third_party/tantivy_ffi/Cargo.toml CRATES
+    corrosion_import_crate(MANIFEST_PATH crates/tantivy_ffi/Cargo.toml CRATES
                            paimon_tantivy_ffi)
     corrosion_experimental_cbindgen(TARGET paimon_tantivy_ffi HEADER_NAME
                                     paimon_tantivy_ffi.h)
@@ -353,10 +337,6 @@ set(CMAKE_C_VISIBILITY_PRESET hidden)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories("${CMAKE_SOURCE_DIR}/third_party/roaring_bitmap")
 include_directories("${CMAKE_SOURCE_DIR}/third_party/xxhash")
-
-if(PAIMON_ENABLE_LANCE)
-    include_directories("${CMAKE_SOURCE_DIR}/third_party/lance")
-endif()
 
 include_directories(SYSTEM ${ARROW_INCLUDE_DIR})
 include_directories(SYSTEM ${TBB_INCLUDE_DIR})
@@ -429,13 +409,6 @@ if(PAIMON_BUILD_TESTS)
         TEST_PLUGIN_LINK_LIBS paimon_parquet_file_format_shared
         paimon_blob_file_format_shared)
     set(TEST_STATIC_LINK_LIBS ${TEST_WHOLE_ARCHIVE_LINK_LIBS} ${TEST_PLUGIN_LINK_LIBS})
-    if(PAIMON_ENABLE_LANCE)
-        paimon_link_libraries_whole_archive(PAIMON_LANCE_FILE_FORMAT_STATIC_LINK_LIBS
-                                            paimon_lance_file_format_static)
-        paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
-                                           paimon_lance_file_format_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
-    endif()
     if(PAIMON_ENABLE_ORC)
         paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
                                            paimon_orc_file_format_shared)
@@ -507,7 +480,6 @@ add_subdirectory(src/paimon/format/blob)
 add_subdirectory(src/paimon/format/orc)
 add_subdirectory(src/paimon/format/parquet)
 add_subdirectory(src/paimon/format/avro)
-add_subdirectory(src/paimon/format/lance)
 add_subdirectory(src/paimon/global_index/lumina)
 add_subdirectory(src/paimon/global_index/lucene)
 if(PAIMON_ENABLE_TANTIVY)

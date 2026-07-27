@@ -3145,7 +3145,7 @@ TEST_F(PkCompactionInteTest, RemoteLookupFileWithSchemaEvolution) {
 //   6. ScanAndVerify after full compact
 TEST_P(PkCompactionInteTest, TestLookupCompatibility) {
     auto file_format = GetParam();
-    if (file_format == "lance" || file_format == "avro") {
+    if (file_format == "avro") {
         return;
     }
     // Step 1: Copy pk_compact_lookup table to temp dir.
@@ -3321,9 +3321,6 @@ std::vector<std::string> GetTestValuesForCompactionInteTest() {
     values.emplace_back("parquet");
 #ifdef PAIMON_ENABLE_ORC
     values.emplace_back("orc");
-#endif
-#ifdef PAIMON_ENABLE_LANCE
-    values.emplace_back("lance");
 #endif
 #ifdef PAIMON_ENABLE_AVRO
     values.emplace_back("avro");

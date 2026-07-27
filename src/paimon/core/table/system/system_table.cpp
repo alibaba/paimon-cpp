@@ -23,6 +23,7 @@
 #include <utility>
 #include <vector>
 
+#include "paimon/catalog/catalog.h"
 #include "paimon/catalog/identifier.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
@@ -30,6 +31,7 @@
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/system/audit_log_system_table.h"
 #include "paimon/core/table/system/binlog_system_table.h"
+#include "paimon/core/table/system/global_system_tables.h"
 #include "paimon/core/table/system/metadata_system_tables.h"
 #include "paimon/core/table/system/read_optimized_system_table.h"
 #include "paimon/core/utils/branch_manager.h"
@@ -188,6 +190,17 @@ Result<std::shared_ptr<SystemTable>> SystemTableLoader::Load(
 
 Result<std::optional<SystemTablePath>> SystemTableLoader::TryParsePath(const std::string& path) {
     std::string table_name = PathUtil::GetName(path);
+    std::string parent = PathUtil::GetParentDirPath(path);
+    std::string parent_name = PathUtil::GetName(parent);
+
+    // Detect global system table paths: <warehouse>/sys/<table_name>
+    if (parent_name == Catalog::SYSTEM_DATABASE_NAME) {
+        SystemTablePath system_table_path;
+        system_table_path.is_global = true;
+        system_table_path.system_table_name = table_name;
+        return std::optional<SystemTablePath>(std::move(system_table_path));
+    }
+
     Identifier identifier(table_name);
     PAIMON_ASSIGN_OR_RAISE(bool is_system_table, identifier.IsSystemTable());
     if (!is_system_table) {
@@ -197,7 +210,6 @@ Result<std::optional<SystemTablePath>> SystemTableLoader::TryParsePath(const std
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> branch, identifier.GetBranchName());
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> system_table_name,
                            identifier.GetSystemTableName());
-    std::string parent = PathUtil::GetParentDirPath(path);
     SystemTablePath system_table_path;
     system_table_path.table_path = PathUtil::JoinPath(parent, data_table_name);
     system_table_path.branch = std::move(branch);
@@ -213,6 +225,21 @@ Result<std::shared_ptr<SystemTable>> SystemTableLoader::LoadFromPath(
         return Status::Invalid("path is not a system table path: ", path);
     }
     const auto& parsed = system_table_path.value();
+
+    // Handle global system tables (under sys/ directory)
+    if (parsed.is_global) {
+        GlobalSystemTableContext context;
+        context.fs = fs;
+        // The warehouse is the grandparent of the sys/<table> path
+        context.warehouse = PathUtil::GetParentDirPath(PathUtil::GetParentDirPath(path));
+        context.catalog_options = dynamic_options;
+        // Note: context.catalog is intentionally left as nullptr here.
+        // Global tables loaded from path do not have a Catalog reference and
+        // cannot enumerate databases/tables. Only tables that don't require
+        // catalog enumeration (e.g. catalog_options) will work in this path.
+        return GlobalSystemTableLoader::Load(parsed.system_table_name, context);
+    }
+
     SchemaManager schema_manager(fs, parsed.table_path,
                                  parsed.branch.value_or(BranchManager::DEFAULT_MAIN_BRANCH));
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,

@@ -46,10 +46,6 @@ class BlobReaderBuilder : public ReaderBuilder {
         return BlobFileBatchReader::Create(input_stream, batch_size_, blob_as_descriptor, pool_);
     }
 
-    Result<std::unique_ptr<FileBatchReader>> Build(const std::string& path) const override {
-        return Status::Invalid("do not support build reader with path in blob format");
-    }
-
  private:
     int32_t batch_size_;
     std::shared_ptr<MemoryPool> pool_;

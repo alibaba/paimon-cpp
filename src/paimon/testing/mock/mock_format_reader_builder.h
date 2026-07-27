@@ -17,7 +17,6 @@
 #pragma once
 
 #include <memory>
-#include <string>
 
 #include "arrow/type.h"
 #include "paimon/format/reader_builder.h"
@@ -50,10 +49,6 @@ class MockFormatReaderBuilder : public ReaderBuilder {
                                                          read_batch_size_);
         }
         return std::make_unique<MockFileBatchReader>(data_, schema_, read_batch_size_);
-    }
-
-    Result<std::unique_ptr<FileBatchReader>> Build(const std::string& path) const override {
-        return Status::Invalid("do not support build reader with path in mock format");
     }
 
  private:

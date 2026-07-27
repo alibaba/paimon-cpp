@@ -48,11 +48,11 @@
 		"source=${localEnv:HOME}/.ssh,target=/home/paimon/.ssh,type=bind,readonly",
 		"source=paimon-cargo-registry,target=/home/paimon/.cargo/registry,type=volume",
 		"source=paimon-cargo-git,target=/home/paimon/.cargo/git,type=volume",
-		"source=paimon-rust-target,target=${containerWorkspaceFolder}/third_party/tantivy_ffi/target,type=volume",
+		"source=paimon-rust-target,target=${containerWorkspaceFolder}/crates/tantivy_ffi/target,type=volume",
 		"source=paimon-build,target=${containerWorkspaceFolder}/build,type=volume",
 		"source=paimon-ccache,target=/home/paimon/.ccache,type=volume"
 	],
-	"postCreateCommand": "sudo chown -R paimon:paimon ${containerWorkspaceFolder}/build ${containerWorkspaceFolder}/third_party/tantivy_ffi/target /home/paimon/.ccache /home/paimon/.cargo/registry /home/paimon/.cargo/git 2>/dev/null || true; cargo install cbindgen --locked || true; rustup component add rust-src rust-analyzer clippy rustfmt || true",
+	"postCreateCommand": "sudo chown -R paimon:paimon ${containerWorkspaceFolder}/build ${containerWorkspaceFolder}/crates/tantivy_ffi/target /home/paimon/.ccache /home/paimon/.cargo/registry /home/paimon/.cargo/git 2>/dev/null || true; cargo install cbindgen --locked || true; rustup component add rust-src rust-analyzer clippy rustfmt || true",
 	"customizations": {
 		"vscode": {
 			"extensions": [
@@ -66,7 +66,7 @@
 			"settings": {
 				"editor.formatOnSave": true,
 				"rust-analyzer.linkedProjects": [
-					"third_party/tantivy_ffi/Cargo.toml"
+					"crates/tantivy_ffi/Cargo.toml"
 				]
 			}
 		}

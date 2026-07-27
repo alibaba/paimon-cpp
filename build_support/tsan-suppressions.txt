@@ -16,7 +16,5 @@
 # under the License.
 
 # Prebuilt shared libraries are not TSAN-instrumented. Suppress reports from the whole library.
-race:liblance_lib_rc.so
-thread:liblance_lib_rc.so
 race:liblumina.so
 race:libjindosdk_c.so.6

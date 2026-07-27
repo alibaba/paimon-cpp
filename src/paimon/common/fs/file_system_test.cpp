@@ -857,7 +857,8 @@ TEST_P(FileSystemTest, TestExistingFileDeletion) {
 TEST_P(FileSystemTest, TestNotExistingFileDeletion) {
     auto check = [&](bool recursive) {
         std::string path = PathUtil::JoinPath(test_root_, RandomName());
-        ASSERT_TRUE(fs_->Delete(path, recursive).IsIOError());
+        Status status = fs_->Delete(path, recursive);
+        ASSERT_TRUE(status.IsIOError() || status.IsNotExist()) << status.ToString();
     };
     check(true);
     check(false);

@@ -1,4 +1,4 @@
-# Copyright 2024-present Alibaba Inc.
+# Copyright 2026-present Alibaba Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(LANCE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lance_lib)
-set(LANCE_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/lance_lib/target/release/liblance_lib_rc.so)
-
-add_library(lance_lib_rc SHARED IMPORTED)
-set_target_properties(lance_lib_rc
-                      PROPERTIES IMPORTED_LOCATION ${LANCE_LIBRARY}
-                                 INTERFACE_INCLUDE_DIRECTORIES ${LANCE_INCLUDE_DIR})
+# Pin the Rust toolchain used to build paimon_tantivy_ffi so Corrosion can
+# resolve a non-empty toolchain name during a fresh CMake configure.
+#
+# Only the `channel` is pinned — no extra components, because rustup in
+# CI/containers may lack network access to fetch clippy/rustfmt, and build
+# doesn't need them.
+[toolchain]
+channel = "stable"
+profile = "minimal"
