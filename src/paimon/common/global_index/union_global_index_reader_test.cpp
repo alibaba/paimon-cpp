@@ -396,9 +396,8 @@ TEST_F(UnionGlobalIndexReaderTest, TestDeferredTaskOwnsActionAfterEarlierFutureT
     std::vector<std::shared_ptr<GlobalIndexReader>> readers = {throwing_reader, deferred_reader};
     auto executor = std::make_shared<DeferAfterFirstExecutor>();
     UnionGlobalIndexReader union_reader(std::move(readers), executor);
-
-    ASSERT_THROW({ [[maybe_unused]] auto result = union_reader.VisitIsNotNull(); },
-                 std::runtime_error);
+    ASSERT_THROW(
+        { [[maybe_unused]] auto result = union_reader.VisitIsNotNull(); }, std::runtime_error);
     ASSERT_EQ(deferred_reader->InvocationCount(), 0);
 
     executor->RunPendingTasks();
