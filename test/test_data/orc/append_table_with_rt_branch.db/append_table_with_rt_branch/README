@@ -9,16 +9,16 @@ partition key: dt
 4.pk table alter table setOption("primary-key", "dt, name")
 
 5.append table write data
-Add: "20240725", "apple", 5 
-Add: "20240725", "banana", 7           
+Add: "20240725", "apple", 5
+Add: "20240725", "banana", 7
 NoCompact
 snapshot-1
 
 6.pk table write data
-Add: "20240725", "apple", 4 
-Add: "20240725", "peach", 10           
-Add: "20240726", "cherry", 3 
-Add: "20240726", "pear", 6           
+Add: "20240725", "apple", 4
+Add: "20240725", "peach", 10
+Add: "20240726", "cherry", 3
+Add: "20240726", "pear", 6
 NoCompact
 snapshot-1
 

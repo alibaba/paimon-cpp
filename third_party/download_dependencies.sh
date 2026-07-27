@@ -18,7 +18,7 @@
 # under the License.
 
 # Adapted from Apache Arrow
-# https://github.com/apache/arrow/blob/main/cpp/thirdparty/download_dependencies.sh
+# https://github.com/apache/arrow/blob/apache-arrow-17.0.0/cpp/thirdparty/download_dependencies.sh
 
 # This script downloads all the thirdparty dependencies as a series of tarballs
 # that can be used for offline builds, etc.

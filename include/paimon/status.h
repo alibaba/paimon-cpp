@@ -19,7 +19,7 @@
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 
 // Adapted from Apache Arrow
-// https://github.com/apache/arrow/blob/main/cpp/src/arrow/status.h
+// https://github.com/apache/arrow/blob/apache-arrow-17.0.0/cpp/src/arrow/status.h
 
 // A Status encapsulates the result of an operation.  It may indicate success,
 // or it may indicate an error with an associated error message.

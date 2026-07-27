@@ -16,7 +16,7 @@
 # under the License.
 
 # Adapted from Apache Arrow
-# https://github.com/apache/arrow/blob/main/docs/Makefile
+# https://github.com/apache/arrow/blob/apache-arrow-17.0.0/docs/Makefile
 
 #
 # Makefile for Sphinx documentation

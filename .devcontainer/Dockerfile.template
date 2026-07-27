@@ -16,7 +16,7 @@
 # under the License.
 
 # Adapted from Apache Iceberg C++
-# https://github.com/apache/iceberg-cpp/blob/main/.devcontainer/Dockerfile.template
+# https://github.com/apache/iceberg-cpp/blob/v0.2.0/.devcontainer/Dockerfile.template
 #
 # This Dockerfile is used to build a development container for Paimon C++.
 # Base: Ubuntu 24.04. Rust toolchain is installed via Dev Container

@@ -43,6 +43,7 @@ class Histogram {
 //
 // The bucket boundaries are aligned with RocksDB's HistogramBucketMapper
 // (rocksdb/monitoring/histogram.cc).
+// https://github.com/facebook/rocksdb/blob/main/monitoring/histogram.cc
 class HistogramImpl : public Histogram {
  public:
     HistogramImpl();

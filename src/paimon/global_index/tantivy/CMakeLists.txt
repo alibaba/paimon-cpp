@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# tantivy-fulltext global index (Rust FFI). See docs/dev/tantivy_fts_migration_plan.md.
-# Stage 4 grows the support lib with the C++ writer wrapper + writer test.
+# Tantivy-fulltext global index support library and tests (Rust FFI).
 
 if(NOT PAIMON_ENABLE_TANTIVY)
     return()
@@ -108,9 +107,9 @@ if(PAIMON_BUILD_TESTS)
                                    PRIVATE ${JIEBA_INCLUDE_DIR} ${JIEBA_DICT_DIR})
     endif()
 
-    # Stage 4 — Writer test. Builds an Arrow batch, runs the writer through
+    # Writer test. Builds an Arrow batch, runs the writer through
     # GlobalIndexFileManager + LocalFileSystem, then validates the packed
-    # on-disk format. Reader round-trip lives in Stage 6.
+    # on-disk format.
     add_paimon_test(tantivy_writer_test
                     SOURCES
                     tantivy_writer_test.cpp
@@ -129,7 +128,7 @@ if(PAIMON_BUILD_TESTS)
     target_compile_definitions(paimon-tantivy-writer-test
                                PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
 
-    # Stage 6 — Reader + 5 query types end-to-end.
+    # Reader + five query types end-to-end.
     add_paimon_test(tantivy_filter_limit_test
                     SOURCES
                     tantivy_filter_limit_test.cpp
@@ -148,9 +147,10 @@ if(PAIMON_BUILD_TESTS)
     target_compile_definitions(paimon-tantivy-filter-limit-test
                                PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
 
-    # Java → C++ cross-read test. Fixture produced by paimon-java's
-    # `TantivyIndexFixtureGen` (see docs/dev/tantivy_java_cross_read_plan.md)
-    # and checked in under test/test_data/java_tantivy_fixtures/.
+    # Java → C++ cross-read test. The fixture is produced by paimon-java's
+    # `TantivyIndexFixtureGen` and checked in under
+    # test/test_data/java_tantivy_fixtures/. See that directory's README for
+    # regeneration instructions.
     add_paimon_test(tantivy_java_compat_test
                     SOURCES
                     tantivy_java_compat_test.cpp
@@ -172,7 +172,7 @@ if(PAIMON_BUILD_TESTS)
                                        PAIMON_TANTIVY_CPP_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/test/test_data/cpp_tantivy_fixtures"
     )
 
-    # K4 — V3 streaming reader + W1 streaming writer integration coverage:
+    # Streaming reader and writer integration coverage:
     # ParseArchiveHeader fuzz, concurrent query on shared reader, concurrent
     # reader create+drop lifecycle, streaming benchmark log.
     add_paimon_test(tantivy_streaming_test
@@ -193,7 +193,7 @@ if(PAIMON_BUILD_TESTS)
     target_compile_definitions(paimon-tantivy-streaming-test
                                PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
 
-    # Stage 8 — TantivyGlobalIndex + factory + end-to-end integration test.
+    # TantivyGlobalIndex + factory + end-to-end integration test.
     # `--whole-archive` is required so the static REGISTER_PAIMON_FACTORY
     # symbols are not stripped out of the test binary.
     add_paimon_test(tantivy_index_test
@@ -214,7 +214,7 @@ if(PAIMON_BUILD_TESTS)
     target_compile_definitions(paimon-tantivy-index-test
                                PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
 
-    # Stage 9 — Cross-implementation coexistence. Links against BOTH the
+    # Cross-implementation coexistence. Links against both the
     # lucene and tantivy support static libs to verify they resolve their
     # `REGISTER_PAIMON_FACTORY` registrations side by side and don't
     # collide on shared symbols. Only built when lucene-fts is enabled.
@@ -240,7 +240,7 @@ if(PAIMON_BUILD_TESTS)
         target_compile_definitions(paimon-tantivy-lucene-coexist-test
                                    PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
 
-        # Stage 10 — Equivalence + benchmark. Same link line as the coexist
+        # Equivalence + benchmark. Same link line as the coexistence
         # test (needs both impls); benchmark output goes to stderr.
         add_paimon_test(tantivy_equivalence_test
                         SOURCES

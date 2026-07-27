@@ -21,7 +21,7 @@
 #   ./.devcontainer/centos7/run.sh build         # build image only
 #   ./.devcontainer/centos7/run.sh up            # start container (detached)
 #   ./.devcontainer/centos7/run.sh shell         # exec into it
-#   ./.devcontainer/centos7/run.sh smoke         # run scripts/tantivy_smoke.sh inside
+#   ./.devcontainer/centos7/run.sh smoke         # run the smoke suite inside
 #   ./.devcontainer/centos7/run.sh down          # stop + remove
 
 set -euo pipefail
@@ -60,34 +60,18 @@ case "${cmd}" in
         ;;
     up)
         docker rm -f "${CONTAINER}" 2>/dev/null || true
-        # Mount host SSH keys read-only (mirrors paimon-dev) so git clones of
-        # internal repos (e.g. aliorc_ep on gitlab.alibaba-inc.com) that go
-        # over SSH can authenticate with the host's key. Skip the mount if
-        # ~/.ssh doesn't exist so the script still works for external users.
-        ssh_mount=()
-        if [ -d "${HOME}/.ssh" ]; then
-            ssh_mount=(-v "${HOME}/.ssh:/home/paimon/.ssh:ro")
-        fi
         docker run -d \
             --name "${CONTAINER}" \
             --privileged \
             -v "${repo}:/workspaces/paimon-cpp" \
             -v "paimon-centos7-cargo-registry:/opt/rust/cargo/registry" \
             -v "paimon-centos7-build:/workspaces/paimon-cpp/build-centos7" \
-            "${ssh_mount[@]}" \
             "${IMAGE}" sleep infinity
         # Named volumes mount as root-owned; `paimon` user (uid 1000) needs
         # write access to build-centos7 and the cargo registry cache.
-        # Also set up the gitlab.alibaba-inc.com url rewrite so aliorc_ep
-        # (and any other ExternalProject pointing at internal gitlab via
-        # http://) picks up the mounted SSH key.
         docker exec --user root "${CONTAINER}" bash -c '
             chown -R paimon:paimon /workspaces/paimon-cpp/build-centos7 \
                                    /opt/rust/cargo/registry
-        '
-        docker exec "${CONTAINER}" bash -c '
-            git config --global url."git@gitlab.alibaba-inc.com:".insteadOf \
-                "http://gitlab.alibaba-inc.com/"
         '
         echo "Container started. \`${0} shell\` to enter."
         ;;
@@ -100,7 +84,7 @@ case "${cmd}" in
             echo "Container ${CONTAINER} not running; starting it."
             "$0" up
         fi
-        # Two env vars pass through for Rosetta 2 (Apple Silicon) compat:
+        # Set two environment variables for Rosetta 2 (Apple Silicon) compatibility:
         # MALLOC_CHECK_=0 disables glibc 2.17 extra malloc integrity checks
         #   that fire false positives under Rosetta's x86_64 emulation.
         # ARROW_USER_SIMD_LEVEL=SSE4_2 keeps arrow runtime-dispatched kernels
@@ -108,10 +92,7 @@ case "${cmd}" in
         # Both are no-ops on real x86_64 CentOS 7 hardware.
         # Use a distinct build dir inside the container so it does not clash
         # with the Ubuntu dev container's build/ dir on the same volume.
-        # Propagate PAIMON_ENABLE_ALIORC so `PAIMON_ENABLE_ALIORC=OFF` env
-        # on the host reaches the cmake inside the container.
         docker exec \
-            -e "PAIMON_ENABLE_ALIORC=${PAIMON_ENABLE_ALIORC:-ON}" \
             -e "MALLOC_CHECK_=0" \
             -e "ARROW_USER_SIMD_LEVEL=SSE4_2" \
             "${CONTAINER}" bash -lc '
@@ -127,13 +108,9 @@ case "${cmd}" in
                 -DPAIMON_ENABLE_LUMINA=OFF \
                 -DPAIMON_ENABLE_JINDO=OFF \
                 -DPAIMON_ENABLE_LUCENE=ON \
+                -DPAIMON_ENABLE_TANTIVY=ON \
                 -DPAIMON_ENABLE_ORC=ON \
-                -DPAIMON_ENABLE_ALIORC="${PAIMON_ENABLE_ALIORC:-ON}" \
                 -DPAIMON_ENABLE_AVRO=ON
-            # ALIORC clones from internal gitlab. `up` mounts $HOME/.ssh and
-            # configures the url.insteadOf rewrite, so by default ALIORC works
-            # for alibaba-inc users. External users without gitlab access can
-            # opt out with `PAIMON_ENABLE_ALIORC=OFF ./run.sh smoke`.
             cmake --build build-centos7 -j "$(nproc)"
             ctest --test-dir build-centos7 \
                 -R "paimon-lucene-index-test|paimon-global-index-test|paimon-tantivy-.*-test" \

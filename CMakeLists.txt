@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Adapted from Apache Arrow:
+# https://github.com/apache/arrow/blob/apache-arrow-17.0.0/cpp/CMakeLists.txt
+
 cmake_minimum_required(VERSION 3.22)
 # 3.22 is the minimum required by Corrosion-rs (used for the Rust<->C++ FFI
-# integration, see third_party/tantivy_ffi). Ubuntu 24.04 ships CMake 3.28 and
-# CentOS 8+/RHEL 9+ ship 3.20+. To build on older distros, see
-# docs/dev/tantivy_fts_migration_plan.md.
+# integration, see crates/tantivy_ffi). Ubuntu 24.04 ships CMake 3.28 and
+# CentOS 8+/RHEL 9+ ship 3.20+, so older distributions need a newer CMake
+# installation.
 message(STATUS "Building using CMake version: ${CMAKE_VERSION}")
 
 # https://cmake.org/cmake/help/latest/policy/CMP0135.html
@@ -298,15 +301,13 @@ add_subdirectory(third_party/roaring_bitmap EXCLUDE_FROM_ALL)
 add_subdirectory(third_party/xxhash EXCLUDE_FROM_ALL)
 
 # ---- tantivy-fulltext Rust FFI via Corrosion-rs --------------------------------
-# See docs/dev/tantivy_fts_migration_plan.md Stage 1.
-#
 # Corrosion wraps the Cargo crate as a CMake target named `paimon_tantivy_ffi`.
 # `corrosion_experimental_cbindgen` runs cbindgen from CMake and writes the
 # header to a stable path; it also adds that path to the target's INTERFACE
 # include dirs so C++ consumers pick it up via target_link_libraries.
 if(PAIMON_ENABLE_TANTIVY)
     include(CorrosionFetch)
-    corrosion_import_crate(MANIFEST_PATH third_party/tantivy_ffi/Cargo.toml CRATES
+    corrosion_import_crate(MANIFEST_PATH crates/tantivy_ffi/Cargo.toml CRATES
                            paimon_tantivy_ffi)
     corrosion_experimental_cbindgen(TARGET paimon_tantivy_ffi HEADER_NAME
                                     paimon_tantivy_ffi.h)

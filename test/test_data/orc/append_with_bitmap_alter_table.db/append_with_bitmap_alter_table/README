@@ -22,8 +22,8 @@ NoCompact
 
 Alter table
 SchemaChange.updateColumnType("f1", DataTypes.BIGINT()),
-SchemaChange.dropColumn("f2"),                    
-SchemaChange.renameColumn("f0", "f4"),            
+SchemaChange.dropColumn("f2"),
+SchemaChange.renameColumn("f0", "f4"),
 SchemaChange.updateColumnPosition(SchemaChange.Move.first("f1")),
 SchemaChange.addColumn("f5", DataTypes.INT()),
 SchemaChange.setOption("file-index.bitmap.columns", "f1,f4,f5")

@@ -1,7 +1,3 @@
-#
-# Note: keep this file in sync with conda_env_sphinx.txt !
-#
-
 breathe
 myst-parser[linkify]
 pydata-sphinx-theme~=0.16

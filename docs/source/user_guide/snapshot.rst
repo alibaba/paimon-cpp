@@ -15,7 +15,7 @@
 .. specific language governing permissions and limitations
 .. under the License.
 
-.. Borrowed the file from Apache Paimon:
+.. Ported from the Paimon documentation:
 .. https://github.com/apache/paimon/blob/master/docs/content/concepts/spec/snapshot.md
 
 Snapshot
