@@ -19,7 +19,7 @@
 #
 
 # Adapted from Apache Arrow
-# https://github.com/apache/arrow/blob/main/docs/source/conf.py
+# https://github.com/apache/arrow/blob/apache-arrow-17.0.0/docs/source/conf.py
 
 # Configuration file for the Sphinx documentation builder.
 #

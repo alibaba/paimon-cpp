@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+// Adapted from Apache Arrow:
+// https://github.com/apache/arrow/blob/apache-arrow-17.0.0/cpp/src/arrow/status_test.cc
+
 #include "paimon/status.h"
 
 #include <cstdint>

@@ -16,7 +16,7 @@
 // under the License.
 
 // Adapted from Apache Arrow
-// https://github.com/apache/arrow/blob/main/cpp/src/arrow/c/abi.h
+// https://github.com/apache/arrow/blob/apache-arrow-17.0.0/cpp/src/arrow/c/abi.h
 
 /// \file abi.h Arrow C Data Interface
 ///

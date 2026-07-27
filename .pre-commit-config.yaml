@@ -16,7 +16,7 @@
 # under the License.
 
 # Adapted from Apache Iceberg C++
-# https://github.com/apache/iceberg-cpp/blob/main/.pre-commit-config.yaml
+# https://github.com/apache/iceberg-cpp/blob/v0.2.0/.pre-commit-config.yaml
 
 # To use this, install the python package `pre-commit` and
 # run once `pre-commit install`. This will setup a git pre-commit-hook

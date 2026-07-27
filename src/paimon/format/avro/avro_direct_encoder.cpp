@@ -18,7 +18,7 @@
  */
 
 // Adapted from Apache Iceberg C++
-// https://github.com/apache/iceberg-cpp/blob/main/src/iceberg/avro/avro_direct_encoder.cc
+// https://github.com/apache/iceberg-cpp/blob/v0.2.0/src/iceberg/avro/avro_direct_encoder.cc
 
 #include "paimon/format/avro/avro_direct_encoder.h"
 

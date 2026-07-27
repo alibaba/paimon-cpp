@@ -16,7 +16,7 @@
 # under the License.
 
 # Borrowed the file from Apache Arrow:
-# https://github.com/apache/arrow/blob/main/cpp/cmake_modules/DefineOptions.cmake
+# https://github.com/apache/arrow/blob/apache-arrow-17.0.0/cpp/cmake_modules/DefineOptions.cmake
 
 macro(set_option_category name)
     set(PAIMON_OPTION_CATEGORY ${name})
