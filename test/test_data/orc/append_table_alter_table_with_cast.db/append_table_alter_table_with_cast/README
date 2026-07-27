@@ -6,7 +6,7 @@ f1:TIMESTAMP(9):3
 f2:DECIMAL(5, 2):4
 f3:STRING:5
 f4:DATE:6
-f5:BIGINT:7 
+f5:BIGINT:7
 partition key: key0, key1
 bucket count: -1
 
@@ -21,14 +21,14 @@ NoCompact
 
 schema evolution
 updateColumnType("f0", INT())
-updateColumnType("f1", STRING()) 
+updateColumnType("f1", STRING())
 updateColumnType("f2", DECIMAL(6, 3))
 updateColumnType("f3", BOOLEAN())
 updateColumnType("f4", TIMESTAMP(9))
-dropColumn("f5")                    
+dropColumn("f5")
 renameColumn("f0", "f5")
 renameColumn("f3", "f0")
-renameColumn("f5", "f3")                    
+renameColumn("f5", "f3")
 updateColumnPosition(SchemaChange.Move.first("f4"))
 addColumn("f6", INT()))
 

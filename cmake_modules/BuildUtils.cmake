@@ -16,7 +16,7 @@
 # under the License.
 
 # Borrowed the file from Apache Arrow:
-# https://github.com/apache/arrow/blob/main/cpp/cmake_modules/BuildUtils.cmake
+# https://github.com/apache/arrow/blob/apache-arrow-17.0.0/cpp/cmake_modules/BuildUtils.cmake
 
 function(paimon_link_libraries_whole_archive OUT_VAR)
     set(_paimon_whole_archive_libs)

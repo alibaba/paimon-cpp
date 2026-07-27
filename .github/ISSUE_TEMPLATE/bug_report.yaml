@@ -16,9 +16,6 @@
 # limitations under the License.
 ################################################################################
 
-# Adapted from Apache Paimon
-# https://github.com/apache/paimon/blob/master/.github/ISSUE_TEMPLATE/bug-report.yml
-
 name: Bug report
 description: Problems with the software
 title: "[Bug] "

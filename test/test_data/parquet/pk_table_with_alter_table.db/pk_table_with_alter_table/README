@@ -1,4 +1,4 @@
-key0:int:0 key1:int:1 key2:int:2 a:int:3 b:int:4 c:int:5 d:int:6 k:string:7 
+key0:int:0 key1:int:1 key2:int:2 a:int:3 b:int:4 c:int:5 d:int:6 k:string:7
 partition key: key0, key1
 primary key: key0, key1, key2
 bucket count: 1
@@ -14,13 +14,13 @@ Add(1, 1, 22, 23, 24, 25, 26, "Bob")
 Add(1, 1, 32, 33, 34, 35, 36, "Emily")
 Add(1, 1, 42, 43, 44, 45, 46, "Tony")
 Add(1, 1, 52, 53, 54, 55, 56, "Alex")
-Add(1, 1, 62, 63, 64, 65, 66, "David")            
+Add(1, 1, 62, 63, 64, 65, 66, "David")
 Add(1, 1, 72, 73, 74, 75, 76, "Whether I shall turn out to be the hero of my own life.")
 Add(1, 1, 82, 83, 84, 85, 86, "Lily")
 
 snapshot 3-4
 DELETE(1, 1, 42, 43, 44, 45, 46, "Tony")
-DELETE(1, 1, 82, 83, 84, 85, 86, "Lily")            
+DELETE(1, 1, 82, 83, 84, 85, 86, "Lily")
 UPDATE_AFTER(0, 1, 12, 93, 94, 95, 96, "Alice")
 
 schema evolution

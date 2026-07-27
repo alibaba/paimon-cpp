@@ -16,9 +16,6 @@
 # limitations under the License.
 ################################################################################
 
-# Adapted from Apache Paimon
-# https://github.com/apache/paimon/blob/master/.github/ISSUE_TEMPLATE/feature.yml
-
 name: Feature
 description: Add new feature, improve code, and more
 title: "[Feature] "

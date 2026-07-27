@@ -18,7 +18,7 @@
  */
 
 // Adapted from Apache Iceberg C++
-// https://github.com/apache/iceberg-cpp/blob/main/src/iceberg/avro/avro_direct_encoder_internal.h
+// https://github.com/apache/iceberg-cpp/blob/v0.2.0/src/iceberg/avro/avro_direct_encoder_internal.h
 
 #pragma once
 

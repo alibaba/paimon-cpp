@@ -16,7 +16,7 @@
 @rem under the License.
 
 @rem Adapted from Apache Arrow
-@rem https://github.com/apache/arrow/blob/main/docs/make.bat
+@rem https://github.com/apache/arrow/blob/apache-arrow-17.0.0/docs/make.bat
 
 @ECHO OFF
 

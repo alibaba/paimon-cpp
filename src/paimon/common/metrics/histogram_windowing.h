@@ -29,6 +29,7 @@ namespace paimon {
 // Window-based histogram implementation.
 //
 // Inspired by RocksDB's monitoring/histogram_windowing.h.
+// https://github.com/facebook/rocksdb/blob/main/monitoring/histogram_windowing.h
 // Maintains multiple time windows and aggregates stats across the recent ones.
 class HistogramWindowingImpl : public Histogram {
  public:

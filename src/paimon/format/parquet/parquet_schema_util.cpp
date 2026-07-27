@@ -16,7 +16,7 @@
 // under the License.
 
 // Adapted from Apache Arrow
-// https://github.com/apache/arrow/blob/main/cpp/src/parquet/arrow/schema_internal.cc
+// https://github.com/apache/arrow/blob/apache-arrow-17.0.0/cpp/src/parquet/arrow/schema_internal.cc
 
 #include "paimon/format/parquet/parquet_schema_util.h"
 
