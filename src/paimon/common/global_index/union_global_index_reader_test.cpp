@@ -19,6 +19,8 @@
 #include <atomic>
 #include <map>
 #include <memory>
+#include <queue>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -52,6 +54,11 @@ class FakeReader : public GlobalIndexReader {
         return_error_ = true;
         return_nullptr_ = false;
         error_message_ = message;
+    }
+
+    void SetThrowException(const std::string& message) {
+        throw_exception_ = true;
+        exception_message_ = message;
     }
 
     /// Sets a scored result returned by VisitVectorSearch.
@@ -161,6 +168,9 @@ class FakeReader : public GlobalIndexReader {
  private:
     Result<std::shared_ptr<GlobalIndexResult>> MakeResult() {
         invocation_count_++;
+        if (throw_exception_) {
+            throw std::runtime_error(exception_message_);
+        }
         if (return_error_) {
             return Status::Invalid(error_message_);
         }
@@ -176,12 +186,48 @@ class FakeReader : public GlobalIndexReader {
     std::vector<int64_t> default_result_;
     bool return_nullptr_ = false;
     bool return_error_ = false;
+    bool throw_exception_ = false;
     std::string error_message_;
+    std::string exception_message_;
     std::vector<int64_t> scored_row_ids_;
     std::vector<float> scored_scores_;
     bool has_scored_result_ = false;
     bool thread_safe_ = true;
     std::atomic<int32_t> invocation_count_{0};
+};
+
+// Runs the first task immediately and defers the rest. This makes it possible to verify that
+// queued tasks own their action even if collecting an earlier future throws.
+class DeferAfterFirstExecutor : public Executor {
+ public:
+    void Add(std::function<void()> func) override {
+        if (submission_count_++ == 0) {
+            func();
+        } else {
+            pending_tasks_.push(std::move(func));
+        }
+    }
+
+    void ShutdownNow() override {
+        std::queue<std::function<void()>> empty;
+        pending_tasks_.swap(empty);
+    }
+
+    uint32_t GetThreadNum() const override {
+        return 1;
+    }
+
+    void RunPendingTasks() {
+        while (!pending_tasks_.empty()) {
+            std::function<void()> task = std::move(pending_tasks_.front());
+            pending_tasks_.pop();
+            task();
+        }
+    }
+
+ private:
+    uint32_t submission_count_ = 0;
+    std::queue<std::function<void()>> pending_tasks_;
 };
 
 class UnionGlobalIndexReaderTest : public ::testing::Test {
@@ -339,6 +385,23 @@ TEST_F(UnionGlobalIndexReaderTest, TestErrorPropagationWithExecutor) {
     UnionGlobalIndexReader union_reader(std::move(readers), executor);
 
     ASSERT_NOK_WITH_MSG(union_reader.VisitIsNotNull(), "Unknown error for reader2");
+}
+
+TEST_F(UnionGlobalIndexReaderTest, TestDeferredTaskOwnsActionAfterEarlierFutureThrows) {
+    auto throwing_reader = std::make_shared<FakeReader>();
+    auto deferred_reader = std::make_shared<FakeReader>();
+    throwing_reader->SetThrowException("reader exception");
+    deferred_reader->SetDefaultResult({2});
+
+    std::vector<std::shared_ptr<GlobalIndexReader>> readers = {throwing_reader, deferred_reader};
+    auto executor = std::make_shared<DeferAfterFirstExecutor>();
+    UnionGlobalIndexReader union_reader(std::move(readers), executor);
+
+    EXPECT_THROW(union_reader.VisitIsNotNull(), std::runtime_error);
+    ASSERT_EQ(deferred_reader->InvocationCount(), 0);
+
+    executor->RunPendingTasks();
+    ASSERT_EQ(deferred_reader->InvocationCount(), 1);
 }
 
 TEST_F(UnionGlobalIndexReaderTest, TestVisitEqualUnion) {

@@ -38,11 +38,15 @@ namespace {
 class BinlogBatchConverter : public ChangelogBatchConverter {
  public:
     Result<std::shared_ptr<arrow::Array>> ConvertDataColumn(
-        const std::shared_ptr<arrow::Array>& array, arrow::MemoryPool* pool) const override {
+        const std::shared_ptr<arrow::Array>& array, const std::vector<int32_t>& row_group_lengths,
+        arrow::MemoryPool* pool) const override {
         arrow::Int32Builder offsets_builder(pool);
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(offsets_builder.Reserve(array->length() + 1));
-        for (int64_t i = 0; i <= array->length(); ++i) {
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(offsets_builder.Append(static_cast<int32_t>(i)));
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(offsets_builder.Reserve(row_group_lengths.size() + 1));
+        int32_t offset = 0;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(offsets_builder.Append(offset));
+        for (int32_t row_group_length : row_group_lengths) {
+            offset += row_group_length;
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(offsets_builder.Append(offset));
         }
         std::shared_ptr<arrow::Array> offsets_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(offsets_builder.Finish(&offsets_array));
@@ -51,9 +55,17 @@ class BinlogBatchConverter : public ChangelogBatchConverter {
             arrow::ListArray::FromArrays(*offsets_array, *array, pool));
         return list_array;
     }
+
+    bool PackUpdateBeforeAfter() const override {
+        return true;
+    }
 };
 
 }  // namespace
+
+std::shared_ptr<const ChangelogBatchConverter> CreateBinlogBatchConverter() {
+    return std::make_shared<BinlogBatchConverter>();
+}
 
 BinlogSystemTable::BinlogSystemTable(std::shared_ptr<FileSystem> fs, std::string table_path,
                                      std::shared_ptr<TableSchema> table_schema,
@@ -84,7 +96,7 @@ Result<std::shared_ptr<arrow::Schema>> BinlogSystemTable::ArrowSchema() const {
 
 Result<std::unique_ptr<TableRead>> BinlogSystemTable::NewRead(
     const std::shared_ptr<ReadContext>& context) const {
-    return NewChangelogRead(context, std::make_shared<BinlogBatchConverter>());
+    return NewChangelogRead(context, CreateBinlogBatchConverter());
 }
 
 }  // namespace paimon

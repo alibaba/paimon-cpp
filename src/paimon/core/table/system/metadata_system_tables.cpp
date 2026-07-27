@@ -41,7 +41,6 @@
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
 #include "paimon/common/utils/internal_row_utils.h"
-#include "paimon/common/utils/object_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/rapidjson_util.h"
 #include "paimon/core/casting/cast_executor_factory.h"
@@ -133,7 +132,7 @@ Result<std::optional<int64_t>> OptionalLocalDateTimePartsToTimestampMillis(
     return std::optional<int64_t>(timestamp_millis);
 }
 
-std::optional<std::string> OptionalDoubleToString(const std::optional<double_t>& value) {
+std::optional<std::string> OptionalDoubleToString(const std::optional<double>& value) {
     if (!value) {
         return std::optional<std::string>();
     }
@@ -422,22 +421,13 @@ Result<std::vector<DataField>> ProjectWriteFields(const std::shared_ptr<TableSch
     }
 
     std::vector<DataField> fields;
-    fields.reserve(file.write_cols->size() + data_schema->PartitionKeys().size());
+    fields.reserve(file.write_cols->size());
     for (const auto& write_col : file.write_cols.value()) {
         if (SpecialFields::IsSystemField(write_col)) {
             continue;
         }
         PAIMON_ASSIGN_OR_RAISE(DataField field, data_schema->GetField(write_col));
         fields.push_back(std::move(field));
-    }
-
-    // Partial writes may omit partition columns from write_cols. Keep them in the stats source
-    // fields so SimpleStatsEvolution can map partition stats consistently.
-    for (const auto& partition_key : data_schema->PartitionKeys()) {
-        if (!ObjectUtils::Contains(file.write_cols.value(), partition_key)) {
-            PAIMON_ASSIGN_OR_RAISE(DataField field, data_schema->GetField(partition_key));
-            fields.push_back(std::move(field));
-        }
     }
     return fields;
 }

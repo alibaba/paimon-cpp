@@ -33,8 +33,18 @@ class ChangelogBatchConverter {
     virtual ~ChangelogBatchConverter() = default;
 
     virtual Result<std::shared_ptr<arrow::Array>> ConvertDataColumn(
-        const std::shared_ptr<arrow::Array>& array, arrow::MemoryPool* pool) const = 0;
+        const std::shared_ptr<arrow::Array>& array, const std::vector<int32_t>& row_group_lengths,
+        arrow::MemoryPool* pool) const = 0;
+
+    virtual bool PackUpdateBeforeAfter() const {
+        return false;
+    }
 };
+
+std::unique_ptr<BatchReader> CreateChangelogBatchReader(
+    std::unique_ptr<BatchReader> reader, std::shared_ptr<arrow::Schema> output_schema,
+    bool include_sequence_number, std::shared_ptr<const ChangelogBatchConverter> converter,
+    bool pack_update_before_after, const std::shared_ptr<MemoryPool>& pool);
 
 /// System table for `T$audit_log`, exposing row-level changelog records with rowkind.
 class AuditLogSystemTable : public SystemTable {
