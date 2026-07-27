@@ -394,8 +394,7 @@ TEST_F(ManifestFileMergerTest, TestDeleteNewManifestFilesWhenMinorCompactionFail
 
     // The first pair is merged successfully. Removing a source file from the second pair makes
     // the following merge fail after a new manifest file has already been created.
-    std::string missing_manifest_path =
-        path_factory_->ToManifestFilePath(input[2].FileName());
+    std::string missing_manifest_path = path_factory_->ToManifestFilePath(input[2].FileName());
     ASSERT_OK(file_system_->Delete(missing_manifest_path));
     std::set<std::string> files_before_merge = ListManifestFiles();
 

@@ -1696,12 +1696,9 @@ TEST(SystemTableReadInteTest, TestStreamingBinlogPacksUpdateBeforeAndAfter) {
     };
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {
-        {Options::FILE_SYSTEM, "local"},
-        {Options::FILE_FORMAT, "parquet"},
-        {Options::MANIFEST_FORMAT, "avro"},
-        {Options::BUCKET, "1"},
-        {Options::WRITE_BUFFER_SIZE, "1"},
-        {Options::WRITE_BUFFER_SPILLABLE, "false"},
+        {Options::FILE_SYSTEM, "local"},    {Options::FILE_FORMAT, "parquet"},
+        {Options::MANIFEST_FORMAT, "avro"}, {Options::BUCKET, "1"},
+        {Options::WRITE_BUFFER_SIZE, "1"},  {Options::WRITE_BUFFER_SPILLABLE, "false"},
     };
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
