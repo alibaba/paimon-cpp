@@ -31,7 +31,7 @@ class Function;
 /// @see PredicateBuilder
 class PAIMON_EXPORT Predicate {
  public:
-    virtual ~Predicate() = default;
+    virtual ~Predicate();
     virtual bool operator==(const Predicate& other) const = 0;
 
     virtual const Function& GetFunction() const = 0;
