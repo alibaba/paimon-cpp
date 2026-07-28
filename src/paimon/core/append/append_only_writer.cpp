@@ -238,10 +238,14 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingBlobWri
             options_.GetBlobTargetFileSize(), single_blob_file_writer_factory);
     };
 
+    WriterFactory main_writer_factory;
+    if (schemas.main_schema->num_fields() > 0) {
+        main_writer_factory =
+            GetDataFileWriterFactory(schemas.main_schema, schemas.main_schema->field_names());
+    }
     return std::make_unique<RollingBlobFileWriter>(
-        options_.GetTargetFileSize(/*has_primary_key=*/false),
-        GetDataFileWriterFactory(schemas.main_schema, schemas.main_schema->field_names()),
-        blob_schema, blob_writer_creator, arrow::struct_(write_schema_->fields()), inline_fields);
+        options_.GetTargetFileSize(/*has_primary_key=*/false), main_writer_factory, blob_schema,
+        blob_writer_creator, arrow::struct_(write_schema_->fields()), inline_fields);
 }
 
 Status AppendOnlyWriter::Sync() {

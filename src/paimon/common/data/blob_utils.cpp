@@ -82,13 +82,12 @@ Result<BlobUtils::SeparatedStructArrays> BlobUtils::SeparateBlobArray(
         return Status::Invalid(
             "SeparateBlobArray expects at least one non-inline blob field, but got none.");
     }
-    if (main_fields.empty()) {
-        return Status::Invalid("SeparateBlobArray expects at least one main field, but got none.");
-    }
 
     SeparatedStructArrays result;
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(result.main_array,
-                                      arrow::StructArray::Make(main_arrays, main_fields));
+    if (!main_fields.empty()) {
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(result.main_array,
+                                          arrow::StructArray::Make(main_arrays, main_fields));
+    }
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(result.blob_array,
                                       arrow::StructArray::Make(blob_arrays, blob_fields));
     return result;

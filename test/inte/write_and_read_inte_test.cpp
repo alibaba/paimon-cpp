@@ -420,6 +420,95 @@ TEST_P(WriteAndReadInteTest, TestNestedType) {
     ASSERT_TRUE(success);
 }
 
+TEST_P(WriteAndReadInteTest, TestSchemaEvolutionAddFieldInsideListAndMap) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format == "lance" || file_format == "avro") {
+        return;
+    }
+    auto list_struct =
+        arrow::struct_({arrow::field("a", arrow::int32()), arrow::field("b", arrow::utf8())});
+    auto map_value = arrow::struct_({arrow::field("m1", arrow::int32())});
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("items", arrow::list(arrow::field("item", list_struct))),
+        arrow::field("props", arrow::map(arrow::utf8(), map_value)),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system},
+        // Exercise ORC lazy decoding, which returns nested strings as dictionaries.
+        {"orc.read.enable-lazy-decoding", "true"},
+    };
+    if (file_system == "jindo") {
+        options = AddOptionsForJindo(options);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(test_dir_, arrow::schema(fields),
+                                                         /*partition_keys=*/{}, /*primary_keys=*/{},
+                                                         options, /*is_streaming_mode=*/false));
+    ASSERT_OK_AND_ASSIGN(auto batch, TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                                 R"([
+                [1, [[10, "x"], [20, "y"]], [["k1", [100]]]],
+                [2, [[30, "z"]], [["k2", [200]]]]
+            ])",
+                                                                 /*partition_map=*/{},
+                                                                 /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    std::string table_path = PathUtil::JoinPath(test_dir_, "foo.db/bar");
+    SchemaManager schema_manager(dir_->GetFileSystem(), table_path);
+    ASSERT_OK_AND_ASSIGN(auto schema_v0, schema_manager.ReadSchema(0));
+    std::vector<DataField> fields_v0 = schema_v0->Fields();
+    int32_t next_id = schema_v0->HighestFieldId();
+
+    auto items_field = fields_v0[1].ArrowField();
+    auto items_list = arrow::internal::checked_pointer_cast<arrow::ListType>(items_field->type());
+    auto items_struct =
+        arrow::internal::checked_pointer_cast<arrow::StructType>(items_list->value_type());
+    auto c_field = DataField::ConvertDataFieldToArrowField(
+        DataField(++next_id, arrow::field("c", arrow::int32())));
+    auto new_items_type = arrow::list(items_list->value_field()->WithType(
+        arrow::struct_({items_struct->field(0), items_struct->field(1), c_field})));
+
+    auto props_field = fields_v0[2].ArrowField();
+    auto props_map = arrow::internal::checked_pointer_cast<arrow::MapType>(props_field->type());
+    auto props_value =
+        arrow::internal::checked_pointer_cast<arrow::StructType>(props_map->item_type());
+    auto m2_field = DataField::ConvertDataFieldToArrowField(
+        DataField(++next_id, arrow::field("m2", arrow::int32())));
+    auto new_props_type = arrow::map(
+        props_map->key_type(),
+        props_map->item_field()->WithType(arrow::struct_({props_value->field(0), m2_field})));
+
+    std::vector<DataField> fields_v1 = fields_v0;
+    fields_v1[1] = DataField(fields_v0[1].Id(), items_field->WithType(new_items_type));
+    fields_v1[2] = DataField(fields_v0[2].Id(), props_field->WithType(new_props_type));
+    ASSERT_OK(WriteNextSchema(fields_v1, next_id, options));
+
+    auto expected_type = arrow::struct_({
+        arrow::field("_VALUE_KIND", arrow::int8()),
+        arrow::field("id", arrow::int32()),
+        arrow::field("items", arrow::list(arrow::field(
+                                  "item", arrow::struct_({arrow::field("a", arrow::int32()),
+                                                          arrow::field("b", arrow::utf8()),
+                                                          arrow::field("c", arrow::int32())})))),
+        arrow::field("props", arrow::map(arrow::utf8(),
+                                         arrow::struct_({arrow::field("m1", arrow::int32()),
+                                                         arrow::field("m2", arrow::int32())}))),
+    });
+    ASSERT_OK_AND_ASSIGN(auto splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(bool success, helper->ReadAndCheckResult(expected_type, splits,
+                                                                  R"([
+                [0, 1, [[10, "x", null], [20, "y", null]], [["k1", [100, null]]]],
+                [0, 2, [[30, "z", null]], [["k2", [200, null]]]]
+            ])"));
+    ASSERT_TRUE(success);
+}
+
 TEST_P(WriteAndReadInteTest, TestAppendExternalPath) {
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int32()),
@@ -2455,10 +2544,9 @@ TEST_P(WriteAndReadInteTest, TestMapSharedShreddingStructValueSchemaEvolutionRea
     fields_with_changed_tag_value[1] =
         DataField(fields_v0[1].Id(), tag_field->WithType(changed_tag_value_type));
     ASSERT_OK(WriteNextSchema(fields_with_changed_tag_value, schema_v0->HighestFieldId(), options));
-    ASSERT_NOK_WITH_MSG(read_fields({"tags"}),
-                        "PruneDataType does not support partial projection inside map: src "
-                        "map<string, struct<v: int64, label: string>> vs target "
-                        "map<string, struct<v: string, label: string>>");
+    ASSERT_NOK_WITH_MSG(
+        read_fields({"tags"}),
+        "PruneDataType nested item type mismatch inside map: read string vs data int64");
 
     auto profile_field = fields_v0[2].ArrowField();
     auto profile_struct =
