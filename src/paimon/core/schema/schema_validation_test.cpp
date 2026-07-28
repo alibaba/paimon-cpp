@@ -971,11 +971,9 @@ TEST(SchemaValidationTest, TestMapSharedShreddingRejectsBlobValue) {
             arrow::field("f0", arrow::utf8()),
             arrow::field("f1", map_type),
         });
-        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
-                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
-                                                 /*primary_keys=*/{}, options));
-        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
-                            "MAP shared-shredding currently cannot contain BLOB fields.");
+        ASSERT_NOK_WITH_MSG(TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                /*primary_keys=*/{}, options),
+                            "Blob field must be a top-level field.");
     }
 }
 
