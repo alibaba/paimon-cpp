@@ -1123,7 +1123,7 @@ TEST_P(WriteAndReadInteTest, TestWriteSamePartitionTwiceWithAllBasicTypesForPk) 
 
 TEST_P(WriteAndReadInteTest, TestCharVarcharBinaryVarbinaryTypes) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
     arrow::FieldVector fields = {
@@ -1509,7 +1509,7 @@ TEST_P(WriteAndReadInteTest, TestAppendWithParquetMetadataCache) {
 
 TEST_P(WriteAndReadInteTest, TestAppendSharedShreddingMap) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -1566,7 +1566,7 @@ TEST_P(WriteAndReadInteTest, TestAppendSharedShreddingMap) {
 
 TEST_P(WriteAndReadInteTest, TestMapSharedShreddingColumnPlacementPolicies) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -1650,7 +1650,7 @@ TEST_P(WriteAndReadInteTest, TestMapSharedShreddingColumnPlacementPolicies) {
 
 TEST_P(WriteAndReadInteTest, TestAppendMapSharedShreddingWithPartitionAndBucket) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -1758,7 +1758,7 @@ TEST_P(WriteAndReadInteTest, TestAppendMapSharedShreddingWithPartitionAndBucket)
 
 TEST_P(WriteAndReadInteTest, TestAppendMapSharedShreddingWithPredicate) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -1852,7 +1852,7 @@ TEST_P(WriteAndReadInteTest, TestAppendMapSharedShreddingWithPredicate) {
 
 TEST_P(WriteAndReadInteTest, TestMapSharedShreddingNewWriterStartsWithMaxColumnCount) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -1921,7 +1921,7 @@ TEST_P(WriteAndReadInteTest, TestMapSharedShreddingNewWriterStartsWithMaxColumnC
 
 TEST_P(WriteAndReadInteTest, TestMapSharedShreddingAdaptsAcrossRollingFiles) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -1994,7 +1994,7 @@ TEST_P(WriteAndReadInteTest, TestMapSharedShreddingAdaptsAcrossRollingFiles) {
 
 TEST_P(WriteAndReadInteTest, TestMapSharedShreddingSwitchMapLayoutAndUseMaxColumnsWithoutMetadata) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2077,7 +2077,7 @@ TEST_P(WriteAndReadInteTest, TestMapSharedShreddingSwitchMapLayoutAndUseMaxColum
 
 TEST_P(WriteAndReadInteTest, TestMapSharedShreddingReadAfterRenameColumn) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2146,7 +2146,7 @@ TEST_P(WriteAndReadInteTest, TestMapSharedShreddingReadAfterRenameColumn) {
 
 TEST_P(WriteAndReadInteTest, TestSharedShreddingWithSchemaEvolution) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2236,7 +2236,7 @@ TEST_P(WriteAndReadInteTest, TestSharedShreddingWithSchemaEvolution) {
 // Verify storage-layout evolution: default->shared-shredding.
 TEST_P(WriteAndReadInteTest, TestMapStorageLayoutDefaultToSharedShredding) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2297,7 +2297,7 @@ TEST_P(WriteAndReadInteTest, TestMapStorageLayoutDefaultToSharedShredding) {
 // Verify storage-layout evolution: shared-shredding->default.
 TEST_P(WriteAndReadInteTest, TestMapStorageLayoutSharedShreddingToDefault) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2361,7 +2361,7 @@ TEST_P(WriteAndReadInteTest, TestMapStorageLayoutSharedShreddingToDefault) {
 
 TEST_P(WriteAndReadInteTest, TestAppendMapStorageLayoutSharedShreddingToDefaultCompaction) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2465,7 +2465,7 @@ TEST_P(WriteAndReadInteTest, TestAppendMapStorageLayoutSharedShreddingToDefaultC
 // Nested map values through both selected physical columns and overflow.
 TEST_P(WriteAndReadInteTest, TestSharedShreddingWithStructValue) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2520,7 +2520,7 @@ TEST_P(WriteAndReadInteTest, TestSharedShreddingWithStructValue) {
 
 TEST_P(WriteAndReadInteTest, TestMapSharedShreddingWithComplexValue) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2614,7 +2614,7 @@ TEST_P(WriteAndReadInteTest, TestMapSharedShreddingWithComplexValue) {
 
 TEST_P(WriteAndReadInteTest, TestMapSharedShreddingWithAllSupportedComplexValueTypes) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2742,7 +2742,7 @@ TEST_P(WriteAndReadInteTest, TestMapSharedShreddingWithAllSupportedComplexValueT
 
 TEST_P(WriteAndReadInteTest, TestMapSharedShreddingStructValueSchemaEvolutionReadFails) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2939,7 +2939,7 @@ TEST_P(WriteAndReadInteTest, TestOrcDictionaryLazyDecodingWithSharedShredding) {
 // Verify shared-shredding in the PK read path.
 TEST_P(WriteAndReadInteTest, TestPkSharedShreddingMap) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2993,7 +2993,7 @@ TEST_P(WriteAndReadInteTest, TestPkSharedShreddingMap) {
 
 TEST_P(WriteAndReadInteTest, TestSharedShreddingPartialKeyRecallWithOverflow) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -3106,7 +3106,7 @@ TEST_P(WriteAndReadInteTest, TestSharedShreddingPartialKeyRecallWithOverflow) {
 
 TEST_P(WriteAndReadInteTest, TestSharedShreddingPartialKeyRecallWithNullOrMissingKey) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -3197,7 +3197,7 @@ TEST_P(WriteAndReadInteTest, TestSharedShreddingPartialKeyRecallWithNullOrMissin
 
 TEST_P(WriteAndReadInteTest, TestSharedShreddingPartialKeyRecallMultipleColumns) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -3286,7 +3286,7 @@ TEST_P(WriteAndReadInteTest, TestSharedShreddingPartialKeyRecallMultipleColumns)
 
 TEST_P(WriteAndReadInteTest, TestMapStorageLayoutDefaultToSharedShreddingPartialKeyRecall) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -3359,7 +3359,7 @@ TEST_P(WriteAndReadInteTest, TestMapStorageLayoutDefaultToSharedShreddingPartial
 
 TEST_P(WriteAndReadInteTest, TestMapStorageLayoutSharedShreddingToDefaultPartialKeyRecall) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -3436,7 +3436,7 @@ TEST_P(WriteAndReadInteTest, TestMapStorageLayoutSharedShreddingToDefaultPartial
 
 TEST_P(WriteAndReadInteTest, TestSharedShreddingDuplicateSelectedKeys) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -3484,7 +3484,7 @@ TEST_P(WriteAndReadInteTest, TestSharedShreddingDuplicateSelectedKeys) {
 
 TEST_P(WriteAndReadInteTest, TestSharedShreddingAllNullMapColumn) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 

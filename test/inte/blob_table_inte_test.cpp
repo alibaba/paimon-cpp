@@ -2237,7 +2237,7 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorMultiCommitAndShuffledReadSchema) {
 // The shared-shredding map is read from one main data file while the blob payload is read from a
 // separate blob file with the same row-id range.
 TEST_P(BlobTableInteTest, TestSharedShreddingWithBlobDataEvolution) {
-    if (GetParam() != "parquet" && GetParam() != "orc") {
+    if (GetParam() == "avro") {
         return;
     }
 
@@ -2296,7 +2296,7 @@ TEST_P(BlobTableInteTest, TestSharedShreddingWithBlobDataEvolution) {
 
 // Two independent shared-shredding map columns are written into different main files.
 TEST_P(BlobTableInteTest, TestMultipleSharedShreddingMapsWithBlobDataEvolution) {
-    if (GetParam() != "parquet" && GetParam() != "orc") {
+    if (GetParam() == "avro") {
         return;
     }
 
@@ -2358,7 +2358,7 @@ TEST_P(BlobTableInteTest, TestMultipleSharedShreddingMapsWithBlobDataEvolution) 
 
 // A newer partial data file rewrites only the shared-shredding map for the same row-id range.
 TEST_P(BlobTableInteTest, TestSharedShreddingMapOverrideWithBlobDataEvolution) {
-    if (GetParam() != "parquet" && GetParam() != "orc") {
+    if (GetParam() == "avro") {
         return;
     }
 
@@ -2633,7 +2633,7 @@ TEST_P(BlobTableInteTest, TestBlobDescriptorFieldWriteRawBytesDirectly) {
 
 TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamTable) {
     auto file_format = GetParam();
-    if (file_format != "orc" && file_format != "parquet") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2797,7 +2797,7 @@ TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamTable) {
 
 TEST_P(BlobTableInteTest, TestForwardBlobViewReference) {
     auto file_format = GetParam();
-    if (file_format != "orc" && file_format != "parquet") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -3081,7 +3081,7 @@ TEST_P(BlobTableInteTest, TestBlobViewFieldWithUpstreamDescriptorBlob) {
 
 TEST_P(BlobTableInteTest, TestBlobViewFieldWithMultipleUpstreamTables) {
     auto file_format = GetParam();
-    if (file_format != "orc" && file_format != "parquet") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -3404,7 +3404,7 @@ TEST_P(BlobTableInteTest, TestBlobViewWithFallbackPath) {
 
 TEST_P(BlobTableInteTest, TestReadBlobDescriptorFieldFromJava) {
     auto file_format = GetParam();
-    if (file_format != "orc" && file_format != "parquet") {
+    if (file_format == "avro") {
         return;
     }
     std::string table_path =

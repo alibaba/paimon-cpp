@@ -988,7 +988,7 @@ TEST(SchemaValidationTest, TestMapSharedShreddingCompression) {
         {"fields.f1.map.storage-layout", "shared-shredding"},
     };
 
-    for (const std::string& compression : {"none", "lz4", "zstd", "ZSTD"}) {
+    for (const std::string compression : {"none", "lz4", "zstd", "ZSTD"}) {
         auto options = base_options;
         options[Options::FILE_COMPRESSION] = compression;
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,

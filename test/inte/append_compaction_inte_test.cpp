@@ -252,7 +252,7 @@ TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompaction) {
 
 TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompactionWithMapSharedShredding) {
     auto file_format = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 

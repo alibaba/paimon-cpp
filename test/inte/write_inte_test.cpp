@@ -4005,7 +4005,7 @@ TEST_P(WriteInteTest, TestNullabilityCheck) {
 
 TEST_P(WriteInteTest, TestPkSpillableMapSharedShreddingReadWrite) {
     auto file_format = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
