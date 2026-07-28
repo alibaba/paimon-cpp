@@ -17,21 +17,20 @@
 
 #include <atomic>
 #include <cstdarg>
-#include <filesystem>
-#include <fstream>
 #include <future>
 #include <iostream>
 #include <memory>
 #include <random>
-#include <sstream>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include "glog/log_severity.h"
 #include "glog/logging.h"
 #include "glog/raw_logging.h"
 #include "paimon/common/executor/future.h"
 #include "paimon/executor.h"
+#include "paimon/fs/file_system.h"
 #include "paimon/testing/utils/testharness.h"
 namespace paimon::test {
 namespace {
@@ -101,18 +100,17 @@ TEST(LoggerTest, TestLogAllSeverities) {
 // Note: Paimon's Logger/GlogAdaptor uses google::RawLog__, which only goes to
 // stderr and never touches disk, so this test drives glog's file sink directly.
 TEST(LoggerTest, TestGlogWritesLogFileToDisk) {
-    namespace fs = std::filesystem;
-
     // Save the global glog flags we are about to change so other tests are unaffected.
     const bool prev_logtostderr = FLAGS_logtostderr;
     const bool prev_timestamp_in_name = FLAGS_timestamp_in_logfile_name;
     const int32_t prev_minloglevel = FLAGS_minloglevel;
 
     // A unique, empty directory so the only file inside is the one glog creates for us.
-    fs::path log_dir = fs::temp_directory_path() /
-                       ("paimon_glog_disk_" + std::to_string(RandomNumber(0, 1'000'000'000)));
-    fs::create_directories(log_dir);
-    const fs::path base = log_dir / "paimon_demo";
+    // The directory (and everything glog wrote into it) is removed on destruction.
+    auto tmp_dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(tmp_dir);
+    std::shared_ptr<FileSystem> fs = tmp_dir->GetFileSystem();
+    const std::string base = tmp_dir->Str() + "/paimon_demo";
 
     FLAGS_logtostderr = false;                // must be false, otherwise glog skips the file sink
     FLAGS_timestamp_in_logfile_name = false;  // deterministic file name (no time/pid suffix)
@@ -121,26 +119,30 @@ TEST(LoggerTest, TestGlogWritesLogFileToDisk) {
     if (!google::IsGoogleLoggingInitialized()) {
         google::InitGoogleLogging("paimon-log-disk-test");
     }
-    // Force INFO logs to a file under our unique directory.
-    google::SetLogDestination(google::GLOG_INFO, base.string().c_str());
+    // Force INFO logs to a file under our unique directory. Disable the
+    // "<program>.INFO" symlink glog normally creates next to the log file: it would
+    // dangle during recursive deletion and break UniqueTestDirectory cleanup.
+    google::SetLogDestination(google::GLOG_INFO, base.c_str());
+    google::SetLogSymlink(google::GLOG_INFO, "");
 
     const std::string token = "PAIMON_DISK_LOG_DEMO_" + std::to_string(RandomNumber(0, 1'000'000));
     LOG(INFO) << "hello from disk logging, token=" << token;
     google::FlushLogFiles(google::GLOG_INFO);
 
-    // Collect the content of whatever regular file glog created in our directory.
+    // Collect the content of whatever file glog created in our directory.
     std::string on_disk_path;
     std::string content;
-    for (const auto& entry : fs::directory_iterator(log_dir)) {
-        if (!entry.is_regular_file()) {
+    std::vector<std::unique_ptr<BasicFileStatus>> entries;
+    ASSERT_OK(fs->ListDir(tmp_dir->Str(), &entries));
+    for (const auto& entry : entries) {
+        if (entry->IsDir()) {
             continue;
         }
-        std::ifstream in(entry.path());
-        std::stringstream buffer;
-        buffer << in.rdbuf();
-        if (buffer.str().find(token) != std::string::npos) {
-            on_disk_path = entry.path().string();
-            content = buffer.str();
+        std::string file_content;
+        ASSERT_OK(fs->ReadFile(entry->GetPath(), &file_content));
+        if (file_content.find(token) != std::string::npos) {
+            on_disk_path = entry->GetPath();
+            content = std::move(file_content);
             break;
         }
     }
@@ -150,16 +152,15 @@ TEST(LoggerTest, TestGlogWritesLogFileToDisk) {
               << content << "===== end of file =====\n";
 
     ASSERT_FALSE(on_disk_path.empty())
-        << "no glog file containing the token was written to " << log_dir.string();
+        << "no glog file containing the token was written to " << tmp_dir->Str();
     ASSERT_NE(content.find(token), std::string::npos);
 
-    // Stop writing INFO logs to the directory we are about to delete, then restore flags.
+    // Stop writing INFO logs to the directory that is deleted when tmp_dir goes out of
+    // scope, then restore flags.
     google::SetLogDestination(google::GLOG_INFO, "");
     FLAGS_logtostderr = prev_logtostderr;
     FLAGS_timestamp_in_logfile_name = prev_timestamp_in_name;
     FLAGS_minloglevel = prev_minloglevel;
-    std::error_code ec;
-    fs::remove_all(log_dir, ec);
 }
 
 // Keep this test last: it installs a process-wide logger creator that cannot be
