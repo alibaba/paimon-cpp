@@ -181,7 +181,6 @@ set(PAIMON_COMMON_SRCS
 if(PAIMON_ENABLE_S3)
     list(APPEND PAIMON_COMMON_SRCS common/fs/http_client.cpp
          common/fs/object_store_file_system.cpp)
-    set(PAIMON_OBJECT_STORE_LINK_LIBS CURL::libcurl)
 endif()
 
 set(PAIMON_CORE_SRCS
@@ -416,7 +415,7 @@ add_paimon_lib(paimon
                xxhash
                Threads::Threads
                RapidJSON
-               ${PAIMON_OBJECT_STORE_LINK_LIBS}
+               ${PAIMON_HTTP_LINK_LIBS}
                STATIC_LINK_LIBS
                arrow
                tbb
@@ -426,7 +425,7 @@ add_paimon_lib(paimon
                xxhash
                Threads::Threads
                RapidJSON
-               ${PAIMON_OBJECT_STORE_LINK_LIBS}
+               ${PAIMON_HTTP_LINK_LIBS}
                SHARED_LINK_FLAGS
                ${PAIMON_VERSION_SCRIPT_FLAGS})
 
@@ -852,6 +851,14 @@ if(PAIMON_BUILD_TESTS)
     if(PAIMON_ENABLE_S3)
         list(APPEND PAIMON_OBJECT_STORE_FS_TEST_SOURCES
              common/fs/object_store_file_system_test.cpp)
+
+        add_paimon_test(http_client_test
+                        SOURCES
+                        common/fs/http_client_test.cpp
+                        STATIC_LINK_LIBS
+                        paimon_shared
+                        fmt
+                        ${GTEST_LINK_TOOLCHAIN})
     endif()
 
     add_paimon_test(fs_test
