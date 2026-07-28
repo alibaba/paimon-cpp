@@ -85,6 +85,13 @@ class PAIMON_EXPORT NestedProjectionUtils {
         const std::shared_ptr<arrow::Array>& map_array,
         const std::vector<std::string>& selected_keys, arrow::MemoryPool* pool);
 
+    /// Reshape `array` to `read_type`, null-filling nested fields added by schema
+    /// evolution. No-op when types match. STRUCT matches children by paimon field id;
+    /// LIST/MAP recurse into items, preserving offsets and validity.
+    static Result<std::shared_ptr<arrow::Array>> AlignArrayToReadType(
+        const std::shared_ptr<arrow::Array>& array,
+        const std::shared_ptr<arrow::DataType>& read_type, arrow::MemoryPool* pool);
+
  private:
     static Result<bool> HasNestedSubfieldProjectionType(
         const std::shared_ptr<arrow::DataType>& file_type,

@@ -38,7 +38,8 @@ namespace paimon {
 /// between them.
 ///
 /// Multiple blob fields are supported. Each blob field is written to its own set of blob files
-/// independently via MultipleBlobFileWriter.
+/// independently via MultipleBlobFileWriter. For blob-only writes, the main writer factory may be
+/// nullptr and only blob files are produced.
 ///
 /// <pre>
 /// For example,
@@ -76,8 +77,7 @@ class RollingBlobFileWriter
  private:
     static Status ValidateFileConsistency(
         const std::shared_ptr<DataFileMeta>& main_data_file_meta,
-        const std::vector<std::shared_ptr<DataFileMeta>>& blob_tagged_metas,
-        int32_t blob_field_count);
+        const std::vector<std::shared_ptr<DataFileMeta>>& blob_tagged_metas);
 
     Status CloseCurrentWriter();
 

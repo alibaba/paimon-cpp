@@ -21,6 +21,7 @@
 
 #include "arrow/type.h"
 #include "gtest/gtest.h"
+#include "paimon/common/data/blob_utils.h"
 #include "paimon/common/data/variant/variant_access_utils.h"
 #include "paimon/common/data/variant/variant_defs.h"
 #include "paimon/common/data/variant/variant_type_utils.h"
@@ -151,6 +152,51 @@ TEST(ArrowSchemaValidatorTest, TestInvalidDataType) {
     }
 }
 
+TEST(ArrowSchemaValidatorTest, TestBlobFieldMustBeTopLevel) {
+    {
+        auto arrow_schema =
+            arrow::schema(arrow::FieldVector({BlobUtils::ToArrowField("blob", true)}));
+        ASSERT_OK(ArrowSchemaValidator::ValidateSchema(*arrow_schema));
+    }
+    {
+        std::vector<DataField> fields = {DataField(0, BlobUtils::ToArrowField("blob", true))};
+        auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(fields);
+        ASSERT_OK(ArrowSchemaValidator::ValidateSchemaWithFieldId(*arrow_schema));
+    }
+    {
+        auto nested_blob_field =
+            arrow::field("nested", arrow::struct_({BlobUtils::ToArrowField("blob", true)}));
+        auto arrow_schema = arrow::schema(arrow::FieldVector({nested_blob_field}));
+        ASSERT_NOK_WITH_MSG(ArrowSchemaValidator::ValidateSchema(*arrow_schema),
+                            "Blob field must be a top-level field.");
+    }
+    {
+        auto array_blob_field =
+            arrow::field("array_blob", arrow::list(BlobUtils::ToArrowField("item", true)));
+        auto arrow_schema = arrow::schema(arrow::FieldVector({array_blob_field}));
+        ASSERT_NOK_WITH_MSG(ArrowSchemaValidator::ValidateSchema(*arrow_schema),
+                            "Blob field must be a top-level field.");
+    }
+    {
+        auto map_blob_field = arrow::field(
+            "map_blob",
+            arrow::map(arrow::utf8(), arrow::struct_({BlobUtils::ToArrowField("blob", true)})));
+        auto arrow_schema = arrow::schema(arrow::FieldVector({map_blob_field}));
+        ASSERT_NOK_WITH_MSG(ArrowSchemaValidator::ValidateSchema(*arrow_schema),
+                            "Blob field must be a top-level field.");
+    }
+    {
+        std::vector<DataField> nested_fields = {
+            DataField(1, BlobUtils::ToArrowField("blob", true))};
+        std::vector<DataField> fields = {DataField(
+            0,
+            arrow::field("nested", DataField::ConvertDataFieldsToArrowStructType(nested_fields)))};
+        auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(fields);
+        ASSERT_NOK_WITH_MSG(ArrowSchemaValidator::ValidateSchemaWithFieldId(*arrow_schema),
+                            "Blob field must be a top-level field.");
+    }
+}
+
 TEST(ArrowSchemaValidatorTest, ValidateDataTypeWithFieldId) {
     {
         std::vector<DataField> fields = {DataField(3, arrow::field("f3", arrow::float64())),
@@ -268,7 +314,8 @@ TEST(ArrowSchemaValidatorTest, ValidateDataTypeWithFieldId) {
         auto struct_type = DataField::ConvertDataFieldsToArrowStructType(fields);
         std::set<int32_t> field_id_set;
         ASSERT_NOK_WITH_MSG(ArrowSchemaValidator::ValidateDataTypeWithFieldId(
-                                struct_type, /*key_value_metadata=*/nullptr, &field_id_set),
+                                struct_type, /*key_value_metadata=*/nullptr,
+                                /*allow_blob=*/true, &field_id_set),
                             "Unknown or unsupported arrow type: large_string");
     }
 }

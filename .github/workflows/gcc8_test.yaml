@@ -42,7 +42,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y gcc-8 g++-8 ninja-build git git-lfs tar curl tzdata zip unzip pkg-config build-essential python3-dev gdb sudo
+          DEBIAN_FRONTEND=noninteractive apt-get install -y gcc-8 g++-8 ninja-build git git-lfs tar curl libcurl4-openssl-dev libssl-dev tzdata zip unzip pkg-config build-essential python3-dev gdb sudo
           curl -L -O https://github.com/Kitware/CMake/releases/download/v3.28.3/cmake-3.28.3-linux-x86_64.tar.gz
           tar -zxvf cmake-3.28.3-linux-x86_64.tar.gz -C /usr/local --strip-components=1
           rm cmake-3.28.3-linux-x86_64.tar.gz

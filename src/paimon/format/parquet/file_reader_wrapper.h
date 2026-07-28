@@ -158,9 +158,6 @@ class FileReaderWrapper {
     /// Read next batch from the fully-matched batch_reader_. Returns nullptr when exhausted.
     Result<std::shared_ptr<arrow::RecordBatch>> NextFullyMatched();
 
-    /// Build page_filtered_read_schema_ from the given column indices. No-op if already built.
-    Status BuildPageFilteredSchema(const std::vector<int32_t>& column_indices);
-
     /// Collect all byte ranges that need pre-buffering (page-filtered + fully-matched).
     std::vector<::arrow::io::ReadRange> CollectPreBufferRanges(
         const std::vector<int32_t>& column_indices);
@@ -193,11 +190,6 @@ class FileReaderWrapper {
 
     // Target row groups with row ranges for none page-level filtering and page-level filtering
     std::vector<TargetRowGroup> target_row_groups_;
-
-    // Arrow schema covering target_column_indices_, used when constructing the per-RG
-    // page-filtered reader. Cached in PrepareForReading because it's identical across
-    // all page-filtered RGs in a session.
-    std::shared_ptr<arrow::Schema> page_filtered_read_schema_;
 
     // Track pre-buffered ranges so we can wait on destruction
     std::vector<::arrow::io::ReadRange> prebuffered_ranges_;

@@ -71,6 +71,10 @@ jobs:
         if: ${{ !matrix.skip_rust }}
         shell: bash
         run: ci/scripts/setup_rust.sh
+      - name: Install HTTP and TLS development dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev
       - name: Build Paimon
         shell: bash
         env:

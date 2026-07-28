@@ -26,11 +26,14 @@
 #include "arrow/array/array_primitive.h"
 #include "arrow/array/builder_primitive.h"
 #include "arrow/array/concatenate.h"
+#include "arrow/array/util.h"
+#include "arrow/compute/cast.h"
 #include "arrow/type.h"
 #include "fmt/format.h"
 #include "paimon/common/data/variant/variant_access_utils.h"
 #include "paimon/common/data/variant/variant_type_utils.h"
 #include "paimon/common/utils/string_utils.h"
+#include "paimon/core/casting/casting_utils.h"
 #include "paimon/status.h"
 
 namespace paimon {
@@ -150,12 +153,47 @@ Result<bool> NestedProjectionUtils::HasNestedSubfieldProjectionType(
 
 namespace {
 
+// Structural equality that also compares paimon field IDs on STRUCT children, so a
+// drop+add of a same-name/same-type field (new ID) is not treated as a no-op.
+Result<bool> EqualWithFieldIds(const std::shared_ptr<arrow::DataType>& a,
+                               const std::shared_ptr<arrow::DataType>& b) {
+    if (a->id() != b->id() || a->num_fields() != b->num_fields()) {
+        return false;
+    }
+    if (a->num_fields() == 0) {
+        return a->Equals(*b);
+    }
+    for (int32_t i = 0; i < a->num_fields(); ++i) {
+        const auto& fa = a->field(i);
+        const auto& fb = b->field(i);
+        if (fa->nullable() != fb->nullable()) {
+            return false;
+        }
+        if (a->id() == arrow::Type::STRUCT) {
+            if (fa->name() != fb->name()) {
+                return false;
+            }
+            // Compare IDs only when present (a map entry's key/value carry none).
+            auto id_a = NestedProjectionUtils::GetPaimonFieldId(fa);
+            auto id_b = NestedProjectionUtils::GetPaimonFieldId(fb);
+            if (id_a.ok() && id_b.ok() && id_a.value() != id_b.value()) {
+                return false;
+            }
+        }
+        PAIMON_ASSIGN_OR_RAISE(bool child_equal, EqualWithFieldIds(fa->type(), fb->type()));
+        if (!child_equal) {
+            return false;
+        }
+    }
+    return true;
+}
+
 /// Whether `read_type` is `data_type` with variant columns replaced by their variant-access
-/// projections and nothing else changed. Such a read drops no field, so it is not a partial
-/// projection of an enclosing repeated group and may pass through where a real one must fail.
-bool IsVariantAccessSubstitution(const std::shared_ptr<arrow::DataType>& read_type,
-                                 const std::shared_ptr<arrow::DataType>& data_type) {
-    if (read_type->Equals(data_type)) {
+/// projections and nothing else changed (matching paimon field IDs).
+Result<bool> IsVariantAccessSubstitution(const std::shared_ptr<arrow::DataType>& read_type,
+                                         const std::shared_ptr<arrow::DataType>& data_type) {
+    PAIMON_ASSIGN_OR_RAISE(bool equal, EqualWithFieldIds(read_type, data_type));
+    if (equal) {
         return true;
     }
     if (VariantAccessUtils::IsVariantAccessType(read_type) &&
@@ -169,16 +207,103 @@ bool IsVariantAccessSubstitution(const std::shared_ptr<arrow::DataType>& read_ty
     for (int32_t i = 0; i < read_type->num_fields(); ++i) {
         const std::shared_ptr<arrow::Field>& read_child = read_type->field(i);
         const std::shared_ptr<arrow::Field>& data_child = data_type->field(i);
-        // LIST and MAP name their children by format convention, so only STRUCT is matched
-        // by name.
-        if (read_type->id() == arrow::Type::STRUCT && read_child->name() != data_child->name()) {
-            return false;
+        // LIST and MAP name their children by format convention, so only STRUCT is
+        // matched by name and field ID.
+        if (read_type->id() == arrow::Type::STRUCT) {
+            if (read_child->name() != data_child->name()) {
+                return false;
+            }
+            auto id_r = NestedProjectionUtils::GetPaimonFieldId(read_child);
+            auto id_d = NestedProjectionUtils::GetPaimonFieldId(data_child);
+            if (id_r.ok() && id_d.ok() && id_r.value() != id_d.value()) {
+                return false;
+            }
         }
-        if (!IsVariantAccessSubstitution(read_child->type(), data_child->type())) {
+        PAIMON_ASSIGN_OR_RAISE(bool sub,
+                               IsVariantAccessSubstitution(read_child->type(), data_child->type()));
+        if (!sub) {
             return false;
         }
     }
     return true;
+}
+
+// Reconcile a LIST/MAP item: read may ADD fields (evolution, null-filled
+// downstream) but must not DROP one. Returns the file-readable item type;
+// `container` names the container ("list"/"map") for the error message.
+Result<std::shared_ptr<arrow::DataType>> PruneRepeatedItemType(
+    const std::shared_ptr<arrow::DataType>& read_type,
+    const std::shared_ptr<arrow::DataType>& data_type, const char* container) {
+    PAIMON_ASSIGN_OR_RAISE(bool same, EqualWithFieldIds(read_type, data_type));
+    if (same) {
+        return data_type;
+    }
+    PAIMON_ASSIGN_OR_RAISE(bool substitution, IsVariantAccessSubstitution(read_type, data_type));
+    if (substitution) {
+        return read_type;
+    }
+    if (read_type->id() != data_type->id()) {
+        return Status::Invalid(
+            fmt::format("PruneDataType nested item type mismatch inside {}: read {} vs data {}",
+                        container, read_type->ToString(), data_type->ToString()));
+    }
+    switch (data_type->id()) {
+        case arrow::Type::STRUCT: {
+            arrow::FieldVector item_fields;
+            for (const auto& data_child : data_type->fields()) {
+                PAIMON_ASSIGN_OR_RAISE(int32_t data_child_id,
+                                       NestedProjectionUtils::GetPaimonFieldId(data_child));
+                std::shared_ptr<arrow::Field> read_child;
+                for (const auto& candidate : read_type->fields()) {
+                    PAIMON_ASSIGN_OR_RAISE(int32_t candidate_id,
+                                           NestedProjectionUtils::GetPaimonFieldId(candidate));
+                    if (candidate_id == data_child_id) {
+                        read_child = candidate;
+                        break;
+                    }
+                }
+                if (!read_child) {
+                    // A file field is dropped -- a real partial projection.
+                    return Status::Invalid(fmt::format(
+                        "PruneDataType does not support partial projection inside {}: src {} vs "
+                        "target {}",
+                        container, data_type->ToString(), read_type->ToString()));
+                }
+                if (read_child->name() != data_child->name()) {
+                    return Status::Invalid(fmt::format(
+                        "PruneDataType does not support renaming inside {}: field id {} read '{}' "
+                        "vs data '{}'",
+                        container, data_child_id, read_child->name(), data_child->name()));
+                }
+                PAIMON_ASSIGN_OR_RAISE(
+                    std::shared_ptr<arrow::DataType> item_child_type,
+                    PruneRepeatedItemType(read_child->type(), data_child->type(), container));
+                item_fields.push_back(data_child->WithType(item_child_type));
+            }
+            return arrow::struct_(item_fields);
+        }
+        case arrow::Type::LIST: {
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::DataType> item,
+                                   PruneRepeatedItemType(read_type->field(0)->type(),
+                                                         data_type->field(0)->type(), container));
+            return arrow::list(data_type->field(0)->WithType(item));
+        }
+        case arrow::Type::MAP: {
+            auto read_map = std::static_pointer_cast<arrow::MapType>(read_type);
+            auto data_map = std::static_pointer_cast<arrow::MapType>(data_type);
+            PAIMON_ASSIGN_OR_RAISE(
+                std::shared_ptr<arrow::DataType> key,
+                PruneRepeatedItemType(read_map->key_type(), data_map->key_type(), container));
+            PAIMON_ASSIGN_OR_RAISE(
+                std::shared_ptr<arrow::DataType> item,
+                PruneRepeatedItemType(read_map->item_type(), data_map->item_type(), container));
+            return std::static_pointer_cast<arrow::DataType>(std::make_shared<arrow::MapType>(
+                data_map->key_field()->WithType(key), data_map->item_field()->WithType(item),
+                data_map->keys_sorted()));
+        }
+        default:
+            return data_type;
+    }
 }
 
 }  // namespace
@@ -186,8 +311,9 @@ bool IsVariantAccessSubstitution(const std::shared_ptr<arrow::DataType>& read_ty
 Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::PruneDataType(
     const std::shared_ptr<arrow::DataType>& read_type,
     const std::shared_ptr<arrow::DataType>& data_type) {
-    // Identical types need no pruning.
-    if (read_type->Equals(data_type)) {
+    // Identical types (including paimon field IDs) need no pruning.
+    PAIMON_ASSIGN_OR_RAISE(bool same, EqualWithFieldIds(read_type, data_type));
+    if (same) {
         return std::optional<std::shared_ptr<arrow::DataType>>(data_type);
     }
 
@@ -232,25 +358,35 @@ Result<std::optional<std::shared_ptr<arrow::DataType>>> NestedProjectionUtils::P
             return std::optional<std::shared_ptr<arrow::DataType>>(arrow::struct_(pruned_fields));
         }
         case arrow::Type::LIST: {
-            if (IsVariantAccessSubstitution(read_type, data_type)) {
+            PAIMON_ASSIGN_OR_RAISE(bool list_substitution,
+                                   IsVariantAccessSubstitution(read_type, data_type));
+            if (list_substitution) {
                 return std::optional<std::shared_ptr<arrow::DataType>>(read_type);
             }
-            // Keep behavior aligned with format readers: partial projection inside
-            // LIST is unsupported and must fail fast.
-            return Status::Invalid(
-                fmt::format("PruneDataType does not support partial projection inside list: src {} "
-                            "vs target {}",
-                            data_type->ToString(), read_type->ToString()));
+            // Added fields (schema evolution) are allowed; dropped fields still fail.
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::DataType> item,
+                                   PruneRepeatedItemType(read_type->field(0)->type(),
+                                                         data_type->field(0)->type(), "list"));
+            return std::optional<std::shared_ptr<arrow::DataType>>(
+                arrow::list(data_type->field(0)->WithType(item)));
         }
         case arrow::Type::MAP: {
-            if (IsVariantAccessSubstitution(read_type, data_type)) {
+            PAIMON_ASSIGN_OR_RAISE(bool map_substitution,
+                                   IsVariantAccessSubstitution(read_type, data_type));
+            if (map_substitution) {
                 return std::optional<std::shared_ptr<arrow::DataType>>(read_type);
             }
-            // Keep behavior aligned with format readers: partial projection inside
-            // MAP is unsupported and must fail fast.
-            return Status::Invalid(fmt::format(
-                "PruneDataType does not support partial projection inside map: src {} vs target {}",
-                data_type->ToString(), read_type->ToString()));
+            auto read_map = std::static_pointer_cast<arrow::MapType>(read_type);
+            auto data_map = std::static_pointer_cast<arrow::MapType>(data_type);
+            PAIMON_ASSIGN_OR_RAISE(
+                std::shared_ptr<arrow::DataType> key,
+                PruneRepeatedItemType(read_map->key_type(), data_map->key_type(), "map"));
+            PAIMON_ASSIGN_OR_RAISE(
+                std::shared_ptr<arrow::DataType> item,
+                PruneRepeatedItemType(read_map->item_type(), data_map->item_type(), "map"));
+            return std::optional<std::shared_ptr<arrow::DataType>>(std::make_shared<arrow::MapType>(
+                data_map->key_field()->WithType(key), data_map->item_field()->WithType(item),
+                data_map->keys_sorted()));
         }
         default:
             // Atomic type: return data_type as-is (type evolution is handled
@@ -450,6 +586,132 @@ Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::FilterMapArrayBySel
     std::shared_ptr<arrow::Array> result_map;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(map_builder.Finish(&result_map));
     return result_map;
+}
+
+namespace {
+// Strips physical-only differences from a leaf type: ORC lazy decoding wraps
+// strings in a dictionary and may widen them to large_string. binary is not
+// dictionary-encoded and large_binary is blob's real type, so neither is
+// normalized. Two leaves with equal normalized types hold the same logical
+// values.
+std::shared_ptr<arrow::DataType> NormalizeLeafRepresentation(
+    const std::shared_ptr<arrow::DataType>& type) {
+    auto t = type;
+    if (t->id() == arrow::Type::DICTIONARY) {
+        t = std::static_pointer_cast<arrow::DictionaryType>(t)->value_type();
+    }
+    if (t->id() == arrow::Type::LARGE_STRING) {
+        return arrow::utf8();
+    }
+    return t;
+}
+}  // namespace
+
+Result<std::shared_ptr<arrow::Array>> NestedProjectionUtils::AlignArrayToReadType(
+    const std::shared_ptr<arrow::Array>& array, const std::shared_ptr<arrow::DataType>& read_type,
+    arrow::MemoryPool* pool) {
+    PAIMON_ASSIGN_OR_RAISE(bool same, EqualWithFieldIds(array->type(), read_type));
+    if (same) {
+        return array;
+    }
+    // Produce exactly `read_type` so every file yields the same output type: rebuild
+    // STRUCT/LIST/MAP with read-side types/nullability and cast a leaf (decodes dict).
+    const auto& data = array->data();
+    switch (read_type->id()) {
+        case arrow::Type::STRUCT: {
+            if (array->type()->id() != arrow::Type::STRUCT) {
+                return Status::Invalid(fmt::format("AlignArrayToReadType cannot reconcile {} to {}",
+                                                   array->type()->ToString(),
+                                                   read_type->ToString()));
+            }
+            const auto& array_type = array->type();
+            std::vector<std::shared_ptr<arrow::ArrayData>> children;
+            children.reserve(read_type->num_fields());
+            for (const auto& read_field : read_type->fields()) {
+                // Match by name (parquet drops nested field-id metadata); if both
+                // carry IDs they must agree, so a drop+add same-name field won't match.
+                auto read_id = GetPaimonFieldId(read_field);
+                int32_t match = -1;
+                for (int32_t j = 0; j < array_type->num_fields(); j++) {
+                    const auto& array_field = array_type->field(j);
+                    if (array_field->name() != read_field->name()) {
+                        continue;
+                    }
+                    auto data_id = GetPaimonFieldId(array_field);
+                    if (read_id.ok() && data_id.ok() && read_id.value() != data_id.value()) {
+                        continue;
+                    }
+                    match = j;
+                    break;
+                }
+                if (match >= 0) {
+                    auto child = arrow::MakeArray(data->child_data[match]);
+                    PAIMON_ASSIGN_OR_RAISE(child,
+                                           AlignArrayToReadType(child, read_field->type(), pool));
+                    children.push_back(child->data());
+                } else {
+                    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+                        std::shared_ptr<arrow::Array> null_child,
+                        arrow::MakeArrayOfNull(read_field->type(), data->offset + data->length,
+                                               pool));
+                    children.push_back(null_child->data());
+                }
+            }
+            auto new_data = data->Copy();
+            new_data->type = read_type;
+            new_data->child_data = std::move(children);
+            return arrow::MakeArray(new_data);
+        }
+        case arrow::Type::LIST: {
+            if (array->type()->id() != arrow::Type::LIST) {
+                return Status::Invalid(fmt::format("AlignArrayToReadType cannot reconcile {} to {}",
+                                                   array->type()->ToString(),
+                                                   read_type->ToString()));
+            }
+            auto read_list = std::static_pointer_cast<arrow::ListType>(read_type);
+            auto values = arrow::MakeArray(data->child_data[0]);
+            PAIMON_ASSIGN_OR_RAISE(values,
+                                   AlignArrayToReadType(values, read_list->value_type(), pool));
+            auto new_data = data->Copy();
+            new_data->type = read_type;
+            new_data->child_data = {values->data()};
+            return arrow::MakeArray(new_data);
+        }
+        case arrow::Type::MAP: {
+            if (array->type()->id() != arrow::Type::MAP) {
+                return Status::Invalid(fmt::format("AlignArrayToReadType cannot reconcile {} to {}",
+                                                   array->type()->ToString(),
+                                                   read_type->ToString()));
+            }
+            auto read_map = std::static_pointer_cast<arrow::MapType>(read_type);
+            const auto& entries_data = data->child_data[0];
+            auto key = arrow::MakeArray(entries_data->child_data[0]);
+            auto value = arrow::MakeArray(entries_data->child_data[1]);
+            PAIMON_ASSIGN_OR_RAISE(key, AlignArrayToReadType(key, read_map->key_type(), pool));
+            PAIMON_ASSIGN_OR_RAISE(value, AlignArrayToReadType(value, read_map->item_type(), pool));
+            auto new_entries = entries_data->Copy();
+            new_entries->type = arrow::struct_({read_map->key_field(), read_map->item_field()});
+            new_entries->child_data = {key->data(), value->data()};
+            auto new_data = data->Copy();
+            new_data->type = read_type;
+            new_data->child_data = {new_entries};
+            return arrow::MakeArray(new_data);
+        }
+        default: {
+            // Leaf: only physical-representation differences are valid here (ORC
+            // dictionary encoding, string/binary offset width). Genuine type
+            // evolution is handled by FieldMappingReader's cast executors and
+            // rejected upstream in PruneDataType, so fail anything else.
+            if (!NormalizeLeafRepresentation(array->type())
+                     ->Equals(*NormalizeLeafRepresentation(read_type))) {
+                return Status::Invalid(
+                    fmt::format("AlignArrayToReadType unsupported leaf type change: data {} vs "
+                                "read {}",
+                                array->type()->ToString(), read_type->ToString()));
+            }
+            return CastingUtils::Cast(array, read_type, arrow::compute::CastOptions::Safe(), pool);
+        }
+    }
 }
 
 }  // namespace paimon
