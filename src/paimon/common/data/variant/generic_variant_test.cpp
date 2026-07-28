@@ -16,8 +16,10 @@
 
 #include "paimon/common/data/variant/generic_variant.h"
 
+#include <functional>
 #include <limits>
 #include <string>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "paimon/common/data/variant/variant_builder.h"
@@ -343,6 +345,77 @@ TEST_F(GenericVariantTest, NonFiniteDoubleToJson) {
     ASSERT_OK_AND_ASSIGN(auto v, builder.Build(pool_));
     ASSERT_OK_AND_ASSIGN(std::string json, v->ToJson());
     ASSERT_EQ(json, "\"Infinity\"");
+}
+
+TEST_F(GenericVariantTest, GetTypeInfoReturnsHeaderBits) {
+    // GetTypeInfo exposes the primitive header's type-info bits; 42 is encoded as an int1.
+    auto v = FromJson("42");
+    ASSERT_OK_AND_ASSIGN(int32_t type_info, v->GetTypeInfo());
+    EXPECT_EQ(type_info, VariantDefs::kInt1);
+}
+
+TEST_F(GenericVariantTest, TypedGettersRejectMismatchedTypes) {
+    // Each accessor validates the value header and fails when the stored type differs.
+    auto number = FromJson("42");    // primitive int1
+    auto text = FromJson("\"hi\"");  // short string
+    auto real = FromJson("1.5e0");   // double
+
+    // A primitive long is neither boolean/double/decimal/float/binary/string/uuid, nor a
+    // container.
+    ASSERT_NOK(number->GetBoolean());
+    ASSERT_NOK(number->GetDouble());
+    ASSERT_NOK(number->GetDecimal());
+    ASSERT_NOK(number->GetFloat());
+    ASSERT_NOK(number->GetBinary());
+    ASSERT_NOK(number->GetString());
+    ASSERT_NOK(number->GetUuid());
+    ASSERT_NOK(number->ObjectSize());
+    ASSERT_NOK(number->ArraySize());
+    // A short string is not a primitive, so long/decimal decoding rejects it early.
+    ASSERT_NOK(text->GetLong());
+    ASSERT_NOK(text->GetDecimal());
+    // A double is a primitive but not an integer-like type.
+    ASSERT_NOK(real->GetLong());
+}
+
+TEST_F(GenericVariantTest, ValueSizeCoversAllPrimitiveWidths) {
+    // Builds an array whose elements span the primitive width branches of `ValueSize` (int4,
+    // decimal8, binary, uuid). Copying elements into the array and re-reading each element's
+    // value both exercise `ValueSize`.
+    auto build = [this](const std::function<Status(VariantBuilder&)>& append) {
+        VariantBuilder builder(/*allow_duplicate_keys=*/false);
+        EXPECT_OK(append(builder));
+        auto result = builder.Build(pool_);
+        EXPECT_TRUE(result.ok()) << result.status().ToString();
+        return result.value();
+    };
+    std::shared_ptr<GenericVariant> int4 =
+        build([](VariantBuilder& b) { return b.AppendLong(100000); });  // needs 4 bytes
+    std::shared_ptr<GenericVariant> decimal8 =
+        build([](VariantBuilder& b) { return b.AppendDecimal(VariantDecimal{1234567890, 2}); });
+    std::shared_ptr<GenericVariant> binary =
+        build([](VariantBuilder& b) { return b.AppendBinary(std::string_view("abc", 3)); });
+    std::string uuid_bytes(16, '\x07');
+    std::shared_ptr<GenericVariant> uuid =
+        build([&](VariantBuilder& b) { return b.AppendUuid(uuid_bytes); });
+
+    VariantBuilder array_builder(/*allow_duplicate_keys=*/false);
+    int32_t start = array_builder.GetWritePos();
+    std::vector<int32_t> offsets;
+    for (const std::shared_ptr<GenericVariant>* element : {&int4, &decimal8, &binary, &uuid}) {
+        offsets.push_back(array_builder.GetWritePos() - start);
+        ASSERT_OK(array_builder.AppendVariant(**element));
+    }
+    ASSERT_OK(array_builder.FinishWritingArray(start, offsets));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GenericVariant> array_variant, array_builder.Build(pool_));
+
+    ASSERT_OK_AND_ASSIGN(int32_t size, array_variant->ArraySize());
+    ASSERT_EQ(size, 4);
+    for (int32_t i = 0; i < size; ++i) {
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<GenericVariant> element,
+                             array_variant->GetElementAtIndex(i));
+        ASSERT_OK(element->Value());
+    }
 }
 
 }  // namespace paimon::test

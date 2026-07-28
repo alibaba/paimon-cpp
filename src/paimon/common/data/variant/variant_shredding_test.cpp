@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -21,6 +22,7 @@
 #include "arrow/api.h"
 #include "gtest/gtest.h"
 #include "paimon/common/data/variant/generic_variant.h"
+#include "paimon/common/data/variant/variant_builder.h"
 #include "paimon/common/data/variant/variant_defs.h"
 #include "paimon/common/data/variant/variant_reassembler.h"
 #include "paimon/common/data/variant/variant_schema.h"
@@ -87,6 +89,78 @@ class VariantShreddingTest : public ::testing::Test {
     }
 
  protected:
+    // The physical shredded arrow type for a logical shredding type.
+    std::shared_ptr<arrow::DataType> Physical(const std::shared_ptr<arrow::DataType>& logical) {
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> physical,
+                             VariantShreddingUtils::VariantShreddingSchema(logical));
+        return physical;
+    }
+
+    std::shared_ptr<GenericVariant> Json(const char* json) {
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<GenericVariant> variant,
+                             GenericVariant::FromJson(json, pool_));
+        return variant;
+    }
+
+    // Builds a single variant using the direct append API, which can encode types (float, binary,
+    // date, timestamp) that JSON parsing never produces.
+    std::shared_ptr<GenericVariant> BuildVariant(
+        const std::function<Status(VariantBuilder&)>& append) {
+        VariantBuilder builder(/*allow_duplicate_keys=*/false);
+        Status st = append(builder);
+        EXPECT_TRUE(st.ok()) << st.ToString();
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<GenericVariant> variant, builder.Build(pool_));
+        return variant;
+    }
+
+    // Shreds the given variants (nullptr = null row) against a physical shredded type, reassembles
+    // them, asserts each reassembled variant renders back to the same JSON, and returns the
+    // shredded array. Unlike `RoundTrip`, the physical type is provided directly so that typed
+    // columns unsupported by `VariantShreddingSchema` (date/timestamp) can be exercised.
+    std::shared_ptr<arrow::StructArray> ShredAndCheck(
+        const std::shared_ptr<arrow::DataType>& physical,
+        const std::vector<std::shared_ptr<GenericVariant>>& variants) {
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<VariantSchema> schema,
+                             VariantShreddingUtils::BuildVariantSchema(physical));
+        EXPECT_OK_AND_ASSIGN(
+            std::unique_ptr<VariantShreddedColumnWriter> writer,
+            VariantShreddedColumnWriter::Create(schema, physical, arrow::default_memory_pool()));
+        std::vector<std::string> expected_jsons;
+        for (const auto& variant : variants) {
+            if (variant == nullptr) {
+                EXPECT_OK(writer->AppendNull());
+                expected_jsons.emplace_back();
+                continue;
+            }
+            EXPECT_OK_AND_ASSIGN(std::string expected_json, variant->ToJson());
+            expected_jsons.push_back(std::move(expected_json));
+            EXPECT_OK(writer->Append(*variant));
+        }
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<arrow::Array> shredded_array, writer->Finish());
+        auto shredded = std::static_pointer_cast<arrow::StructArray>(shredded_array);
+
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<arrow::Array> assembled_array,
+                             VariantReassembler::AssembleVariantArray(
+                                 shredded, schema, pool_, arrow::default_memory_pool()));
+        auto assembled = std::static_pointer_cast<arrow::StructArray>(assembled_array);
+        auto value_column = std::static_pointer_cast<arrow::BinaryArray>(assembled->field(0));
+        auto metadata_column = std::static_pointer_cast<arrow::BinaryArray>(assembled->field(1));
+        for (size_t i = 0; i < variants.size(); ++i) {
+            SCOPED_TRACE("row " + std::to_string(i));
+            if (variants[i] == nullptr) {
+                EXPECT_TRUE(assembled->IsNull(i));
+                continue;
+            }
+            EXPECT_FALSE(assembled->IsNull(i));
+            EXPECT_OK_AND_ASSIGN(std::shared_ptr<GenericVariant> variant,
+                                 GenericVariant::Create(value_column->GetView(i),
+                                                        metadata_column->GetView(i), pool_));
+            EXPECT_OK_AND_ASSIGN(std::string actual_json, variant->ToJson());
+            EXPECT_EQ(actual_json, expected_jsons[i]);
+        }
+        return shredded;
+    }
+
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
 };
 
@@ -237,6 +311,157 @@ TEST_F(VariantShreddingTest, ShredScalarsAndMismatches) {
         {arrow::field("arr", arrow::list(arrow::struct_({arrow::field("k", arrow::utf8())})))});
     RoundTrip(array_type, {R"({"arr": [{"k": "v1"}, {"k": "v2", "extra": 1}, {"other": 2}]})",
                            "{\"arr\": [1, 2]}", R"({"arr": {"k": "v"}})"});
+}
+
+TEST_F(VariantShreddingTest, ScalarShreddingIntegerWidths) {
+    // int8/int16 targets: in-range longs shred into the narrow typed column, while out-of-range
+    // values fall back to the residual value column. Decimal-integral inputs take the
+    // decimal->integer shredding path.
+    ShredAndCheck(Physical(arrow::struct_({arrow::field("x", arrow::int8())})),
+                  {Json(R"({"x": 5})"), Json(R"({"x": 200})"), Json(R"({"x": 5.0})")});
+    ShredAndCheck(Physical(arrow::struct_({arrow::field("x", arrow::int16())})),
+                  {Json(R"({"x": 5})"), Json(R"({"x": 40000})"), Json(R"({"x": 5.0})")});
+}
+
+TEST_F(VariantShreddingTest, ScalarShreddingFloatAndBinary) {
+    // Float and binary variants are not producible from JSON, so build them directly. They shred
+    // into their typed columns and round-trip back to the same value.
+    ShredAndCheck(Physical(arrow::float32()),
+                  {BuildVariant([](VariantBuilder& b) { return b.AppendFloat(1.5f); }), nullptr});
+    ShredAndCheck(Physical(arrow::binary()), {BuildVariant([](VariantBuilder& b) {
+                      return b.AppendBinary(std::string_view("\x01\x02\x03", 3));
+                  })});
+}
+
+TEST_F(VariantShreddingTest, ScalarShreddingDate) {
+    // date typed columns are produced by external engines; `VariantShreddingSchema` itself never
+    // emits them, so build the physical shredded type directly.
+    auto physical = arrow::struct_({arrow::field("metadata", arrow::binary(), false),
+                                    arrow::field("value", arrow::binary(), true),
+                                    arrow::field("typed_value", arrow::date32(), true)});
+    ShredAndCheck(physical,
+                  {BuildVariant([](VariantBuilder& b) { return b.AppendDate(19000); }), nullptr});
+}
+
+TEST_F(VariantShreddingTest, TimestampSchemaParsing) {
+    auto make_physical = [](const std::shared_ptr<arrow::DataType>& ts) {
+        return arrow::struct_({arrow::field("metadata", arrow::binary(), false),
+                               arrow::field("value", arrow::binary(), true),
+                               arrow::field("typed_value", ts, true)});
+    };
+    // A microsecond timestamp with a timezone parses as TIMESTAMP_LTZ; without, TIMESTAMP_NTZ.
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<VariantSchema> ltz,
+                         VariantShreddingUtils::BuildVariantSchema(
+                             make_physical(arrow::timestamp(arrow::TimeUnit::MICRO, "UTC"))));
+    ASSERT_TRUE(ltz->scalar_schema.has_value());
+    ASSERT_EQ(ltz->scalar_schema->kind, VariantSchema::ScalarKind::kTimestampLtz);
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<VariantSchema> ntz,
+                         VariantShreddingUtils::BuildVariantSchema(
+                             make_physical(arrow::timestamp(arrow::TimeUnit::MICRO))));
+    ASSERT_TRUE(ntz->scalar_schema.has_value());
+    ASSERT_EQ(ntz->scalar_schema->kind, VariantSchema::ScalarKind::kTimestampNtz);
+    // Non-microsecond timestamps cannot represent the variant's microsecond values, so they are
+    // rejected as an invalid shredding schema.
+    ASSERT_NOK(VariantShreddingUtils::BuildVariantSchema(
+        make_physical(arrow::timestamp(arrow::TimeUnit::MILLI, "UTC"))));
+}
+
+TEST_F(VariantShreddingTest, TimestampReassembly) {
+    // The writer never produces timestamp typed columns, but the reassembler must handle files
+    // written by engines that do. Build a shredded array with a populated timestamp typed_value
+    // and verify it reassembles into the same variant.
+    auto reassemble_one = [&](const std::shared_ptr<arrow::DataType>& ts_type,
+                              const std::shared_ptr<GenericVariant>& reference, int64_t micros) {
+        auto physical = arrow::struct_({arrow::field("metadata", arrow::binary(), false),
+                                        arrow::field("value", arrow::binary(), true),
+                                        arrow::field("typed_value", ts_type, true)});
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<VariantSchema> schema,
+                             VariantShreddingUtils::BuildVariantSchema(physical));
+        std::string metadata(reference->Metadata());
+        ASSERT_OK_AND_ASSIGN(std::string expected_json, reference->ToJson());
+
+        arrow::BinaryBuilder meta_builder;
+        ASSERT_TRUE(meta_builder.Append(metadata).ok());
+        std::shared_ptr<arrow::Array> meta_array;
+        ASSERT_TRUE(meta_builder.Finish(&meta_array).ok());
+        arrow::BinaryBuilder value_builder;
+        ASSERT_TRUE(value_builder.AppendNull().ok());
+        std::shared_ptr<arrow::Array> value_array;
+        ASSERT_TRUE(value_builder.Finish(&value_array).ok());
+        arrow::TimestampBuilder ts_builder(ts_type, arrow::default_memory_pool());
+        ASSERT_TRUE(ts_builder.Append(micros).ok());
+        std::shared_ptr<arrow::Array> ts_array;
+        ASSERT_TRUE(ts_builder.Finish(&ts_array).ok());
+        auto made = arrow::StructArray::Make({meta_array, value_array, ts_array},
+                                             {"metadata", "value", "typed_value"});
+        ASSERT_TRUE(made.ok()) << made.status().ToString();
+        std::shared_ptr<arrow::StructArray> shredded = made.ValueOrDie();
+
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Array> assembled_array,
+                             VariantReassembler::AssembleVariantArray(
+                                 shredded, schema, pool_, arrow::default_memory_pool()));
+        auto assembled = std::static_pointer_cast<arrow::StructArray>(assembled_array);
+        auto value_column = std::static_pointer_cast<arrow::BinaryArray>(assembled->field(0));
+        auto metadata_column = std::static_pointer_cast<arrow::BinaryArray>(assembled->field(1));
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<GenericVariant> variant,
+            GenericVariant::Create(value_column->GetView(0), metadata_column->GetView(0), pool_));
+        ASSERT_OK_AND_ASSIGN(std::string actual_json, variant->ToJson());
+        ASSERT_EQ(actual_json, expected_json);
+    };
+
+    int64_t micros = 1700000000000000;
+    reassemble_one(arrow::timestamp(arrow::TimeUnit::MICRO, "UTC"),
+                   BuildVariant([&](VariantBuilder& b) { return b.AppendTimestamp(micros); }),
+                   micros);
+    reassemble_one(arrow::timestamp(arrow::TimeUnit::MICRO),
+                   BuildVariant([&](VariantBuilder& b) { return b.AppendTimestampNtz(micros); }),
+                   micros);
+}
+
+TEST_F(VariantShreddingTest, ScalarSchemaToArrowType) {
+    using SK = VariantSchema::ScalarKind;
+    auto check = [](VariantSchema::ScalarType scalar,
+                    const std::shared_ptr<arrow::DataType>& expected) {
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> type,
+                             VariantShreddingUtils::ScalarSchemaToArrowType(scalar));
+        ASSERT_TRUE(type->Equals(*expected)) << type->ToString();
+    };
+    check({SK::kBoolean}, arrow::boolean());
+    check({SK::kByte}, arrow::int8());
+    check({SK::kShort}, arrow::int16());
+    check({SK::kInt}, arrow::int32());
+    check({SK::kLong}, arrow::int64());
+    check({SK::kFloat}, arrow::float32());
+    check({SK::kDouble}, arrow::float64());
+    check({SK::kString}, arrow::utf8());
+    check({SK::kBinary}, arrow::binary());
+    check({SK::kDecimal, 10, 2}, arrow::decimal128(10, 2));
+    check({SK::kDate}, arrow::date32());
+    check({SK::kTimestampLtz}, arrow::timestamp(arrow::TimeUnit::MICRO, "UTC"));
+    check({SK::kTimestampNtz}, arrow::timestamp(arrow::TimeUnit::MICRO));
+    // kUuid has no shredded arrow representation.
+    ASSERT_NOK(VariantShreddingUtils::ScalarSchemaToArrowType({SK::kUuid}));
+}
+
+TEST_F(VariantShreddingTest, InvalidShreddingSchemas) {
+    // Not a struct.
+    ASSERT_NOK(VariantShreddingUtils::BuildVariantSchema(arrow::int32()));
+    // Empty struct.
+    ASSERT_NOK(VariantShreddingUtils::BuildVariantSchema(arrow::struct_({})));
+    // The "value" column must be binary.
+    ASSERT_NOK(VariantShreddingUtils::BuildVariantSchema(
+        arrow::struct_({arrow::field("value", arrow::int32())})));
+    // Unknown field name.
+    ASSERT_NOK(VariantShreddingUtils::BuildVariantSchema(
+        arrow::struct_({arrow::field("bogus", arrow::binary())})));
+    // A top-level schema must carry a metadata column.
+    ASSERT_NOK(VariantShreddingUtils::BuildVariantSchema(
+        arrow::struct_({arrow::field("value", arrow::binary())})));
+    // Unsupported typed_value type.
+    ASSERT_NOK(VariantShreddingUtils::BuildVariantSchema(arrow::struct_(
+        {arrow::field("metadata", arrow::binary()), arrow::field("value", arrow::binary()),
+         arrow::field("typed_value", arrow::map(arrow::utf8(), arrow::int32()))})));
 }
 
 }  // namespace paimon::test

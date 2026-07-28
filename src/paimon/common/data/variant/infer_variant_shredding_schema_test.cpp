@@ -16,6 +16,7 @@
 
 #include "paimon/common/data/variant/infer_variant_shredding_schema.h"
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -50,6 +51,18 @@ class InferVariantShreddingSchemaTest : public ::testing::Test {
             samples.push_back(variant.value());
         }
         return samples;
+    }
+
+    // Builds a single variant using the direct append API, which can encode types (float, binary,
+    // uuid, decimals with a specific scale) that JSON parsing never produces.
+    std::shared_ptr<GenericVariant> BuildVariant(
+        const std::function<Status(VariantBuilder&)>& append) {
+        VariantBuilder builder(/*allow_duplicate_keys=*/false);
+        Status st = append(builder);
+        EXPECT_TRUE(st.ok()) << st.ToString();
+        auto result = builder.Build(pool_);
+        EXPECT_TRUE(result.ok()) << result.status().ToString();
+        return result.value();
     }
 
  protected:
@@ -207,6 +220,151 @@ TEST_F(InferVariantShreddingSchemaTest, TemporalValuesStayUnshredded) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> ts_inferred,
                          InferColumn(infer_, {ts_variant}));
     ASSERT_EQ(ts_inferred, nullptr);
+}
+
+TEST_F(InferVariantShreddingSchemaTest, MergeObjectsWithDisjointFields) {
+    // Objects whose keys interleave exercise both single-side merge branches (field only in the
+    // first object, and field only in the second).
+    auto samples = Samples({R"({"a": 1, "c": 3})", R"({"b": 2, "c": 4})"});
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred, InferColumn(infer_, samples));
+    ASSERT_NE(inferred, nullptr);
+    auto expected =
+        arrow::struct_({arrow::field("a", arrow::int64()), arrow::field("b", arrow::int64()),
+                        arrow::field("c", arrow::int64())});
+    ASSERT_TRUE(inferred->Equals(*expected)) << inferred->ToString();
+}
+
+TEST_F(InferVariantShreddingSchemaTest, VariantNullSamplesAndFields) {
+    // A top-level variant null (JSON `null`, not a missing sample) merges away, leaving the other
+    // sample's inferred type.
+    auto scalar_and_null = Samples({"1", "null"});
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> merged,
+                         InferColumn(infer_, scalar_and_null));
+    ASSERT_NE(merged, nullptr);
+    ASSERT_TRUE(merged->Equals(*arrow::int64())) << merged->ToString();
+
+    // An object field that is always variant-null becomes an untyped variant leaf.
+    auto object_with_null = Samples({R"({"a": null, "b": 1})"});
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
+                         InferColumn(infer_, object_with_null));
+    ASSERT_NE(inferred, nullptr);
+    auto expected =
+        arrow::struct_({arrow::field("a", arrow::null()), arrow::field("b", arrow::int64())});
+    ASSERT_TRUE(inferred->Equals(*expected)) << inferred->ToString();
+}
+
+TEST_F(InferVariantShreddingSchemaTest, ArraysMerge) {
+    // Two arrays merge element-wise into a single typed element schema.
+    auto samples = Samples({"[1, 2]", "[3, 4]"});
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred, InferColumn(infer_, samples));
+    ASSERT_NE(inferred, nullptr);
+    ASSERT_TRUE(inferred->Equals(*arrow::list(arrow::int64()))) << inferred->ToString();
+}
+
+TEST_F(InferVariantShreddingSchemaTest, ArrayBeyondDepthLimitStaysVariant) {
+    InferVariantShreddingSchema shallow_infer{/*max_schema_width=*/300, /*max_schema_depth=*/1,
+                                              /*min_field_cardinality_ratio=*/0.1};
+    auto samples = Samples({R"({"arr": [1, 2]})"});
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
+                         InferColumn(shallow_infer, samples));
+    ASSERT_NE(inferred, nullptr);
+    // Depth 1: the nested array is beyond the limit and stays an untyped variant leaf.
+    auto expected = arrow::struct_({arrow::field("arr", arrow::null())});
+    ASSERT_TRUE(inferred->Equals(*expected)) << inferred->ToString();
+}
+
+TEST_F(InferVariantShreddingSchemaTest, ScalarLeafTypes) {
+    // Float and binary leaves shred to their arrow types.
+    std::shared_ptr<GenericVariant> float_variant =
+        BuildVariant([](VariantBuilder& b) { return b.AppendFloat(1.5f); });
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> float_inferred,
+                         InferColumn(infer_, {float_variant}));
+    ASSERT_NE(float_inferred, nullptr);
+    ASSERT_TRUE(float_inferred->Equals(*arrow::float32())) << float_inferred->ToString();
+
+    std::shared_ptr<GenericVariant> binary_variant = BuildVariant(
+        [](VariantBuilder& b) { return b.AppendBinary(std::string_view("\x01\x02", 2)); });
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> binary_inferred,
+                         InferColumn(infer_, {binary_variant}));
+    ASSERT_NE(binary_inferred, nullptr);
+    ASSERT_TRUE(binary_inferred->Equals(*arrow::binary())) << binary_inferred->ToString();
+
+    // A UUID has no shredding type, so the column stays unshredded.
+    std::string uuid_bytes(16, '\0');
+    std::shared_ptr<GenericVariant> uuid_variant =
+        BuildVariant([&](VariantBuilder& b) { return b.AppendUuid(uuid_bytes); });
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> uuid_inferred,
+                         InferColumn(infer_, {uuid_variant}));
+    ASSERT_EQ(uuid_inferred, nullptr);
+}
+
+TEST_F(InferVariantShreddingSchemaTest, LargeIntegerAndDecimalMerging) {
+    // A 19-digit long exceeds decimal(18) precision, so it stays a genuine int64 leaf.
+    auto big_long = Samples({"1000000000000000000"});
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> long_inferred,
+                         InferColumn(infer_, big_long));
+    ASSERT_NE(long_inferred, nullptr);
+    ASSERT_TRUE(long_inferred->Equals(*arrow::int64())) << long_inferred->ToString();
+
+    // A long (int64) merged with a fractional decimal widens via MergeDecimalWithLong.
+    auto long_then_decimal = Samples({"1000000000000000000", "1.5"});
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> ld,
+                         InferColumn(infer_, long_then_decimal));
+    ASSERT_NE(ld, nullptr);
+    ASSERT_TRUE(ld->Equals(*arrow::decimal128(38, 1))) << ld->ToString();
+
+    // The reversed order (decimal first, then long) hits the mirrored branch.
+    auto decimal_then_long = Samples({"1.5", "1000000000000000000"});
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> dl,
+                         InferColumn(infer_, decimal_then_long));
+    ASSERT_NE(dl, nullptr);
+    ASSERT_TRUE(dl->Equals(*arrow::decimal128(38, 1))) << dl->ToString();
+}
+
+TEST_F(InferVariantShreddingSchemaTest, LongMergedWithIntegralDecimalStaysLong) {
+    // A scale-0 decimal that fits in 18 digits merges with a long back to int64.
+    std::shared_ptr<GenericVariant> integral_decimal =
+        BuildVariant([](VariantBuilder& b) { return b.AppendDecimal(VariantDecimal{123, 0}); });
+    std::shared_ptr<GenericVariant> big_long = Samples({"1000000000000000000"})[0];
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
+                         InferColumn(infer_, {integral_decimal, big_long}));
+    ASSERT_NE(inferred, nullptr);
+    ASSERT_TRUE(inferred->Equals(*arrow::int64())) << inferred->ToString();
+}
+
+TEST_F(InferVariantShreddingSchemaTest, SmallFractionalDecimalPrecisionAdjusted) {
+    // 0.0015 has more fractional digits than significant digits; precision widens up to the scale.
+    auto samples = Samples({"0.0015"});
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred, InferColumn(infer_, samples));
+    ASSERT_NE(inferred, nullptr);
+    ASSERT_TRUE(inferred->Equals(*arrow::decimal128(18, 4))) << inferred->ToString();
+}
+
+TEST_F(InferVariantShreddingSchemaTest, DecimalMergeOverflowFallsToVariant) {
+    // A 38-digit integral decimal merged with a high-scale decimal would need precision > 38,
+    // which decimal cannot represent, so the column stays unshredded.
+    __int128 wide_unscaled = 0;
+    for (int i = 0; i < 38; ++i) {
+        wide_unscaled = wide_unscaled * 10 + 1;  // 38 ones, no trailing zeros
+    }
+    std::shared_ptr<GenericVariant> wide_decimal = BuildVariant(
+        [&](VariantBuilder& b) { return b.AppendDecimal(VariantDecimal{wide_unscaled, 0}); });
+    std::shared_ptr<GenericVariant> high_scale_decimal =
+        BuildVariant([](VariantBuilder& b) { return b.AppendDecimal(VariantDecimal{15, 20}); });
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
+                         InferColumn(infer_, {wide_decimal, high_scale_decimal}));
+    ASSERT_EQ(inferred, nullptr);
+}
+
+TEST_F(InferVariantShreddingSchemaTest, ObjectWithAllRareFieldsStaysUnshredded) {
+    InferVariantShreddingSchema strict_infer{/*max_schema_width=*/300, /*max_schema_depth=*/50,
+                                             /*min_field_cardinality_ratio=*/0.6};
+    // Two objects with disjoint single-occurrence keys: with a 0.6 ratio every field is below the
+    // cardinality threshold, so the object contributes no typed field and the column is dropped.
+    auto samples = Samples({R"({"a": 1})", R"({"b": 2})"});
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
+                         InferColumn(strict_infer, samples));
+    ASSERT_EQ(inferred, nullptr);
 }
 
 }  // namespace paimon::test

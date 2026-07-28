@@ -28,6 +28,14 @@ TEST(FileTypeTest, TestIsIndex) {
     ASSERT_FALSE(FileTypeUtils::IsIndex(FileType::kData));
 }
 
+TEST(FileTypeTest, TestToString) {
+    ASSERT_EQ(FileTypeUtils::ToString(FileType::kMeta), "meta");
+    ASSERT_EQ(FileTypeUtils::ToString(FileType::kData), "data");
+    ASSERT_EQ(FileTypeUtils::ToString(FileType::kBucketIndex), "bucket_index");
+    ASSERT_EQ(FileTypeUtils::ToString(FileType::kGlobalIndex), "global_index");
+    ASSERT_EQ(FileTypeUtils::ToString(FileType::kFileIndex), "file_index");
+}
+
 TEST(FileTypeTest, TestMetaPrefix) {
     ASSERT_EQ(FileTypeUtils::Classify("dfs://cluster/db/snapshot/snapshot-1"), FileType::kMeta);
     ASSERT_EQ(FileTypeUtils::Classify("dfs://cluster/db/schema/schema-2"), FileType::kMeta);
@@ -173,6 +181,12 @@ TEST(FileTypeTest, TestInvalidTempWrapperFallsBackToOriginalName) {
 
     // Too short -> should not unwrap.
     ASSERT_EQ(FileTypeUtils::Classify("dfs://cluster/db/snapshot/.x.tmp"), FileType::kData);
+
+    // Long enough and ends with .tmp, but the char before the trailing 41-char suffix is not a
+    // dot -> should not unwrap.
+    ASSERT_EQ(FileTypeUtils::Classify(
+                  "dfs://cluster/db/snapshot/.snapshot-1234567890123456789012345678901234.tmp"),
+              FileType::kData);
 }
 
 }  // namespace paimon::test

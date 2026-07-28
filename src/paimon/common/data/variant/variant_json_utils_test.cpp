@@ -18,8 +18,10 @@
 
 #include <cmath>
 #include <limits>
+#include <string>
 
 #include "gtest/gtest.h"
+#include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
 
@@ -67,6 +69,50 @@ TEST(VariantJsonUtilsTest, JavaFloatToString) {
               "3.4028235E38");
     EXPECT_EQ(VariantJsonUtils::JavaFloatToString(1.0F), "1.0");
     EXPECT_EQ(VariantJsonUtils::JavaFloatToString(2.5F), "2.5");
+}
+
+TEST(VariantJsonUtilsTest, AppendEscapedJsonControlChars) {
+    // Control characters without a named escape are emitted as \uXXXX.
+    std::string out;
+    VariantJsonUtils::AppendEscapedJson(std::string_view("\x01\x1f", 2), &out);
+    EXPECT_EQ(out, "\"\\u0001\\u001f\"");
+}
+
+TEST(VariantJsonUtilsTest, DateToStringNegativeYear) {
+    // A date far before the epoch renders a negative (BCE) year with a leading '-'.
+    std::string result = VariantJsonUtils::DateToString(-800000);
+    ASSERT_FALSE(result.empty());
+    EXPECT_EQ(result.front(), '-');
+}
+
+TEST(VariantJsonUtilsTest, TimestampToStringEdgeCases) {
+    // Sub-second fraction trailing zeros are trimmed.
+    EXPECT_EQ(VariantJsonUtils::TimestampToString(500000, 0, /*with_offset=*/false),
+              "1970-01-01 00:00:00.5");
+    // Negative epoch micros floor to the previous day (FloorDiv keeps a non-negative remainder).
+    EXPECT_EQ(VariantJsonUtils::TimestampToString(-1, 0, /*with_offset=*/false),
+              "1969-12-31 23:59:59.999999");
+    // A positive zone offset is appended as +HH:MM.
+    EXPECT_EQ(VariantJsonUtils::TimestampToString(0, 8 * 3600, /*with_offset=*/true),
+              "1970-01-01 08:00:00+08:00");
+}
+
+TEST(VariantJsonUtilsTest, ZoneOffsetParsing) {
+    // `UTC`/`GMT`/`UT` prefixes are stripped before the fixed offset is parsed.
+    ASSERT_OK_AND_ASSIGN(int32_t utc_prefixed,
+                         VariantJsonUtils::GetZoneOffsetSeconds("UTC+08:00", 0));
+    EXPECT_EQ(utc_prefixed, 8 * 3600);
+    ASSERT_OK_AND_ASSIGN(int32_t ut_prefixed, VariantJsonUtils::GetZoneOffsetSeconds("UT+05", 0));
+    EXPECT_EQ(ut_prefixed, 5 * 3600);
+    // HHMMSS form and a negative offset.
+    ASSERT_OK_AND_ASSIGN(int32_t hms, VariantJsonUtils::GetZoneOffsetSeconds("+18:30:15", 0));
+    EXPECT_EQ(hms, 18 * 3600 + 30 * 60 + 15);
+    ASSERT_OK_AND_ASSIGN(int32_t neg, VariantJsonUtils::GetZoneOffsetSeconds("-06:30", 0));
+    EXPECT_EQ(neg, -(6 * 3600 + 30 * 60));
+    // Invalid forms are rejected: a non-digit char, a wrong digit count, and an out-of-range hour.
+    ASSERT_NOK(VariantJsonUtils::GetZoneOffsetSeconds("+9A", 0));
+    ASSERT_NOK(VariantJsonUtils::GetZoneOffsetSeconds("+123", 0));
+    ASSERT_NOK(VariantJsonUtils::GetZoneOffsetSeconds("+19:00", 0));
 }
 
 }  // namespace paimon::test
