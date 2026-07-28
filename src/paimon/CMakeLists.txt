@@ -131,6 +131,7 @@ set(PAIMON_COMMON_SRCS
     common/reader/predicate_batch_reader.cpp
     common/reader/prefetch_file_batch_reader_impl.cpp
     common/reader/reader_utils.cpp
+    common/reader/blob_fallback_batch_reader.cpp
     common/reader/blob_view_resolving_batch_reader.cpp
     common/reader/complete_row_kind_batch_reader.cpp
     common/reader/data_evolution_file_reader.cpp
@@ -542,6 +543,7 @@ if(PAIMON_BUILD_TESTS)
                     common/reader/prefetch_file_batch_reader_impl_test.cpp
                     common/reader/reader_utils_test.cpp
                     common/reader/complete_row_kind_batch_reader_test.cpp
+                    common/reader/blob_fallback_batch_reader_test.cpp
                     common/reader/blob_view_resolving_batch_reader_test.cpp
                     common/reader/data_evolution_file_reader_test.cpp
                     common/reader/data_evolution_array_test.cpp
@@ -803,6 +805,7 @@ if(PAIMON_BUILD_TESTS)
                     core/table/source/table_read_test.cpp
                     core/table/source/append_count_reader_test.cpp
                     core/table/source/pk_count_reader_test.cpp
+                    core/table/source/data_evolution_batch_scan_test.cpp
                     core/table/source/data_split_test.cpp
                     core/table/source/deletion_file_test.cpp
                     core/table/source/split_generator_test.cpp

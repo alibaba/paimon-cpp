@@ -24,6 +24,7 @@
 
 #include "arrow/type.h"
 #include "fmt/format.h"
+#include "paimon/common/data/blob_defs.h"
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/data/shredding/map_shared_shredding_file_reader.h"
 #include "paimon/common/data/shredding/map_shared_shredding_utils.h"
@@ -75,7 +76,8 @@ Result<std::vector<std::unique_ptr<FileBatchReader>>> AbstractSplitRead::CreateR
     const BinaryRow& partition, const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
     DeletionVector::Factory dv_factory, const std::optional<std::vector<Range>>& row_ranges,
-    const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
+    const std::shared_ptr<DataFilePathFactory>& data_file_path_factory,
+    const std::map<std::string, std::string>& extra_format_options) const {
     if (data_files.empty()) {
         return std::vector<std::unique_ptr<FileBatchReader>>();
     }
@@ -89,7 +91,7 @@ Result<std::vector<std::unique_ptr<FileBatchReader>>> AbstractSplitRead::CreateR
         auto data_file_path = data_file_path_factory->ToPath(file);
         PAIMON_ASSIGN_OR_RAISE(std::string data_file_identifier, file->FileFormat());
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReaderBuilder> reader_builder,
-                               PrepareReaderBuilder(data_file_identifier));
+                               PrepareReaderBuilder(data_file_identifier, extra_format_options));
         PAIMON_ASSIGN_OR_RAISE(
             std::unique_ptr<FileBatchReader> file_reader,
             CreateFieldMappingReader(data_file_path, file, partition, reader_builder.get(),
@@ -120,9 +122,17 @@ Result<std::unique_ptr<BatchReader>> AbstractSplitRead::ApplyPredicateFilterIfNe
 }
 
 Result<std::unique_ptr<ReaderBuilder>> AbstractSplitRead::PrepareReaderBuilder(
-    const std::string& format_identifier) const {
+    const std::string& format_identifier,
+    const std::map<std::string, std::string>& extra_format_options) const {
+    std::map<std::string, std::string> format_options = options_.ToMap();
+    // The blob placeholder channels are internal: strip user-supplied blob.internal.* table
+    // options so only the internal read path can enable them through extra_format_options.
+    BlobDefs::EraseInternalPlaceholderOptions(&format_options);
+    for (const auto& [key, value] : extra_format_options) {
+        format_options[key] = value;
+    }
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileFormat> file_format,
-                           FileFormatFactory::Get(format_identifier, options_.ToMap()));
+                           FileFormatFactory::Get(format_identifier, format_options));
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReaderBuilder> reader_builder,
                            file_format->CreateReaderBuilder(options_.GetReadBatchSize()));
     reader_builder->WithMemoryPool(pool_);
@@ -206,8 +216,15 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingRe
             file_reader, ApplyVariantShreddingReaderIfNeeded(std::move(file_reader), read_schema));
     }
     if (NeedCompleteRowTrackingFields(options_.RowTrackingEnabled(), read_schema)) {
+        // A blob file has no self-describing schema: its physical fields are declared by the
+        // file meta's write cols instead of queried from the format reader.
+        std::optional<std::vector<std::string>> file_field_names;
+        if (file_format_identifier == "blob") {
+            file_field_names = file_meta->write_cols;
+        }
         file_reader = std::make_unique<CompleteRowTrackingFieldsBatchReader>(
-            std::move(file_reader), file_meta->first_row_id, file_meta->max_sequence_number, pool_);
+            std::move(file_reader), file_meta->first_row_id, file_meta->max_sequence_number,
+            file_field_names, pool_);
     }
     const auto& predicate = field_mapping->non_partition_info.non_partition_filter;
     auto all_data_schema = DataField::ConvertDataFieldsToArrowSchema(data_schema->Fields());

@@ -16,6 +16,7 @@
 
 #pragma once
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -37,10 +38,14 @@ class DataEvolutionBatchScan : public AbstractTableScan {
 
     Result<std::shared_ptr<Plan>> CreatePlan() override;
 
- private:
-    Result<std::shared_ptr<Plan>> WrapToIndexedSplits(
+    /// Wraps each DataSplit in `data_plan` into an IndexedSplit whose row ranges are the
+    /// intersection of `row_range_index` and the row-id range of each data file. Visible for
+    /// testing.
+    static Result<std::shared_ptr<Plan>> WrapToIndexedSplits(
         const std::shared_ptr<Plan>& data_plan, const RowRangeIndex& row_range_index,
-        const std::map<int64_t, float>& id_to_score) const;
+        const std::map<int64_t, float>& id_to_score);
+
+ private:
     Result<std::shared_ptr<GlobalIndexResult>> EvalGlobalIndex() const;
 
  private:

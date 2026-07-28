@@ -17,7 +17,10 @@
 #include "paimon/core/io/complete_row_tracking_fields_reader.h"
 
 #include <memory>
+#include <optional>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "arrow/api.h"
 #include "arrow/array/array_base.h"
@@ -44,7 +47,8 @@ class CompleteRowTrackingFieldsBatchReaderTest : public testing::Test {
                 std::make_unique<MockFileBatchReader>(src_array, src_array->type(), batch_size);
             auto complete_row_tracking_fields_reader =
                 std::make_shared<CompleteRowTrackingFieldsBatchReader>(
-                    std::move(file_batch_reader), first_row_id, snapshot_id, pool_);
+                    std::move(file_batch_reader), first_row_id, snapshot_id,
+                    /*file_field_names=*/std::nullopt, pool_);
             ArrowSchema c_read_schema;
             ASSERT_TRUE(arrow::ExportSchema(*read_schema, &c_read_schema).ok());
             ASSERT_OK(complete_row_tracking_fields_reader->SetReadSchema(
@@ -63,12 +67,14 @@ class CompleteRowTrackingFieldsBatchReaderTest : public testing::Test {
     void CheckSetReadSchema(
         const std::shared_ptr<arrow::Schema>& file_schema,
         const std::shared_ptr<arrow::Schema>& read_schema,
-        const std::shared_ptr<arrow::Schema>& expected_schema_for_inner_reader) const {
+        const std::shared_ptr<arrow::Schema>& expected_schema_for_inner_reader,
+        const std::optional<std::vector<std::string>>& file_field_names = std::nullopt) const {
         auto file_batch_reader = std::make_unique<MockFileBatchReader>(
             /*data=*/nullptr, arrow::struct_(file_schema->fields()), /*read_batch_size=*/1);
         auto complete_row_tracking_fields_reader =
             std::make_shared<CompleteRowTrackingFieldsBatchReader>(
-                std::move(file_batch_reader), /*first_row_id=*/10, /*snapshot_id=*/1, pool_);
+                std::move(file_batch_reader), /*first_row_id=*/10, /*snapshot_id=*/1,
+                file_field_names, pool_);
         ArrowSchema c_read_schema;
         ASSERT_TRUE(arrow::ExportSchema(*read_schema, &c_read_schema).ok());
         ASSERT_OK(
@@ -127,6 +133,33 @@ TEST_F(CompleteRowTrackingFieldsBatchReaderTest, TestSetReadSchema) {
         auto read_schema = arrow::schema({fields[1], fields[3]});
         auto expected_schema_for_inner_reader = read_schema;
         CheckSetReadSchema(file_schema, read_schema, expected_schema_for_inner_reader);
+    }
+}
+
+TEST_F(CompleteRowTrackingFieldsBatchReaderTest, TestSetReadSchemaWithDeclaredFileFields) {
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::int32()),
+        arrow::field("_ROW_ID", arrow::int64()),
+        arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+    };
+    {
+        // declared physical fields take precedence over the inner reader's self-described
+        // schema: the special fields are stripped even though the mock's file schema
+        // contains them
+        auto file_schema = arrow::schema(fields);
+        auto read_schema = arrow::schema(fields);
+        auto expected_schema_for_inner_reader = arrow::schema({fields[0], fields[1]});
+        CheckSetReadSchema(file_schema, read_schema, expected_schema_for_inner_reader,
+                           std::vector<std::string>{"f0", "f1"});
+    }
+    {
+        // declared physical fields containing the special fields keep them for the inner reader
+        auto file_schema = arrow::schema({fields[0], fields[1]});
+        auto read_schema = arrow::schema(fields);
+        auto expected_schema_for_inner_reader = read_schema;
+        CheckSetReadSchema(file_schema, read_schema, expected_schema_for_inner_reader,
+                           std::vector<std::string>{"f0", "f1", "_ROW_ID", "_SEQUENCE_NUMBER"});
     }
 }
 
@@ -342,7 +375,8 @@ TEST_F(CompleteRowTrackingFieldsBatchReaderTest, TestInvalidWithReadNonExistFiel
 
     auto complete_row_tracking_fields_reader =
         std::make_shared<CompleteRowTrackingFieldsBatchReader>(
-            std::move(file_batch_reader), /*first_row_id=*/100, /*snapshot_id=*/8, pool_);
+            std::move(file_batch_reader), /*first_row_id=*/100, /*snapshot_id=*/8,
+            /*file_field_names=*/std::nullopt, pool_);
     ArrowSchema c_read_schema;
     ASSERT_TRUE(arrow::ExportSchema(*read_schema, &c_read_schema).ok());
     ASSERT_OK(
@@ -378,7 +412,8 @@ TEST_F(CompleteRowTrackingFieldsBatchReaderTest, TestInvalidNextBatchBeforeSetRe
 
     auto complete_row_tracking_fields_reader =
         std::make_shared<CompleteRowTrackingFieldsBatchReader>(
-            std::move(file_batch_reader), /*first_row_id=*/100, /*snapshot_id=*/8, pool_);
+            std::move(file_batch_reader), /*first_row_id=*/100, /*snapshot_id=*/8,
+            /*file_field_names=*/std::nullopt, pool_);
     ASSERT_NOK_WITH_MSG(complete_row_tracking_fields_reader->NextBatchWithBitmap(),
                         "in CompleteRowTrackingFieldsBatchReader SetReadSchema is supposed to be "
                         "called before NextBatch");
@@ -408,7 +443,8 @@ TEST_F(CompleteRowTrackingFieldsBatchReaderTest, TestInvalidNullFirstRowId) {
 
     auto complete_row_tracking_fields_reader =
         std::make_shared<CompleteRowTrackingFieldsBatchReader>(
-            std::move(file_batch_reader), /*first_row_id=*/std::nullopt, /*snapshot_id=*/8, pool_);
+            std::move(file_batch_reader), /*first_row_id=*/std::nullopt, /*snapshot_id=*/8,
+            /*file_field_names=*/std::nullopt, pool_);
     ArrowSchema c_read_schema;
     ASSERT_TRUE(arrow::ExportSchema(*read_schema, &c_read_schema).ok());
     ASSERT_OK(

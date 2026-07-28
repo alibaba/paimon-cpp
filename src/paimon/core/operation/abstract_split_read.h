@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
 #include <optional>
 #include <set>
@@ -60,12 +61,16 @@ class AbstractSplitRead : public SplitRead {
  public:
     ~AbstractSplitRead() override = default;
 
+    /// `extra_format_options` are merged over the table options when building the format
+    /// reader, e.g. to switch the blob format reader into placeholder-aware mode for the
+    /// data-evolution blob fallback read path.
     Result<std::vector<std::unique_ptr<FileBatchReader>>> CreateRawFileReaders(
         const BinaryRow& partition, const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
         const std::shared_ptr<arrow::Schema>& read_schema,
         const std::shared_ptr<Predicate>& predicate, DeletionVector::Factory dv_factory,
         const std::optional<std::vector<Range>>& row_ranges,
-        const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
+        const std::shared_ptr<DataFilePathFactory>& data_file_path_factory,
+        const std::map<std::string, std::string>& extra_format_options) const;
 
  protected:
     AbstractSplitRead(const std::shared_ptr<FileStorePathFactory>& path_factory,
@@ -95,7 +100,8 @@ class AbstractSplitRead : public SplitRead {
 
  private:
     Result<std::unique_ptr<ReaderBuilder>> PrepareReaderBuilder(
-        const std::string& format_identifier) const;
+        const std::string& format_identifier,
+        const std::map<std::string, std::string>& extra_format_options) const;
 
     Result<std::unique_ptr<FileBatchReader>> CreateFileBatchReader(
         const std::string& file_format_identifier, const std::string& data_file_path,

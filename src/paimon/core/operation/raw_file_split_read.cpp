@@ -81,7 +81,8 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
     PAIMON_ASSIGN_OR_RAISE(
         std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers,
         CreateRawFileReaders(partition, data_files, raw_read_schema_, predicate, dv_factory,
-                             /*row_ranges=*/{}, data_file_path_factory));
+                             /*row_ranges=*/{}, data_file_path_factory,
+                             /*extra_format_options=*/{}));
 
     auto raw_readers =
         ObjectUtils::MoveVector<std::unique_ptr<BatchReader>>(std::move(raw_file_readers));

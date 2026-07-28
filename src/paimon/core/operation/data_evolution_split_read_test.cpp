@@ -145,36 +145,31 @@ TEST_F(DataEvolutionSplitReadTest, TestAddNonBlobFileInvalid) {
 TEST_F(DataEvolutionSplitReadTest, TestAddBlobWithSameFirstRowId) {
     auto blob_entry =
         CreateBlobFile("blob1", /*first_row_id=*/0, /*row_count=*/100,
-                       /*max_sequence_number=*/1,
+                       /*max_sequence_number=*/3,
                        /*write_cols=*/std::optional<std::vector<std::string>>({"blob_col"}));
-    auto blob_tail =
-        CreateBlobFile("blob2", /*first_row_id=*/0, /*row_count=*/50,
+    auto blob_full_tail =
+        CreateBlobFile("blob2", /*first_row_id=*/0, /*row_count=*/100,
                        /*max_sequence_number=*/2,
                        /*write_cols=*/std::optional<std::vector<std::string>>({"blob_col"}));
-    auto blob_bunch = std::make_shared<DataEvolutionSplitRead::BlobBunch>(
-        INT64_MAX, /*has_row_ids_selection=*/false);
-    ASSERT_OK(blob_bunch->Add(blob_entry));
-    ASSERT_NOK_WITH_MSG(blob_bunch->Add(blob_tail),
-                        "Blob file with same first row id should have decreasing sequence number.");
-}
-
-TEST_F(DataEvolutionSplitReadTest, TestAddBlobFileWithSameFirstRowIdAndLowerSequenceNumber) {
-    auto blob_entry =
-        CreateBlobFile("blob1", /*first_row_id=*/0, /*row_count=*/100,
-                       /*max_sequence_number=*/2,
-                       /*write_cols=*/std::optional<std::vector<std::string>>({"blob_col"}));
-    auto blob_tail =
-        CreateBlobFile("blob2", /*first_row_id=*/0, /*row_count=*/50,
+    auto blob_short_tail =
+        CreateBlobFile("blob3", /*first_row_id=*/0, /*row_count=*/50,
                        /*max_sequence_number=*/1,
                        /*write_cols=*/std::optional<std::vector<std::string>>({"blob_col"}));
     auto blob_bunch = std::make_shared<DataEvolutionSplitRead::BlobBunch>(
         INT64_MAX, /*has_row_ids_selection=*/false);
     ASSERT_OK(blob_bunch->Add(blob_entry));
-    // Adding file with same firstRowId and lower sequence number should be ignored
-    ASSERT_OK(blob_bunch->Add(blob_tail));
+    // Files with the same first row id and lower sequence numbers are older layers of a
+    // partial update; they are kept for the row-level placeholder fallback, whether they
+    // cover the same range or only a shorter prefix of it.
+    ASSERT_OK(blob_bunch->Add(blob_full_tail));
+    ASSERT_OK(blob_bunch->Add(blob_short_tail));
 
-    ASSERT_EQ(blob_bunch->Files().size(), 1);
+    ASSERT_EQ(blob_bunch->Files().size(), 3);
     ASSERT_EQ(blob_bunch->Files()[0], blob_entry);
+    ASSERT_EQ(blob_bunch->Files()[1], blob_full_tail);
+    ASSERT_EQ(blob_bunch->Files()[2], blob_short_tail);
+    ASSERT_EQ(blob_bunch->RowCount(), 100);
+    ASSERT_FALSE(blob_bunch->SequentialReadOptimize());
 }
 
 TEST_F(DataEvolutionSplitReadTest, TestAddBlobFileWithOverlappingRowId) {
@@ -189,11 +184,12 @@ TEST_F(DataEvolutionSplitReadTest, TestAddBlobFileWithOverlappingRowId) {
     auto blob_bunch = std::make_shared<DataEvolutionSplitRead::BlobBunch>(
         INT64_MAX, /*has_row_ids_selection=*/false);
     ASSERT_OK(blob_bunch->Add(blob_entry));
-    // Adding file with overlapping row id and lower sequence number should be ignored
+    // Overlapping layers with different sequence numbers are kept for the fallback.
     ASSERT_OK(blob_bunch->Add(blob_tail));
 
-    ASSERT_EQ(blob_bunch->Files().size(), 1);
-    ASSERT_EQ(blob_bunch->Files()[0], blob_entry);
+    ASSERT_EQ(blob_bunch->Files().size(), 2);
+    ASSERT_EQ(blob_bunch->RowCount(), 200);
+    ASSERT_FALSE(blob_bunch->SequentialReadOptimize());
 }
 
 TEST_F(DataEvolutionSplitReadTest, TestAddBlobFileWithOverlappingRowIdAndHigherSequenceNumber) {
@@ -208,9 +204,29 @@ TEST_F(DataEvolutionSplitReadTest, TestAddBlobFileWithOverlappingRowIdAndHigherS
     auto blob_bunch = std::make_shared<DataEvolutionSplitRead::BlobBunch>(
         INT64_MAX, /*has_row_ids_selection=*/false);
     ASSERT_OK(blob_bunch->Add(blob_entry));
-    ASSERT_NOK_WITH_MSG(
-        blob_bunch->Add(blob_tail),
-        "Blob file with overlapping row id should have decreasing sequence number.");
+    ASSERT_OK(blob_bunch->Add(blob_tail));
+
+    ASSERT_EQ(blob_bunch->Files().size(), 2);
+    ASSERT_EQ(blob_bunch->RowCount(), 200);
+    ASSERT_FALSE(blob_bunch->SequentialReadOptimize());
+}
+
+TEST_F(DataEvolutionSplitReadTest, TestAddBlobFileWithOverlappingRowIdInSameLayer) {
+    auto blob_entry =
+        CreateBlobFile("blob1", /*first_row_id=*/0, /*row_count=*/100,
+                       /*max_sequence_number=*/1,
+                       /*write_cols=*/std::optional<std::vector<std::string>>({"blob_col"}));
+    auto blob_tail =
+        CreateBlobFile("blob2", /*first_row_id=*/50, /*row_count=*/150,
+                       /*max_sequence_number=*/1,
+                       /*write_cols=*/std::optional<std::vector<std::string>>({"blob_col"}));
+    auto blob_bunch = std::make_shared<DataEvolutionSplitRead::BlobBunch>(
+        INT64_MAX, /*has_row_ids_selection=*/false);
+    ASSERT_OK(blob_bunch->Add(blob_entry));
+    // Files sharing a max sequence number form one layer and must not overlap.
+    ASSERT_NOK_WITH_MSG(blob_bunch->Add(blob_tail),
+                        "Blob files with the same max sequence number should not have overlapping "
+                        "row id ranges");
 }
 
 TEST_F(DataEvolutionSplitReadTest, TestAddBlobFileWithNonContinuousRowId) {
@@ -265,12 +281,14 @@ TEST_F(DataEvolutionSplitReadTest, TestRowIdSelectionWithOverlap) {
     auto blob_bunch = std::make_shared<DataEvolutionSplitRead::BlobBunch>(
         INT64_MAX, /*has_row_ids_selection=*/true);
     ASSERT_OK(blob_bunch->Add(blob_entry));
-    // blob_sub1 will not be added, for it has been skipped by row_ids in scan process.
-    // after blob_sub2 is added, blob_entry is removed
+    // blob_sub1 was pruned by the row-ids selection in the scan process; blob_sub2 is a newer
+    // layer and both files are kept for the row-level placeholder fallback.
     ASSERT_OK(blob_bunch->Add(blob_sub2));
-    ASSERT_EQ(blob_bunch->Files().size(), 1);
-    ASSERT_EQ(blob_bunch->Files()[0], blob_sub2);
-    ASSERT_EQ(blob_bunch->RowCount(), 5);
+    ASSERT_EQ(blob_bunch->Files().size(), 2);
+    ASSERT_EQ(blob_bunch->Files()[0], blob_entry);
+    ASSERT_EQ(blob_bunch->Files()[1], blob_sub2);
+    ASSERT_EQ(blob_bunch->RowCount(), 10);
+    ASSERT_FALSE(blob_bunch->SequentialReadOptimize());
 }
 
 TEST_F(DataEvolutionSplitReadTest, TestRowIdSelectionWithOverlap2) {
@@ -291,13 +309,14 @@ TEST_F(DataEvolutionSplitReadTest, TestRowIdSelectionWithOverlap2) {
     auto blob_bunch = std::make_shared<DataEvolutionSplitRead::BlobBunch>(
         INT64_MAX, /*has_row_ids_selection=*/true);
     ASSERT_OK(blob_bunch->Add(blob_entry));
-    // blob_sub1 will not be added, for it has been skipped by row_ids in scan process.
-    // after blob_sub2 is added, as blob_sub2 has smaller sequence number, blob_sub2 will be
-    // skipped.
+    // blob_sub1 was pruned by the row-ids selection in the scan process; blob_sub2 is an older
+    // layer and both files are kept for the row-level placeholder fallback.
     ASSERT_OK(blob_bunch->Add(blob_sub2));
-    ASSERT_EQ(blob_bunch->Files().size(), 1);
+    ASSERT_EQ(blob_bunch->Files().size(), 2);
     ASSERT_EQ(blob_bunch->Files()[0], blob_entry);
+    ASSERT_EQ(blob_bunch->Files()[1], blob_sub2);
     ASSERT_EQ(blob_bunch->RowCount(), 10);
+    ASSERT_FALSE(blob_bunch->SequentialReadOptimize());
 }
 
 TEST_F(DataEvolutionSplitReadTest, TestRowIdSelection) {
@@ -420,15 +439,15 @@ TEST_F(DataEvolutionSplitReadTest, TestComplexBlobBunchScenario2) {
     std::vector<std::shared_ptr<DataFileMeta>> batch = batches[0];
     ASSERT_EQ(batch.size(), 10);
     ASSERT_EQ(batch[0], data);
-    ASSERT_EQ(batch[1], blob_entry5);  // pick
-    ASSERT_EQ(batch[2], blob_entry2);  // skip
-    ASSERT_EQ(batch[3], blob_entry1);  // skip
-    ASSERT_EQ(batch[4], blob_entry9);  // pick
-    ASSERT_EQ(batch[5], blob_entry6);  // skip
-    ASSERT_EQ(batch[6], blob_entry3);  // skip
-    ASSERT_EQ(batch[7], blob_entry7);  // pick
-    ASSERT_EQ(batch[8], blob_entry4);  // skip
-    ASSERT_EQ(batch[9], blob_entry8);  // pick
+    ASSERT_EQ(batch[1], blob_entry5);
+    ASSERT_EQ(batch[2], blob_entry2);
+    ASSERT_EQ(batch[3], blob_entry1);
+    ASSERT_EQ(batch[4], blob_entry9);
+    ASSERT_EQ(batch[5], blob_entry6);
+    ASSERT_EQ(batch[6], blob_entry3);
+    ASSERT_EQ(batch[7], blob_entry7);
+    ASSERT_EQ(batch[8], blob_entry4);
+    ASSERT_EQ(batch[9], blob_entry8);
 
     auto blob_field_to_field_id = [](const std::shared_ptr<DataFileMeta>&) -> Result<int32_t> {
         return 0;
@@ -440,12 +459,19 @@ TEST_F(DataEvolutionSplitReadTest, TestComplexBlobBunchScenario2) {
     ASSERT_EQ(bunch.size(), 2);
     auto blob_bunch = std::dynamic_pointer_cast<DataEvolutionSplitRead::BlobBunch>(bunch[1]);
 
-    ASSERT_EQ(blob_bunch->Files().size(), 4);
+    // every sequence layer is kept for the row-level placeholder fallback
+    ASSERT_EQ(blob_bunch->Files().size(), 9);
     ASSERT_EQ(blob_bunch->Files()[0], blob_entry5);
-    ASSERT_EQ(blob_bunch->Files()[1], blob_entry9);
-    ASSERT_EQ(blob_bunch->Files()[2], blob_entry7);
-    ASSERT_EQ(blob_bunch->Files()[3], blob_entry8);
+    ASSERT_EQ(blob_bunch->Files()[1], blob_entry2);
+    ASSERT_EQ(blob_bunch->Files()[2], blob_entry1);
+    ASSERT_EQ(blob_bunch->Files()[3], blob_entry9);
+    ASSERT_EQ(blob_bunch->Files()[4], blob_entry6);
+    ASSERT_EQ(blob_bunch->Files()[5], blob_entry3);
+    ASSERT_EQ(blob_bunch->Files()[6], blob_entry7);
+    ASSERT_EQ(blob_bunch->Files()[7], blob_entry4);
+    ASSERT_EQ(blob_bunch->Files()[8], blob_entry8);
     ASSERT_EQ(blob_bunch->RowCount(), 1000);
+    ASSERT_FALSE(blob_bunch->SequentialReadOptimize());
 }
 
 TEST_F(DataEvolutionSplitReadTest, TestComplexBlobBunchScenario3) {
@@ -561,20 +587,33 @@ TEST_F(DataEvolutionSplitReadTest, TestComplexBlobBunchScenario3) {
 
     ASSERT_EQ(bunch.size(), 3);
     auto blob_bunch = std::dynamic_pointer_cast<DataEvolutionSplitRead::BlobBunch>(bunch[1]);
-    ASSERT_EQ(blob_bunch->Files().size(), 4);
+    // every sequence layer is kept for the row-level placeholder fallback
+    ASSERT_EQ(blob_bunch->Files().size(), 9);
     ASSERT_EQ(blob_bunch->Files()[0], blob_entry5);
-    ASSERT_EQ(blob_bunch->Files()[1], blob_entry9);
-    ASSERT_EQ(blob_bunch->Files()[2], blob_entry7);
-    ASSERT_EQ(blob_bunch->Files()[3], blob_entry8);
+    ASSERT_EQ(blob_bunch->Files()[1], blob_entry2);
+    ASSERT_EQ(blob_bunch->Files()[2], blob_entry1);
+    ASSERT_EQ(blob_bunch->Files()[3], blob_entry9);
+    ASSERT_EQ(blob_bunch->Files()[4], blob_entry6);
+    ASSERT_EQ(blob_bunch->Files()[5], blob_entry3);
+    ASSERT_EQ(blob_bunch->Files()[6], blob_entry7);
+    ASSERT_EQ(blob_bunch->Files()[7], blob_entry4);
+    ASSERT_EQ(blob_bunch->Files()[8], blob_entry8);
     ASSERT_EQ(blob_bunch->RowCount(), 1000);
+    ASSERT_FALSE(blob_bunch->SequentialReadOptimize());
 
     auto blob_bunch2 = std::dynamic_pointer_cast<DataEvolutionSplitRead::BlobBunch>(bunch[2]);
-    ASSERT_EQ(blob_bunch2->Files().size(), 4);
+    ASSERT_EQ(blob_bunch2->Files().size(), 9);
     ASSERT_EQ(blob_bunch2->Files()[0], blob_entry15);
-    ASSERT_EQ(blob_bunch2->Files()[1], blob_entry19);
-    ASSERT_EQ(blob_bunch2->Files()[2], blob_entry17);
-    ASSERT_EQ(blob_bunch2->Files()[3], blob_entry18);
+    ASSERT_EQ(blob_bunch2->Files()[1], blob_entry12);
+    ASSERT_EQ(blob_bunch2->Files()[2], blob_entry11);
+    ASSERT_EQ(blob_bunch2->Files()[3], blob_entry19);
+    ASSERT_EQ(blob_bunch2->Files()[4], blob_entry16);
+    ASSERT_EQ(blob_bunch2->Files()[5], blob_entry13);
+    ASSERT_EQ(blob_bunch2->Files()[6], blob_entry17);
+    ASSERT_EQ(blob_bunch2->Files()[7], blob_entry14);
+    ASSERT_EQ(blob_bunch2->Files()[8], blob_entry18);
     ASSERT_EQ(blob_bunch2->RowCount(), 1000);
+    ASSERT_FALSE(blob_bunch2->SequentialReadOptimize());
 }
 
 TEST_F(DataEvolutionSplitReadTest, TestDifferentRowIdRange) {

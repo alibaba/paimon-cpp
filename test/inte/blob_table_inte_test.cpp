@@ -42,6 +42,7 @@
 #include "paimon/common/data/binary_array_writer.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
+#include "paimon/common/data/blob_defs.h"
 #include "paimon/common/data/blob_descriptor.h"
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/data/blob_view_struct.h"
@@ -1099,6 +1100,595 @@ TEST_P(BlobTableInteTest, TestDataEvolutionBlobOnlyWriteWithFirstRowId) {
     ])")
             .ValueOrDie());
     ASSERT_OK(ScanAndRead(table_path, {"f0", "f1", "b0", "_ROW_ID"}, expected_with_row_id));
+}
+
+/// Build a single-blob-column StructArray for a data-evolution partial update: "PH" marks a row
+/// whose blob is not updated (persisted as a placeholder entry), std::nullopt a null blob.
+std::shared_ptr<arrow::StructArray> MakeBlobUpdateArray(
+    const std::shared_ptr<arrow::Field>& blob_field,
+    const std::vector<std::optional<std::string>>& rows) {
+    auto struct_type = arrow::struct_({blob_field});
+    arrow::StructBuilder struct_builder(struct_type, arrow::default_memory_pool(),
+                                        {std::make_shared<arrow::LargeBinaryBuilder>()});
+    auto blob_builder = static_cast<arrow::LargeBinaryBuilder*>(struct_builder.field_builder(0));
+    for (const auto& row : rows) {
+        EXPECT_TRUE(struct_builder.Append().ok());
+        if (!row) {
+            EXPECT_TRUE(blob_builder->AppendNull().ok());
+        } else if (*row == "PH") {
+            std::string_view sentinel = BlobDefs::PlaceholderSentinelView();
+            EXPECT_TRUE(blob_builder->Append(sentinel.data(), sentinel.size()).ok());
+        } else {
+            EXPECT_TRUE(blob_builder->Append(row->data(), row->size()).ok());
+        }
+    }
+    std::shared_ptr<arrow::Array> array;
+    EXPECT_TRUE(struct_builder.Finish(&array).ok());
+    return std::dynamic_pointer_cast<arrow::StructArray>(array);
+}
+
+TEST_P(BlobTableInteTest, TestDataEvolutionBlobPartialUpdateFallback) {
+    // the blob column is updated to null below, so it must be nullable
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
+                                 arrow::field("f1", arrow::utf8()),
+                                 BlobUtils::ToArrowField("b0", /*nullable=*/true)};
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(fields, /*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    auto schema = arrow::schema(fields);
+
+    // Initial full-row write assigns row ids 0-2.
+    auto src_array0 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+        [1, "a", "blob_a"],
+        [2, "b", "blob_b"],
+        [3, "c", "blob_c"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs0,
+                         WriteArray(table_path, {}, schema->field_names(), {src_array0}));
+    ASSERT_OK(Commit(table_path, commit_msgs0));
+
+    // Partial update: only row 1 gets a new blob, the untouched rows are written as
+    // placeholder entries and must fall back to the previous blob file when read.
+    auto update_array = MakeBlobUpdateArray(fields[2], {"PH", "updated_b", "PH"});
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs1, WriteArray(table_path, {}, {"b0"}, {update_array}));
+    SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs1);
+    ASSERT_OK(Commit(table_path, commit_msgs1));
+
+    auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+        [1, "a", "blob_a"],
+        [2, "b", "updated_b"],
+        [3, "c", "blob_c"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_array));
+
+    // updating a blob to null is not a placeholder: the null must win over older layers
+    auto null_update_array = MakeBlobUpdateArray(fields[2], {std::nullopt, "PH", "PH"});
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs2,
+                         WriteArray(table_path, {}, {"b0"}, {null_update_array}));
+    SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs2);
+    ASSERT_OK(Commit(table_path, commit_msgs2));
+
+    auto expected_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+        [1, "a", null],
+        [2, "b", "updated_b"],
+        [3, "c", "blob_c"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_array2));
+
+    // row ids still come from the data files and stay aligned with the fallback result
+    auto expected_with_row_id = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(
+            arrow::struct_({fields[0], fields[1], fields[2], SpecialFields::RowId().field_}),
+            R"([
+        [1, "a", null, 0],
+        [2, "b", "updated_b", 1],
+        [3, "c", "blob_c", 2]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, {"f0", "f1", "b0", "_ROW_ID"}, expected_with_row_id));
+
+    // blob_as_descriptor read mode: the fallback-merged values come back as descriptors and
+    // must still resolve to the same bytes
+    ASSERT_OK_AND_ASSIGN(auto plan, ScanTable(table_path));
+    std::map<std::string, std::string> read_options = {{Options::BLOB_AS_DESCRIPTOR, "true"}};
+    ASSERT_OK_AND_ASSIGN(auto desc_result, ReadTable(table_path, schema->field_names(), plan,
+                                                     /*predicate=*/nullptr, read_options));
+    ASSERT_TRUE(desc_result.chunked_array);
+    auto desc_concat = arrow::Concatenate(desc_result.chunked_array->chunks()).ValueOrDie();
+    auto desc_struct = std::dynamic_pointer_cast<arrow::StructArray>(desc_concat);
+    ASSERT_TRUE(desc_struct);
+    ASSERT_OK_AND_ASSIGN(auto resolved, ConvertDescriptorToRawBlob(desc_struct, {"b0"}));
+    ASSERT_OK_AND_ASSIGN(auto expected_with_rk, PrependRowKindColumn(expected_array2));
+    ASSERT_TRUE(resolved->Equals(expected_with_rk))
+        << "result:" << resolved->ToString() << "\nexpected:" << expected_with_rk->ToString();
+}
+
+TEST_P(BlobTableInteTest, TestDataEvolutionBlobPartialUpdateMultipleLayers) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
+                                 arrow::field("f1", arrow::utf8()), BlobUtils::ToArrowField("b0")};
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(fields, /*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    auto schema = arrow::schema(fields);
+
+    auto src_array0 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+        [1, "a", "blob_0"],
+        [2, "b", "blob_1"],
+        [3, "c", "blob_2"],
+        [4, "d", "blob_3"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs0,
+                         WriteArray(table_path, {}, schema->field_names(), {src_array0}));
+    ASSERT_OK(Commit(table_path, commit_msgs0));
+
+    // second layer updates row 0 within rows [0, 1]
+    auto update_array1 = MakeBlobUpdateArray(fields[2], {"update1_0", "PH"});
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs1, WriteArray(table_path, {}, {"b0"}, {update_array1}));
+    SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs1);
+    ASSERT_OK(Commit(table_path, commit_msgs1));
+
+    // third layer updates row 3 within rows [2, 3]; each layer only partially covers the
+    // range, the uncovered parts behave as placeholders
+    auto update_array2 = MakeBlobUpdateArray(fields[2], {"PH", "update2_3"});
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs2, WriteArray(table_path, {}, {"b0"}, {update_array2}));
+    SetFirstRowId(/*reset_first_row_id=*/2, commit_msgs2);
+    ASSERT_OK(Commit(table_path, commit_msgs2));
+
+    auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+        [1, "a", "update1_0"],
+        [2, "b", "blob_1"],
+        [3, "c", "blob_2"],
+        [4, "d", "update2_3"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_array));
+
+    // row-range pushdown where the selected rows fall in one layer's file and in another
+    // layer's uncovered gap: row 1 is a gap row for the third layer, row 2 for the second
+    auto expected_middle = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+        [2, "b", "blob_1"],
+        [3, "c", "blob_2"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_middle,
+                          /*predicate=*/nullptr, /*row_ranges=*/{Range(1, 2)}));
+
+    // per-row reads resolve every row independently
+    const std::vector<std::string> expected_rows = {
+        R"([[1, "a", "update1_0"]])", R"([[2, "b", "blob_1"]])", R"([[3, "c", "blob_2"]])",
+        R"([[4, "d", "update2_3"]])"};
+    for (int32_t i = 0; i < static_cast<int32_t>(expected_rows.size()); i++) {
+        auto expected_single = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), expected_rows[i])
+                .ValueOrDie());
+        ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_single,
+                              /*predicate=*/nullptr, /*row_ranges=*/{Range(i, i)}));
+    }
+}
+
+TEST_P(BlobTableInteTest, TestDataEvolutionBlobPartialUpdateCompactedLayers) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
+                                 arrow::field("f1", arrow::utf8()), BlobUtils::ToArrowField("b0")};
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(fields, /*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    auto schema = arrow::schema(fields);
+
+    // Mirrors the layer shapes of Java's BlobUpdateTest.testReadCompactedBlobSequenceGroups
+    // (with a single base write, as the C++ write path assigns one sequence per commit):
+    //   row id:  0    1    2    3    4    5    6    7    8    9
+    //   seq1:   [b0   b1   b2   b3   b4   b5   b6   b7   b8   b9]
+    //   seq2:   [u20  P    P    u23  u24] .    .    .    .    .
+    //   seq3:    .    .    .    .    .   [P    u46  P    u48  P]
+    //   seq4:   [P    u61  P    P    P    P    P    P    P    u69]
+    //   result:  u20  u61  b2   u23  u24  b5   u46  b7   u48  u69
+    auto base_array = PrepareBulkData(
+        10,
+        [](int32_t i) {
+            return std::to_string(i) + ", \"name_" + std::to_string(i) + "\", \"blob_" +
+                   std::to_string(i) + "\"";
+        },
+        fields);
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs0,
+                         WriteArray(table_path, {}, schema->field_names(), {base_array}));
+    ASSERT_OK(Commit(table_path, commit_msgs0));
+
+    auto update_array1 = MakeBlobUpdateArray(fields[2], {"u20", "PH", "PH", "u23", "u24"});
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs1, WriteArray(table_path, {}, {"b0"}, {update_array1}));
+    SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs1);
+    ASSERT_OK(Commit(table_path, commit_msgs1));
+
+    auto update_array2 = MakeBlobUpdateArray(fields[2], {"PH", "u46", "PH", "u48", "PH"});
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs2, WriteArray(table_path, {}, {"b0"}, {update_array2}));
+    SetFirstRowId(/*reset_first_row_id=*/5, commit_msgs2);
+    ASSERT_OK(Commit(table_path, commit_msgs2));
+
+    auto update_array3 = MakeBlobUpdateArray(
+        fields[2], {"PH", "u61", "PH", "PH", "PH", "PH", "PH", "PH", "PH", "u69"});
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs3, WriteArray(table_path, {}, {"b0"}, {update_array3}));
+    SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs3);
+    ASSERT_OK(Commit(table_path, commit_msgs3));
+
+    const std::vector<std::string> expected_blobs = {"u20",    "u61", "blob_2", "u23", "u24",
+                                                     "blob_5", "u46", "blob_7", "u48", "u69"};
+    auto expected_row = [&](int32_t i) {
+        return std::to_string(i) + ", \"name_" + std::to_string(i) + "\", \"" + expected_blobs[i] +
+               "\"";
+    };
+    auto expected_full = PrepareBulkData(10, expected_row, fields);
+    ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_full));
+
+    // every row resolves independently under row-range pushdown
+    for (int32_t i = 0; i < 10; i++) {
+        auto expected_single = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields),
+                                                      "[[" + expected_row(i) + "]]")
+                .ValueOrDie());
+        ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_single,
+                              /*predicate=*/nullptr, /*row_ranges=*/{Range(i, i)}));
+    }
+}
+
+TEST_P(BlobTableInteTest, TestDataEvolutionBlobPartialUpdateWithRowRanges) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
+                                 arrow::field("f1", arrow::utf8()), BlobUtils::ToArrowField("b0")};
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(fields, /*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    auto schema = arrow::schema(fields);
+
+    auto base_array = PrepareBulkData(
+        10,
+        [](int32_t i) {
+            return std::to_string(i) + ", \"name_" + std::to_string(i) + "\", \"blob_" +
+                   std::to_string(i) + "\"";
+        },
+        fields);
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs0,
+                         WriteArray(table_path, {}, schema->field_names(), {base_array}));
+    ASSERT_OK(Commit(table_path, commit_msgs0));
+
+    // partial update touching rows 1 and 9 only
+    auto update_array = MakeBlobUpdateArray(
+        fields[2], {"PH", "update_1", "PH", "PH", "PH", "PH", "PH", "PH", "PH", "update_9"});
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs1, WriteArray(table_path, {}, {"b0"}, {update_array}));
+    SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs1);
+    ASSERT_OK(Commit(table_path, commit_msgs1));
+
+    // push down row ranges hitting updated and untouched rows
+    auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+        [1, "name_1", "update_1"],
+        [5, "name_5", "blob_5"],
+        [9, "name_9", "update_9"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_array,
+                          /*predicate=*/nullptr,
+                          /*row_ranges=*/{Range(1, 1), Range(5, 5), Range(9, 9)}));
+
+    // full read still resolves every row
+    auto expected_full = PrepareBulkData(
+        10,
+        [](int32_t i) {
+            std::string blob = (i == 1 || i == 9) ? "\"update_" + std::to_string(i) + "\""
+                                                  : "\"blob_" + std::to_string(i) + "\"";
+            return std::to_string(i) + ", \"name_" + std::to_string(i) + "\", " + blob;
+        },
+        fields);
+    ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_full));
+}
+
+/// A BLOB sequence layer whose physical file covers only a strict subrange of the full row id
+/// range: the newest group is internally Gap(2), File([u2, u3]), Gap(6). The table needs a
+/// normal column to be creatable, but only the blob column is ever written, so the split
+/// contains only blob files and the blob bunch itself carries the row-tracking fields: the
+/// fallback reader must keep _ROW_ID correct and report each row's _SEQUENCE_NUMBER from the
+/// layer that resolved it, without ever exposing the internal placeholder sentinel.
+TEST_P(BlobTableInteTest, TestDataEvolutionBlobPartialUpdateRowTrackingWithSubrangeLayer) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
+                                 BlobUtils::ToArrowField("b0", /*nullable=*/true)};
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(fields, /*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+
+    // old layer: rows 0-9 all real
+    std::vector<std::optional<std::string>> base_rows;
+    for (int32_t i = 0; i < 10; i++) {
+        base_rows.emplace_back("b" + std::to_string(i));
+    }
+    auto base_array = MakeBlobUpdateArray(fields[1], base_rows);
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs0, WriteArray(table_path, {}, {"b0"}, {base_array}));
+    SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs0);
+    ASSERT_OK(Commit(table_path, commit_msgs0));
+
+    // new layer: first_row_id=2, row_count=2, covering only rows 2-3
+    auto update_array = MakeBlobUpdateArray(fields[1], {"u2", "u3"});
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs1, WriteArray(table_path, {}, {"b0"}, {update_array}));
+    SetFirstRowId(/*reset_first_row_id=*/2, commit_msgs1);
+    ASSERT_OK(Commit(table_path, commit_msgs1));
+
+    ASSERT_OK_AND_ASSIGN(auto scan_read,
+                         ScanAndReadResult(table_path, {"b0", "_ROW_ID", "_SEQUENCE_NUMBER"}));
+    ASSERT_TRUE(scan_read.chunked_array);
+    auto concat_array = arrow::Concatenate(scan_read.chunked_array->chunks()).ValueOrDie();
+    auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(concat_array);
+    ASSERT_TRUE(struct_array);
+    ASSERT_EQ(struct_array->length(), 10);
+    auto blob_col =
+        std::dynamic_pointer_cast<arrow::LargeBinaryArray>(struct_array->GetFieldByName("b0"));
+    auto row_id_col = std::dynamic_pointer_cast<arrow::Int64Array>(
+        struct_array->GetFieldByName(SpecialFields::RowId().Name()));
+    auto seq_col = std::dynamic_pointer_cast<arrow::Int64Array>(
+        struct_array->GetFieldByName(SpecialFields::SequenceNumber().Name()));
+    ASSERT_TRUE(blob_col && row_id_col && seq_col);
+    int64_t old_layer_seq = seq_col->Value(0);
+    int64_t new_layer_seq = seq_col->Value(2);
+    ASSERT_GT(new_layer_seq, old_layer_seq);
+    for (int64_t i = 0; i < 10; i++) {
+        ASSERT_FALSE(blob_col->IsNull(i));
+        std::string expected_blob =
+            (i == 2 || i == 3) ? "u" + std::to_string(i) : "b" + std::to_string(i);
+        // the leading and trailing gaps never expose the internal placeholder sentinel
+        ASSERT_EQ(blob_col->GetString(i), expected_blob) << "row " << i;
+        ASSERT_EQ(row_id_col->Value(i), i);
+        ASSERT_EQ(seq_col->Value(i), (i == 2 || i == 3) ? new_layer_seq : old_layer_seq)
+            << "row " << i;
+    }
+
+    // row-range pushdown with the row-tracking projection: the selection removes rows inside
+    // the blob files, so batch positions must still map back to the right file row indexes
+    ASSERT_OK_AND_ASSIGN(auto range_read,
+                         ScanAndReadResult(table_path, {"b0", "_ROW_ID", "_SEQUENCE_NUMBER"},
+                                           /*predicate=*/nullptr,
+                                           /*row_ranges=*/{Range(1, 2), Range(8, 8)}));
+    ASSERT_TRUE(range_read.chunked_array);
+    auto range_concat = arrow::Concatenate(range_read.chunked_array->chunks()).ValueOrDie();
+    auto range_struct = std::dynamic_pointer_cast<arrow::StructArray>(range_concat);
+    ASSERT_TRUE(range_struct);
+    ASSERT_EQ(range_struct->length(), 3);
+    auto range_blob_col =
+        std::dynamic_pointer_cast<arrow::LargeBinaryArray>(range_struct->GetFieldByName("b0"));
+    auto range_row_id_col = std::dynamic_pointer_cast<arrow::Int64Array>(
+        range_struct->GetFieldByName(SpecialFields::RowId().Name()));
+    auto range_seq_col = std::dynamic_pointer_cast<arrow::Int64Array>(
+        range_struct->GetFieldByName(SpecialFields::SequenceNumber().Name()));
+    ASSERT_TRUE(range_blob_col && range_row_id_col && range_seq_col);
+    const std::vector<int64_t> expected_row_ids = {1, 2, 8};
+    const std::vector<std::string> expected_blobs = {"b1", "u2", "b8"};
+    for (int64_t i = 0; i < 3; i++) {
+        ASSERT_EQ(range_blob_col->GetString(i), expected_blobs[i]) << "row " << i;
+        ASSERT_EQ(range_row_id_col->Value(i), expected_row_ids[i]) << "row " << i;
+        ASSERT_EQ(range_seq_col->Value(i), expected_row_ids[i] == 2 ? new_layer_seq : old_layer_seq)
+            << "row " << i;
+    }
+}
+
+/// A row that is a placeholder in every BLOB layer degrades to a null blob but keeps its
+/// _ROW_ID and reports -1 as its _SEQUENCE_NUMBER. Only the blob column is ever written, so
+/// the blob bunch itself carries the row-tracking fields.
+TEST_P(BlobTableInteTest, TestDataEvolutionBlobPartialUpdateAllPlaceholderRowTracking) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
+                                 BlobUtils::ToArrowField("b0", /*nullable=*/true)};
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(fields, /*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+
+    // the base layer itself holds a placeholder at row 1, so after the second layer also
+    // leaves it untouched, row 1 is a placeholder in every layer
+    auto base_array = MakeBlobUpdateArray(fields[1], {"blob_a", "PH", "blob_c"});
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs0, WriteArray(table_path, {}, {"b0"}, {base_array}));
+    SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs0);
+    ASSERT_OK(Commit(table_path, commit_msgs0));
+
+    auto update_array = MakeBlobUpdateArray(fields[1], {"PH", "PH", "update_c"});
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs1, WriteArray(table_path, {}, {"b0"}, {update_array}));
+    SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs1);
+    ASSERT_OK(Commit(table_path, commit_msgs1));
+
+    ASSERT_OK_AND_ASSIGN(auto scan_read,
+                         ScanAndReadResult(table_path, {"b0", "_ROW_ID", "_SEQUENCE_NUMBER"}));
+    ASSERT_TRUE(scan_read.chunked_array);
+    auto concat_array = arrow::Concatenate(scan_read.chunked_array->chunks()).ValueOrDie();
+    auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(concat_array);
+    ASSERT_TRUE(struct_array);
+    ASSERT_EQ(struct_array->length(), 3);
+    auto blob_col =
+        std::dynamic_pointer_cast<arrow::LargeBinaryArray>(struct_array->GetFieldByName("b0"));
+    auto row_id_col = std::dynamic_pointer_cast<arrow::Int64Array>(
+        struct_array->GetFieldByName(SpecialFields::RowId().Name()));
+    auto seq_col = std::dynamic_pointer_cast<arrow::Int64Array>(
+        struct_array->GetFieldByName(SpecialFields::SequenceNumber().Name()));
+    ASSERT_TRUE(blob_col && row_id_col && seq_col);
+
+    ASSERT_EQ(blob_col->GetString(0), "blob_a");
+    ASSERT_EQ(blob_col->GetString(2), "update_c");
+    // the all-placeholder row: null blob, row id kept, sequence number -1
+    ASSERT_TRUE(blob_col->IsNull(1));
+    ASSERT_EQ(row_id_col->Value(1), 1);
+    ASSERT_EQ(seq_col->Value(1), -1);
+    for (int64_t i : {static_cast<int64_t>(0), static_cast<int64_t>(2)}) {
+        ASSERT_EQ(row_id_col->Value(i), i);
+        ASSERT_GE(seq_col->Value(i), 0);
+    }
+    ASSERT_GT(seq_col->Value(2), seq_col->Value(0));
+}
+
+/// A normal (full-row) write never interprets blob bytes: a user value whose bytes exactly
+/// equal the placeholder sentinel must be stored verbatim (not persisted as a bin_length -2
+/// entry) and read back unchanged. The sentinel is reserved only inside the data-evolution
+/// partial-update channels (see BlobDefs::kPlaceholderSentinel).
+TEST_P(BlobTableInteTest, TestBlobValueEqualToPlaceholderSentinelBytes) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
+                                 arrow::field("f1", arrow::utf8()),
+                                 BlobUtils::ToArrowField("b0", /*nullable=*/true)};
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(fields, /*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    auto schema = arrow::schema(fields);
+    std::string sentinel_bytes = std::string(BlobDefs::PlaceholderSentinelView());
+
+    // full-row write: row 0's blob is exactly the sentinel bytes
+    auto struct_type = arrow::struct_(fields);
+    arrow::StructBuilder struct_builder(
+        struct_type, arrow::default_memory_pool(),
+        {std::make_shared<arrow::Int32Builder>(), std::make_shared<arrow::StringBuilder>(),
+         std::make_shared<arrow::LargeBinaryBuilder>()});
+    auto f0_builder = static_cast<arrow::Int32Builder*>(struct_builder.field_builder(0));
+    auto f1_builder = static_cast<arrow::StringBuilder*>(struct_builder.field_builder(1));
+    auto b0_builder = static_cast<arrow::LargeBinaryBuilder*>(struct_builder.field_builder(2));
+    ASSERT_TRUE(struct_builder.Append().ok());
+    ASSERT_TRUE(f0_builder->Append(1).ok());
+    ASSERT_TRUE(f1_builder->Append("a").ok());
+    ASSERT_TRUE(b0_builder->Append(sentinel_bytes.data(), sentinel_bytes.size()).ok());
+    ASSERT_TRUE(struct_builder.Append().ok());
+    ASSERT_TRUE(f0_builder->Append(2).ok());
+    ASSERT_TRUE(f1_builder->Append("b").ok());
+    ASSERT_TRUE(b0_builder->Append("normal", 6).ok());
+    std::shared_ptr<arrow::Array> src_array;
+    ASSERT_TRUE(struct_builder.Finish(&src_array).ok());
+    auto src_struct = std::dynamic_pointer_cast<arrow::StructArray>(src_array);
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs0,
+                         WriteArray(table_path, {}, schema->field_names(), {src_struct}));
+    ASSERT_OK(Commit(table_path, commit_msgs0));
+
+    // read back unchanged: the sentinel-equal bytes are a normal value
+    ASSERT_OK(ScanAndRead(table_path, schema->field_names(), src_struct));
+
+    // a value that merely starts with the sentinel bytes stays a normal value even through a
+    // partial-update fallback (placeholders are identified by exact equality only)
+    std::string prefixed_bytes = sentinel_bytes + "suffix";
+    auto update_array = MakeBlobUpdateArray(fields[2], {prefixed_bytes, "updated_b"});
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs1, WriteArray(table_path, {}, {"b0"}, {update_array}));
+    SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs1);
+    ASSERT_OK(Commit(table_path, commit_msgs1));
+
+    ASSERT_OK_AND_ASSIGN(auto scan_read, ScanAndReadResult(table_path, schema->field_names()));
+    ASSERT_TRUE(scan_read.chunked_array);
+    auto concat_array = arrow::Concatenate(scan_read.chunked_array->chunks()).ValueOrDie();
+    auto struct_result = std::dynamic_pointer_cast<arrow::StructArray>(concat_array);
+    ASSERT_TRUE(struct_result);
+    ASSERT_EQ(struct_result->length(), 2);
+    auto blob_col =
+        std::dynamic_pointer_cast<arrow::LargeBinaryArray>(struct_result->GetFieldByName("b0"));
+    ASSERT_TRUE(blob_col);
+    ASSERT_FALSE(blob_col->IsNull(0));
+    ASSERT_EQ(blob_col->GetString(0), prefixed_bytes);
+    ASSERT_EQ(blob_col->GetString(1), "updated_b");
+}
+
+TEST_P(BlobTableInteTest, TestBlobSentinelValueInBaseLayerDegradesToNull) {
+    // Pins the accepted collision of the byte-identified placeholder protocol (see
+    // BlobDefs::kPlaceholderSentinel): the fallback merge byte-compares every layer, so a user
+    // blob equal to the sentinel bytes that a later partial update leaves untouched reads as a
+    // placeholder in every layer and degrades to a null blob instead of falling back.
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
+                                 arrow::field("f1", arrow::utf8()),
+                                 BlobUtils::ToArrowField("b0", /*nullable=*/true)};
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(fields, /*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    auto schema = arrow::schema(fields);
+    std::string sentinel_bytes = std::string(BlobDefs::PlaceholderSentinelView());
+
+    // the full-row write stores row 0's sentinel-equal bytes verbatim (the write channel is off)
+    std::string src_json =
+        std::string(R"([[1, "a", ")") + sentinel_bytes + R"("], [2, "b", "blob_b"]])";
+    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), src_json).ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs0,
+                         WriteArray(table_path, {}, schema->field_names(), {src_array}));
+    ASSERT_OK(Commit(table_path, commit_msgs0));
+
+    // the partial update leaves row 0 untouched, so its base value collides with the
+    // placeholder markers of the newer layer
+    auto update_array = MakeBlobUpdateArray(fields[2], {"PH", "updated_b"});
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs1, WriteArray(table_path, {}, {"b0"}, {update_array}));
+    SetFirstRowId(/*reset_first_row_id=*/0, commit_msgs1);
+    ASSERT_OK(Commit(table_path, commit_msgs1));
+
+    // row 0's non-blob fields survive (they come from the data file); only the blob degrades
+    auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+        [1, "a", null],
+        [2, "b", "updated_b"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_array));
+}
+
+TEST_P(BlobTableInteTest, TestUserSuppliedInternalPlaceholderOptionsIgnored) {
+    // blob.internal.* options are reserved for the data-evolution write and read paths. Set in
+    // the user table options they must be ignored: were the write key honored, this full-row
+    // write would persist the sentinel-equal user value as a placeholder entry that no older
+    // layer can resolve, making the table unreadable.
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32()),
+                                 arrow::field("f1", arrow::utf8()),
+                                 BlobUtils::ToArrowField("b0", /*nullable=*/true)};
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"},
+                                                  {BlobDefs::kWritePlaceholderKey, "true"},
+                                                  {BlobDefs::kEmitPlaceholderSentinelKey, "true"}};
+    CreateTable(fields, /*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    auto schema = arrow::schema(fields);
+    std::string sentinel_bytes = std::string(BlobDefs::PlaceholderSentinelView());
+
+    std::string src_json =
+        std::string(R"([[1, "a", ")") + sentinel_bytes + R"("], [2, "b", "blob_b"]])";
+    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), src_json).ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         WriteArray(table_path, {}, schema->field_names(), {src_array}));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+
+    // the sentinel-equal value round-trips verbatim: the user-supplied keys were stripped
+    ASSERT_OK(ScanAndRead(table_path, schema->field_names(), src_array));
 }
 
 TEST_P(BlobTableInteTest, TestDataEvolutionBlobOnlyFirstCommitFailsWithoutFirstRowId) {

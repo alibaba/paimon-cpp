@@ -49,7 +49,8 @@ namespace paimon::blob {
 /// ====================================================================
 /// 1. Data Bins Section
 /// ====================================================================
-/// The file consists of one or more contiguous 'bins' (bin_0, bin_1, bin_2, ...).
+/// The file consists of zero or more contiguous 'bins' (bin_0, bin_1, bin_2, ...); rows whose
+/// index entry is negative (see Section 2) have no bin.
 /// The structure of each bin is as follows:
 ///
 /// | Field Name        | Length (bytes) | Description                                             |
@@ -67,7 +68,13 @@ namespace paimon::blob {
 /// ====================================================================
 /// The Index is located after all data bins and is used for quick lookup and management.
 ///
-/// Purpose: Records the lengths (record lens) of all data bins.
+/// Purpose: Records one signed length entry per row, in row order.
+///
+/// Special lengths: an entry does not always describe a bin present in the Data Bins Section.
+/// - -1 (BlobDefs::kNullBinLength): a null blob; no bin is written.
+/// - -2 (BlobDefs::kPlaceholderBinLength): a placeholder blob written by a data-evolution
+///   partial update for a row it did not touch; no bin is written and the value must be
+///   resolved from an older blob file covering the same row.
 ///
 /// Encoding:
 /// - Uses Delta Encoding to store differences between successive length values.
@@ -87,9 +94,16 @@ namespace paimon::blob {
 /// - Current version is 1.
 class BlobFileBatchReader : public FileBatchReader {
  public:
+    /// `emit_placeholder_sentinel` controls how placeholder entries (bin_length ==
+    /// BlobDefs::kPlaceholderBinLength) are read: when false they fail the read, as resolving
+    /// them requires the data-evolution blob fallback path; when true they are returned as the
+    /// non-null BlobDefs::kPlaceholderSentinel bytes for that path to merge away. Stored values
+    /// are returned verbatim; see BlobDefs::kPlaceholderSentinel for the accepted collision
+    /// with a user value exactly equal to the sentinel.
     static Result<std::unique_ptr<BlobFileBatchReader>> Create(
         const std::shared_ptr<InputStream>& input_stream, int32_t batch_size,
-        bool blob_as_descriptor, const std::shared_ptr<MemoryPool>& pool);
+        bool blob_as_descriptor, bool emit_placeholder_sentinel,
+        const std::shared_ptr<MemoryPool>& pool);
 
     Result<std::unique_ptr<::ArrowSchema>> GetFileSchema() const override;
 
@@ -99,14 +113,8 @@ class BlobFileBatchReader : public FileBatchReader {
     Result<ReadBatch> NextBatch() override;
 
     Result<uint64_t> GetPreviousBatchFileRowId(uint64_t batch_row_id) const override {
-        if (all_blob_lengths_.size() != target_blob_lengths_.size()) {
-            return Status::NotImplemented(
-                "Cannot call GetPreviousBatchFileRowId in BlobFileBatchReader because, after "
-                "bitmap pushdown, rows in the array returned by NextBatch are no longer "
-                "contiguous.");
-        }
         if (previous_batch_row_count_ == 0) {
-            if (previous_batch_first_row_number_ == std::numeric_limits<uint64_t>::max()) {
+            if (previous_batch_start_pos_ == std::numeric_limits<size_t>::max()) {
                 return Status::Invalid("No batch has been read yet.");
             } else {
                 return Status::Invalid("Last batch was EOF.");
@@ -117,7 +125,9 @@ class BlobFileBatchReader : public FileBatchReader {
                 fmt::format("batch_row_id {} is out of range, last batch row count is {}",
                             batch_row_id, previous_batch_row_count_));
         }
-        return previous_batch_first_row_number_ + batch_row_id;
+        // target_blob_row_indexes_ maps every selected position back to its original file row
+        // index, so this stays correct after a bitmap selection removed rows.
+        return target_blob_row_indexes_[previous_batch_start_pos_ + batch_row_id];
     }
 
     Result<uint64_t> GetNumberOfRows() const override {
@@ -144,7 +154,8 @@ class BlobFileBatchReader : public FileBatchReader {
     BlobFileBatchReader(const std::shared_ptr<InputStream>& input_stream,
                         const std::string& file_path, const std::vector<int64_t>& blob_lengths,
                         const std::vector<int64_t>& blob_offsets, int32_t batch_size,
-                        bool blob_as_descriptor, const std::shared_ptr<MemoryPool>& pool);
+                        bool blob_as_descriptor, bool emit_placeholder_sentinel,
+                        const std::shared_ptr<MemoryPool>& pool);
 
     Status ReadBlobContentAt(const int64_t offset, const int64_t length, uint8_t* content) const;
 
@@ -158,6 +169,23 @@ class BlobFileBatchReader : public FileBatchReader {
     /// Returns true if the blob at the given index is null (bin_length == kNullBinLength).
     bool IsTargetNull(size_t index) const {
         return target_blob_lengths_[index] == BlobDefs::kNullBinLength;
+    }
+
+    bool IsTargetPlaceholder(size_t index) const {
+        return target_blob_lengths_[index] == BlobDefs::kPlaceholderBinLength;
+    }
+
+    /// Content bytes the blob at the given index contributes to the output buffer: nothing for
+    /// a null entry, the sentinel bytes for a placeholder entry (which occupies no file space),
+    /// the stored bytes otherwise.
+    int64_t GetTargetOutputLength(size_t index) const {
+        if (IsTargetNull(index)) {
+            return 0;
+        }
+        if (IsTargetPlaceholder(index)) {
+            return BlobDefs::kPlaceholderSentinelLength;
+        }
+        return GetTargetContentLength(index);
     }
 
     int64_t GetTargetContentOffset(size_t index) const {
@@ -179,6 +207,7 @@ class BlobFileBatchReader : public FileBatchReader {
 
     const int32_t batch_size_;
     const bool blob_as_descriptor_;
+    const bool emit_placeholder_sentinel_;
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<arrow::MemoryPool> arrow_pool_;
 
@@ -186,7 +215,9 @@ class BlobFileBatchReader : public FileBatchReader {
     std::shared_ptr<Metrics> metrics_;
 
     size_t current_pos_ = 0;
-    uint64_t previous_batch_first_row_number_ = std::numeric_limits<uint64_t>::max();
+    /// Start position of the previous batch in the (possibly selection-filtered) target index
+    /// space; max() until the first batch is read.
+    size_t previous_batch_start_pos_ = std::numeric_limits<size_t>::max();
     uint64_t previous_batch_row_count_ = 0;
     bool closed_ = false;
 };

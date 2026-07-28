@@ -18,6 +18,8 @@
 
 #include <cstdint>
 #include <functional>
+#include <limits>
+#include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -55,7 +57,8 @@ struct DeletionFile;
 /// Readers Overview: (ConcatBatchReader across
 /// splits)->(BlobViewResolvingBatchReader)->(CompleteIndexScoreBatchReader)->
 /// CompleteRowKindBatchReader->(PredicateBatchReader)
-/// ->ConcatBatchReader across files->DataEvolutionFileReader->(ConcatBatchReader across blob files)
+/// ->ConcatBatchReader across files->DataEvolutionFileReader
+/// ->(ConcatBatchReader across blob files | BlobFallbackBatchReader across blob sequence layers)
 /// ->FieldMappingReader->(CompleteRowTrackingFieldsBatchReader)->(ShreddingFileReader)
 /// ->(MapSharedShreddingFileReader)
 /// ->(DelegatingPrefetchReader)->(PrefetchFileBatchReader)->FormatReader
@@ -107,26 +110,43 @@ class DataEvolutionSplitRead : public AbstractSplitRead {
         std::vector<std::shared_ptr<DataFileMeta>> data_files_;
     };
 
+    /// All blob files of one blob field in a merge group. Unlike data files, every file is kept
+    /// (aligned with Java's BlobFileBunch): files whose max sequence numbers differ form layers
+    /// of a data-evolution partial update, where newer layers record untouched rows as
+    /// placeholder entries and reading falls back row by row to older layers.
+    /// Files must be added ordered by first row id ascending (then max sequence number
+    /// descending), as produced by MergeRangesAndSort.
     class BlobBunch : public FieldBunch {
      public:
         explicit BlobBunch(int64_t expected_row_count, bool has_row_ids_selection)
             : expected_row_count_(expected_row_count),
               has_row_ids_selection_(has_row_ids_selection) {}
-        int64_t RowCount() const override {
-            return row_count_;
-        }
+        /// Number of distinct row ids covered by the added files. Without a row-ids selection
+        /// the covered range is contiguous (enforced by Add) and matches the data files.
+        int64_t RowCount() const override;
         const std::vector<std::shared_ptr<DataFileMeta>>& Files() const override {
             return files_;
         }
         Status Add(const std::shared_ptr<DataFileMeta>& file);
+        /// True when every file shares one max sequence number, so the files are read
+        /// sequentially without the fallback merge. A lone layer is expected to hold no
+        /// placeholder entries; if one does (a user value equal to the placeholder sentinel
+        /// written by a blob-only first write), the strict blob reader rejects the read, since
+        /// no older layer exists to resolve it.
+        bool SequentialReadOptimize() const {
+            return sequence_group_end_.size() <= 1;
+        }
 
      private:
         int64_t expected_row_count_ = -1;
-        int64_t latest_first_row_id_ = -1;
-        int64_t expected_next_first_row_id_ = -1;
-        int64_t latest_max_sequence_number_ = -1;
-        int64_t row_count_ = 0;
         bool has_row_ids_selection_ = false;
+        int64_t union_first_row_id_ = std::numeric_limits<int64_t>::max();
+        /// Exclusive end of the union row id range covered so far.
+        int64_t union_end_row_id_ = std::numeric_limits<int64_t>::min();
+        /// Per max sequence number: exclusive end of the last added range, to reject
+        /// overlapping files within one layer.
+        std::map<int64_t, int64_t> sequence_group_end_;
+        std::vector<Range> ranges_;
         std::vector<std::shared_ptr<DataFileMeta>> files_;
     };
 
@@ -162,6 +182,16 @@ class DataEvolutionSplitRead : public AbstractSplitRead {
     Result<std::unique_ptr<DataEvolutionFileReader>> CreateUnionReader(
         const BinaryRow& partition,
         const std::vector<std::shared_ptr<DataFileMeta>>& need_merge_files,
+        const std::optional<std::vector<Range>>& row_ranges,
+        const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
+
+    /// Builds the row-level fallback reader for a blob bunch spanning multiple max sequence
+    /// number layers: groups the files by max sequence number, pads uncovered row id ranges of
+    /// each layer with placeholder gap segments, and resolves each row to the newest
+    /// non-placeholder layer. See BlobFallbackBatchReader.
+    Result<std::unique_ptr<BatchReader>> CreateBlobFallbackReader(
+        const BinaryRow& partition, const std::vector<std::shared_ptr<DataFileMeta>>& files,
+        const std::shared_ptr<arrow::Schema>& file_read_schema,
         const std::optional<std::vector<Range>>& row_ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
 };
