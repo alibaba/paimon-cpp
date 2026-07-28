@@ -78,32 +78,33 @@ class ChangelogBatchReader : public BatchReader {
     Result<ReadBatch> NextBatch() override {
         while (true) {
             PAIMON_ASSIGN_OR_RAISE(ReadBatch batch, reader_->NextBatch());
+            std::shared_ptr<arrow::StructArray> struct_array;
+            std::vector<int32_t> row_group_lengths;
             if (BatchReader::IsEofBatch(batch)) {
-                if (pending_update_before_) {
-                    return Status::Invalid(
-                        "UPDATE_BEFORE has no matching UPDATE_AFTER in binlog reader");
+                if (!pending_update_before_) {
+                    return batch;
                 }
-                return batch;
+                struct_array = std::move(pending_update_before_);
+                row_group_lengths.push_back(1);
+            } else {
+                auto& [c_array, c_schema] = batch;
+                PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> arrow_array,
+                                                  arrow::ImportArray(c_array.get(), c_schema.get()));
+                struct_array = std::dynamic_pointer_cast<arrow::StructArray>(arrow_array);
+                if (!struct_array) {
+                    return Status::Invalid("audit_log system table expects struct batches");
+                }
+                PAIMON_ASSIGN_OR_RAISE(struct_array, PrependPendingUpdateBefore(struct_array));
+                PAIMON_ASSIGN_OR_RAISE(row_group_lengths, BuildRowGroupLengths(struct_array));
             }
-            auto& [c_array, c_schema] = batch;
-            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> arrow_array,
-                                              arrow::ImportArray(c_array.get(), c_schema.get()));
-            std::shared_ptr<arrow::StructArray> struct_array =
-                std::dynamic_pointer_cast<arrow::StructArray>(arrow_array);
-            if (!struct_array) {
-                return Status::Invalid("audit_log system table expects struct batches");
-            }
-            PAIMON_ASSIGN_OR_RAISE(struct_array, PrependPendingUpdateBefore(struct_array));
-            PAIMON_ASSIGN_OR_RAISE(std::vector<int32_t> row_group_lengths,
-                                   BuildRowGroupLengths(struct_array));
             if (row_group_lengths.empty()) {
                 continue;
             }
 
-            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> rowkind_array,
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> row_kind_array,
                                    BuildRowKindArray(struct_array, row_group_lengths));
 
-            arrow::ArrayVector output_arrays = {rowkind_array};
+            arrow::ArrayVector output_arrays = {row_kind_array};
             if (include_sequence_number_) {
                 PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> sequence_array,
                                        BuildSequenceNumberArray(struct_array, row_group_lengths));
@@ -225,13 +226,15 @@ class ChangelogBatchReader : public BatchReader {
         PAIMON_RETURN_NOT_OK_FROM_ARROW(builder.Reserve(row_group_lengths.size()));
         int64_t offset = 0;
         for (int32_t row_group_length : row_group_lengths) {
-            int64_t rowkind_index = offset + row_group_length - 1;
-            if (value_kind_array->IsNull(rowkind_index)) {
+            int64_t row_kind_index = offset + row_group_length - 1;
+            if (value_kind_array->IsNull(row_kind_index)) {
+                return Status::Invalid(
+                    fmt::format("exists null value in value kind array in pos {}", row_kind_index));
                 PAIMON_RETURN_NOT_OK_FROM_ARROW(builder.AppendNull());
             } else {
                 PAIMON_ASSIGN_OR_RAISE(
                     const RowKind* row_kind,
-                    RowKind::FromByteValue(value_kind_array->Value(rowkind_index)));
+                    RowKind::FromByteValue(value_kind_array->Value(row_kind_index)));
                 PAIMON_RETURN_NOT_OK_FROM_ARROW(builder.Append(row_kind->ShortString()));
             }
             offset += row_group_length;
@@ -290,6 +293,10 @@ class ChangelogTableRead : public TableRead {
 
     Result<std::unique_ptr<BatchReader>> CreateReader(
         const std::vector<std::shared_ptr<Split>>& splits) override {
+        // Records across different splits should not be packed, because for streaming reads on a
+        // primary-key table, all data belonging to the same partition and bucket is placed in a
+        // single split. Therefore, an UPDATE_BEFORE/UPDATE_AFTER pair will not be truncated at a
+        // split boundary.
         if (converter_->PackUpdateBeforeAfter()) {
             std::vector<std::unique_ptr<BatchReader>> readers;
             readers.reserve(splits.size());
@@ -355,10 +362,10 @@ std::string AuditLogSystemTable::Name() const {
 }
 
 Result<std::shared_ptr<arrow::Schema>> AuditLogSystemTable::ArrowSchema() const {
-    std::shared_ptr<arrow::Field> rowkind_field =
+    std::shared_ptr<arrow::Field> row_kind_field =
         DataField::ConvertDataFieldToArrowField(SpecialFields::RowKind());
-    rowkind_field = rowkind_field->WithNullable(false);
-    arrow::FieldVector fields = {rowkind_field};
+    row_kind_field = row_kind_field->WithNullable(false);
+    arrow::FieldVector fields = {row_kind_field};
     PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(options_));
     if (core_options.TableReadSequenceNumberEnabled()) {
         fields.push_back(DataField::ConvertDataFieldToArrowField(SpecialFields::SequenceNumber()));

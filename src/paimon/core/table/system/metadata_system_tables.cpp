@@ -368,9 +368,12 @@ Result<StatsStringOverrides> OmittedPartitionStats(const std::shared_ptr<TableSc
     }
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> partition_values,
                            RowValueStrings(partition_fields, partition));
-
-    size_t length = std::min(partition_fields.size(), partition_values.size());
-    for (size_t i = 0; i < length; ++i) {
+    if (partition_fields.size() != partition_values.size()) {
+        return Status::Invalid(
+            fmt::format("partition field count {} does not match partition value count {}",
+                        partition_fields.size(), partition_values.size()));
+    }
+    for (size_t i = 0; i < partition_fields.size(); ++i) {
         const std::string& field_name = partition_fields[i].Name();
         if (std::find(file.write_cols->begin(), file.write_cols->end(), field_name) !=
             file.write_cols->end()) {
