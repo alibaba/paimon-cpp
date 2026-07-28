@@ -26,7 +26,7 @@ as in-memory data format interface. Please ensure that Arrow C++ is installed
 and available to your build system
 
 The recommended way to integrate the Paimon C++ libraries into your C++ project
-is to use CMake’s `find_package <https://cmake.org/cmake/help/latest/command/find_package.html>`_
+is to use CMake's `find_package <https://cmake.org/cmake/help/latest/command/find_package.html>`_
 function to locate and integrate dependencies.
 
 CMake
@@ -45,11 +45,27 @@ for data format and file system.
 
    project(MyExample)
 
-   find_package(Arrow REQUIRED)
-   find_package(Paimon REQUIRED)
+   # Arrow's static package may export LZ4 under a different target name.
+   find_package(lz4 CONFIG QUIET)
+   if(TARGET LZ4::lz4_static AND NOT TARGET LZ4::lz4)
+     add_library(LZ4::lz4 ALIAS LZ4::lz4_static)
+   elseif(TARGET lz4::lz4 AND NOT TARGET LZ4::lz4)
+     add_library(LZ4::lz4 ALIAS lz4::lz4)
+   endif()
+
+   find_package(Arrow CONFIG REQUIRED)
+   find_package(Paimon CONFIG REQUIRED)
+
+   if(TARGET Arrow::arrow_shared)
+     set(PAIMON_ARROW_TARGET Arrow::arrow_shared)
+   elseif(TARGET Arrow::arrow_static)
+     set(PAIMON_ARROW_TARGET Arrow::arrow_static)
+   else()
+     message(FATAL_ERROR "No supported Arrow CMake target is available")
+   endif()
 
    add_executable(my_example my_example.cc)
-   target_link_libraries(my_example PRIVATE Arrow::arrow_shared
+   target_link_libraries(my_example PRIVATE ${PAIMON_ARROW_TARGET}
                                             Paimon::paimon_shared
                                             Paimon::paimon_parquet_file_format_shared
                                             Paimon::paimon_local_file_system_shared)
@@ -61,12 +77,15 @@ The directive ``find_package(Paimon REQUIRED)`` instructs CMake to locate a
 Paimon C++ installation on your system. If successful, it sets ``Paimon_FOUND``
 to true if the Paimon C++ libraries were found.
 
-It also defines the following linkable imported targets:
+It defines the following supported imported target:
 
 * ``Paimon::paimon_shared`` links to the Paimon shared libraries
-* ``Paimon::paimon_static`` links to the Paimon static libraries
 
-In most cases, it is recommended to use the Paimon shared libraries.
+Static targets such as ``Paimon::paimon_static`` may also be present when
+Paimon is built with ``PAIMON_BUILD_STATIC=ON``. They are not currently
+supported as standalone installed targets because their exported link
+interfaces do not include every third-party dependency. Installed consumers
+should use the shared targets.
 
 Optional plugins (built-in file formats, file systems, and index)
 -----------------------------------------------------------------
@@ -75,21 +94,23 @@ Paimon provides a set of built-in optional plugins that you can link to as neede
 
 - File format plugins:
 
-  - ``Paimon::paimon_parquet_file_format_shared`` / ``Paimon::paimon_parquet_file_format_static``
-  - ``Paimon::paimon_orc_file_format_shared`` / ``Paimon::paimon_orc_file_format_static``
-  - ``Paimon::paimon_avro_file_format_shared`` / ``Paimon::paimon_avro_file_format_static``
-  - ``Paimon::paimon_blob_file_format_shared`` / ``Paimon::paimon_blob_file_format_static``
+  - ``Paimon::paimon_parquet_file_format_shared``
+  - ``Paimon::paimon_orc_file_format_shared``
+  - ``Paimon::paimon_avro_file_format_shared``
+  - ``Paimon::paimon_blob_file_format_shared``
 
 - File system plugins:
 
-  - ``Paimon::paimon_local_file_system_shared`` / ``Paimon::paimon_local_file_system_static``
-  - ``Paimon::paimon_jindo_file_system_shared`` / ``Paimon::paimon_jindo_file_system_static``
+  - ``Paimon::paimon_local_file_system_shared``
+  - ``Paimon::paimon_jindo_file_system_shared``
 
 - Index plugins:
 
-  - ``Paimon::paimon_file_index_shared`` / ``Paimon::paimon_file_index_static``
-  - ``Paimon::paimon_lumina_index_shared`` / ``Paimon::paimon_lumina_index_static``
+  - ``Paimon::paimon_file_index_shared``
+  - ``Paimon::paimon_lumina_index_shared``
 
 .. note::
 
-  In most cases, it is recommended to use the shared variants of these plugins.
+  Static plugin targets have the same installed-consumer limitation as
+  ``Paimon::paimon_static`` and should not be used as standalone imported
+  targets.

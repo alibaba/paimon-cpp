@@ -40,6 +40,11 @@ class CommitMessage;
 ///
 /// The `FileStoreCommit` class provides interfaces for committing changes, expiring old snapshots,
 /// dropping partitions, and retrieving commit metrics.
+///
+/// @note Direct file-system commits support append-only and primary-key tables on non-object-store
+/// paths. Object-store paths require REST catalog commit mode: enable it with
+/// `CommitContextBuilder::UseRESTCatalogCommit()`, call `Commit()` or `FilterAndCommit()`, and then
+/// retrieve the request with `GetLastCommitTableRequest()`.
 class PAIMON_EXPORT FileStoreCommit {
  public:
     /// Create an instance of `FileStoreCommit`.

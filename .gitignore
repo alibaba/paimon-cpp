@@ -16,6 +16,7 @@
 build
 build-*/
 output
+release
 
 # IDE settings
 .idea

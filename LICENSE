@@ -219,6 +219,7 @@ This product includes code from Apache Iceberg C++.
 * Dev Container utilities:
   * .devcontainer/Dockerfile.template
   * .devcontainer/devcontainer.json.template
+  * .devcontainer/x86_64/devcontainer.json.template
 * CI utilities:
   * .pre-commit-config.yaml
 * Avro direct decoder/encoder:
@@ -230,6 +231,28 @@ This product includes code from Apache Iceberg C++.
 
 Copyright: 2024-2025 The Apache Software Foundation.
 Home page: https://iceberg.apache.org/
+License: https://www.apache.org/licenses/LICENSE-2.0
+
+--------------------------------------------------------------------------------
+
+This product includes code based on Apache Spark.
+
+* Variant utilities:
+  * src/paimon/common/data/variant/generic_variant.cpp
+  * src/paimon/common/data/variant/generic_variant.h
+  * src/paimon/common/data/variant/variant_binary_util.cpp
+  * src/paimon/common/data/variant/variant_binary_util.h
+  * src/paimon/common/data/variant/variant_builder.cpp
+  * src/paimon/common/data/variant/variant_builder.h
+  * src/paimon/common/data/variant/variant_reassembler.cpp
+  * src/paimon/common/data/variant/variant_reassembler.h
+  * src/paimon/common/data/variant/variant_schema.h
+  * src/paimon/common/data/variant/variant_shredding_utils.cpp
+  * src/paimon/common/data/variant/variant_shredding_writer.cpp
+  * src/paimon/common/data/variant/variant_shredding_writer.h
+
+Copyright: 2014 and onwards The Apache Software Foundation.
+Home page: https://spark.apache.org/
 License: https://www.apache.org/licenses/LICENSE-2.0
 
 --------------------------------------------------------------------------------

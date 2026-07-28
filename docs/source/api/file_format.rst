@@ -33,10 +33,6 @@ Interface
    :members:
    :undoc-members:
 
-.. doxygenclass:: paimon::BatchReader
-   :members:
-   :undoc-members:
-
 .. doxygenclass:: paimon::FileBatchReader
    :members:
    :undoc-members:

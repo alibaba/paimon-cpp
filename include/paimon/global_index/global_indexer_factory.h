@@ -49,7 +49,7 @@ class PAIMON_EXPORT GlobalIndexerFactory : public Factory {
     static Result<std::unique_ptr<GlobalIndexer>> Get(
         const std::string& identifier, const std::map<std::string, std::string>& options);
 
-    /// Creates a `GlobalIndexer` using the current factory’s implementation and the given options.
+    /// Creates a `GlobalIndexer` using the current factory's implementation and the given options.
     virtual Result<std::unique_ptr<GlobalIndexer>> Create(
         const std::map<std::string, std::string>& options) const = 0;
 };

@@ -90,8 +90,9 @@ struct PAIMON_EXPORT Options {
     static const char SEQUENCE_GROUP[];
     /// @}
 
-    /// "bucket" - Bucket number for file store. It should either be equal to -1 (dynamic bucket
-    /// mode), or it must be greater than 0 (fixed bucket mode).
+    /// "bucket" - Bucket mode or bucket count for file store. Append tables support -1
+    /// (unaware-bucket mode), primary-key tables support -2 (postpone-bucket mode), and both
+    /// table types support values greater than 0 (fixed-bucket mode).
     static const char BUCKET[];
 
     /// "bucket-key" - Specify the paimon distribution policy. Data is assigned to each bucket
