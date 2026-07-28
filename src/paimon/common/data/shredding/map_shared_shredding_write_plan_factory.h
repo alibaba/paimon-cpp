@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -34,15 +35,14 @@ namespace paimon {
 
 class MapSharedShreddingContext;
 
-/// Creates MAP shared-shredding batch converters driven by the cross-file adaptive-K context.
+/// Detects configured MAP shared-shredding fields and owns their cross-file adaptive-K context.
 /// The write plan is never inferred from samples; per-file field metadata is persisted into the
 /// file footer by the metadata finalizer.
 class MapSharedShreddingWritePlanFactory : public ShreddingWritePlanFactory {
  public:
-    MapSharedShreddingWritePlanFactory(const CoreOptions& options,
-                                       const std::shared_ptr<arrow::Schema>& write_schema,
-                                       const std::shared_ptr<MapSharedShreddingContext>& context,
-                                       const std::shared_ptr<MemoryPool>& pool);
+    static Result<std::shared_ptr<MapSharedShreddingWritePlanFactory>> Create(
+        const CoreOptions& options, const std::shared_ptr<arrow::Schema>& write_schema,
+        const std::shared_ptr<MemoryPool>& pool);
 
     bool ShouldCreateWritePlan() const override;
 
@@ -52,14 +52,23 @@ class MapSharedShreddingWritePlanFactory : public ShreddingWritePlanFactory {
 
     Result<std::shared_ptr<ShreddingBatchConverter>> CreateConverter(
         const std::string& file_format_identifier,
-        const std::vector<std::shared_ptr<arrow::Array>>& sample_batches) const override;
+        const std::vector<std::shared_ptr<arrow::Array>>& sample_batches) override;
 
     MetadataFinalizer CreateMetadataFinalizer(
-        const std::shared_ptr<ShreddingBatchConverter>& converter) const override;
+        const std::shared_ptr<ShreddingBatchConverter>& converter,
+        const std::string& compression) const override;
+
+    Status OnFileCompleted(const std::shared_ptr<ShreddingBatchConverter>& converter) override;
 
  private:
+    MapSharedShreddingWritePlanFactory(const CoreOptions& options,
+                                       const std::shared_ptr<arrow::Schema>& write_schema,
+                                       const std::map<std::string, int32_t>& field_to_max_columns,
+                                       const std::shared_ptr<MemoryPool>& pool);
+
     CoreOptions options_;
     std::shared_ptr<arrow::Schema> write_schema_;
+    std::map<std::string, int32_t> field_to_max_columns_;
     std::shared_ptr<MapSharedShreddingContext> context_;
     std::shared_ptr<MemoryPool> pool_;
 };

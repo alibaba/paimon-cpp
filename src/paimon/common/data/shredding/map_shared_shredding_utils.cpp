@@ -26,7 +26,6 @@
 #include "paimon/common/compression/block_compressor.h"
 #include "paimon/common/compression/block_decompressor.h"
 #include "paimon/common/data/shredding/map_shared_shredding_batch_converter.h"
-#include "paimon/common/data/shredding/map_shared_shredding_context.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/core_options.h"
@@ -76,18 +75,6 @@ Result<std::vector<std::string>> MapSharedShreddingUtils::DetectShreddingColumns
         }
     }
     return field_names;
-}
-
-Result<std::shared_ptr<MapSharedShreddingContext>> MapSharedShreddingUtils::CreateShreddingContext(
-    const std::shared_ptr<arrow::Schema>& schema, const CoreOptions& options) {
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> shredding_field_names,
-                           DetectShreddingColumns(schema, options));
-    if (shredding_field_names.empty()) {
-        return std::shared_ptr<MapSharedShreddingContext>();
-    }
-    std::map<std::string, int32_t> field_to_k_max;
-    PAIMON_ASSIGN_OR_RAISE(field_to_k_max, BuildColumnToNumColumns(shredding_field_names, options));
-    return std::make_shared<MapSharedShreddingContext>(field_to_k_max);
 }
 
 // ---- Schema conversion ----
@@ -358,6 +345,7 @@ Result<std::set<int32_t>> DeserializeOverflowSet(const std::string& json_str) {
 Status MapSharedShreddingUtils::SerializeMetadata(const MapSharedShreddingFieldMeta& field_meta,
                                                   const std::string& compression,
                                                   arrow::KeyValueMetadata* metadata) {
+    const std::string normalized_compression = StringUtils::ToLowerCase(compression);
     PAIMON_RETURN_NOT_OK_FROM_ARROW(metadata->Set(
         MapShreddingDefine::kStorageLayout, MapShreddingDefine::kStorageLayoutSharedShredding));
     PAIMON_RETURN_NOT_OK_FROM_ARROW(
@@ -367,8 +355,10 @@ Status MapSharedShreddingUtils::SerializeMetadata(const MapSharedShreddingFieldM
     std::string field_dict_json = SerializeFieldDict(field_meta);
     PAIMON_RETURN_NOT_OK_FROM_ARROW(metadata->Set(MapSharedShreddingDefine::kFieldDictOriginalSize,
                                                   std::to_string(field_dict_json.size())));
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(
+        metadata->Set(MapSharedShreddingDefine::kFieldDictCompression, normalized_compression));
     PAIMON_ASSIGN_OR_RAISE(std::string compressed_dict,
-                           CompressString(field_dict_json, compression));
+                           CompressString(field_dict_json, normalized_compression));
     PAIMON_RETURN_NOT_OK_FROM_ARROW(
         metadata->Set(MapSharedShreddingDefine::kFieldDict, std::move(compressed_dict)));
 
@@ -385,7 +375,7 @@ Status MapSharedShreddingUtils::SerializeMetadata(const MapSharedShreddingFieldM
 }
 
 Result<MapSharedShreddingFieldMeta> MapSharedShreddingUtils::DeserializeMetadata(
-    const std::shared_ptr<arrow::KeyValueMetadata>& metadata, const std::string& compression) {
+    const std::shared_ptr<arrow::KeyValueMetadata>& metadata) {
     if (!HasShreddingMetadata(metadata)) {
         return Status::Invalid("metadata is null or storage layout is not shared-shredding");
     }
@@ -405,8 +395,12 @@ Result<MapSharedShreddingFieldMeta> MapSharedShreddingUtils::DeserializeMetadata
         GetRequiredInt32(metadata, MapSharedShreddingDefine::kFieldDictOriginalSize));
     PAIMON_ASSIGN_OR_RAISE(std::string compressed_dict,
                            GetRequiredValue(metadata, MapSharedShreddingDefine::kFieldDict));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::string field_dict_compression,
+        GetRequiredValue(metadata, MapSharedShreddingDefine::kFieldDictCompression));
+    field_dict_compression = StringUtils::ToLowerCase(field_dict_compression);
     PAIMON_ASSIGN_OR_RAISE(std::string field_dict_json,
-                           DecompressString(compressed_dict, original_len, compression));
+                           DecompressString(compressed_dict, original_len, field_dict_compression));
     PAIMON_ASSIGN_OR_RAISE(result.name_to_id, DeserializeFieldDict(field_dict_json));
 
     // field_columns
@@ -453,10 +447,8 @@ Result<bool> MapSharedShreddingUtils::IsOverflowField(const MapSharedShreddingFi
 std::function<Result<std::shared_ptr<arrow::Schema>>()>
 MapSharedShreddingUtils::BuildMetadataFinalizer(
     const std::shared_ptr<MapSharedShreddingBatchConverter>& converter,
-    const std::string& compression, const std::shared_ptr<MapSharedShreddingContext>& context,
-    const std::shared_ptr<arrow::Schema>& physical_schema) {
-    return [converter, compression, context,
-            physical_schema]() -> Result<std::shared_ptr<arrow::Schema>> {
+    const std::string& compression, const std::shared_ptr<arrow::Schema>& physical_schema) {
+    return [converter, compression, physical_schema]() -> Result<std::shared_ptr<arrow::Schema>> {
         const std::vector<std::string>& shredding_field_names =
             converter->GetShreddingColumnNames();
         arrow::FieldVector updated_fields = physical_schema->fields();
@@ -474,7 +466,6 @@ MapSharedShreddingUtils::BuildMetadataFinalizer(
             PAIMON_RETURN_NOT_OK(
                 MapSharedShreddingUtils::SerializeMetadata(file_meta, compression, metadata.get()));
             updated_fields[col_index] = field->WithMetadata(metadata);
-            context->ReportFileStats(field_name, file_meta.max_row_width);
         }
         return arrow::schema(std::move(updated_fields));
     };

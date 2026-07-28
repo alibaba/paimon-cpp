@@ -82,8 +82,7 @@ class RemoteLookupFileManagerTest : public testing::Test {
                              std::vector<std::string>({"key"}), data_path_factory, key_comparator,
                              /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper,
                              /*schema_id=*/0, arrow_schema_, options, noop_compact_manager_,
-                             /*io_manager=*/nullptr, /*enable_multi_thread_spill=*/false,
-                             /*shredding_context=*/nullptr, pool_));
+                             /*io_manager=*/nullptr, /*enable_multi_thread_spill=*/false, pool_));
 
         ArrowArray c_src_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*src_array, &c_src_array));

@@ -322,7 +322,7 @@ TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompactionWithMap
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_EQ(data_splits.size(), 1);
     {
-        // check adaptive k
+        // Compaction creates a fresh rolling writer, so it starts from K_max.
         auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(data_splits[0]);
         ASSERT_TRUE(data_split);
         ASSERT_EQ(data_split->DataFiles().size(), 1);
@@ -340,11 +340,9 @@ TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompactionWithMap
         auto tags_field = file_schema->GetFieldByName("tags");
         ASSERT_TRUE(tags_field);
         ASSERT_TRUE(tags_field->metadata());
-        ASSERT_OK_AND_ASSIGN(
-            auto tags_meta,
-            MapSharedShreddingUtils::DeserializeMetadata(
-                tags_field->metadata()->Copy(), MapSharedShreddingDefine::kDefaultDictCompression));
-        ASSERT_EQ(4, tags_meta.num_columns);
+        ASSERT_OK_AND_ASSIGN(auto tags_meta, MapSharedShreddingUtils::DeserializeMetadata(
+                                                 tags_field->metadata()->Copy()));
+        ASSERT_EQ(64, tags_meta.num_columns);
         ASSERT_EQ(4, tags_meta.max_row_width);
     }
     {

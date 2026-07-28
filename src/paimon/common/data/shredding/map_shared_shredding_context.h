@@ -25,7 +25,7 @@ namespace paimon {
 
 /// Cross-file shared context for shared-shredding MAP columns.
 ///
-/// Lifetime: same as the owning writer (e.g. AppendOnlyWriter).
+/// Lifetime: same as one rolling writer / write-plan factory.
 /// Holds per-column K_max and a sliding window of recent max_row_width
 /// values to support adaptive K sizing across files.
 ///

@@ -42,7 +42,6 @@ class Schema;
 namespace paimon {
 
 class CommitIncrement;
-class MapSharedShreddingContext;
 class RecordBatch;
 template <typename T, typename R>
 class RollingFileWriter;
@@ -61,7 +60,6 @@ class AppendOnlyWriter : public BatchWriter {
                      int64_t max_sequence_number,
                      const std::shared_ptr<DataFilePathFactory>& path_factory,
                      const std::shared_ptr<CompactManager>& compact_manager,
-                     const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
                      const std::shared_ptr<MemoryPool>& memory_pool);
 
     ~AppendOnlyWriter() override;
@@ -104,7 +102,7 @@ class AppendOnlyWriter : public BatchWriter {
     Result<CommitIncrement> DrainIncrement();
     Status Flush(bool wait_for_latest_compaction, bool forced_full_compaction);
 
-    WriterFactory GetDataFileWriterFactory(
+    Result<WriterFactory> GetDataFileWriterFactory(
         const std::shared_ptr<arrow::Schema>& schema,
         const std::optional<std::vector<std::string>>& write_cols) const;
 
@@ -134,11 +132,6 @@ class AppendOnlyWriter : public BatchWriter {
     std::unique_ptr<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>> writer_;
     std::set<std::string> inline_descriptor_fields_;
     std::set<std::string> inline_view_fields_;
-
-    // ---- Shared-shredding MAP support ----
-    /// Cross-file context for K adaptation and shredding column tracking.
-    /// nullptr when no shared-shredding MAP columns are configured.
-    std::shared_ptr<MapSharedShreddingContext> shredding_context_;
 };
 
 }  // namespace paimon

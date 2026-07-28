@@ -51,19 +51,24 @@ class VariantShreddingWritePlan {
     /// @param logical_schema The logical write schema.
     /// @param column_shredding_types The shredding type per variant column name, e.g.
     ///        `{"v": struct{a: int32, b: string}}`. Names that are not top-level variant columns
-    ///        of `logical_schema` are ignored. Returns nullptr when no name matches (the file is
-    ///        written unshredded, mirroring the Java behavior).
+    ///        of `logical_schema` are ignored. When no name matches, returns an identity plan.
     static Result<std::shared_ptr<VariantShreddingWritePlan>> Create(
         const std::shared_ptr<arrow::Schema>& logical_schema,
         const std::map<std::string, std::shared_ptr<arrow::DataType>>& column_shredding_types);
 
     /// Creates a plan shredding the variant columns at the given field-index paths (top-level or
-    /// nested inside structs). Paths that do not point at a variant field are ignored. Returns
-    /// nullptr when no path matches.
+    /// nested inside structs). Paths that do not point at a variant field are ignored. When no
+    /// path matches, returns an identity plan.
     static Result<std::shared_ptr<VariantShreddingWritePlan>> CreateFromPaths(
         const std::shared_ptr<arrow::Schema>& logical_schema,
         const std::map<std::vector<int32_t>, std::shared_ptr<arrow::DataType>>&
             path_shredding_types);
+
+    /// Creates a plan by comparing the complete logical and physical row schemas produced by
+    /// whole-row Variant schema inference.
+    static Result<std::shared_ptr<VariantShreddingWritePlan>> CreateFromPhysicalSchema(
+        const std::shared_ptr<arrow::Schema>& logical_schema,
+        const std::shared_ptr<arrow::Schema>& physical_schema);
 
     /// Creates a plan from the `variant.shreddingSchema` option value: a ROW type JSON whose
     /// fields map top-level variant column names to their shredding types (nested variant

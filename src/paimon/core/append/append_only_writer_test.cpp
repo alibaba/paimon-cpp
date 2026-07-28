@@ -38,7 +38,6 @@
 #include "paimon/common/data/blob_descriptor.h"
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/data/blob_view_struct.h"
-#include "paimon/common/data/shredding/map_shared_shredding_context.h"
 #include "paimon/common/data/shredding/map_shared_shredding_utils.h"
 #include "paimon/common/data/shredding/map_shredding_defs.h"
 #include "paimon/common/fs/external_path_provider.h"
@@ -303,10 +302,8 @@ class AppendOnlyWriterTest : public testing::Test {
         // Deserialize and compare the per-field shared-shredding map metadata.
         auto metadata = file_schema->field(field_index)->metadata();
         ASSERT_NE(nullptr, metadata);
-        ASSERT_OK_AND_ASSIGN(
-            auto deserialized_meta,
-            MapSharedShreddingUtils::DeserializeMetadata(
-                metadata->Copy(), MapSharedShreddingDefine::kDefaultDictCompression));
+        ASSERT_OK_AND_ASSIGN(auto deserialized_meta,
+                             MapSharedShreddingUtils::DeserializeMetadata(metadata->Copy()));
         ASSERT_EQ(expected_meta, deserialized_meta);
     }
 
@@ -317,12 +314,9 @@ class AppendOnlyWriterTest : public testing::Test {
         const std::shared_ptr<DataFilePathFactory>& path_factory,
         const std::shared_ptr<CompactManager>& compact_manager,
         const std::shared_ptr<MemoryPool>& memory_pool) const {
-        PAIMON_ASSIGN_OR_RAISE(
-            auto shredding_context,
-            MapSharedShreddingUtils::CreateShreddingContext(write_schema, options));
         return std::make_unique<AppendOnlyWriter>(options, schema_id, write_schema, write_cols,
                                                   max_sequence_number, path_factory,
-                                                  compact_manager, shredding_context, memory_pool);
+                                                  compact_manager, memory_pool);
     }
 
  protected:
@@ -705,8 +699,9 @@ TEST_F(AppendOnlyWriterTest, TestCompactPassesFullCompactionFlag) {
 }
 
 TEST_F(AppendOnlyWriterTest, TestWriteWithSingleBlobField) {
-    auto options =
-        CreateOptions({{Options::FILE_FORMAT, "orc"}, {Options::MANIFEST_FORMAT, "orc"}});
+    auto options = CreateOptions({{Options::FILE_FORMAT, "orc"},
+                                  {Options::MANIFEST_FORMAT, "orc"},
+                                  {Options::TARGET_FILE_ROW_NUM, "1"}});
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
     auto path_factory = CreatePathFactory(dir->Str(), "orc", options);
@@ -728,16 +723,18 @@ TEST_F(AppendOnlyWriterTest, TestWriteWithSingleBlobField) {
     ASSERT_TRUE(blob_builder.Append("bb", 2).ok());
     auto blob_array = blob_builder.Finish().ValueOrDie();
 
-    ASSERT_OK(writer->Write(CreateStructBatch(schema, {int_array, blob_array})));
+    ASSERT_OK(writer->Write(
+        CreateStructBatch(schema, {int_array->Slice(0, 1), blob_array->Slice(0, 1)})));
+    ASSERT_OK(writer->Write(
+        CreateStructBatch(schema, {int_array->Slice(1, 1), blob_array->Slice(1, 1)})));
     ASSERT_OK_AND_ASSIGN(CommitIncrement inc, writer->PrepareCommit(/*wait_compaction=*/true));
 
-    ASSERT_EQ(inc.GetNewFilesIncrement().NewFiles().size(), 2);
-    const auto& main_file = inc.GetNewFilesIncrement().NewFiles()[0];
-    const auto& blob_file = inc.GetNewFilesIncrement().NewFiles()[1];
-    ASSERT_TRUE(
-        options.GetFileSystem()->Exists(path_factory->ToPath(main_file->file_name)).value());
-    ASSERT_TRUE(
-        options.GetFileSystem()->Exists(path_factory->ToPath(blob_file->file_name)).value());
+    const auto& files = inc.GetNewFilesIncrement().NewFiles();
+    ASSERT_EQ(files.size(), 4);
+    for (const auto& file : files) {
+        ASSERT_EQ(file->row_count, 1);
+        ASSERT_TRUE(options.GetFileSystem()->Exists(path_factory->ToPath(file->file_name)).value());
+    }
     ASSERT_OK(writer->Close());
 }
 
@@ -975,6 +972,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapFieldContent) {
     auto options = CreateOptions({
         {Options::FILE_FORMAT, format},
         {Options::MANIFEST_FORMAT, format},
+        {Options::TARGET_FILE_ROW_NUM, "2"},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "3"},
         {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
@@ -1106,6 +1104,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapAllNullThenAllEmptyF
     auto options = CreateOptions({
         {Options::FILE_FORMAT, format},
         {Options::MANIFEST_FORMAT, format},
+        {Options::TARGET_FILE_ROW_NUM, "2"},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "3"},
         {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
@@ -1132,21 +1131,39 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapAllNullThenAllEmptyF
         [2, null]
     ])");
     ASSERT_OK(writer->Write(std::move(null_batch)));
-    ASSERT_OK_AND_ASSIGN(CommitIncrement null_inc, writer->PrepareCommit(/*wait_compaction=*/true));
-    ASSERT_EQ(1, null_inc.GetNewFilesIncrement().NewFiles().size());
-    std::string null_file_path =
-        path_factory->ToPath(null_inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
+
+    auto empty_batch = CreateBatch(logical_schema, R"([
+        [3, []],
+        [4, []]
+    ])");
+    ASSERT_OK(writer->Write(std::move(empty_batch)));
+
+    auto null_value_batch = CreateBatch(logical_schema, R"([
+        [5, [["a", null]]],
+        [6, [["b", null]]],
+        [7, [["c", 7], ["d", null]]]
+    ])");
+    ASSERT_OK(writer->Write(std::move(null_value_batch)));
+    ASSERT_OK_AND_ASSIGN(CommitIncrement inc, writer->PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_OK(writer->Close());
+
+    const auto& files = inc.GetNewFilesIncrement().NewFiles();
+    ASSERT_EQ(3, files.size());
+    std::string null_file_path = path_factory->ToPath(files[0]->file_name);
+    std::string empty_file_path = path_factory->ToPath(files[1]->file_name);
+    std::string null_value_file_path = path_factory->ToPath(files[2]->file_name);
 
     std::map<std::string, int32_t> first_file_k = {{"tags", 3}};
     ASSERT_OK_AND_ASSIGN(auto first_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                 logical_schema, first_file_k));
+    auto first_physical_type = arrow::struct_(first_schema->fields());
+
     MapSharedShreddingFieldMeta empty_meta;
     empty_meta.num_columns = 3;
     empty_meta.max_row_width = 0;
     CheckShreddingFileSchema(null_file_path, format, first_schema, /*field_index=*/1, empty_meta,
                              options.GetFileCompression());
 
-    auto first_physical_type = arrow::struct_(first_schema->fields());
     std::shared_ptr<arrow::ChunkedArray> expected_null_array;
     ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(first_physical_type, {R"([
         [1, null],
@@ -1156,29 +1173,16 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapAllNullThenAllEmptyF
                     .ok());
     CheckFileContent(null_file_path, format, expected_null_array);
 
-    auto empty_batch = CreateBatch(logical_schema, R"([
-        [3, []],
-        [4, []]
-    ])");
-    ASSERT_OK(writer->Write(std::move(empty_batch)));
-    ASSERT_OK_AND_ASSIGN(CommitIncrement empty_inc,
-                         writer->PrepareCommit(/*wait_compaction=*/true));
-    ASSERT_EQ(1, empty_inc.GetNewFilesIncrement().NewFiles().size());
-    std::string empty_file_path =
-        path_factory->ToPath(empty_inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
-
-    // Previous file observed max_row_width=0, but the next file must still keep at least one
-    // physical value column so shared-shredding never produces a K=0 schema.
-    std::map<std::string, int32_t> second_file_k = {{"tags", 1}};
-    ASSERT_OK_AND_ASSIGN(auto second_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                 logical_schema, second_file_k));
+    std::map<std::string, int32_t> subsequent_file_k = {{"tags", 1}};
+    ASSERT_OK_AND_ASSIGN(auto subsequent_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                     logical_schema, subsequent_file_k));
+    auto subsequent_physical_type = arrow::struct_(subsequent_schema->fields());
     empty_meta.num_columns = 1;
-    CheckShreddingFileSchema(empty_file_path, format, second_schema, /*field_index=*/1, empty_meta,
-                             options.GetFileCompression());
+    CheckShreddingFileSchema(empty_file_path, format, subsequent_schema, /*field_index=*/1,
+                             empty_meta, options.GetFileCompression());
 
-    auto second_physical_type = arrow::struct_(second_schema->fields());
     std::shared_ptr<arrow::ChunkedArray> expected_empty_array;
-    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(second_physical_type, {R"([
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(subsequent_physical_type, {R"([
         [3, [[-1], null, null]],
         [4, [[-1], null, null]]
     ])"},
@@ -1186,29 +1190,17 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapAllNullThenAllEmptyF
                     .ok());
     CheckFileContent(empty_file_path, format, expected_empty_array);
 
-    auto null_value_batch = CreateBatch(logical_schema, R"([
-        [5, [["a", null]]],
-        [6, [["b", null]]],
-        [7, [["c", 7], ["d", null]]]
-    ])");
-    ASSERT_OK(writer->Write(std::move(null_value_batch)));
-    ASSERT_OK_AND_ASSIGN(CommitIncrement null_value_inc,
-                         writer->PrepareCommit(/*wait_compaction=*/true));
-    ASSERT_EQ(1, null_value_inc.GetNewFilesIncrement().NewFiles().size());
-    std::string null_value_file_path =
-        path_factory->ToPath(null_value_inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
-
     MapSharedShreddingFieldMeta null_value_meta;
     null_value_meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}, {"d", 3}};
     null_value_meta.field_to_columns = {{0, {0}}, {1, {0}}, {2, {0}}};
     null_value_meta.overflow_field_set = {3};
     null_value_meta.num_columns = 1;
     null_value_meta.max_row_width = 2;
-    CheckShreddingFileSchema(null_value_file_path, format, second_schema, /*field_index=*/1,
+    CheckShreddingFileSchema(null_value_file_path, format, subsequent_schema, /*field_index=*/1,
                              null_value_meta, options.GetFileCompression());
 
     std::shared_ptr<arrow::ChunkedArray> expected_null_value_array;
-    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(second_physical_type, {R"([
+    ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(subsequent_physical_type, {R"([
         [5, [[0], null, null]],
         [6, [[1], null, null]],
         [7, [[2], 7, [[3, null]]]]
@@ -1216,7 +1208,6 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapAllNullThenAllEmptyF
                                                                  &expected_null_value_array)
                     .ok());
     CheckFileContent(null_value_file_path, format, expected_null_value_array);
-
     ASSERT_OK(writer->Close());
 }
 
@@ -1360,11 +1351,12 @@ TEST_P(AppendOnlyWriterShreddingTest, TestWriteSharedShreddingMapWithLruPlacemen
     CheckFileContent(data_file_path, format, expected_array);
 }
 
-TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFiles) {
+TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossRollingFiles) {
     std::string format = GetFormat();
     auto options = CreateOptions({
         {Options::FILE_FORMAT, format},
         {Options::MANIFEST_FORMAT, format},
+        {Options::TARGET_FILE_ROW_NUM, "1"},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "10"},
         {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
@@ -1392,20 +1384,29 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
         [2, [["c", 30], ["a", 40], ["b", 50]]]
     ])");
     ASSERT_OK(writer->Write(std::move(batch1)));
-    ASSERT_OK_AND_ASSIGN(CommitIncrement inc1, writer->PrepareCommit(/*wait_compaction=*/true));
-    ASSERT_EQ(1, inc1.GetNewFilesIncrement().NewFiles().size());
 
-    std::string file1_path =
-        path_factory->ToPath(inc1.GetNewFilesIncrement().NewFiles()[0]->file_name);
+    // File 2 adapts to file 1's max row width.
+    auto batch2 = CreateBatch(logical_schema, R"([
+        [3, [["x", 100], ["y", 200], ["z", 300], ["w", 400], ["v", 500]]]
+    ])");
+    ASSERT_OK(writer->Write(std::move(batch2)));
 
-    // File 1 should have K=10 (first file uses K_max).
+    // File 3 sees both preceding files in the same rolling session.
+    auto batch3 = CreateBatch(logical_schema, R"([
+        [4, [["p", 1000], ["q", 2000], ["r", 3000], ["s", 4000]]]
+    ])");
+    ASSERT_OK(writer->Write(std::move(batch3)));
+    ASSERT_OK_AND_ASSIGN(CommitIncrement increment,
+                         writer->PrepareCommit(/*wait_compaction=*/true));
+    const auto& files = increment.GetNewFilesIncrement().NewFiles();
+    ASSERT_EQ(3, files.size());
+    std::string file1_path = path_factory->ToPath(files[0]->file_name);
+    std::string file2_path = path_factory->ToPath(files[1]->file_name);
+    std::string file3_path = path_factory->ToPath(files[2]->file_name);
+
     std::map<std::string, int32_t> column_to_k_file1 = {{"tags", 10}};
     ASSERT_OK_AND_ASSIGN(auto phys_schema1, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                 logical_schema, column_to_k_file1));
-    // Verify file1 physical schema has 10 columns.
-    auto struct_type1 = std::static_pointer_cast<arrow::StructType>(phys_schema1->field(1)->type());
-    ASSERT_EQ(12, struct_type1->num_fields());  // mapping + 10 cols + overflow
-
     MapSharedShreddingFieldMeta meta1;
     meta1.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}};
     meta1.field_to_columns = {{0, {0, 1}}, {1, {1, 2}}, {2, {0}}};
@@ -1415,25 +1416,9 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
     CheckShreddingFileSchema(file1_path, format, phys_schema1, /*field_index=*/1, meta1,
                              compression);
 
-    // --- File 2: K should adapt to min(max_window=3, K_max=10) = 3 ---
-    // Write 5 keys → 3 fit in columns, 2 overflow.
-    auto batch2 = CreateBatch(logical_schema, R"([
-        [3, [["x", 100], ["y", 200], ["z", 300], ["w", 400], ["v", 500]]]
-    ])");
-    ASSERT_OK(writer->Write(std::move(batch2)));
-    ASSERT_OK_AND_ASSIGN(CommitIncrement inc2, writer->PrepareCommit(/*wait_compaction=*/true));
-    ASSERT_EQ(1, inc2.GetNewFilesIncrement().NewFiles().size());
-
-    std::string file2_path =
-        path_factory->ToPath(inc2.GetNewFilesIncrement().NewFiles()[0]->file_name);
-
-    // File 2 should have K=3 (adapted from file1's max_row_width=3).
     std::map<std::string, int32_t> column_to_k_file2 = {{"tags", 3}};
     ASSERT_OK_AND_ASSIGN(auto phys_schema2, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                 logical_schema, column_to_k_file2));
-    auto struct_type2 = std::static_pointer_cast<arrow::StructType>(phys_schema2->field(1)->type());
-    ASSERT_EQ(5, struct_type2->num_fields());  // mapping + 3 cols + overflow
-
     MapSharedShreddingFieldMeta meta2;
     meta2.name_to_id = {{"x", 0}, {"y", 1}, {"z", 2}, {"w", 3}, {"v", 4}};
     meta2.field_to_columns = {{0, {0}}, {1, {1}}, {2, {2}}};
@@ -1442,8 +1427,6 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
     meta2.max_row_width = 5;
     CheckShreddingFileSchema(file2_path, format, phys_schema2, /*field_index=*/1, meta2,
                              compression);
-
-    // Verify data: 5 keys, K=3, so w and v overflow.
     auto physical_type2 = arrow::struct_(phys_schema2->fields());
     std::shared_ptr<arrow::ChunkedArray> expected_array2;
     ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(physical_type2, {R"([
@@ -1453,26 +1436,9 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
                     .ok());
     CheckFileContent(file2_path, format, expected_array2);
 
-    // --- File 3: K should adapt to min(max_window=max(3,5)=5, K_max=10) = 5 ---
-    // File2 reported max_row_width=5, so window now has [3, 5], max=5.
-    // Write 4 keys → all fit in K=5, no overflow.
-    auto batch3 = CreateBatch(logical_schema, R"([
-        [4, [["p", 1000], ["q", 2000], ["r", 3000], ["s", 4000]]]
-    ])");
-    ASSERT_OK(writer->Write(std::move(batch3)));
-    ASSERT_OK_AND_ASSIGN(CommitIncrement inc3, writer->PrepareCommit(/*wait_compaction=*/true));
-    ASSERT_EQ(1, inc3.GetNewFilesIncrement().NewFiles().size());
-
-    std::string file3_path =
-        path_factory->ToPath(inc3.GetNewFilesIncrement().NewFiles()[0]->file_name);
-
-    // File 3 should have K=5 (window max grew from file2's max_row_width=5).
     std::map<std::string, int32_t> column_to_k_file3 = {{"tags", 5}};
     ASSERT_OK_AND_ASSIGN(auto phys_schema3, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                 logical_schema, column_to_k_file3));
-    auto struct_type3 = std::static_pointer_cast<arrow::StructType>(phys_schema3->field(1)->type());
-    ASSERT_EQ(7, struct_type3->num_fields());  // mapping + 5 cols + overflow
-
     MapSharedShreddingFieldMeta meta3;
     meta3.name_to_id = {{"p", 0}, {"q", 1}, {"r", 2}, {"s", 3}};
     meta3.field_to_columns = {{0, {0}}, {1, {1}}, {2, {2}}, {3, {3}}};
@@ -1480,8 +1446,6 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
     meta3.max_row_width = 4;
     CheckShreddingFileSchema(file3_path, format, phys_schema3, /*field_index=*/1, meta3,
                              compression);
-
-    // Verify data: 4 keys fit in K=5, col4 unused, no overflow.
     auto physical_type3 = arrow::struct_(phys_schema3->fields());
     std::shared_ptr<arrow::ChunkedArray> expected_array3;
     ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(physical_type3, {R"([
@@ -1494,7 +1458,7 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapKAdaptationAcrossFil
     ASSERT_OK(writer->Close());
 }
 
-TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapUsesInitialContextForFirstFile) {
+TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapFirstFileUsesConfiguredMaxK) {
     std::string format = GetFormat();
     auto options = CreateOptions({
         {Options::FILE_FORMAT, format},
@@ -1514,12 +1478,9 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapUsesInitialContextFo
     ASSERT_TRUE(dir);
     auto path_factory = CreatePathFactory(dir->Str(), format, options);
 
-    auto initial_context =
-        std::make_shared<MapSharedShreddingContext>(std::map<std::string, int32_t>{{"tags", 10}});
-    initial_context->ReportFileStats("tags", 2);
     auto writer = std::make_unique<AppendOnlyWriter>(
         options, /*schema_id=*/0, logical_schema, /*write_cols=*/std::nullopt,
-        /*max_sequence_number=*/-1, path_factory, compact_manager_, initial_context, memory_pool_);
+        /*max_sequence_number=*/-1, path_factory, compact_manager_, memory_pool_);
 
     auto batch = CreateBatch(logical_schema, R"([
         [1, [["a", 10], ["b", 20], ["c", 30]]]
@@ -1531,14 +1492,13 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapUsesInitialContextFo
     std::string file_path =
         path_factory->ToPath(inc.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
-    std::map<std::string, int32_t> column_to_k = {{"tags", 2}};
+    std::map<std::string, int32_t> column_to_k = {{"tags", 10}};
     ASSERT_OK_AND_ASSIGN(auto physical_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                    logical_schema, column_to_k));
     MapSharedShreddingFieldMeta expected_meta;
     expected_meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}};
-    expected_meta.field_to_columns = {{0, {0}}, {1, {1}}};
-    expected_meta.overflow_field_set = {2};
-    expected_meta.num_columns = 2;
+    expected_meta.field_to_columns = {{0, {0}}, {1, {1}}, {2, {2}}};
+    expected_meta.num_columns = 10;
     expected_meta.max_row_width = 3;
     CheckShreddingFileSchema(file_path, format, physical_schema, /*field_index=*/1, expected_meta,
                              options.GetFileCompression());
@@ -1546,7 +1506,8 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapUsesInitialContextFo
     auto physical_type = arrow::struct_(physical_schema->fields());
     std::shared_ptr<arrow::ChunkedArray> expected_array;
     ASSERT_TRUE(arrow::ipc::internal::json::ChunkedArrayFromJSON(physical_type, {R"([
-        [1, [[0, 1], 10, 20, [[2, 30]]]]
+        [1, [[0, 1, 2, -1, -1, -1, -1, -1, -1, -1],
+             10, 20, 30, null, null, null, null, null, null, null, null]]
     ])"},
                                                                  &expected_array)
                     .ok());
@@ -1555,12 +1516,13 @@ TEST_P(AppendOnlyWriterShreddingTest, TestSharedShreddingMapUsesInitialContextFo
     ASSERT_OK(writer->Close());
 }
 
-TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsWithKAdaptation) {
+TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsAdaptAcrossRollingFiles) {
     std::string format = GetFormat();
     // Two shared-shredding MAP fields with different initial K: tags(K=8), attrs(K=4).
     auto options = CreateOptions({
         {Options::FILE_FORMAT, format},
         {Options::MANIFEST_FORMAT, format},
+        {Options::TARGET_FILE_ROW_NUM, "1"},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "8"},
         {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
@@ -1594,17 +1556,27 @@ TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsWithKA
         [2, [["a", 30]],            [["x", "v2"]]]
     ])");
     ASSERT_OK(writer->Write(std::move(batch1)));
-    ASSERT_OK_AND_ASSIGN(CommitIncrement inc1, writer->PrepareCommit(/*wait_compaction=*/true));
-    ASSERT_EQ(1, inc1.GetNewFilesIncrement().NewFiles().size());
 
-    std::string file1_path =
-        path_factory->ToPath(inc1.GetNewFilesIncrement().NewFiles()[0]->file_name);
+    auto batch2 = CreateBatch(logical_schema, R"([
+        [3, [["c", 100], ["d", 200], ["e", 300]], [["p", "a1"], ["q", "a2"], ["r", "a3"]]]
+    ])");
+    ASSERT_OK(writer->Write(std::move(batch2)));
 
-    // Verify file1: tags K=8, attrs K=4 (first file uses K_max).
+    auto batch3 = CreateBatch(logical_schema, R"([
+        [4, [["f", 400], ["g", 500]], [["s", "b1"], ["t", "b2"]]]
+    ])");
+    ASSERT_OK(writer->Write(std::move(batch3)));
+    ASSERT_OK_AND_ASSIGN(CommitIncrement increment,
+                         writer->PrepareCommit(/*wait_compaction=*/true));
+    const auto& files = increment.GetNewFilesIncrement().NewFiles();
+    ASSERT_EQ(3, files.size());
+    std::string file1_path = path_factory->ToPath(files[0]->file_name);
+    std::string file2_path = path_factory->ToPath(files[1]->file_name);
+    std::string file3_path = path_factory->ToPath(files[2]->file_name);
+
     std::map<std::string, int32_t> col_to_k_file1 = {{"tags", 8}, {"attrs", 4}};
     ASSERT_OK_AND_ASSIGN(auto phys_schema1, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                 logical_schema, col_to_k_file1));
-
     MapSharedShreddingFieldMeta meta1_tags;
     meta1_tags.name_to_id = {{"a", 0}, {"b", 1}};
     meta1_tags.field_to_columns = {{0, {0}}, {1, {1}}};
@@ -1612,7 +1584,6 @@ TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsWithKA
     meta1_tags.max_row_width = 2;
     CheckShreddingFileSchema(file1_path, format, phys_schema1, /*field_index=*/1, meta1_tags,
                              compression);
-
     MapSharedShreddingFieldMeta meta1_attrs;
     meta1_attrs.name_to_id = {{"x", 0}};
     meta1_attrs.field_to_columns = {{0, {0}}};
@@ -1621,22 +1592,9 @@ TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsWithKA
     CheckShreddingFileSchema(file1_path, format, phys_schema1, /*field_index=*/2, meta1_attrs,
                              compression);
 
-    // --- File 2: tags K=min(2,8)=2, attrs K=min(1,4)=1 ---
-    // tags: 3 keys → 1 overflow; attrs: 3 keys → 2 overflow
-    auto batch2 = CreateBatch(logical_schema, R"([
-        [3, [["c", 100], ["d", 200], ["e", 300]], [["p", "a1"], ["q", "a2"], ["r", "a3"]]]
-    ])");
-    ASSERT_OK(writer->Write(std::move(batch2)));
-    ASSERT_OK_AND_ASSIGN(CommitIncrement inc2, writer->PrepareCommit(/*wait_compaction=*/true));
-    ASSERT_EQ(1, inc2.GetNewFilesIncrement().NewFiles().size());
-
-    std::string file2_path =
-        path_factory->ToPath(inc2.GetNewFilesIncrement().NewFiles()[0]->file_name);
-
     std::map<std::string, int32_t> col_to_k_file2 = {{"tags", 2}, {"attrs", 1}};
     ASSERT_OK_AND_ASSIGN(auto phys_schema2, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                 logical_schema, col_to_k_file2));
-
     MapSharedShreddingFieldMeta meta2_tags;
     meta2_tags.name_to_id = {{"c", 0}, {"d", 1}, {"e", 2}};
     meta2_tags.field_to_columns = {{0, {0}}, {1, {1}}};
@@ -1645,7 +1603,6 @@ TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsWithKA
     meta2_tags.max_row_width = 3;
     CheckShreddingFileSchema(file2_path, format, phys_schema2, /*field_index=*/1, meta2_tags,
                              compression);
-
     MapSharedShreddingFieldMeta meta2_attrs;
     meta2_attrs.name_to_id = {{"p", 0}, {"q", 1}, {"r", 2}};
     meta2_attrs.field_to_columns = {{0, {0}}};
@@ -1654,18 +1611,6 @@ TEST_P(AppendOnlyWriterShreddingTest, TestMultipleSharedShreddingMapFieldsWithKA
     meta2_attrs.max_row_width = 3;
     CheckShreddingFileSchema(file2_path, format, phys_schema2, /*field_index=*/2, meta2_attrs,
                              compression);
-
-    // --- File 3: tags K=min(max(2,3),8)=3, attrs K=min(max(1,3),4)=3 ---
-    // tags: 2 keys, fits; attrs: 2 keys, fits.
-    auto batch3 = CreateBatch(logical_schema, R"([
-        [4, [["f", 400], ["g", 500]], [["s", "b1"], ["t", "b2"]]]
-    ])");
-    ASSERT_OK(writer->Write(std::move(batch3)));
-    ASSERT_OK_AND_ASSIGN(CommitIncrement inc3, writer->PrepareCommit(/*wait_compaction=*/true));
-    ASSERT_EQ(1, inc3.GetNewFilesIncrement().NewFiles().size());
-
-    std::string file3_path =
-        path_factory->ToPath(inc3.GetNewFilesIncrement().NewFiles()[0]->file_name);
 
     std::map<std::string, int32_t> col_to_k_file3 = {{"tags", 3}, {"attrs", 3}};
     ASSERT_OK_AND_ASSIGN(auto phys_schema3, MapSharedShreddingUtils::LogicalToPhysicalSchema(

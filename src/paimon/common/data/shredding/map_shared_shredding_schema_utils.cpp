@@ -75,8 +75,7 @@ Result<std::unique_ptr<::ArrowSchema>> MapSharedShreddingSchemaUtils::AttachMeta
 }
 
 Result<MapSharedShreddingFieldMeta> MapSharedShreddingSchemaUtils::ExtractMetadataFromField(
-    std::unique_ptr<::ArrowSchema> physical_schema, const std::string& field_name,
-    const std::string& compression) {
+    std::unique_ptr<::ArrowSchema> physical_schema, const std::string& field_name) {
     if (!physical_schema) {
         return Status::Invalid("physical schema is null");
     }
@@ -90,7 +89,7 @@ Result<MapSharedShreddingFieldMeta> MapSharedShreddingSchemaUtils::ExtractMetada
 
     auto metadata =
         field->metadata() ? field->metadata()->Copy() : std::shared_ptr<arrow::KeyValueMetadata>();
-    return MapSharedShreddingUtils::DeserializeMetadata(metadata, compression);
+    return MapSharedShreddingUtils::DeserializeMetadata(metadata);
 }
 
 }  // namespace paimon

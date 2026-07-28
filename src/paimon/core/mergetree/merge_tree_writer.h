@@ -47,7 +47,6 @@ namespace paimon {
 class DataFilePathFactory;
 class IOManager;
 class FieldsComparator;
-class MapSharedShreddingContext;
 class MemoryPool;
 class Metrics;
 template <typename T>
@@ -64,7 +63,6 @@ class MergeTreeWriter : public BatchWriter {
         int64_t schema_id, const std::shared_ptr<arrow::Schema>& value_schema,
         const CoreOptions& options, const std::shared_ptr<CompactManager>& compact_manager,
         const std::shared_ptr<IOManager>& io_manager, bool enable_multi_thread_spill,
-        const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
         const std::shared_ptr<MemoryPool>& pool);
 
     Status Write(std::unique_ptr<RecordBatch>&& batch) override;
@@ -97,7 +95,7 @@ class MergeTreeWriter : public BatchWriter {
     Status FlushWriteBuffer(bool wait_for_latest_compaction, bool forced_full_compaction);
     Result<CommitIncrement> DrainIncrement();
 
-    std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>
+    Result<std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>>
     CreateRollingRowWriter() const;
 
     Status TrySyncLatestCompaction(bool blocking);
@@ -114,7 +112,6 @@ class MergeTreeWriter : public BatchWriter {
                     int64_t schema_id, const std::shared_ptr<arrow::Schema>& write_schema,
                     const std::shared_ptr<CompactManager>& compact_manager,
                     std::unique_ptr<WriteBuffer>&& write_buffer,
-                    const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
                     const std::shared_ptr<MemoryPool>& pool);
 
     std::shared_ptr<MemoryPool> pool_;
@@ -140,8 +137,5 @@ class MergeTreeWriter : public BatchWriter {
     std::vector<std::shared_ptr<DataFileMeta>> compact_after_;
 
     std::shared_ptr<CompactDeletionFile> compact_deletion_file_;
-
-    /// Cross-file shared context for shared-shredding MAP columns (nullable).
-    std::shared_ptr<MapSharedShreddingContext> shredding_context_;
 };
 }  // namespace paimon

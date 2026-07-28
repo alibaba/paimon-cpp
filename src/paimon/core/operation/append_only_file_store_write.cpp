@@ -17,6 +17,7 @@
 #include "paimon/core/operation/append_only_file_store_write.h"
 
 #include <functional>
+#include <limits>
 #include <vector>
 
 #include "arrow/c/bridge.h"
@@ -32,7 +33,6 @@
 #include "paimon/core/io/append_data_file_writer_factory.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/io/data_file_path_factory.h"
-#include "paimon/core/io/map_shared_shredding_core_utils.h"
 #include "paimon/core/io/rolling_file_writer.h"
 #include "paimon/core/io/shredding_append_data_file_writer_factory.h"
 #include "paimon/core/manifest/manifest_file.h"
@@ -120,14 +120,13 @@ Result<std::vector<std::shared_ptr<DataFileMeta>>> AppendOnlyFileStoreWrite::Com
                            CreateFilesReader(partition, bucket, dv_factory, to_compact));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
                            file_store_path_factory_->CreateDataFilePathFactory(partition, bucket));
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<MapSharedShreddingContext> shredding_context,
-                           MapSharedShreddingCoreUtils::CreateAndRestoreContext(
-                               write_schema_, to_compact, data_file_path_factory, options_, pool_));
+    PAIMON_ASSIGN_OR_RAISE(
+        WriterFactory writer_factory,
+        GetDataFileWriterFactory(data_file_path_factory, write_schema_, write_cols_, to_compact));
     auto rewriter =
         std::make_unique<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
             options_.GetTargetFileSize(/*has_primary_key=*/false),
-            GetDataFileWriterFactory(data_file_path_factory, write_schema_, write_cols_, to_compact,
-                                     shredding_context));
+            /*target_file_row_num=*/std::numeric_limits<int64_t>::max(), writer_factory);
 
     ScopeGuard reader_guard([&]() {
         if (reader) {
@@ -211,25 +210,21 @@ Result<std::shared_ptr<BatchWriter>> AppendOnlyFileStoreWrite::CreateWriter(
             compaction_metrics_->CreateReporter(partition, bucket), cancellation_controller);
     }
 
-    PAIMON_ASSIGN_OR_RAISE(
-        std::shared_ptr<MapSharedShreddingContext> shredding_context,
-        MapSharedShreddingCoreUtils::CreateAndRestoreContext(
-            write_schema_, restore_data_files, data_file_path_factory, options_, pool_));
     auto writer = std::make_unique<AppendOnlyWriter>(
         options_, table_schema_->Id(), write_schema_, write_cols_, restore_max_seq_number,
-        data_file_path_factory, compact_manager, shredding_context, pool_);
+        data_file_path_factory, compact_manager, pool_);
     return std::shared_ptr<BatchWriter>(std::move(writer));
 }
 
-AppendOnlyFileStoreWrite::WriterFactory AppendOnlyFileStoreWrite::GetDataFileWriterFactory(
+Result<AppendOnlyFileStoreWrite::WriterFactory> AppendOnlyFileStoreWrite::GetDataFileWriterFactory(
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory,
     const std::shared_ptr<arrow::Schema>& schema,
     const std::optional<std::vector<std::string>>& write_cols,
-    const std::vector<std::shared_ptr<DataFileMeta>>& to_compact,
-    const std::shared_ptr<MapSharedShreddingContext>& shredding_context) const {
+    const std::vector<std::shared_ptr<DataFileMeta>>& to_compact) const {
     auto seq_num_counter = std::make_shared<LongCounter>(to_compact[0]->min_sequence_number);
-    if (auto plan_factory =
-            ShreddingWritePlanFactories::SelectActive(options_, schema, shredding_context, pool_)) {
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ShreddingWritePlanFactory> plan_factory,
+                           ShreddingWritePlanFactories::SelectActive(options_, schema, pool_));
+    if (plan_factory != nullptr) {
         return std::make_shared<ShreddingAppendDataFileWriterFactory>(
             options_, table_schema_->Id(), schema, write_cols, seq_num_counter,
             FileSource::Compact(), data_file_path_factory, plan_factory, pool_);

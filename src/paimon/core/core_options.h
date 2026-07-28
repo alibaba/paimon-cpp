@@ -25,6 +25,7 @@
 
 #include "paimon/bucket/bucket_function_type.h"
 #include "paimon/cache/cache.h"
+#include "paimon/common/data/variant/variant_defs.h"
 #include "paimon/core/options/changelog_producer.h"
 #include "paimon/core/options/compress_options.h"
 #include "paimon/core/options/external_path_strategy.h"
@@ -76,6 +77,7 @@ class PAIMON_EXPORT CoreOptions {
     int32_t GetFileCompressionZstdLevel() const;
     int64_t GetPageSize() const;
     int64_t GetTargetFileSize(bool has_primary_key) const;
+    int64_t GetTargetFileRowNum() const;
     int64_t GetBlobTargetFileSize() const;
     bool BlobSplitByFileSize() const;
     int64_t GetCompactionFileSize(bool has_primary_key) const;
@@ -149,10 +151,13 @@ class PAIMON_EXPORT CoreOptions {
     /// "parquet.variant.shreddingSchema").
     std::optional<std::string> GetVariantShreddingSchema() const;
     bool VariantInferShreddingSchemaEnabled() const;
+    VariantShreddingInferenceMode GetVariantShreddingInferenceMode() const;
     int32_t GetVariantShreddingMaxSchemaWidth() const;
     int32_t GetVariantShreddingMaxSchemaDepth() const;
     double GetVariantShreddingMinFieldCardinalityRatio() const;
     int32_t GetVariantShreddingMaxInferBufferRow() const;
+    int32_t GetVariantShreddingAdaptiveMaxInferBufferRow() const;
+    double GetVariantShreddingAdaptiveRetentionRatio() const;
 
     bool DeletionVectorsEnabled() const;
     bool DeletionVectorsBitmap64() const;

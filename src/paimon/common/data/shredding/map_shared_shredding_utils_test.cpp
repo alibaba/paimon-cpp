@@ -276,8 +276,7 @@ TEST(MapSharedShreddingUtilsTest, MetadataRoundtripNoneCompression) {
     ASSERT_EQ(find_value(MapSharedShreddingDefine::kOverflowSet), "[1,5]");
 
     // Roundtrip verify
-    ASSERT_OK_AND_ASSIGN(auto deserialized,
-                         MapSharedShreddingUtils::DeserializeMetadata(metadata, "none"));
+    ASSERT_OK_AND_ASSIGN(auto deserialized, MapSharedShreddingUtils::DeserializeMetadata(metadata));
     ASSERT_EQ(deserialized, original);
 }
 
@@ -294,7 +293,7 @@ TEST(MapSharedShreddingUtilsTest, MetadataRoundtripCompression) {
         ASSERT_OK(
             MapSharedShreddingUtils::SerializeMetadata(original, compression, metadata.get()));
         ASSERT_OK_AND_ASSIGN(auto deserialized,
-                             MapSharedShreddingUtils::DeserializeMetadata(metadata, compression));
+                             MapSharedShreddingUtils::DeserializeMetadata(metadata));
         ASSERT_EQ(deserialized, original);
     };
 
@@ -311,7 +310,7 @@ TEST(MapSharedShreddingUtilsTest, MetadataRoundtripEmptyData) {
         ASSERT_OK(
             MapSharedShreddingUtils::SerializeMetadata(original, compression, metadata.get()));
         ASSERT_OK_AND_ASSIGN(auto deserialized,
-                             MapSharedShreddingUtils::DeserializeMetadata(metadata, compression));
+                             MapSharedShreddingUtils::DeserializeMetadata(metadata));
         ASSERT_EQ(deserialized, original);
     };
 
@@ -325,28 +324,25 @@ TEST(MapSharedShreddingUtilsTest, MetadataRoundtripEmptyData) {
 TEST(MapSharedShreddingUtilsTest, DeserializeMetadataErrors) {
     const std::string layout_error = "metadata is null or storage layout is not shared-shredding";
     // nullptr
-    ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::DeserializeMetadata(nullptr, "none"),
-                        layout_error);
+    ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::DeserializeMetadata(nullptr), layout_error);
     // missing storage layout
     {
         auto metadata = std::make_shared<arrow::KeyValueMetadata>();
         metadata->Append("some_key", "some_value");
-        ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::DeserializeMetadata(metadata, "none"),
-                            layout_error);
+        ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::DeserializeMetadata(metadata), layout_error);
     }
     // wrong storage layout
     {
         auto metadata = std::make_shared<arrow::KeyValueMetadata>();
         metadata->Append(MapShreddingDefine::kStorageLayout, "default");
-        ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::DeserializeMetadata(metadata, "none"),
-                            layout_error);
+        ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::DeserializeMetadata(metadata), layout_error);
     }
     // missing version
     {
         auto metadata = std::make_shared<arrow::KeyValueMetadata>();
         metadata->Append(MapShreddingDefine::kStorageLayout,
                          MapShreddingDefine::kStorageLayoutSharedShredding);
-        ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::DeserializeMetadata(metadata, "none"),
+        ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::DeserializeMetadata(metadata),
                             "missing shredding metadata key: paimon.map.shared-shredding.version");
     }
     // wrong version
@@ -357,7 +353,7 @@ TEST(MapSharedShreddingUtilsTest, DeserializeMetadataErrors) {
         metadata->Append(MapSharedShreddingDefine::kVersion, "999");
         metadata->Append(MapSharedShreddingDefine::kFieldDictOriginalSize, "2");
         metadata->Append(MapSharedShreddingDefine::kFieldDict, "{}");
-        ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::DeserializeMetadata(metadata, "none"),
+        ASSERT_NOK_WITH_MSG(MapSharedShreddingUtils::DeserializeMetadata(metadata),
                             "unsupported shared-shredding metadata version: 999");
     }
     // missing field_dict
@@ -368,8 +364,20 @@ TEST(MapSharedShreddingUtilsTest, DeserializeMetadataErrors) {
         metadata->Append(MapSharedShreddingDefine::kVersion, "1");
         metadata->Append(MapSharedShreddingDefine::kFieldDictOriginalSize, "2");
         ASSERT_NOK_WITH_MSG(
-            MapSharedShreddingUtils::DeserializeMetadata(metadata, "none"),
+            MapSharedShreddingUtils::DeserializeMetadata(metadata),
             "missing shredding metadata key: paimon.map.shared-shredding.field-dict");
+    }
+    // missing field_dict_compression
+    {
+        auto metadata = std::make_shared<arrow::KeyValueMetadata>();
+        metadata->Append(MapShreddingDefine::kStorageLayout,
+                         MapShreddingDefine::kStorageLayoutSharedShredding);
+        metadata->Append(MapSharedShreddingDefine::kVersion, "1");
+        metadata->Append(MapSharedShreddingDefine::kFieldDictOriginalSize, "2");
+        metadata->Append(MapSharedShreddingDefine::kFieldDict, "{}");
+        ASSERT_NOK_WITH_MSG(
+            MapSharedShreddingUtils::DeserializeMetadata(metadata),
+            "missing shredding metadata key: paimon.map.shared-shredding.field-dict-compression");
     }
 }
 

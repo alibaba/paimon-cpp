@@ -131,10 +131,8 @@ class PostponeBucketWriterTest : public ::testing::Test,
 
         auto metadata = file_schema->field(field_index)->metadata();
         ASSERT_NE(nullptr, metadata);
-        ASSERT_OK_AND_ASSIGN(
-            auto actual_meta,
-            MapSharedShreddingUtils::DeserializeMetadata(
-                metadata->Copy(), MapSharedShreddingDefine::kDefaultDictCompression));
+        ASSERT_OK_AND_ASSIGN(auto actual_meta,
+                             MapSharedShreddingUtils::DeserializeMetadata(metadata->Copy()));
         ASSERT_EQ(expected_meta, actual_meta);
     }
 
@@ -173,10 +171,9 @@ TEST_P(PostponeBucketWriterTest, TestSimple) {
     ASSERT_OK(path_factory->Init(dir->Str(), file_format, options.DataFilePrefix(), nullptr));
     std::string uuid = path_factory->uuid_;
 
-    ASSERT_OK_AND_ASSIGN(
-        auto postpone_bucket_writer,
-        PostponeBucketWriter::Create(primary_keys_, path_factory, /*schema_id=*/1, value_schema_,
-                                     options, /*shredding_context=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(auto postpone_bucket_writer,
+                         PostponeBucketWriter::Create(primary_keys_, path_factory, /*schema_id=*/1,
+                                                      value_schema_, options, pool_));
 
     // write batch
     std::shared_ptr<arrow::Array> array1 =
@@ -254,8 +251,7 @@ TEST_P(PostponeBucketWriterTest, TestNestedType) {
     ASSERT_OK_AND_ASSIGN(
         auto postpone_bucket_writer,
         PostponeBucketWriter::Create(std::vector<std::string>{"key"}, path_factory, /*schema_id=*/1,
-                                     arrow::schema(fields), options,
-                                     /*shredding_context=*/nullptr, pool_));
+                                     arrow::schema(fields), options, pool_));
 
     // write batch
     auto array1 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
@@ -334,14 +330,10 @@ TEST_F(PostponeBucketWriterTest, TestSharedShreddingMap) {
     ASSERT_OK(path_factory->Init(dir->Str(), file_format, options.DataFilePrefix(), nullptr));
     std::string uuid = path_factory->uuid_;
     auto value_schema = arrow::schema(fields);
-    auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
-    ASSERT_OK_AND_ASSIGN(auto shredding_context,
-                         MapSharedShreddingUtils::CreateShreddingContext(write_schema, options));
-
     ASSERT_OK_AND_ASSIGN(
         auto postpone_bucket_writer,
         PostponeBucketWriter::Create(std::vector<std::string>{"key"}, path_factory, /*schema_id=*/1,
-                                     value_schema, options, shredding_context, pool_));
+                                     value_schema, options, pool_));
 
     auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["Lucy", [["a", 1], ["b", 2]]],
@@ -400,10 +392,9 @@ TEST_P(PostponeBucketWriterTest, TestWriteMultiBatch) {
     ASSERT_OK(path_factory->Init(dir->Str(), file_format, options.DataFilePrefix(), nullptr));
     std::string uuid = path_factory->uuid_;
 
-    ASSERT_OK_AND_ASSIGN(
-        auto postpone_bucket_writer,
-        PostponeBucketWriter::Create(primary_keys_, path_factory, /*schema_id=*/1, value_schema_,
-                                     options, /*shredding_context=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(auto postpone_bucket_writer,
+                         PostponeBucketWriter::Create(primary_keys_, path_factory, /*schema_id=*/1,
+                                                      value_schema_, options, pool_));
 
     // write batch 1, batch size = 3
     std::shared_ptr<arrow::Array> array1 =
@@ -499,10 +490,9 @@ TEST_P(PostponeBucketWriterTest, TestMultiplePrepareCommit) {
     ASSERT_OK(path_factory->Init(dir->Str(), file_format, options.DataFilePrefix(), nullptr));
     std::string uuid = path_factory->uuid_;
 
-    ASSERT_OK_AND_ASSIGN(
-        auto postpone_bucket_writer,
-        PostponeBucketWriter::Create(primary_keys_, path_factory, /*schema_id=*/1, value_schema_,
-                                     options, /*shredding_context=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(auto postpone_bucket_writer,
+                         PostponeBucketWriter::Create(primary_keys_, path_factory, /*schema_id=*/1,
+                                                      value_schema_, options, pool_));
 
     // write batch 1, batch size = 3
     std::shared_ptr<arrow::Array> array1 =
@@ -630,10 +620,9 @@ TEST_P(PostponeBucketWriterTest, TestPrepareCommitForEmptyData) {
     ASSERT_OK(path_factory->Init(dir->Str(), file_format, options.DataFilePrefix(), nullptr));
     std::string uuid = path_factory->uuid_;
 
-    ASSERT_OK_AND_ASSIGN(
-        auto postpone_bucket_writer,
-        PostponeBucketWriter::Create(primary_keys_, path_factory, /*schema_id=*/1, value_schema_,
-                                     options, /*shredding_context=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(auto postpone_bucket_writer,
+                         PostponeBucketWriter::Create(primary_keys_, path_factory, /*schema_id=*/1,
+                                                      value_schema_, options, pool_));
 
     // prepare commit, without write
     ASSERT_OK_AND_ASSIGN(CommitIncrement commit_increment,
@@ -672,10 +661,9 @@ TEST_P(PostponeBucketWriterTest, TestCloseBeforePrepareCommit) {
     ASSERT_OK(path_factory->Init(dir->Str(), file_format, options.DataFilePrefix(), nullptr));
     std::string uuid = path_factory->uuid_;
 
-    ASSERT_OK_AND_ASSIGN(
-        auto postpone_bucket_writer,
-        PostponeBucketWriter::Create(primary_keys_, path_factory, /*schema_id=*/1, value_schema_,
-                                     options, /*shredding_context=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(auto postpone_bucket_writer,
+                         PostponeBucketWriter::Create(primary_keys_, path_factory, /*schema_id=*/1,
+                                                      value_schema_, options, pool_));
 
     // write batch
     std::shared_ptr<arrow::Array> array1 =
@@ -706,10 +694,10 @@ TEST_P(PostponeBucketWriterTest, TestIOException) {
         ASSERT_OK(path_factory->Init(dir->Str(), file_format, options.DataFilePrefix(), nullptr));
         std::string uuid = path_factory->uuid_;
 
-        ASSERT_OK_AND_ASSIGN(auto postpone_bucket_writer,
-                             PostponeBucketWriter::Create(primary_keys_, path_factory,
-                                                          /*schema_id=*/1, value_schema_, options,
-                                                          /*shredding_context=*/nullptr, pool_));
+        ASSERT_OK_AND_ASSIGN(
+            auto postpone_bucket_writer,
+            PostponeBucketWriter::Create(primary_keys_, path_factory,
+                                         /*schema_id=*/1, value_schema_, options, pool_));
 
         // write batch
         std::shared_ptr<arrow::Array> array =

@@ -61,7 +61,7 @@ class RollingBlobFileWriter
     using MainWriter = SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>;
     using MainWriterFactory = SingleFileWriterFactory<::ArrowArray*, std::shared_ptr<DataFileMeta>>;
 
-    RollingBlobFileWriter(int64_t target_file_size,
+    RollingBlobFileWriter(int64_t target_file_size, int64_t target_file_row_num,
                           const std::shared_ptr<MainWriterFactory>& writer_factory,
                           const std::shared_ptr<arrow::Schema>& blob_schema,
                           MultipleBlobFileWriter::BlobWriterCreator blob_writer_creator,

@@ -40,12 +40,13 @@ class DataType;
 namespace paimon {
 
 RollingBlobFileWriter::RollingBlobFileWriter(
-    int64_t target_file_size, const std::shared_ptr<MainWriterFactory>& writer_factory,
+    int64_t target_file_size, int64_t target_file_row_num,
+    const std::shared_ptr<MainWriterFactory>& writer_factory,
     const std::shared_ptr<arrow::Schema>& blob_schema,
     MultipleBlobFileWriter::BlobWriterCreator blob_writer_creator,
     const std::shared_ptr<arrow::DataType>& data_type, const std::set<std::string>& inline_fields)
-    : RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>(target_file_size,
-                                                                      writer_factory),
+    : RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>(
+          target_file_size, target_file_row_num, writer_factory),
       blob_schema_(blob_schema),
       blob_writer_creator_(std::move(blob_writer_creator)),
       data_type_(data_type),
@@ -86,11 +87,14 @@ Status RollingBlobFileWriter::Write(::ArrowArray* record) {
     PAIMON_RETURN_NOT_OK(blob_writer_->Write(&c_blob_array));
 
     record_count_ += record_count;
-    if (current_writer_ != nullptr) {
-        PAIMON_ASSIGN_OR_RAISE(bool need_rolling_file, NeedRollingFile());
-        if (need_rolling_file) {
-            PAIMON_RETURN_NOT_OK(CloseCurrentWriter());
-        }
+    current_file_record_count_ += record_count;
+    bool need_rolling_file = current_file_record_count_ >= target_file_row_num_;
+    if (!need_rolling_file && current_writer_ != nullptr) {
+        PAIMON_ASSIGN_OR_RAISE(bool main_writer_needs_rolling, NeedRollingFile());
+        need_rolling_file = main_writer_needs_rolling;
+    }
+    if (need_rolling_file) {
+        PAIMON_RETURN_NOT_OK(CloseCurrentWriter());
     }
     guard.Release();
     return Status::OK();
@@ -114,6 +118,7 @@ Status RollingBlobFileWriter::CloseCurrentWriter() {
     results_.insert(results_.end(), blob_metas.begin(), blob_metas.end());
 
     current_writer_.reset();
+    current_file_record_count_ = 0;
     return Status::OK();
 }
 

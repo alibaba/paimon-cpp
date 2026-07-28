@@ -97,6 +97,12 @@ class SingleFileWriter : public FileWriter<T, R> {
     void Abort() override;
     Status Close() override;
 
+    /// Sets a callback invoked only after the format writer and output stream have both
+    /// completed successfully.
+    void SetCompletionCallback(std::function<Status()> callback) {
+        completion_callback_ = std::move(callback);
+    }
+
     std::shared_ptr<Metrics> GetMetrics() const override {
         if (writer_) {
             return writer_->GetWriterMetrics();
@@ -134,6 +140,7 @@ class SingleFileWriter : public FileWriter<T, R> {
     std::shared_ptr<OutputStream> out_;  // nullptr for DirectWriterBuilder
     bool closed_ = false;
     std::string path_;
+    std::function<Status()> completion_callback_;
 
  private:
     int64_t record_count_ = 0;
@@ -224,6 +231,9 @@ Status SingleFileWriter<T, R>::Close() {
     } else {
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStatus> file_status, fs_->GetFileStatus(path_));
         output_bytes_ = file_status->GetLen();
+    }
+    if (completion_callback_) {
+        PAIMON_RETURN_NOT_OK(completion_callback_());
     }
     closed_ = true;
     guard.Release();

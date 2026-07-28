@@ -254,8 +254,7 @@ AbstractSplitRead::ApplySharedShreddingReaderIfNeeded(
         }
         // get meta
         PAIMON_ASSIGN_OR_RAISE(MapSharedShreddingFieldMeta meta,
-                               MapSharedShreddingUtils::DeserializeMetadata(
-                                   metadata, MapSharedShreddingDefine::kDefaultDictCompression));
+                               MapSharedShreddingUtils::DeserializeMetadata(metadata));
         // get selected_keys
         PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> selected_keys,
                                NestedProjectionUtils::GetMapSelectedKeys(read_field));

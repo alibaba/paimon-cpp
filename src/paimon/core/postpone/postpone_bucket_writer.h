@@ -44,7 +44,6 @@ struct ArrowArray;
 
 namespace paimon {
 class DataFilePathFactory;
-class MapSharedShreddingContext;
 class MemoryPool;
 class Metrics;
 
@@ -54,7 +53,6 @@ class PostponeBucketWriter : public BatchWriter {
         const std::vector<std::string>& trimmed_primary_keys,
         const std::shared_ptr<DataFilePathFactory>& path_factory, int64_t schema_id,
         const std::shared_ptr<arrow::Schema>& value_schema, const CoreOptions& options,
-        const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
         const std::shared_ptr<MemoryPool>& pool);
 
     ~PostponeBucketWriter() override {
@@ -122,15 +120,14 @@ class PostponeBucketWriter : public BatchWriter {
     Status Flush();
     Result<CommitIncrement> DrainIncrement();
 
-    std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>
+    Result<std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>>
     CreateRollingRowWriter() const;
 
     PostponeBucketWriter(const std::vector<std::string>& trimmed_primary_keys,
                          const std::shared_ptr<DataFilePathFactory>& path_factory,
                          int64_t schema_id, const std::shared_ptr<arrow::Schema>& value_schema,
                          const std::shared_ptr<arrow::Schema>& write_schema,
-                         const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool,
-                         const std::shared_ptr<MapSharedShreddingContext>& shredding_context);
+                         const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool);
 
  private:
     std::shared_ptr<MemoryPool> pool_;
@@ -142,7 +139,6 @@ class PostponeBucketWriter : public BatchWriter {
     // write_schema = value_schema + special fields
     std::shared_ptr<arrow::DataType> value_type_;
     std::shared_ptr<arrow::Schema> write_schema_;
-    std::shared_ptr<MapSharedShreddingContext> shredding_context_;
     std::shared_ptr<Metrics> metrics_;
     std::vector<std::shared_ptr<DataFileMeta>> new_files_;
     std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>> writer_;

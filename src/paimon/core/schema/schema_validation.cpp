@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <functional>
 #include <map>
 #include <optional>
 #include <set>
@@ -49,6 +50,60 @@
 #include "paimon/result.h"
 
 namespace paimon {
+namespace {
+
+bool ContainsBlobField(const std::shared_ptr<arrow::Field>& field) {
+    if (BlobUtils::IsBlobField(field)) {
+        return true;
+    }
+    const std::shared_ptr<arrow::DataType>& type = field->type();
+    if (type->id() == arrow::Type::STRUCT) {
+        for (const auto& child : type->fields()) {
+            if (ContainsBlobField(child)) {
+                return true;
+            }
+        }
+    } else if (type->id() == arrow::Type::LIST || type->id() == arrow::Type::LARGE_LIST ||
+               type->id() == arrow::Type::FIXED_SIZE_LIST) {
+        return ContainsBlobField(type->fields().front());
+    } else if (type->id() == arrow::Type::MAP) {
+        auto map_type = std::static_pointer_cast<arrow::MapType>(type);
+        return ContainsBlobField(map_type->key_field()) ||
+               ContainsBlobField(map_type->item_field());
+    }
+    return false;
+}
+
+Status ValidateSharedShreddingCompression(const std::string& option_key,
+                                          const std::string& compression) {
+    std::string normalized = StringUtils::ToLowerCase(compression);
+    if (normalized != "none" && normalized != "lz4" && normalized != "zstd") {
+        return Status::Invalid(fmt::format(
+            "MAP shared-shredding only supports none/lz4/zstd compression, but {} is {}.",
+            option_key, compression));
+    }
+    return Status::OK();
+}
+
+Status ValidatePerLevelOption(
+    const std::map<std::string, std::string>& options, const std::string& option_key,
+    const std::function<Status(const std::string&, const std::string&)>& validator) {
+    auto it = options.find(option_key);
+    if (it == options.end() || it->second.empty()) {
+        return Status::OK();
+    }
+    auto entries = StringUtils::Split(it->second, std::string(","));
+    for (const std::string& entry : entries) {
+        auto level_and_value = StringUtils::Split(entry, std::string(":"));
+        if (level_and_value.size() == 2) {
+            PAIMON_RETURN_NOT_OK(
+                validator(option_key + "." + level_and_value[0], level_and_value[1]));
+        }
+    }
+    return Status::OK();
+}
+
+}  // namespace
 
 bool SchemaValidation::IsComplexType(const std::shared_ptr<arrow::Field>& field) {
     arrow::Type::type arrow_type_id = field->type()->id();
@@ -498,6 +553,7 @@ Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
     }
 
     std::string fields_prefix_str = std::string(Options::FIELDS_PREFIX);
+    bool has_shared_shredding = false;
     for (const auto& [key, value] : options_map) {
         if (!StringUtils::StartsWith(key, fields_prefix_str)) {
             continue;
@@ -533,6 +589,7 @@ Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
         if (layout != MapStorageLayout::SHARED_SHREDDING) {
             continue;
         }
+        has_shared_shredding = true;
         for (const auto& field : schema.Fields()) {
             if (VariantTypeUtils::ContainsVariantField(field.ArrowField())) {
                 return Status::Invalid(
@@ -543,14 +600,38 @@ Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
         if (!MapSharedShreddingUtils::IsShreddingKeyMap(field_type)) {
             return Status::Invalid(
                 fmt::format("Column '{}' is configured with map.storage-layout=shared-shredding "
-                            "but its type is not MAP<STRING, T>.",
+                            "but its type is not MAP<STRING NOT NULL, T>.",
                             field_name));
+        }
+        auto map_type = std::static_pointer_cast<arrow::MapType>(field_type);
+        if (map_type->key_field()->nullable()) {
+            return Status::Invalid(
+                fmt::format("Column '{}' is configured with map.storage-layout=shared-shredding "
+                            "but its map key type is nullable.",
+                            field_name));
+        }
+        if (ContainsBlobField(map_type->item_field())) {
+            return Status::Invalid("MAP shared-shredding currently cannot contain BLOB fields.");
         }
         // Validate max-columns config
         PAIMON_RETURN_NOT_OK(options.GetMapSharedShreddingMaxColumns(field_name));
         // Validate placement policy config
         PAIMON_RETURN_NOT_OK(options.GetMapSharedShreddingColumnPlacementPolicy(field_name));
     }
+    if (!has_shared_shredding) {
+        return Status::OK();
+    }
+
+    if (IsPostponeBucketTable(schema, options.GetBucket())) {
+        return Status::Invalid(
+            "MAP shared-shredding currently does not support postpone bucket mode.");
+    }
+
+    PAIMON_RETURN_NOT_OK(ValidateSharedShreddingCompression(Options::FILE_COMPRESSION,
+                                                            options.GetFileCompression()));
+    PAIMON_RETURN_NOT_OK(ValidatePerLevelOption(options_map, Options::FILE_COMPRESSION_PER_LEVEL,
+                                                ValidateSharedShreddingCompression));
+
     return Status::OK();
 }
 

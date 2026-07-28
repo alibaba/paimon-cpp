@@ -18,8 +18,6 @@
 
 #include <map>
 
-#include "paimon/common/data/shredding/map_shared_shredding_context.h"
-#include "paimon/common/data/shredding/map_shared_shredding_utils.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/core/mergetree/compact/first_row_merge_function_wrapper.h"
 #include "paimon/core/mergetree/compact/lookup_changelog_merge_function_wrapper.h"
@@ -40,14 +38,13 @@ LookupMergeTreeCompactRewriter<T>::LookupMergeTreeCompactRewriter(
     MergeFunctionWrapperFactory merge_function_wrapper_factory,
     const std::shared_ptr<CancellationController>& cancellation_controller,
     const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
-    const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
     const std::shared_ptr<MemoryPool>& pool)
     : ChangelogMergeTreeRewriter(
           max_level, /*force_drop_delete=*/dv_maintainer != nullptr, partition, bucket, schema_id,
           trimmed_primary_keys, options, data_schema, write_schema,
           DeletionVector::CreateFactory(dv_maintainer), path_factory_cache,
           std::move(merge_file_split_read), std::move(merge_function_wrapper_factory),
-          cancellation_controller, shredding_context, pool),
+          cancellation_controller, pool),
       lookup_levels_(std::move(lookup_levels)),
       dv_maintainer_(dv_maintainer),
       remote_lookup_file_manager_(remote_lookup_file_manager) {}
@@ -94,14 +91,11 @@ LookupMergeTreeCompactRewriter<T>::Create(
         std::unique_ptr<MergeFileSplitRead> merge_file_split_read,
         MergeFileSplitRead::Create(path_factory, internal_context, pool, CreateDefaultExecutor()));
 
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<MapSharedShreddingContext> shredding_context,
-                           MapSharedShreddingUtils::CreateShreddingContext(write_schema, options));
-
     return std::unique_ptr<LookupMergeTreeCompactRewriter>(new LookupMergeTreeCompactRewriter(
         std::move(lookup_levels), dv_maintainer, max_level, partition, bucket, table_schema->Id(),
         trimmed_primary_keys, options, data_schema, write_schema, path_factory_cache,
         std::move(merge_file_split_read), std::move(merge_function_wrapper_factory),
-        cancellation_controller, remote_lookup_file_manager, shredding_context, pool));
+        cancellation_controller, remote_lookup_file_manager, pool));
 }
 
 template <typename T>

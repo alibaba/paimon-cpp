@@ -19,10 +19,8 @@
 #include <vector>
 
 #include "paimon/common/data/binary_row.h"
-#include "paimon/common/table/special_fields.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
-#include "paimon/core/io/map_shared_shredding_core_utils.h"
 #include "paimon/core/manifest/manifest_file.h"
 #include "paimon/core/manifest/manifest_list.h"
 #include "paimon/core/mergetree/levels.h"
@@ -106,11 +104,6 @@ Result<std::shared_ptr<BatchWriter>> KeyValueFileStoreWrite::CreateWriter(
                            file_store_path_factory_->CreateDataFilePathFactory(partition, bucket));
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_keys,
                            table_schema_->TrimmedPrimaryKeys());
-    auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(schema_);
-    PAIMON_ASSIGN_OR_RAISE(
-        std::shared_ptr<MapSharedShreddingContext> shredding_context,
-        MapSharedShreddingCoreUtils::CreateAndRestoreContext(
-            write_schema, restore_data_files, data_file_path_factory, options_, pool_));
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<Levels> levels,
         Levels::Create(key_comparator_, restore_data_files, options_.GetNumLevels()));
@@ -122,11 +115,10 @@ Result<std::shared_ptr<BatchWriter>> KeyValueFileStoreWrite::CreateWriter(
 
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<MergeTreeWriter> writer,
-        MergeTreeWriter::Create(restore_max_seq_number, trimmed_primary_keys,
-                                data_file_path_factory, key_comparator_,
-                                user_defined_seq_comparator_, merge_function_wrapper_,
-                                table_schema_->Id(), schema_, options_, compact_manager,
-                                io_manager_, enable_multi_thread_spill_, shredding_context, pool_));
+        MergeTreeWriter::Create(
+            restore_max_seq_number, trimmed_primary_keys, data_file_path_factory, key_comparator_,
+            user_defined_seq_comparator_, merge_function_wrapper_, table_schema_->Id(), schema_,
+            options_, compact_manager, io_manager_, enable_multi_thread_spill_, pool_));
     return writer;
 }
 

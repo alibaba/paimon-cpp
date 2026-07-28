@@ -62,7 +62,7 @@ TEST(MapSharedShreddingSchemaUtilsTest, AttachMetadataToSchemaBasic) {
     auto tags_metadata = updated_schema->GetFieldByName("tags")->metadata()->Copy();
     ASSERT_TRUE(MapSharedShreddingUtils::HasShreddingMetadata(tags_metadata));
     ASSERT_OK_AND_ASSIGN(auto deserialized,
-                         MapSharedShreddingUtils::DeserializeMetadata(tags_metadata, "none"));
+                         MapSharedShreddingUtils::DeserializeMetadata(tags_metadata));
     ASSERT_EQ(deserialized, tags_meta);
 }
 
@@ -159,7 +159,7 @@ TEST(MapSharedShreddingSchemaUtilsTest, AttachMetadataToSchemaOverwritesExisting
     }
     ASSERT_EQ(storage_layout_key_count, 1);
     ASSERT_OK_AND_ASSIGN(auto deserialized,
-                         MapSharedShreddingUtils::DeserializeMetadata(updated_metadata, "none"));
+                         MapSharedShreddingUtils::DeserializeMetadata(updated_metadata));
     ASSERT_EQ(deserialized, tags_meta);
 }
 
@@ -183,7 +183,7 @@ TEST(MapSharedShreddingSchemaUtilsTest, ExtractMetadataFromField) {
     auto c_schema = std::make_unique<::ArrowSchema>();
     ASSERT_TRUE(arrow::ExportSchema(*schema, c_schema.get()).ok());
     ASSERT_OK_AND_ASSIGN(auto parsed_meta, MapSharedShreddingSchemaUtils::ExtractMetadataFromField(
-                                               std::move(c_schema), "tags", "none"));
+                                               std::move(c_schema), "tags"));
     ASSERT_EQ(parsed_meta, tags_meta);
 }
 
@@ -194,14 +194,14 @@ TEST(MapSharedShreddingSchemaUtilsTest, ExtractMetadataFromFieldNoShreddingMetad
     auto c_schema = std::make_unique<::ArrowSchema>();
     ASSERT_TRUE(arrow::ExportSchema(*schema, c_schema.get()).ok());
 
-    ASSERT_NOK_WITH_MSG(MapSharedShreddingSchemaUtils::ExtractMetadataFromField(std::move(c_schema),
-                                                                                "tags", "none"),
-                        "metadata is null or storage layout is not shared-shredding");
+    ASSERT_NOK_WITH_MSG(
+        MapSharedShreddingSchemaUtils::ExtractMetadataFromField(std::move(c_schema), "tags"),
+        "metadata is null or storage layout is not shared-shredding");
 }
 
 TEST(MapSharedShreddingSchemaUtilsTest, ExtractMetadataFromFieldInvalidInput) {
     ASSERT_NOK_WITH_MSG(MapSharedShreddingSchemaUtils::ExtractMetadataFromField(
-                            std::unique_ptr<::ArrowSchema>(), "tags", "none"),
+                            std::unique_ptr<::ArrowSchema>(), "tags"),
                         "physical schema is null");
 
     auto schema = arrow::schema({arrow::field("id", arrow::int32())});
@@ -209,9 +209,9 @@ TEST(MapSharedShreddingSchemaUtilsTest, ExtractMetadataFromFieldInvalidInput) {
     auto c_schema = std::make_unique<::ArrowSchema>();
     ASSERT_TRUE(arrow::ExportSchema(*schema, c_schema.get()).ok());
 
-    ASSERT_NOK_WITH_MSG(MapSharedShreddingSchemaUtils::ExtractMetadataFromField(std::move(c_schema),
-                                                                                "tags", "none"),
-                        "Shared-shredding field 'tags' not found in physical schema.");
+    ASSERT_NOK_WITH_MSG(
+        MapSharedShreddingSchemaUtils::ExtractMetadataFromField(std::move(c_schema), "tags"),
+        "Shared-shredding field 'tags' not found in physical schema.");
 }
 
 TEST(MapSharedShreddingSchemaUtilsTest, LogicalToPhysicalSchemaInvalidInput) {

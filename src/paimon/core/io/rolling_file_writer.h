@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <limits>
 #include <memory>
 #include <type_traits>
 #include <vector>
@@ -35,9 +36,10 @@ namespace paimon {
 template <typename T, typename R>
 class RollingFileWriter : public FileWriter<T, std::vector<R>> {
  public:
-    RollingFileWriter(int64_t target_file_size,
+    RollingFileWriter(int64_t target_file_size, int64_t target_file_row_num,
                       const std::shared_ptr<SingleFileWriterFactory<T, R>>& writer_factory)
         : target_file_size_(target_file_size),
+          target_file_row_num_(target_file_row_num),
           writer_factory_(writer_factory),
           metrics_(std::make_shared<MetricsImpl>()),
           logger_(Logger::GetLogger("RollingFileWriter")) {}
@@ -61,6 +63,10 @@ class RollingFileWriter : public FileWriter<T, std::vector<R>> {
         return target_file_size_;
     }
 
+    int64_t TargetFileRowNum() const {
+        return target_file_row_num_;
+    }
+
  protected:
     static constexpr int32_t CHECK_ROLLING_RECORD_CNT = 1000;
 
@@ -70,10 +76,12 @@ class RollingFileWriter : public FileWriter<T, std::vector<R>> {
     Status OpenCurrentWriter();
 
     int64_t target_file_size_ = 0;
+    int64_t target_file_row_num_ = std::numeric_limits<int64_t>::max();
     std::shared_ptr<SingleFileWriterFactory<T, R>> writer_factory_;
     std::shared_ptr<Metrics> metrics_;
 
     int64_t record_count_ = 0;
+    int64_t current_file_record_count_ = 0;
     int64_t last_need_rolling_record_count_ = 0;
     bool closed_ = false;
 
@@ -99,6 +107,9 @@ bool RollingFileWriter<T, R>::SuggestCheck() {
 
 template <typename T, typename R>
 Result<bool> RollingFileWriter<T, R>::NeedRollingFile() {
+    if (current_file_record_count_ >= target_file_row_num_) {
+        return true;
+    }
     return current_writer_->ReachTargetSize(SuggestCheck(), target_file_size_);
 }
 
@@ -119,6 +130,7 @@ Status RollingFileWriter<T, R>::Write(T record) {
     }
     PAIMON_RETURN_NOT_OK(current_writer_->Write(std::move(record)));
     record_count_ += record_count;
+    current_file_record_count_ += record_count;
     PAIMON_ASSIGN_OR_RAISE(bool need_rolling_file, NeedRollingFile());
     if (need_rolling_file) {
         PAIMON_RETURN_NOT_OK(CloseCurrentWriter());
@@ -163,6 +175,7 @@ Status RollingFileWriter<T, R>::CloseCurrentWriter() {
     PAIMON_ASSIGN_OR_RAISE(R result, current_writer_->GetResult());
     results_.push_back(result);
     current_writer_.reset();
+    current_file_record_count_ = 0;
     if (metrics_) {
         metrics_->Merge(current_metrics);
     }
