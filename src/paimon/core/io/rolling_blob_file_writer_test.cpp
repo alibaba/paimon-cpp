@@ -82,11 +82,15 @@ TEST_F(RollingBlobFileWriterTest, ValidateFileConsistency) {
         /*delete_row_count=*/0, /*embedded_index=*/nullptr, FileSource::Append(),
         /*value_stats_cols=*/std::nullopt, /*external_path=*/std::nullopt, /*first_row_id=*/3,
         /*write_cols=*/std::vector<std::string>({"blob"}));
-    ASSERT_OK(RollingBlobFileWriter::ValidateFileConsistency(file_meta1, {file_meta2, file_meta3},
-                                                             /*blob_field_count=*/1));
-    ASSERT_NOK_WITH_MSG(RollingBlobFileWriter::ValidateFileConsistency(file_meta1, {file_meta2},
-                                                                       /*blob_field_count=*/2),
-                        "This is a bug: The row count of main file and blob files does not match.");
+    ASSERT_OK(RollingBlobFileWriter::ValidateFileConsistency(file_meta1, {file_meta2, file_meta3}));
+    ASSERT_NOK_WITH_MSG(RollingBlobFileWriter::ValidateFileConsistency(file_meta1, {file_meta2}),
+                        "This is a bug: The row count of main file and blob file does not match.");
+
+    file_meta2->write_cols = std::vector<std::string>({"blob1"});
+    file_meta3->write_cols = std::vector<std::string>({"blob2"});
+    ASSERT_NOK_WITH_MSG(
+        RollingBlobFileWriter::ValidateFileConsistency(file_meta1, {file_meta2, file_meta3}),
+        "This is a bug: The row count of main file and blob file does not match.");
 }
 
 }  // namespace paimon::test

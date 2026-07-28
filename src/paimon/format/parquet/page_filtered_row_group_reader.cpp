@@ -28,7 +28,9 @@
 #include "fmt/format.h"
 #include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
+#include "parquet/arrow/reader.h"
 #include "parquet/arrow/reader_internal.h"
+#include "parquet/arrow/schema.h"
 #include "parquet/metadata.h"
 #include "parquet/schema.h"
 
@@ -72,6 +74,29 @@ class TableRecordBatchReader : public arrow::RecordBatchReader {
     std::shared_ptr<arrow::Table> table_;
     arrow::TableBatchReader inner_;
     std::shared_ptr<arrow::MemoryPool> pool_;
+};
+
+/// A FileColumnIterator that installs a data_page_filter on every PageReader it
+/// produces, enabling I/O-level page skipping. The base class handles row group
+/// iteration; this subclass only decorates the PageReader returned by NextChunk().
+class PageFilteringColumnIterator : public ::parquet::arrow::FileColumnIterator {
+ public:
+    PageFilteringColumnIterator(
+        int column_index, ::parquet::ParquetFileReader* reader, std::vector<int> row_groups,
+        std::function<bool(const ::parquet::DataPageStats&)> data_page_filter)
+        : FileColumnIterator(column_index, reader, std::move(row_groups)),
+          data_page_filter_(std::move(data_page_filter)) {}
+
+    std::unique_ptr<::parquet::PageReader> NextChunk() override {
+        std::unique_ptr<::parquet::PageReader> page_reader = FileColumnIterator::NextChunk();
+        if (page_reader && data_page_filter_) {
+            page_reader->set_data_page_filter(data_page_filter_);
+        }
+        return page_reader;
+    }
+
+ private:
+    std::function<bool(const ::parquet::DataPageStats&)> data_page_filter_;
 };
 
 }  // namespace
@@ -139,92 +164,35 @@ std::pair<RowRanges, int64_t> PageFilteredRowGroupReader::ComputeCompressedRowRa
 }
 
 Status PageFilteredRowGroupReader::ExecuteSkipReadPattern(
-    const std::shared_ptr<::parquet::internal::RecordReader>& record_reader,
-    const RowRanges& ranges, int64_t total_row_count, int32_t row_group_index,
-    int32_t column_index) {
-    int64_t current_row = 0;
+    int col_idx, const RowRanges& ranges, int64_t total,
+    ::parquet::arrow::ColumnReader* column_reader) {
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(column_reader->ResetLeaf(col_idx, total));
+    int64_t current = 0;
     for (const auto& range : ranges.GetRanges()) {
-        if (range.from > current_row) {
-            int64_t to_skip = range.from - current_row;
-            int64_t skipped = record_reader->SkipRecords(to_skip);
-            if (skipped != to_skip) {
-                return Status::Invalid(fmt::format(
-                    "PageFilteredRowGroupReader: expected to skip {} records but skipped {} "
-                    "(row_group={}, column={})",
-                    to_skip, skipped, row_group_index, column_index));
-            }
-            current_row = range.from;
+        int64_t skip = range.from > current ? range.from - current : 0;
+        int64_t skipped = column_reader->SkipRecords(col_idx, skip);
+        if (skipped != skip) {
+            return Status::Invalid(fmt::format(
+                "PageFilteredRowGroupReader: leaf {} expected to skip {} records but skipped {}",
+                col_idx, skip, skipped));
         }
         int64_t to_read = range.Count();
-        int64_t read = record_reader->ReadRecords(to_read);
+        int64_t read = column_reader->ReadRecords(col_idx, to_read);
         if (read != to_read) {
-            return Status::Invalid(
-                fmt::format("PageFilteredRowGroupReader: expected to read {} records but read {} "
-                            "(row_group={}, column={}, range=[{},{}])",
-                            to_read, read, row_group_index, column_index, range.from, range.to));
+            return Status::Invalid(fmt::format(
+                "PageFilteredRowGroupReader: leaf {} expected to read {} records but read {}",
+                col_idx, to_read, read));
         }
-        current_row += to_read;
-    }
-    if (current_row < total_row_count) {
-        record_reader->SkipRecords(total_row_count - current_row);
+        current = range.to + 1;
     }
     return Status::OK();
 }
 
-Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFilteredColumn(
-    const std::shared_ptr<::parquet::RowGroupReader>& row_group_reader,
-    ::parquet::ParquetFileReader* parquet_reader,
-    const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
-    int32_t row_group_index, int32_t column_index, const RowRanges& row_ranges,
-    const std::shared_ptr<arrow::Field>& field, int64_t row_group_row_count,
-    std::shared_ptr<::arrow::MemoryPool> pool) {
-    auto file_metadata = parquet_reader->metadata();
-    const auto* col_descriptor = file_metadata->schema()->Column(column_index);
-
-    // Try to get OffsetIndex for I/O-level page skipping
-    RowRanges effective_ranges = row_ranges;
-    int64_t effective_row_count = row_group_row_count;
-
-    std::shared_ptr<::parquet::OffsetIndex> offset_index;
-    if (rg_page_index_reader) {
-        offset_index = rg_page_index_reader->GetOffsetIndex(column_index);
-    }
-
-    auto page_reader = row_group_reader->GetColumnPageReader(column_index);
-
-    if (offset_index) {
-        // Set data_page_filter for I/O-level page skipping
-        page_reader->set_data_page_filter(
-            MakePageFilter(row_ranges, offset_index, row_group_row_count));
-        // Compute compressed RowRanges for the decode-level skip/read pattern
-        auto [compressed_ranges, compressed_total] =
-            ComputeCompressedRowRanges(row_ranges, offset_index, row_group_row_count);
-        effective_ranges = std::move(compressed_ranges);
-        effective_row_count = compressed_total;
-    }
-
-    // Create RecordReader
-    ::parquet::internal::LevelInfo leaf_info =
-        ::parquet::internal::LevelInfo::ComputeLevelInfo(col_descriptor);
-    auto record_reader =
-        ::parquet::internal::RecordReader::Make(col_descriptor, leaf_info, pool.get());
-    record_reader->SetPageReader(std::move(page_reader));
-
-    PAIMON_RETURN_NOT_OK(ExecuteSkipReadPattern(
-        record_reader, effective_ranges, effective_row_count, row_group_index, column_index));
-
-    std::shared_ptr<arrow::ChunkedArray> chunked_array;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(::parquet::arrow::TransferColumnData(
-        record_reader.get(), field, col_descriptor, pool.get(), &chunked_array));
-
-    return chunked_array;
-}
-
 Status PageFilteredRowGroupReader::WaitForPreBuffer(
-    ::parquet::ParquetFileReader* parquet_reader, int32_t row_group_index,
-    const std::vector<int32_t>& column_indices, const ::arrow::io::CacheOptions& cache_options,
-    bool pre_buffered, const std::vector<::arrow::io::ReadRange>& page_ranges,
-    std::shared_ptr<::arrow::MemoryPool> pool) {
+    int32_t row_group_index, const std::vector<int32_t>& column_indices,
+    const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
+    const std::vector<::arrow::io::ReadRange>& page_ranges,
+    std::shared_ptr<::arrow::MemoryPool> pool, ::parquet::ParquetFileReader* parquet_reader) {
     std::vector<int> rg_vec = {row_group_index};
     std::vector<int> col_vec(column_indices.begin(), column_indices.end());
     if (!pre_buffered) {
@@ -244,28 +212,84 @@ Status PageFilteredRowGroupReader::WaitForPreBuffer(
     return Status::OK();
 }
 
+Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFilteredField(
+    const std::shared_ptr<::parquet::RowGroupPageIndexReader>& rg_page_index_reader,
+    int32_t row_group_index, int32_t field_index, const std::vector<int32_t>& column_indices,
+    const RowRanges& row_ranges, int64_t row_group_row_count,
+    ::parquet::arrow::FileReader* arrow_file_reader) {
+    // Factory: set data_page_filter on every leaf (per-leaf OffsetIndex).
+    // data_page_filter enables I/O-level page skipping for all leaves.
+    auto factory =
+        [row_group_index, &rg_page_index_reader, &row_ranges, row_group_row_count](
+            int col_idx,
+            ::parquet::ParquetFileReader* reader) -> ::parquet::arrow::FileColumnIterator* {
+        std::function<bool(const ::parquet::DataPageStats&)> data_page_filter;
+        if (rg_page_index_reader) {
+            auto offset_index = rg_page_index_reader->GetOffsetIndex(col_idx);
+            if (offset_index) {
+                data_page_filter = MakePageFilter(row_ranges, offset_index, row_group_row_count);
+            }
+        }
+        return new PageFilteringColumnIterator(col_idx, reader, std::vector<int>{row_group_index},
+                                               std::move(data_page_filter));
+    };
+
+    // Build reader tree with leaf column filtering
+    std::unique_ptr<::parquet::arrow::ColumnReader> column_reader;
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(
+        arrow_file_reader->GetColumn(field_index, column_indices, factory, &column_reader));
+
+    if (!column_reader) {
+        return Status::Invalid(
+            fmt::format("PageFilteredRowGroupReader: field {} has no matching leaf columns "
+                        "(row_group={})",
+                        field_index, row_group_index));
+    }
+
+    // Since leaf columns may have misaligned pages, we compute compressed row ranges and drive each
+    // leaf column independently
+
+    for (int col_idx : column_reader->LeafColumnIndices()) {
+        RowRanges effective_ranges = row_ranges;
+        int64_t effective_total = row_group_row_count;
+        if (rg_page_index_reader) {
+            auto offset_index = rg_page_index_reader->GetOffsetIndex(col_idx);
+            if (offset_index) {
+                auto [compressed, total] =
+                    ComputeCompressedRowRanges(row_ranges, offset_index, row_group_row_count);
+                effective_ranges = std::move(compressed);
+                effective_total = total;
+            }
+        }
+
+        PAIMON_RETURN_NOT_OK(ExecuteSkipReadPattern(col_idx, effective_ranges, effective_total,
+                                                    column_reader.get()));
+    }
+
+    // Build the Arrow array (TransferColumnData for leaves + assemble for nested)
+    std::shared_ptr<arrow::ChunkedArray> chunked_array;
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(
+        column_reader->BuildArray(row_ranges.RowCount(), &chunked_array));
+
+    return chunked_array;
+}
+
 Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::ReadFilteredRowGroup(
-    ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
-    const std::vector<int32_t>& column_indices, const std::shared_ptr<arrow::Schema>& arrow_schema,
+    const TargetRowGroup& target_row_group, const std::vector<int32_t>& column_indices,
     const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
     const std::vector<::arrow::io::ReadRange>& page_ranges, int64_t max_chunksize,
-    std::shared_ptr<::arrow::MemoryPool> pool) {
+    std::shared_ptr<::arrow::MemoryPool> pool, ::parquet::arrow::FileReader* arrow_file_reader) {
+    auto parquet_reader = arrow_file_reader->parquet_reader();
     const auto& row_ranges = target_row_group.GetRowRanges();
     int32_t row_group_index = target_row_group.GetRowGroupIndex();
 
-    if (row_ranges.IsEmpty()) {
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Table> empty_table,
-                                          arrow::Table::MakeEmpty(arrow_schema, pool.get()));
-        return std::make_unique<TableRecordBatchReader>(std::move(empty_table), max_chunksize,
-                                                        pool);
-    }
-
     int64_t expected_rows = row_ranges.RowCount();
 
-    PAIMON_RETURN_NOT_OK(WaitForPreBuffer(parquet_reader, row_group_index, column_indices,
-                                          cache_options, pre_buffered, page_ranges, pool));
+    if (!row_ranges.IsEmpty()) {
+        PAIMON_RETURN_NOT_OK(WaitForPreBuffer(row_group_index, column_indices, cache_options,
+                                              pre_buffered, page_ranges, pool, parquet_reader));
+    }
 
-    auto row_group_reader = parquet_reader->RowGroup(row_group_index);
     auto rg_metadata = parquet_reader->metadata()->RowGroup(row_group_index);
     int64_t row_group_row_count = rg_metadata->num_rows();
 
@@ -277,36 +301,45 @@ Result<std::unique_ptr<arrow::RecordBatchReader>> PageFilteredRowGroupReader::Re
         rg_page_index_reader = page_index_reader->RowGroup(row_group_index);
     }
 
-    // Read each column with page filtering
-    std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
-    columns.reserve(column_indices.size());
+    const auto& manifest = arrow_file_reader->manifest();
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+        std::vector<int> field_indices,
+        manifest.GetFieldIndices(std::vector<int>(column_indices.begin(), column_indices.end())));
 
-    for (size_t i = 0; i < column_indices.size(); ++i) {
+    std::vector<std::shared_ptr<arrow::ChunkedArray>> result_arrays;
+    result_arrays.reserve(field_indices.size());
+
+    for (int field_idx : field_indices) {
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<arrow::ChunkedArray> chunked_array,
-            ReadFilteredColumn(row_group_reader, parquet_reader, rg_page_index_reader,
-                               row_group_index, column_indices[i], row_ranges,
-                               arrow_schema->field(static_cast<int>(i)), row_group_row_count,
-                               pool));
+            ReadFilteredField(rg_page_index_reader, row_group_index, field_idx, column_indices,
+                              row_ranges, row_group_row_count, arrow_file_reader));
 
         if (chunked_array->length() != expected_rows) {
-            return Status::Invalid(fmt::format(
-                "PageFilteredRowGroupReader: column {} produced {} rows but expected {} "
-                "(row_group={})",
-                column_indices[i], chunked_array->length(), expected_rows, row_group_index));
+            return Status::Invalid(
+                fmt::format("PageFilteredRowGroupReader: field {} produced {} rows but expected {} "
+                            "(row_group={})",
+                            field_idx, chunked_array->length(), expected_rows, row_group_index));
         }
 
-        columns.push_back(std::move(chunked_array));
+        result_arrays.push_back(std::move(chunked_array));
     }
 
-    auto table = arrow::Table::Make(arrow_schema, std::move(columns), expected_rows);
-    return std::make_unique<TableRecordBatchReader>(std::move(table), max_chunksize,
-                                                    std::move(pool));
+    std::vector<std::shared_ptr<arrow::Field>> result_fields;
+    for (size_t i = 0; i < result_arrays.size(); ++i) {
+        const auto& field = manifest.schema_fields[field_indices[i]].field;
+        result_fields.push_back(arrow::field(field->name(), result_arrays[i]->type(),
+                                             field->nullable(), field->metadata()));
+    }
+    auto result_schema = arrow::schema(result_fields);
+
+    auto table = arrow::Table::Make(result_schema, std::move(result_arrays), expected_rows);
+    return std::make_unique<TableRecordBatchReader>(std::move(table), max_chunksize, pool);
 }
 
 std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRanges(
-    ::parquet::ParquetFileReader* parquet_reader, const TargetRowGroup& target_row_group,
-    const std::vector<int32_t>& column_indices) {
+    const TargetRowGroup& target_row_group, const std::vector<int32_t>& column_indices,
+    ::parquet::ParquetFileReader* parquet_reader) {
     int32_t row_group_index = target_row_group.GetRowGroupIndex();
     const auto& row_ranges = target_row_group.GetRowRanges();
 

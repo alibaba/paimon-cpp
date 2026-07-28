@@ -17,6 +17,7 @@
 #include "paimon/format/parquet/page_filtered_row_group_reader.h"
 
 #include <cstdint>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <optional>
@@ -76,7 +77,7 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
     void WriteTestFile(const std::string& file_name,
                        const std::shared_ptr<arrow::StructArray>& struct_array,
                        int32_t write_batch_size, int64_t max_row_group_length,
-                       bool enable_dictionary = false) {
+                       bool enable_dictionary = false, int64_t data_page_size = 1) {
         auto data_type = struct_array->struct_type();
         auto data_schema = arrow::schema(data_type->fields());
         auto data_arrow_array = std::make_unique<ArrowArray>();
@@ -92,10 +93,12 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
             builder.disable_dictionary();  // Ensure page index min/max are meaningful
         }
         builder.enable_write_page_index();  // Enable page index for page-level filtering
-        // Set data page size to 1 byte to force a new page after every write_batch_size rows.
-        // The writer flushes a page when accumulated data exceeds data_pagesize, so setting
-        // it to 1 ensures each batch of write_batch_size rows becomes exactly one page.
-        builder.data_pagesize(1);
+        // Data page size controls when a page is flushed. The default of 1 byte forces a new
+        // page after every write_batch_size rows (each batch becomes one page), giving pages
+        // aligned across columns. A larger byte-based value combined with write_batch_size=1
+        // instead lets columns of different physical widths flush pages at different row
+        // counts, producing intentionally misaligned pages across leaves.
+        builder.data_pagesize(data_page_size);
         auto writer_properties = builder.build();
         ASSERT_OK_AND_ASSIGN(
             auto format_writer,
@@ -551,9 +554,8 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesPartialMatch) {
     row_ranges.Add(RowRanges::Range(50, 59));
 
     auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
-        parquet_reader.get(),
         TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true, /*ranges=*/row_ranges),
-        /*column_indices=*/{0});
+        /*column_indices=*/{0}, parquet_reader.get());
 
     // Should have exactly 1 range (page 5 of column 0, no dictionary since disabled)
     ASSERT_EQ(1, ranges.size());
@@ -577,8 +579,8 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesAllMatch) {
     row_ranges.Add(RowRanges::Range(0, 99));
 
     auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
-        parquet_reader.get(),
-        TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true, /*ranges=*/row_ranges), {0});
+        TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true, /*ranges=*/row_ranges), {0},
+        parquet_reader.get());
 
     // 10 pages, all matching
     ASSERT_EQ(10, ranges.size());
@@ -602,8 +604,8 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesNoMatch) {
     RowRanges row_ranges;  // empty
 
     auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
-        parquet_reader.get(),
-        TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true, /*ranges=*/row_ranges), {0});
+        TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true, /*ranges=*/row_ranges), {0},
+        parquet_reader.get());
 
     ASSERT_EQ(0, ranges.size());
 }
@@ -624,9 +626,8 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesMultiColumn) {
     row_ranges.Add(RowRanges::Range(50, 59));
 
     auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
-        parquet_reader.get(),
         TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true, /*ranges=*/row_ranges),
-        {0, 1});
+        {0, 1}, parquet_reader.get());
 
     // 1 matching page per column = 2 ranges total
     ASSERT_EQ(2, ranges.size());
@@ -652,8 +653,8 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesMultiplePages) {
     row_ranges.Add(RowRanges::Range(70, 79));
 
     auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
-        parquet_reader.get(),
-        TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true, /*ranges=*/row_ranges), {0});
+        TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true, /*ranges=*/row_ranges), {0},
+        parquet_reader.get());
 
     // 2 matching pages for 1 column
     ASSERT_EQ(2, ranges.size());
@@ -837,9 +838,8 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
     row_ranges.Add(RowRanges::Range(0, 99));
 
     auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
-        parquet_reader.get(),
         TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/false, /*ranges=*/row_ranges),
-        /*column_indices=*/{0});
+        /*column_indices=*/{0}, parquet_reader.get());
 
     ASSERT_FALSE(ranges.empty());
 
@@ -914,56 +914,56 @@ TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesWithDictionaryEncoding) 
     auto partial_concat = arrow::Concatenate(result_partial->chunks()).ValueOrDie();
     ASSERT_TRUE(partial_concat->Equals(expected_struct));
 }
-/// Helper: build a StructArray with a top-level int32 "id" column and a nested struct column
-/// "info" containing two int32 fields: "x" and "y".
-/// id[i] = i, info.x[i] = i * 100, info.y[i] = i * 100 + 1, for i in [0, N).
-///
-/// Arrow schema: { id: int32, info: struct<x: int32, y: int32> }
-/// Parquet leaf columns: [id (index 0), info.x (index 1), info.y (index 2)]
-static std::shared_ptr<arrow::StructArray> MakeNestedStructData(int32_t num_rows) {
-    arrow::Int32Builder id_builder, x_builder, y_builder;
+/// Helper: build an Int32Array with sequential values 0..N-1.
+static std::shared_ptr<arrow::Array> MakeIdColumn(int32_t num_rows) {
+    arrow::Int32Builder id_builder;
     EXPECT_TRUE(id_builder.Reserve(num_rows).ok());
+    for (int32_t i = 0; i < num_rows; ++i) {
+        id_builder.UnsafeAppend(i);
+    }
+    return id_builder.Finish().ValueOrDie();
+}
+
+/// Helper: build a struct<x: int32, y: int32> array (without id column).
+/// x[i] = i * 100, y[i] = i * 100 + 1, for i in [0, N).
+static std::shared_ptr<arrow::StructArray> MakeNestedStructData(int32_t num_rows) {
+    arrow::Int32Builder x_builder, y_builder;
     EXPECT_TRUE(x_builder.Reserve(num_rows).ok());
     EXPECT_TRUE(y_builder.Reserve(num_rows).ok());
     for (int32_t i = 0; i < num_rows; ++i) {
-        id_builder.UnsafeAppend(i);
         x_builder.UnsafeAppend(i * 100);
         y_builder.UnsafeAppend(i * 100 + 1);
     }
-    auto id_array = id_builder.Finish().ValueOrDie();
     auto x_array = x_builder.Finish().ValueOrDie();
     auto y_array = y_builder.Finish().ValueOrDie();
 
     auto field_x = arrow::field("x", arrow::int32());
     auto field_y = arrow::field("y", arrow::int32());
-    auto inner_struct =
-        arrow::StructArray::Make({x_array, y_array}, {field_x, field_y}).ValueOrDie();
-
-    auto field_id = arrow::field("id", arrow::int32());
-    auto field_info = arrow::field("info", arrow::struct_({field_x, field_y}));
-    return arrow::StructArray::Make({id_array, inner_struct}, {field_id, field_info}).ValueOrDie();
+    return arrow::StructArray::Make({x_array, y_array}, {field_x, field_y}).ValueOrDie();
 }
 
 /// Test: rowgroup-level filtering on a file with nested struct columns.
 ///
-/// This test exposes the bug where BuildPageFilteredSchema fails to correctly map
-/// Parquet leaf column indices to Arrow fields for nested types, and
-/// ReadFilteredRowGroup cannot correctly assemble nested column results.
-///
 /// Schema: { id: int32, info: struct<x: int32, y: int32> }
 /// Parquet leaf columns: [id=0, info.x=1, info.y=2]
 /// 100 rows, 10 per page, 2 row groups.
-/// Predicate: id >= 70 → row groups 0 skipped, row groups 1 read → 50 rows expected.
+/// Predicate: id >= 70 → page 0-7 skipped, paged 8-9 read → 30 rows expected.
 /// The read schema requests both "id" and "info" columns.
-TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnRowGroupFilter) {
+TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnPageFilter) {
     std::string file_name = dir_->Str() + "/nested_struct_filter.parquet";
-    auto data = MakeNestedStructData(100);
-    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
 
     auto field_x = arrow::field("x", arrow::int32());
     auto field_y = arrow::field("y", arrow::int32());
-    auto read_schema = arrow::schema({arrow::field("id", arrow::int32()),
-                                      arrow::field("info", arrow::struct_({field_x, field_y}))});
+    auto field_id = arrow::field("id", arrow::int32());
+    auto field_info = arrow::field("info", arrow::struct_({field_x, field_y}));
+
+    auto id_array = MakeIdColumn(100);
+    auto info_array = MakeNestedStructData(100);
+    auto data =
+        arrow::StructArray::Make({id_array, info_array}, {field_id, field_info}).ValueOrDie();
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
+
+    auto read_schema = arrow::schema({field_id, field_info});
 
     auto predicate = PredicateBuilder::GreaterOrEqual(
         /*field_index=*/0, /*field_name=*/"id", FieldType::INT, Literal(70));
@@ -971,32 +971,36 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnRowGroupFilter) {
     std::shared_ptr<arrow::ChunkedArray> result;
     ReadWithPredicateImpl(file_name, read_schema, predicate, &result);
 
-    // Should get rows 50-99 = 50 rows
+    // Should get rows 70-99 = 30 rows
     ASSERT_TRUE(result);
-    ASSERT_EQ(50, result->length());
+    ASSERT_EQ(30, result->length());
 
     // Build expected result: rows 50-99 from the original data
-    auto expected = data->Slice(50, 50);
+    auto expected = data->Slice(70, 30);
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
 
 /// Test: Page-level filtering reading only the predicate column (no nested column in read schema).
 ///
-/// This verifies that when reading only the "id" column (without the nested struct),
-/// page-level filtering works correctly since the read schema contains no nested types.
+/// This verifies that when reading only the "id" column (without the nested struct)
 ///
 /// Schema: { id: int32, info: struct<x: int32, y: int32> }
 /// Read schema: { id: int32 }
 /// Predicate on "id": id >= 70. Page-level filtering active → rows 70-99 (30 rows).
 TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnOnlyReadIdField) {
     std::string file_name = dir_->Str() + "/nested_struct_only_nested.parquet";
-    auto data = MakeNestedStructData(100);
-    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
 
-    auto field_id = arrow::field("id", arrow::int32());
     auto field_x = arrow::field("x", arrow::int32());
     auto field_y = arrow::field("y", arrow::int32());
+    auto field_id = arrow::field("id", arrow::int32());
     auto field_info = arrow::field("info", arrow::struct_({field_x, field_y}));
+
+    auto id_array = MakeIdColumn(100);
+    auto info_array = MakeNestedStructData(100);
+    auto data =
+        arrow::StructArray::Make({id_array, info_array}, {field_id, field_info}).ValueOrDie();
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
+
     // Read "id" column only
     auto read_schema = arrow::schema({field_id});
 
@@ -1016,19 +1020,9 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructColumnOnlyReadIdField) {
     ASSERT_TRUE(data->field(0)->Slice(70, 30)->Equals(result_struct->field(0)));
 }
 
-/// Helper: build a StructArray with an int32 "id" column and a list<int32> "tags" column.
-/// id[i] = i, tags[i] = [i*10, i*10+1], for i in [0, N).
-///
-/// Arrow schema: { id: int32, tags: list<item: int32> }
-/// Parquet leaf columns: [id (index 0), tags.item (index 1)]
-static std::shared_ptr<arrow::StructArray> MakeListColumnData(int32_t num_rows) {
-    arrow::Int32Builder id_builder;
-    EXPECT_TRUE(id_builder.Reserve(num_rows).ok());
-    for (int32_t i = 0; i < num_rows; ++i) {
-        id_builder.UnsafeAppend(i);
-    }
-    auto id_array = id_builder.Finish().ValueOrDie();
-
+/// Helper: build a list<item: int32> array (without id column).
+/// tags[i] = [i*10, i*10+1], for i in [0, N).
+static std::shared_ptr<arrow::Array> MakeListColumnData(int32_t num_rows) {
     auto value_builder = std::make_shared<arrow::Int32Builder>();
     arrow::ListBuilder list_builder(arrow::default_memory_pool(), value_builder);
     for (int32_t i = 0; i < num_rows; ++i) {
@@ -1036,26 +1030,12 @@ static std::shared_ptr<arrow::StructArray> MakeListColumnData(int32_t num_rows) 
         EXPECT_TRUE(value_builder->Append(i * 10).ok());
         EXPECT_TRUE(value_builder->Append(i * 10 + 1).ok());
     }
-    auto list_array = list_builder.Finish().ValueOrDie();
-
-    auto field_id = arrow::field("id", arrow::int32());
-    auto field_tags = arrow::field("tags", arrow::list(arrow::field("item", arrow::int32())));
-    return arrow::StructArray::Make({id_array, list_array}, {field_id, field_tags}).ValueOrDie();
+    return list_builder.Finish().ValueOrDie();
 }
 
-/// Helper: build a StructArray with an int32 "id" column and a map<utf8, int32> "props" column.
-/// id[i] = i, props[i] = {"k_i": i * 100}, for i in [0, N).
-///
-/// Arrow schema: { id: int32, props: map<utf8, int32> }
-/// Parquet leaf columns: [id (index 0), props.key (index 1), props.value (index 2)]
-static std::shared_ptr<arrow::StructArray> MakeMapColumnData(int32_t num_rows) {
-    arrow::Int32Builder id_builder;
-    EXPECT_TRUE(id_builder.Reserve(num_rows).ok());
-    for (int32_t i = 0; i < num_rows; ++i) {
-        id_builder.UnsafeAppend(i);
-    }
-    auto id_array = id_builder.Finish().ValueOrDie();
-
+/// Helper: build a map<utf8, int32> array (without id column).
+/// props[i] = {"k_i": i * 100}, for i in [0, N).
+static std::shared_ptr<arrow::Array> MakeMapColumnData(int32_t num_rows) {
     auto key_builder = std::make_shared<arrow::StringBuilder>();
     auto value_builder = std::make_shared<arrow::Int32Builder>();
     arrow::MapBuilder map_builder(arrow::default_memory_pool(), key_builder, value_builder);
@@ -1065,26 +1045,27 @@ static std::shared_ptr<arrow::StructArray> MakeMapColumnData(int32_t num_rows) {
         EXPECT_TRUE(key_builder->Append(key).ok());
         EXPECT_TRUE(value_builder->Append(i * 100).ok());
     }
-    auto map_array = map_builder.Finish().ValueOrDie();
-
-    auto field_id = arrow::field("id", arrow::int32());
-    auto field_props = arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()));
-    return arrow::StructArray::Make({id_array, map_array}, {field_id, field_props}).ValueOrDie();
+    return map_builder.Finish().ValueOrDie();
 }
 
 /// Test: rowgroup-level filtering on a file with a list column.
 ///
 /// Schema: { id: int32, tags: list<item: int32> }
 /// 100 rows, 10 per page, 2 row groups.
-/// Predicate: id >= 70 → row groups 0 skipped, row groups 1 read → 50 rows expected.
-TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnRowGroupFilter) {
+/// Predicate: id >= 70 → page 0-7 skipped, page 8-9 read → 30 rows expected.
+TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnPageFilter) {
     std::string file_name = dir_->Str() + "/nested_list_filter.parquet";
-    auto data = MakeListColumnData(100);
+
+    auto field_id = arrow::field("id", arrow::int32());
+    auto field_tags = arrow::field("tags", arrow::list(arrow::field("item", arrow::int32())));
+
+    auto id_array = MakeIdColumn(100);
+    auto tags_array = MakeListColumnData(100);
+    auto data =
+        arrow::StructArray::Make({id_array, tags_array}, {field_id, field_tags}).ValueOrDie();
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
 
-    auto read_schema =
-        arrow::schema({arrow::field("id", arrow::int32()),
-                       arrow::field("tags", arrow::list(arrow::field("item", arrow::int32())))});
+    auto read_schema = arrow::schema({field_id, field_tags});
 
     auto predicate = PredicateBuilder::GreaterOrEqual(
         /*field_index=*/0, /*field_name=*/"id", FieldType::INT, Literal(70));
@@ -1093,10 +1074,10 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnRowGroupFilter) {
     ReadWithPredicateImpl(file_name, read_schema, predicate, &result);
 
     ASSERT_TRUE(result);
-    ASSERT_EQ(50, result->length());
+    ASSERT_EQ(30, result->length());
 
-    // Build expected result: rows 50-99 from the original data
-    auto expected = data->Slice(50, 50);
+    // Build expected result: rows 70-99 from the original data
+    auto expected = data->Slice(70, 30);
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
 
@@ -1104,15 +1085,20 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedListColumnRowGroupFilter) {
 ///
 /// Schema: { id: int32, props: map<utf8, int32> }
 /// 100 rows, 10 per page, 2 row groups.
-/// Predicate: id >= 70 → row groups 0 skipped, row groups 1 read → 50 rows expected.
-TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnRowGroupFilter) {
+/// Predicate: id >= 70 → page 0-7 skipped, page 8-9 read → 30 rows expected.
+TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnPageFilter) {
     std::string file_name = dir_->Str() + "/nested_map_filter.parquet";
-    auto data = MakeMapColumnData(100);
+
+    auto field_id = arrow::field("id", arrow::int32());
+    auto field_props = arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()));
+
+    auto id_array = MakeIdColumn(100);
+    auto props_array = MakeMapColumnData(100);
+    auto data =
+        arrow::StructArray::Make({id_array, props_array}, {field_id, field_props}).ValueOrDie();
     WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
 
-    auto read_schema =
-        arrow::schema({arrow::field("id", arrow::int32()),
-                       arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()))});
+    auto read_schema = arrow::schema({field_id, field_props});
 
     auto predicate = PredicateBuilder::GreaterOrEqual(
         /*field_index=*/0, /*field_name=*/"id", FieldType::INT, Literal(70));
@@ -1121,99 +1107,10 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedMapColumnRowGroupFilter) {
     ReadWithPredicateImpl(file_name, read_schema, predicate, &result);
 
     ASSERT_TRUE(result);
-    ASSERT_EQ(50, result->length());
+    ASSERT_EQ(30, result->length());
 
-    // Build expected result: rows 50-99 from the original data
-    auto expected = data->Slice(50, 50);
-    ASSERT_TRUE(expected->Equals(result->chunk(0)));
-}
-
-/// Test: nested map projection falls back to row-group-level filtering when page index filter is
-/// unavailable for nested read schemas.
-///
-/// Schema: { id: int32, props: map<utf8, int32> }
-/// 100 rows, 10 per page, 2 row group.
-/// Bitmap: {70..99} hits the second row group (50..99).
-/// Because nested schema disables page-level filtering, the entire row group 1 (50..99) is read,
-/// so rows [50, 99] should all be returned.
-TEST_F(PageFilteredRowGroupReaderTest, NestedMapBitmapFallback) {
-    std::string file_name = dir_->Str() + "/nested_map_projection_fallback.parquet";
-    auto data = MakeMapColumnData(100);
-    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
-
-    auto field_props = arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()));
-    auto read_schema = arrow::schema({arrow::field("id", arrow::int32()), field_props});
-
-    RoaringBitmap32 bitmap;
-    bitmap.AddRange(70, 100);
-
-    std::shared_ptr<arrow::ChunkedArray> result;
-    ReadWithPredicateAndBitmapImpl(file_name, read_schema, nullptr, bitmap, &result);
-
-    ASSERT_TRUE(result);
-    // Because page-level filtering is skipped for nested schemas, we read full row groups.
-    ASSERT_EQ(50, result->length());
-
-    auto expected = data->Slice(50, 50);
-    ASSERT_TRUE(expected->Equals(result->chunk(0)));
-}
-
-/// Test: nested list projection falls back to row-group-level filtering when page index filter is
-/// unavailable for nested read schemas.
-///
-/// Schema: { id: int32, tags: list<item: int32> }
-/// 100 rows, 10 per page, 2 row group.
-/// Bitmap: {70..99} hits the second row group (50..99).
-/// Because nested schema disables page-level filtering, the entire row group 1 (50..99) is read,
-/// so rows [50, 99] should all be returned.
-TEST_F(PageFilteredRowGroupReaderTest, NestedListBitmapFallback) {
-    std::string file_name = dir_->Str() + "/nested_list_projection_fallback.parquet";
-    auto data = MakeListColumnData(100);
-    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
-
-    auto field_tags = arrow::field("tags", arrow::list(arrow::field("item", arrow::int32())));
-    auto read_schema = arrow::schema({arrow::field("id", arrow::int32()), field_tags});
-
-    RoaringBitmap32 bitmap;
-    bitmap.AddRange(70, 100);
-
-    std::shared_ptr<arrow::ChunkedArray> result;
-    ReadWithPredicateAndBitmapImpl(file_name, read_schema, nullptr, bitmap, &result);
-
-    ASSERT_TRUE(result);
-    ASSERT_EQ(50, result->length());
-
-    auto expected = data->Slice(50, 50);
-    ASSERT_TRUE(expected->Equals(result->chunk(0)));
-}
-
-/// Test: nested struct projection falls back to row-group-level filtering when page index filter is
-/// unavailable for nested read schemas.
-///
-/// Schema: { id: int32, info: struct<x: int32, y: int32> }
-/// Bitmap: {70..99} hits the second row group (50..99).
-/// Because nested schema disables page-level filtering, the entire second row group (50..99) is
-/// read.
-TEST_F(PageFilteredRowGroupReaderTest, NestedStructBitmapFallback) {
-    std::string file_name = dir_->Str() + "/nested_struct_projection_fallback.parquet";
-    auto data = MakeNestedStructData(100);
-    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
-
-    auto field_x = arrow::field("x", arrow::int32());
-    auto field_y = arrow::field("y", arrow::int32());
-    auto field_info = arrow::field("info", arrow::struct_({field_x, field_y}));
-    auto read_schema = arrow::schema({arrow::field("id", arrow::int32()), field_info});
-
-    RoaringBitmap32 bitmap;
-    bitmap.AddRange(70, 100);
-
-    std::shared_ptr<arrow::ChunkedArray> result;
-    ReadWithPredicateAndBitmapImpl(file_name, read_schema, nullptr, bitmap, &result);
-
-    ASSERT_TRUE(result);
-    ASSERT_EQ(50, result->length());
-
-    auto expected = data->Slice(50, 50);
+    // Build expected result: rows 70-99 from the original data
+    auto expected = data->Slice(70, 30);
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
 
@@ -1221,39 +1118,20 @@ TEST_F(PageFilteredRowGroupReaderTest, NestedStructBitmapFallback) {
 ///
 /// Schema: { id: int32, info: struct<x: int32, y: int32>, tags: list<item: int32> }
 /// This tests the boundary handling when two nested fields are adjacent in the schema.
-/// Predicate: id >= 70 → row groups 0 skipped, row groups 1 read → 50 rows expected.
+/// Predicate: id >= 70 → page 0-7 skipped, page 8-9 read → 30 rows expected.
 TEST_F(PageFilteredRowGroupReaderTest, MultipleAdjacentNestedColumns) {
     std::string file_name = dir_->Str() + "/multi_nested.parquet";
 
-    // Build data with id, info (struct), tags (list)
-    arrow::Int32Builder id_builder, x_builder, y_builder;
-    ASSERT_TRUE(id_builder.Reserve(100).ok());
-    ASSERT_TRUE(x_builder.Reserve(100).ok());
-    ASSERT_TRUE(y_builder.Reserve(100).ok());
-    auto value_builder = std::make_shared<arrow::Int32Builder>();
-    arrow::ListBuilder list_builder(arrow::default_memory_pool(), value_builder);
-
-    for (int32_t i = 0; i < 100; ++i) {
-        id_builder.UnsafeAppend(i);
-        x_builder.UnsafeAppend(i * 100);
-        y_builder.UnsafeAppend(i * 100 + 1);
-        ASSERT_TRUE(list_builder.Append().ok());
-        ASSERT_TRUE(value_builder->Append(i * 10).ok());
-    }
-    auto id_array = id_builder.Finish().ValueOrDie();
-    auto x_array = x_builder.Finish().ValueOrDie();
-    auto y_array = y_builder.Finish().ValueOrDie();
-    auto list_array = list_builder.Finish().ValueOrDie();
-
     auto field_x = arrow::field("x", arrow::int32());
     auto field_y = arrow::field("y", arrow::int32());
-    auto inner_struct =
-        arrow::StructArray::Make({x_array, y_array}, {field_x, field_y}).ValueOrDie();
-
     auto field_id = arrow::field("id", arrow::int32());
     auto field_info = arrow::field("info", arrow::struct_({field_x, field_y}));
     auto field_tags = arrow::field("tags", arrow::list(arrow::field("item", arrow::int32())));
-    auto data = arrow::StructArray::Make({id_array, inner_struct, list_array},
+
+    auto id_array = MakeIdColumn(100);
+    auto info_array = MakeNestedStructData(100);
+    auto tags_array = MakeListColumnData(100);
+    auto data = arrow::StructArray::Make({id_array, info_array, tags_array},
                                          {field_id, field_info, field_tags})
                     .ValueOrDie();
 
@@ -1267,10 +1145,10 @@ TEST_F(PageFilteredRowGroupReaderTest, MultipleAdjacentNestedColumns) {
     ReadWithPredicateImpl(file_name, read_schema, predicate, &result);
 
     ASSERT_TRUE(result);
-    ASSERT_EQ(50, result->length());
+    ASSERT_EQ(30, result->length());
 
-    // Build expected result: rows 50-99 from the original data
-    auto expected = data->Slice(50, 50);
+    // Build expected result: rows 70-99 from the original data
+    auto expected = data->Slice(70, 30);
     ASSERT_TRUE(expected->Equals(result->chunk(0)));
 }
 /// Test: bitmap hits all pages of a subset of row groups (no predicate).
@@ -1717,6 +1595,414 @@ TEST_F(PageFilteredRowGroupReaderTest, BitmapTrimMultiColumnTest) {
         ASSERT_EQ(60 + i, a_arr->Value(50 + i));
         ASSERT_EQ((60 + i) * 10, b_arr->Value(50 + i));
     }
+}
+
+/// Test: predicate pushdown with all nested column types (struct, list, map).
+///
+/// Schema: { id: int32, info: struct<x: int32, y: int32>,
+///           tags: list<item: int32>, props: map<utf8, int32> }
+/// 100 rows, 10 rows per page, 50 rows per row group → 2 row groups.
+/// Predicate: id in [15, 29] or id in [80, 99] (Between is inclusive).
+/// Read schema: full schema (all columns).
+/// Page-level filtering (10 rows/page):
+///   Between(15, 29) → pages 1-2 (rows 10-29)
+///   Between(80, 99) → pages 8-9 (rows 80-99)
+///   Total: 40 rows.
+TEST_F(PageFilteredRowGroupReaderTest, MultipleNestedColumns) {
+    std::string file_name = dir_->Str() + "/multi_nested_columns.parquet";
+
+    auto field_x = arrow::field("x", arrow::int32());
+    auto field_y = arrow::field("y", arrow::int32());
+    auto field_id = arrow::field("id", arrow::int32());
+    auto field_info = arrow::field("info", arrow::struct_({field_x, field_y}));
+    auto field_tags = arrow::field("tags", arrow::list(arrow::field("item", arrow::int32())));
+    auto field_props = arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()));
+
+    // Build data with all nested column types using shared helpers
+    auto id_array = MakeIdColumn(100);
+    auto info_array = MakeNestedStructData(100);
+    auto tags_array = MakeListColumnData(100);
+    auto props_array = MakeMapColumnData(100);
+    auto data = arrow::StructArray::Make({id_array, info_array, tags_array, props_array},
+                                         {field_id, field_info, field_tags, field_props})
+                    .ValueOrDie();
+
+    // Write: 10 rows per page, 50 rows per row group → 2 row groups
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
+
+    // Read full schema
+    auto read_schema = arrow::schema({field_id, field_info, field_tags, field_props});
+
+    // predicate: id in [15, 29] or id in [80, 99]
+    ASSERT_OK_AND_ASSIGN(
+        auto predicate, PredicateBuilder::Or(
+                            {PredicateBuilder::Between(/*field_index=*/0, /*field_name=*/"id",
+                                                       FieldType::INT, Literal(15), Literal(29)),
+                             PredicateBuilder::Between(/*field_index=*/0, /*field_name=*/"id",
+                                                       FieldType::INT, Literal(80), Literal(99))}));
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateImpl(file_name, read_schema, predicate, &result,
+                          /*batch_size=*/1024);
+
+    // Page-level filtering (10 rows/page):
+    //   Between(15, 29) → pages 1-2 (rows 10-29)
+    //   Between(80, 99) → pages 8-9 (rows 80-99)
+    //   Total: 40 rows
+    ASSERT_TRUE(result);
+    ASSERT_EQ(40, result->length());
+
+    auto expected =
+        arrow::ChunkedArray::Make({data->Slice(10, 20), data->Slice(80, 20)}).ValueOrDie();
+    ASSERT_TRUE(result->Equals(expected));
+}
+
+/// Test: sub-column projection of a struct type with page-level filtering.
+///
+/// Schema: { id: int32, info: struct<x: int32, y: int32> }
+/// Read schema: { info: struct<x: int32> } — project only x, not y.
+/// Predicate: id >= 70 → 30 rows expected.
+/// Verifies that reading a sub-column of a nested struct works correctly
+/// with page-level filtering and the ColumnReader tree (GetColumn + filter_leaves).
+TEST_F(PageFilteredRowGroupReaderTest, NestedStructSubColumnProjection) {
+    std::string file_name = dir_->Str() + "/nested_struct_subcol.parquet";
+
+    auto field_x = arrow::field("x", arrow::int32());
+    auto field_y = arrow::field("y", arrow::int32());
+    auto field_id = arrow::field("id", arrow::int32());
+    auto field_info = arrow::field("info", arrow::struct_({field_x, field_y}));
+
+    auto id_array = MakeIdColumn(100);
+    auto info_array = MakeNestedStructData(100);
+    auto data =
+        arrow::StructArray::Make({id_array, info_array}, {field_id, field_info}).ValueOrDie();
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/50);
+
+    // Read only info.x (sub-column projection: only x, not y)
+    auto read_schema = arrow::schema({arrow::field("info", arrow::struct_({field_x}))});
+
+    auto predicate = PredicateBuilder::GreaterOrEqual(
+        /*field_index=*/0, /*field_name=*/"id", FieldType::INT, Literal(70));
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateImpl(file_name, read_schema, predicate, &result);
+
+    ASSERT_TRUE(result);
+    ASSERT_EQ(30, result->length());
+
+    // Result is struct<info: struct<x: int32>>
+    auto result_struct = std::dynamic_pointer_cast<arrow::StructArray>(result->chunk(0));
+    ASSERT_TRUE(result_struct);
+    ASSERT_EQ(1, result_struct->num_fields());
+
+    auto info_result = std::dynamic_pointer_cast<arrow::StructArray>(result_struct->field(0));
+    ASSERT_TRUE(info_result);
+    ASSERT_EQ(1, info_result->num_fields());
+
+    auto x_arr = std::dynamic_pointer_cast<arrow::Int32Array>(info_result->field(0));
+    ASSERT_TRUE(x_arr);
+    for (int32_t i = 0; i < 30; ++i) {
+        ASSERT_EQ((70 + i) * 100, x_arr->Value(i)) << "Mismatch at index " << i;
+    }
+}
+
+/// Helper: build a struct with a flat key plus several nested columns of different
+/// physical widths / repetition, so that with a byte-based data page size their
+/// leaves flush pages at different row counts (misaligned pages):
+///   key:   int64            (fixed 8B  -> ~5 rows/page)
+///   s:     struct<x:int32, y:int64>   (x ~10 rows/page, y ~5 rows/page)
+///   tags:  list<int32>       (2 values/row -> ~5 rows/page)
+///   props: map<utf8,int32>   (variable-width utf8 key -> irregular rows/page)
+/// key/s.x/s.y encode the row index (= i); tags/props reuse the shared list/map
+/// helpers. Correctness is verified per row by deep-comparing against this array.
+static std::shared_ptr<arrow::StructArray> MakeMisalignedNestedData(int32_t num_rows) {
+    arrow::Int64Builder key_builder;
+    arrow::Int32Builder x_builder;
+    arrow::Int64Builder y_builder;
+    EXPECT_TRUE(key_builder.Reserve(num_rows).ok());
+    EXPECT_TRUE(x_builder.Reserve(num_rows).ok());
+    EXPECT_TRUE(y_builder.Reserve(num_rows).ok());
+    for (int32_t i = 0; i < num_rows; ++i) {
+        key_builder.UnsafeAppend(i);
+        x_builder.UnsafeAppend(i);
+        y_builder.UnsafeAppend(i);
+    }
+    auto key_array = key_builder.Finish().ValueOrDie();
+    auto x_array = x_builder.Finish().ValueOrDie();
+    auto y_array = y_builder.Finish().ValueOrDie();
+
+    auto field_x = arrow::field("x", arrow::int32());
+    auto field_y = arrow::field("y", arrow::int64());
+    auto s_array = arrow::StructArray::Make({x_array, y_array}, {field_x, field_y}).ValueOrDie();
+
+    // Repeated nested leaves (list<int32> and map<utf8,int32>) paginate on value
+    // bytes, so they misalign with the struct's fixed-width leaves too.
+    auto tags_array = MakeListColumnData(num_rows);
+    auto props_array = MakeMapColumnData(num_rows);
+
+    auto field_key = arrow::field("key", arrow::int64());
+    auto field_s = arrow::field("s", arrow::struct_({field_x, field_y}));
+    auto field_tags = arrow::field("tags", arrow::list(arrow::field("item", arrow::int32())));
+    auto field_props = arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()));
+    return arrow::StructArray::Make({key_array, s_array, tags_array, props_array},
+                                    {field_key, field_s, field_tags, field_props})
+        .ValueOrDie();
+}
+
+/// Test: page-level filtering across multiple nested columns whose leaf pages are
+/// MISALIGNED, within a SINGLE row group. The file mixes a flat key, a
+/// struct<int32,int64>, a list<int32> and a map<utf8,int32>; with write_batch_size=1
+/// and a byte-based data page size every leaf flushes pages at a different (and, for
+/// the utf8 map key, irregular) row count.
+/// Bitmap: [0,15), [77, 87) (to avoid bitmap hole filling)
+/// Expected: 25 rows
+TEST_F(PageFilteredRowGroupReaderTest, NestedColumnsMisalignedPagesSingleRowGroup) {
+    std::string file_name = dir_->Str() + "/nested_misaligned_single_rg.parquet";
+    constexpr int32_t kNumRows = 100;
+    auto data = MakeMisalignedNestedData(kNumRows);
+
+    // write_batch_size=1 + a byte-based data page size makes the int32 and int64 leaves
+    // flush pages at different row counts, i.e. deliberately misaligned pages.
+    // max_row_group_length=kNumRows keeps all rows in a single row group.
+    WriteTestFile(file_name, data, /*write_batch_size=*/1, /*max_row_group_length=*/kNumRows,
+                  /*enable_dictionary=*/false, /*data_page_size=*/40);
+
+    auto read_schema =
+        arrow::schema({arrow::field("key", arrow::int64()),
+                       arrow::field("s", arrow::struct_({arrow::field("x", arrow::int32()),
+                                                         arrow::field("y", arrow::int64())})),
+                       arrow::field("tags", arrow::list(arrow::field("item", arrow::int32()))),
+                       arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()))});
+
+    // bitmap: [0,15), [77, 87)
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 15);
+    bitmap.AddRange(77, 87);
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, nullptr, bitmap, &result);
+    ASSERT_TRUE(result);
+
+    int64_t total = 0;
+    auto top = std::dynamic_pointer_cast<arrow::StructArray>(result->chunk(0));
+    ASSERT_TRUE(top);
+    auto key_arr = std::dynamic_pointer_cast<arrow::Int64Array>(top->field(0));
+    for (int64_t i = 0; i < key_arr->length(); ++i) {
+        int64_t k = key_arr->Value(i);
+        // Full-row deep compare across ALL columns (struct + list + map): the returned
+        // row must equal the original row identified by key k. This is what catches a
+        // desync in the repeated list/map leaves, whose reassembly also relies on the
+        // per-leaf skip/read staying row-consistent.
+        ASSERT_TRUE(data->Slice(k, 1)->Equals(*top->Slice(i, 1)))
+            << "row content mismatch at key " << k;
+        ++total;
+    }
+
+    for (int64_t i = 0; i < 15; ++i) {
+        ASSERT_EQ(i, key_arr->Value(i));
+    }
+    for (int64_t i = 0; i < 10; ++i) {
+        ASSERT_EQ(77 + i, key_arr->Value(15 + i));
+    }
+
+    ASSERT_EQ(total, 25);
+}
+
+/// Test: same misaligned nested layout as the single-row-group case above, but split
+/// across MULTIPLE row groups (max_row_group_length=40 -> row groups of 40/40/20).
+/// The selection bitmap spans row-group boundaries so the reader must keep the
+/// per-leaf skip/read row-consistent both across misaligned pages and across row
+/// groups.
+/// Bitmap: [0,15), [77, 87) (to avoid bitmap hole filling)
+/// Expected: 25 rows -> keys 0..14 and 77..86
+TEST_F(PageFilteredRowGroupReaderTest, NestedColumnsMisalignedPagesMultiRowGroup) {
+    std::string file_name = dir_->Str() + "/nested_misaligned_multi_rg.parquet";
+    constexpr int32_t kNumRows = 100;
+    auto data = MakeMisalignedNestedData(kNumRows);
+
+    // write_batch_size=1 + byte-based data page size -> misaligned leaf pages.
+    // max_row_group_length=40 -> 3 row groups (40, 40, 20).
+    WriteTestFile(file_name, data, /*write_batch_size=*/1, /*max_row_group_length=*/40,
+                  /*enable_dictionary=*/false, /*data_page_size=*/40);
+
+    auto read_schema =
+        arrow::schema({arrow::field("key", arrow::int64()),
+                       arrow::field("s", arrow::struct_({arrow::field("x", arrow::int32()),
+                                                         arrow::field("y", arrow::int64())})),
+                       arrow::field("tags", arrow::list(arrow::field("item", arrow::int32()))),
+                       arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()))});
+
+    // bitmap: [0,15), [77, 87) -> spans all three row groups.
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 15);
+    bitmap.AddRange(77, 87);
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, nullptr, bitmap, &result);
+    ASSERT_TRUE(result);
+
+    std::vector<int64_t> keys;
+
+    auto concated = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto top = std::dynamic_pointer_cast<arrow::StructArray>(concated);
+    ASSERT_TRUE(top);
+    auto key_arr = std::dynamic_pointer_cast<arrow::Int64Array>(top->field(0));
+    ASSERT_TRUE(key_arr);
+    for (int64_t i = 0; i < key_arr->length(); ++i) {
+        int64_t k = key_arr->Value(i);
+        ASSERT_TRUE(data->Slice(k, 1)->Equals(*top->Slice(i, 1)))
+            << "row content mismatch at key " << k;
+        keys.push_back(k);
+    }
+
+    std::vector<int64_t> expected;
+    for (int64_t i = 0; i < 15; ++i) {
+        expected.push_back(i);
+    }
+    for (int64_t i = 77; i < 87; ++i) {
+        expected.push_back(i);
+    }
+    ASSERT_EQ(keys, expected);
+}
+
+/// Helper: like MakeMisalignedNestedData but sprinkles nulls into the nested columns
+/// so that definition levels vary per row (which also perturbs page boundaries):
+///   key:   int64, always non-null (= i, used to identify the row)
+///   s:     struct<x:int32, y:int64>; whole struct null when i%11==0, otherwise
+///          x null when i%5==0 and y null when i%7==0
+///   tags:  list<int32>; null when i%6==0, otherwise [i*10, i*10+1]
+///   props: map<utf8,int32>; null when i%8==0, otherwise {"k_i": i*100}
+/// Correctness is verified per row by deep-comparing against this array.
+static std::shared_ptr<arrow::StructArray> MakeMisalignedNestedDataWithNulls(int32_t num_rows) {
+    arrow::Int64Builder key_builder;
+    EXPECT_TRUE(key_builder.Reserve(num_rows).ok());
+    for (int32_t i = 0; i < num_rows; ++i) {
+        key_builder.UnsafeAppend(i);
+    }
+    auto key_array = key_builder.Finish().ValueOrDie();
+
+    // s: struct<x:int32, y:int64> with nulls at both leaf and struct level.
+    auto field_x = arrow::field("x", arrow::int32());
+    auto field_y = arrow::field("y", arrow::int64());
+    auto x_builder = std::make_shared<arrow::Int32Builder>();
+    auto y_builder = std::make_shared<arrow::Int64Builder>();
+    arrow::StructBuilder s_builder(arrow::struct_({field_x, field_y}), arrow::default_memory_pool(),
+                                   {x_builder, y_builder});
+    for (int32_t i = 0; i < num_rows; ++i) {
+        if (i % 11 == 0) {
+            // AppendNull() also appends nulls to the child builders, keeping lengths in sync.
+            EXPECT_TRUE(s_builder.AppendNull().ok());
+            continue;
+        }
+        EXPECT_TRUE(s_builder.Append().ok());
+        if (i % 5 == 0) {
+            EXPECT_TRUE(x_builder->AppendNull().ok());
+        } else {
+            EXPECT_TRUE(x_builder->Append(i).ok());
+        }
+        if (i % 7 == 0) {
+            EXPECT_TRUE(y_builder->AppendNull().ok());
+        } else {
+            EXPECT_TRUE(y_builder->Append(i).ok());
+        }
+    }
+    auto s_array = s_builder.Finish().ValueOrDie();
+
+    // tags: list<int32> with null lists.
+    auto item_builder = std::make_shared<arrow::Int32Builder>();
+    arrow::ListBuilder tags_builder(arrow::default_memory_pool(), item_builder);
+    for (int32_t i = 0; i < num_rows; ++i) {
+        if (i % 6 == 0) {
+            EXPECT_TRUE(tags_builder.AppendNull().ok());
+        } else {
+            EXPECT_TRUE(tags_builder.Append().ok());
+            EXPECT_TRUE(item_builder->Append(i * 10).ok());
+            EXPECT_TRUE(item_builder->Append(i * 10 + 1).ok());
+        }
+    }
+    auto tags_array = tags_builder.Finish().ValueOrDie();
+
+    // props: map<utf8,int32> with null maps.
+    auto map_key_builder = std::make_shared<arrow::StringBuilder>();
+    auto map_val_builder = std::make_shared<arrow::Int32Builder>();
+    arrow::MapBuilder props_builder(arrow::default_memory_pool(), map_key_builder, map_val_builder);
+    for (int32_t i = 0; i < num_rows; ++i) {
+        if (i % 8 == 0) {
+            EXPECT_TRUE(props_builder.AppendNull().ok());
+        } else {
+            EXPECT_TRUE(props_builder.Append().ok());
+            EXPECT_TRUE(map_key_builder->Append("k_" + std::to_string(i)).ok());
+            EXPECT_TRUE(map_val_builder->Append(i * 100).ok());
+        }
+    }
+    auto props_array = props_builder.Finish().ValueOrDie();
+
+    auto field_key = arrow::field("key", arrow::int64());
+    auto field_s = arrow::field("s", arrow::struct_({field_x, field_y}));
+    auto field_tags = arrow::field("tags", arrow::list(arrow::field("item", arrow::int32())));
+    auto field_props = arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()));
+    return arrow::StructArray::Make({key_array, s_array, tags_array, props_array},
+                                    {field_key, field_s, field_tags, field_props})
+        .ValueOrDie();
+}
+
+/// Test: nested columns containing NULLs, with MISALIGNED leaf pages, split across
+/// MULTIPLE row groups. This combines the three stress dimensions: null-driven
+/// definition levels, byte-based misaligned pages, and row-group boundaries that the
+/// selection bitmap crosses. Every returned row is deep-compared (nulls included)
+/// against the original data identified by its non-null key.
+/// Bitmap: [0,15), [77, 87) (to avoid bitmap hole filling)
+/// Expected: 25 rows -> keys 0..14 and 77..86
+TEST_F(PageFilteredRowGroupReaderTest, NestedColumnsWithNullsMisalignedPagesMultiRowGroup) {
+    std::string file_name = dir_->Str() + "/nested_nulls_misaligned_multi_rg.parquet";
+    constexpr int32_t kNumRows = 100;
+    auto data = MakeMisalignedNestedDataWithNulls(kNumRows);
+
+    // write_batch_size=1 + byte-based data page size -> misaligned leaf pages.
+    // max_row_group_length=40 -> 3 row groups (40, 40, 20).
+    WriteTestFile(file_name, data, /*write_batch_size=*/1, /*max_row_group_length=*/40,
+                  /*enable_dictionary=*/false, /*data_page_size=*/40);
+
+    auto read_schema =
+        arrow::schema({arrow::field("key", arrow::int64()),
+                       arrow::field("s", arrow::struct_({arrow::field("x", arrow::int32()),
+                                                         arrow::field("y", arrow::int64())})),
+                       arrow::field("tags", arrow::list(arrow::field("item", arrow::int32()))),
+                       arrow::field("props", arrow::map(arrow::utf8(), arrow::int32()))});
+
+    // bitmap: [0,15), [77, 87) -> spans all three row groups.
+    RoaringBitmap32 bitmap;
+    bitmap.AddRange(0, 15);
+    bitmap.AddRange(77, 87);
+
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, nullptr, bitmap, &result);
+    ASSERT_TRUE(result);
+
+    std::vector<int64_t> keys;
+
+    auto concated = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto top = std::dynamic_pointer_cast<arrow::StructArray>(concated);
+    ASSERT_TRUE(top);
+    auto key_arr = std::dynamic_pointer_cast<arrow::Int64Array>(top->field(0));
+    ASSERT_TRUE(key_arr);
+    for (int64_t i = 0; i < key_arr->length(); ++i) {
+        ASSERT_FALSE(key_arr->IsNull(i)) << "key column must stay non-null";
+        int64_t k = key_arr->Value(i);
+        // Deep compare including nulls across struct/list/map leaves.
+        ASSERT_TRUE(data->Slice(k, 1)->Equals(*top->Slice(i, 1)))
+            << "row content mismatch at key " << k;
+        keys.push_back(k);
+    }
+
+    std::vector<int64_t> expected;
+    for (int64_t i = 0; i < 15; ++i) {
+        expected.push_back(i);
+    }
+    for (int64_t i = 77; i < 87; ++i) {
+        expected.push_back(i);
+    }
+    ASSERT_EQ(keys, expected);
 }
 
 }  // namespace paimon::parquet::test

@@ -172,10 +172,11 @@ Result<std::vector<std::shared_ptr<CastExecutor>>> FieldMappingBuilder::CreateDa
                                FieldTypeUtils::ConvertToFieldType(data_fields[i].Type()->id()));
 
         if (!read_fields[i].Type()->Equals(data_fields[i].Type())) {
-            if (read_type == FieldType::STRUCT) {
-                // STRUCT may still differ by nested pruning shape. No cast is
-                // needed — type pruning is handled by PruneDataType during
-                // field mapping construction.
+            auto read_type_id = read_fields[i].Type()->id();
+            if (read_type_id == arrow::Type::STRUCT || read_type_id == arrow::Type::LIST ||
+                read_type_id == arrow::Type::MAP) {
+                // Nested type differs by pruning/evolution; the reader's reshape
+                // handles it, no scalar cast.
                 cast_executors.push_back(nullptr);
                 continue;
             }

@@ -30,6 +30,7 @@
 #include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/macros.h"
 #include "parquet/arrow/reader.h"
+#include "parquet/arrow/schema.h"
 #include "parquet/file_reader.h"
 #include "parquet/metadata.h"
 #include "parquet/page_index.h"
@@ -230,15 +231,14 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::NextPageFiltered(
     if (!current_page_filtered_reader_) {
         const auto& target_rg = target_row_groups_[current_row_group_idx_];
         auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
-            file_reader_->parquet_reader(), target_rg, target_column_indices_);
+            target_rg, target_column_indices_, file_reader_->parquet_reader());
         bool pre_buffered = !prebuffered_ranges_.empty();
         int64_t max_chunksize = batch_size_ > 0 ? batch_size_ : std::numeric_limits<int64_t>::max();
         PAIMON_ASSIGN_OR_RAISE(
             current_page_filtered_reader_,
             PageFilteredRowGroupReader::ReadFilteredRowGroup(
-                file_reader_->parquet_reader(), target_rg, target_column_indices_,
-                page_filtered_read_schema_, file_reader_->properties().cache_options(),
-                pre_buffered, page_ranges, max_chunksize, pool_));
+                target_rg, target_column_indices_, file_reader_->properties().cache_options(),
+                pre_buffered, page_ranges, max_chunksize, pool_, file_reader_.get()));
         current_filtered_row_ranges_ = target_rg.GetRowRanges();
         current_filtered_rg_start_ = all_row_group_ranges_[rg_id].first;
         filtered_global_offset_ = 0;
@@ -345,29 +345,6 @@ Status FileReaderWrapper::PrepareForReadingLazy(
     return Status::OK();
 }
 
-Status FileReaderWrapper::BuildPageFilteredSchema(const std::vector<int32_t>& column_indices) {
-    if (page_filtered_read_schema_) {
-        return Status::OK();
-    }
-    std::shared_ptr<arrow::Schema> schema;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetSchema(&schema));
-    auto parquet_schema = file_reader_->parquet_reader()->metadata()->schema();
-    std::vector<std::shared_ptr<arrow::Field>> fields;
-    for (int32_t col_idx : column_indices) {
-        const std::string& col_name = parquet_schema->Column(col_idx)->name();
-        auto field = schema->GetFieldByName(col_name);
-        if (!field) {
-            return Status::Invalid(fmt::format(
-                "PrepareForReading: Parquet column {} ('{}') has no matching Arrow field in "
-                "file schema",
-                col_idx, col_name));
-        }
-        fields.push_back(field);
-    }
-    page_filtered_read_schema_ = arrow::schema(fields);
-    return Status::OK();
-}
-
 std::vector<::arrow::io::ReadRange> FileReaderWrapper::CollectPreBufferRanges(
     const std::vector<int32_t>& column_indices) {
     std::vector<::arrow::io::ReadRange> ranges;
@@ -379,7 +356,7 @@ std::vector<::arrow::io::ReadRange> FileReaderWrapper::CollectPreBufferRanges(
         if (trg.IsPartiallyMatched()) {
             // Page-filtered RGs: only matching page byte ranges.
             auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
-                file_reader_->parquet_reader(), trg, column_indices);
+                trg, column_indices, file_reader_->parquet_reader());
             ranges.insert(ranges.end(), std::make_move_iterator(page_ranges.begin()),
                           std::make_move_iterator(page_ranges.end()));
         } else {
@@ -416,7 +393,6 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
     try {
         target_row_groups_ = target_row_groups;
         target_column_indices_ = column_indices;
-        page_filtered_read_schema_.reset();
 
         // Partition into fully-matched and page-filtered row groups, skipping excluded ones.
         std::vector<int32_t> fully_matched_row_groups;
@@ -432,9 +408,6 @@ Status FileReaderWrapper::PrepareForReading(const std::vector<TargetRowGroup>& t
         }
 
         bool has_partially_matched = fully_matched_row_groups.size() != active_count;
-        if (has_partially_matched) {
-            PAIMON_RETURN_NOT_OK(BuildPageFilteredSchema(column_indices));
-        }
 
         WaitForPendingPreBuffer();
 

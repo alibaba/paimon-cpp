@@ -51,7 +51,8 @@ class PAIMON_EXPORT BlobUtils {
     };
 
     struct SeparatedStructArrays {
-        /// Non-blob fields (includes inline blob fields when inline_fields is provided)
+        /// Non-blob fields (includes inline blob fields when inline_fields is provided).
+        /// nullptr when all fields are stored in blob files.
         std::shared_ptr<arrow::StructArray> main_array;
         /// Blob fields that go to separate .blob files
         std::shared_ptr<arrow::StructArray> blob_array;
