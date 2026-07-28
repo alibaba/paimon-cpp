@@ -88,8 +88,9 @@ class ChangelogBatchReader : public BatchReader {
                 row_group_lengths.push_back(1);
             } else {
                 auto& [c_array, c_schema] = batch;
-                PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> arrow_array,
-                                                  arrow::ImportArray(c_array.get(), c_schema.get()));
+                PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+                    std::shared_ptr<arrow::Array> arrow_array,
+                    arrow::ImportArray(c_array.get(), c_schema.get()));
                 struct_array = std::dynamic_pointer_cast<arrow::StructArray>(arrow_array);
                 if (!struct_array) {
                     return Status::Invalid("audit_log system table expects struct batches");
