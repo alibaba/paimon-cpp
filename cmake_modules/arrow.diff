@@ -415,6 +415,14 @@ diff --git a/cpp/cmake_modules/ThirdpartyToolchain.cmake b/cpp/cmake_modules/Thi
  # and crosscompiling emulator (for try_run() )
  if(CMAKE_CROSSCOMPILING_EMULATOR)
    string(REPLACE ";" ${EP_LIST_SEPARATOR} EP_CMAKE_CROSSCOMPILING_EMULATOR
+@@ -1720,6 +1725,7 @@ macro(build_thrift)
+       -DWITH_JAVASCRIPT=OFF
+       -DWITH_LIBEVENT=OFF
+       -DWITH_NODEJS=OFF
++      -DWITH_OPENSSL=OFF
+       -DWITH_PYTHON=OFF
+       -DWITH_QT5=OFF
+       -DWITH_ZLIB=OFF)
 diff --git a/cpp/cmake_modules/BuildUtils.cmake b/cpp/cmake_modules/BuildUtils.cmake
 --- a/cpp/cmake_modules/BuildUtils.cmake
 +++ b/cpp/cmake_modules/BuildUtils.cmake
