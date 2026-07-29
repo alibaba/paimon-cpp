@@ -2372,7 +2372,7 @@ TEST_P(GlobalIndexTest, TestLuceneWriteCommitScanReadIndexWithScore) {
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              index_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
                                  "f0",
-                                 /*limit=*/10, "THI", FullTextSearch::SearchType::PREFIX,
+                                 /*limit=*/10, "THIS", FullTextSearch::SearchType::PREFIX,
                                  /*pre_filter=*/std::nullopt)));
         ASSERT_TRUE(index_result->ToString().find("row ids: {0,1}") != std::string::npos);
     }

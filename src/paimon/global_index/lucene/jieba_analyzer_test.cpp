@@ -112,6 +112,10 @@ TEST(JiebaTokenizerTest, TestNormalizeCase) {
     JiebaTokenizer::NormalizeCase(&alphanumeric_term);
     ASSERT_EQ(alphanumeric_term, "this123");
 
+    std::string mixed_ascii_cjk_term = "B超";
+    JiebaTokenizer::NormalizeCase(&mixed_ascii_cjk_term);
+    ASSERT_EQ(mixed_ascii_cjk_term, "B超");
+
     std::string term_with_underscore = "THIS_IS";
     JiebaTokenizer::NormalizeCase(&term_with_underscore);
     ASSERT_EQ(term_with_underscore, "THIS_IS");

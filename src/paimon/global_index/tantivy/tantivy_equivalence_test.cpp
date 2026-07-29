@@ -220,6 +220,7 @@ TEST_F(TantivyEquivalenceTest, EnglishBagOfWordsBattery) {
     struct Case {
         std::string query;
         FullTextSearch::SearchType type;
+        std::set<int64_t> expected_ids;
     };
     std::vector<Case> cases = {
         {"alpha", FullTextSearch::SearchType::MATCH_ALL},
@@ -232,13 +233,17 @@ TEST_F(TantivyEquivalenceTest, EnglishBagOfWordsBattery) {
         {"alpha beta gamma", FullTextSearch::SearchType::PHRASE},
         {"beta gamma delta", FullTextSearch::SearchType::PHRASE},
         {"delta epsilon", FullTextSearch::SearchType::PHRASE},
-        {"ALP", FullTextSearch::SearchType::PREFIX},
-        {"*ALPH*", FullTextSearch::SearchType::WILDCARD},
-        {"*ALP?A*", FullTextSearch::SearchType::WILDCARD},
+        {"ALP", FullTextSearch::SearchType::PREFIX, {0, 1, 4, 6, 9}},
+        {"*ALPHA*", FullTextSearch::SearchType::WILDCARD, {0, 1, 4, 6, 9}},
+        {"*ALP?A*", FullTextSearch::SearchType::WILDCARD, {0, 1, 4, 6, 9}},
     };
     for (const auto& c : cases) {
         auto [l, t] = RunPair(pair, c.query, c.type);
         ASSERT_EQ(l, t) << "diverge: query=" << c.query << " type=" << static_cast<int32_t>(c.type);
+        if (!c.expected_ids.empty()) {
+            ASSERT_EQ(l, c.expected_ids) << "unexpected matches: query=" << c.query
+                                         << " type=" << static_cast<int32_t>(c.type);
+        }
     }
 }
 
@@ -275,6 +280,32 @@ TEST_F(TantivyEquivalenceTest, ChineseQueryModeBattery) {
     for (const auto& c : cases) {
         auto [l, t] = RunPair(pair, c.query, c.type);
         ASSERT_EQ(l, t) << "diverge: query=" << c.query << " type=" << static_cast<int32_t>(c.type);
+    }
+}
+
+TEST_F(TantivyEquivalenceTest, MixedAsciiCjkPrefixAndWildcard) {
+    auto data_type = arrow::struct_({arrow::field("f0", arrow::utf8())});
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
+        ["B超检查"],
+        ["T恤"]
+    ])")
+                     .ValueOrDie();
+    std::map<std::string, std::string> lopts = {{"lucene-fts.jieba.tokenize-mode", "query"}};
+    std::map<std::string, std::string> topts = {
+        {"tantivy-fulltext.tantivy.write.tokenizer", "paimon_jieba"},
+        {"tantivy-fulltext.jieba.tokenize-mode", "query"},
+    };
+    auto pair = WriteAndOpenBoth(data_type, array, lopts, topts);
+
+    {
+        auto [l, t] = RunPair(pair, "B", FullTextSearch::SearchType::PREFIX);
+        ASSERT_EQ(l, (std::set<int64_t>{0}));
+        ASSERT_EQ(t, l);
+    }
+    {
+        auto [l, t] = RunPair(pair, "*T*", FullTextSearch::SearchType::WILDCARD);
+        ASSERT_EQ(l, (std::set<int64_t>{1}));
+        ASSERT_EQ(t, l);
     }
 }
 

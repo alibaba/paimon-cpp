@@ -21,8 +21,8 @@
 //!   1 MATCH_ALL — tokenize query, BooleanQuery (Must)
 //!   2 MATCH_ANY — tokenize query, BooleanQuery (Should)
 //!   3 PHRASE    — tokenize query, PhraseQuery
-//!   4 PREFIX    — case-normalized RegexQuery `<escaped>.*` (no tokenization)
-//!   5 WILDCARD  — case-normalized RegexQuery from glob pattern
+//!   4 PREFIX    — original + case-normalized RegexQuery `<escaped>.*` (no tokenization)
+//!   5 WILDCARD  — original + case-normalized RegexQuery from glob pattern
 //!                 (`*` → `.*`, `?` → `.`, others escaped)
 //!
 //! For paimon-java compatibility, row_id is stored as an explicit u64 field
@@ -38,7 +38,9 @@ use std::path::Path;
 use croaring::{Portable, Treemap};
 use tantivy::collector::{Collector, SegmentCollector};
 use tantivy::columnar::Column;
-use tantivy::query::{BooleanQuery, Occur, PhraseQuery, Query, RegexQuery, TermQuery};
+use tantivy::query::{
+    BooleanQuery, DisjunctionMaxQuery, Occur, PhraseQuery, Query, RegexQuery, TermQuery,
+};
 use tantivy::schema::{Field, IndexRecordOption};
 use tantivy::{DocAddress, DocId, Index, IndexReader, ReloadPolicy, Score, SegmentOrdinal,
                SegmentReader, Term};
@@ -230,13 +232,23 @@ impl PaimonTantivyReader {
         if query.is_empty() {
             return Err("prefix query is empty".into());
         }
-        // Mirror lucene-fts: don't tokenize the prefix, but apply the same
-        // ASCII-alphanumeric case normalization used for indexed terms.
+        // Mirror lucene-fts: don't tokenize the prefix. Retain the original form for mixed
+        // ASCII/CJK indexed terms, and add the normalized form for pure ASCII terms.
         let normalized_query = normalize_case(query);
-        let pattern = format!("{}.*", regex_escape(&normalized_query));
-        RegexQuery::from_pattern(&pattern, self.text_field)
-            .map(|q| Box::new(q) as Box<dyn Query>)
-            .map_err(|e| format!("RegexQuery from prefix {query:?}: {e}"))
+        let create_query = |value: &str| -> Result<Box<dyn Query>, String> {
+            let pattern = format!("{}.*", regex_escape(value));
+            RegexQuery::from_pattern(&pattern, self.text_field)
+                .map(|q| Box::new(q) as Box<dyn Query>)
+                .map_err(|e| format!("RegexQuery from prefix {value:?}: {e}"))
+        };
+        let original = create_query(query)?;
+        if normalized_query == query {
+            return Ok(original);
+        }
+        let normalized = create_query(&normalized_query)?;
+        Ok(Box::new(DisjunctionMaxQuery::new(vec![
+            original, normalized,
+        ])))
     }
 
     fn build_wildcard_query(&self, query: &str) -> Result<Box<dyn Query>, String> {
@@ -244,10 +256,20 @@ impl PaimonTantivyReader {
             return Err("wildcard query is empty".into());
         }
         let normalized_query = normalize_wildcard_query(query);
-        let pattern = wildcard_to_regex(&normalized_query);
-        RegexQuery::from_pattern(&pattern, self.text_field)
-            .map(|q| Box::new(q) as Box<dyn Query>)
-            .map_err(|e| format!("RegexQuery from wildcard {query:?} (pattern {pattern}): {e}"))
+        let create_query = |value: &str| -> Result<Box<dyn Query>, String> {
+            let pattern = wildcard_to_regex(value);
+            RegexQuery::from_pattern(&pattern, self.text_field)
+                .map(|q| Box::new(q) as Box<dyn Query>)
+                .map_err(|e| format!("RegexQuery from wildcard {value:?} (pattern {pattern}): {e}"))
+        };
+        let original = create_query(query)?;
+        if normalized_query == query {
+            return Ok(original);
+        }
+        let normalized = create_query(&normalized_query)?;
+        Ok(Box::new(DisjunctionMaxQuery::new(vec![
+            original, normalized,
+        ])))
     }
 
     fn build_query(&self, search_type: SearchType, query: &str) -> Result<Box<dyn Query>, String> {
@@ -1048,7 +1070,7 @@ mod tests {
     fn prefix_normalizes_ascii_alphanumeric_case() {
         let bytes = build(&["This is a test document", "another document"]);
         let r = open(&bytes);
-        let ids = r.search_all(SearchType::Prefix, "THI").unwrap();
+        let ids = r.search_all(SearchType::Prefix, "THIS").unwrap();
         assert_eq!(ids, vec![0u64]);
     }
 
@@ -1069,8 +1091,22 @@ mod tests {
             vec![0u64]
         );
         assert_eq!(
-            r.search_all(SearchType::Wildcard, "*THI?*").unwrap(),
+            r.search_all(SearchType::Wildcard, "*?HIS*").unwrap(),
             vec![0u64]
+        );
+    }
+
+    #[test]
+    fn prefix_and_wildcard_preserve_mixed_ascii_cjk_terms() {
+        let bytes = build(&["B超检查", "T恤"]);
+        let r = open(&bytes);
+        assert_eq!(
+            r.search_all(SearchType::Prefix, "B").unwrap(),
+            vec![0u64]
+        );
+        assert_eq!(
+            r.search_all(SearchType::Wildcard, "*T*").unwrap(),
+            vec![1u64]
         );
     }
 
@@ -1092,7 +1128,7 @@ mod tests {
 
     #[test]
     fn wildcard_normalization_preserves_non_alphanumeric_segments() {
-        assert_eq!(normalize_wildcard_query("*THI?*"), "*thi?*");
+        assert_eq!(normalize_wildcard_query("*?HIS*"), "*?his*");
         assert_eq!(normalize_wildcard_query("*THIS_IS*"), "*THIS_IS*");
         assert_eq!(normalize_wildcard_query("*机器*"), "*机器*");
     }
