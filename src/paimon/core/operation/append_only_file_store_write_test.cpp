@@ -507,6 +507,57 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingNewWriterUsesMaxForEvery
     ASSERT_EQ(4, attrs_meta.max_row_width);
 }
 
+TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingFieldDictCompressionFileRoundTrip) {
+    std::vector<std::string> file_formats = {"parquet"};
+#ifdef PAIMON_ENABLE_ORC
+    file_formats.emplace_back("orc");
+#endif
+    for (const std::string& file_format : file_formats) {
+        for (const std::string compression : {"none", "zstd"}) {
+            SCOPED_TRACE("format=" + file_format + ", compression=" + compression);
+            std::map<std::string, std::string> options = {
+                {Options::FILE_FORMAT, file_format},
+                {Options::FILE_COMPRESSION, compression},
+                {"fields.tags.map.storage-layout", "shared-shredding"},
+                {"fields.tags.map.shared-shredding.max-columns", "4"},
+                {"write-only", "true"},
+                {"bucket", "1"},
+                {"bucket-key", "id"},
+            };
+            auto logical_schema = arrow::schema({
+                arrow::field("id", arrow::int32()),
+                arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+            });
+
+            auto dir = UniqueTestDirectory::Create();
+            ASSERT_TRUE(dir);
+            CreateTable(dir->Str(), logical_schema, options);
+            std::string table_path = PathUtil::JoinPath(dir->Str(), "foo.db/bar");
+            auto commit_msgs = WriteAndPrepare(table_path, logical_schema, options, R"([
+                [1, [["a", 1], ["b", 2]]],
+                [2, [["c", 3]]]
+            ])",
+                                               /*commit_identifier=*/0);
+
+            auto file_schema = ReadDataFileSchema(table_path, OnlyNewFile(commit_msgs), options);
+            auto tags_metadata = file_schema->GetFieldByName("tags")->metadata();
+            ASSERT_NE(tags_metadata, nullptr);
+            int32_t compression_index =
+                tags_metadata->FindKey(MapSharedShreddingDefine::kFieldDictCompression);
+            ASSERT_GE(compression_index, 0);
+            ASSERT_EQ(compression, tags_metadata->value(compression_index));
+
+            ASSERT_OK_AND_ASSIGN(
+                MapSharedShreddingFieldMeta field_meta,
+                MapSharedShreddingUtils::DeserializeMetadata(tags_metadata->Copy()));
+            ASSERT_EQ(3, field_meta.name_to_id.size());
+            ASSERT_TRUE(field_meta.name_to_id.count("a"));
+            ASSERT_TRUE(field_meta.name_to_id.count("b"));
+            ASSERT_TRUE(field_meta.name_to_id.count("c"));
+        }
+    }
+}
+
 TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingPartialWriteSkipsMissingMapColumn) {
     std::map<std::string, std::string> options = {
         {"file.format", "parquet"},

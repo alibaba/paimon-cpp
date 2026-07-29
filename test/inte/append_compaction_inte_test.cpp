@@ -267,6 +267,7 @@ TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompactionWithMap
 
     std::map<std::string, std::string> options = {
         {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_ROW_NUM, "1"},
         {Options::BUCKET, "1"},
         {Options::BUCKET_KEY, "id"},
         {Options::FILE_SYSTEM, "local"},
@@ -322,7 +323,8 @@ TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompactionWithMap
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_EQ(data_splits.size(), 1);
     {
-        // Compaction creates a fresh rolling writer, so it starts from K_max.
+        // Compaction ignores target-file-row-num and creates one five-row output file. It also
+        // creates a fresh shared-shredding writer, so the file starts from K_max.
         auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(data_splits[0]);
         ASSERT_TRUE(data_split);
         ASSERT_EQ(data_split->DataFiles().size(), 1);

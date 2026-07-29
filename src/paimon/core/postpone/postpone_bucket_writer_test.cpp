@@ -478,6 +478,45 @@ TEST_P(PostponeBucketWriterTest, TestWriteMultiBatch) {
     ASSERT_EQ(expected_data_increment, commit_increment.GetNewFilesIncrement());
 }
 
+TEST_P(PostponeBucketWriterTest, TargetFileRowNumRollsOnlyAfterWholeBatch) {
+    auto file_format = GetParam();
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({{Options::FILE_FORMAT, file_format},
+                                               {Options::TARGET_FILE_ROW_NUM, "2"}}));
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = std::make_shared<DataFilePathFactory>();
+    ASSERT_OK(path_factory->Init(dir->Str(), file_format, options.DataFilePrefix(), nullptr));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<PostponeBucketWriter> postpone_bucket_writer,
+                         PostponeBucketWriter::Create(primary_keys_, path_factory, /*schema_id=*/1,
+                                                      value_schema_, options, pool_));
+
+    // The first batch exceeds the target by itself. It must remain intact in one file instead of
+    // being sliced at two rows.
+    auto first_batch = arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+      ["David", 120, 11, null],
+      ["Bob", 140, 12, null],
+      ["Alex", 110, 10, null]
+    ])")
+                           .ValueOrDie();
+    WriteBatch(first_batch, /*row_kinds=*/{}, postpone_bucket_writer.get());
+
+    auto second_batch = arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+      ["Lucy", 20, 1, 14.1]
+    ])")
+                            .ValueOrDie();
+    WriteBatch(second_batch, /*row_kinds=*/{}, postpone_bucket_writer.get());
+
+    ASSERT_OK_AND_ASSIGN(CommitIncrement increment,
+                         postpone_bucket_writer->PrepareCommit(/*wait_compaction=*/false));
+    ASSERT_OK(postpone_bucket_writer->Close());
+    const auto& files = increment.GetNewFilesIncrement().NewFiles();
+    ASSERT_EQ(2, files.size());
+    EXPECT_EQ(3, files[0]->row_count);
+    EXPECT_EQ(1, files[1]->row_count);
+}
+
 TEST_P(PostponeBucketWriterTest, TestMultiplePrepareCommit) {
     auto file_format = GetParam();
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
