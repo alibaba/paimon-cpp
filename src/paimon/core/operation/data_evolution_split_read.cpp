@@ -94,9 +94,7 @@ Status DataEvolutionSplitRead::BlobBunch::Add(const std::shared_ptr<DataFileMeta
             }
         }
         if (!files_.empty()) {
-            if (file->schema_id != files_[0]->schema_id) {
-                return Status::Invalid("All files in a blob bunch should have the same schema id.");
-            }
+            // Blob files for the same field may span schema ids.
             if (file->write_cols != files_[0]->write_cols) {
                 return Status::Invalid(
                     "All files in a blob bunch should have the same write columns.");
