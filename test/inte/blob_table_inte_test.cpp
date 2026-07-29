@@ -872,6 +872,62 @@ TEST_P(BlobTableInteTest, TestBasic) {
                           expected_row_tracking_array));
 }
 
+TEST_P(BlobTableInteTest, TestBlobFilesAcrossSchemaIds) {
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(/*partition_keys=*/{}, options);
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+
+    // Simulate the post-compaction layout: one normal file bridges blob files across schema ids.
+    std::vector<std::string> write_cols0 = {"f0", "f2"};
+    auto src_array0 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields_[0], fields_[2]}), R"([
+        [1, "a"],
+        [2, "b"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs0, WriteArray(table_path, {}, write_cols0, {src_array0}));
+    ASSERT_OK(Commit(table_path, commit_msgs0));
+
+    std::vector<std::string> blob_write_cols = {"f1"};
+    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields_[1]}), R"([
+        ["c"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs1,
+                         WriteArray(table_path, {}, blob_write_cols, {src_array1}));
+    SetFirstRowId(0, commit_msgs1);
+    ASSERT_OK(Commit(table_path, commit_msgs1));
+
+    auto f3 = arrow::field("f3", arrow::int64());
+    ASSERT_OK(WriteNextSchema(table_path,
+                              {DataField(0, fields_[0]), DataField(1, fields_[1]),
+                               DataField(2, fields_[2]), DataField(3, f3)},
+                              /*highest_field_id=*/3, options));
+
+    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields_[1]}), R"([
+        ["d"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs2,
+                         WriteArray(table_path, {}, blob_write_cols, {src_array2}));
+    SetFirstRowId(1, commit_msgs2);
+    ASSERT_OK(Commit(table_path, commit_msgs2));
+
+    auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+        [1, "c", "a"],
+        [2, "d", "b"]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, arrow::schema(fields_)->field_names(), expected_array));
+}
+
 TEST_P(BlobTableInteTest, TestMultipleAppends) {
     CreateTable();
     std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
