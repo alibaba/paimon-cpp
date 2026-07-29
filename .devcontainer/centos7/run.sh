@@ -98,8 +98,6 @@ case "${cmd}" in
             "${CONTAINER}" bash -lc '
             set -eux
             cd /workspaces/paimon-cpp
-            git lfs install --local
-            git lfs pull
             cmake -S . -B build-centos7 \
                 -G Ninja \
                 -DCMAKE_BUILD_TYPE=Release \

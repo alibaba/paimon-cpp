@@ -104,17 +104,26 @@ int main(int argc, char* argv[]) {
     std::string temp_table_path = std::string(argv[2]);
     std::string clean_mode = std::string(argv[3]);
 
+    if (clean_mode != "orphan_file" && clean_mode != "drop_partition" &&
+        clean_mode != "expire_snapshot") {
+        std::cerr << "Unknown clean mode: " << clean_mode
+                  << ". Expected orphan_file, drop_partition, or expire_snapshot." << std::endl;
+        return -1;
+    }
+
     if (!CopyToTempDirectory(origin_table_path, temp_table_path)) {
         return -1;
     }
 
-    std::map<std::string, std::string> clean_options;
     paimon::Status status;
     if (clean_mode == "orphan_file") {
         std::cout << "enter the timestamp (ms) before which orphan files will be deleted"
                   << std::endl;
-        int64_t older_than_ms;
-        std::cin >> older_than_ms;
+        int64_t older_than_ms = 0;
+        if (!(std::cin >> older_than_ms)) {
+            std::cerr << "Invalid timestamp: expected an integer in milliseconds." << std::endl;
+            return -1;
+        }
         status = paimon::CleanOrphanFiles(temp_table_path, older_than_ms);
     } else if (clean_mode == "drop_partition") {
         std::cout << "enter partition key-value pairs to drop. type 'EOF EOF' to finish"

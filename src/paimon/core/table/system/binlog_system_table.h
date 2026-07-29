@@ -26,6 +26,8 @@ namespace paimon {
 class FileSystem;
 class TableSchema;
 
+std::shared_ptr<const ChangelogBatchConverter> CreateBinlogBatchConverter();
+
 /// System table for `T$binlog`, exposing changelog records with list-wrapped data columns.
 class BinlogSystemTable : public AuditLogSystemTable {
  public:

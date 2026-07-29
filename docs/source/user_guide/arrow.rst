@@ -59,7 +59,7 @@ costs and increasing long-term maintenance complexity.
 Adopting the Arrow C Data Interface
 -----------------------------------
 
-To leverage Arrow’s performance and ecosystem benefits while avoiding tight
+To leverage Arrow's performance and ecosystem benefits while avoiding tight
 coupling to specific Arrow C++ SDK versions, we use the Arrow C Data
 Interface as the default in-memory format for Paimon C++.
 
@@ -111,7 +111,7 @@ Memory management
 
 Nullability and validity
 ~~~~~~~~~~~~~~~~~~~~~~~~
-- Use standard validity bitmaps for nullability and adhere to Arrow’s canonical buffer organization (validity, offsets, data, etc.).
+- Use standard validity bitmaps for nullability and adhere to Arrow's canonical buffer organization (validity, offsets, data, etc.).
 
 Conversion boundaries
 ~~~~~~~~~~~~~~~~~~~~~~

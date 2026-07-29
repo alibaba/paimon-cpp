@@ -20,9 +20,11 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "arrow/api.h"
+#include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/system/audit_log_system_table.h"
@@ -31,8 +33,12 @@
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/file_system_factory.h"
+#include "paimon/memory/memory_pool.h"
+#include "paimon/reader/batch_reader.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
+#include "paimon/testing/mock/mock_file_batch_reader.h"
+#include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -66,6 +72,92 @@ TEST(SystemTableTest, TestChangelogArrowSchemaReturnsInvalidOptions) {
     BinlogSystemTable binlog(/*fs=*/nullptr, "/tmp/table", table_schema, options);
     ASSERT_NOK_WITH_MSG(binlog.ArrowSchema(),
                         "Invalid Config [table-read.sequence-number.enabled: invalid]");
+}
+
+TEST(SystemTableTest, TestBinlogArrowSchemaWithSequenceNumber) {
+    std::map<std::string, std::string> options = {
+        {Options::TABLE_READ_SEQUENCE_NUMBER_ENABLED, "true"}};
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                         CreateTableSchemaForTest(options));
+
+    BinlogSystemTable binlog(/*fs=*/nullptr, "/tmp/table", table_schema, options);
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Schema> schema, binlog.ArrowSchema());
+
+    ASSERT_EQ(schema->field_names(),
+              (std::vector<std::string>{"rowkind", "_SEQUENCE_NUMBER", "pk", "v"}));
+    ASSERT_EQ(schema->field(0)->type()->id(), arrow::Type::STRING);
+    ASSERT_FALSE(schema->field(0)->nullable());
+    ASSERT_EQ(schema->field(1)->type()->id(), arrow::Type::INT64);
+    ASSERT_EQ(schema->field(2)->type()->id(), arrow::Type::LIST);
+    ASSERT_EQ(schema->field(3)->type()->id(), arrow::Type::LIST);
+}
+
+TEST(SystemTableTest, TestStreamingBinlogPacksUpdateAcrossBatches) {
+    std::shared_ptr<arrow::DataType> input_type = arrow::struct_({
+        arrow::field("_VALUE_KIND", arrow::int8()),
+        arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+        arrow::field("pk", arrow::utf8()),
+        arrow::field("v", arrow::int32()),
+    });
+    std::shared_ptr<arrow::Array> input =
+        arrow::ipc::internal::json::ArrayFromJSON(
+            input_type, R"([[0, 10, "a", 1], [1, 11, "b", 2], [2, 12, "b", 3], [3, 13, "d", 4]])")
+            .ValueOrDie();
+    std::shared_ptr<arrow::Schema> output_schema = arrow::schema({
+        arrow::field("rowkind", arrow::utf8(), /*nullable=*/false),
+        arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+        arrow::field("pk", arrow::list(arrow::utf8())),
+        arrow::field("v", arrow::list(arrow::int32())),
+    });
+    std::unique_ptr<BatchReader> reader = CreateChangelogBatchReader(
+        std::make_unique<MockFileBatchReader>(input, input_type, /*read_batch_size=*/2),
+        output_schema,
+        /*include_sequence_number=*/true, CreateBinlogBatchConverter(),
+        /*pack_update_before_after=*/true, GetDefaultPool());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> actual,
+                         ReadResultCollector::CollectResult(reader.get()));
+    std::shared_ptr<arrow::Array> expected_array =
+        arrow::ipc::internal::json::ArrayFromJSON(actual->type(), R"([
+                ["+I", 10, ["a"], [1]],
+                ["+U", 11, ["b", "b"], [2, 3]],
+                ["-D", 13, ["d"], [4]]
+            ])")
+            .ValueOrDie();
+    auto expected = std::make_shared<arrow::ChunkedArray>(expected_array);
+    ASSERT_TRUE(actual->Equals(*expected))
+        << "expected: " << expected->ToString() << "\nactual: " << actual->ToString();
+}
+
+TEST(SystemTableTest, TestStreamingBinlogEmitsUnmatchedUpdateBefore) {
+    std::shared_ptr<arrow::DataType> input_type = arrow::struct_({
+        arrow::field("_VALUE_KIND", arrow::int8()),
+        arrow::field("pk", arrow::utf8()),
+        arrow::field("v", arrow::int32()),
+    });
+    std::shared_ptr<arrow::Array> input =
+        arrow::ipc::internal::json::ArrayFromJSON(input_type, R"([[1, "b", 2]])").ValueOrDie();
+    std::shared_ptr<arrow::Schema> output_schema = arrow::schema({
+        arrow::field("rowkind", arrow::utf8(), /*nullable=*/false),
+        arrow::field("pk", arrow::list(arrow::utf8())),
+        arrow::field("v", arrow::list(arrow::int32())),
+    });
+    std::unique_ptr<BatchReader> reader = CreateChangelogBatchReader(
+        std::make_unique<MockFileBatchReader>(input, input_type, /*read_batch_size=*/1),
+        output_schema,
+        /*include_sequence_number=*/false, CreateBinlogBatchConverter(),
+        /*pack_update_before_after=*/true, GetDefaultPool());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> actual,
+                         ReadResultCollector::CollectResult(reader.get()));
+    std::shared_ptr<arrow::Array> expected_array =
+        arrow::ipc::internal::json::ArrayFromJSON(actual->type(), R"([
+                ["-U", ["b"], [2]]
+            ])")
+            .ValueOrDie();
+    auto expected = std::make_shared<arrow::ChunkedArray>(expected_array);
+    ASSERT_TRUE(actual->Equals(*expected))
+        << "expected: " << expected->ToString() << "\nactual: " << actual->ToString();
 }
 
 TEST(SystemTableTest, TestReadOptimizedSystemTableRegistration) {

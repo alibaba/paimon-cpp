@@ -118,6 +118,14 @@ TEST_F(FieldListaggAggTest, TestDistinctNoDuplicates) {
     ASSERT_EQ(DataDefine::GetVariantValue<std::string_view>(ret), "a b c d");
 }
 
+TEST_F(FieldListaggAggTest, TestDistinctWithEmptyDelimiterFallsBackToWhitespace) {
+    ASSERT_OK_AND_ASSIGN(auto agg, MakeAgg("", true));
+
+    // Empty delimiter falls back to whitespace, so the repeated "b" is removed.
+    auto ret = agg->Agg(std::string_view("a b"), std::string_view("b c"));
+    ASSERT_EQ(DataDefine::GetVariantValue<std::string_view>(ret), "a b c");
+}
+
 TEST_F(FieldListaggAggTest, TestDistinctEmptyInput) {
     ASSERT_OK_AND_ASSIGN(auto agg, MakeAgg(";", true));
 

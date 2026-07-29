@@ -39,84 +39,84 @@ Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::VisitIsNull()
 
 Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::VisitEqual(
     const Literal& literal) {
-    return Union([&literal](const std::shared_ptr<GlobalIndexReader>& reader) {
+    return Union([literal](const std::shared_ptr<GlobalIndexReader>& reader) {
         return reader->VisitEqual(literal);
     });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::VisitNotEqual(
     const Literal& literal) {
-    return Union([&literal](const std::shared_ptr<GlobalIndexReader>& reader) {
+    return Union([literal](const std::shared_ptr<GlobalIndexReader>& reader) {
         return reader->VisitNotEqual(literal);
     });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::VisitLessThan(
     const Literal& literal) {
-    return Union([&literal](const std::shared_ptr<GlobalIndexReader>& reader) {
+    return Union([literal](const std::shared_ptr<GlobalIndexReader>& reader) {
         return reader->VisitLessThan(literal);
     });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::VisitLessOrEqual(
     const Literal& literal) {
-    return Union([&literal](const std::shared_ptr<GlobalIndexReader>& reader) {
+    return Union([literal](const std::shared_ptr<GlobalIndexReader>& reader) {
         return reader->VisitLessOrEqual(literal);
     });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::VisitGreaterThan(
     const Literal& literal) {
-    return Union([&literal](const std::shared_ptr<GlobalIndexReader>& reader) {
+    return Union([literal](const std::shared_ptr<GlobalIndexReader>& reader) {
         return reader->VisitGreaterThan(literal);
     });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::VisitGreaterOrEqual(
     const Literal& literal) {
-    return Union([&literal](const std::shared_ptr<GlobalIndexReader>& reader) {
+    return Union([literal](const std::shared_ptr<GlobalIndexReader>& reader) {
         return reader->VisitGreaterOrEqual(literal);
     });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::VisitIn(
     const std::vector<Literal>& literals) {
-    return Union([&literals](const std::shared_ptr<GlobalIndexReader>& reader) {
+    return Union([literals](const std::shared_ptr<GlobalIndexReader>& reader) {
         return reader->VisitIn(literals);
     });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::VisitNotIn(
     const std::vector<Literal>& literals) {
-    return Union([&literals](const std::shared_ptr<GlobalIndexReader>& reader) {
+    return Union([literals](const std::shared_ptr<GlobalIndexReader>& reader) {
         return reader->VisitNotIn(literals);
     });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::VisitStartsWith(
     const Literal& prefix) {
-    return Union([&prefix](const std::shared_ptr<GlobalIndexReader>& reader) {
+    return Union([prefix](const std::shared_ptr<GlobalIndexReader>& reader) {
         return reader->VisitStartsWith(prefix);
     });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::VisitEndsWith(
     const Literal& suffix) {
-    return Union([&suffix](const std::shared_ptr<GlobalIndexReader>& reader) {
+    return Union([suffix](const std::shared_ptr<GlobalIndexReader>& reader) {
         return reader->VisitEndsWith(suffix);
     });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::VisitContains(
     const Literal& literal) {
-    return Union([&literal](const std::shared_ptr<GlobalIndexReader>& reader) {
+    return Union([literal](const std::shared_ptr<GlobalIndexReader>& reader) {
         return reader->VisitContains(literal);
     });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::VisitLike(
     const Literal& literal) {
-    return Union([&literal](const std::shared_ptr<GlobalIndexReader>& reader) {
+    return Union([literal](const std::shared_ptr<GlobalIndexReader>& reader) {
         return reader->VisitLike(literal);
     });
 }
@@ -124,7 +124,7 @@ Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::VisitLike(
 Result<std::shared_ptr<ScoredGlobalIndexResult>> UnionGlobalIndexReader::VisitVectorSearch(
     const std::shared_ptr<VectorSearch>& vector_search) {
     auto results = ExecuteAllReaders<Result<std::shared_ptr<ScoredGlobalIndexResult>>>(
-        [&vector_search](const std::shared_ptr<GlobalIndexReader>& reader)
+        [vector_search](const std::shared_ptr<GlobalIndexReader>& reader)
             -> Result<std::shared_ptr<ScoredGlobalIndexResult>> {
             return reader->VisitVectorSearch(vector_search);
         });
@@ -155,15 +155,13 @@ Result<std::shared_ptr<ScoredGlobalIndexResult>> UnionGlobalIndexReader::VisitVe
 
 Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::VisitFullTextSearch(
     const std::shared_ptr<FullTextSearch>& full_text_search) {
-    return Union([&full_text_search](const std::shared_ptr<GlobalIndexReader>& reader) {
+    return Union([full_text_search](const std::shared_ptr<GlobalIndexReader>& reader) {
         return reader->VisitFullTextSearch(full_text_search);
     });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> UnionGlobalIndexReader::Union(ReaderAction action) {
-    auto results = ExecuteAllReaders<Result<std::shared_ptr<GlobalIndexResult>>>(
-        [&action](const std::shared_ptr<GlobalIndexReader>& reader)
-            -> Result<std::shared_ptr<GlobalIndexResult>> { return action(reader); });
+    auto results = ExecuteAllReaders<Result<std::shared_ptr<GlobalIndexResult>>>(action);
 
     std::shared_ptr<GlobalIndexResult> merged_result = nullptr;
     for (auto& result_or_status : results) {
@@ -207,8 +205,7 @@ std::vector<R> UnionGlobalIndexReader::ExecuteAllReaders(
     std::vector<std::future<R>> futures;
     futures.reserve(readers_.size());
     for (const auto& reader : readers_) {
-        futures.push_back(
-            Via(executor_.get(), [&action, reader]() -> R { return action(reader); }));
+        futures.push_back(Via(executor_.get(), [action, reader]() -> R { return action(reader); }));
     }
     return CollectAll(futures);
 }

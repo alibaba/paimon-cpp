@@ -33,7 +33,6 @@
 #   scl enable devtoolset-11 rh-python38 -- bash        # activate modern gcc + python
 #   source /opt/paimon-env.sh                           # PATH for rust, cmake
 #   cd /workspaces/paimon-cpp
-#   git lfs install --local && git lfs pull             # critical: boost & friends are LFS
 #
 # Run ./.devcontainer/centos7/run.sh smoke from the host for the full check.
 
@@ -91,7 +90,7 @@ enabled=0\n' > /etc/yum.repos.d/CentOS-Base.repo \
     && yum makecache
 
 # ---------- Base toolchain ----------
-# EPEL provides git-lfs, ninja-build, a newer python3 than the base 3.6.
+# EPEL provides ninja-build and a newer python3 than the base 3.6.
 # SCL (Software Collections) provides devtoolset-11 (gcc 11) and rh-python38
 # without overriding the system gcc/python. CentOS 7's default gcc 4.8 is
 # too old for C++17/20 used by lucene++ and our tantivy wrapper.
@@ -129,7 +128,6 @@ enabled=1\n' > /etc/yum.repos.d/CentOS-SCLo-scl.repo \
         rh-python38 \
         rh-python38-python-pip \
         git \
-        git-lfs \
         ninja-build \
         make \
         patch \
