@@ -21,8 +21,9 @@
 //!   1 MATCH_ALL — tokenize query, BooleanQuery (Must)
 //!   2 MATCH_ANY — tokenize query, BooleanQuery (Should)
 //!   3 PHRASE    — tokenize query, PhraseQuery
-//!   4 PREFIX    — RegexQuery `<escaped>.*` (no tokenization, mirrors lucene-fts)
-//!   5 WILDCARD  — RegexQuery from glob pattern (`*` → `.*`, `?` → `.`, others escaped)
+//!   4 PREFIX    — case-normalized RegexQuery `<escaped>.*` (no tokenization)
+//!   5 WILDCARD  — case-normalized RegexQuery from glob pattern
+//!                 (`*` → `.*`, `?` → `.`, others escaped)
 //!
 //! For paimon-java compatibility, row_id is stored as an explicit u64 field
 //! (`fast` for O(1) retrieval). Reader translates tantivy DocAddress → row_id
@@ -46,7 +47,7 @@ use crate::buffer::PaimonTantivyBuffer;
 use crate::callback_directory::{PaimonCallbackDirectory, PaimonStreamCallbacks};
 use crate::error::{set_last_error, PaimonTantivyStatus};
 use crate::handle::{borrow_handle_mut, free_handle, into_handle};
-use crate::tokenizer::{PaimonJiebaTokenizer, TokenizeMode};
+use crate::tokenizer::{normalize_case, PaimonJiebaTokenizer, TokenizeMode};
 use crate::writer::{PAIMON_ROW_ID_FIELD_NAME, PAIMON_TEXT_FIELD_NAME, PAIMON_TOKENIZER_NAME};
 
 /// Numeric encoding of `paimon::FullTextSearch::SearchType`. Kept in sync
@@ -229,9 +230,10 @@ impl PaimonTantivyReader {
         if query.is_empty() {
             return Err("prefix query is empty".into());
         }
-        // Mirror lucene-fts: don't tokenize prefix; match indexed term bytes
-        // starting with the given prefix verbatim.
-        let pattern = format!("{}.*", regex_escape(query));
+        // Mirror lucene-fts: don't tokenize the prefix, but apply the same
+        // ASCII-alphanumeric case normalization used for indexed terms.
+        let normalized_query = normalize_case(query);
+        let pattern = format!("{}.*", regex_escape(&normalized_query));
         RegexQuery::from_pattern(&pattern, self.text_field)
             .map(|q| Box::new(q) as Box<dyn Query>)
             .map_err(|e| format!("RegexQuery from prefix {query:?}: {e}"))
@@ -241,7 +243,8 @@ impl PaimonTantivyReader {
         if query.is_empty() {
             return Err("wildcard query is empty".into());
         }
-        let pattern = wildcard_to_regex(query);
+        let normalized_query = normalize_wildcard_query(query);
+        let pattern = wildcard_to_regex(&normalized_query);
         RegexQuery::from_pattern(&pattern, self.text_field)
             .map(|q| Box::new(q) as Box<dyn Query>)
             .map_err(|e| format!("RegexQuery from wildcard {query:?} (pattern {pattern}): {e}"))
@@ -468,6 +471,23 @@ fn regex_escape(input: &str) -> String {
             _ => out.push(ch),
         }
     }
+    out
+}
+
+/// Normalize each literal segment independently while preserving wildcard
+/// operators. This matches lucene-fts, where `*` and `?` are not analyzed.
+fn normalize_wildcard_query(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let mut segment_start = 0;
+    for (index, ch) in input.char_indices() {
+        if ch != '*' && ch != '?' {
+            continue;
+        }
+        out.push_str(&normalize_case(&input[segment_start..index]));
+        out.push(ch);
+        segment_start = index + ch.len_utf8();
+    }
+    out.push_str(&normalize_case(&input[segment_start..]));
     out
 }
 
@@ -1025,11 +1045,33 @@ mod tests {
     }
 
     #[test]
+    fn prefix_normalizes_ascii_alphanumeric_case() {
+        let bytes = build(&["This is a test document", "another document"]);
+        let r = open(&bytes);
+        let ids = r.search_all(SearchType::Prefix, "THI").unwrap();
+        assert_eq!(ids, vec![0u64]);
+    }
+
+    #[test]
     fn wildcard_with_star() {
         let bytes = build(&["unordered", "ordered", "border"]);
         let r = open(&bytes);
         let ids = r.search_all(SearchType::Wildcard, "*order*").unwrap();
         assert_eq!(ids, vec![0u64, 1, 2]);
+    }
+
+    #[test]
+    fn wildcard_normalizes_ascii_alphanumeric_segments() {
+        let bytes = build(&["This is a test document", "another document"]);
+        let r = open(&bytes);
+        assert_eq!(
+            r.search_all(SearchType::Wildcard, "*THIS*").unwrap(),
+            vec![0u64]
+        );
+        assert_eq!(
+            r.search_all(SearchType::Wildcard, "*THI?*").unwrap(),
+            vec![0u64]
+        );
     }
 
     #[test]
@@ -1046,6 +1088,13 @@ mod tests {
         assert_eq!(wildcard_to_regex("a?b"), "a.b");
         assert_eq!(wildcard_to_regex("a.b"), r"a\.b");
         assert_eq!(wildcard_to_regex("*a*"), ".*a.*");
+    }
+
+    #[test]
+    fn wildcard_normalization_preserves_non_alphanumeric_segments() {
+        assert_eq!(normalize_wildcard_query("*THI?*"), "*thi?*");
+        assert_eq!(normalize_wildcard_query("*THIS_IS*"), "*THIS_IS*");
+        assert_eq!(normalize_wildcard_query("*机器*"), "*机器*");
     }
 
     // ----- limit + pre_filter + scoring (row_id-based) -----

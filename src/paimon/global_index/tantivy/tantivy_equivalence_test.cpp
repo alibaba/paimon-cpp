@@ -18,13 +18,11 @@
  * EQUIVALENCE: a parametric corpus × query battery that compares lucene-fts
  * and tantivy-fulltext result *sets* (doc_id only — not score order, not score
  * values). Coverage targets:
- *   - English bag-of-words: MATCH_ALL / MATCH_ANY / PHRASE
+ *   - English bag-of-words: MATCH_ALL / MATCH_ANY / PHRASE / PREFIX / WILDCARD
  *   - Chinese (jieba "query" mode): MATCH_ALL / MATCH_ANY / PHRASE
  *   - Pre_filter intersection (no scoring)
- * PREFIX and WILDCARD are NOT compared as required-equal: tantivy's RegexQuery
- * walks byte-level term dictionary, lucene's PrefixQuery/WildcardQuery walks
- * its own; edge cases (empty input, anchors, multi-byte UTF-8) diverge by
- * design.
+ * PREFIX and WILDCARD equivalence covers ASCII token patterns, including case
+ * normalization. Engine-specific regex edge cases are outside this test.
  *
  * BENCHMARK: build a 200-doc index per backend and time write + 100 queries.
  * Prints to stderr; never fails on perf — guarding against perf regressions
@@ -234,6 +232,9 @@ TEST_F(TantivyEquivalenceTest, EnglishBagOfWordsBattery) {
         {"alpha beta gamma", FullTextSearch::SearchType::PHRASE},
         {"beta gamma delta", FullTextSearch::SearchType::PHRASE},
         {"delta epsilon", FullTextSearch::SearchType::PHRASE},
+        {"ALP", FullTextSearch::SearchType::PREFIX},
+        {"*ALPH*", FullTextSearch::SearchType::WILDCARD},
+        {"*ALP?A*", FullTextSearch::SearchType::WILDCARD},
     };
     for (const auto& c : cases) {
         auto [l, t] = RunPair(pair, c.query, c.type);
