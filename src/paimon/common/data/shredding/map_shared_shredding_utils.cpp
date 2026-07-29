@@ -395,9 +395,10 @@ Result<MapSharedShreddingFieldMeta> MapSharedShreddingUtils::DeserializeMetadata
         GetRequiredInt32(metadata, MapSharedShreddingDefine::kFieldDictOriginalSize));
     PAIMON_ASSIGN_OR_RAISE(std::string compressed_dict,
                            GetRequiredValue(metadata, MapSharedShreddingDefine::kFieldDict));
-    PAIMON_ASSIGN_OR_RAISE(
-        std::string field_dict_compression,
-        GetRequiredValue(metadata, MapSharedShreddingDefine::kFieldDictCompression));
+    int32_t compression_index = metadata->FindKey(MapSharedShreddingDefine::kFieldDictCompression);
+    std::string field_dict_compression = compression_index < 0
+                                             ? MapSharedShreddingDefine::kDefaultDictCompression
+                                             : metadata->value(compression_index);
     field_dict_compression = StringUtils::ToLowerCase(field_dict_compression);
     PAIMON_ASSIGN_OR_RAISE(std::string field_dict_json,
                            DecompressString(compressed_dict, original_len, field_dict_compression));

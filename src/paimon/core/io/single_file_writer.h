@@ -227,15 +227,19 @@ Status SingleFileWriter<T, R>::Close() {
     if (out_) {
         PAIMON_RETURN_NOT_OK(out_->Flush());
         PAIMON_ASSIGN_OR_RAISE(output_bytes_, out_->GetPos());
-        PAIMON_RETURN_NOT_OK(out_->Close());
+        std::shared_ptr<OutputStream> out = std::move(out_);
+        PAIMON_RETURN_NOT_OK(out->Close());
     } else {
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStatus> file_status, fs_->GetFileStatus(path_));
         output_bytes_ = file_status->GetLen();
     }
+    // Completing the format writer and stream is terminal even if publication fails. The scope
+    // guard still removes the file on a callback error, while a repeated Close() does not publish
+    // the same file again.
+    closed_ = true;
     if (completion_callback_) {
         PAIMON_RETURN_NOT_OK(completion_callback_());
     }
-    closed_ = true;
     guard.Release();
     return Status::OK();
 }
@@ -262,7 +266,8 @@ Status SingleFileWriter<T, R>::UpdateSchema(const std::shared_ptr<arrow::Schema>
 template <typename T, typename R>
 void SingleFileWriter<T, R>::Abort() {
     if (out_) {
-        auto status = out_->Close();
+        std::shared_ptr<OutputStream> out = std::move(out_);
+        auto status = out->Close();
         if (!status.ok()) {
             PAIMON_LOG_WARN(logger_, "Exception occurs when closing %s: %s", path_.c_str(),
                             status.ToString().c_str());

@@ -67,7 +67,9 @@ class InferVariantShreddingSchemaTest : public ::testing::Test {
 
  protected:
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
-    InferVariantShreddingSchema infer_{/*max_schema_width=*/300, /*max_schema_depth=*/50,
+    std::shared_ptr<arrow::Schema> empty_logical_schema_ = arrow::schema(arrow::FieldVector{});
+    InferVariantShreddingSchema infer_{empty_logical_schema_, pool_,
+                                       /*max_schema_width=*/300, /*max_schema_depth=*/50,
                                        /*min_field_cardinality_ratio=*/0.1};
 };
 
@@ -143,7 +145,8 @@ TEST_F(InferVariantShreddingSchemaTest, FieldCardinalityAdmissionThreshold) {
     };
     auto samples = Samples(jsons);
 
-    InferVariantShreddingSchema permissive{/*max_schema_width=*/300,
+    InferVariantShreddingSchema permissive{empty_logical_schema_, pool_,
+                                           /*max_schema_width=*/300,
                                            /*max_schema_depth=*/50,
                                            /*min_field_cardinality_ratio=*/0.1};
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> admitted,
@@ -152,7 +155,8 @@ TEST_F(InferVariantShreddingSchemaTest, FieldCardinalityAdmissionThreshold) {
         {arrow::field("common", arrow::int64()), arrow::field("rare", arrow::int64())});
     ASSERT_TRUE(admitted->Equals(*expected_admitted)) << admitted->ToString();
 
-    InferVariantShreddingSchema strict{/*max_schema_width=*/300,
+    InferVariantShreddingSchema strict{empty_logical_schema_, pool_,
+                                       /*max_schema_width=*/300,
                                        /*max_schema_depth=*/50,
                                        /*min_field_cardinality_ratio=*/0.25};
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> rejected, InferColumn(strict, samples));
@@ -270,7 +274,8 @@ TEST_F(InferVariantShreddingSchemaTest, NoUsefulSchema) {
 }
 
 TEST_F(InferVariantShreddingSchemaTest, MaxSchemaWidthLimit) {
-    InferVariantShreddingSchema narrow_infer{/*max_schema_width=*/3, /*max_schema_depth=*/50,
+    InferVariantShreddingSchema narrow_infer{empty_logical_schema_, pool_,
+                                             /*max_schema_width=*/3, /*max_schema_depth=*/50,
                                              /*min_field_cardinality_ratio=*/0.1};
     auto samples = Samples({R"({"a": 1, "b": 2, "c": 3, "d": 4, "e": 5})"});
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
@@ -296,7 +301,8 @@ TEST_F(InferVariantShreddingSchemaTest, MaxSchemaWidthLimit) {
 }
 
 TEST_F(InferVariantShreddingSchemaTest, MaxSchemaDepthLimit) {
-    InferVariantShreddingSchema shallow_infer{/*max_schema_width=*/300, /*max_schema_depth=*/1,
+    InferVariantShreddingSchema shallow_infer{empty_logical_schema_, pool_,
+                                              /*max_schema_width=*/300, /*max_schema_depth=*/1,
                                               /*min_field_cardinality_ratio=*/0.1};
     auto samples = Samples({R"({"outer": {"inner": 1}})"});
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
@@ -320,7 +326,8 @@ TEST_F(InferVariantShreddingSchemaTest, DeepNestedObjectSchema) {
 }
 
 TEST_F(InferVariantShreddingSchemaTest, AdaptivePreviousSelectionHonorsSharedWidthBudget) {
-    InferVariantShreddingSchema narrow_infer{/*max_schema_width=*/6, /*max_schema_depth=*/50,
+    InferVariantShreddingSchema narrow_infer{empty_logical_schema_, pool_,
+                                             /*max_schema_width=*/6, /*max_schema_depth=*/50,
                                              /*min_field_cardinality_ratio=*/0.1};
     // A scalar-to-object transition can leave the combined evidence untyped while selecting the
     // current object schema for writing.
@@ -417,7 +424,8 @@ TEST_F(InferVariantShreddingSchemaTest, ArraysMerge) {
 }
 
 TEST_F(InferVariantShreddingSchemaTest, ArrayBeyondDepthLimitStaysVariant) {
-    InferVariantShreddingSchema shallow_infer{/*max_schema_width=*/300, /*max_schema_depth=*/1,
+    InferVariantShreddingSchema shallow_infer{empty_logical_schema_, pool_,
+                                              /*max_schema_width=*/300, /*max_schema_depth=*/1,
                                               /*min_field_cardinality_ratio=*/0.1};
     auto samples = Samples({R"({"arr": [1, 2]})"});
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
@@ -478,8 +486,9 @@ TEST_F(InferVariantShreddingSchemaTest, LargeIntegerAndDecimalMerging) {
 
 TEST_F(InferVariantShreddingSchemaTest, LongMergedWithIntegralDecimalStaysLong) {
     // A scale-0 decimal that fits in 18 digits merges with a long back to int64.
-    std::shared_ptr<GenericVariant> integral_decimal =
-        BuildVariant([](VariantBuilder& b) { return b.AppendDecimal(VariantDecimal{123, 0}); });
+    std::shared_ptr<GenericVariant> integral_decimal = BuildVariant([](VariantBuilder& b) {
+        return b.AppendDecimal(VariantDecimal{123, 0});
+    });
     std::shared_ptr<GenericVariant> big_long = Samples({"1000000000000000000"})[0];
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
                          InferColumn(infer_, {integral_decimal, big_long}));
@@ -502,17 +511,20 @@ TEST_F(InferVariantShreddingSchemaTest, DecimalMergeOverflowFallsToVariant) {
     for (int i = 0; i < 38; ++i) {
         wide_unscaled = wide_unscaled * 10 + 1;  // 38 ones, no trailing zeros
     }
-    std::shared_ptr<GenericVariant> wide_decimal = BuildVariant(
-        [&](VariantBuilder& b) { return b.AppendDecimal(VariantDecimal{wide_unscaled, 0}); });
-    std::shared_ptr<GenericVariant> high_scale_decimal =
-        BuildVariant([](VariantBuilder& b) { return b.AppendDecimal(VariantDecimal{15, 20}); });
+    std::shared_ptr<GenericVariant> wide_decimal = BuildVariant([&](VariantBuilder& b) {
+        return b.AppendDecimal(VariantDecimal{wide_unscaled, 0});
+    });
+    std::shared_ptr<GenericVariant> high_scale_decimal = BuildVariant([](VariantBuilder& b) {
+        return b.AppendDecimal(VariantDecimal{15, 20});
+    });
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
                          InferColumn(infer_, {wide_decimal, high_scale_decimal}));
     ASSERT_EQ(inferred, nullptr);
 }
 
 TEST_F(InferVariantShreddingSchemaTest, ObjectWithAllRareFieldsStaysUnshredded) {
-    InferVariantShreddingSchema strict_infer{/*max_schema_width=*/300, /*max_schema_depth=*/50,
+    InferVariantShreddingSchema strict_infer{empty_logical_schema_, pool_,
+                                             /*max_schema_width=*/300, /*max_schema_depth=*/50,
                                              /*min_field_cardinality_ratio=*/0.6};
     // Two objects with disjoint single-occurrence keys: with a 0.6 ratio every field is below the
     // cardinality threshold, so the object contributes no typed field and the column is dropped.

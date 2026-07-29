@@ -306,4 +306,21 @@ bool VariantShreddingUtils::IsShreddedFileType(
     return struct_type->GetFieldByName(VariantDefs::kTypedValueFieldName) != nullptr;
 }
 
+bool VariantShreddingUtils::IsUntypedPhysicalVariantType(
+    const std::shared_ptr<arrow::DataType>& file_variant_type) {
+    if (!file_variant_type || file_variant_type->id() != arrow::Type::STRUCT) {
+        return false;
+    }
+    const auto& struct_type = std::static_pointer_cast<arrow::StructType>(file_variant_type);
+    if (struct_type->num_fields() != 2) {
+        return false;
+    }
+    const auto& metadata = struct_type->field(0);
+    const auto& value = struct_type->field(1);
+    return metadata->name() == VariantDefs::kMetadataFieldName &&
+           metadata->type()->id() == arrow::Type::BINARY &&
+           value->name() == VariantDefs::kValueFieldName &&
+           value->type()->id() == arrow::Type::BINARY;
+}
+
 }  // namespace paimon

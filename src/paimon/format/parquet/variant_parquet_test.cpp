@@ -141,12 +141,8 @@ class VariantParquetTest : public ::testing::Test {
         WriteFile(paimon_schema_, arrow_array.get());
     }
 
-    // Writes `jsons` shredded according to the configured ROW-type shredding schema JSON.
     void WriteShreddedFile(const std::vector<const char*>& jsons,
-                           const char* shredding_schema_json) {
-        ASSERT_OK_AND_ASSIGN(
-            std::shared_ptr<VariantShreddingWritePlan> plan,
-            VariantShreddingWritePlan::FromConfiguredSchema(paimon_schema_, shredding_schema_json));
+                           const std::shared_ptr<VariantShreddingWritePlan>& plan) {
         ASSERT_NE(plan, nullptr);
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<VariantShreddingBatchConverter> converter,
                              VariantShreddingBatchConverter::Create(plan, pool_));
@@ -156,6 +152,24 @@ class VariantParquetTest : public ::testing::Test {
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<ArrowArray> c_physical,
                              converter->Convert(c_logical.get()));
         WriteFile(converter->GetPhysicalSchema(), c_physical.get());
+    }
+
+    // Writes `jsons` shredded according to the configured ROW-type shredding schema JSON.
+    void WriteShreddedFile(const std::vector<const char*>& jsons,
+                           const char* shredding_schema_json) {
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<VariantShreddingWritePlan> plan,
+            VariantShreddingWritePlan::FromConfiguredSchema(paimon_schema_, shredding_schema_json));
+        WriteShreddedFile(jsons, plan);
+    }
+
+    // Writes `jsons` using the given inferred shredding type for the top-level Variant column.
+    void WriteShreddedFile(const std::vector<const char*>& jsons,
+                           const std::shared_ptr<arrow::DataType>& shredding_type) {
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<VariantShreddingWritePlan> plan,
+            VariantShreddingWritePlan::Create(paimon_schema_, {{"v", shredding_type}}));
+        WriteShreddedFile(jsons, plan);
     }
 
     static std::string NestedSiblingValue(size_t row) {
@@ -613,6 +627,54 @@ TEST_F(VariantParquetTest, ShreddedWriteAndReadRoundTrip) {
 
     // Reading the column as a plain VARIANT reassembles every physical shape back to the
     // original logical value.
+    std::shared_ptr<arrow::StructArray> variant_column;
+    ReadVariantColumn(paimon_schema_, &variant_column);
+    ASSERT_EQ(variant_column->length(), static_cast<int64_t>(jsons.size()));
+    auto value_column = std::static_pointer_cast<arrow::BinaryArray>(variant_column->field(0));
+    auto metadata_column = std::static_pointer_cast<arrow::BinaryArray>(variant_column->field(1));
+    for (size_t i = 0; i < jsons.size(); ++i) {
+        SCOPED_TRACE("row " + std::to_string(i));
+        if (jsons[i] == nullptr) {
+            ASSERT_TRUE(variant_column->IsNull(i));
+            continue;
+        }
+        ASSERT_FALSE(variant_column->IsNull(i));
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<GenericVariant> variant,
+            GenericVariant::Create(value_column->GetView(i), metadata_column->GetView(i), pool_));
+        ASSERT_OK_AND_ASSIGN(std::string actual_json, variant->ToJson());
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<GenericVariant> expected,
+                             GenericVariant::FromJson(jsons[i], pool_));
+        ASSERT_OK_AND_ASSIGN(std::string expected_json, expected->ToJson());
+        ASSERT_EQ(actual_json, expected_json);
+    }
+}
+
+TEST_F(VariantParquetTest, UntypedPhysicalVariantWriteAndReadRoundTrip) {
+    std::vector<const char*> jsons = {
+        R"({"a": 1, "b": "hello"})",
+        nullptr,
+        "[1,2,3]",
+    };
+    WriteShreddedFile(jsons, arrow::null());
+
+    {
+        std::unique_ptr<FileBatchReader> file_reader;
+        std::shared_ptr<arrow::Schema> file_schema;
+        OpenFile(&file_reader, &file_schema);
+        auto file_variant_field = file_schema->GetFieldByName("v");
+        ASSERT_NE(file_variant_field, nullptr);
+        const auto& physical_type =
+            static_cast<const arrow::StructType&>(*file_variant_field->type());
+        ASSERT_EQ(physical_type.num_fields(), 2);
+        ASSERT_EQ(physical_type.field(0)->name(), VariantDefs::kMetadataFieldName);
+        ASSERT_EQ(physical_type.field(1)->name(), VariantDefs::kValueFieldName);
+        ASSERT_FALSE(VariantShreddingUtils::IsShreddedFileType(file_variant_field->type()));
+        ASSERT_TRUE(
+            VariantShreddingUtils::IsUntypedPhysicalVariantType(file_variant_field->type()));
+        file_reader->Close();
+    }
+
     std::shared_ptr<arrow::StructArray> variant_column;
     ReadVariantColumn(paimon_schema_, &variant_column);
     ASSERT_EQ(variant_column->length(), static_cast<int64_t>(jsons.size()));

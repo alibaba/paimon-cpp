@@ -118,6 +118,8 @@ struct PAIMON_EXPORT Options {
 
     /// "target-file-row-num" - Target number of rows per newly written data file. Disabled by
     /// default. A file rolls when this or target-file-size is reached, whichever comes first.
+    /// This limit is enforced at write-batch granularity, so a file may exceed the target by up
+    /// to one batch.
     static const char TARGET_FILE_ROW_NUM[];
 
     /// "blob.target-file-size" - Target size of a blob file. Default is TARGET_FILE_SIZE.

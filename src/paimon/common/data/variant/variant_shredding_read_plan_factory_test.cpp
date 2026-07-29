@@ -152,6 +152,39 @@ TEST_F(VariantShreddingReadPlanFactoryTest, FullVariantReadOfShreddedFile) {
     ASSERT_NOK(plan->Assemble(ints, arrow::default_memory_pool()));
 }
 
+TEST_F(VariantShreddingReadPlanFactoryTest, FullVariantReadOfUntypedPhysicalFile) {
+    std::shared_ptr<GenericVariant> variant = Variant(R"({"a": 5})");
+    std::shared_ptr<arrow::DataType> physical;
+    std::shared_ptr<arrow::StructArray> shredded;
+    MakeFullShredded(arrow::null(), variant, &physical, &shredded);
+    ASSERT_FALSE(HasFatalFailure());
+
+    const auto& physical_struct = static_cast<const arrow::StructType&>(*physical);
+    ASSERT_EQ(physical_struct.num_fields(), 2);
+    ASSERT_EQ(physical_struct.field(0)->name(), VariantDefs::kMetadataFieldName);
+    ASSERT_EQ(physical_struct.field(1)->name(), VariantDefs::kValueFieldName);
+    ASSERT_FALSE(VariantShreddingUtils::IsShreddedFileType(physical));
+    ASSERT_TRUE(VariantShreddingUtils::IsUntypedPhysicalVariantType(physical));
+
+    auto read_field = VariantTypeUtils::ToArrowField("v");
+    auto file_field = arrow::field("v", physical);
+    std::shared_ptr<ShreddingColumnReadPlan> plan = CreatePlan(read_field, file_field);
+    ASSERT_NE(plan, nullptr);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Array> assembled,
+                         plan->Assemble(shredded, arrow::default_memory_pool()));
+    auto assembled_struct = std::static_pointer_cast<arrow::StructArray>(assembled);
+    ASSERT_EQ(assembled_struct->data()->child_data[0], shredded->data()->child_data[1]);
+    ASSERT_EQ(assembled_struct->data()->child_data[1], shredded->data()->child_data[0]);
+    auto value_column = std::static_pointer_cast<arrow::BinaryArray>(assembled_struct->field(0));
+    auto metadata_column = std::static_pointer_cast<arrow::BinaryArray>(assembled_struct->field(1));
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<GenericVariant> rebuilt,
+        GenericVariant::Create(value_column->GetView(0), metadata_column->GetView(0), pool_));
+    ASSERT_OK_AND_ASSIGN(std::string json, rebuilt->ToJson());
+    EXPECT_EQ(json, R"({"a":5})");
+}
+
 TEST_F(VariantShreddingReadPlanFactoryTest, AccessProjectionOnUnshreddedFile) {
     std::shared_ptr<GenericVariant> variant = Variant(R"({"a": 5, "b": [10, 20], "c": "hi"})");
     std::shared_ptr<arrow::StructArray> unshredded = MakeUnshredded(variant);

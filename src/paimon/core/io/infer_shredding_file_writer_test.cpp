@@ -157,7 +157,7 @@ class InferShreddingFileWriterTest : public ::testing::Test {
 
 TEST_F(InferShreddingFileWriterTest, BuffersUntilThresholdThenReplays) {
     auto writer = MakeWriter(/*buffer_rows=*/4);
-    // Never rolls while buffering.
+    // File-size rolling is suppressed while buffering.
     ASSERT_OK_AND_ASSIGN(bool reach, writer->ReachTargetSize(true, 1));
     ASSERT_FALSE(reach);
 

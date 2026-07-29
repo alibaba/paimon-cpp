@@ -228,6 +228,10 @@ Status ArrowSchemaValidator::ValidateField(const std::shared_ptr<arrow::Field>& 
                 arrow::internal::checked_cast<const arrow::MapType&>(*field->type()).key_field();
             const auto& item_field =
                 arrow::internal::checked_cast<const arrow::MapType&>(*field->type()).item_field();
+            if (key_field->nullable()) {
+                return Status::Invalid(
+                    fmt::format("Map field '{}' has a nullable key.", field->name()));
+            }
             PAIMON_RETURN_NOT_OK(ValidateField(key_field, /*allow_blob=*/false));
             PAIMON_RETURN_NOT_OK(ValidateField(item_field, /*allow_blob=*/false));
             break;

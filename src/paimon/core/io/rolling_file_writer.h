@@ -59,14 +59,6 @@ class RollingFileWriter : public FileWriter<T, std::vector<R>> {
         return metrics_;
     }
 
-    int64_t TargetFileSize() const {
-        return target_file_size_;
-    }
-
-    int64_t TargetFileRowNum() const {
-        return target_file_row_num_;
-    }
-
  protected:
     static constexpr int32_t CHECK_ROLLING_RECORD_CNT = 1000;
 

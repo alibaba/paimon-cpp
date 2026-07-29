@@ -85,12 +85,14 @@ MapSharedShreddingWritePlanFactory::CreateMetadataFinalizer(
 
 Status MapSharedShreddingWritePlanFactory::OnFileCompleted(
     const std::shared_ptr<ShreddingBatchConverter>& converter) {
-    auto map_converter = std::static_pointer_cast<MapSharedShreddingBatchConverter>(converter);
+    auto map_converter = std::dynamic_pointer_cast<MapSharedShreddingBatchConverter>(converter);
+    if (map_converter == nullptr) {
+        return Status::Invalid("Unexpected converter for MAP shared-shredding.");
+    }
     std::vector<std::pair<std::string, int32_t>> completed_stats;
     for (const std::string& field_name : map_converter->GetShreddingColumnNames()) {
-        PAIMON_ASSIGN_OR_RAISE(MapSharedShreddingFieldMeta file_meta,
-                               map_converter->BuildFieldMeta(field_name));
-        completed_stats.emplace_back(field_name, file_meta.max_row_width);
+        PAIMON_ASSIGN_OR_RAISE(int32_t max_row_width, map_converter->GetMaxRowWidth(field_name));
+        completed_stats.emplace_back(field_name, max_row_width);
     }
     for (const auto& [field_name, max_row_width] : completed_stats) {
         context_->ReportFileStats(field_name, max_row_width);

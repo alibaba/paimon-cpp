@@ -28,6 +28,7 @@
 #include <utility>
 
 #include "arrow/type.h"
+#include "arrow/util/checked_cast.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "paimon/common/data/blob_utils.h"
@@ -63,13 +64,11 @@ bool ContainsBlobField(const std::shared_ptr<arrow::Field>& field) {
                 return true;
             }
         }
-    } else if (type->id() == arrow::Type::LIST || type->id() == arrow::Type::LARGE_LIST ||
-               type->id() == arrow::Type::FIXED_SIZE_LIST) {
+    } else if (type->id() == arrow::Type::LIST) {
         return ContainsBlobField(type->fields().front());
     } else if (type->id() == arrow::Type::MAP) {
-        auto map_type = std::static_pointer_cast<arrow::MapType>(type);
-        return ContainsBlobField(map_type->key_field()) ||
-               ContainsBlobField(map_type->item_field());
+        const auto& map_type = arrow::internal::checked_cast<const arrow::MapType&>(*type);
+        return ContainsBlobField(map_type.key_field()) || ContainsBlobField(map_type.item_field());
     }
     return false;
 }
@@ -81,6 +80,17 @@ Status ValidateSharedShreddingCompression(const std::string& option_key,
         return Status::Invalid(fmt::format(
             "MAP shared-shredding only supports none/lz4/zstd compression, but {} is {}.",
             option_key, compression));
+    }
+    return Status::OK();
+}
+
+Status ValidateSharedShreddingFileFormat(const std::string& option_key,
+                                         const std::string& file_format) {
+    std::string normalized = StringUtils::ToLowerCase(file_format);
+    if (normalized != "parquet" && normalized != "orc") {
+        return Status::Invalid(fmt::format(
+            "MAP shared-shredding only supports parquet/orc file formats, but {} is {}.",
+            option_key, file_format));
     }
     return Status::OK();
 }
@@ -603,7 +613,7 @@ Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
                             "but its type is not MAP<STRING NOT NULL, T>.",
                             field_name));
         }
-        auto map_type = std::static_pointer_cast<arrow::MapType>(field_type);
+        auto map_type = arrow::internal::checked_pointer_cast<arrow::MapType>(field_type);
         if (map_type->key_field()->nullable()) {
             return Status::Invalid(
                 fmt::format("Column '{}' is configured with map.storage-layout=shared-shredding "
@@ -627,6 +637,10 @@ Status SchemaValidation::ValidateMapStorageLayout(const TableSchema& schema,
             "MAP shared-shredding currently does not support postpone bucket mode.");
     }
 
+    PAIMON_RETURN_NOT_OK(ValidateSharedShreddingFileFormat(Options::FILE_FORMAT,
+                                                           options.GetFileFormat()->Identifier()));
+    PAIMON_RETURN_NOT_OK(ValidatePerLevelOption(options_map, Options::FILE_FORMAT_PER_LEVEL,
+                                                ValidateSharedShreddingFileFormat));
     PAIMON_RETURN_NOT_OK(ValidateSharedShreddingCompression(Options::FILE_COMPRESSION,
                                                             options.GetFileCompression()));
     PAIMON_RETURN_NOT_OK(ValidatePerLevelOption(options_map, Options::FILE_COMPRESSION_PER_LEVEL,

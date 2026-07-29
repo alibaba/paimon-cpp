@@ -480,12 +480,17 @@ TEST_F(MapSharedShreddingBatchConverterTest, BuildFieldMetaInvalidFieldName) {
 
     // Valid case: "tags" exists
     ASSERT_OK_AND_ASSIGN([[maybe_unused]] auto meta, converter->BuildFieldMeta("tags"));
+    ASSERT_OK_AND_ASSIGN(int32_t max_row_width, converter->GetMaxRowWidth("tags"));
+    ASSERT_EQ(0, max_row_width);
 
     // Invalid case: "id" is not a shredding field
     ASSERT_NOK_WITH_MSG(converter->BuildFieldMeta("id"), "cannot find field_name 'id'");
+    ASSERT_NOK_WITH_MSG(converter->GetMaxRowWidth("id"), "cannot find field_name 'id'");
 
     // Invalid case: nonexistent field name
     ASSERT_NOK_WITH_MSG(converter->BuildFieldMeta("nonexistent"),
+                        "cannot find field_name 'nonexistent'");
+    ASSERT_NOK_WITH_MSG(converter->GetMaxRowWidth("nonexistent"),
                         "cannot find field_name 'nonexistent'");
 }
 

@@ -935,7 +935,7 @@ TEST(SchemaValidationTest, TestMapStorageLayout) {
     }
 }
 
-TEST(SchemaValidationTest, TestMapSharedShreddingRequiresNonNullableStringKey) {
+TEST(SchemaValidationTest, TestMapRequiresNonNullableKey) {
     auto nullable_key_map =
         std::make_shared<arrow::MapType>(arrow::field("key", arrow::utf8(), /*nullable=*/true),
                                          arrow::field("value", arrow::int64()));
@@ -948,11 +948,9 @@ TEST(SchemaValidationTest, TestMapSharedShreddingRequiresNonNullableStringKey) {
         {Options::BUCKET_KEY, "f0"},
         {"fields.f1.map.storage-layout", "shared-shredding"},
     };
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
-                         TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
-                                             /*primary_keys=*/{}, options));
-    ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
-                        "map key type is nullable");
+    ASSERT_NOK_WITH_MSG(TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                            /*primary_keys=*/{}, options),
+                        "Map field 'f1' has a nullable key.");
 }
 
 TEST(SchemaValidationTest, TestMapSharedShreddingRejectsBlobValue) {
@@ -1034,6 +1032,48 @@ TEST(SchemaValidationTest, TestMapSharedShreddingCompression) {
                              TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
                                                  /*primary_keys=*/{}, options));
         ASSERT_OK(SchemaValidation::ValidateTableSchema(*table_schema));
+    }
+}
+
+TEST(SchemaValidationTest, TestMapSharedShreddingFileFormat) {
+    auto schema = arrow::schema({
+        arrow::field("f0", arrow::utf8()),
+        arrow::field("f1", arrow::map(arrow::utf8(), arrow::int64())),
+    });
+    std::map<std::string, std::string> base_options = {
+        {Options::BUCKET, "1"},
+        {Options::BUCKET_KEY, "f0"},
+        {"fields.f1.map.storage-layout", "shared-shredding"},
+    };
+
+    for (const std::string file_format : {"parquet", "orc"}) {
+        auto options = base_options;
+        options[Options::FILE_FORMAT] = file_format;
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{}, options));
+        ASSERT_OK(SchemaValidation::ValidateTableSchema(*table_schema));
+    }
+    {
+        auto options = base_options;
+        options[Options::FILE_FORMAT] = "avro";
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{}, options));
+        ASSERT_NOK_WITH_MSG(
+            SchemaValidation::ValidateTableSchema(*table_schema),
+            "MAP shared-shredding only supports parquet/orc file formats, but file.format is "
+            "avro.");
+    }
+    {
+        auto options = base_options;
+        options[Options::FILE_FORMAT_PER_LEVEL] = "0:parquet,1:avro";
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{}, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "MAP shared-shredding only supports parquet/orc file formats, but "
+                            "file.format.per.level.1 is avro.");
     }
 }
 

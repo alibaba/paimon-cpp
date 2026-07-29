@@ -319,6 +319,23 @@ TEST(MapSharedShreddingUtilsTest, MetadataRoundtripEmptyData) {
     verify_roundtrip("zstd");
 }
 
+TEST(MapSharedShreddingUtilsTest, DeserializeLegacyMetadataWithoutCompression) {
+    MapSharedShreddingFieldMeta original;
+    original.name_to_id = {{"alpha", 0}, {"beta", 1}};
+    original.field_to_columns = {{0, {0}}, {1, {1}}};
+    original.overflow_field_set = {1};
+    original.num_columns = 2;
+    original.max_row_width = 2;
+
+    auto metadata = std::make_shared<arrow::KeyValueMetadata>();
+    ASSERT_OK(MapSharedShreddingUtils::SerializeMetadata(
+        original, MapSharedShreddingDefine::kDefaultDictCompression, metadata.get()));
+    ASSERT_TRUE(metadata->Delete(MapSharedShreddingDefine::kFieldDictCompression).ok());
+
+    ASSERT_OK_AND_ASSIGN(auto deserialized, MapSharedShreddingUtils::DeserializeMetadata(metadata));
+    ASSERT_EQ(deserialized, original);
+}
+
 // ---- DeserializeMetadata error cases ----
 
 TEST(MapSharedShreddingUtilsTest, DeserializeMetadataErrors) {
@@ -366,18 +383,6 @@ TEST(MapSharedShreddingUtilsTest, DeserializeMetadataErrors) {
         ASSERT_NOK_WITH_MSG(
             MapSharedShreddingUtils::DeserializeMetadata(metadata),
             "missing shredding metadata key: paimon.map.shared-shredding.field-dict");
-    }
-    // missing field_dict_compression
-    {
-        auto metadata = std::make_shared<arrow::KeyValueMetadata>();
-        metadata->Append(MapShreddingDefine::kStorageLayout,
-                         MapShreddingDefine::kStorageLayoutSharedShredding);
-        metadata->Append(MapSharedShreddingDefine::kVersion, "1");
-        metadata->Append(MapSharedShreddingDefine::kFieldDictOriginalSize, "2");
-        metadata->Append(MapSharedShreddingDefine::kFieldDict, "{}");
-        ASSERT_NOK_WITH_MSG(
-            MapSharedShreddingUtils::DeserializeMetadata(metadata),
-            "missing shredding metadata key: paimon.map.shared-shredding.field-dict-compression");
     }
 }
 

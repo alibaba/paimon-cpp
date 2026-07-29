@@ -65,12 +65,6 @@ class InferVariantShreddingSchema {
         int32_t remaining;
     };
 
-    InferVariantShreddingSchema(int32_t max_schema_width, int32_t max_schema_depth,
-                                double min_field_cardinality_ratio)
-        : max_schema_width_(max_schema_width),
-          max_schema_depth_(max_schema_depth),
-          min_field_cardinality_ratio_(min_field_cardinality_ratio) {}
-
     InferVariantShreddingSchema(const std::shared_ptr<arrow::Schema>& logical_schema,
                                 const std::shared_ptr<MemoryPool>& pool, int32_t max_schema_width,
                                 int32_t max_schema_depth, double min_field_cardinality_ratio);
