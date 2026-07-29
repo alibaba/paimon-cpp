@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <functional>
 #include <limits>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -28,12 +29,17 @@
 #include "arrow/api.h"
 #include "gtest/gtest.h"
 #include "paimon/common/utils/fields_comparator.h"
+#include "paimon/core/compact/compact_deletion_file.h"
+#include "paimon/core/deletionvectors/bucketed_dv_maintainer.h"
+#include "paimon/core/deletionvectors/deletion_vectors_index_file.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/manifest/file_source.h"
 #include "paimon/core/mergetree/level_sorted_run.h"
 #include "paimon/core/mergetree/levels.h"
 #include "paimon/core/mergetree/sorted_run.h"
 #include "paimon/core/stats/simple_stats.h"
+#include "paimon/fs/file_system_factory.h"
+#include "paimon/testing/mock/mock_index_path_factory.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/testharness.h"
 
@@ -407,6 +413,80 @@ TEST_F(MergeTreeCompactManagerTest, TestTriggerFullCompaction) {
     for (const auto& after : compact_result.value()->After()) {
         EXPECT_EQ(after->level, 2);
     }
+}
+
+TEST_F(MergeTreeCompactManagerTest, TestFullCompactionRewritesEachMaxLevelFile) {
+    std::vector<std::shared_ptr<DataFileMeta>> files = {
+        ToFile(LevelMinMax(2, 1, 3), /*max_sequence=*/3),
+        ToFile(LevelMinMax(2, 4, 6), /*max_sequence=*/6)};
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels, CreateLevels(files));
+
+    auto manager = std::make_shared<MergeTreeCompactManager>(
+        levels, std::make_shared<FunctionalCompactStrategy>(TestStrategy()), comparator_,
+        /*compaction_file_size=*/2,
+        /*num_sorted_run_stop_trigger=*/std::numeric_limits<int32_t>::max(),
+        std::make_shared<TestRewriter>(/*expected_drop_delete=*/true),
+        /*metrics_reporter=*/nullptr,
+        /*dv_maintainer=*/nullptr,
+        /*lazy_gen_deletion_file=*/false,
+        /*need_lookup=*/false,
+        /*force_rewrite_all_files=*/true,
+        /*force_keep_delete=*/false, std::make_shared<CancellationController>(),
+        std::make_shared<InlineExecutor>());
+
+    ASSERT_OK(manager->TriggerCompaction(/*full_compaction=*/true));
+    ASSERT_OK_AND_ASSIGN(std::optional<std::shared_ptr<CompactResult>> compact_result,
+                         manager->GetCompactionResult(/*blocking=*/true));
+    ASSERT_TRUE(compact_result.has_value());
+    ASSERT_EQ(compact_result.value()->Before(), files);
+    ASSERT_EQ(compact_result.value()->After().size(), 2);
+    for (const auto& file : compact_result.value()->After()) {
+        ASSERT_EQ(file->file_name.rfind("rewrite-", /*pos=*/0), 0);
+    }
+}
+
+TEST_F(MergeTreeCompactManagerTest, TestCompactionGeneratesDeletionFileEagerly) {
+    std::vector<std::shared_ptr<DataFileMeta>> files = {
+        ToFile(LevelMinMax(0, 1, 3), /*max_sequence=*/0),
+        ToFile(LevelMinMax(1, 1, 5), /*max_sequence=*/1)};
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels, CreateLevels(files));
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileSystem> fs,
+                         FileSystemFactory::Get("local", dir->Str(), {}));
+    auto path_factory = std::make_shared<MockIndexPathFactory>(dir->Str());
+    auto dv_index_file =
+        std::make_shared<DeletionVectorsIndexFile>(fs, path_factory, /*bitmap64=*/false, pool_);
+    auto dv_maintainer = std::make_shared<BucketedDvMaintainer>(
+        dv_index_file, std::map<std::string, std::shared_ptr<DeletionVector>>{});
+    ASSERT_OK(dv_maintainer->NotifyNewDeletion("remaining-file", /*position=*/0));
+
+    auto manager = std::make_shared<MergeTreeCompactManager>(
+        levels, std::make_shared<FunctionalCompactStrategy>(TestStrategy()), comparator_,
+        /*compaction_file_size=*/2,
+        /*num_sorted_run_stop_trigger=*/std::numeric_limits<int32_t>::max(),
+        std::make_shared<TestRewriter>(/*expected_drop_delete=*/true),
+        /*metrics_reporter=*/nullptr, dv_maintainer,
+        /*lazy_gen_deletion_file=*/false,
+        /*need_lookup=*/false,
+        /*force_rewrite_all_files=*/false,
+        /*force_keep_delete=*/false, std::make_shared<CancellationController>(),
+        std::make_shared<InlineExecutor>());
+
+    ASSERT_OK(manager->TriggerCompaction(/*full_compaction=*/false));
+    ASSERT_OK_AND_ASSIGN(std::optional<std::shared_ptr<CompactResult>> compact_result,
+                         manager->GetCompactionResult(/*blocking=*/true));
+    ASSERT_TRUE(compact_result.has_value());
+    std::shared_ptr<CompactDeletionFile> deletion_file = compact_result.value()->DeletionFile();
+    ASSERT_NE(deletion_file, nullptr);
+    ASSERT_NE(std::dynamic_pointer_cast<GeneratedDeletionFile>(deletion_file), nullptr);
+
+    ASSERT_OK_AND_ASSIGN(std::optional<std::shared_ptr<IndexFileMeta>> index_file,
+                         deletion_file->GetOrCompute());
+    ASSERT_TRUE(index_file.has_value());
+    ASSERT_EQ(index_file.value()->IndexType(), DeletionVectorsIndexFile::DELETION_VECTORS_INDEX);
+    ASSERT_OK_AND_ASSIGN(bool exists, dv_index_file->Exists(index_file.value()));
+    ASSERT_TRUE(exists);
 }
 
 TEST_F(MergeTreeCompactManagerTest, TestRejectReentrantFullCompaction) {
