@@ -34,6 +34,11 @@ class FieldIgnoreRetractAgg : public FieldAggregator {
         return agg_->Agg(accumulator, input_field);
     }
 
+    Result<VariantType> AggResult(const VariantType& accumulator,
+                                  const VariantType& input_field) override {
+        return agg_->AggResult(accumulator, input_field);
+    }
+
     Result<VariantType> Retract(const VariantType& accumulator,
                                 const VariantType& input_field) const override {
         return accumulator;

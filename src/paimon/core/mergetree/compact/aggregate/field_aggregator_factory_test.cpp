@@ -17,7 +17,9 @@
 #include "paimon/core/mergetree/compact/aggregate/field_aggregator_factory.h"
 
 #include <map>
+#include <memory>
 
+#include "arrow/api.h"
 #include "arrow/type_fwd.h"
 #include "gtest/gtest.h"
 #include "paimon/testing/utils/testharness.h"
@@ -122,6 +124,33 @@ TEST(FieldAggregatorFactoryTest, TestRemoveRecordOnDeleteConflictsWithIgnoreRetr
     ASSERT_NOK_WITH_MSG(
         FieldAggregatorFactory::CreateFieldAggregator("f0", arrow::int32(), "sum", options),
         "conflicting behavior");
+}
+
+TEST(FieldAggregatorFactoryTest, CreatesJavaCompatibleAggregators) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
+    std::shared_ptr<arrow::DataType> nested_type =
+        arrow::list(arrow::struct_({arrow::field("id", arrow::int32())}));
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldAggregator> collect,
+                         FieldAggregatorFactory::CreateFieldAggregator(
+                             "f", arrow::list(arrow::int32()), "collect", options));
+    ASSERT_TRUE(dynamic_cast<FieldCollectAgg*>(collect.get()));
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<FieldAggregator> merge_map,
+        FieldAggregatorFactory::CreateFieldAggregator(
+            "f", arrow::map(arrow::int32(), arrow::int32()), "merge_map", options));
+    ASSERT_TRUE(dynamic_cast<FieldMergeMapAgg*>(merge_map.get()));
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<FieldAggregator> nested_update,
+        FieldAggregatorFactory::CreateFieldAggregator("f", nested_type, "nested_update", options));
+    ASSERT_TRUE(dynamic_cast<FieldNestedUpdateAgg*>(nested_update.get()));
+
+    for (const char* name : {"rbm64", "hll_sketch", "theta_sketch"}) {
+        ASSERT_OK_AND_ASSIGN(
+            std::unique_ptr<FieldAggregator> aggregator,
+            FieldAggregatorFactory::CreateFieldAggregator("f", arrow::binary(), name, options));
+        ASSERT_EQ(name, aggregator->GetName());
+    }
 }
 
 }  // namespace paimon::test

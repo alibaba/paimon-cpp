@@ -32,6 +32,8 @@ set(PAIMON_COMMON_SRCS
     common/data/columnar/columnar_row.cpp
     common/data/columnar/columnar_row_ref.cpp
     common/data/decimal.cpp
+    common/data/generic_array.cpp
+    common/data/generic_map.cpp
     common/data/internal_row.cpp
     common/data/record_batch.cpp
     common/data/serializer/binary_row_serializer.cpp
@@ -287,6 +289,12 @@ set(PAIMON_CORE_SRCS
     core/mergetree/compact/universal_compaction.cpp
     core/mergetree/compact/early_full_compaction.cpp
     core/mergetree/compact/aggregate/aggregate_merge_function.cpp
+    core/mergetree/compact/aggregate/field_aggregate_utils.cpp
+    core/mergetree/compact/aggregate/field_collect_agg.cpp
+    core/mergetree/compact/aggregate/field_merge_map_agg.cpp
+    core/mergetree/compact/aggregate/field_nested_update_agg.cpp
+    core/mergetree/compact/aggregate/field_roaring_bitmap64_agg.cpp
+    core/mergetree/compact/aggregate/field_sketch_agg.cpp
     core/mergetree/compact/aggregate/field_sum_agg.cpp
     core/mergetree/compact/interval_partition.cpp
     core/mergetree/compact/loser_tree.cpp
@@ -417,6 +425,7 @@ add_paimon_lib(paimon
                xxhash
                Threads::Threads
                RapidJSON
+               DataSketches
                ${PAIMON_OBJECT_STORE_LINK_LIBS}
                STATIC_LINK_LIBS
                arrow
@@ -427,6 +436,7 @@ add_paimon_lib(paimon
                xxhash
                Threads::Threads
                RapidJSON
+               DataSketches
                ${PAIMON_OBJECT_STORE_LINK_LIBS}
                SHARED_LINK_FLAGS
                ${PAIMON_VERSION_SCRIPT_FLAGS})
@@ -711,14 +721,19 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/compact/aggregate/aggregate_merge_function_test.cpp
                     core/mergetree/compact/aggregate/field_aggregator_factory_test.cpp
                     core/mergetree/compact/aggregate/field_bool_agg_test.cpp
+                    core/mergetree/compact/aggregate/field_collect_agg_test.cpp
                     core/mergetree/compact/aggregate/field_first_non_null_value_agg_test.cpp
                     core/mergetree/compact/aggregate/field_first_value_agg_test.cpp
                     core/mergetree/compact/aggregate/field_ignore_retract_agg_test.cpp
                     core/mergetree/compact/aggregate/field_last_non_null_value_agg_test.cpp
                     core/mergetree/compact/aggregate/field_last_value_agg_test.cpp
                     core/mergetree/compact/aggregate/field_listagg_agg_test.cpp
+                    core/mergetree/compact/aggregate/field_merge_map_agg_test.cpp
                     core/mergetree/compact/aggregate/field_min_max_agg_test.cpp
+                    core/mergetree/compact/aggregate/field_nested_update_agg_test.cpp
                     core/mergetree/compact/aggregate/field_primary_key_agg_test.cpp
+                    core/mergetree/compact/aggregate/field_roaring_bitmap64_agg_test.cpp
+                    core/mergetree/compact/aggregate/field_sketch_agg_test.cpp
                     core/mergetree/compact/aggregate/field_sum_agg_test.cpp
                     core/mergetree/compact/deduplicate_merge_function_test.cpp
                     core/mergetree/compact/first_row_merge_function_test.cpp
@@ -832,6 +847,7 @@ if(PAIMON_BUILD_TESTS)
                     STATIC_LINK_LIBS
                     paimon_shared
                     test_utils_static
+                    DataSketches
                     ${TEST_STATIC_LINK_LIBS}
                     ${GTEST_LINK_TOOLCHAIN})
 

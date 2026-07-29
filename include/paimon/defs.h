@@ -80,6 +80,14 @@ struct PAIMON_EXPORT Options {
     static const char DEFAULT_AGG_FUNCTION[];
     /// IGNORE_RETRACT is "ignore-retract"
     static const char IGNORE_RETRACT[];
+    /// NESTED_KEY is "nested-key"
+    static const char NESTED_KEY[];
+    /// NESTED_KEY_NULL_STRATEGY is "nested-key-null-strategy"
+    static const char NESTED_KEY_NULL_STRATEGY[];
+    /// NESTED_SEQUENCE_FIELD is "nested-sequence-field"
+    static const char NESTED_SEQUENCE_FIELD[];
+    /// COUNT_LIMIT is "count-limit"
+    static const char COUNT_LIMIT[];
     /// "distinct" - Distinct option for aggregate functions like listagg. Default value is false.
     /// Example: fields.f.distinct=true to deduplicate values during aggregation.
     static const char DISTINCT[];

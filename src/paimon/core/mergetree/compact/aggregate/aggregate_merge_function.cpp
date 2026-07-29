@@ -85,7 +85,8 @@ Status AggregateMergeFunction::Add(KeyValue&& kv) {
             PAIMON_ASSIGN_OR_RAISE(merged_field,
                                    aggregators_[i]->Retract(accumulator, input_field));
         } else {
-            merged_field = aggregators_[i]->Agg(accumulator, input_field);
+            PAIMON_ASSIGN_OR_RAISE(merged_field,
+                                   aggregators_[i]->AggResult(accumulator, input_field));
         }
         row_->SetField(i, merged_field);
     }

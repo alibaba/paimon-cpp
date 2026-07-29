@@ -333,16 +333,16 @@ Status PartialUpdateMergeFunction::Add(KeyValue&& moved_kv) {
     }
     last_seq_num_ = kv.sequence_number;
     if (field_comparators_.empty()) {
-        UpdateNonNullFields(std::move(kv));
+        PAIMON_RETURN_NOT_OK(UpdateNonNullFields(std::move(kv)));
     } else {
-        UpdateWithSequenceGroup(std::move(kv));
+        PAIMON_RETURN_NOT_OK(UpdateWithSequenceGroup(std::move(kv)));
     }
     meet_insert_ = true;
     not_null_column_filled_ = true;
     return Status::OK();
 }
 
-void PartialUpdateMergeFunction::UpdateNonNullFields(KeyValue&& kv) {
+Status PartialUpdateMergeFunction::UpdateNonNullFields(KeyValue&& kv) {
     for (size_t i = 0; i < getters_.size(); ++i) {
         VariantType field = getters_[i](*(kv.value));
         if (!DataDefine::IsVariantNull(field)) {
@@ -350,9 +350,10 @@ void PartialUpdateMergeFunction::UpdateNonNullFields(KeyValue&& kv) {
         }
     }
     row_->AddDataHolder(std::move(kv.value));
+    return Status::OK();
 }
 
-void PartialUpdateMergeFunction::UpdateWithSequenceGroup(KeyValue&& kv) {
+Status PartialUpdateMergeFunction::UpdateWithSequenceGroup(KeyValue&& kv) {
     for (size_t i = 0; i < getters_.size(); ++i) {
         VariantType field = getters_[i](*(kv.value));
         VariantType accumulator = getters_[i](*row_);
@@ -362,7 +363,8 @@ void PartialUpdateMergeFunction::UpdateWithSequenceGroup(KeyValue&& kv) {
             (agg_iter == field_aggregators_.end() ? nullptr : agg_iter->second.get());
         if (comp_iter == field_comparators_.end()) {
             if (agg) {
-                row_->SetField(i, agg->Agg(accumulator, field));
+                PAIMON_ASSIGN_OR_RAISE(VariantType result, agg->AggResult(accumulator, field));
+                row_->SetField(i, result);
             } else if (!DataDefine::IsVariantNull(field)) {
                 row_->SetField(i, field);
             }
@@ -383,13 +385,21 @@ void PartialUpdateMergeFunction::UpdateWithSequenceGroup(KeyValue&& kv) {
                     }
                     continue;
                 }
-                row_->SetField(i, agg ? agg->Agg(accumulator, field) : field);
+                if (agg) {
+                    PAIMON_ASSIGN_OR_RAISE(VariantType result, agg->AggResult(accumulator, field));
+                    row_->SetField(i, result);
+                } else {
+                    row_->SetField(i, field);
+                }
             } else if (agg) {
-                row_->SetField(i, agg->AggReversed(accumulator, field));
+                PAIMON_ASSIGN_OR_RAISE(VariantType result,
+                                       agg->AggReversedResult(accumulator, field));
+                row_->SetField(i, result);
             }
         }
     }
     row_->AddDataHolder(std::move(kv.value));
+    return Status::OK();
 }
 
 Status PartialUpdateMergeFunction::RetractWithSequenceGroup(KeyValue&& kv) {

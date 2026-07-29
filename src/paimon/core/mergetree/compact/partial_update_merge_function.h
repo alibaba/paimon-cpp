@@ -106,9 +106,9 @@ class PartialUpdateMergeFunction : public MergeFunction {
     /// Initialize row_ with all field values and transfer data ownership to row_.
     void InitRowAndHoldData(std::unique_ptr<InternalRow>&& value);
 
-    void UpdateNonNullFields(KeyValue&& kv);
+    Status UpdateNonNullFields(KeyValue&& kv);
 
-    void UpdateWithSequenceGroup(KeyValue&& kv);
+    Status UpdateWithSequenceGroup(KeyValue&& kv);
 
     Status RetractWithSequenceGroup(KeyValue&& kv);
 

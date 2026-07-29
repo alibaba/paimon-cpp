@@ -58,6 +58,13 @@ class PAIMON_EXPORT CoreOptions {
         SNAPSHOT,
     };
 
+    /// Defines how nested_update handles null values in nested keys.
+    enum class NestedKeyNullStrategy {
+        MERGE,
+        IGNORE,
+        ERROR,
+    };
+
     static Result<CoreOptions> FromMap(
         const std::map<std::string, std::string>& options_map,
         const std::shared_ptr<FileSystem>& specified_file_system = nullptr,
@@ -139,6 +146,29 @@ class PAIMON_EXPORT CoreOptions {
     std::optional<std::string> GetFieldsDefaultFunc() const;
     Result<std::optional<std::string>> GetFieldAggFunc(const std::string& field_name) const;
     Result<bool> FieldAggIgnoreRetract(const std::string& field_name) const;
+    /// Return nested key fields configured for a nested_update field.
+    ///
+    /// @param field_name Name of the table field.
+    /// @return Configured nested key field names, or an error Status.
+    Result<std::vector<std::string>> FieldNestedUpdateAggNestedKey(
+        const std::string& field_name) const;
+    /// Return the null-key strategy configured for a nested_update field.
+    ///
+    /// @param field_name Name of the table field.
+    /// @return The configured null-key strategy, or an error Status.
+    Result<NestedKeyNullStrategy> FieldNestedUpdateAggNestedKeyNullStrategy(
+        const std::string& field_name) const;
+    /// Return sequence fields configured for a nested_update field.
+    ///
+    /// @param field_name Name of the table field.
+    /// @return Configured nested sequence field names, or an error Status.
+    Result<std::vector<std::string>> FieldNestedUpdateAggNestedSequenceField(
+        const std::string& field_name) const;
+    /// Return the maximum number of rows retained by a nested_update field.
+    ///
+    /// @param field_name Name of the table field.
+    /// @return The configured row count limit, or an error Status.
+    Result<int32_t> FieldNestedUpdateAggCountLimit(const std::string& field_name) const;
     Result<std::string> FieldListAggDelimiter(const std::string& field_name) const;
     Result<bool> FieldCollectAggDistinct(const std::string& field_name) const;
 

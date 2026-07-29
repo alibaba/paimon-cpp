@@ -223,6 +223,12 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
                          AUTO
                          BUNDLED
                          SYSTEM)
+    define_option_string(DataSketches_SOURCE
+                         "Dependency source for DataSketches"
+                         ""
+                         AUTO
+                         BUNDLED
+                         SYSTEM)
     define_option_string(TBB_SOURCE
                          "Dependency source for TBB"
                          ""

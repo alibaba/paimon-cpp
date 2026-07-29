@@ -1378,6 +1378,61 @@ Result<bool> CoreOptions::FieldAggIgnoreRetract(const std::string& field_name) c
     return field_agg_ignore_retract;
 }
 
+Result<std::vector<std::string>> CoreOptions::FieldNestedUpdateAggNestedKey(
+    const std::string& field_name) const {
+    ConfigParser parser(impl_->raw_options);
+    std::vector<std::string> nested_key;
+    std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
+                      std::string(Options::NESTED_KEY);
+    PAIMON_RETURN_NOT_OK(
+        parser.ParseList<std::string>(key, Options::FIELDS_SEPARATOR, &nested_key, true));
+    return nested_key;
+}
+
+Result<CoreOptions::NestedKeyNullStrategy> CoreOptions::FieldNestedUpdateAggNestedKeyNullStrategy(
+    const std::string& field_name) const {
+    ConfigParser parser(impl_->raw_options);
+    std::string strategy = "merge";
+    std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
+                      std::string(Options::NESTED_KEY_NULL_STRATEGY);
+    PAIMON_RETURN_NOT_OK(parser.Parse(key, &strategy));
+    if (strategy == "merge") {
+        return NestedKeyNullStrategy::MERGE;
+    }
+    if (strategy == "ignore") {
+        return NestedKeyNullStrategy::IGNORE;
+    }
+    if (strategy == "error") {
+        return NestedKeyNullStrategy::ERROR;
+    }
+    return Status::Invalid(fmt::format(
+        "Invalid Config [{}: {}], supported values are merge, ignore and error", key, strategy));
+}
+
+Result<std::vector<std::string>> CoreOptions::FieldNestedUpdateAggNestedSequenceField(
+    const std::string& field_name) const {
+    ConfigParser parser(impl_->raw_options);
+    std::vector<std::string> sequence_fields;
+    std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
+                      std::string(Options::NESTED_SEQUENCE_FIELD);
+    PAIMON_RETURN_NOT_OK(
+        parser.ParseList<std::string>(key, Options::FIELDS_SEPARATOR, &sequence_fields, true));
+    return sequence_fields;
+}
+
+Result<int32_t> CoreOptions::FieldNestedUpdateAggCountLimit(const std::string& field_name) const {
+    ConfigParser parser(impl_->raw_options);
+    int32_t count_limit = std::numeric_limits<int32_t>::max();
+    std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
+                      std::string(Options::COUNT_LIMIT);
+    PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(key, &count_limit));
+    if (count_limit < 0) {
+        return Status::Invalid(
+            fmt::format("Invalid Config [{}: {}], must not be negative", key, count_limit));
+    }
+    return count_limit;
+}
+
 Result<std::string> CoreOptions::FieldListAggDelimiter(const std::string& field_name) const {
     ConfigParser parser(impl_->raw_options);
     std::string delimiter = ",";

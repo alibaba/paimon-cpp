@@ -17,9 +17,16 @@
 #include "paimon/core/mergetree/compact/aggregate/field_ignore_retract_agg.h"
 
 #include <cstdint>
+#include <memory>
+#include <utility>
+#include <vector>
 
+#include "arrow/api.h"
 #include "arrow/type_fwd.h"
 #include "gtest/gtest.h"
+#include "paimon/common/data/generic_array.h"
+#include "paimon/core/core_options.h"
+#include "paimon/core/mergetree/compact/aggregate/field_collect_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_sum_agg.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
@@ -62,6 +69,28 @@ TEST(FieldIgnoreRetractAggTest, TestNull) {
         ASSERT_OK_AND_ASSIGN(auto retract_ret, agg->Retract(NullType(), NullType()));
         ASSERT_TRUE(DataDefine::IsVariantNull(retract_ret));
     }
+}
+
+// matches Java, where the wrapper only overrides agg: reversed aggregation falls back to the base
+// implementation and therefore bypasses the wrapped aggregator's own aggReversed override
+TEST(FieldIgnoreRetractAggTest, ReversedAggBypassesWrappedOverride) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldCollectAgg> collect_agg,
+                         FieldCollectAgg::Create(arrow::list(arrow::int32()), options, "f0"));
+    auto agg = std::make_unique<FieldIgnoreRetractAgg>(std::move(collect_agg));
+
+    VariantType accumulator = VariantType(std::static_pointer_cast<InternalArray>(
+        std::make_shared<GenericArray>(std::vector<VariantType>{int32_t{1}, int32_t{2}})));
+    VariantType input = VariantType(std::static_pointer_cast<InternalArray>(
+        std::make_shared<GenericArray>(std::vector<VariantType>{int32_t{3}, int32_t{4}})));
+
+    ASSERT_OK_AND_ASSIGN(VariantType result, agg->AggReversedResult(accumulator, input));
+    auto values = DataDefine::GetVariantValue<std::shared_ptr<InternalArray>>(result);
+    ASSERT_EQ(4, values->Size());
+    ASSERT_EQ(3, values->GetInt(0));
+    ASSERT_EQ(4, values->GetInt(1));
+    ASSERT_EQ(1, values->GetInt(2));
+    ASSERT_EQ(2, values->GetInt(3));
 }
 
 }  // namespace paimon::test

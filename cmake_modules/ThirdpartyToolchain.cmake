@@ -103,6 +103,19 @@ else()
     endif()
 endif()
 
+if(DEFINED ENV{PAIMON_DATASKETCHES_URL})
+    set(DATASKETCHES_SOURCE_URL "$ENV{PAIMON_DATASKETCHES_URL}")
+else()
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_DATASKETCHES_PKG_NAME}")
+        set_urls(DATASKETCHES_SOURCE_URL
+                 "${THIRDPARTY_DIR}/${PAIMON_DATASKETCHES_PKG_NAME}")
+    else()
+        set_urls(DATASKETCHES_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/apache/datasketches-cpp/archive/refs/tags/${PAIMON_DATASKETCHES_BUILD_VERSION}.tar.gz"
+        )
+    endif()
+endif()
+
 if(DEFINED ENV{PAIMON_FMT_URL})
     set(FMT_SOURCE_URL "$ENV{PAIMON_FMT_URL}")
 else()
@@ -600,6 +613,8 @@ macro(paimon_build_dependency DEPENDENCY_NAME)
         build_fmt()
     elseif("${DEPENDENCY_NAME}" STREQUAL "RapidJSON")
         build_rapidjson()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "DataSketches")
+        build_datasketches()
     elseif("${DEPENDENCY_NAME}" STREQUAL "zstd")
         build_zstd()
     elseif("${DEPENDENCY_NAME}" STREQUAL "Snappy")
@@ -881,6 +896,26 @@ macro(build_rapidjson)
     add_library(RapidJSON INTERFACE IMPORTED)
     target_include_directories(RapidJSON INTERFACE "${RAPIDJSON_INCLUDE_DIR}")
     add_dependencies(RapidJSON rapidjson_ep)
+endmacro()
+
+macro(build_datasketches)
+    message(STATUS "Building DataSketches from source")
+    set(DATASKETCHES_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/datasketches_ep-install")
+    set(DATASKETCHES_INCLUDE_DIR "${DATASKETCHES_PREFIX}/include")
+    set(DATASKETCHES_CMAKE_ARGS ${EP_COMMON_CMAKE_ARGS} -DBUILD_TESTS=OFF
+                                "-DCMAKE_INSTALL_PREFIX=${DATASKETCHES_PREFIX}")
+
+    externalproject_add(datasketches_ep
+                        ${EP_COMMON_OPTIONS}
+                        URL ${DATASKETCHES_SOURCE_URL}
+                        URL_HASH "SHA256=${PAIMON_DATASKETCHES_BUILD_SHA256_CHECKSUM}"
+                        CMAKE_ARGS ${DATASKETCHES_CMAKE_ARGS})
+
+    file(MAKE_DIRECTORY "${DATASKETCHES_INCLUDE_DIR}")
+    add_library(DataSketches INTERFACE IMPORTED)
+    target_include_directories(DataSketches SYSTEM
+                               INTERFACE "${DATASKETCHES_INCLUDE_DIR}")
+    add_dependencies(DataSketches datasketches_ep)
 endmacro()
 
 macro(build_fmt)
@@ -1862,6 +1897,7 @@ endmacro()
 
 resolve_dependency(fmt)
 resolve_dependency(RapidJSON)
+resolve_dependency(DataSketches)
 paimon_apply_dependency_source_defaults()
 resolve_dependency(RE2)
 resolve_dependency(Snappy)

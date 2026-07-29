@@ -24,6 +24,7 @@
 #include "paimon/core/mergetree/compact/aggregate/field_aggregator.h"
 #include "paimon/core/mergetree/compact/aggregate/field_bool_and_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_bool_or_agg.h"
+#include "paimon/core/mergetree/compact/aggregate/field_collect_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_first_non_null_value_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_first_value_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_ignore_retract_agg.h"
@@ -31,8 +32,12 @@
 #include "paimon/core/mergetree/compact/aggregate/field_last_value_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_listagg_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_max_agg.h"
+#include "paimon/core/mergetree/compact/aggregate/field_merge_map_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_min_agg.h"
+#include "paimon/core/mergetree/compact/aggregate/field_nested_update_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_primary_key_agg.h"
+#include "paimon/core/mergetree/compact/aggregate/field_roaring_bitmap64_agg.h"
+#include "paimon/core/mergetree/compact/aggregate/field_sketch_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_sum_agg.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -75,6 +80,24 @@ class FieldAggregatorFactory {
         } else if (str_agg == FieldListaggAgg::NAME) {
             PAIMON_ASSIGN_OR_RAISE(field_aggregator,
                                    FieldListaggAgg::Create(field_type, options, field_name));
+        } else if (str_agg == FieldCollectAgg::NAME) {
+            PAIMON_ASSIGN_OR_RAISE(field_aggregator,
+                                   FieldCollectAgg::Create(field_type, options, field_name));
+        } else if (str_agg == FieldMergeMapAgg::NAME) {
+            PAIMON_ASSIGN_OR_RAISE(field_aggregator,
+                                   FieldMergeMapAgg::Create(field_type, field_name));
+        } else if (str_agg == FieldNestedUpdateAgg::NAME) {
+            PAIMON_ASSIGN_OR_RAISE(field_aggregator,
+                                   FieldNestedUpdateAgg::Create(field_type, options, field_name));
+        } else if (str_agg == FieldRoaringBitmap64Agg::NAME) {
+            PAIMON_ASSIGN_OR_RAISE(field_aggregator,
+                                   FieldRoaringBitmap64Agg::Create(field_type, field_name));
+        } else if (str_agg == FieldHllSketchAgg::NAME) {
+            PAIMON_ASSIGN_OR_RAISE(field_aggregator,
+                                   FieldHllSketchAgg::Create(field_type, field_name));
+        } else if (str_agg == FieldThetaSketchAgg::NAME) {
+            PAIMON_ASSIGN_OR_RAISE(field_aggregator,
+                                   FieldThetaSketchAgg::Create(field_type, field_name));
         } else {
             return Status::Invalid(fmt::format(
                 "Use unsupported aggregation {} or spell aggregate function incorrectly!",
