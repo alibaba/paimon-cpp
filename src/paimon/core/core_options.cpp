@@ -708,8 +708,21 @@ struct CoreOptions::Impl {
         PAIMON_RETURN_NOT_OK(parser.ParseSortEngine(&sort_engine));
         // Parse merge-engine - merge engine for primary key table, default "deduplicate"
         PAIMON_RETURN_NOT_OK(parser.ParseMergeEngine(&merge_engine));
-        // Parse ignore-delete - whether to ignore delete records, default false
-        PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::IGNORE_DELETE, &ignore_delete));
+        // Parse ignore-delete - whether to ignore delete records, default false.
+        // Java CoreOptions declares first-row.ignore-delete, deduplicate.ignore-delete
+        // and partial-update.ignore-delete as fallback keys, checked in that order only
+        // when ignore-delete itself is absent.
+        std::optional<bool> ignore_delete_value;
+        PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::IGNORE_DELETE, &ignore_delete_value));
+        for (const char* fallback_key : {Options::FALLBACK_FIRST_ROW_IGNORE_DELETE,
+                                         Options::FALLBACK_DEDUPLICATE_IGNORE_DELETE,
+                                         Options::FALLBACK_PARTIAL_UPDATE_IGNORE_DELETE}) {
+            if (ignore_delete_value.has_value()) {
+                break;
+            }
+            PAIMON_RETURN_NOT_OK(parser.Parse<bool>(fallback_key, &ignore_delete_value));
+        }
+        ignore_delete = ignore_delete_value.value_or(false);
         // Parse fields.default-aggregate-function - default agg function for partial-update
         PAIMON_RETURN_NOT_OK(parser.Parse(Options::FIELDS_DEFAULT_AGG_FUNC, &field_default_func));
         // Parse changelog-producer - whether to double write to a changelog file, default "none"

@@ -320,6 +320,15 @@ struct PAIMON_EXPORT Options {
     /// "ignore-delete" - Whether to ignore delete records. Default value is "false".
     static const char IGNORE_DELETE[];
 
+    /// "first-row.ignore-delete" deprecated as a fallback for `IGNORE_DELETE`.
+    static const char FALLBACK_FIRST_ROW_IGNORE_DELETE[];
+
+    /// "deduplicate.ignore-delete" deprecated as a fallback for `IGNORE_DELETE`.
+    static const char FALLBACK_DEDUPLICATE_IGNORE_DELETE[];
+
+    /// "partial-update.ignore-delete" deprecated as a fallback for `IGNORE_DELETE`.
+    static const char FALLBACK_PARTIAL_UPDATE_IGNORE_DELETE[];
+
     /// "fields.default-aggregate-function" - Default aggregate function of all fields for
     /// partial-update and aggregate merge function.
     static const char FIELDS_DEFAULT_AGG_FUNC[];
