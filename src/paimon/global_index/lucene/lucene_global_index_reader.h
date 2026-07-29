@@ -126,6 +126,8 @@ class LuceneGlobalIndexReader : public GlobalIndexReader {
 
     std::vector<std::wstring> TokenizeQuery(const std::string& query) const;
 
+    static std::string NormalizeWildcardQuery(const std::string& query);
+
     std::shared_ptr<GlobalIndexResult> CreateAllResult() const {
         return nullptr;
     }

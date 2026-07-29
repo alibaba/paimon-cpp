@@ -83,6 +83,21 @@ void JiebaTokenizer::CutWithMode(const std::string& tokenize_mode, const cppjieb
     }
 }
 
+void JiebaTokenizer::NormalizeCase(std::string* term) {
+    bool is_alphanumeric = true;
+    for (const auto& c : *term) {
+        if (!std::isalnum(static_cast<unsigned char>(c))) {
+            is_alphanumeric = false;
+            break;
+        }
+    }
+    if (is_alphanumeric && !term->empty()) {
+        std::transform(term->begin(), term->end(), term->begin(), [](char ch) {
+            return static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+        });
+    }
+}
+
 void JiebaTokenizer::Normalize(const std::unordered_set<std::string>& stop_words,
                                std::vector<std::string>* input_ptr,
                                std::vector<std::string_view>* output_ptr) {
@@ -98,19 +113,7 @@ void JiebaTokenizer::Normalize(const std::unordered_set<std::string>& stop_words
         if (stop_words.find(term) != stop_words.end()) {
             continue;
         }
-        // to lower case
-        bool is_alphanumeric = true;
-        for (const auto& c : term) {
-            if (!std::isalnum(static_cast<unsigned char>(c))) {
-                is_alphanumeric = false;
-                break;
-            }
-        }
-        if (is_alphanumeric && !term.empty()) {
-            std::transform(term.begin(), term.end(), term.begin(), [](char ch) {
-                return static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
-            });
-        }
+        NormalizeCase(&term);
         output.emplace_back(term.data(), term.length());
     }
 }

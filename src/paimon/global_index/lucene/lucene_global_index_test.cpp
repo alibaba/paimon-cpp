@@ -234,6 +234,14 @@ TEST_P(LuceneGlobalIndexTest, TestSimple) {
                                  /*pre_filter=*/std::nullopt)));
         CheckResult(result, {3l});
     }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "THI", FullTextSearch::SearchType::PREFIX,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {1l, 0l});
+    }
     // test wildcard query
     {
         ASSERT_OK_AND_ASSIGN(auto result,
@@ -250,6 +258,14 @@ TEST_P(LuceneGlobalIndexTest, TestSimple) {
                                  /*limit=*/10, "*or*er*", FullTextSearch::SearchType::WILDCARD,
                                  /*pre_filter=*/std::nullopt)));
         CheckResult(result, {3l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "*THIS*", FullTextSearch::SearchType::WILDCARD,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {1l, 0l});
     }
     // test filter
     {

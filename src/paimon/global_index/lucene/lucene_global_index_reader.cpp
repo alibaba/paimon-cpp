@@ -116,6 +116,25 @@ std::vector<std::wstring> LuceneGlobalIndexReader::TokenizeQuery(const std::stri
     return wterms;
 }
 
+std::string LuceneGlobalIndexReader::NormalizeWildcardQuery(const std::string& query) {
+    std::string normalized_query;
+    normalized_query.reserve(query.size());
+    size_t term_begin = 0;
+    for (size_t i = 0; i <= query.size(); i++) {
+        if (i != query.size() && query[i] != '*' && query[i] != '?') {
+            continue;
+        }
+        std::string term = query.substr(term_begin, i - term_begin);
+        JiebaTokenizer::NormalizeCase(&term);
+        normalized_query.append(term);
+        if (i != query.size()) {
+            normalized_query.push_back(query[i]);
+        }
+        term_begin = i + 1;
+    }
+    return normalized_query;
+}
+
 Lucene::QueryPtr LuceneGlobalIndexReader::ConstructMatchQuery(
     const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false) {
     assert(full_text_search->search_type == FullTextSearch::SearchType::MATCH_ALL ||
@@ -153,15 +172,18 @@ Lucene::QueryPtr LuceneGlobalIndexReader::ConstructPhraseQuery(
 Lucene::QueryPtr LuceneGlobalIndexReader::ConstructPrefixQuery(
     const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false) {
     assert(full_text_search->search_type == FullTextSearch::SearchType::PREFIX);
-    return Lucene::newLucene<Lucene::PrefixQuery>(Lucene::newLucene<Lucene::Term>(
-        wfield_name_, LuceneUtils::StringToWstring(full_text_search->query)));
+    std::string query = full_text_search->query;
+    JiebaTokenizer::NormalizeCase(&query);
+    return Lucene::newLucene<Lucene::PrefixQuery>(
+        Lucene::newLucene<Lucene::Term>(wfield_name_, LuceneUtils::StringToWstring(query)));
 }
 
 Lucene::QueryPtr LuceneGlobalIndexReader::ConstructWildCardQuery(
     const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false) {
     assert(full_text_search->search_type == FullTextSearch::SearchType::WILDCARD);
     return Lucene::newLucene<Lucene::WildcardQuery>(Lucene::newLucene<Lucene::Term>(
-        wfield_name_, LuceneUtils::StringToWstring(full_text_search->query)));
+        wfield_name_,
+        LuceneUtils::StringToWstring(NormalizeWildcardQuery(full_text_search->query))));
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> LuceneGlobalIndexReader::SearchWithLimit(
