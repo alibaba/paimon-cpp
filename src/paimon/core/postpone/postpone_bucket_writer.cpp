@@ -72,21 +72,19 @@ Result<std::unique_ptr<PostponeBucketWriter>> PostponeBucketWriter::Create(
     const std::vector<std::string>& trimmed_primary_keys,
     const std::shared_ptr<DataFilePathFactory>& path_factory, int64_t schema_id,
     const std::shared_ptr<arrow::Schema>& value_schema, const CoreOptions& options,
-    const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
     const std::shared_ptr<MemoryPool>& pool) {
     auto write_schema = BuildPostponeBucketWriteSchema(value_schema);
-    return std::unique_ptr<PostponeBucketWriter>(
-        new PostponeBucketWriter(trimmed_primary_keys, path_factory, schema_id, value_schema,
-                                 write_schema, options, pool, shredding_context));
+    return std::unique_ptr<PostponeBucketWriter>(new PostponeBucketWriter(
+        trimmed_primary_keys, path_factory, schema_id, value_schema, write_schema, options, pool));
 }
 
-PostponeBucketWriter::PostponeBucketWriter(
-    const std::vector<std::string>& trimmed_primary_keys,
-    const std::shared_ptr<DataFilePathFactory>& path_factory, int64_t schema_id,
-    const std::shared_ptr<arrow::Schema>& value_schema,
-    const std::shared_ptr<arrow::Schema>& write_schema, const CoreOptions& options,
-    const std::shared_ptr<MemoryPool>& pool,
-    const std::shared_ptr<MapSharedShreddingContext>& shredding_context)
+PostponeBucketWriter::PostponeBucketWriter(const std::vector<std::string>& trimmed_primary_keys,
+                                           const std::shared_ptr<DataFilePathFactory>& path_factory,
+                                           int64_t schema_id,
+                                           const std::shared_ptr<arrow::Schema>& value_schema,
+                                           const std::shared_ptr<arrow::Schema>& write_schema,
+                                           const CoreOptions& options,
+                                           const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
       arrow_pool_(GetArrowPool(pool)),
       trimmed_primary_keys_(trimmed_primary_keys),
@@ -95,7 +93,6 @@ PostponeBucketWriter::PostponeBucketWriter(
       schema_id_(schema_id),
       value_type_(arrow::struct_(value_schema->fields())),
       write_schema_(write_schema),
-      shredding_context_(shredding_context),
       metrics_(std::make_shared<MetricsImpl>()) {}
 
 Status PostponeBucketWriter::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
@@ -137,7 +134,10 @@ Status PostponeBucketWriter::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
 
     // write KeyValueBatch to RollingFileWriter
     if (!writer_) {
-        writer_ = CreateRollingRowWriter();
+        std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>
+            rolling_writer;
+        PAIMON_ASSIGN_OR_RAISE(rolling_writer, CreateRollingRowWriter());
+        writer_ = std::move(rolling_writer);
     }
     PAIMON_RETURN_NOT_OK(writer_->Write(std::move(key_value_batch)));
     return Status::OK();
@@ -259,11 +259,13 @@ PostponeBucketWriter::PrepareMinMaxKey(
                                       value_struct_array->length() - 1));
 }
 
-std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>
+Result<std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>>
 PostponeBucketWriter::CreateRollingRowWriter() const {
     std::shared_ptr<SingleFileWriterFactory<KeyValueBatch, std::shared_ptr<DataFileMeta>>> factory;
-    if (auto plan_factory = ShreddingWritePlanFactories::SelectActive(options_, write_schema_,
-                                                                      shredding_context_, pool_)) {
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<ShreddingWritePlanFactory> plan_factory,
+        ShreddingWritePlanFactories::SelectActive(options_, write_schema_, pool_));
+    if (plan_factory != nullptr) {
         factory = std::make_shared<ShreddingKeyValueDataFileWriterFactory>(
             options_, schema_id_, write_schema_, /*level=*/0, FileSource::Append(),
             trimmed_primary_keys_, path_factory_, /*create_stats_extractor=*/false, plan_factory,
@@ -274,7 +276,8 @@ PostponeBucketWriter::CreateRollingRowWriter() const {
             trimmed_primary_keys_, path_factory_, /*create_stats_extractor=*/false, pool_);
     }
     return std::make_unique<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>(
-        options_.GetTargetFileSize(/*has_primary_key=*/true), factory);
+        options_.GetTargetFileSize(/*has_primary_key=*/true), options_.GetTargetFileRowNum(),
+        factory);
 }
 
 Status PostponeBucketWriter::Flush() {

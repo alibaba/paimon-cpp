@@ -22,24 +22,27 @@
 
 namespace paimon {
 
-std::shared_ptr<ShreddingWritePlanFactory> ShreddingWritePlanFactories::SelectActive(
+Result<std::shared_ptr<ShreddingWritePlanFactory>> ShreddingWritePlanFactories::SelectActive(
     const CoreOptions& options, const std::shared_ptr<arrow::Schema>& write_schema,
-    const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
     const std::shared_ptr<MemoryPool>& pool) {
-    // MAP shared-shredding is active exactly when a context exists; constructing its factory
-    // copies the options, so skip it otherwise.
-    if (shredding_context != nullptr) {
-        auto map_factory = std::make_shared<MapSharedShreddingWritePlanFactory>(
-            options, write_schema, shredding_context, pool);
-        if (map_factory->ShouldCreateWritePlan()) {
-            return map_factory;
-        }
-    }
+    std::shared_ptr<ShreddingWritePlanFactory> active_factory;
+
     auto variant_factory = VariantShreddingWritePlanFactory::Create(options, write_schema, pool);
     if (variant_factory->ShouldCreateWritePlan()) {
-        return variant_factory;
+        active_factory = std::move(variant_factory);
     }
-    return std::shared_ptr<ShreddingWritePlanFactory>(nullptr);
+
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<MapSharedShreddingWritePlanFactory> map_factory,
+                           MapSharedShreddingWritePlanFactory::Create(options, write_schema, pool));
+    if (map_factory->ShouldCreateWritePlan()) {
+        if (active_factory != nullptr) {
+            return Status::NotImplemented(
+                "Composing multiple active shredding write plans is not supported.");
+        }
+        active_factory = std::move(map_factory);
+    }
+
+    return active_factory;
 }
 
 }  // namespace paimon

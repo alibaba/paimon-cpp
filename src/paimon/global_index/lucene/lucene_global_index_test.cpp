@@ -234,6 +234,14 @@ TEST_P(LuceneGlobalIndexTest, TestSimple) {
                                  /*pre_filter=*/std::nullopt)));
         CheckResult(result, {3l});
     }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "THIS", FullTextSearch::SearchType::PREFIX,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {1l, 0l});
+    }
     // test wildcard query
     {
         ASSERT_OK_AND_ASSIGN(auto result,
@@ -250,6 +258,22 @@ TEST_P(LuceneGlobalIndexTest, TestSimple) {
                                  /*limit=*/10, "*or*er*", FullTextSearch::SearchType::WILDCARD,
                                  /*pre_filter=*/std::nullopt)));
         CheckResult(result, {3l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "*THIS*", FullTextSearch::SearchType::WILDCARD,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {1l, 0l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "*?HIS*", FullTextSearch::SearchType::WILDCARD,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {1l, 0l});
     }
     // test filter
     {
@@ -437,6 +461,43 @@ TEST_P(LuceneGlobalIndexTest, TestSimpleChinese) {
                 /*pre_filter=*/std::nullopt)));
         CheckResult(result, {0l, 1l, 2l, 3l});
     }
+}
+
+TEST_P(LuceneGlobalIndexTest, TestMixedAsciiCjkPrefixAndWildcard) {
+    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    auto tmp_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(tmp_dir);
+
+    std::map<std::string, std::string> options = {
+        {"lucene-fts.write.omit-term-freq-and-position", "false"},
+        {"lucene-fts.read.buffer-size", std::to_string(GetParam())},
+        {"lucene-fts.jieba.tokenize-mode", "query"},
+        {"lucene-fts.write.tmp.directory", tmp_dir->Str()}};
+    std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(data_type_, R"([
+            ["B超检查"],
+            ["T恤"]
+        ])")
+                                              .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(auto meta, WriteGlobalIndex(test_root_dir->Str(), data_type_, options,
+                                                     array, Range(0, 1), tmp_dir->Str()));
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         CreateGlobalIndexReader(test_root_dir->Str(), data_type_, options, meta));
+    auto lucene_reader = std::dynamic_pointer_cast<LuceneGlobalIndexReader>(reader);
+    ASSERT_TRUE(lucene_reader);
+
+    ASSERT_OK_AND_ASSIGN(auto prefix_result,
+                         lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                             "f0", /*limit=*/10, "B", FullTextSearch::SearchType::PREFIX,
+                             /*pre_filter=*/std::nullopt)));
+    CheckResult(prefix_result, {0l});
+
+    ASSERT_OK_AND_ASSIGN(auto wildcard_result,
+                         lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                             "f0", /*limit=*/10, "*T*", FullTextSearch::SearchType::WILDCARD,
+                             /*pre_filter=*/std::nullopt)));
+    CheckResult(wildcard_result, {1l});
 }
 
 TEST_F(LuceneGlobalIndexTest, TestInvalidWithoutTmpDir) {

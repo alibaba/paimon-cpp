@@ -32,6 +32,7 @@ const char Options::BUCKET_KEY[] = "bucket-key";
 const char Options::FILE_FORMAT[] = "file.format";
 const char Options::FILE_SYSTEM[] = "file-system";
 const char Options::TARGET_FILE_SIZE[] = "target-file-size";
+const char Options::TARGET_FILE_ROW_NUM[] = "target-file-row-num";
 const char Options::BLOB_TARGET_FILE_SIZE[] = "blob.target-file-size";
 const char Options::BLOB_SPLIT_BY_FILE_SIZE[] = "blob.split-by-file-size";
 const char Options::PAGE_SIZE[] = "page-size";
@@ -107,12 +108,17 @@ const char Options::MAP_SHARED_SHREDDING_COLUMN_PLACEMENT_POLICY[] =
 const char Options::VARIANT_SHREDDING_SCHEMA[] = "variant.shreddingSchema";
 const char Options::PARQUET_VARIANT_SHREDDING_SCHEMA[] = "parquet.variant.shreddingSchema";
 const char Options::VARIANT_INFER_SHREDDING_SCHEMA[] = "variant.inferShreddingSchema";
+const char Options::VARIANT_SHREDDING_INFERENCE_MODE[] = "variant.shredding.inferenceMode";
 const char Options::VARIANT_SHREDDING_MAX_SCHEMA_WIDTH[] = "variant.shredding.maxSchemaWidth";
 const char Options::VARIANT_SHREDDING_MAX_SCHEMA_DEPTH[] = "variant.shredding.maxSchemaDepth";
 const char Options::VARIANT_SHREDDING_MIN_FIELD_CARDINALITY_RATIO[] =
     "variant.shredding.minFieldCardinalityRatio";
 const char Options::VARIANT_SHREDDING_MAX_INFER_BUFFER_ROW[] =
     "variant.shredding.maxInferBufferRow";
+const char Options::VARIANT_SHREDDING_ADAPTIVE_MAX_INFER_BUFFER_ROW[] =
+    "variant.shredding.adaptive.maxInferBufferRow";
+const char Options::VARIANT_SHREDDING_ADAPTIVE_RETENTION_RATIO[] =
+    "variant.shredding.adaptive.retentionRatio";
 const char Options::BLOB_AS_DESCRIPTOR[] = "blob-as-descriptor";
 const char Options::BLOB_FIELD[] = "blob-field";
 const char Options::BLOB_DESCRIPTOR_FIELD[] = "blob-descriptor-field";

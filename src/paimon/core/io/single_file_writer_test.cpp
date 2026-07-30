@@ -104,4 +104,42 @@ TEST(SingleFileWriterTest, TestInvalidConvert) {
     ASSERT_FALSE(exist);
 }
 
+TEST(SingleFileWriterTest, CompletionCallbackFailureIsTerminal) {
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    std::string file_path = dir->Str() + "/single-file";
+    auto data_type = arrow::struct_({arrow::field("col", arrow::int32())});
+    auto converter = [&](int32_t value, ::ArrowArray* dest) -> Status {
+        std::string value_str = "[[" + std::to_string(value) + "]]";
+        auto array =
+            arrow::ipc::internal::json::ArrayFromJSON(data_type, value_str.c_str()).ValueOrDie();
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, dest));
+        return Status::OK();
+    };
+    SimpleSingleFileWriter writer("zstd", converter);
+    ASSERT_OK_AND_ASSIGN(
+        CoreOptions options,
+        CoreOptions::FromMap({{Options::MANIFEST_FORMAT, "orc"}, {Options::FILE_FORMAT, "orc"}}));
+    auto file_format = options.GetWriteFileFormat(/*level=*/0);
+    auto file_system = options.GetFileSystem();
+    ArrowSchema arrow_schema;
+    ASSERT_TRUE(arrow::ExportType(*data_type, &arrow_schema).ok());
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<WriterBuilder> writer_builder,
+                         file_format->CreateWriterBuilder(&arrow_schema, /*batch_size=*/100));
+    ASSERT_OK(writer.Init(file_system, file_path, writer_builder));
+    ASSERT_OK(writer.Write(100));
+
+    int32_t callback_count = 0;
+    writer.SetCompletionCallback([&callback_count]() -> Status {
+        ++callback_count;
+        return Status::Invalid("completion failed");
+    });
+    ASSERT_NOK_WITH_MSG(writer.Close(), "completion failed");
+    ASSERT_EQ(callback_count, 1);
+    ASSERT_OK(writer.Close());
+    ASSERT_EQ(callback_count, 1);
+    ASSERT_OK_AND_ASSIGN(auto exists, file_system->Exists(file_path));
+    ASSERT_FALSE(exists);
+}
+
 }  // namespace paimon::test

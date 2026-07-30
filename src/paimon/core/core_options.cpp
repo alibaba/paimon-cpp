@@ -227,6 +227,23 @@ class ConfigParser {
         return Status::OK();
     }
 
+    // Parse VariantShreddingInferenceMode
+    Status ParseVariantShreddingInferenceMode(VariantShreddingInferenceMode* inference_mode) const {
+        auto iter = config_map_.find(Options::VARIANT_SHREDDING_INFERENCE_MODE);
+        if (iter != config_map_.end()) {
+            std::string str = StringUtils::ToLowerCase(iter->second);
+            if (str == "per-file") {
+                *inference_mode = VariantShreddingInferenceMode::PER_FILE;
+            } else if (str == "adaptive") {
+                *inference_mode = VariantShreddingInferenceMode::ADAPTIVE;
+            } else {
+                return Status::Invalid(
+                    fmt::format("invalid variant shredding inference mode: {}", str));
+            }
+        }
+        return Status::OK();
+    }
+
     // Parse ChangelogProducer
     Status ParseChangelogProducer(ChangelogProducer* changelog_producer) const {
         auto iter = config_map_.find(Options::CHANGELOG_PRODUCER);
@@ -360,6 +377,7 @@ class ConfigParser {
 struct CoreOptions::Impl {
     int64_t page_size = 64 * 1024;
     std::optional<int64_t> target_file_size;
+    int64_t target_file_row_num = std::numeric_limits<int64_t>::max();
     std::optional<int64_t> blob_target_file_size;
     int64_t source_split_target_size = 128 * 1024 * 1024;
     int64_t source_split_open_file_cost = 4 * 1024 * 1024;
@@ -448,10 +466,14 @@ struct CoreOptions::Impl {
     bool row_tracking_partition_group_on_commit = true;
     bool data_evolution_enabled = false;
     bool variant_infer_shredding_schema = false;
+    VariantShreddingInferenceMode variant_shredding_inference_mode =
+        VariantShreddingInferenceMode::PER_FILE;
     int32_t variant_shredding_max_schema_width = 300;
     int32_t variant_shredding_max_schema_depth = 50;
     double variant_shredding_min_field_cardinality_ratio = 0.1;
     int32_t variant_shredding_max_infer_buffer_row = 4096;
+    int32_t variant_shredding_adaptive_max_infer_buffer_row = 256;
+    double variant_shredding_adaptive_retention_ratio = 0.05;
     bool blob_view_resolve_enabled = true;
     bool blob_as_descriptor = false;
     std::optional<bool> blob_split_by_file_size;
@@ -500,6 +522,13 @@ struct CoreOptions::Impl {
         PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::PAGE_SIZE, &page_size));
         // Parse target-file-size - target size of a data file
         PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::TARGET_FILE_SIZE, &target_file_size));
+        // Parse target-file-row-num - target rows of a newly written data file
+        PAIMON_RETURN_NOT_OK(
+            parser.Parse<int64_t>(Options::TARGET_FILE_ROW_NUM, &target_file_row_num));
+        if (target_file_row_num <= 0) {
+            return Status::Invalid(
+                fmt::format("{} should be at least 1", Options::TARGET_FILE_ROW_NUM));
+        }
         // Parse blob.target-file-size - target size of a blob file
         PAIMON_RETURN_NOT_OK(
             parser.ParseMemorySize(Options::BLOB_TARGET_FILE_SIZE, &blob_target_file_size));
@@ -868,6 +897,8 @@ struct CoreOptions::Impl {
         // Parse variant.inferShreddingSchema - infer the shredding schema from sampled rows
         PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::VARIANT_INFER_SHREDDING_SCHEMA,
                                                 &variant_infer_shredding_schema));
+        PAIMON_RETURN_NOT_OK(
+            parser.ParseVariantShreddingInferenceMode(&variant_shredding_inference_mode));
         // Parse variant.shredding.maxSchemaWidth - max number of shredded fields, default 300
         PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::VARIANT_SHREDDING_MAX_SCHEMA_WIDTH,
                                                    &variant_shredding_max_schema_width));
@@ -883,6 +914,12 @@ struct CoreOptions::Impl {
         // default 4096
         PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::VARIANT_SHREDDING_MAX_INFER_BUFFER_ROW,
                                                    &variant_shredding_max_infer_buffer_row));
+        PAIMON_RETURN_NOT_OK(
+            parser.Parse<int32_t>(Options::VARIANT_SHREDDING_ADAPTIVE_MAX_INFER_BUFFER_ROW,
+                                  &variant_shredding_adaptive_max_infer_buffer_row));
+        PAIMON_RETURN_NOT_OK(
+            parser.Parse<double>(Options::VARIANT_SHREDDING_ADAPTIVE_RETENTION_RATIO,
+                                 &variant_shredding_adaptive_retention_ratio));
         if (variant_shredding_max_schema_width <= 0) {
             return Status::Invalid(fmt::format(
                 "The option '{}' should be positive, while input is {}",
@@ -905,6 +942,23 @@ struct CoreOptions::Impl {
                 fmt::format("The option '{}' should be positive, while input is {}",
                             Options::VARIANT_SHREDDING_MAX_INFER_BUFFER_ROW,
                             variant_shredding_max_infer_buffer_row));
+        }
+        if (variant_shredding_inference_mode == VariantShreddingInferenceMode::ADAPTIVE) {
+            if (variant_shredding_adaptive_max_infer_buffer_row <= 0) {
+                return Status::Invalid(
+                    fmt::format("The option '{}' should be positive, while input is {}",
+                                Options::VARIANT_SHREDDING_ADAPTIVE_MAX_INFER_BUFFER_ROW,
+                                variant_shredding_adaptive_max_infer_buffer_row));
+            }
+            if (variant_shredding_adaptive_retention_ratio < 0.0 ||
+                variant_shredding_adaptive_retention_ratio >
+                    variant_shredding_min_field_cardinality_ratio) {
+                return Status::Invalid(
+                    fmt::format("The option '{}' should be in the range [0, {}], while input is {}",
+                                Options::VARIANT_SHREDDING_ADAPTIVE_RETENTION_RATIO,
+                                Options::VARIANT_SHREDDING_MIN_FIELD_CARDINALITY_RATIO,
+                                variant_shredding_adaptive_retention_ratio));
+            }
         }
         return Status::OK();
     }
@@ -1046,6 +1100,10 @@ int64_t CoreOptions::GetTargetFileSize(bool has_primary_key) const {
         return has_primary_key ? 128 * 1024 * 1024 : 256 * 1024 * 1024;
     }
     return impl_->target_file_size.value();
+}
+
+int64_t CoreOptions::GetTargetFileRowNum() const {
+    return impl_->target_file_row_num;
 }
 
 int64_t CoreOptions::GetBlobTargetFileSize() const {
@@ -1353,6 +1411,10 @@ bool CoreOptions::VariantInferShreddingSchemaEnabled() const {
     return impl_->variant_infer_shredding_schema;
 }
 
+VariantShreddingInferenceMode CoreOptions::GetVariantShreddingInferenceMode() const {
+    return impl_->variant_shredding_inference_mode;
+}
+
 int32_t CoreOptions::GetVariantShreddingMaxSchemaWidth() const {
     return impl_->variant_shredding_max_schema_width;
 }
@@ -1367,6 +1429,14 @@ double CoreOptions::GetVariantShreddingMinFieldCardinalityRatio() const {
 
 int32_t CoreOptions::GetVariantShreddingMaxInferBufferRow() const {
     return impl_->variant_shredding_max_infer_buffer_row;
+}
+
+int32_t CoreOptions::GetVariantShreddingAdaptiveMaxInferBufferRow() const {
+    return impl_->variant_shredding_adaptive_max_infer_buffer_row;
+}
+
+double CoreOptions::GetVariantShreddingAdaptiveRetentionRatio() const {
+    return impl_->variant_shredding_adaptive_retention_ratio;
 }
 
 Result<MapStorageLayout> CoreOptions::GetMapStorageLayout(const std::string& field_name) const {

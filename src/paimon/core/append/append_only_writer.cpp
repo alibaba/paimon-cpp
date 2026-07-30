@@ -17,6 +17,7 @@
 #include "paimon/core/append/append_only_writer.h"
 
 #include <functional>
+#include <limits>
 #include <map>
 #include <string>
 #include <utility>
@@ -51,14 +52,13 @@
 
 namespace paimon {
 
-AppendOnlyWriter::AppendOnlyWriter(
-    const CoreOptions& options, int64_t schema_id,
-    const std::shared_ptr<arrow::Schema>& write_schema,
-    const std::optional<std::vector<std::string>>& write_cols, int64_t max_sequence_number,
-    const std::shared_ptr<DataFilePathFactory>& path_factory,
-    const std::shared_ptr<CompactManager>& compact_manager,
-    const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
-    const std::shared_ptr<MemoryPool>& memory_pool)
+AppendOnlyWriter::AppendOnlyWriter(const CoreOptions& options, int64_t schema_id,
+                                   const std::shared_ptr<arrow::Schema>& write_schema,
+                                   const std::optional<std::vector<std::string>>& write_cols,
+                                   int64_t max_sequence_number,
+                                   const std::shared_ptr<DataFilePathFactory>& path_factory,
+                                   const std::shared_ptr<CompactManager>& compact_manager,
+                                   const std::shared_ptr<MemoryPool>& memory_pool)
     : options_(options),
       schema_id_(schema_id),
       write_schema_(write_schema),
@@ -67,8 +67,7 @@ AppendOnlyWriter::AppendOnlyWriter(
       path_factory_(path_factory),
       compact_manager_(compact_manager),
       memory_pool_(memory_pool),
-      metrics_(std::make_shared<MetricsImpl>()),
-      shredding_context_(shredding_context) {}
+      metrics_(std::make_shared<MetricsImpl>()) {}
 
 AppendOnlyWriter::~AppendOnlyWriter() = default;
 
@@ -187,16 +186,20 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingRowWrit
     }
 
     // No BLOB fields, or all BLOB fields are inline and no .blob files are needed.
+    PAIMON_ASSIGN_OR_RAISE(WriterFactory writer_factory,
+                           GetDataFileWriterFactory(write_schema_, write_cols_));
     return std::make_unique<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
-        options_.GetTargetFileSize(/*has_primary_key=*/false),
-        GetDataFileWriterFactory(write_schema_, write_cols_));
+        options_.GetTargetFileSize(/*has_primary_key=*/false), options_.GetTargetFileRowNum(),
+        writer_factory);
 }
 
-AppendOnlyWriter::WriterFactory AppendOnlyWriter::GetDataFileWriterFactory(
+Result<AppendOnlyWriter::WriterFactory> AppendOnlyWriter::GetDataFileWriterFactory(
     const std::shared_ptr<arrow::Schema>& schema,
     const std::optional<std::vector<std::string>>& write_cols) const {
-    if (auto plan_factory = ShreddingWritePlanFactories::SelectActive(
-            options_, schema, shredding_context_, memory_pool_)) {
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<ShreddingWritePlanFactory> plan_factory,
+        ShreddingWritePlanFactories::SelectActive(options_, schema, memory_pool_));
+    if (plan_factory != nullptr) {
         return std::make_shared<ShreddingAppendDataFileWriterFactory>(
             options_, schema_id_, schema, write_cols, seq_num_counter_, FileSource::Append(),
             path_factory_, plan_factory, memory_pool_);
@@ -235,17 +238,21 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingBlobWri
         auto single_blob_file_writer_factory =
             GetBlobFileWriterFactory(single_field_schema, write_cols);
         return std::make_unique<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
-            options_.GetBlobTargetFileSize(), single_blob_file_writer_factory);
+            options_.GetBlobTargetFileSize(),
+            /*target_file_row_num=*/std::numeric_limits<int64_t>::max(),
+            single_blob_file_writer_factory);
     };
 
     WriterFactory main_writer_factory;
     if (schemas.main_schema->num_fields() > 0) {
-        main_writer_factory =
-            GetDataFileWriterFactory(schemas.main_schema, schemas.main_schema->field_names());
+        PAIMON_ASSIGN_OR_RAISE(
+            main_writer_factory,
+            GetDataFileWriterFactory(schemas.main_schema, schemas.main_schema->field_names()));
     }
     return std::make_unique<RollingBlobFileWriter>(
-        options_.GetTargetFileSize(/*has_primary_key=*/false), main_writer_factory, blob_schema,
-        blob_writer_creator, arrow::struct_(write_schema_->fields()), inline_fields);
+        options_.GetTargetFileSize(/*has_primary_key=*/false), options_.GetTargetFileRowNum(),
+        main_writer_factory, blob_schema, blob_writer_creator,
+        arrow::struct_(write_schema_->fields()), inline_fields);
 }
 
 Status AppendOnlyWriter::Sync() {

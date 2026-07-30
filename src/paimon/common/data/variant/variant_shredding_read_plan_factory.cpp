@@ -75,6 +75,40 @@ class FullVariantColumnReadPlan : public ShreddingColumnReadPlan {
     std::shared_ptr<MemoryPool> pool_;
 };
 
+/// Restores the logical `struct<value, metadata>` field order of an untyped physical
+/// `struct<metadata, value>` without copying either binary child.
+class UntypedVariantColumnReadPlan : public ShreddingColumnReadPlan {
+ public:
+    UntypedVariantColumnReadPlan(std::shared_ptr<arrow::Field> logical_field,
+                                 std::shared_ptr<arrow::Field> physical_field)
+        : logical_field_(std::move(logical_field)), physical_field_(std::move(physical_field)) {}
+
+    const std::shared_ptr<arrow::Field>& LogicalField() const override {
+        return logical_field_;
+    }
+
+    const std::shared_ptr<arrow::Field>& PhysicalField() const override {
+        return physical_field_;
+    }
+
+    Result<std::shared_ptr<arrow::Array>> Assemble(const std::shared_ptr<arrow::Array>& physical,
+                                                   arrow::MemoryPool*) const override {
+        if (physical->type_id() != arrow::Type::STRUCT ||
+            physical->data()->child_data.size() != 2) {
+            return Status::Invalid(fmt::format("cannot reorder untyped physical variant field {}",
+                                               physical_field_->name()));
+        }
+        std::shared_ptr<arrow::ArrayData> logical_data = physical->data()->Copy();
+        logical_data->type = logical_field_->type();
+        std::swap(logical_data->child_data[0], logical_data->child_data[1]);
+        return arrow::MakeArray(std::move(logical_data));
+    }
+
+ private:
+    std::shared_ptr<arrow::Field> logical_field_;
+    std::shared_ptr<arrow::Field> physical_field_;
+};
+
 /// A node of a nested variant plan tree: a variant position with its own leaf plan, or a nested
 /// container level to descend through.
 struct NestedVariantNode {
@@ -538,6 +572,9 @@ Result<std::shared_ptr<ShreddingColumnReadPlan>> CreateVariantColumnPlan(
         }
         return std::make_shared<VariantAccessColumnReadPlan>(
             read_field, physical_field, std::move(schema), std::move(resolved), pool);
+    }
+    if (VariantShreddingUtils::IsUntypedPhysicalVariantType(file_field->type())) {
+        return std::make_shared<UntypedVariantColumnReadPlan>(read_field, file_field);
     }
     if (!VariantShreddingUtils::IsShreddedFileType(file_field->type())) {
         return std::shared_ptr<ShreddingColumnReadPlan>();

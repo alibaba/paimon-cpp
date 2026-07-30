@@ -29,18 +29,14 @@ class Schema;
 namespace paimon {
 
 class CoreOptions;
-class MapSharedShreddingContext;
-
 /// Composes the known shredding write-plan factories (MAP shared-shredding and VARIANT
 /// shredding) and selects the one active for a write schema.
 class ShreddingWritePlanFactories {
  public:
     /// Returns the single active write-plan factory for the write, or nullptr when no shredding
-    /// applies. MAP shared-shredding takes precedence over VARIANT shredding, preserving the
-    /// selection order of the writer call sites.
-    static std::shared_ptr<ShreddingWritePlanFactory> SelectActive(
+    /// applies. Each concrete factory detects whether it is active and owns its internal state.
+    static Result<std::shared_ptr<ShreddingWritePlanFactory>> SelectActive(
         const CoreOptions& options, const std::shared_ptr<arrow::Schema>& write_schema,
-        const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
         const std::shared_ptr<MemoryPool>& pool);
 };
 

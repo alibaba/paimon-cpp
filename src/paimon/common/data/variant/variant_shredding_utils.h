@@ -56,6 +56,10 @@ class VariantShreddingUtils {
     /// Whether the physical struct type of a variant field in a data file is shredded (contains
     /// a `typed_value` child).
     static bool IsShreddedFileType(const std::shared_ptr<arrow::DataType>& file_variant_type);
+
+    /// Whether the physical struct uses the untyped inference layout `{metadata, value}`.
+    static bool IsUntypedPhysicalVariantType(
+        const std::shared_ptr<arrow::DataType>& file_variant_type);
 };
 
 }  // namespace paimon

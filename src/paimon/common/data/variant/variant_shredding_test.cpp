@@ -197,9 +197,15 @@ TEST_F(VariantShreddingTest, ShreddingSchemaShape) {
     ASSERT_EQ(schema->object_schema.size(), 2);
     ASSERT_FALSE(schema->IsUnshredded());
     ASSERT_TRUE(VariantShreddingUtils::IsShreddedFileType(physical));
-    ASSERT_FALSE(VariantShreddingUtils::IsShreddedFileType(
-        arrow::struct_({arrow::field("value", arrow::binary(), false),
-                        arrow::field("metadata", arrow::binary(), false)})));
+    auto logical_variant = arrow::struct_({arrow::field("value", arrow::binary(), false),
+                                           arrow::field("metadata", arrow::binary(), false)});
+    auto untyped_physical_variant =
+        arrow::struct_({arrow::field("metadata", arrow::binary(), false),
+                        arrow::field("value", arrow::binary(), false)});
+    ASSERT_FALSE(VariantShreddingUtils::IsShreddedFileType(logical_variant));
+    ASSERT_FALSE(VariantShreddingUtils::IsShreddedFileType(untyped_physical_variant));
+    ASSERT_FALSE(VariantShreddingUtils::IsUntypedPhysicalVariantType(logical_variant));
+    ASSERT_TRUE(VariantShreddingUtils::IsUntypedPhysicalVariantType(untyped_physical_variant));
 
     // Invalid shredding types are rejected.
     ASSERT_NOK(VariantShreddingUtils::VariantShreddingSchema(arrow::date32()));

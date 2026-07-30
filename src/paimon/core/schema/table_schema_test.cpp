@@ -1276,6 +1276,34 @@ TEST_F(TableSchemaTest, MapKeyMustBeNotNull) {
     })";
     ASSERT_NOK_WITH_MSG(TableSchema::CreateFromJson(table_schema_str),
                         "Map field 'f0' has a nullable key.");
+
+    auto nullable_key_map =
+        std::make_shared<arrow::MapType>(arrow::field("key", arrow::int8(), /*nullable=*/true),
+                                         arrow::field("value", arrow::int16()));
+    ASSERT_NOK_WITH_MSG(
+        TableSchema::Create(/*schema_id=*/0, arrow::schema({arrow::field("f0", nullable_key_map)}),
+                            /*partition_keys=*/{}, /*primary_keys=*/{}, /*options=*/{}),
+        "Map field 'f0' has a nullable key.");
+}
+
+TEST_F(TableSchemaTest, MapKeysSortedIsNormalized) {
+    auto sorted_map =
+        std::make_shared<arrow::MapType>(arrow::field("key", arrow::utf8(), /*nullable=*/false),
+                                         arrow::field("value", arrow::int64()),
+                                         /*keys_sorted=*/true);
+    ASSERT_OK_AND_ASSIGN(
+        auto table_schema,
+        TableSchema::Create(/*schema_id=*/0, arrow::schema({arrow::field("f0", sorted_map)}),
+                            /*partition_keys=*/{}, /*primary_keys=*/{}, /*options=*/{}));
+
+    auto map_type = std::static_pointer_cast<arrow::MapType>(table_schema->Fields()[0].Type());
+    ASSERT_FALSE(map_type->keys_sorted());
+
+    ASSERT_OK_AND_ASSIGN(std::string json, table_schema->ToJsonString());
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableSchema> restored, TableSchema::CreateFromJson(json));
+    auto restored_map_type = std::static_pointer_cast<arrow::MapType>(restored->Fields()[0].Type());
+    ASSERT_FALSE(restored_map_type->keys_sorted());
+    ASSERT_TRUE(map_type->Equals(*restored_map_type));
 }
 
 TEST_F(TableSchemaTest, CrossPartitionUpdate) {

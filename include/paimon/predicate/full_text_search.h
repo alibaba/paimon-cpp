@@ -77,10 +77,14 @@ struct PAIMON_EXPORT FullTextSearch {
     /// - For PHRASE: matches the exact word sequence (with optional slop). Also be analyzed.
     ///
     /// - For PREFIX: matches terms starting with the given string (e.g., "run" → running, runner).
-    ///   Only the prefix part is considered; analysis will not be applied.
+    ///   The query is not tokenized or filtered for stop words. The original prefix is retained,
+    ///   and a prefix consisting entirely of ASCII letters and digits is also matched using the
+    ///   lowercase case-normalization applied to pure ASCII terms at indexing time.
     ///
     /// - For WILDCARD: supports wildcards * and ? (e.g., "ap*e", "app?e").
-    ///   Not passed through analyzer — matched directly against indexed terms.
+    ///   The query is not tokenized or filtered for stop words. The wildcard operators are
+    ///   preserved. Both the original pattern and an alternative with each ASCII alphanumeric
+    ///   fragment lowercased are matched, covering pure ASCII and mixed ASCII/non-ASCII terms.
     ///
     /// @note Analyzer consistency between indexing and querying is critical for correctness.
     std::string query;

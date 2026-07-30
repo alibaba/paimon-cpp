@@ -71,6 +71,9 @@ class MapSharedShreddingBatchConverter : public ShreddingBatchConverter {
     /// Called at file close to serialize metadata.
     Result<MapSharedShreddingFieldMeta> BuildFieldMeta(const std::string& field_name) const;
 
+    /// Returns the maximum number of entries observed in one row for a shredding column.
+    Result<int32_t> GetMaxRowWidth(const std::string& field_name) const;
+
     /// Returns all shredding column field names.
     const std::vector<std::string>& GetShreddingColumnNames() const;
 

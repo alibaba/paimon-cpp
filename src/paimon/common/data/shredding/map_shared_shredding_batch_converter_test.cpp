@@ -28,6 +28,7 @@
 #include "gtest/gtest.h"
 #include "paimon/common/data/shredding/map_shared_shredding_context.h"
 #include "paimon/common/data/shredding/map_shared_shredding_utils.h"
+#include "paimon/common/data/shredding/map_shared_shredding_write_plan_factory.h"
 #include "paimon/common/data/shredding/map_shredding_defs.h"
 #include "paimon/core/core_options.h"
 #include "paimon/memory/memory_pool.h"
@@ -116,6 +117,77 @@ TEST_F(MapSharedShreddingBatchConverterTest, BasicConversion) {
     expected_meta.num_columns = 3;
     expected_meta.max_row_width = 3;
     ASSERT_EQ(expected_meta, converter->BuildFieldMeta("tags").value());
+}
+
+TEST_F(MapSharedShreddingBatchConverterTest, MapWithNullValue) {
+    auto logical_schema =
+        arrow::schema({arrow::field("metrics", arrow::map(arrow::utf8(), arrow::int64()))});
+    auto context =
+        std::make_shared<MapSharedShreddingContext>(std::map<std::string, int32_t>{{"metrics", 2}});
+    ASSERT_OK_AND_ASSIGN(CoreOptions options, MakeCoreOptions({{"metrics", "plain"}}));
+    ASSERT_OK_AND_ASSIGN(auto converter, MapSharedShreddingBatchConverter::Create(
+                                             logical_schema, context, options, pool_));
+    auto logical_type = arrow::struct_(logical_schema->fields());
+    auto physical_type = arrow::struct_(converter->GetPhysicalSchema()->fields());
+
+    auto actual =
+        RunConvert(logical_type, R"([[[["a", null], ["b", 20]]]])", physical_type, converter.get());
+    auto expected = ArrayFromJSON(physical_type, R"([[[[0, 1], null, 20, null]]])").ValueOrDie();
+    AssertArrayEquals(expected, actual);
+
+    MapSharedShreddingFieldMeta expected_meta;
+    expected_meta.name_to_id = {{"a", 0}, {"b", 1}};
+    expected_meta.field_to_columns = {{0, {0}}, {1, {1}}};
+    expected_meta.num_columns = 2;
+    expected_meta.max_row_width = 2;
+    ASSERT_EQ(expected_meta, converter->BuildFieldMeta("metrics").value());
+}
+
+TEST_F(MapSharedShreddingBatchConverterTest, OverflowWhenExceedK) {
+    auto logical_schema =
+        arrow::schema({arrow::field("metrics", arrow::map(arrow::utf8(), arrow::int64()))});
+    auto context =
+        std::make_shared<MapSharedShreddingContext>(std::map<std::string, int32_t>{{"metrics", 2}});
+    ASSERT_OK_AND_ASSIGN(CoreOptions options, MakeCoreOptions({{"metrics", "plain"}}));
+    ASSERT_OK_AND_ASSIGN(auto converter, MapSharedShreddingBatchConverter::Create(
+                                             logical_schema, context, options, pool_));
+    auto logical_type = arrow::struct_(logical_schema->fields());
+    auto physical_type = arrow::struct_(converter->GetPhysicalSchema()->fields());
+
+    auto actual = RunConvert(logical_type, R"([[[["a", 10], ["b", 20], ["c", 30]]]])",
+                             physical_type, converter.get());
+    auto expected = ArrayFromJSON(physical_type, R"([[[[0, 1], 10, 20, [[2, 30]]]]])").ValueOrDie();
+    AssertArrayEquals(expected, actual);
+
+    MapSharedShreddingFieldMeta expected_meta;
+    expected_meta.name_to_id = {{"a", 0}, {"b", 1}, {"c", 2}};
+    expected_meta.field_to_columns = {{0, {0}}, {1, {1}}};
+    expected_meta.overflow_field_set = {2};
+    expected_meta.num_columns = 2;
+    expected_meta.max_row_width = 3;
+    ASSERT_EQ(expected_meta, converter->BuildFieldMeta("metrics").value());
+}
+
+TEST_F(MapSharedShreddingBatchConverterTest, EmptyAndNullMaps) {
+    auto logical_schema =
+        arrow::schema({arrow::field("metrics", arrow::map(arrow::utf8(), arrow::int64()))});
+    auto context =
+        std::make_shared<MapSharedShreddingContext>(std::map<std::string, int32_t>{{"metrics", 2}});
+    ASSERT_OK_AND_ASSIGN(CoreOptions options, MakeCoreOptions({{"metrics", "plain"}}));
+    ASSERT_OK_AND_ASSIGN(auto converter, MapSharedShreddingBatchConverter::Create(
+                                             logical_schema, context, options, pool_));
+    auto logical_type = arrow::struct_(logical_schema->fields());
+    auto physical_type = arrow::struct_(converter->GetPhysicalSchema()->fields());
+
+    auto actual = RunConvert(logical_type, R"([[null], [[]]])", physical_type, converter.get());
+    auto expected =
+        ArrayFromJSON(physical_type, R"([[null], [[[-1, -1], null, null, null]]])").ValueOrDie();
+    AssertArrayEquals(expected, actual);
+
+    MapSharedShreddingFieldMeta expected_meta;
+    expected_meta.num_columns = 2;
+    expected_meta.max_row_width = 0;
+    ASSERT_EQ(expected_meta, converter->BuildFieldMeta("metrics").value());
 }
 
 TEST_F(MapSharedShreddingBatchConverterTest, NestedValueStruct) {
@@ -408,12 +480,17 @@ TEST_F(MapSharedShreddingBatchConverterTest, BuildFieldMetaInvalidFieldName) {
 
     // Valid case: "tags" exists
     ASSERT_OK_AND_ASSIGN([[maybe_unused]] auto meta, converter->BuildFieldMeta("tags"));
+    ASSERT_OK_AND_ASSIGN(int32_t max_row_width, converter->GetMaxRowWidth("tags"));
+    ASSERT_EQ(0, max_row_width);
 
     // Invalid case: "id" is not a shredding field
     ASSERT_NOK_WITH_MSG(converter->BuildFieldMeta("id"), "cannot find field_name 'id'");
+    ASSERT_NOK_WITH_MSG(converter->GetMaxRowWidth("id"), "cannot find field_name 'id'");
 
     // Invalid case: nonexistent field name
     ASSERT_NOK_WITH_MSG(converter->BuildFieldMeta("nonexistent"),
+                        "cannot find field_name 'nonexistent'");
+    ASSERT_NOK_WITH_MSG(converter->GetMaxRowWidth("nonexistent"),
                         "cannot find field_name 'nonexistent'");
 }
 
@@ -494,6 +571,59 @@ TEST_F(MapSharedShreddingBatchConverterTest, LruPlacementPreservesResidentColumn
     expected_meta.num_columns = 3;
     expected_meta.max_row_width = 4;
     ASSERT_EQ(expected_meta, converter->BuildFieldMeta("tags").value());
+}
+
+TEST_F(MapSharedShreddingBatchConverterTest, FactoryUsesMaxColumnCountForFirstFile) {
+    auto logical_schema =
+        arrow::schema({arrow::field("tags", arrow::map(arrow::utf8(), arrow::int32()))});
+    ASSERT_OK_AND_ASSIGN(
+        CoreOptions options,
+        CoreOptions::FromMap({{"fields.tags.map.storage-layout", "shared-shredding"},
+                              {"fields.tags.map.shared-shredding.max-columns", "4"}}));
+    ASSERT_OK_AND_ASSIGN(
+        auto factory, MapSharedShreddingWritePlanFactory::Create(options, logical_schema, pool_));
+
+    ASSERT_TRUE(factory->ShouldCreateWritePlan());
+    ASSERT_FALSE(factory->ShouldInferWritePlan());
+    ASSERT_EQ(0, factory->InferBufferRowCount());
+    ASSERT_OK_AND_ASSIGN(auto converter, factory->CreateConverter("parquet", {}));
+    ASSERT_OK_AND_ASSIGN(auto expected, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                            logical_schema, {{"tags", 4}}));
+    ASSERT_TRUE(converter->GetPhysicalSchema()->Equals(*expected));
+}
+
+TEST_F(MapSharedShreddingBatchConverterTest, FactoryUsesCompletedFileStatsForNextFile) {
+    auto logical_schema =
+        arrow::schema({arrow::field("tags", arrow::map(arrow::utf8(), arrow::int32()))});
+    ASSERT_OK_AND_ASSIGN(
+        CoreOptions options,
+        CoreOptions::FromMap({{"fields.tags.map.storage-layout", "shared-shredding"},
+                              {"fields.tags.map.shared-shredding.max-columns", "8"}}));
+    ASSERT_OK_AND_ASSIGN(
+        auto factory, MapSharedShreddingWritePlanFactory::Create(options, logical_schema, pool_));
+    ASSERT_OK_AND_ASSIGN(auto first, factory->CreateConverter("parquet", {}));
+
+    auto logical_type = arrow::struct_(logical_schema->fields());
+    auto first_physical_type = arrow::struct_(first->GetPhysicalSchema()->fields());
+    auto input = ArrayFromJSON(logical_type, R"([
+        [[["a", 1], ["b", 2]]],
+        [[["c", 3], ["d", 4], ["e", 5]]]
+    ])")
+                     .ValueOrDie();
+    ArrowArray c_input;
+    ASSERT_TRUE(arrow::ExportArray(*input, &c_input).ok());
+    ASSERT_OK_AND_ASSIGN(auto c_output, first->Convert(&c_input));
+    auto first_output = arrow::ImportArray(c_output.get(), first_physical_type).ValueOrDie();
+    ASSERT_EQ(2, first_output->length());
+    ASSERT_OK(factory->OnFileCompleted(first));
+
+    ASSERT_OK_AND_ASSIGN(auto second, factory->CreateConverter("parquet", {}));
+    ASSERT_OK_AND_ASSIGN(auto expected_first, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                  logical_schema, {{"tags", 8}}));
+    ASSERT_OK_AND_ASSIGN(auto expected_second, MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                                                   logical_schema, {{"tags", 3}}));
+    ASSERT_TRUE(first->GetPhysicalSchema()->Equals(*expected_first));
+    ASSERT_TRUE(second->GetPhysicalSchema()->Equals(*expected_second));
 }
 
 }  // namespace paimon

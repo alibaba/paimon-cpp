@@ -107,6 +107,24 @@ TEST_P(JiebaAnalyzerTest, TestNormalize) {
     ASSERT_EQ(expected, results);
 }
 
+TEST(JiebaTokenizerTest, TestNormalizeCase) {
+    std::string alphanumeric_term = "THIS123";
+    JiebaTokenizer::NormalizeCase(&alphanumeric_term);
+    ASSERT_EQ(alphanumeric_term, "this123");
+
+    std::string mixed_ascii_cjk_term = "B超";
+    JiebaTokenizer::NormalizeCase(&mixed_ascii_cjk_term);
+    ASSERT_EQ(mixed_ascii_cjk_term, "B超");
+
+    std::string term_with_underscore = "THIS_IS";
+    JiebaTokenizer::NormalizeCase(&term_with_underscore);
+    ASSERT_EQ(term_with_underscore, "THIS_IS");
+
+    std::string chinese_term = "机器";
+    JiebaTokenizer::NormalizeCase(&chinese_term);
+    ASSERT_EQ(chinese_term, "机器");
+}
+
 INSTANTIATE_TEST_SUITE_P(ReadBufferSize, JiebaAnalyzerTest,
                          ::testing::ValuesIn(std::vector<int32_t>({2, 5, 10, 100})));
 

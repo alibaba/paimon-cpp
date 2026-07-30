@@ -18,13 +18,11 @@
  * EQUIVALENCE: a parametric corpus × query battery that compares lucene-fts
  * and tantivy-fulltext result *sets* (doc_id only — not score order, not score
  * values). Coverage targets:
- *   - English bag-of-words: MATCH_ALL / MATCH_ANY / PHRASE
+ *   - English bag-of-words: MATCH_ALL / MATCH_ANY / PHRASE / PREFIX / WILDCARD
  *   - Chinese (jieba "query" mode): MATCH_ALL / MATCH_ANY / PHRASE
  *   - Pre_filter intersection (no scoring)
- * PREFIX and WILDCARD are NOT compared as required-equal: tantivy's RegexQuery
- * walks byte-level term dictionary, lucene's PrefixQuery/WildcardQuery walks
- * its own; edge cases (empty input, anchors, multi-byte UTF-8) diverge by
- * design.
+ * PREFIX and WILDCARD equivalence covers ASCII token patterns, including case
+ * normalization. Engine-specific regex edge cases are outside this test.
  *
  * BENCHMARK: build a 200-doc index per backend and time write + 100 queries.
  * Prints to stderr; never fails on perf — guarding against perf regressions
@@ -222,22 +220,30 @@ TEST_F(TantivyEquivalenceTest, EnglishBagOfWordsBattery) {
     struct Case {
         std::string query;
         FullTextSearch::SearchType type;
+        std::set<int64_t> expected_ids;
     };
     std::vector<Case> cases = {
-        {"alpha", FullTextSearch::SearchType::MATCH_ALL},
-        {"alpha", FullTextSearch::SearchType::MATCH_ANY},
-        {"alpha beta", FullTextSearch::SearchType::MATCH_ALL},
-        {"alpha beta", FullTextSearch::SearchType::MATCH_ANY},
-        {"alpha gamma delta", FullTextSearch::SearchType::MATCH_ALL},
-        {"alpha gamma delta", FullTextSearch::SearchType::MATCH_ANY},
-        {"epsilon iota", FullTextSearch::SearchType::MATCH_ALL},
-        {"alpha beta gamma", FullTextSearch::SearchType::PHRASE},
-        {"beta gamma delta", FullTextSearch::SearchType::PHRASE},
-        {"delta epsilon", FullTextSearch::SearchType::PHRASE},
+        {"alpha", FullTextSearch::SearchType::MATCH_ALL, {}},
+        {"alpha", FullTextSearch::SearchType::MATCH_ANY, {}},
+        {"alpha beta", FullTextSearch::SearchType::MATCH_ALL, {}},
+        {"alpha beta", FullTextSearch::SearchType::MATCH_ANY, {}},
+        {"alpha gamma delta", FullTextSearch::SearchType::MATCH_ALL, {}},
+        {"alpha gamma delta", FullTextSearch::SearchType::MATCH_ANY, {}},
+        {"epsilon iota", FullTextSearch::SearchType::MATCH_ALL, {}},
+        {"alpha beta gamma", FullTextSearch::SearchType::PHRASE, {}},
+        {"beta gamma delta", FullTextSearch::SearchType::PHRASE, {}},
+        {"delta epsilon", FullTextSearch::SearchType::PHRASE, {}},
+        {"ALP", FullTextSearch::SearchType::PREFIX, {0, 1, 4, 6, 9}},
+        {"*ALPHA*", FullTextSearch::SearchType::WILDCARD, {0, 1, 4, 6, 9}},
+        {"*ALP?A*", FullTextSearch::SearchType::WILDCARD, {0, 1, 4, 6, 9}},
     };
     for (const auto& c : cases) {
         auto [l, t] = RunPair(pair, c.query, c.type);
         ASSERT_EQ(l, t) << "diverge: query=" << c.query << " type=" << static_cast<int32_t>(c.type);
+        if (!c.expected_ids.empty()) {
+            ASSERT_EQ(l, c.expected_ids) << "unexpected matches: query=" << c.query
+                                         << " type=" << static_cast<int32_t>(c.type);
+        }
     }
 }
 
@@ -274,6 +280,32 @@ TEST_F(TantivyEquivalenceTest, ChineseQueryModeBattery) {
     for (const auto& c : cases) {
         auto [l, t] = RunPair(pair, c.query, c.type);
         ASSERT_EQ(l, t) << "diverge: query=" << c.query << " type=" << static_cast<int32_t>(c.type);
+    }
+}
+
+TEST_F(TantivyEquivalenceTest, MixedAsciiCjkPrefixAndWildcard) {
+    auto data_type = arrow::struct_({arrow::field("f0", arrow::utf8())});
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
+        ["B超检查"],
+        ["T恤"]
+    ])")
+                     .ValueOrDie();
+    std::map<std::string, std::string> lopts = {{"lucene-fts.jieba.tokenize-mode", "query"}};
+    std::map<std::string, std::string> topts = {
+        {"tantivy-fulltext.tantivy.write.tokenizer", "paimon_jieba"},
+        {"tantivy-fulltext.jieba.tokenize-mode", "query"},
+    };
+    auto pair = WriteAndOpenBoth(data_type, array, lopts, topts);
+
+    {
+        auto [l, t] = RunPair(pair, "B", FullTextSearch::SearchType::PREFIX);
+        ASSERT_EQ(l, (std::set<int64_t>{0}));
+        ASSERT_EQ(t, l);
+    }
+    {
+        auto [l, t] = RunPair(pair, "*T*", FullTextSearch::SearchType::WILDCARD);
+        ASSERT_EQ(l, (std::set<int64_t>{1}));
+        ASSERT_EQ(t, l);
     }
 }
 

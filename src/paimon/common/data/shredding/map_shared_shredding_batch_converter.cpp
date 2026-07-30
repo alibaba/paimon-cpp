@@ -337,6 +337,17 @@ Result<MapSharedShreddingFieldMeta> MapSharedShreddingBatchConverter::BuildField
         "cannot find field_name '{}' in MapSharedShreddingBatchConverter contexts", field_name));
 }
 
+Result<int32_t> MapSharedShreddingBatchConverter::GetMaxRowWidth(
+    const std::string& field_name) const {
+    for (const auto& context : contexts_) {
+        if (context.field_name == field_name) {
+            return context.allocator->GetMaxRowWidth();
+        }
+    }
+    return Status::Invalid(fmt::format(
+        "cannot find field_name '{}' in MapSharedShreddingBatchConverter contexts", field_name));
+}
+
 const std::vector<std::string>& MapSharedShreddingBatchConverter::GetShreddingColumnNames() const {
     return shredding_field_names_;
 }

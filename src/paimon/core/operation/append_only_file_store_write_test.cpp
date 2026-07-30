@@ -171,9 +171,7 @@ class AppendOnlyFileStoreWriteTest : public testing::Test {
                                               int32_t field_index) const {
         auto metadata = file_schema->field(field_index)->metadata();
         EXPECT_NE(nullptr, metadata);
-        return MapSharedShreddingUtils::DeserializeMetadata(
-                   metadata->Copy(), MapSharedShreddingDefine::kDefaultDictCompression)
-            .value();
+        return MapSharedShreddingUtils::DeserializeMetadata(metadata->Copy()).value();
     }
 
  private:
@@ -282,9 +280,10 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestGetMaxSequenceNumberFromMultiPartition)
     }
 }
 
-TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingMapRestoreInitializesNextWriter) {
+TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingMapAdaptsAcrossRollingFiles) {
     std::map<std::string, std::string> options = {
         {"file.format", "parquet"},
+        {"target-file-row-num", "1"},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "10"},
         {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
@@ -303,25 +302,37 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingMapRestoreInitializesNex
 
     std::string table_path = PathUtil::JoinPath(dir->Str(), "foo.db/bar");
 
-    auto first_commit_msgs = WriteAndPrepare(table_path, logical_schema, options, R"([
+    WriteContextBuilder builder(table_path, commit_user_);
+    builder.SetOptions(options);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context, builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
+    ASSERT_OK(file_store_write->Write(MakeBatch(logical_schema, R"([
         [1, [["a", 1], ["b", 2]]]
-    ])",
-                                             /*commit_identifier=*/0);
-    auto first_file_schema =
-        ReadDataFileSchema(table_path, OnlyNewFile(first_commit_msgs), options);
+    ])")));
+    ASSERT_OK(file_store_write->Write(MakeBatch(logical_schema, R"([
+        [2, [["c", 3], ["d", 4], ["e", 5]]]
+    ])")));
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs, file_store_write->PrepareCommit(
+                                               /*wait_compaction=*/false, /*commit_identifier=*/0));
+    ASSERT_OK(file_store_write->Close());
+
+    ASSERT_EQ(1, commit_msgs.size());
+    auto commit_msg = std::dynamic_pointer_cast<CommitMessageImpl>(commit_msgs[0]);
+    ASSERT_NE(nullptr, commit_msg);
+    const auto& files = commit_msg->GetNewFilesIncrement().NewFiles();
+    ASSERT_EQ(2, files.size());
+
+    auto first_file_schema = ReadDataFileSchema(table_path, files[0], options);
     auto first_meta = ShreddingMeta(first_file_schema, /*field_index=*/1);
+    ASSERT_OK_AND_ASSIGN(
+        auto expected_first_schema,
+        MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, {{"tags", 10}}));
+    ASSERT_TRUE(first_file_schema->Equals(*expected_first_schema, /*check_metadata=*/false));
     ASSERT_EQ(10, first_meta.num_columns);
     ASSERT_EQ(2, first_meta.max_row_width);
-    Commit(table_path, options, first_commit_msgs);
 
-    auto second_commit_msgs = WriteAndPrepare(table_path, logical_schema, options, R"([
-        [2, [["c", 3], ["d", 4], ["e", 5]]]
-    ])",
-                                              /*commit_identifier=*/1);
-    auto second_file_schema =
-        ReadDataFileSchema(table_path, OnlyNewFile(second_commit_msgs), options);
+    auto second_file_schema = ReadDataFileSchema(table_path, files[1], options);
     auto second_meta = ShreddingMeta(second_file_schema, /*field_index=*/1);
-
     ASSERT_OK_AND_ASSIGN(
         auto expected_second_schema,
         MapSharedShreddingUtils::LogicalToPhysicalSchema(logical_schema, {{"tags", 2}}));
@@ -330,7 +341,7 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingMapRestoreInitializesNex
     ASSERT_EQ(3, second_meta.max_row_width);
 }
 
-TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingRestoreIgnoresAvroFileWithoutMetadata) {
+TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingNewWriterIgnoresExistingAvroFile) {
     auto logical_schema = arrow::schema({
         arrow::field("id", arrow::int32()),
         arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
@@ -374,9 +385,10 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingRestoreIgnoresAvroFileWi
     ASSERT_EQ(3, second_meta.max_row_width);
 }
 
-TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingRestoreMultipleMapColumns) {
+TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingMultipleMapColumnsAdaptAcrossRollingFiles) {
     std::map<std::string, std::string> options = {
         {"file.format", "parquet"},
+        {"target-file-row-num", "1"},
         {"fields.tags.map.storage-layout", "shared-shredding"},
         {"fields.tags.map.shared-shredding.max-columns", "10"},
         {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
@@ -392,52 +404,58 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingRestoreMultipleMapColumn
         arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
         arrow::field("attrs", arrow::map(arrow::utf8(), arrow::int64())),
     });
-    auto tags_schema = arrow::schema({
-        logical_schema->field(0),
-        logical_schema->field(1),
-    });
-    auto attrs_schema = arrow::schema({
-        logical_schema->field(0),
-        logical_schema->field(2),
-    });
 
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
     CreateTable(dir->Str(), logical_schema, options);
     std::string table_path = PathUtil::JoinPath(dir->Str(), "foo.db/bar");
 
-    auto tags_commit_msgs =
-        WriteAndPrepareWithWriteSchema(table_path, tags_schema, options, {"id", "tags"}, R"([
-            [1, [["a", 1], ["b", 2]]]
-        ])",
-                                       /*commit_identifier=*/0);
-    Commit(table_path, options, tags_commit_msgs);
+    WriteContextBuilder builder(table_path, commit_user_);
+    builder.SetOptions(options);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context, builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
+    ASSERT_OK(file_store_write->Write(MakeBatch(logical_schema, R"([
+        [1, [["a", 1], ["b", 2]], [["c", 3], ["d", 4], ["e", 5], ["f", 6]]]
+    ])")));
+    ASSERT_OK(file_store_write->Write(MakeBatch(logical_schema, R"([
+        [2, [["g", 7], ["h", 8], ["i", 9]], [["j", 10], ["k", 11], ["l", 12], ["m", 13], ["n", 14]]]
+    ])")));
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs, file_store_write->PrepareCommit(
+                                               /*wait_compaction=*/false, /*commit_identifier=*/0));
+    ASSERT_OK(file_store_write->Close());
 
-    auto attrs_commit_msgs =
-        WriteAndPrepareWithWriteSchema(table_path, attrs_schema, options, {"id", "attrs"}, R"([
-            [2, [["c", 3], ["d", 4], ["e", 5], ["f", 6]]]
-        ])",
-                                       /*commit_identifier=*/1);
-    Commit(table_path, options, attrs_commit_msgs);
+    ASSERT_EQ(1, commit_msgs.size());
+    auto commit_msg = std::dynamic_pointer_cast<CommitMessageImpl>(commit_msgs[0]);
+    ASSERT_NE(nullptr, commit_msg);
+    const auto& files = commit_msg->GetNewFilesIncrement().NewFiles();
+    ASSERT_EQ(2, files.size());
 
-    auto full_commit_msgs = WriteAndPrepare(table_path, logical_schema, options, R"([
-        [3, [["g", 7], ["h", 8], ["i", 9]], [["j", 10], ["k", 11], ["l", 12], ["m", 13], ["n", 14]]]
-    ])",
-                                            /*commit_identifier=*/2);
-    auto full_file_schema = ReadDataFileSchema(table_path, OnlyNewFile(full_commit_msgs), options);
-    auto tags_meta = ShreddingMeta(full_file_schema, /*field_index=*/1);
-    auto attrs_meta = ShreddingMeta(full_file_schema, /*field_index=*/2);
+    auto first_file_schema = ReadDataFileSchema(table_path, files[0], options);
+    auto first_tags_meta = ShreddingMeta(first_file_schema, /*field_index=*/1);
+    auto first_attrs_meta = ShreddingMeta(first_file_schema, /*field_index=*/2);
+    ASSERT_OK_AND_ASSIGN(auto expected_first_schema,
+                         MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                             logical_schema, {{"tags", 10}, {"attrs", 10}}));
+    ASSERT_TRUE(first_file_schema->Equals(*expected_first_schema, /*check_metadata=*/false));
+    ASSERT_EQ(10, first_tags_meta.num_columns);
+    ASSERT_EQ(2, first_tags_meta.max_row_width);
+    ASSERT_EQ(10, first_attrs_meta.num_columns);
+    ASSERT_EQ(4, first_attrs_meta.max_row_width);
 
-    ASSERT_OK_AND_ASSIGN(auto expected_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                   logical_schema, {{"tags", 2}, {"attrs", 4}}));
-    ASSERT_TRUE(full_file_schema->Equals(*expected_schema, /*check_metadata=*/false));
-    ASSERT_EQ(2, tags_meta.num_columns);
-    ASSERT_EQ(3, tags_meta.max_row_width);
-    ASSERT_EQ(4, attrs_meta.num_columns);
-    ASSERT_EQ(5, attrs_meta.max_row_width);
+    auto second_file_schema = ReadDataFileSchema(table_path, files[1], options);
+    auto second_tags_meta = ShreddingMeta(second_file_schema, /*field_index=*/1);
+    auto second_attrs_meta = ShreddingMeta(second_file_schema, /*field_index=*/2);
+    ASSERT_OK_AND_ASSIGN(auto expected_second_schema,
+                         MapSharedShreddingUtils::LogicalToPhysicalSchema(
+                             logical_schema, {{"tags", 2}, {"attrs", 4}}));
+    ASSERT_TRUE(second_file_schema->Equals(*expected_second_schema, /*check_metadata=*/false));
+    ASSERT_EQ(2, second_tags_meta.num_columns);
+    ASSERT_EQ(3, second_tags_meta.max_row_width);
+    ASSERT_EQ(4, second_attrs_meta.num_columns);
+    ASSERT_EQ(5, second_attrs_meta.max_row_width);
 }
 
-TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingRestoreUsesDefaultForMissingMap) {
+TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingNewWriterUsesMaxForEveryMap) {
     std::map<std::string, std::string> options = {
         {"file.format", "parquet"},
         {"fields.tags.map.storage-layout", "shared-shredding"},
@@ -481,12 +499,63 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingRestoreUsesDefaultForMis
     auto attrs_meta = ShreddingMeta(full_file_schema, /*field_index=*/2);
 
     ASSERT_OK_AND_ASSIGN(auto expected_schema, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                   logical_schema, {{"tags", 2}, {"attrs", 10}}));
+                                                   logical_schema, {{"tags", 10}, {"attrs", 10}}));
     ASSERT_TRUE(full_file_schema->Equals(*expected_schema, /*check_metadata=*/false));
-    ASSERT_EQ(2, tags_meta.num_columns);
+    ASSERT_EQ(10, tags_meta.num_columns);
     ASSERT_EQ(3, tags_meta.max_row_width);
     ASSERT_EQ(10, attrs_meta.num_columns);
     ASSERT_EQ(4, attrs_meta.max_row_width);
+}
+
+TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingFieldDictCompressionFileRoundTrip) {
+    std::vector<std::string> file_formats = {"parquet"};
+#ifdef PAIMON_ENABLE_ORC
+    file_formats.emplace_back("orc");
+#endif
+    for (const std::string& file_format : file_formats) {
+        for (const std::string compression : {"none", "zstd"}) {
+            SCOPED_TRACE("format=" + file_format + ", compression=" + compression);
+            std::map<std::string, std::string> options = {
+                {Options::FILE_FORMAT, file_format},
+                {Options::FILE_COMPRESSION, compression},
+                {"fields.tags.map.storage-layout", "shared-shredding"},
+                {"fields.tags.map.shared-shredding.max-columns", "4"},
+                {"write-only", "true"},
+                {"bucket", "1"},
+                {"bucket-key", "id"},
+            };
+            auto logical_schema = arrow::schema({
+                arrow::field("id", arrow::int32()),
+                arrow::field("tags", arrow::map(arrow::utf8(), arrow::int64())),
+            });
+
+            auto dir = UniqueTestDirectory::Create();
+            ASSERT_TRUE(dir);
+            CreateTable(dir->Str(), logical_schema, options);
+            std::string table_path = PathUtil::JoinPath(dir->Str(), "foo.db/bar");
+            auto commit_msgs = WriteAndPrepare(table_path, logical_schema, options, R"([
+                [1, [["a", 1], ["b", 2]]],
+                [2, [["c", 3]]]
+            ])",
+                                               /*commit_identifier=*/0);
+
+            auto file_schema = ReadDataFileSchema(table_path, OnlyNewFile(commit_msgs), options);
+            auto tags_metadata = file_schema->GetFieldByName("tags")->metadata();
+            ASSERT_NE(tags_metadata, nullptr);
+            int32_t compression_index =
+                tags_metadata->FindKey(MapSharedShreddingDefine::kFieldDictCompression);
+            ASSERT_GE(compression_index, 0);
+            ASSERT_EQ(compression, tags_metadata->value(compression_index));
+
+            ASSERT_OK_AND_ASSIGN(
+                MapSharedShreddingFieldMeta field_meta,
+                MapSharedShreddingUtils::DeserializeMetadata(tags_metadata->Copy()));
+            ASSERT_EQ(3, field_meta.name_to_id.size());
+            ASSERT_TRUE(field_meta.name_to_id.count("a"));
+            ASSERT_TRUE(field_meta.name_to_id.count("b"));
+            ASSERT_TRUE(field_meta.name_to_id.count("c"));
+        }
+    }
 }
 
 TEST_F(AppendOnlyFileStoreWriteTest, TestSharedShreddingPartialWriteSkipsMissingMapColumn) {

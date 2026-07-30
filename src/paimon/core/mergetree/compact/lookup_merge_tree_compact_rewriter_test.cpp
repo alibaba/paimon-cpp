@@ -104,7 +104,7 @@ class LookupMergeTreeCompactRewriterTest : public ::testing::TestWithParam<std::
                 data_path_factory, key_comparator, /*user_defined_seq_comparator=*/nullptr,
                 merge_function_wrapper, /*schema_id=*/latest_schema.value()->Id(), arrow_schema_,
                 options, std::make_shared<NoopCompactManager>(), /*io_manager=*/nullptr,
-                /*enable_multi_thread_spill=*/false, /*shredding_context=*/nullptr, pool_));
+                /*enable_multi_thread_spill=*/false, pool_));
 
         // write data
         ArrowArray c_src_array;
@@ -1078,8 +1078,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
             /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr,
-            cancellation_controller, /*remote_lookup_file_manager=*/nullptr,
-            /*shredding_context=*/nullptr, pool_);
+            cancellation_controller, /*remote_lookup_file_manager=*/nullptr, pool_);
         auto file = create_meta(/*level=*/1, /*delete_row_count=*/std::nullopt);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::NoChangelogNoRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/2, file));
@@ -1094,8 +1093,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
             /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr,
-            cancellation_controller, /*remote_lookup_file_manager=*/nullptr,
-            /*shredding_context=*/nullptr, pool_);
+            cancellation_controller, /*remote_lookup_file_manager=*/nullptr, pool_);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/std::nullopt);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::ChangelogWithRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/5, file));
@@ -1114,8 +1112,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
             /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr,
-            cancellation_controller, /*remote_lookup_file_manager=*/nullptr,
-            /*shredding_context=*/nullptr, pool_);
+            cancellation_controller, /*remote_lookup_file_manager=*/nullptr, pool_);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/1);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::ChangelogWithRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/2, file));
@@ -1130,8 +1127,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
             /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr,
-            cancellation_controller, /*remote_lookup_file_manager=*/nullptr,
-            /*shredding_context=*/nullptr, pool_);
+            cancellation_controller, /*remote_lookup_file_manager=*/nullptr, pool_);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/std::nullopt);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::ChangelogNoRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/5, file));
@@ -1146,8 +1142,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
             /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr,
-            cancellation_controller, /*remote_lookup_file_manager=*/nullptr,
-            /*shredding_context=*/nullptr, pool_);
+            cancellation_controller, /*remote_lookup_file_manager=*/nullptr, pool_);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/std::nullopt);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::ChangelogNoRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/2, file));
@@ -1163,8 +1158,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
             /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr,
-            cancellation_controller, /*remote_lookup_file_manager=*/nullptr,
-            /*shredding_context=*/nullptr, pool_);
+            cancellation_controller, /*remote_lookup_file_manager=*/nullptr, pool_);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/std::nullopt);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::ChangelogWithRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/2, file));

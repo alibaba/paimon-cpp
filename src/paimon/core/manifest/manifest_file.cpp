@@ -17,6 +17,7 @@
 #include "paimon/core/manifest/manifest_file.h"
 
 #include <cassert>
+#include <limits>
 #include <utility>
 
 #include "arrow/c/abi.h"
@@ -105,7 +106,8 @@ Result<std::vector<ManifestFileMeta>> ManifestFile::Write(
         options_.GetFileSystem(), path_factory_, writer_builder_);
     std::unique_ptr<RollingFileWriter<const ManifestEntry&, ManifestFileMeta>> writer =
         std::make_unique<RollingFileWriter<const ManifestEntry&, ManifestFileMeta>>(
-            target_file_size_, writer_factory);
+            target_file_size_, /*target_file_row_num=*/std::numeric_limits<int64_t>::max(),
+            writer_factory);
     for (const auto& entry : entries) {
         auto s = writer->Write(entry);
         if (!s.ok()) {

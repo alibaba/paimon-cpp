@@ -16,6 +16,7 @@
 #include "paimon/global_index/lucene/lucene_global_index_reader.h"
 
 #include "arrow/c/bridge.h"
+#include "lucene++/DisjunctionMaxQuery.h"
 #include "lucene++/FileUtils.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/path_util.h"
@@ -116,6 +117,25 @@ std::vector<std::wstring> LuceneGlobalIndexReader::TokenizeQuery(const std::stri
     return wterms;
 }
 
+std::string LuceneGlobalIndexReader::NormalizeWildcardQuery(const std::string& query) {
+    std::string normalized_query;
+    normalized_query.reserve(query.size());
+    size_t term_begin = 0;
+    for (size_t i = 0; i <= query.size(); i++) {
+        if (i != query.size() && query[i] != '*' && query[i] != '?') {
+            continue;
+        }
+        std::string term = query.substr(term_begin, i - term_begin);
+        JiebaTokenizer::NormalizeCase(&term);
+        normalized_query.append(term);
+        if (i != query.size()) {
+            normalized_query.push_back(query[i]);
+        }
+        term_begin = i + 1;
+    }
+    return normalized_query;
+}
+
 Lucene::QueryPtr LuceneGlobalIndexReader::ConstructMatchQuery(
     const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false) {
     assert(full_text_search->search_type == FullTextSearch::SearchType::MATCH_ALL ||
@@ -153,15 +173,43 @@ Lucene::QueryPtr LuceneGlobalIndexReader::ConstructPhraseQuery(
 Lucene::QueryPtr LuceneGlobalIndexReader::ConstructPrefixQuery(
     const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false) {
     assert(full_text_search->search_type == FullTextSearch::SearchType::PREFIX);
-    return Lucene::newLucene<Lucene::PrefixQuery>(Lucene::newLucene<Lucene::Term>(
-        wfield_name_, LuceneUtils::StringToWstring(full_text_search->query)));
+    auto create_query = [this](const std::string& query) -> Lucene::QueryPtr {
+        return Lucene::newLucene<Lucene::PrefixQuery>(
+            Lucene::newLucene<Lucene::Term>(wfield_name_, LuceneUtils::StringToWstring(query)));
+    };
+    std::string normalized_query = full_text_search->query;
+    JiebaTokenizer::NormalizeCase(&normalized_query);
+    Lucene::QueryPtr query = create_query(full_text_search->query);
+    if (normalized_query == full_text_search->query) {
+        return query;
+    }
+
+    // Preserve the original query for mixed ASCII/CJK indexed terms such as "B超", whose
+    // complete token is not lowercased by the index analyzer. The normalized alternative still
+    // matches pure ASCII terms. DisjunctionMax avoids double-counting scores if both match.
+    auto disjunction = Lucene::newLucene<Lucene::DisjunctionMaxQuery>(0.0);
+    disjunction->add(query);
+    disjunction->add(create_query(normalized_query));
+    return disjunction;
 }
 
 Lucene::QueryPtr LuceneGlobalIndexReader::ConstructWildCardQuery(
     const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false) {
     assert(full_text_search->search_type == FullTextSearch::SearchType::WILDCARD);
-    return Lucene::newLucene<Lucene::WildcardQuery>(Lucene::newLucene<Lucene::Term>(
-        wfield_name_, LuceneUtils::StringToWstring(full_text_search->query)));
+    auto create_query = [this](const std::string& query) -> Lucene::QueryPtr {
+        return Lucene::newLucene<Lucene::WildcardQuery>(
+            Lucene::newLucene<Lucene::Term>(wfield_name_, LuceneUtils::StringToWstring(query)));
+    };
+    std::string normalized_query = NormalizeWildcardQuery(full_text_search->query);
+    Lucene::QueryPtr query = create_query(full_text_search->query);
+    if (normalized_query == full_text_search->query) {
+        return query;
+    }
+
+    auto disjunction = Lucene::newLucene<Lucene::DisjunctionMaxQuery>(0.0);
+    disjunction->add(query);
+    disjunction->add(create_query(normalized_query));
+    return disjunction;
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> LuceneGlobalIndexReader::SearchWithLimit(
