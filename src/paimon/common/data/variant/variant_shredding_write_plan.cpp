@@ -88,6 +88,52 @@ Result<std::shared_ptr<arrow::Field>> ReplacePlannedFields(
     return field->WithType(arrow::struct_(new_fields));
 }
 
+Status CollectPlannedColumns(const std::shared_ptr<arrow::Field>& logical_field,
+                             const std::shared_ptr<arrow::Field>& physical_field,
+                             std::vector<int32_t>* path,
+                             std::vector<VariantShreddingWritePlan::PlannedColumn>* columns) {
+    if (logical_field->name() != physical_field->name()) {
+        return Status::Invalid(
+            fmt::format("variant shredding physical field '{}' does not match logical field '{}'",
+                        physical_field->name(), logical_field->name()));
+    }
+    if (VariantTypeUtils::IsVariantField(logical_field)) {
+        if (logical_field->type()->Equals(*physical_field->type())) {
+            return Status::OK();
+        }
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<VariantSchema> variant_schema,
+                               VariantShreddingUtils::BuildVariantSchema(physical_field->type()));
+        columns->push_back(VariantShreddingWritePlan::PlannedColumn{
+            *path, std::move(variant_schema), physical_field->type()});
+        return Status::OK();
+    }
+    if (logical_field->type()->Equals(*physical_field->type())) {
+        return Status::OK();
+    }
+    if (logical_field->type()->id() != arrow::Type::STRUCT ||
+        physical_field->type()->id() != arrow::Type::STRUCT) {
+        return Status::Invalid(fmt::format(
+            "variant shredding physical type of field '{}' differs outside a Variant column",
+            logical_field->name()));
+    }
+    const auto& logical_type =
+        arrow::internal::checked_cast<const arrow::StructType&>(*logical_field->type());
+    const auto& physical_type =
+        arrow::internal::checked_cast<const arrow::StructType&>(*physical_field->type());
+    if (logical_type.num_fields() != physical_type.num_fields()) {
+        return Status::Invalid(
+            fmt::format("variant shredding physical struct '{}' has a different field count",
+                        logical_field->name()));
+    }
+    for (int32_t i = 0; i < logical_type.num_fields(); ++i) {
+        path->push_back(i);
+        PAIMON_RETURN_NOT_OK(
+            CollectPlannedColumns(logical_type.field(i), physical_type.field(i), path, columns));
+        path->pop_back();
+    }
+    return Status::OK();
+}
+
 }  // namespace
 
 Result<std::shared_ptr<VariantShreddingWritePlan>> VariantShreddingWritePlan::Create(
@@ -111,13 +157,29 @@ Result<std::shared_ptr<VariantShreddingWritePlan>> VariantShreddingWritePlan::Cr
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<arrow::Field> new_root,
         ReplacePlannedFields(root_field, path_shredding_types, /*depth=*/0, &columns));
-    if (columns.empty()) {
-        // No planned path matches a variant column; the file is written unshredded.
-        return std::shared_ptr<VariantShreddingWritePlan>(nullptr);
-    }
     auto physical_schema = arrow::schema(new_root->type()->fields(), logical_schema->metadata());
     return std::shared_ptr<VariantShreddingWritePlan>(new VariantShreddingWritePlan(
         logical_schema, std::move(physical_schema), std::move(columns)));
+}
+
+Result<std::shared_ptr<VariantShreddingWritePlan>>
+VariantShreddingWritePlan::CreateFromPhysicalSchema(
+    const std::shared_ptr<arrow::Schema>& logical_schema,
+    const std::shared_ptr<arrow::Schema>& physical_schema) {
+    if (logical_schema->num_fields() != physical_schema->num_fields()) {
+        return Status::Invalid(
+            "variant shredding logical and physical schemas have different field counts");
+    }
+    std::vector<PlannedColumn> columns;
+    std::vector<int32_t> path;
+    for (int32_t i = 0; i < logical_schema->num_fields(); ++i) {
+        path.push_back(i);
+        PAIMON_RETURN_NOT_OK(CollectPlannedColumns(logical_schema->field(i),
+                                                   physical_schema->field(i), &path, &columns));
+        path.pop_back();
+    }
+    return std::shared_ptr<VariantShreddingWritePlan>(
+        new VariantShreddingWritePlan(logical_schema, physical_schema, std::move(columns)));
 }
 
 Result<std::shared_ptr<VariantShreddingWritePlan>> VariantShreddingWritePlan::FromConfiguredSchema(

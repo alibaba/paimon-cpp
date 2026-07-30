@@ -61,7 +61,6 @@ class BinaryRow;
 class CoreOptions;
 class Executor;
 class Logger;
-class MapSharedShreddingContext;
 class MemoryPool;
 class SchemaManager;
 class TableSchema;
@@ -109,12 +108,11 @@ class AppendOnlyFileStoreWrite : public AbstractFileStoreWrite {
     Result<std::unique_ptr<FileStoreScan>> CreateFileStoreScan(
         const std::shared_ptr<ScanFilter>& filter) const override;
 
-    WriterFactory GetDataFileWriterFactory(
+    Result<WriterFactory> GetDataFileWriterFactory(
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory,
         const std::shared_ptr<arrow::Schema>& schema,
         const std::optional<std::vector<std::string>>& write_cols,
-        const std::vector<std::shared_ptr<DataFileMeta>>& to_compact,
-        const std::shared_ptr<MapSharedShreddingContext>& shredding_context) const;
+        const std::vector<std::shared_ptr<DataFileMeta>>& to_compact) const;
 
     Result<std::unique_ptr<BatchReader>> CreateFilesReader(
         const BinaryRow& partition, int32_t bucket, DeletionVector::Factory dv_factory,

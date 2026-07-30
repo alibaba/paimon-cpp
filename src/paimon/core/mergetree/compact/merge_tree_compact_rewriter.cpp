@@ -16,18 +16,17 @@
 #include "paimon/core/mergetree/compact/merge_tree_compact_rewriter.h"
 
 #include <cassert>
+#include <limits>
 #include <map>
 
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
-#include "paimon/common/data/shredding/map_shared_shredding_utils.h"
 #include "paimon/common/data/shredding/shredding_write_plan_factories.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/io/key_value_data_file_writer_factory.h"
 #include "paimon/core/io/key_value_meta_projection_consumer.h"
 #include "paimon/core/io/key_value_record_reader.h"
-#include "paimon/core/io/map_shared_shredding_core_utils.h"
 #include "paimon/core/io/row_to_arrow_array_converter.h"
 #include "paimon/core/io/shredding_key_value_data_file_writer_factory.h"
 #include "paimon/core/manifest/file_source.h"
@@ -44,7 +43,6 @@ MergeTreeCompactRewriter::MergeTreeCompactRewriter(
     std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
     MergeFunctionWrapperFactory merge_function_wrapper_factory,
     const std::shared_ptr<CancellationController>& cancellation_controller,
-    const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
     const std::shared_ptr<MemoryPool>& pool)
     : options_(options),
       merge_file_split_read_(std::move(merge_file_split_read)),
@@ -58,8 +56,7 @@ MergeTreeCompactRewriter::MergeTreeCompactRewriter(
       dv_factory_(std::move(dv_factory)),
       path_factory_cache_(path_factory_cache),
       merge_function_wrapper_factory_(std::move(merge_function_wrapper_factory)),
-      cancellation_controller_(cancellation_controller),
-      shredding_context_(shredding_context) {
+      cancellation_controller_(cancellation_controller) {
     assert(cancellation_controller_ != nullptr);
 }
 
@@ -104,13 +101,10 @@ Result<std::unique_ptr<MergeTreeCompactRewriter>> MergeTreeCompactRewriter::Crea
         return std::shared_ptr<MergeFunctionWrapper<KeyValue>>();
     };
 
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<MapSharedShreddingContext> shredding_context,
-                           MapSharedShreddingUtils::CreateShreddingContext(write_schema, options));
-
     return std::unique_ptr<MergeTreeCompactRewriter>(new MergeTreeCompactRewriter(
         partition, bucket, table_schema->Id(), trimmed_primary_keys, options, data_schema,
         write_schema, std::move(dv_factory), path_factory_cache, std::move(merge_file_split_read),
-        merge_function_wrapper_factory, cancellation_controller, shredding_context, pool));
+        merge_function_wrapper_factory, cancellation_controller, pool));
 }
 
 Result<CompactResult> MergeTreeCompactRewriter::Upgrade(int32_t output_level,
@@ -137,24 +131,16 @@ std::vector<std::shared_ptr<DataFileMeta>> MergeTreeCompactRewriter::ExtractFile
     return files;
 }
 
-Status MergeTreeCompactRewriter::RestoreShreddingContextFromFiles(
-    const std::vector<std::shared_ptr<DataFileMeta>>& files) {
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
-                           CreateDataFilePathFactory(options_.GetFileFormat()->Identifier()));
-    PAIMON_ASSIGN_OR_RAISE(shredding_context_,
-                           MapSharedShreddingCoreUtils::CreateAndRestoreContext(
-                               write_schema_, files, data_file_path_factory, options_, pool_));
-    return Status::OK();
-}
-
 Result<std::unique_ptr<MergeTreeCompactRewriter::KeyValueRollingFileWriter>>
 MergeTreeCompactRewriter::CreateRollingRowWriter(int32_t level) {
     auto format = options_.GetWriteFileFormat(level);
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
                            CreateDataFilePathFactory(format->Identifier()));
     std::shared_ptr<SingleFileWriterFactory<KeyValueBatch, std::shared_ptr<DataFileMeta>>> factory;
-    if (auto plan_factory = ShreddingWritePlanFactories::SelectActive(options_, write_schema_,
-                                                                      shredding_context_, pool_)) {
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<ShreddingWritePlanFactory> plan_factory,
+        ShreddingWritePlanFactories::SelectActive(options_, write_schema_, pool_));
+    if (plan_factory != nullptr) {
         factory = std::make_shared<ShreddingKeyValueDataFileWriterFactory>(
             options_, schema_id_, write_schema_, level, FileSource::Compact(),
             trimmed_primary_keys_, data_file_path_factory, /*create_stats_extractor=*/true,
@@ -165,7 +151,8 @@ MergeTreeCompactRewriter::CreateRollingRowWriter(int32_t level) {
             trimmed_primary_keys_, data_file_path_factory, /*create_stats_extractor=*/true, pool_);
     }
     return std::make_unique<MergeTreeCompactRewriter::KeyValueRollingFileWriter>(
-        options_.GetTargetFileSize(/*has_primary_key=*/true), factory);
+        options_.GetTargetFileSize(/*has_primary_key=*/true),
+        /*target_file_row_num=*/std::numeric_limits<int64_t>::max(), factory);
 }
 
 Result<MergeTreeCompactRewriter::KeyValueConsumerCreator>
@@ -264,8 +251,6 @@ Result<CompactResult> MergeTreeCompactRewriter::RewriteCompaction(
     PAIMON_ASSIGN_OR_RAISE(MergeTreeCompactRewriter::KeyValueConsumerCreator create_consumer,
                            GenerateKeyValueConsumer());
     auto before = ExtractFilesFromSections(sections);
-    PAIMON_RETURN_NOT_OK(RestoreShreddingContextFromFiles(before));
-
     std::vector<std::shared_ptr<MergeTreeCompactRewriter::KeyValueMergeReader>> reader_holders;
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<KeyValueRollingFileWriter> rolling_writer,
                            CreateRollingRowWriter(output_level));

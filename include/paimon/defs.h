@@ -117,6 +117,12 @@ struct PAIMON_EXPORT Options {
     /// append table: the default value is 256 MB.
     static const char TARGET_FILE_SIZE[];
 
+    /// "target-file-row-num" - Target number of rows per newly written data file. Disabled by
+    /// default. A file rolls when this or target-file-size is reached, whichever comes first.
+    /// This limit is enforced at write-batch granularity, so a file may exceed the target by up
+    /// to one batch.
+    static const char TARGET_FILE_ROW_NUM[];
+
     /// "blob.target-file-size" - Target size of a blob file. Default is TARGET_FILE_SIZE.
     static const char BLOB_TARGET_FILE_SIZE[];
 
@@ -433,6 +439,8 @@ struct PAIMON_EXPORT Options {
     /// "variant.inferShreddingSchema" - Whether to automatically infer the shredding schema when
     /// writing Variant columns. Default value is "false".
     static const char VARIANT_INFER_SHREDDING_SCHEMA[];
+    /// "variant.shredding.inferenceMode" - "per-file" or "adaptive". Default is "per-file".
+    static const char VARIANT_SHREDDING_INFERENCE_MODE[];
     /// "variant.shredding.maxSchemaWidth" - Maximum number of shredded fields allowed in an
     /// inferred schema. Default value is 300.
     static const char VARIANT_SHREDDING_MAX_SCHEMA_WIDTH[];
@@ -446,6 +454,12 @@ struct PAIMON_EXPORT Options {
     /// "variant.shredding.maxInferBufferRow" - Maximum number of rows to buffer for schema
     /// inference. Default value is 4096.
     static const char VARIANT_SHREDDING_MAX_INFER_BUFFER_ROW[];
+    /// "variant.shredding.adaptive.maxInferBufferRow" - Maximum prefix rows sampled after the
+    /// first file in an adaptive session. Default value is 256.
+    static const char VARIANT_SHREDDING_ADAPTIVE_MAX_INFER_BUFFER_ROW[];
+    /// "variant.shredding.adaptive.retentionRatio" - Minimum combined ratio for retaining a
+    /// previously selected path. Default value is 0.05.
+    static const char VARIANT_SHREDDING_ADAPTIVE_RETENTION_RATIO[];
 
     /// "blob-as-descriptor" - Read blob field using blob descriptor rather than blob
     /// bytes. Default value is "false".

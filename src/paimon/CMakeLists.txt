@@ -40,6 +40,7 @@ set(PAIMON_COMMON_SRCS
     common/data/timestamp.cpp
     common/data/variant/generic_variant.cpp
     common/data/variant/infer_variant_shredding_schema.cpp
+    common/data/variant/variant_shredding_inference_session.cpp
     common/data/variant/variant.cpp
     common/data/variant/variant_binary_util.cpp
     common/data/variant/variant_builder.cpp
@@ -264,7 +265,6 @@ set(PAIMON_CORE_SRCS
     core/io/key_value_meta_projection_consumer.cpp
     core/io/key_value_projection_consumer.cpp
     core/io/key_value_projection_reader.cpp
-    core/io/map_shared_shredding_core_utils.cpp
     core/io/shredding_append_data_file_writer_factory.cpp
     core/io/shredding_key_value_data_file_writer_factory.cpp
     core/io/multiple_blob_file_writer.cpp

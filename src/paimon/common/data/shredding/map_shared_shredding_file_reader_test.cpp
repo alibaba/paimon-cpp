@@ -108,9 +108,7 @@ class MapSharedShreddingFileReaderTest : public ::testing::Test {
             if (!MapSharedShreddingUtils::HasShreddingMetadata(metadata)) {
                 continue;
             }
-            EXPECT_OK_AND_ASSIGN(auto meta,
-                                 MapSharedShreddingUtils::DeserializeMetadata(
-                                     metadata, MapSharedShreddingDefine::kDefaultDictCompression));
+            EXPECT_OK_AND_ASSIGN(auto meta, MapSharedShreddingUtils::DeserializeMetadata(metadata));
             auto physical_type =
                 arrow::internal::checked_pointer_cast<arrow::StructType>(field->type());
             std::shared_ptr<arrow::Field> item_field;
@@ -219,12 +217,9 @@ class MapSharedShreddingFileReaderTest : public ::testing::Test {
         const std::optional<std::vector<std::string>>& write_cols, int64_t max_sequence_number,
         const std::shared_ptr<DataFilePathFactory>& path_factory,
         const std::shared_ptr<CompactManager>& compact_manager) const {
-        PAIMON_ASSIGN_OR_RAISE(
-            std::shared_ptr<MapSharedShreddingContext> shredding_context,
-            MapSharedShreddingUtils::CreateShreddingContext(logical_schema, core_options));
         return std::make_unique<AppendOnlyWriter>(core_options, schema_id, logical_schema,
                                                   write_cols, max_sequence_number, path_factory,
-                                                  compact_manager, shredding_context, pool_);
+                                                  compact_manager, pool_);
     }
 
  private:

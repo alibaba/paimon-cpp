@@ -23,9 +23,7 @@
 #include <utility>
 #include <vector>
 
-#include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/preconditions.h"
-#include "paimon/core/io/map_shared_shredding_core_utils.h"
 #include "paimon/core/operation/abstract_file_store_write.h"
 #include "paimon/core/operation/file_store_scan.h"
 #include "paimon/core/postpone/postpone_bucket_writer.h"
@@ -127,16 +125,10 @@ class PostponeBucketFileStoreWrite : public AbstractFileStoreWrite {
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<DataFilePathFactory> data_file_path_factory,
             file_store_path_factory_->CreateDataFilePathFactory(partition, bucket));
-        auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(schema_);
-        PAIMON_ASSIGN_OR_RAISE(
-            std::shared_ptr<MapSharedShreddingContext> shredding_context,
-            MapSharedShreddingCoreUtils::CreateAndRestoreContext(
-                write_schema, restore_data_files, data_file_path_factory, options_, pool_));
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<BatchWriter> writer,
             PostponeBucketWriter::Create(trimmed_primary_keys, data_file_path_factory,
-                                         table_schema_->Id(), schema_, options_, shredding_context,
-                                         pool_));
+                                         table_schema_->Id(), schema_, options_, pool_));
         return writer;
     }
 

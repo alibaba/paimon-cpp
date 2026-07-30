@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "paimon/common/data/shredding/shredding_write_plan_factory.h"
+#include "paimon/common/data/variant/variant_shredding_inference_session.h"
 #include "paimon/core/core_options.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
@@ -54,21 +55,24 @@ class VariantShreddingWritePlanFactory : public ShreddingWritePlanFactory {
 
     Result<std::shared_ptr<ShreddingBatchConverter>> CreateConverter(
         const std::string& file_format_identifier,
-        const std::vector<std::shared_ptr<arrow::Array>>& sample_batches) const override;
+        const std::vector<std::shared_ptr<arrow::Array>>& sample_batches) override;
 
     MetadataFinalizer CreateMetadataFinalizer(
-        const std::shared_ptr<ShreddingBatchConverter>& converter) const override {
+        const std::shared_ptr<ShreddingBatchConverter>& converter,
+        const std::string& compression) const override {
         // The shredded physical schema is self-describing; no per-file metadata is needed.
         return nullptr;
     }
 
+    Status OnFileCompleted(const std::shared_ptr<ShreddingBatchConverter>& converter) override;
+
  private:
-    VariantShreddingWritePlanFactory(std::optional<std::string> configured_schema,
-                                     bool infer_enabled, int32_t max_schema_width,
-                                     int32_t max_schema_depth, double min_field_cardinality_ratio,
-                                     int32_t max_infer_buffer_row,
-                                     const std::shared_ptr<arrow::Schema>& write_schema,
-                                     const std::shared_ptr<MemoryPool>& pool);
+    VariantShreddingWritePlanFactory(
+        std::optional<std::string> configured_schema, bool infer_enabled, int32_t max_schema_width,
+        int32_t max_schema_depth, double min_field_cardinality_ratio, int32_t max_infer_buffer_row,
+        VariantShreddingInferenceMode inference_mode, int32_t adaptive_max_infer_buffer_row,
+        double adaptive_retention_ratio, const std::shared_ptr<arrow::Schema>& write_schema,
+        const std::shared_ptr<MemoryPool>& pool);
 
     bool HasConfiguredShreddingSchema() const;
     /// Whether the write schema holds a shreddable variant field: at the top level or nested
@@ -84,6 +88,10 @@ class VariantShreddingWritePlanFactory : public ShreddingWritePlanFactory {
     int32_t max_schema_depth_ = 0;
     double min_field_cardinality_ratio_ = 0.0;
     int32_t max_infer_buffer_row_ = 0;
+    int32_t adaptive_max_infer_buffer_row_ = 0;
+    std::unique_ptr<VariantShreddingInferenceSession> adaptive_session_;
+    bool has_pending_adaptive_inference_ = false;
+    std::shared_ptr<ShreddingBatchConverter> pending_adaptive_converter_;
 };
 
 }  // namespace paimon

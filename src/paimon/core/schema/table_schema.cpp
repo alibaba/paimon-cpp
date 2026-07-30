@@ -122,8 +122,11 @@ Result<std::shared_ptr<arrow::Field>> TableSchema::AssignFieldIdsRecursively(
             key_field, AssignFieldIdsRecursively(key_field, /*set_field_id=*/false, field_id));
         PAIMON_ASSIGN_OR_RAISE(
             value_field, AssignFieldIdsRecursively(value_field, /*set_field_id=*/false, field_id));
-        return arrow::field(field->name(), arrow::map(key_field->type(), value_field),
-                            field->nullable(), metadata);
+        // Paimon MAP does not expose Arrow's keys_sorted property. Normalize it so an
+        // in-memory schema and the same schema reloaded from JSON remain equivalent.
+        auto new_map_type =
+            std::make_shared<arrow::MapType>(key_field, value_field, /*keys_sorted=*/false);
+        return arrow::field(field->name(), new_map_type, field->nullable(), metadata);
     }
     return metadata ? field->WithMergedMetadata(metadata) : field;
 }

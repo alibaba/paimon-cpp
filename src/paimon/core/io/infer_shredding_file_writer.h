@@ -35,7 +35,8 @@ namespace paimon {
 /// batches are buffered until `ShreddingWritePlanFactory::InferBufferRowCount` rows have been
 /// collected (or the writer is closed); the buffered batches are then sampled to create the
 /// batch converter, the actual file writer is created with the resulting physical schema, and
-/// the buffered batches are replayed into it. The file never rolls while buffering.
+/// the buffered batches are replayed into it. File-size rolling is suppressed while buffering;
+/// row-count rolling remains controlled by the outer RollingFileWriter.
 template <typename T, typename R>
 class InferShreddingFileWriter : public SingleFileWriter<T, R> {
  public:
@@ -78,7 +79,7 @@ class InferShreddingFileWriter : public SingleFileWriter<T, R> {
 
     Result<bool> ReachTargetSize(bool suggested_check, int64_t target_size) override {
         if (!plan_finalized_) {
-            // Never roll the file while rows are being buffered for inference.
+            // File-size rolling is unavailable until the inner writer has been created.
             return false;
         }
         return inner_->ReachTargetSize(suggested_check, target_size);

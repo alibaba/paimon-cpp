@@ -4003,6 +4003,77 @@ TEST_P(WriteInteTest, TestNullabilityCheck) {
                                                 /*expected_commit_messages=*/std::nullopt));
 }
 
+TEST_P(WriteInteTest, TestPkSpillableMapSharedShreddingReadWrite) {
+    auto file_format = GetParam();
+    if (file_format == "avro") {
+        return;
+    }
+
+    auto dir = UniqueTestDirectory::Create();
+    auto map_type = arrow::map(arrow::utf8(), arrow::int64());
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("metrics", map_type),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::BUCKET, "1"},
+        {Options::BUCKET_KEY, "id"},
+        {Options::FILE_SYSTEM, "local"},
+        {Options::WRITE_BUFFER_SIZE, "1"},
+        {Options::WRITE_BUFFER_SPILLABLE, "true"},
+        {Options::WRITE_ONLY, "true"},
+        {"fields.metrics.map.storage-layout", "shared-shredding"},
+        {"fields.metrics.map.shared-shredding.max-columns", "2"},
+    };
+    auto schema = arrow::schema(fields);
+    ::ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTestTable(dir->Str(), "db", "tbl", &c_schema,
+                                                          /*partition_keys=*/{},
+                                                          /*primary_keys=*/{"id"}, options));
+
+    std::string tmp_dir = PathUtil::JoinPath(dir->Str(), "tmp");
+    WriteContextBuilder write_builder(table_path, "commit_user_1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context,
+                         write_builder.SetOptions(options)
+                             .WithStreamingMode(true)
+                             .WithTempDirectory(tmp_dir)
+                             .Finish());
+    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
+
+    ASSERT_OK_AND_ASSIGN(
+        auto batch_0, TestHelper::MakeRecordBatch(
+                          arrow::struct_(fields),
+                          R"([[1, [["a", 10], ["b", 11], ["overflow", -10]]], [2, [["x", 20]]]])",
+                          /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(file_store_write->Write(std::move(batch_0)));
+    ASSERT_GT(TestHelper::CountChannelFiles(file_system_, tmp_dir), 0);
+
+    ASSERT_OK_AND_ASSIGN(auto batch_1,
+                         TestHelper::MakeRecordBatch(
+                             arrow::struct_(fields),
+                             R"([[1, [["a", 100], ["b", 101], ["overflow", -100]]], [3, null]])",
+                             /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(file_store_write->Write(std::move(batch_1)));
+    ASSERT_GT(TestHelper::CountChannelFiles(file_system_, tmp_dir), 0);
+
+    ASSERT_OK_AND_ASSIGN(auto commit_messages,
+                         file_store_write->PrepareCommit(/*wait_compaction=*/false,
+                                                         /*commit_identifier=*/0));
+    ASSERT_EQ(0, TestHelper::CountChannelFiles(file_system_, tmp_dir));
+    ASSERT_OK(CommitMessages(table_path, commit_messages));
+    ASSERT_OK(file_store_write->Close());
+
+    ASSERT_OK(ScanAndVerifyResult(table_path, fields,
+                                  R"([
+        [0, 1, [["a", 100], ["b", 101], ["overflow", -100]]],
+        [0, 2, [["x", 20]]],
+        [0, 3, null]
+    ])"));
+}
+
 TEST_P(WriteInteTest, TestPkSpillableDiskQuotaExhaustedFallsBackToFlush) {
     auto dir = UniqueTestDirectory::Create();
     arrow::FieldVector fields = {

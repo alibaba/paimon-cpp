@@ -40,6 +40,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(64 * 1024L, core_options.GetPageSize());
     ASSERT_EQ(256 * 1024 * 1024L, core_options.GetTargetFileSize(/*has_primary_key=*/false));
     ASSERT_EQ(128 * 1024 * 1024L, core_options.GetTargetFileSize(/*has_primary_key=*/true));
+    ASSERT_EQ(std::numeric_limits<int64_t>::max(), core_options.GetTargetFileRowNum());
     ASSERT_EQ(256 * 1024 * 1024L, core_options.GetBlobTargetFileSize());
     ASSERT_TRUE(core_options.BlobSplitByFileSize());
     ASSERT_EQ(187904815, core_options.GetCompactionFileSize(/*has_primary_key=*/false));
@@ -176,6 +177,7 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::BUCKET, "3"},
         {Options::PAGE_SIZE, "128 kb"},
         {Options::TARGET_FILE_SIZE, "512MB"},
+        {Options::TARGET_FILE_ROW_NUM, "123"},
         {Options::BLOB_TARGET_FILE_SIZE, "1G"},
         {Options::PARTITION_DEFAULT_NAME, "foo"},
         {Options::MANIFEST_TARGET_FILE_SIZE, "16MB"},
@@ -305,6 +307,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(128 * 1024L, core_options.GetPageSize());
     ASSERT_EQ(512 * 1024 * 1024L, core_options.GetTargetFileSize(/*has_primary_key=*/true));
     ASSERT_EQ(512 * 1024 * 1024L, core_options.GetTargetFileSize(/*has_primary_key=*/false));
+    ASSERT_EQ(123, core_options.GetTargetFileRowNum());
     ASSERT_EQ(1024 * 1024 * 1024L, core_options.GetBlobTargetFileSize());
     ASSERT_EQ("foo", core_options.GetPartitionDefaultName());
     ASSERT_EQ(16 * 1024 * 1024L, core_options.GetManifestTargetFileSize());
@@ -445,6 +448,8 @@ TEST(CoreOptionsTest, TestFromMap) {
 }
 
 TEST(CoreOptionsTest, TestInvalidCase) {
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::TARGET_FILE_ROW_NUM, "0"}}),
+                        "target-file-row-num should be at least 1");
     ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::BUCKET, "3.5"}}),
                         "Invalid Config [bucket: 3.5]");
     ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::SCAN_SNAPSHOT_ID, "3.5"}}),
@@ -848,6 +853,7 @@ TEST(CoreOptionsTest, TestCopyAssignmentOperator) {
         {Options::BUCKET, "3"},
         {Options::PAGE_SIZE, "128 kb"},
         {Options::TARGET_FILE_SIZE, "512MB"},
+        {Options::TARGET_FILE_ROW_NUM, "4321"},
         {Options::FILE_FORMAT, "ORC"},
         {Options::FILE_COMPRESSION, "lz4"},
         {Options::FILE_COMPRESSION_ZSTD_LEVEL, "5"},
@@ -876,6 +882,9 @@ TEST(CoreOptionsTest, TestCopyAssignmentOperator) {
         {Options::DATA_FILE_PREFIX, "test-data-"},
         {Options::ROW_TRACKING_ENABLED, "true"},
         {Options::DATA_EVOLUTION_ENABLED, "true"},
+        {Options::VARIANT_SHREDDING_INFERENCE_MODE, "adaptive"},
+        {Options::VARIANT_SHREDDING_ADAPTIVE_MAX_INFER_BUFFER_ROW, "77"},
+        {Options::VARIANT_SHREDDING_ADAPTIVE_RETENTION_RATIO, "0.02"},
         {Options::BUCKET_FUNCTION_TYPE, "mod"},
     };
     ASSERT_OK_AND_ASSIGN(CoreOptions source, CoreOptions::FromMap(options));
@@ -889,6 +898,7 @@ TEST(CoreOptionsTest, TestCopyAssignmentOperator) {
     // Verify all fields are correctly copied
     ASSERT_EQ(3, target.GetBucket());
     ASSERT_EQ(128 * 1024L, target.GetPageSize());
+    ASSERT_EQ(4321, target.GetTargetFileRowNum());
     ASSERT_EQ("orc", target.GetFileFormat()->Identifier());
     ASSERT_EQ("lz4", target.GetFileCompression());
     ASSERT_EQ(5, target.GetFileCompressionZstdLevel());
@@ -917,6 +927,9 @@ TEST(CoreOptionsTest, TestCopyAssignmentOperator) {
     ASSERT_EQ("test-data-", target.DataFilePrefix());
     ASSERT_TRUE(target.RowTrackingEnabled());
     ASSERT_TRUE(target.DataEvolutionEnabled());
+    ASSERT_EQ(VariantShreddingInferenceMode::ADAPTIVE, target.GetVariantShreddingInferenceMode());
+    ASSERT_EQ(77, target.GetVariantShreddingAdaptiveMaxInferBufferRow());
+    ASSERT_DOUBLE_EQ(0.02, target.GetVariantShreddingAdaptiveRetentionRatio());
     ASSERT_EQ(BucketFunctionType::MOD, target.GetBucketFunctionType());
 
     // Verify the target's ToMap matches the source's ToMap
@@ -1116,10 +1129,14 @@ TEST(CoreOptionsTest, TestVariantOptions) {
         ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
         ASSERT_EQ(options.GetVariantShreddingSchema(), std::nullopt);
         ASSERT_FALSE(options.VariantInferShreddingSchemaEnabled());
+        ASSERT_EQ(options.GetVariantShreddingInferenceMode(),
+                  VariantShreddingInferenceMode::PER_FILE);
         ASSERT_EQ(options.GetVariantShreddingMaxSchemaWidth(), 300);
         ASSERT_EQ(options.GetVariantShreddingMaxSchemaDepth(), 50);
         ASSERT_DOUBLE_EQ(options.GetVariantShreddingMinFieldCardinalityRatio(), 0.1);
         ASSERT_EQ(options.GetVariantShreddingMaxInferBufferRow(), 4096);
+        ASSERT_EQ(options.GetVariantShreddingAdaptiveMaxInferBufferRow(), 256);
+        ASSERT_DOUBLE_EQ(options.GetVariantShreddingAdaptiveRetentionRatio(), 0.05);
     }
     {
         // Configured values.
@@ -1127,16 +1144,23 @@ TEST(CoreOptionsTest, TestVariantOptions) {
             CoreOptions options,
             CoreOptions::FromMap({{"variant.shreddingSchema", "{\"type\": \"ROW\"}"},
                                   {"variant.inferShreddingSchema", "true"},
+                                  {"variant.shredding.inferenceMode", "ADAPTIVE"},
                                   {"variant.shredding.maxSchemaWidth", "20"},
                                   {"variant.shredding.maxSchemaDepth", "5"},
                                   {"variant.shredding.minFieldCardinalityRatio", "0.25"},
-                                  {"variant.shredding.maxInferBufferRow", "128"}}));
+                                  {"variant.shredding.maxInferBufferRow", "128"},
+                                  {"variant.shredding.adaptive.maxInferBufferRow", "64"},
+                                  {"variant.shredding.adaptive.retentionRatio", "0.2"}}));
         ASSERT_EQ(options.GetVariantShreddingSchema(), "{\"type\": \"ROW\"}");
         ASSERT_TRUE(options.VariantInferShreddingSchemaEnabled());
+        ASSERT_EQ(options.GetVariantShreddingInferenceMode(),
+                  VariantShreddingInferenceMode::ADAPTIVE);
         ASSERT_EQ(options.GetVariantShreddingMaxSchemaWidth(), 20);
         ASSERT_EQ(options.GetVariantShreddingMaxSchemaDepth(), 5);
         ASSERT_DOUBLE_EQ(options.GetVariantShreddingMinFieldCardinalityRatio(), 0.25);
         ASSERT_EQ(options.GetVariantShreddingMaxInferBufferRow(), 128);
+        ASSERT_EQ(options.GetVariantShreddingAdaptiveMaxInferBufferRow(), 64);
+        ASSERT_DOUBLE_EQ(options.GetVariantShreddingAdaptiveRetentionRatio(), 0.2);
     }
     {
         // The legacy parquet-prefixed key is a fallback for the shredding schema.
@@ -1147,6 +1171,8 @@ TEST(CoreOptionsTest, TestVariantOptions) {
     // Invalid values fail when the options are parsed, not when they are used.
     ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{"variant.inferShreddingSchema", "not_a_bool"}}),
                         "variant.inferShreddingSchema");
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{"variant.shredding.inferenceMode", "invalid"}}),
+                        "invalid variant shredding inference mode: invalid");
     ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{"variant.shredding.maxSchemaWidth", "abc"}}),
                         "variant.shredding.maxSchemaWidth");
     ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{"variant.shredding.maxSchemaWidth", "0"}}),
@@ -1158,6 +1184,18 @@ TEST(CoreOptionsTest, TestVariantOptions) {
         "should be in the range [0, 1]");
     ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{"variant.shredding.maxInferBufferRow", "0"}}),
                         "should be positive");
+    ASSERT_NOK_WITH_MSG(
+        CoreOptions::FromMap({{"variant.shredding.inferenceMode", "adaptive"},
+                              {"variant.shredding.adaptive.maxInferBufferRow", "0"}}),
+        "variant.shredding.adaptive.maxInferBufferRow");
+    ASSERT_NOK_WITH_MSG(
+        CoreOptions::FromMap({{"variant.shredding.inferenceMode", "adaptive"},
+                              {"variant.shredding.adaptive.retentionRatio", "-0.01"}}),
+        "variant.shredding.adaptive.retentionRatio");
+    ASSERT_NOK_WITH_MSG(
+        CoreOptions::FromMap({{"variant.shredding.inferenceMode", "adaptive"},
+                              {"variant.shredding.adaptive.retentionRatio", "0.11"}}),
+        "should be in the range [0, variant.shredding.minFieldCardinalityRatio]");
 }
 
 }  // namespace paimon::test

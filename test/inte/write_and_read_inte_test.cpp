@@ -58,6 +58,7 @@
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/test_helper.h"
 #include "paimon/testing/utils/testharness.h"
+#include "paimon/testing/utils/timezone_guard.h"
 #include "paimon/write_context.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
@@ -243,8 +244,7 @@ class WriteAndReadInteTest
             return Status::Invalid(
                 fmt::format("field {} has no shared-shredding metadata", field_name));
         }
-        return MapSharedShreddingUtils::DeserializeMetadata(
-            metadata_copy, MapSharedShreddingDefine::kDefaultDictCompression);
+        return MapSharedShreddingUtils::DeserializeMetadata(metadata_copy);
     }
 
  private:
@@ -1123,7 +1123,7 @@ TEST_P(WriteAndReadInteTest, TestWriteSamePartitionTwiceWithAllBasicTypesForPk) 
 
 TEST_P(WriteAndReadInteTest, TestCharVarcharBinaryVarbinaryTypes) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
     arrow::FieldVector fields = {
@@ -1509,7 +1509,7 @@ TEST_P(WriteAndReadInteTest, TestAppendWithParquetMetadataCache) {
 
 TEST_P(WriteAndReadInteTest, TestAppendSharedShreddingMap) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -1564,9 +1564,93 @@ TEST_P(WriteAndReadInteTest, TestAppendSharedShreddingMap) {
     ASSERT_TRUE(success);
 }
 
+TEST_P(WriteAndReadInteTest, TestMapSharedShreddingColumnPlacementPolicies) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format == "avro") {
+        return;
+    }
+
+    auto map_type = arrow::map(arrow::utf8(), arrow::int64());
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("plain_metrics", map_type),
+        arrow::field("sequential_metrics", map_type),
+        arrow::field("lru_metrics", map_type),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system},
+        {"fields.plain_metrics.map.storage-layout", "shared-shredding"},
+        {"fields.plain_metrics.map.shared-shredding.max-columns", "3"},
+        {"fields.plain_metrics.map.shared-shredding.column-placement-policy", "plain"},
+        {"fields.sequential_metrics.map.storage-layout", "shared-shredding"},
+        {"fields.sequential_metrics.map.shared-shredding.max-columns", "3"},
+        {"fields.sequential_metrics.map.shared-shredding.column-placement-policy", "sequential"},
+        {"fields.lru_metrics.map.storage-layout", "shared-shredding"},
+        {"fields.lru_metrics.map.shared-shredding.max-columns", "3"},
+        {"fields.lru_metrics.map.shared-shredding.column-placement-policy", "lru"},
+    };
+    if (file_system == "jindo") {
+        options = AddOptionsForJindo(options);
+    }
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(test_dir_, arrow::schema(fields), /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+                [1, [["a", 10], ["b", 20], ["c", 30]], [["a", 10], ["c", 30], ["d", 60]], [["a", 10], ["b", 20], ["c", 30]]],
+                [2, [["a", 40], ["b", 50]], [["a", 40], ["c", 50]], [["a", 40], ["b", 50]]],
+                [3, [["d", 60]], [["b", 60]], [["d", 60]]],
+                [4, [["a", 70], ["b", 80], ["c", 90], ["d", 100]], [["a", 70], ["b", 80], ["c", 90], ["d", 100]], [["a", 70], ["b", 80], ["c", 90], ["d", 100]]]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto files, CurrentDataFiles(options));
+    ASSERT_EQ(1, files.size());
+    auto check_meta = [&](const std::string& field_name,
+                          const std::string& overflow_name) -> Status {
+        PAIMON_ASSIGN_OR_RAISE(MapSharedShreddingFieldMeta meta,
+                               ReadShreddingMeta(files[0], field_name, options));
+        if (meta.name_to_id.size() != 4 || meta.num_columns != 3 || meta.max_row_width != 4 ||
+            meta.overflow_field_set.size() != 1) {
+            return Status::Invalid("unexpected shared-shredding metadata for ", field_name);
+        }
+        auto overflow_id = meta.name_to_id.find(overflow_name);
+        if (overflow_id == meta.name_to_id.end() ||
+            meta.overflow_field_set.count(overflow_id->second) != 1) {
+            return Status::Invalid("unexpected overflow field for ", field_name);
+        }
+        return Status::OK();
+    };
+    ASSERT_OK(check_meta("plain_metrics", "d"));
+    ASSERT_OK(check_meta("sequential_metrics", "b"));
+    ASSERT_OK(check_meta("lru_metrics", "c"));
+
+    arrow::FieldVector expected_fields = fields;
+    expected_fields.insert(expected_fields.begin(), arrow::field("_VALUE_KIND", arrow::int8()));
+    ASSERT_OK_AND_ASSIGN(auto splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(bool success,
+                         helper->ReadAndCheckResult(arrow::struct_(expected_fields), splits,
+                                                    R"([
+                [0, 1, [["a", 10], ["b", 20], ["c", 30]], [["a", 10], ["c", 30], ["d", 60]], [["a", 10], ["b", 20], ["c", 30]]],
+                [0, 2, [["a", 40], ["b", 50]], [["a", 40], ["c", 50]], [["a", 40], ["b", 50]]],
+                [0, 3, [["d", 60]], [["b", 60]], [["d", 60]]],
+                [0, 4, [["a", 70], ["b", 80], ["c", 90], ["d", 100]], [["a", 70], ["b", 80], ["c", 90], ["d", 100]], [["a", 70], ["b", 80], ["c", 90], ["d", 100]]]
+            ])"));
+    ASSERT_TRUE(success);
+}
+
 TEST_P(WriteAndReadInteTest, TestAppendMapSharedShreddingWithPartitionAndBucket) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -1663,7 +1747,7 @@ TEST_P(WriteAndReadInteTest, TestAppendMapSharedShreddingWithPartitionAndBucket)
 
     ASSERT_OK_AND_ASSIGN(auto p1_second_meta,
                          ReadShreddingMeta(p1_bucket0_files[1], "tags", options));
-    ASSERT_EQ(1, p1_second_meta.num_columns);
+    ASSERT_EQ(5, p1_second_meta.num_columns);
     ASSERT_EQ(1, p1_second_meta.max_row_width);
 
     ASSERT_OK_AND_ASSIGN(auto p2_first_meta,
@@ -1674,7 +1758,7 @@ TEST_P(WriteAndReadInteTest, TestAppendMapSharedShreddingWithPartitionAndBucket)
 
 TEST_P(WriteAndReadInteTest, TestAppendMapSharedShreddingWithPredicate) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -1766,9 +1850,9 @@ TEST_P(WriteAndReadInteTest, TestAppendMapSharedShreddingWithPredicate) {
     ASSERT_TRUE(expected->Equals(actual)) << actual->ToString();
 }
 
-TEST_P(WriteAndReadInteTest, TestMapSharedShreddingRestoreAdaptiveColumnCountFromFileMetadata) {
+TEST_P(WriteAndReadInteTest, TestMapSharedShreddingNewWriterStartsWithMaxColumnCount) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -1817,7 +1901,7 @@ TEST_P(WriteAndReadInteTest, TestMapSharedShreddingRestoreAdaptiveColumnCountFro
     ASSERT_EQ(8, first_meta.num_columns);
     ASSERT_EQ(1, first_meta.max_row_width);
     ASSERT_OK_AND_ASSIGN(auto second_meta, ReadShreddingMeta(files[1], "metrics", options));
-    ASSERT_EQ(1, second_meta.num_columns);
+    ASSERT_EQ(8, second_meta.num_columns);
     ASSERT_EQ(1, second_meta.max_row_width);
 
     auto expected_type = arrow::struct_({
@@ -1835,9 +1919,82 @@ TEST_P(WriteAndReadInteTest, TestMapSharedShreddingRestoreAdaptiveColumnCountFro
     ASSERT_TRUE(success);
 }
 
+TEST_P(WriteAndReadInteTest, TestMapSharedShreddingAdaptsAcrossRollingFiles) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format == "avro") {
+        return;
+    }
+
+    auto map_type = arrow::map(arrow::utf8(), arrow::int64());
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("metrics", map_type),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1048576"},
+        {Options::TARGET_FILE_ROW_NUM, "2"},
+        {Options::BUCKET, "1"},
+        {Options::BUCKET_KEY, "id"},
+        {Options::FILE_SYSTEM, file_system},
+        {Options::WRITE_ONLY, "true"},
+        {"fields.metrics.map.storage-layout", "shared-shredding"},
+        {"fields.metrics.map.shared-shredding.max-columns", "8"},
+    };
+    if (file_system == "jindo") {
+        options = AddOptionsForJindo(options);
+    }
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(test_dir_, arrow::schema(fields), /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+
+    std::vector<std::unique_ptr<RecordBatch>> batches;
+    ASSERT_OK_AND_ASSIGN(
+        auto first_batch,
+        TestHelper::MakeRecordBatch(
+            arrow::struct_(fields),
+            R"([[1, [["a", 11], ["b", 12]]], [2, [["c", 21], ["d", 22], ["e", 23]]]])",
+            /*partition_map=*/{}, /*bucket=*/0, {}));
+    batches.push_back(std::move(first_batch));
+    ASSERT_OK_AND_ASSIGN(
+        auto second_batch,
+        TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                    R"([[3, [["f", 31]]], [4, [["g", 41], ["h", 42]]]])",
+                                    /*partition_map=*/{}, /*bucket=*/0, {}));
+    batches.push_back(std::move(second_batch));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batches), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto files, CurrentDataFiles(options));
+    ASSERT_EQ(2, files.size());
+    ASSERT_OK_AND_ASSIGN(auto first_meta, ReadShreddingMeta(files[0], "metrics", options));
+    ASSERT_EQ(8, first_meta.num_columns);
+    ASSERT_EQ(3, first_meta.max_row_width);
+    ASSERT_OK_AND_ASSIGN(auto second_meta, ReadShreddingMeta(files[1], "metrics", options));
+    ASSERT_EQ(3, second_meta.num_columns);
+    ASSERT_EQ(2, second_meta.max_row_width);
+
+    auto expected_type = arrow::struct_({
+        arrow::field("_VALUE_KIND", arrow::int8()),
+        arrow::field("id", arrow::int32()),
+        arrow::field("metrics", map_type),
+    });
+    ASSERT_OK_AND_ASSIGN(auto splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(bool success, helper->ReadAndCheckResult(expected_type, splits,
+                                                                  R"([
+        [0, 1, [["a", 11], ["b", 12]]],
+        [0, 2, [["c", 21], ["d", 22], ["e", 23]]],
+        [0, 3, [["f", 31]]],
+        [0, 4, [["g", 41], ["h", 42]]]
+    ])"));
+    ASSERT_TRUE(success);
+}
+
 TEST_P(WriteAndReadInteTest, TestMapSharedShreddingSwitchMapLayoutAndUseMaxColumnsWithoutMetadata) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -1920,7 +2077,7 @@ TEST_P(WriteAndReadInteTest, TestMapSharedShreddingSwitchMapLayoutAndUseMaxColum
 
 TEST_P(WriteAndReadInteTest, TestMapSharedShreddingReadAfterRenameColumn) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -1989,7 +2146,7 @@ TEST_P(WriteAndReadInteTest, TestMapSharedShreddingReadAfterRenameColumn) {
 
 TEST_P(WriteAndReadInteTest, TestSharedShreddingWithSchemaEvolution) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2079,7 +2236,7 @@ TEST_P(WriteAndReadInteTest, TestSharedShreddingWithSchemaEvolution) {
 // Verify storage-layout evolution: default->shared-shredding.
 TEST_P(WriteAndReadInteTest, TestMapStorageLayoutDefaultToSharedShredding) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2140,7 +2297,7 @@ TEST_P(WriteAndReadInteTest, TestMapStorageLayoutDefaultToSharedShredding) {
 // Verify storage-layout evolution: shared-shredding->default.
 TEST_P(WriteAndReadInteTest, TestMapStorageLayoutSharedShreddingToDefault) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2204,7 +2361,7 @@ TEST_P(WriteAndReadInteTest, TestMapStorageLayoutSharedShreddingToDefault) {
 
 TEST_P(WriteAndReadInteTest, TestAppendMapStorageLayoutSharedShreddingToDefaultCompaction) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2308,7 +2465,7 @@ TEST_P(WriteAndReadInteTest, TestAppendMapStorageLayoutSharedShreddingToDefaultC
 // Nested map values through both selected physical columns and overflow.
 TEST_P(WriteAndReadInteTest, TestSharedShreddingWithStructValue) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2363,7 +2520,7 @@ TEST_P(WriteAndReadInteTest, TestSharedShreddingWithStructValue) {
 
 TEST_P(WriteAndReadInteTest, TestMapSharedShreddingWithComplexValue) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2455,9 +2612,137 @@ TEST_P(WriteAndReadInteTest, TestMapSharedShreddingWithComplexValue) {
     ASSERT_TRUE(selected_success);
 }
 
+TEST_P(WriteAndReadInteTest, TestMapSharedShreddingWithAllSupportedComplexValueTypes) {
+    auto [file_format, file_system] = GetParam();
+    if (file_format == "avro") {
+        return;
+    }
+
+    TimezoneGuard timezone_guard("Asia/Shanghai");
+    // Nested TIMESTAMP_LTZ needs a timezone projection inside MAP. The Parquet reader currently
+    // rejects that projection, so only ORC exercises LTZ here; Parquet still covers both timestamp
+    // precisions as timezone-free timestamps.
+    std::string timezone =
+        file_format == "orc" ? DateTimeUtils::GetLocalTimezoneName() : std::string();
+    auto value_type = arrow::struct_({
+        arrow::field("bool", arrow::boolean()),
+        arrow::field("tiny", arrow::int8()),
+        arrow::field("small", arrow::int16()),
+        arrow::field("i", arrow::int32()),
+        arrow::field("big", arrow::int64()),
+        arrow::field("f", arrow::float32()),
+        arrow::field("d", arrow::float64()),
+        arrow::field("s", arrow::utf8()),
+        arrow::field("bin", arrow::binary()),
+        arrow::field("compact_decimal", arrow::decimal128(10, 2)),
+        arrow::field("large_decimal", arrow::decimal128(23, 5)),
+        arrow::field("date", arrow::date32()),
+        arrow::field("ts3", arrow::timestamp(arrow::TimeUnit::MILLI)),
+        arrow::field("ts9", arrow::timestamp(arrow::TimeUnit::NANO)),
+        arrow::field("ts_ltz3", arrow::timestamp(arrow::TimeUnit::MILLI, timezone)),
+        arrow::field("ts_ltz6", arrow::timestamp(arrow::TimeUnit::MICRO, timezone)),
+        arrow::field("ints", arrow::list(arrow::int32())),
+        arrow::field("attrs", arrow::map(arrow::utf8(), arrow::int64())),
+        arrow::field("nested", arrow::struct_({
+                                   arrow::field("name", arrow::utf8()),
+                                   arrow::field("score", arrow::int32()),
+                               })),
+    });
+    auto map_type = arrow::map(arrow::utf8(), value_type);
+    arrow::FieldVector fields = {
+        arrow::field("id", arrow::int32()),
+        arrow::field("metrics", map_type),
+    };
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "avro"},
+        {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+        {Options::FILE_SYSTEM, file_system},
+        {Options::WRITE_ONLY, "true"},
+        {"orc.timestamp-ltz.legacy.type", "false"},
+        {"fields.metrics.map.storage-layout", "shared-shredding"},
+        {"fields.metrics.map.shared-shredding.max-columns", "2"},
+    };
+    if (file_system == "jindo") {
+        options = AddOptionsForJindo(options);
+    }
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(test_dir_, arrow::schema(fields), /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+
+    ASSERT_OK_AND_ASSIGN(auto batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields),
+                                                     R"([
+                [1, [
+                    ["fixed-a", [
+                        true, 1, 2, 3, 4, 5.5, 6.25, "str", "bin",
+                        "12345678.90", "123456789012345678.12345", 19500,
+                        "2023-11-14 22:13:20.123", "2023-11-14 22:13:20.123456789",
+                        "2023-11-14 22:13:20.123", "2023-11-14 22:13:20.123456",
+                        [7, null, 8], [["m1", 10], ["m2", null]], ["nested", 99]
+                    ]],
+                    ["fixed-b", [
+                        null, null, null, null, null, null, null, null, null,
+                        null, null, null, null, null, null, null, null, null, null
+                    ]],
+                    ["overflow", [
+                        false, 9, 10, 11, 12, 13.5, 14.25, "overflow", "raw",
+                        "-1.23", "-123456789012345678.12345", 19600,
+                        "2027-01-15 08:00:00.321", "2027-01-15 08:00:00.321987654",
+                        "2027-01-15 08:00:00.321", "2027-01-15 08:00:00.321987",
+                        [42], [["om", 100]], ["overflow-nested", -7]
+                    ]]
+                ]],
+                [2, null],
+                [3, []]
+            ])",
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK(helper->WriteAndCommit(std::move(batch), /*commit_identifier=*/0,
+                                     /*expected_commit_messages=*/std::nullopt));
+
+    ASSERT_OK_AND_ASSIGN(auto files, CurrentDataFiles(options));
+    ASSERT_EQ(1, files.size());
+    ASSERT_OK_AND_ASSIGN(auto meta, ReadShreddingMeta(files[0], "metrics", options));
+    ASSERT_EQ(2, meta.num_columns);
+    ASSERT_EQ(3, meta.max_row_width);
+
+    arrow::FieldVector expected_fields = fields;
+    expected_fields.insert(expected_fields.begin(), arrow::field("_VALUE_KIND", arrow::int8()));
+    ASSERT_OK_AND_ASSIGN(auto splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_OK_AND_ASSIGN(bool success,
+                         helper->ReadAndCheckResult(arrow::struct_(expected_fields), splits,
+                                                    R"([
+                [0, 1, [
+                    ["fixed-a", [
+                        true, 1, 2, 3, 4, 5.5, 6.25, "str", "bin",
+                        "12345678.90", "123456789012345678.12345", 19500,
+                        "2023-11-14 22:13:20.123", "2023-11-14 22:13:20.123456789",
+                        "2023-11-14 22:13:20.123", "2023-11-14 22:13:20.123456",
+                        [7, null, 8], [["m1", 10], ["m2", null]], ["nested", 99]
+                    ]],
+                    ["fixed-b", [
+                        null, null, null, null, null, null, null, null, null,
+                        null, null, null, null, null, null, null, null, null, null
+                    ]],
+                    ["overflow", [
+                        false, 9, 10, 11, 12, 13.5, 14.25, "overflow", "raw",
+                        "-1.23", "-123456789012345678.12345", 19600,
+                        "2027-01-15 08:00:00.321", "2027-01-15 08:00:00.321987654",
+                        "2027-01-15 08:00:00.321", "2027-01-15 08:00:00.321987",
+                        [42], [["om", 100]], ["overflow-nested", -7]
+                    ]]
+                ]],
+                [0, 2, null],
+                [0, 3, []]
+            ])"));
+    ASSERT_TRUE(success);
+}
+
 TEST_P(WriteAndReadInteTest, TestMapSharedShreddingStructValueSchemaEvolutionReadFails) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2654,7 +2939,7 @@ TEST_P(WriteAndReadInteTest, TestOrcDictionaryLazyDecodingWithSharedShredding) {
 // Verify shared-shredding in the PK read path.
 TEST_P(WriteAndReadInteTest, TestPkSharedShreddingMap) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2708,7 +2993,7 @@ TEST_P(WriteAndReadInteTest, TestPkSharedShreddingMap) {
 
 TEST_P(WriteAndReadInteTest, TestSharedShreddingPartialKeyRecallWithOverflow) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2821,7 +3106,7 @@ TEST_P(WriteAndReadInteTest, TestSharedShreddingPartialKeyRecallWithOverflow) {
 
 TEST_P(WriteAndReadInteTest, TestSharedShreddingPartialKeyRecallWithNullOrMissingKey) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -2912,7 +3197,7 @@ TEST_P(WriteAndReadInteTest, TestSharedShreddingPartialKeyRecallWithNullOrMissin
 
 TEST_P(WriteAndReadInteTest, TestSharedShreddingPartialKeyRecallMultipleColumns) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -3001,7 +3286,7 @@ TEST_P(WriteAndReadInteTest, TestSharedShreddingPartialKeyRecallMultipleColumns)
 
 TEST_P(WriteAndReadInteTest, TestMapStorageLayoutDefaultToSharedShreddingPartialKeyRecall) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -3074,7 +3359,7 @@ TEST_P(WriteAndReadInteTest, TestMapStorageLayoutDefaultToSharedShreddingPartial
 
 TEST_P(WriteAndReadInteTest, TestMapStorageLayoutSharedShreddingToDefaultPartialKeyRecall) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -3151,7 +3436,7 @@ TEST_P(WriteAndReadInteTest, TestMapStorageLayoutSharedShreddingToDefaultPartial
 
 TEST_P(WriteAndReadInteTest, TestSharedShreddingDuplicateSelectedKeys) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -3199,7 +3484,7 @@ TEST_P(WriteAndReadInteTest, TestSharedShreddingDuplicateSelectedKeys) {
 
 TEST_P(WriteAndReadInteTest, TestSharedShreddingAllNullMapColumn) {
     auto [file_format, file_system] = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 

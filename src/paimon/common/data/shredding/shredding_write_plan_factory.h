@@ -56,12 +56,17 @@ class ShreddingWritePlanFactory {
     /// no conversion is useful for this file (the file is written with the logical schema).
     virtual Result<std::shared_ptr<ShreddingBatchConverter>> CreateConverter(
         const std::string& file_format_identifier,
-        const std::vector<std::shared_ptr<arrow::Array>>& sample_batches) const = 0;
+        const std::vector<std::shared_ptr<arrow::Array>>& sample_batches) = 0;
 
     /// The per-file metadata finalizer persisted into the file footer, or nullptr when the
     /// physical schema is self-describing (as it is for VARIANT shredding).
     virtual MetadataFinalizer CreateMetadataFinalizer(
-        const std::shared_ptr<ShreddingBatchConverter>& converter) const = 0;
+        const std::shared_ptr<ShreddingBatchConverter>& converter,
+        const std::string& compression) const = 0;
+
+    /// Advances rolling-writer-scoped state after the file and its output stream have been
+    /// closed successfully. Failed files must never affect the next file's write plan.
+    virtual Status OnFileCompleted(const std::shared_ptr<ShreddingBatchConverter>& converter) = 0;
 };
 
 }  // namespace paimon
