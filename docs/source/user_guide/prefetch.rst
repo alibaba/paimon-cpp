@@ -20,26 +20,50 @@ Prefetch
    :align: center
    :width: 100%
 
-In C++ Paimon, we use a multi-producer, single-consumer model to optimize file reading. The core idea is to split a file into line-based ReadRanges and assign them to multiple reader threads (producers). Each reader thread owns an independent result queue that holds its processed RecordBatches. In the main reader thread (the consumer), we sort the heads of all queues by the ReadRange start offset in ascending order and select the RecordBatch with the smallest start offset to ensure globally ordered results.
+In Paimon C++, we use a multi-producer, single-consumer model to optimize file
+reading. The core idea is to split a file into row-based read ranges and assign
+them to multiple reader threads (producers). Each reader thread owns an
+independent result queue that holds its processed RecordBatches. In the main
+reader thread (the consumer), we sort the heads of all queues by the read
+range's starting row and select the RecordBatch with the smallest starting row
+to ensure globally ordered results.
 
 Read Range Splitting Strategy
 =============================
 
-Designing an efficient ReadRange splitting strategy requires balancing two key objectives:
+Designing an efficient ReadRange splitting strategy requires balancing two key
+objectives:
 
-- Minimize read amplification: Ensure the data fetched from storage is used effectively, avoiding unnecessary I/O overhead.
-- Reduce ReadRange span: Ideally, the size of a ReadRange should match a single read batch size to enable fine-grained parallel control.
+- Minimize read amplification: Ensure the data fetched from storage is used
+  effectively, avoiding unnecessary I/O overhead.
+- Reduce ReadRange span: Ideally, the size of a ReadRange should match a single
+  read batch size to enable fine-grained parallel control.
 
-Below we detail how these strategies are applied to formats Parquet.
+Below we detail how these strategies are applied to Parquet and ORC.
 
 Parquet
 =======
 
-Parquet files are organized into RowGroups and Pages. Since C++ Parquet does not support row-level seeking, prefetching can only be done at the RowGroup level. This naturally avoids read amplification, but introduces a new challenge: if a file contains only a small number of RowGroups, parallelism is severely limited. Therefore, we recommend users reduce RowGroup size when writing Parquet files to increase opportunities for parallel processing.
+Parquet files are organized into RowGroups and Pages. Since C++ Parquet does
+not support row-level seeking, prefetching can only be done at the RowGroup
+level. This naturally avoids read amplification, but introduces a new
+challenge: if a file contains only a small number of RowGroups, parallelism is
+severely limited. Therefore, we recommend users reduce RowGroup size when
+writing Parquet files to increase opportunities for parallel processing.
 
-Another critical difference is the read behavior compared to Orc. Orc strictly returns RecordBatches aligned to Stripe boundaries, whereas C++ Parquet may return a RecordBatch containing data from multiple RowGroups. This can lead to output order confusion during parallel reads. We modified C++ Parquet internals to return results strictly aligned to RowGroup boundaries, matching Orc’s behavior. With this change, parallel reading no longer requires complex seek operations, improving overall read efficiency.
+Another critical difference is the read behavior compared to ORC. ORC strictly
+returns RecordBatches aligned to Stripe boundaries, whereas C++ Parquet may
+return a RecordBatch containing data from multiple RowGroups. This can lead to
+output order confusion during parallel reads. We modified C++ Parquet internals
+to return results strictly aligned to RowGroup boundaries, matching ORC's
+behavior. With this change, parallel reading no longer requires complex seek
+operations, improving overall read efficiency.
 
-.. admonition:: TODO
-  :class: tip
+ORC
+===
 
-  Support prefetch for Orc.
+ORC files are organized into Stripes. Paimon C++ generates row ranges from
+Stripe metadata, the selected columns, and the configured natural read size.
+Prefetch is enabled when the estimated compressed size of the selected columns
+exceeds the configured threshold; otherwise the reader uses the normal
+single-reader path.

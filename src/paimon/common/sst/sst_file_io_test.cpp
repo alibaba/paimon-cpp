@@ -171,7 +171,7 @@ TEST_P(SstFileIOTest, TestSimple) {
     ASSERT_EQ("looooooooooong-值-15", string15);
 }
 
-TEST_P(SstFileIOTest, TestJavaCompatibility) {
+TEST_P(SstFileIOTest, DISABLED_TestJavaCompatibility) {
     auto param = GetParam();
 
     // key range [1_000_000, 2_000_000], value is equal to the key

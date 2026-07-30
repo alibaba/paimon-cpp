@@ -79,7 +79,6 @@ Before submitting, please verify:
 - **C++17** compatible compiler (GCC recommended)
 - **CMake** ≥ 3.16
 - **Python 3** (for linting scripts and pre-commit)
-- **git-lfs** (the repository uses Git LFS for large files)
 
 ---
 

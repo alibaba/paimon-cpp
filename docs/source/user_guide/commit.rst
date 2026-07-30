@@ -15,7 +15,7 @@
 Commit
 ==========================================
 
-Commit is a critical stage in Paimon’s write path. It is responsible for generating
+Commit is a critical stage in Paimon's write path. It is responsible for generating
 Snapshot files that describe the current state of a Paimon table. This document
 provides a detailed analysis of the Paimon Commit process.
 
@@ -41,7 +41,7 @@ Collect File Changes
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 During Commit, the system extracts key information from ``CommitMessages``—such as
-file name, operation type (``ADD`` or ``DELETE``), the file’s Partition and Bucket—
+file name, operation type (``ADD`` or ``DELETE``), the file's Partition and Bucket—
 and converts them into ``ManifestEntry`` records.
 
 A ``ManifestEntry`` represents a single operation record in a manifest file and
@@ -80,7 +80,7 @@ classifies them as follows:
 Minor Compaction
 ^^^^^^^^^^^^^^^^
 
-If Full Compaction’s conditions are not met, Minor Compaction is attempted:
+If Full Compaction's conditions are not met, Minor Compaction is attempted:
 
 - The system iterates over all files, skipping any file larger than the target file size.
 - Whenever the accumulated size of selected files exceeds the target file size, those files are merged.
@@ -98,7 +98,7 @@ Generate the Base Manifest List
 
 After compaction (which may or may not be triggered every time), the system obtains
 a consolidated set of manifest file metadata. This metadata is written into a new
-manifest list file, forming the Snapshot’s base manifest list.
+manifest list file, forming the Snapshot's base manifest list.
 
 Generate New Manifest Files and the Delta Manifest List
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

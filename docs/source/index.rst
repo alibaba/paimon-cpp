@@ -83,7 +83,7 @@ native engines to access the Paimon datalake format with maximum efficiency.
       :class-card: contrib-card
       :shadow: none
 
-      Explore Paimon‘s API reference documentation
+      Explore Paimon's API reference documentation
 
       +++
 

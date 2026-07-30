@@ -994,6 +994,50 @@ TEST(CoreOptionsTest, TestFallback) {
     }
 }
 
+TEST(CoreOptionsTest, TestIgnoreDeleteFallbackKeys) {
+    {
+        // Tables written by Java may carry first-row.ignore-delete instead of ignore-delete.
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::MERGE_ENGINE, "first-row"},
+                                  {Options::FALLBACK_FIRST_ROW_IGNORE_DELETE, "true"}}));
+        ASSERT_TRUE(options.IgnoreDelete());
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::FALLBACK_DEDUPLICATE_IGNORE_DELETE, "true"}}));
+        ASSERT_TRUE(options.IgnoreDelete());
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::FALLBACK_PARTIAL_UPDATE_IGNORE_DELETE, "true"}}));
+        ASSERT_TRUE(options.IgnoreDelete());
+    }
+    {
+        // The primary key takes precedence over fallback keys, matching Java CoreOptions.
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::IGNORE_DELETE, "false"},
+                                  {Options::FALLBACK_FIRST_ROW_IGNORE_DELETE, "true"}}));
+        ASSERT_FALSE(options.IgnoreDelete());
+    }
+    {
+        // Fallback keys are checked in declaration order.
+        ASSERT_OK_AND_ASSIGN(
+            CoreOptions options,
+            CoreOptions::FromMap({{Options::FALLBACK_FIRST_ROW_IGNORE_DELETE, "false"},
+                                  {Options::FALLBACK_DEDUPLICATE_IGNORE_DELETE, "true"}}));
+        ASSERT_FALSE(options.IgnoreDelete());
+    }
+    {
+        ASSERT_NOK_WITH_MSG(
+            CoreOptions::FromMap({{Options::FALLBACK_FIRST_ROW_IGNORE_DELETE, "invalid"}}),
+            "Invalid Config [first-row.ignore-delete: invalid]");
+    }
+}
+
 TEST(CoreOptionsTest, TestMapStorageLayout) {
     // Test shared-shredding layout configured for a specific column
     {

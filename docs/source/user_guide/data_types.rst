@@ -157,8 +157,9 @@ and `Arrow DataTypes <https://arrow.apache.org/docs/format/Columnar.html#data-ty
      - Data type of a timestamp without time zone consisting of year-month-day hour:minute:second[.fractional] with up to nanosecond precision and values ranging from 0000-01-01 00:00:00.000000000 to 9999-12-31 23:59:59.999999999.
 
        The type can be declared using ``TIMESTAMP(p)`` where p is the number of
-       digits of fractional seconds (precision). p must have a value between 0
-       and 9 (both inclusive). If no precision is specified, p is equal to 6.
+       digits of fractional seconds (precision). Paimon C++ supports precision
+       values 0 (seconds), 3 (milliseconds), 6 (microseconds), and 9
+       (nanoseconds). If no precision is specified, p is equal to 6.
 
    * - ``TIMESTAMP WITH LOCAL TIME ZONE``
 
@@ -170,6 +171,9 @@ and `Arrow DataTypes <https://arrow.apache.org/docs/format/Columnar.html#data-ty
        timestamp types by allowing the interpretation of UTC timestamps according
        to the configured session time zone. A conversion from and to int describes
        the number of seconds since epoch. A conversion from and to long describes the number of milliseconds since epoch.
+
+       Paimon C++ supports precision values 0 (seconds), 3 (milliseconds), 6
+       (microseconds), and 9 (nanoseconds).
 
    * - ``ARRAY<t>``
      - List

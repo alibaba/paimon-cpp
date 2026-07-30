@@ -82,7 +82,7 @@ Detailed Steps
 1. Build a ``ScanFilter`` for the partition and use the latest snapshot
    to scan the partition.
 2. Iterate over the scanned data file list (``ManifestEntries``) and
-   rewrite each entry’s type to ``DELETE``.
+   rewrite each entry's type to ``DELETE``.
 3. Commit using the rewritten ``ManifestEntries``. If the commit fails,
    retry a limited number of times.
 

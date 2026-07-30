@@ -20,6 +20,7 @@
 #include <functional>
 #include <limits>
 #include <map>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -108,9 +109,22 @@ class ManifestFileMergerTest : public testing::Test {
         return manifest_file_metas[0];
     }
 
+    std::set<std::string> ListManifestFiles() const {
+        std::vector<std::unique_ptr<FileStatus>> file_statuses;
+        EXPECT_OK(file_system_->ListFileStatus(
+            FileStorePathFactory::ManifestPath(path_factory_->RootPath()), &file_statuses));
+        std::set<std::string> files;
+        for (const auto& status : file_statuses) {
+            if (!status->IsDir()) {
+                files.insert(status->GetPath());
+            }
+        }
+        return files;
+    }
+
  private:
     void CreateManifestFile(const std::string& path_str) {
-        auto file_system = std::make_shared<LocalFileSystem>();
+        file_system_ = std::make_shared<LocalFileSystem>();
         ASSERT_OK_AND_ASSIGN(
             std::shared_ptr<FileFormat> file_format,
             FileFormatFactory::Get("parquet", std::map<std::string, std::string>()));
@@ -128,10 +142,11 @@ class ManifestFileMergerTest : public testing::Test {
                 options.GetFileFormat()->Identifier(), options.DataFilePrefix(),
                 options.LegacyPartitionNameEnabled(), external_paths, global_index_external_path,
                 options.IndexFileInDataFileDir(), pool_));
+        path_factory_ = path_factory;
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Schema> partition_schema,
                              FieldMapping::GetPartitionSchema(schema, {"f0"}));
         ASSERT_OK_AND_ASSIGN(manifest_file_,
-                             ManifestFile::Create(file_system, file_format, "zstd", path_factory,
+                             ManifestFile::Create(file_system_, file_format, "zstd", path_factory,
                                                   /*target_file_size=*/1024 * 1024, pool_, options,
                                                   partition_schema));
     }
@@ -165,6 +180,8 @@ class ManifestFileMergerTest : public testing::Test {
     std::string test_root_;
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<ManifestFile> manifest_file_;
+    std::shared_ptr<FileSystem> file_system_;
+    std::shared_ptr<FileStorePathFactory> path_factory_;
     std::shared_ptr<arrow::DataType> partition_type_;
 };
 
@@ -367,6 +384,26 @@ TEST_F(ManifestFileMergerTest, TestTriggerFullCompaction) {
     }
     entry_file_expected.emplace_back("G", FileKind::Add());
     ContainSameEntryFile(merged.value(), entry_file_expected);
+}
+
+TEST_F(ManifestFileMergerTest, TestDeleteNewManifestFilesWhenMinorCompactionFails) {
+    std::vector<ManifestFileMeta> input;
+    for (int32_t i = 0; i < 4; i++) {
+        input.push_back(MakeManifest({MakeEntry(FileKind::Add(), std::to_string(i))}));
+    }
+
+    // The first pair is merged successfully. Removing a source file from the second pair makes
+    // the following merge fail after a new manifest file has already been created.
+    std::string missing_manifest_path = path_factory_->ToManifestFilePath(input[2].FileName());
+    ASSERT_OK(file_system_->Delete(missing_manifest_path));
+    std::set<std::string> files_before_merge = ListManifestFiles();
+
+    ASSERT_NOK_WITH_MSG(ManifestFileMerger::Merge(
+                            input, /*manifest_target_file_size=*/5000, /*merge_min_count=*/2,
+                            /*full_compaction_file_size=*/MAX_LONG_VALUE, manifest_file_.get()),
+                        "not exists");
+
+    ASSERT_EQ(files_before_merge, ListManifestFiles());
 }
 
 }  // namespace paimon::test

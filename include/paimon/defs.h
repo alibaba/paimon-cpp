@@ -90,8 +90,9 @@ struct PAIMON_EXPORT Options {
     static const char SEQUENCE_GROUP[];
     /// @}
 
-    /// "bucket" - Bucket number for file store. It should either be equal to -1 (dynamic bucket
-    /// mode), or it must be greater than 0 (fixed bucket mode).
+    /// "bucket" - Bucket mode or bucket count for file store. Append tables support -1
+    /// (unaware-bucket mode), primary-key tables support -2 (postpone-bucket mode), and both
+    /// table types support values greater than 0 (fixed-bucket mode).
     static const char BUCKET[];
 
     /// "bucket-key" - Specify the paimon distribution policy. Data is assigned to each bucket
@@ -324,6 +325,15 @@ struct PAIMON_EXPORT Options {
 
     /// "ignore-delete" - Whether to ignore delete records. Default value is "false".
     static const char IGNORE_DELETE[];
+
+    /// "first-row.ignore-delete" deprecated as a fallback for `IGNORE_DELETE`.
+    static const char FALLBACK_FIRST_ROW_IGNORE_DELETE[];
+
+    /// "deduplicate.ignore-delete" deprecated as a fallback for `IGNORE_DELETE`.
+    static const char FALLBACK_DEDUPLICATE_IGNORE_DELETE[];
+
+    /// "partial-update.ignore-delete" deprecated as a fallback for `IGNORE_DELETE`.
+    static const char FALLBACK_PARTIAL_UPDATE_IGNORE_DELETE[];
 
     /// "fields.default-aggregate-function" - Default aggregate function of all fields for
     /// partial-update and aggregate merge function.
