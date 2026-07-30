@@ -176,10 +176,8 @@ class MergeTreeWriterTest : public ::testing::TestWithParam<bool> {
 
         auto metadata = file_schema->field(field_index)->metadata();
         ASSERT_NE(nullptr, metadata);
-        ASSERT_OK_AND_ASSIGN(
-            auto deserialized_meta,
-            MapSharedShreddingUtils::DeserializeMetadata(
-                metadata->Copy(), MapSharedShreddingDefine::kDefaultDictCompression));
+        ASSERT_OK_AND_ASSIGN(auto deserialized_meta,
+                             MapSharedShreddingUtils::DeserializeMetadata(metadata->Copy()));
         ASSERT_EQ(expected_meta, deserialized_meta);
     }
 
@@ -208,8 +206,7 @@ class MergeTreeWriterTest : public ::testing::TestWithParam<bool> {
         return MergeTreeWriter::Create(
             last_sequence_number, primary_keys_, path_factory, key_comparator_,
             user_defined_seq_comparator, merge_function_wrapper_, schema_id, value_schema_, options,
-            writer_compact_manager, io_manager, /*enable_multi_thread_spill=*/false,
-            /*shredding_context=*/nullptr, pool_);
+            writer_compact_manager, io_manager, /*enable_multi_thread_spill=*/false, pool_);
     }
 
  private:
@@ -403,9 +400,6 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMapDataFileMetaInfo) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> key_comparator,
                          FieldsComparator::Create({value_fields[0]},
                                                   /*is_ascending_order=*/true));
-    ASSERT_OK_AND_ASSIGN(auto shredding_context,
-                         MapSharedShreddingUtils::CreateShreddingContext(write_schema, options));
-
     ASSERT_OK_AND_ASSIGN(
         auto merge_writer,
         MergeTreeWriter::Create(
@@ -414,7 +408,7 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMapDataFileMetaInfo) {
             /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/5,
             value_schema, options, noop_compact_manager_,
             GetParam() ? std::make_shared<IOManager>(dir->Str() + "/tmp", file_system_) : nullptr,
-            /*enable_multi_thread_spill=*/false, shredding_context, pool_));
+            /*enable_multi_thread_spill=*/false, pool_));
 
     // Each batch contains duplicated primary keys. DeduplicateMergeFunction should keep the
     // latest sequence number for each key across and within batches.
@@ -486,10 +480,12 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMapDataFileMetaInfo) {
     ASSERT_TRUE(expected_data_file_meta->TEST_Equal(*actual_meta));
 }
 
-TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation) {
+TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsAdaptAcrossRollingFiles) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({
                              {Options::FILE_FORMAT, "orc"},
+                             {Options::TARGET_FILE_ROW_NUM, "2"},
+                             {Options::WRITE_BATCH_SIZE, "2"},
                              {"fields.tags.map.storage-layout", "shared-shredding"},
                              {"fields.tags.map.shared-shredding.max-columns", "8"},
                              {"fields.tags.map.shared-shredding.column-placement-policy", "plain"},
@@ -515,9 +511,6 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation)
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> key_comparator,
                          FieldsComparator::Create({value_fields[0]},
                                                   /*is_ascending_order=*/true));
-    ASSERT_OK_AND_ASSIGN(auto shredding_context,
-                         MapSharedShreddingUtils::CreateShreddingContext(write_schema, options));
-
     ASSERT_OK_AND_ASSIGN(
         auto merge_writer,
         MergeTreeWriter::Create(
@@ -526,7 +519,7 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation)
             /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
             value_schema, options, noop_compact_manager_,
             GetParam() ? std::make_shared<IOManager>(dir->Str() + "/tmp", file_system_) : nullptr,
-            /*enable_multi_thread_spill=*/false, shredding_context, pool_));
+            /*enable_multi_thread_spill=*/false, pool_));
 
     auto array1 = arrow::ipc::internal::json::ArrayFromJSON(value_type, R"([
       [1, [["a", 10], ["b", 20]], [["x", "v1"]]],
@@ -534,11 +527,24 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation)
     ])")
                       .ValueOrDie();
     WriteBatch(array1, /*row_kinds=*/{}, merge_writer.get());
-    ASSERT_OK_AND_ASSIGN(CommitIncrement commit_increment1,
+
+    auto array2 = arrow::ipc::internal::json::ArrayFromJSON(value_type, R"([
+      [3, [["c", 100], ["d", 200], ["e", 300]], [["p", "a1"], ["q", "a2"], ["r", "a3"]]]
+    ])")
+                      .ValueOrDie();
+    WriteBatch(array2, /*row_kinds=*/{}, merge_writer.get());
+
+    auto array3 = arrow::ipc::internal::json::ArrayFromJSON(value_type, R"([
+      [4, [["f", 400], ["g", 500]], [["s", "b1"], ["t", "b2"]]]
+    ])")
+                      .ValueOrDie();
+    WriteBatch(array3, /*row_kinds=*/{}, merge_writer.get());
+    ASSERT_OK_AND_ASSIGN(CommitIncrement increment,
                          merge_writer->PrepareCommit(/*wait_compaction=*/false));
-    ASSERT_EQ(1, commit_increment1.GetNewFilesIncrement().NewFiles().size());
-    std::string file1_path =
-        path_factory->ToPath(commit_increment1.GetNewFilesIncrement().NewFiles()[0]->file_name);
+    const auto& files = increment.GetNewFilesIncrement().NewFiles();
+    ASSERT_EQ(2, files.size());
+    std::string file1_path = path_factory->ToPath(files[0]->file_name);
+    std::string file2_path = path_factory->ToPath(files[1]->file_name);
 
     std::map<std::string, int32_t> column_to_k_file1 = {{"tags", 8}, {"attrs", 4}};
     ASSERT_OK_AND_ASSIGN(auto physical_schema1, MapSharedShreddingUtils::LogicalToPhysicalSchema(
@@ -549,7 +555,6 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation)
     tags_meta1.num_columns = 8;
     tags_meta1.max_row_width = 2;
     CheckShreddingFileSchema(file1_path, physical_schema1, /*field_index=*/3, tags_meta1);
-
     MapSharedShreddingFieldMeta attrs_meta1;
     attrs_meta1.name_to_id = {{"x", 0}};
     attrs_meta1.field_to_columns = {{0, {0}}};
@@ -557,63 +562,23 @@ TEST_P(MergeTreeWriterTest, TestSharedShreddingMultipleMapFieldsWithKAdaptation)
     attrs_meta1.max_row_width = 1;
     CheckShreddingFileSchema(file1_path, physical_schema1, /*field_index=*/4, attrs_meta1);
 
-    auto array2 = arrow::ipc::internal::json::ArrayFromJSON(value_type, R"([
-      [3, [["c", 100], ["d", 200], ["e", 300]], [["p", "a1"], ["q", "a2"], ["r", "a3"]]]
-    ])")
-                      .ValueOrDie();
-    WriteBatch(array2, /*row_kinds=*/{}, merge_writer.get());
-    ASSERT_OK_AND_ASSIGN(CommitIncrement commit_increment2,
-                         merge_writer->PrepareCommit(/*wait_compaction=*/false));
-    ASSERT_EQ(1, commit_increment2.GetNewFilesIncrement().NewFiles().size());
-    std::string file2_path =
-        path_factory->ToPath(commit_increment2.GetNewFilesIncrement().NewFiles()[0]->file_name);
-
     std::map<std::string, int32_t> column_to_k_file2 = {{"tags", 2}, {"attrs", 1}};
     ASSERT_OK_AND_ASSIGN(auto physical_schema2, MapSharedShreddingUtils::LogicalToPhysicalSchema(
                                                     write_schema, column_to_k_file2));
     MapSharedShreddingFieldMeta tags_meta2;
-    tags_meta2.name_to_id = {{"c", 0}, {"d", 1}, {"e", 2}};
-    tags_meta2.field_to_columns = {{0, {0}}, {1, {1}}};
+    tags_meta2.name_to_id = {{"c", 0}, {"d", 1}, {"e", 2}, {"f", 3}, {"g", 4}};
+    tags_meta2.field_to_columns = {{0, {0}}, {1, {1}}, {3, {0}}, {4, {1}}};
     tags_meta2.overflow_field_set = {2};
     tags_meta2.num_columns = 2;
     tags_meta2.max_row_width = 3;
     CheckShreddingFileSchema(file2_path, physical_schema2, /*field_index=*/3, tags_meta2);
-
     MapSharedShreddingFieldMeta attrs_meta2;
-    attrs_meta2.name_to_id = {{"p", 0}, {"q", 1}, {"r", 2}};
-    attrs_meta2.field_to_columns = {{0, {0}}};
-    attrs_meta2.overflow_field_set = {1, 2};
+    attrs_meta2.name_to_id = {{"p", 0}, {"q", 1}, {"r", 2}, {"s", 3}, {"t", 4}};
+    attrs_meta2.field_to_columns = {{0, {0}}, {3, {0}}};
+    attrs_meta2.overflow_field_set = {1, 2, 4};
     attrs_meta2.num_columns = 1;
     attrs_meta2.max_row_width = 3;
     CheckShreddingFileSchema(file2_path, physical_schema2, /*field_index=*/4, attrs_meta2);
-
-    auto array3 = arrow::ipc::internal::json::ArrayFromJSON(value_type, R"([
-      [4, [["f", 400], ["g", 500]], [["s", "b1"], ["t", "b2"]]]
-    ])")
-                      .ValueOrDie();
-    WriteBatch(array3, /*row_kinds=*/{}, merge_writer.get());
-    ASSERT_OK_AND_ASSIGN(CommitIncrement commit_increment3,
-                         merge_writer->PrepareCommit(/*wait_compaction=*/false));
-    ASSERT_EQ(1, commit_increment3.GetNewFilesIncrement().NewFiles().size());
-    std::string file3_path =
-        path_factory->ToPath(commit_increment3.GetNewFilesIncrement().NewFiles()[0]->file_name);
-
-    std::map<std::string, int32_t> column_to_k_file3 = {{"tags", 3}, {"attrs", 3}};
-    ASSERT_OK_AND_ASSIGN(auto physical_schema3, MapSharedShreddingUtils::LogicalToPhysicalSchema(
-                                                    write_schema, column_to_k_file3));
-    MapSharedShreddingFieldMeta tags_meta3;
-    tags_meta3.name_to_id = {{"f", 0}, {"g", 1}};
-    tags_meta3.field_to_columns = {{0, {0}}, {1, {1}}};
-    tags_meta3.num_columns = 3;
-    tags_meta3.max_row_width = 2;
-    CheckShreddingFileSchema(file3_path, physical_schema3, /*field_index=*/3, tags_meta3);
-
-    MapSharedShreddingFieldMeta attrs_meta3;
-    attrs_meta3.name_to_id = {{"s", 0}, {"t", 1}};
-    attrs_meta3.field_to_columns = {{0, {0}}, {1, {1}}};
-    attrs_meta3.num_columns = 3;
-    attrs_meta3.max_row_width = 2;
-    CheckShreddingFileSchema(file3_path, physical_schema3, /*field_index=*/4, attrs_meta3);
 
     ASSERT_OK(merge_writer->Close());
 }
@@ -1366,8 +1331,7 @@ TEST_F(MergeTreeWriterTest, TestSpillWithSameKeyDeduplicate) {
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
                                 noop_compact_manager_, io_manager,
-                                /*enable_multi_thread_spill=*/false,
-                                /*shredding_context=*/nullptr, pool_));
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     std::shared_ptr<arrow::Array> batch1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1435,8 +1399,7 @@ TEST_F(MergeTreeWriterTest, TestIntermediateMergeSpillFileBound) {
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
                                 noop_compact_manager_, io_manager,
-                                /*enable_multi_thread_spill=*/false,
-                                /*shredding_context=*/nullptr, pool_));
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     std::shared_ptr<arrow::Array> batch1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1502,8 +1465,7 @@ TEST_F(MergeTreeWriterTest, TestDiskQuotaExhaustedFallsBackToFlushWriteBuffer) {
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
                                 noop_compact_manager_, io_manager,
-                                /*enable_multi_thread_spill=*/false,
-                                /*shredding_context=*/nullptr, pool_));
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     // Phase 1: Manual FlushMemory path — disk quota exhausted causes fallback.
     std::shared_ptr<arrow::Array> array1 =
@@ -1581,8 +1543,7 @@ TEST_F(MergeTreeWriterTest, TestFlushMemoryQuotaExhaustedFallsBackToFlushWriteBu
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
                                 noop_compact_manager_, io_manager,
-                                /*enable_multi_thread_spill=*/false,
-                                /*shredding_context=*/nullptr, pool_));
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     std::shared_ptr<arrow::Array> array =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1626,8 +1587,7 @@ TEST_F(MergeTreeWriterTest, TestCloseDeletesSpillTempFiles) {
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
                                 noop_compact_manager_, io_manager,
-                                /*enable_multi_thread_spill=*/false,
-                                /*shredding_context=*/nullptr, pool_));
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     std::shared_ptr<arrow::Array> array =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1660,8 +1620,7 @@ TEST_F(MergeTreeWriterTest, TestMultiplePrepareCommitWithSpill) {
                                 key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                 merge_function_wrapper_, /*schema_id=*/0, value_schema_, options,
                                 noop_compact_manager_, io_manager,
-                                /*enable_multi_thread_spill=*/false,
-                                /*shredding_context=*/nullptr, pool_));
+                                /*enable_multi_thread_spill=*/false, pool_));
 
     std::shared_ptr<arrow::Array> array1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -1739,8 +1698,7 @@ TEST_F(MergeTreeWriterTest, TestSpillWithIOException) {
                                     key_comparator_, /*user_defined_seq_comparator=*/nullptr,
                                     merge_function_wrapper_, /*schema_id=*/0, value_schema_,
                                     options, noop_compact_manager_, io_manager,
-                                    /*enable_multi_thread_spill=*/false,
-                                    /*shredding_context=*/nullptr, pool_));
+                                    /*enable_multi_thread_spill=*/false, pool_));
 
         ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
         io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);

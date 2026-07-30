@@ -157,7 +157,7 @@ class InferShreddingFileWriterTest : public ::testing::Test {
 
 TEST_F(InferShreddingFileWriterTest, BuffersUntilThresholdThenReplays) {
     auto writer = MakeWriter(/*buffer_rows=*/4);
-    // Never rolls while buffering.
+    // File-size rolling is suppressed while buffering.
     ASSERT_OK_AND_ASSIGN(bool reach, writer->ReachTargetSize(true, 1));
     ASSERT_FALSE(reach);
 
@@ -197,13 +197,15 @@ TEST_F(InferShreddingFileWriterTest, CloseFlushesPartialBuffer) {
     ASSERT_TRUE(inner_->closed);
 }
 
-TEST_F(InferShreddingFileWriterTest, EmptyFileFallsBackToLogicalSchema) {
+TEST_F(InferShreddingFileWriterTest, EmptyFileUsesUntypedVariantPlan) {
     auto writer = MakeWriter(/*buffer_rows=*/4);
     ASSERT_OK(writer->Close());
-    // With no samples there is no useful shredding schema; the writer is created without a
-    // converter.
+    // Even without typed fields, inference creates the complete untyped Variant physical plan.
     ASSERT_EQ(captured_converters_.size(), 1);
-    ASSERT_EQ(captured_converters_[0], nullptr);
+    ASSERT_NE(captured_converters_[0], nullptr);
+    const auto& physical_type = static_cast<const arrow::StructType&>(
+        *captured_converters_[0]->GetPhysicalSchema()->GetFieldByName("v")->type());
+    ASSERT_EQ(physical_type.GetFieldByName("typed_value"), nullptr);
     ASSERT_TRUE(sink_.empty());
     ASSERT_TRUE(inner_->closed);
 }

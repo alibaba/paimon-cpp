@@ -56,7 +56,6 @@ Result<std::shared_ptr<MergeTreeWriter>> MergeTreeWriter::Create(
     int64_t schema_id, const std::shared_ptr<arrow::Schema>& value_schema,
     const CoreOptions& options, const std::shared_ptr<CompactManager>& compact_manager,
     const std::shared_ptr<IOManager>& io_manager, bool enable_multi_thread_spill,
-    const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
     const std::shared_ptr<MemoryPool>& pool) {
     auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
 
@@ -66,10 +65,10 @@ Result<std::shared_ptr<MergeTreeWriter>> MergeTreeWriter::Create(
                             options.GetSequenceField(), key_comparator, user_defined_seq_comparator,
                             merge_function_wrapper, options, io_manager, enable_multi_thread_spill,
                             pool));
-    return std::shared_ptr<MergeTreeWriter>(new MergeTreeWriter(
-        trimmed_primary_keys, options, path_factory, key_comparator, user_defined_seq_comparator,
-        merge_function_wrapper, schema_id, write_schema, compact_manager, std::move(write_buffer),
-        shredding_context, pool));
+    return std::shared_ptr<MergeTreeWriter>(
+        new MergeTreeWriter(trimmed_primary_keys, options, path_factory, key_comparator,
+                            user_defined_seq_comparator, merge_function_wrapper, schema_id,
+                            write_schema, compact_manager, std::move(write_buffer), pool));
 }
 
 MergeTreeWriter::MergeTreeWriter(
@@ -80,9 +79,7 @@ MergeTreeWriter::MergeTreeWriter(
     const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
     int64_t schema_id, const std::shared_ptr<arrow::Schema>& write_schema,
     const std::shared_ptr<CompactManager>& compact_manager,
-    std::unique_ptr<WriteBuffer>&& write_buffer,
-    const std::shared_ptr<MapSharedShreddingContext>& shredding_context,
-    const std::shared_ptr<MemoryPool>& pool)
+    std::unique_ptr<WriteBuffer>&& write_buffer, const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
       trimmed_primary_keys_(trimmed_primary_keys),
       options_(options),
@@ -94,8 +91,7 @@ MergeTreeWriter::MergeTreeWriter(
       write_schema_(write_schema),
       compact_manager_(compact_manager),
       write_buffer_(std::move(write_buffer)),
-      metrics_(std::make_shared<MetricsImpl>()),
-      shredding_context_(shredding_context) {}
+      metrics_(std::make_shared<MetricsImpl>()) {}
 
 Status MergeTreeWriter::DoClose() {
     // Request cancellation and wait for running compaction to exit.
@@ -275,7 +271,9 @@ Status MergeTreeWriter::FlushWriteBuffer(bool wait_for_latest_compaction,
             std::make_unique<AsyncKeyValueProducerAndConsumer<KeyValue, KeyValueBatch>>(
                 std::move(sort_merge_reader), create_consumer, options_.GetWriteBatchSize(),
                 /*projection_thread_num=*/1, pool_);
-        auto rolling_writer = CreateRollingRowWriter();
+        std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>
+            rolling_writer;
+        PAIMON_ASSIGN_OR_RAISE(rolling_writer, CreateRollingRowWriter());
         ScopeGuard write_guard([&]() -> void {
             rolling_writer->Abort();
             async_key_value_producer_consumer->Close();
@@ -319,11 +317,13 @@ Result<CommitIncrement> MergeTreeWriter::DrainIncrement() {
     return CommitIncrement(data_increment, compact_increment, drain_deletion_file);
 }
 
-std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>
+Result<std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>>
 MergeTreeWriter::CreateRollingRowWriter() const {
     std::shared_ptr<SingleFileWriterFactory<KeyValueBatch, std::shared_ptr<DataFileMeta>>> factory;
-    if (auto plan_factory = ShreddingWritePlanFactories::SelectActive(options_, write_schema_,
-                                                                      shredding_context_, pool_)) {
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<ShreddingWritePlanFactory> plan_factory,
+        ShreddingWritePlanFactories::SelectActive(options_, write_schema_, pool_));
+    if (plan_factory != nullptr) {
         factory = std::make_shared<ShreddingKeyValueDataFileWriterFactory>(
             options_, schema_id_, write_schema_, /*level=*/0, FileSource::Append(),
             trimmed_primary_keys_, path_factory_, /*create_stats_extractor=*/true, plan_factory,
@@ -334,7 +334,8 @@ MergeTreeWriter::CreateRollingRowWriter() const {
             trimmed_primary_keys_, path_factory_, /*create_stats_extractor=*/true, pool_);
     }
     return std::make_unique<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>(
-        options_.GetTargetFileSize(/*has_primary_key=*/true), factory);
+        options_.GetTargetFileSize(/*has_primary_key=*/true), options_.GetTargetFileRowNum(),
+        factory);
 }
 
 }  // namespace paimon

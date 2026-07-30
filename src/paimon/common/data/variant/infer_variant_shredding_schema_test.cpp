@@ -67,7 +67,9 @@ class InferVariantShreddingSchemaTest : public ::testing::Test {
 
  protected:
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
-    InferVariantShreddingSchema infer_{/*max_schema_width=*/300, /*max_schema_depth=*/50,
+    std::shared_ptr<arrow::Schema> empty_logical_schema_ = arrow::schema(arrow::FieldVector{});
+    InferVariantShreddingSchema infer_{empty_logical_schema_, pool_,
+                                       /*max_schema_width=*/300, /*max_schema_depth=*/50,
                                        /*min_field_cardinality_ratio=*/0.1};
 };
 
@@ -86,6 +88,17 @@ TEST_F(InferVariantShreddingSchemaTest, InferObjectSchema) {
                         arrow::field("tags", arrow::list(arrow::int64()))});
     ASSERT_TRUE(inferred->Equals(*expected)) << inferred->ToString();
     ASSERT_OK(VariantShreddingUtils::VariantShreddingSchema(inferred));
+}
+
+TEST_F(InferVariantShreddingSchemaTest, NullObjectFieldMergesWithTypedValue) {
+    auto samples = Samples({
+        R"({"a": 1, "b": null})",
+        R"({"a": 2, "b": 3})",
+    });
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred, InferColumn(infer_, samples));
+    auto expected =
+        arrow::struct_({arrow::field("a", arrow::int64()), arrow::field("b", arrow::int64())});
+    ASSERT_TRUE(inferred->Equals(*expected)) << inferred->ToString();
 }
 
 TEST_F(InferVariantShreddingSchemaTest, MixedTypesFallToVariant) {
@@ -117,6 +130,40 @@ TEST_F(InferVariantShreddingSchemaTest, RareFieldsDropped) {
     ASSERT_TRUE(inferred->Equals(*expected)) << inferred->ToString();
 }
 
+TEST_F(InferVariantShreddingSchemaTest, FieldCardinalityAdmissionThreshold) {
+    std::vector<const char*> jsons = {
+        R"({"common": 1, "rare": 99})",
+        R"({"common": 2, "rare": 88})",
+        R"({"common": 3})",
+        R"({"common": 4})",
+        R"({"common": 5})",
+        R"({"common": 6})",
+        R"({"common": 7})",
+        R"({"common": 8})",
+        R"({"common": 9})",
+        R"({"common": 10})",
+    };
+    auto samples = Samples(jsons);
+
+    InferVariantShreddingSchema permissive{empty_logical_schema_, pool_,
+                                           /*max_schema_width=*/300,
+                                           /*max_schema_depth=*/50,
+                                           /*min_field_cardinality_ratio=*/0.1};
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> admitted,
+                         InferColumn(permissive, samples));
+    auto expected_admitted = arrow::struct_(
+        {arrow::field("common", arrow::int64()), arrow::field("rare", arrow::int64())});
+    ASSERT_TRUE(admitted->Equals(*expected_admitted)) << admitted->ToString();
+
+    InferVariantShreddingSchema strict{empty_logical_schema_, pool_,
+                                       /*max_schema_width=*/300,
+                                       /*max_schema_depth=*/50,
+                                       /*min_field_cardinality_ratio=*/0.25};
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> rejected, InferColumn(strict, samples));
+    auto expected_rejected = arrow::struct_({arrow::field("common", arrow::int64())});
+    ASSERT_TRUE(rejected->Equals(*expected_rejected)) << rejected->ToString();
+}
+
 TEST_F(InferVariantShreddingSchemaTest, DecimalMerging) {
     auto samples = Samples({
         "{\"d\": 100.99}",
@@ -128,6 +175,82 @@ TEST_F(InferVariantShreddingSchemaTest, DecimalMerging) {
     // Decimals merge to a widened decimal (scale 2, enough integer digits), capped at 18 digits.
     auto expected = arrow::struct_({arrow::field("d", arrow::decimal128(18, 2))});
     ASSERT_TRUE(inferred->Equals(*expected)) << inferred->ToString();
+}
+
+TEST_F(InferVariantShreddingSchemaTest, AllPrimitiveTypes) {
+    auto samples = Samples({R"({
+        "string": "test",
+        "long": 123456789,
+        "double": 3.14159,
+        "boolean": true,
+        "null": null
+    })"});
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred, InferColumn(infer_, samples));
+    auto expected = arrow::struct_({
+        arrow::field("boolean", arrow::boolean()),
+        arrow::field("double", arrow::decimal128(18, 5)),
+        arrow::field("long", arrow::int64()),
+        arrow::field("null", arrow::null()),
+        arrow::field("string", arrow::utf8()),
+    });
+    ASSERT_TRUE(inferred->Equals(*expected)) << inferred->ToString();
+}
+
+TEST_F(InferVariantShreddingSchemaTest, MixedArrayElementTypesFallToVariant) {
+    auto samples = Samples({
+        R"({"arr": [1, 2, 3]})",
+        R"({"arr": ["a", "b", "c"]})",
+        R"({"arr": [true, false, true]})",
+        R"({"arr": [1, "mixed", true]})",
+    });
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred, InferColumn(infer_, samples));
+    auto expected = arrow::struct_({arrow::field("arr", arrow::list(arrow::null()))});
+    ASSERT_TRUE(inferred->Equals(*expected)) << inferred->ToString();
+}
+
+TEST_F(InferVariantShreddingSchemaTest, NullInNestedArrays) {
+    auto samples = Samples({
+        R"({"arr": [1, 2, 3, null, 5]})",
+        R"({"arr": [null, null, null]})",
+        R"({"arr": [10, null, 20, null, 30]})",
+        R"({"arr": null})",
+    });
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred, InferColumn(infer_, samples));
+    auto expected = arrow::struct_({arrow::field("arr", arrow::list(arrow::null()))});
+    ASSERT_TRUE(inferred->Equals(*expected)) << inferred->ToString();
+}
+
+TEST_F(InferVariantShreddingSchemaTest, LargeDatasetWithManyFields) {
+    std::vector<std::string> documents;
+    documents.reserve(500);
+    for (int32_t row = 0; row < 500; ++row) {
+        std::string json = "{";
+        for (int32_t field = 0; field < 50; ++field) {
+            if (field > 0) {
+                json += ",";
+            }
+            json += "\"field" + std::to_string(field) +
+                    "\":" + std::to_string((row * 50 + field) % 1000);
+        }
+        json += "}";
+        documents.push_back(std::move(json));
+    }
+    std::vector<const char*> jsons;
+    jsons.reserve(documents.size());
+    for (const std::string& document : documents) {
+        jsons.push_back(document.c_str());
+    }
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
+                         InferColumn(infer_, Samples(jsons)));
+    ASSERT_EQ(arrow::Type::STRUCT, inferred->id());
+    const auto& struct_type = static_cast<const arrow::StructType&>(*inferred);
+    ASSERT_EQ(50, struct_type.num_fields());
+    for (int32_t field = 0; field < 50; ++field) {
+        auto inferred_field = struct_type.GetFieldByName("field" + std::to_string(field));
+        ASSERT_NE(nullptr, inferred_field);
+        ASSERT_TRUE(inferred_field->type()->Equals(*arrow::int64()));
+    }
 }
 
 TEST_F(InferVariantShreddingSchemaTest, NoUsefulSchema) {
@@ -151,7 +274,8 @@ TEST_F(InferVariantShreddingSchemaTest, NoUsefulSchema) {
 }
 
 TEST_F(InferVariantShreddingSchemaTest, MaxSchemaWidthLimit) {
-    InferVariantShreddingSchema narrow_infer{/*max_schema_width=*/3, /*max_schema_depth=*/50,
+    InferVariantShreddingSchema narrow_infer{empty_logical_schema_, pool_,
+                                             /*max_schema_width=*/3, /*max_schema_depth=*/50,
                                              /*min_field_cardinality_ratio=*/0.1};
     auto samples = Samples({R"({"a": 1, "b": 2, "c": 3, "d": 4, "e": 5})"});
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
@@ -177,7 +301,8 @@ TEST_F(InferVariantShreddingSchemaTest, MaxSchemaWidthLimit) {
 }
 
 TEST_F(InferVariantShreddingSchemaTest, MaxSchemaDepthLimit) {
-    InferVariantShreddingSchema shallow_infer{/*max_schema_width=*/300, /*max_schema_depth=*/1,
+    InferVariantShreddingSchema shallow_infer{empty_logical_schema_, pool_,
+                                              /*max_schema_width=*/300, /*max_schema_depth=*/1,
                                               /*min_field_cardinality_ratio=*/0.1};
     auto samples = Samples({R"({"outer": {"inner": 1}})"});
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
@@ -186,6 +311,43 @@ TEST_F(InferVariantShreddingSchemaTest, MaxSchemaDepthLimit) {
     // Depth 1: the nested object stays an untyped variant leaf.
     auto expected = arrow::struct_({arrow::field("outer", arrow::null())});
     ASSERT_TRUE(inferred->Equals(*expected)) << inferred->ToString();
+}
+
+TEST_F(InferVariantShreddingSchemaTest, DeepNestedObjectSchema) {
+    auto samples = Samples({R"({"level1":{"level2":{"level3":{"value":42}}}})"});
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred, InferColumn(infer_, samples));
+    auto expected = arrow::struct_({arrow::field(
+        "level1",
+        arrow::struct_({arrow::field(
+            "level2",
+            arrow::struct_({arrow::field(
+                "level3", arrow::struct_({arrow::field("value", arrow::int64())}))}))}))});
+    ASSERT_TRUE(inferred->Equals(*expected)) << inferred->ToString();
+}
+
+TEST_F(InferVariantShreddingSchemaTest, AdaptivePreviousSelectionHonorsSharedWidthBudget) {
+    InferVariantShreddingSchema narrow_infer{empty_logical_schema_, pool_,
+                                             /*max_schema_width=*/6, /*max_schema_depth=*/50,
+                                             /*min_field_cardinality_ratio=*/0.1};
+    // A scalar-to-object transition can leave the combined evidence untyped while selecting the
+    // current object schema for writing.
+    InferVariantShreddingSchema::ColumnEvidence previous_evidence;
+    previous_evidence.root_value_count = 1;
+    auto previous_selected =
+        arrow::struct_({arrow::field("a", arrow::int64()), arrow::field("b", arrow::int64())});
+    InferVariantShreddingSchema::MaxFields max_fields = narrow_infer.CreateMaxFieldsBudget();
+    // In the preceding file, an earlier Variant column used one slot, leaving five slots for this
+    // column's root, a and b. In this file that earlier column expanded to use three slots, so only
+    // three remain and the previous selection must be trimmed.
+    max_fields.remaining = 3;
+
+    ASSERT_OK_AND_ASSIGN(
+        InferVariantShreddingSchema::AdaptiveColumnResult result,
+        narrow_infer.InferAdaptiveColumn(
+            previous_evidence, previous_selected, /*samples=*/{}, /*effective_sample_size=*/10,
+            /*admission_ratio=*/0.1, /*retention_ratio=*/0.05, &max_fields));
+    auto expected = arrow::struct_({arrow::field("a", arrow::int64())});
+    ASSERT_TRUE(result.selected_schema->Equals(*expected)) << result.selected_schema->ToString();
 }
 
 TEST_F(InferVariantShreddingSchemaTest, TrailingZeroDecimalNormalized) {
@@ -262,7 +424,8 @@ TEST_F(InferVariantShreddingSchemaTest, ArraysMerge) {
 }
 
 TEST_F(InferVariantShreddingSchemaTest, ArrayBeyondDepthLimitStaysVariant) {
-    InferVariantShreddingSchema shallow_infer{/*max_schema_width=*/300, /*max_schema_depth=*/1,
+    InferVariantShreddingSchema shallow_infer{empty_logical_schema_, pool_,
+                                              /*max_schema_width=*/300, /*max_schema_depth=*/1,
                                               /*min_field_cardinality_ratio=*/0.1};
     auto samples = Samples({R"({"arr": [1, 2]})"});
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
@@ -357,7 +520,8 @@ TEST_F(InferVariantShreddingSchemaTest, DecimalMergeOverflowFallsToVariant) {
 }
 
 TEST_F(InferVariantShreddingSchemaTest, ObjectWithAllRareFieldsStaysUnshredded) {
-    InferVariantShreddingSchema strict_infer{/*max_schema_width=*/300, /*max_schema_depth=*/50,
+    InferVariantShreddingSchema strict_infer{empty_logical_schema_, pool_,
+                                             /*max_schema_width=*/300, /*max_schema_depth=*/50,
                                              /*min_field_cardinality_ratio=*/0.6};
     // Two objects with disjoint single-occurrence keys: with a 0.6 ratio every field is below the
     // cardinality threshold, so the object contributes no typed field and the column is dropped.

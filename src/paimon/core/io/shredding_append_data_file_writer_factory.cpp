@@ -65,7 +65,11 @@ ShreddingAppendDataFileWriterFactory::CreateShreddedWriter(
     const std::shared_ptr<ShreddingBatchConverter>& converter) const {
     if (converter == nullptr) {
         // No conversion is useful for this file; fall back to the plain writer.
-        return AppendDataFileWriterFactory::CreateWriter();
+        std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>> writer;
+        PAIMON_ASSIGN_OR_RAISE(writer, AppendDataFileWriterFactory::CreateWriter());
+        writer->SetCompletionCallback(
+            [factory = plan_factory_, converter]() { return factory->OnFileCompleted(converter); });
+        return writer;
     }
     std::shared_ptr<LongCounter> seq_num_counter = ResolveSeqNumCounter();
     std::shared_ptr<arrow::Schema> file_schema = converter->GetPhysicalSchema();
@@ -85,10 +89,12 @@ ShreddingAppendDataFileWriterFactory::CreateShreddedWriter(
     PAIMON_RETURN_NOT_OK(
         writer->Init(options_.GetFileSystem(), path_factory_->NewPath(), resources.writer_builder));
     ShreddingWritePlanFactory::MetadataFinalizer finalizer =
-        plan_factory_->CreateMetadataFinalizer(converter);
+        plan_factory_->CreateMetadataFinalizer(converter, options_.GetFileCompression());
     if (finalizer) {
         writer->SetMetadataFinalizer(std::move(finalizer));
     }
+    writer->SetCompletionCallback(
+        [factory = plan_factory_, converter]() { return factory->OnFileCompleted(converter); });
     return std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
         std::move(writer));
 }

@@ -355,7 +355,7 @@ class PkCompactionInteTest : public ::testing::Test,
 // Verify shared-shredding MAP can be read correctly after PK full compaction.
 TEST_P(PkCompactionInteTest, TestKeyValueTableFullCompactionWithMapSharedShredding) {
     auto file_format = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 
@@ -427,7 +427,7 @@ TEST_P(PkCompactionInteTest, TestKeyValueTableFullCompactionWithMapSharedShreddi
 
 TEST_P(PkCompactionInteTest, TestKeyValueTableDvCompactionWithMapSharedShredding) {
     auto file_format = GetParam();
-    if (file_format != "parquet" && file_format != "orc") {
+    if (file_format == "avro") {
         return;
     }
 

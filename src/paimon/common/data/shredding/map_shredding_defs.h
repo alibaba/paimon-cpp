@@ -42,6 +42,9 @@ struct MapSharedShreddingDefine {
     static constexpr int32_t kCurrentVersion = 1;
     /// JSON-encoded field name <-> field id dictionary (may be compressed).
     static constexpr const char* kFieldDict = "paimon.map.shared-shredding.field-dict";
+    /// Compression codec used by field_dict. Missing in legacy files, which default to zstd.
+    static constexpr const char* kFieldDictCompression =
+        "paimon.map.shared-shredding.field-dict-compression";
     /// Original (uncompressed) size of field_dict value.
     static constexpr const char* kFieldDictOriginalSize =
         "paimon.map.shared-shredding.field-dict-original-size";

@@ -85,11 +85,9 @@ class PAIMON_EXPORT MapSharedShreddingSchemaUtils {
     /// @param physical_schema The Arrow C physical schema that contains the target field.
     ///        Ownership of schema resources is transferred to this method.
     /// @param field_name The physical field name whose metadata should be extracted.
-    /// @param compression Compression codec name for field_dict deserialization.
     /// @return Parsed shared-shredding metadata for the field.
     static Result<MapSharedShreddingFieldMeta> ExtractMetadataFromField(
-        std::unique_ptr<::ArrowSchema> physical_schema, const std::string& field_name,
-        const std::string& compression);
+        std::unique_ptr<::ArrowSchema> physical_schema, const std::string& field_name);
 };
 
 }  // namespace paimon

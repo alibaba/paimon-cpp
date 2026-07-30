@@ -869,7 +869,7 @@ TEST(SchemaValidationTest, TestMapStorageLayout) {
                              TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
                                                  /*primary_keys=*/{"f0", "f1"}, options));
         ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
-                            "not MAP<STRING, T>");
+                            "not MAP<STRING NOT NULL, T>");
     }
     // Invalid: nested MAP paths are not shared-shredding columns; only top-level columns are
     // addressable by fields.<column>.map.storage-layout.
@@ -933,6 +933,165 @@ TEST(SchemaValidationTest, TestMapStorageLayout) {
         ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
                             "invalid map.shared-shredding.column-placement-policy: invalid");
     }
+}
+
+TEST(SchemaValidationTest, TestMapRequiresNonNullableKey) {
+    auto nullable_key_map =
+        std::make_shared<arrow::MapType>(arrow::field("key", arrow::utf8(), /*nullable=*/true),
+                                         arrow::field("value", arrow::int64()));
+    auto schema = arrow::schema({
+        arrow::field("f0", arrow::utf8()),
+        arrow::field("f1", nullable_key_map),
+    });
+    std::map<std::string, std::string> options = {
+        {Options::BUCKET, "1"},
+        {Options::BUCKET_KEY, "f0"},
+        {"fields.f1.map.storage-layout", "shared-shredding"},
+    };
+    ASSERT_NOK_WITH_MSG(TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                            /*primary_keys=*/{}, options),
+                        "Map field 'f1' has a nullable key.");
+}
+
+TEST(SchemaValidationTest, TestMapSharedShreddingRejectsBlobValue) {
+    auto direct_blob_map =
+        arrow::map(arrow::utf8(), BlobUtils::ToArrowField("value", /*nullable=*/true));
+    auto nested_blob_map = arrow::map(
+        arrow::utf8(), arrow::field("value", arrow::struct_({BlobUtils::ToArrowField("blob")})));
+    std::map<std::string, std::string> options = {
+        {Options::BUCKET, "1"},
+        {Options::BUCKET_KEY, "f0"},
+        {"fields.f1.map.storage-layout", "shared-shredding"},
+    };
+
+    for (const auto& map_type : {direct_blob_map, nested_blob_map}) {
+        auto schema = arrow::schema({
+            arrow::field("f0", arrow::utf8()),
+            arrow::field("f1", map_type),
+        });
+        ASSERT_NOK_WITH_MSG(TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                /*primary_keys=*/{}, options),
+                            "Blob field must be a top-level field.");
+    }
+}
+
+TEST(SchemaValidationTest, TestMapSharedShreddingCompression) {
+    auto schema = arrow::schema({
+        arrow::field("f0", arrow::utf8()),
+        arrow::field("f1", arrow::map(arrow::utf8(), arrow::int64())),
+    });
+    std::map<std::string, std::string> base_options = {
+        {Options::BUCKET, "1"},
+        {Options::BUCKET_KEY, "f0"},
+        {"fields.f1.map.storage-layout", "shared-shredding"},
+    };
+
+    for (const std::string compression : {"none", "lz4", "zstd", "ZSTD"}) {
+        auto options = base_options;
+        options[Options::FILE_COMPRESSION] = compression;
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{}, options));
+        ASSERT_OK(SchemaValidation::ValidateTableSchema(*table_schema));
+    }
+    {
+        auto options = base_options;
+        options[Options::FILE_COMPRESSION] = "snappy";
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{}, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "MAP shared-shredding only supports none/lz4/zstd compression, but "
+                            "file.compression is snappy.");
+    }
+    {
+        auto options = base_options;
+        options[Options::FILE_COMPRESSION] = "";
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{}, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "MAP shared-shredding only supports none/lz4/zstd compression, but "
+                            "file.compression is .");
+    }
+    {
+        auto options = base_options;
+        options[Options::FILE_COMPRESSION_PER_LEVEL] = "0:lz4,1:snappy";
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{}, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "MAP shared-shredding only supports none/lz4/zstd compression, but "
+                            "file.compression.per.level.1 is snappy.");
+    }
+    {
+        auto options = base_options;
+        options.erase("fields.f1.map.storage-layout");
+        options[Options::FILE_COMPRESSION] = "snappy";
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{}, options));
+        ASSERT_OK(SchemaValidation::ValidateTableSchema(*table_schema));
+    }
+}
+
+TEST(SchemaValidationTest, TestMapSharedShreddingFileFormat) {
+    auto schema = arrow::schema({
+        arrow::field("f0", arrow::utf8()),
+        arrow::field("f1", arrow::map(arrow::utf8(), arrow::int64())),
+    });
+    std::map<std::string, std::string> base_options = {
+        {Options::BUCKET, "1"},
+        {Options::BUCKET_KEY, "f0"},
+        {"fields.f1.map.storage-layout", "shared-shredding"},
+    };
+
+    for (const std::string file_format : {"parquet", "orc"}) {
+        auto options = base_options;
+        options[Options::FILE_FORMAT] = file_format;
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{}, options));
+        ASSERT_OK(SchemaValidation::ValidateTableSchema(*table_schema));
+    }
+    {
+        auto options = base_options;
+        options[Options::FILE_FORMAT] = "avro";
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{}, options));
+        ASSERT_NOK_WITH_MSG(
+            SchemaValidation::ValidateTableSchema(*table_schema),
+            "MAP shared-shredding only supports parquet/orc file formats, but file.format is "
+            "avro.");
+    }
+    {
+        auto options = base_options;
+        options[Options::FILE_FORMAT_PER_LEVEL] = "0:parquet,1:avro";
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                             TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                                 /*primary_keys=*/{}, options));
+        ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                            "MAP shared-shredding only supports parquet/orc file formats, but "
+                            "file.format.per.level.1 is avro.");
+    }
+}
+
+TEST(SchemaValidationTest, TestMapSharedShreddingRejectsPostponeBucketMode) {
+    auto schema = arrow::schema({
+        arrow::field("f0", arrow::utf8()),
+        arrow::field("f1", arrow::map(arrow::utf8(), arrow::int64())),
+    });
+    std::map<std::string, std::string> options = {
+        {Options::BUCKET, "-2"},
+        {Options::WRITE_ONLY, "true"},
+        {"fields.f1.map.storage-layout", "shared-shredding"},
+    };
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<TableSchema> table_schema,
+                         TableSchema::Create(/*schema_id=*/0, schema, /*partition_keys=*/{},
+                                             /*primary_keys=*/{"f0"}, options));
+    ASSERT_NOK_WITH_MSG(SchemaValidation::ValidateTableSchema(*table_schema),
+                        "MAP shared-shredding currently does not support postpone bucket mode.");
 }
 
 }  // namespace paimon::test

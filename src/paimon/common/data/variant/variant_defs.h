@@ -20,6 +20,11 @@
 
 namespace paimon {
 
+enum class VariantShreddingInferenceMode {
+    PER_FILE,
+    ADAPTIVE,
+};
+
 /// Constants of the Paimon Variant type and the Variant Binary Encoding, which follows the
 /// parquet-format VariantEncoding.md specification (compatible with the Java / Spark
 /// implementation).
