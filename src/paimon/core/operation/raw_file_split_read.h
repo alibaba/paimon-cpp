@@ -83,6 +83,12 @@ class RawFileSplitRead : public AbstractSplitRead {
         const std::shared_ptr<Predicate>& predicate, DeletionVector::Factory dv_factory,
         const std::optional<std::vector<Range>>& ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const override;
+
+ private:
+    Result<std::unique_ptr<BatchReader>> CreateReader(
+        const BinaryRow& partition, int32_t bucket,
+        const std::vector<std::shared_ptr<DataFileMeta>>& files, DeletionVector::Factory dv_factory,
+        std::shared_ptr<DataFilePathFactory> data_file_path_factory);
 };
 
 }  // namespace paimon

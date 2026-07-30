@@ -199,8 +199,8 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::WrapWithBlobViewRes
 Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::CreateBlobViewReader(
     const std::shared_ptr<DataSplit>& data_split,
     const std::vector<std::string>& read_blob_view_fields) const {
-    auto split_impl = dynamic_cast<DataSplitImpl*>(data_split.get());
-    if (split_impl == nullptr) {
+    auto split_impl = std::dynamic_pointer_cast<DataSplitImpl>(data_split);
+    if (!split_impl) {
         return Status::Invalid("unexpected error, split cast to impl failed");
     }
     assert(raw_read_schema_->num_fields() > 0);
@@ -217,9 +217,8 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::CreateBlobViewReade
     }
     auto blob_view_schema = arrow::schema(std::move(blob_view_arrow_fields));
 
-    PAIMON_ASSIGN_OR_RAISE(
-        std::shared_ptr<DataFilePathFactory> data_file_path_factory,
-        path_factory_->CreateDataFilePathFactory(split_impl->Partition(), split_impl->Bucket()));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
+                           CreateDataFilePathFactory(split_impl));
 
     // skip blob files: they only contain blob payloads, not the blob-view columns.
     std::vector<std::shared_ptr<DataFileMeta>> data_files;
@@ -292,14 +291,13 @@ Result<std::unordered_set<BlobViewStruct>> DataEvolutionSplitRead::ExtractBlobVi
 Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::InnerCreateReader(
     const std::shared_ptr<DataSplit>& data_split,
     const std::optional<std::vector<Range>>& row_ranges) const {
-    auto split_impl = dynamic_cast<DataSplitImpl*>(data_split.get());
-    if (split_impl == nullptr) {
+    auto split_impl = std::dynamic_pointer_cast<DataSplitImpl>(data_split);
+    if (!split_impl) {
         return Status::Invalid("unexpected error, split cast to impl failed");
     }
     assert(raw_read_schema_->num_fields() > 0);
-    PAIMON_ASSIGN_OR_RAISE(
-        std::shared_ptr<DataFilePathFactory> data_file_path_factory,
-        path_factory_->CreateDataFilePathFactory(split_impl->Partition(), split_impl->Bucket()));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
+                           CreateDataFilePathFactory(split_impl));
     auto metas = split_impl->DataFiles();
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::vector<std::shared_ptr<DataFileMeta>>> split_by_row_id,
                            MergeRangesAndSort(std::move(metas)));

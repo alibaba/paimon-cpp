@@ -177,7 +177,7 @@ class DataSplitImpl : public DataSplit {
 
     std::string ToString() const;
 
- private:
+ protected:
     DataSplitImpl(const BinaryRow& partition, int32_t bucket, const std::string& bucket_path,
                   std::vector<std::shared_ptr<DataFileMeta>>&& data_files)
         : partition_(partition),
@@ -185,11 +185,21 @@ class DataSplitImpl : public DataSplit {
           bucket_path_(bucket_path),
           data_files_(std::move(data_files)) {}
 
+    void CopyMetadataFrom(const DataSplitImpl& other) {
+        total_buckets_ = other.total_buckets_;
+        snapshot_id_ = other.snapshot_id_;
+        before_files_ = other.before_files_;
+        before_deletion_files_ = other.before_deletion_files_;
+        data_deletion_files_ = other.data_deletion_files_;
+        is_streaming_ = other.is_streaming_;
+        raw_convertible_ = other.raw_convertible_;
+    }
+
+ private:
     Result<std::optional<int64_t>> RawMergedRowCount(DeletionVector::Factory dv_factory) const;
     bool DataEvolutionRowCountAvailable() const;
     Result<int64_t> DataEvolutionMergedRowCount() const;
 
- private:
     int64_t snapshot_id_ = 0;
     BinaryRow partition_ = BinaryRow::EmptyRow();
     int32_t bucket_ = -1;

@@ -70,15 +70,15 @@ class DataFilePathFactory : public PathFactory {
     }
 
     std::string ToPath(const std::string& file_name) const override;
-    std::string ToPath(const std::shared_ptr<DataFileMeta>& file_meta) const;
+    virtual std::string ToPath(const std::shared_ptr<DataFileMeta>& file_meta) const;
 
     const std::string& GetUUID() const {
         return uuid_;
     }
 
     std::string ToFileIndexPath(const std::string& file_path) const;
-    std::string ToAlignedPath(const std::string& file_name,
-                              const std::shared_ptr<DataFileMeta>& aligned) const;
+    virtual std::string ToAlignedPath(const std::string& file_name,
+                                      const std::shared_ptr<DataFileMeta>& aligned) const;
 
     std::vector<std::string> CollectFiles(const std::shared_ptr<DataFileMeta>& file_meta) const;
     bool IsExternalPath() const {
