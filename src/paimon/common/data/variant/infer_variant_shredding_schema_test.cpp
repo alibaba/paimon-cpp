@@ -486,9 +486,8 @@ TEST_F(InferVariantShreddingSchemaTest, LargeIntegerAndDecimalMerging) {
 
 TEST_F(InferVariantShreddingSchemaTest, LongMergedWithIntegralDecimalStaysLong) {
     // A scale-0 decimal that fits in 18 digits merges with a long back to int64.
-    std::shared_ptr<GenericVariant> integral_decimal = BuildVariant([](VariantBuilder& b) {
-        return b.AppendDecimal(VariantDecimal{123, 0});
-    });
+    std::shared_ptr<GenericVariant> integral_decimal =
+        BuildVariant([](VariantBuilder& b) { return b.AppendDecimal(VariantDecimal{123, 0}); });
     std::shared_ptr<GenericVariant> big_long = Samples({"1000000000000000000"})[0];
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
                          InferColumn(infer_, {integral_decimal, big_long}));
@@ -511,12 +510,10 @@ TEST_F(InferVariantShreddingSchemaTest, DecimalMergeOverflowFallsToVariant) {
     for (int i = 0; i < 38; ++i) {
         wide_unscaled = wide_unscaled * 10 + 1;  // 38 ones, no trailing zeros
     }
-    std::shared_ptr<GenericVariant> wide_decimal = BuildVariant([&](VariantBuilder& b) {
-        return b.AppendDecimal(VariantDecimal{wide_unscaled, 0});
-    });
-    std::shared_ptr<GenericVariant> high_scale_decimal = BuildVariant([](VariantBuilder& b) {
-        return b.AppendDecimal(VariantDecimal{15, 20});
-    });
+    std::shared_ptr<GenericVariant> wide_decimal = BuildVariant(
+        [&](VariantBuilder& b) { return b.AppendDecimal(VariantDecimal{wide_unscaled, 0}); });
+    std::shared_ptr<GenericVariant> high_scale_decimal =
+        BuildVariant([](VariantBuilder& b) { return b.AppendDecimal(VariantDecimal{15, 20}); });
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::DataType> inferred,
                          InferColumn(infer_, {wide_decimal, high_scale_decimal}));
     ASSERT_EQ(inferred, nullptr);
