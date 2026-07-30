@@ -37,7 +37,7 @@
 namespace paimon::parquet {
 namespace {
 
-arrow::compute::Expression ConvertFloatingPointComparison(
+Result<arrow::compute::Expression> ConvertFloatingPointComparison(
     const std::string& field_name, Function::Type function_type, const Literal& literal,
     const arrow::compute::Expression& arrow_literal) {
     arrow::compute::Expression field = arrow::compute::field_ref(field_name);
@@ -71,7 +71,8 @@ arrow::compute::Expression ConvertFloatingPointComparison(
         case Function::Type::LESS_OR_EQUAL:
             return arrow::compute::less_equal(std::move(field), arrow_literal);
         default:
-            return arrow::compute::literal(true);
+            return Status::Invalid(fmt::format("invalid floating-point comparison type {}",
+                                               static_cast<int32_t>(function_type)));
     }
 }
 
@@ -185,7 +186,7 @@ Result<arrow::compute::Expression> PredicateConverter::ConvertLeaf(
     const auto& function = leaf_predicate->GetFunction();
     auto function_type = function.GetType();
     if (FloatingPointPredicateUtils::IsType(leaf_predicate->GetFieldType()) &&
-        FloatingPointPredicateUtils::RequiresJavaSignedZeroHandling(function_type, literals)) {
+        FloatingPointPredicateUtils::IsComparison(function_type)) {
         return ConvertFloatingPointLeaf(leaf_predicate);
     }
     switch (function_type) {
@@ -297,15 +298,20 @@ Result<arrow::compute::Expression> PredicateConverter::ConvertFloatingPointLeaf(
     Function::Type function_type = function.GetType();
     PAIMON_RETURN_NOT_OK(CheckLiteralNotEmpty(literals, function, field_name));
 
-    if (function_type == Function::Type::NOT_IN) {
+    if (function_type == Function::Type::IN || function_type == Function::Type::NOT_IN) {
+        Function::Type comparison_type =
+            function_type == Function::Type::IN ? Function::Type::EQUAL : Function::Type::NOT_EQUAL;
         std::vector<arrow::compute::Expression> sub_exprs;
         sub_exprs.reserve(literals.size());
         for (const auto& literal : literals) {
             CONVERT_TO_ARROW_LITERAL(literal);
-            sub_exprs.push_back(ConvertFloatingPointComparison(
-                field_name, Function::Type::NOT_EQUAL, literal, arrow_literal));
+            PAIMON_ASSIGN_OR_RAISE(arrow::compute::Expression sub_expr,
+                                   ConvertFloatingPointComparison(field_name, comparison_type,
+                                                                  literal, arrow_literal));
+            sub_exprs.push_back(std::move(sub_expr));
         }
-        return arrow::compute::and_(sub_exprs);
+        return function_type == Function::Type::IN ? arrow::compute::or_(sub_exprs)
+                                                   : arrow::compute::and_(sub_exprs);
     }
 
     CONVERT_TO_ARROW_LITERAL(literals[0]);

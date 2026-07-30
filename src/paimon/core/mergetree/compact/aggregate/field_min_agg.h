@@ -70,8 +70,8 @@ class FieldMinAgg : public FieldAggregator {
             case arrow::Type::type::FLOAT:
                 return FieldMinFunc([](const VariantType& accumulator,
                                        const VariantType& input_field) -> VariantType {
-                    float accumulator_value = DataDefine::GetVariantValue<float>(accumulator);
-                    float input_value = DataDefine::GetVariantValue<float>(input_field);
+                    auto accumulator_value = DataDefine::GetVariantValue<float>(accumulator);
+                    auto input_value = DataDefine::GetVariantValue<float>(input_field);
                     int32_t compare_result =
                         FieldsComparator::CompareFloatingPoint(accumulator_value, input_value);
                     return compare_result < 0 ? accumulator : input_field;
@@ -79,8 +79,8 @@ class FieldMinAgg : public FieldAggregator {
             case arrow::Type::type::DOUBLE:
                 return FieldMinFunc([](const VariantType& accumulator,
                                        const VariantType& input_field) -> VariantType {
-                    double accumulator_value = DataDefine::GetVariantValue<double>(accumulator);
-                    double input_value = DataDefine::GetVariantValue<double>(input_field);
+                    auto accumulator_value = DataDefine::GetVariantValue<double>(accumulator);
+                    auto input_value = DataDefine::GetVariantValue<double>(input_field);
                     int32_t compare_result =
                         FieldsComparator::CompareFloatingPoint(accumulator_value, input_value);
                     return compare_result < 0 ? accumulator : input_field;

@@ -16,9 +16,7 @@
 
 #pragma once
 
-#include <algorithm>
 #include <cmath>
-#include <vector>
 
 #include "paimon/defs.h"
 #include "paimon/predicate/function.h"
@@ -58,22 +56,17 @@ class FloatingPointPredicateUtils {
         return std::signbit(literal.GetValue<double>());
     }
 
-    static bool RequiresJavaSignedZeroHandling(Function::Type function_type,
-                                               const std::vector<Literal>& literals) {
-        if (literals.empty()) {
-            return false;
-        }
+    static bool IsComparison(Function::Type function_type) {
         switch (function_type) {
+            case Function::Type::EQUAL:
             case Function::Type::NOT_EQUAL:
-                return IsZero(literals[0]);
             case Function::Type::GREATER_THAN:
-                return IsNegativeZero(literals[0]);
+            case Function::Type::GREATER_OR_EQUAL:
             case Function::Type::LESS_THAN:
-                return IsZero(literals[0]) && !IsNegativeZero(literals[0]);
+            case Function::Type::LESS_OR_EQUAL:
+            case Function::Type::IN:
             case Function::Type::NOT_IN:
-                return std::any_of(literals.begin(), literals.end(), [](const Literal& literal) {
-                    return FloatingPointPredicateUtils::IsZero(literal);
-                });
+                return true;
             default:
                 return false;
         }
