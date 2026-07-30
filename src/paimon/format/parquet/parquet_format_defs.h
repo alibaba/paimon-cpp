@@ -38,6 +38,10 @@ namespace paimon::parquet {
 // write
 static inline const char PARQUET_BLOCK_SIZE[] = "parquet.block.size";
 static inline const char PARQUET_PAGE_SIZE[] = "parquet.page.size";
+// Max number of rows in a single data page, aligned with parquet-mr's
+// "parquet.page.row.count.limit" (PARQUET-1414). A page is finished when either
+// this row count or the page byte size (parquet.page.size) is reached first.
+static inline const char PARQUET_PAGE_ROW_COUNT_LIMIT[] = "parquet.page.row.count.limit";
 static inline const char PARQUET_DICTIONARY_PAGE_SIZE[] = "parquet.dictionary.page.size";
 static inline const char PARQUET_ENABLE_DICTIONARY[] = "parquet.enable-dictionary";
 static inline const char PARQUET_WRITER_VERSION[] = "parquet.writer.version";

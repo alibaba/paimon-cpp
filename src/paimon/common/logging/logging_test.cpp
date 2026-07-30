@@ -29,6 +29,7 @@
 #include "glog/logging.h"
 #include "glog/raw_logging.h"
 #include "paimon/common/executor/future.h"
+#include "paimon/common/utils/scope_guard.h"
 #include "paimon/executor.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/testing/utils/testharness.h"
@@ -112,6 +113,16 @@ TEST(LoggerTest, TestGlogWritesLogFileToDisk) {
     std::shared_ptr<FileSystem> fs = tmp_dir->GetFileSystem();
     const std::string base = tmp_dir->Str() + "/paimon_demo";
 
+    // Restore the process-wide glog state on every exit path, including an early return from
+    // a failed ASSERT_*. Declared after tmp_dir so that it runs first and detaches the INFO
+    // sink before the directory is deleted.
+    ScopeGuard restore_glog_state([&]() {
+        google::SetLogDestination(google::GLOG_INFO, "");
+        FLAGS_logtostderr = prev_logtostderr;
+        FLAGS_timestamp_in_logfile_name = prev_timestamp_in_name;
+        FLAGS_minloglevel = prev_minloglevel;
+    });
+
     FLAGS_logtostderr = false;                // must be false, otherwise glog skips the file sink
     FLAGS_timestamp_in_logfile_name = false;  // deterministic file name (no time/pid suffix)
     FLAGS_minloglevel = google::GLOG_INFO;    // do not filter out INFO
@@ -154,13 +165,6 @@ TEST(LoggerTest, TestGlogWritesLogFileToDisk) {
     ASSERT_FALSE(on_disk_path.empty())
         << "no glog file containing the token was written to " << tmp_dir->Str();
     ASSERT_NE(content.find(token), std::string::npos);
-
-    // Stop writing INFO logs to the directory that is deleted when tmp_dir goes out of
-    // scope, then restore flags.
-    google::SetLogDestination(google::GLOG_INFO, "");
-    FLAGS_logtostderr = prev_logtostderr;
-    FLAGS_timestamp_in_logfile_name = prev_timestamp_in_name;
-    FLAGS_minloglevel = prev_minloglevel;
 }
 
 // Keep this test last: it installs a process-wide logger creator that cannot be

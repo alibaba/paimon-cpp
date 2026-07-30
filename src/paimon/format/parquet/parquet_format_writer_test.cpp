@@ -381,8 +381,20 @@ TEST_F(ParquetFormatWriterTest, TestMemoryControl) {
         ASSERT_OK(out->Flush());
         ASSERT_OK(out->Close());
         uint64_t actual_max_mem = pool->MaxMemoryUsage();
-        ASSERT_GT(actual_max_mem, max_memory_use);
-        ASSERT_LT(actual_max_mem, max_memory_use * 1.5);  // allow 50% overhead
+        if (all_null_value) {
+            // With the default data page row count limit (20000), all-null pages are
+            // RLE-encoded and finished early, so the writer stays far below the budget
+            // and never needs to break the row group.
+            ASSERT_LT(actual_max_mem, max_memory_use);
+        } else {
+            ASSERT_GT(actual_max_mem, max_memory_use);
+            // The budget is only checked between batches, and with the default row-count
+            // page split (20000) the budget is mostly held as finished page buffers,
+            // which BufferedPageWriter copies into its in-memory sink when the row group
+            // is flushed, transiently doubling the footprint (~2.2x measured; 2x plus
+            // one batch is the theoretical bound regardless of encoding).
+            ASSERT_LT(actual_max_mem, max_memory_use * 2.5);
+        }
     };
     run(/*all_null_value=*/true, /*max_memory_use=*/20 * 1024 * 1024);   // 20MB
     run(/*all_null_value=*/true, /*max_memory_use=*/40 * 1024 * 1024);   // 40MB

@@ -84,6 +84,11 @@ Result<std::shared_ptr<::parquet::WriterProperties>> ParquetWriterBuilder::Prepa
                            OptionsUtils::GetValueFromMap<int64_t>(options_, PARQUET_PAGE_SIZE,
                                                                   ::parquet::kDefaultDataPageSize));
     builder.data_pagesize(page_size);
+    PAIMON_ASSIGN_OR_RAISE(
+        int64_t page_row_count_limit,
+        OptionsUtils::GetValueFromMap<int64_t>(options_, PARQUET_PAGE_ROW_COUNT_LIMIT,
+                                               ::parquet::DEFAULT_DATA_PAGE_ROW_COUNT_LIMIT));
+    builder.data_page_row_count_limit(page_row_count_limit);
     PAIMON_ASSIGN_OR_RAISE(bool enable_dictionary, OptionsUtils::GetValueFromMap<bool>(
                                                        options_, PARQUET_ENABLE_DICTIONARY,
                                                        ::parquet::DEFAULT_IS_DICTIONARY_ENABLED));

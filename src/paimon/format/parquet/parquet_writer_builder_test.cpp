@@ -45,6 +45,8 @@ TEST(ParquetWriterBuilderTest, DefaultPrepareWriterProperties) {
     ASSERT_EQ(::parquet::ParquetVersion::PARQUET_2_6, properties->version());
     ASSERT_EQ(1024 * 1024, properties->dictionary_pagesize_limit());
     ASSERT_EQ(1024 * 1024, properties->data_pagesize());
+    // Default follows parquet-mr's parquet.page.row.count.limit (20000).
+    ASSERT_EQ(20000, properties->data_page_row_count_limit());
     ASSERT_EQ(std::numeric_limits<int64_t>::max(), properties->max_row_group_length());
     ASSERT_EQ(128 * 1024 * 1024, properties->max_row_group_size());
     ASSERT_EQ(1024, properties->write_batch_size());
@@ -57,6 +59,7 @@ TEST(ParquetWriterBuilderTest, PrepareWriterProperties) {
     std::shared_ptr<arrow::Schema> schema = arrow::schema(fields);
     std::map<std::string, std::string> options;
     options[PARQUET_PAGE_SIZE] = "1024";
+    options[PARQUET_PAGE_ROW_COUNT_LIMIT] = "40000";
     options[PARQUET_DICTIONARY_PAGE_SIZE] = "4096";
     options[PARQUET_WRITER_VERSION] = "PARQUET_2_0";
     options[PARQUET_COMPRESSION_CODEC_ZSTD_LEVEL] = "3";
@@ -70,6 +73,7 @@ TEST(ParquetWriterBuilderTest, PrepareWriterProperties) {
     ASSERT_EQ(::parquet::ParquetVersion::PARQUET_2_6, properties->version());
     ASSERT_EQ(4096, properties->dictionary_pagesize_limit());
     ASSERT_EQ(1024, properties->data_pagesize());
+    ASSERT_EQ(40000, properties->data_page_row_count_limit());
     ASSERT_EQ(2048, properties->max_row_group_size());
     ASSERT_EQ(1024 * 1024, properties->write_batch_size());
     ASSERT_EQ(3, properties->default_column_properties().compression_level());
