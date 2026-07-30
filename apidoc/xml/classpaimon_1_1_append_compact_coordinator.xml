@@ -1,0 +1,134 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_append_compact_coordinator" kind="class" language="C++" prot="public">
+    <compoundname>paimon::AppendCompactCoordinator</compoundname>
+    <includes refid="append__compact__coordinator_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/append/append_compact_coordinator.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_append_compact_coordinator_1a3b1921a4a524f0ddf401ba7e28b1502d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::AppendCompactCoordinator::AppendCompactCoordinator</definition>
+        <argsstring>()=delete</argsstring>
+        <name>AppendCompactCoordinator</name>
+        <qualifiedname>paimon::AppendCompactCoordinator::AppendCompactCoordinator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/append/append_compact_coordinator.h" line="42" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_append_compact_coordinator_1a010813430fa4a147fc75f633c060b820" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::AppendCompactCoordinator::~AppendCompactCoordinator</definition>
+        <argsstring>()=delete</argsstring>
+        <name>~AppendCompactCoordinator</name>
+        <qualifiedname>paimon::AppendCompactCoordinator::~AppendCompactCoordinator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/append/append_compact_coordinator.h" line="43" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_append_compact_coordinator_1a2f0fba04866b9631ef56f63d816a25ac" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref> &gt; &gt; &gt;</type>
+        <definition>static Result&lt; std::vector&lt; std::shared_ptr&lt; CommitMessage &gt; &gt; &gt; paimon::AppendCompactCoordinator::Run</definition>
+        <argsstring>(const std::string &amp;table_path, const std::map&lt; std::string, std::string &gt; &amp;options, const std::vector&lt; std::map&lt; std::string, std::string &gt; &gt; &amp;partitions, const std::shared_ptr&lt; FileSystem &gt; &amp;file_system, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>Run</name>
+        <qualifiedname>paimon::AppendCompactCoordinator::Run</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>table_path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::map&lt; std::string, std::string &gt; &gt; &amp;</type>
+          <declname>partitions</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_system" kindref="compound">FileSystem</ref> &gt; &amp;</type>
+          <declname>file_system</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Run the compaction coordinator. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Scans the latest snapshot for small files across the specified partitions, generates compact tasks via bin-packing, executes them synchronously, and returns the resulting commit messages.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>table_path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The root path of the table. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>options</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>User-defined options (will be merged with schema options). </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>partitions</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Partition filters; each element is a partition spec as key-value pairs. Empty vector means all partitions. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>file_system</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The file system to use. If nullptr, will be created from options. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The memory pool to use. If nullptr, will use default pool. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a vector of commit messages from compaction tasks. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/append/append_compact_coordinator.h" line="57" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Compact coordinator for append-only unaware-bucket tables. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>This coordinator scans the latest snapshot for small files, groups them by partition, and generates compaction tasks using a bin-packing algorithm. It then synchronously executes all tasks and returns the resulting commit messages.</para>
+<para><simplesect kind="note"><para>This implementation does not support deletion vectors or streaming mode. It only scans the current latest snapshot (batch mode). </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/append/append_compact_coordinator.h" line="40" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/append/append_compact_coordinator.h" bodystart="40" bodyend="61"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_append_compact_coordinator_1a3b1921a4a524f0ddf401ba7e28b1502d" prot="public" virt="non-virtual"><scope>paimon::AppendCompactCoordinator</scope><name>AppendCompactCoordinator</name></member>
+      <member refid="classpaimon_1_1_append_compact_coordinator_1a2f0fba04866b9631ef56f63d816a25ac" prot="public" virt="non-virtual"><scope>paimon::AppendCompactCoordinator</scope><name>Run</name></member>
+      <member refid="classpaimon_1_1_append_compact_coordinator_1a010813430fa4a147fc75f633c060b820" prot="public" virt="non-virtual"><scope>paimon::AppendCompactCoordinator</scope><name>~AppendCompactCoordinator</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

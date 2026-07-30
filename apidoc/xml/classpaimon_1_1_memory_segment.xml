@@ -1,0 +1,759 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_memory_segment" kind="class" language="C++" prot="public">
+    <compoundname>paimon::MemorySegment</compoundname>
+    <includes refid="memory__segment_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_memory_segment_1ae105bd280ab93024b74ff9bd29c08043" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Bytes&gt; paimon::MemorySegment::heap_memory_</definition>
+        <argsstring></argsstring>
+        <name>heap_memory_</name>
+        <qualifiedname>paimon::MemorySegment::heap_memory_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="193" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="193" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_memory_segment_1a2f53f484fa6fcedd9fb5ac1e7a80c32d" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+        <definition>const char* paimon::MemorySegment::data_</definition>
+        <argsstring></argsstring>
+        <name>data_</name>
+        <qualifiedname>paimon::MemorySegment::data_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="194" column="16" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="194" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_memory_segment_1adc785778041cc52b9bb8a7820b6ce5c1" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::MemorySegment::size_</definition>
+        <argsstring></argsstring>
+        <name>size_</name>
+        <qualifiedname>paimon::MemorySegment::size_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="195" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="195" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1a5faa808d16c2f0a81808c166c088e07c" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::MemorySegment::MemorySegment</definition>
+        <argsstring>()</argsstring>
+        <name>MemorySegment</name>
+        <qualifiedname>paimon::MemorySegment::MemorySegment</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="40" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="40" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1adbc873e8e404278f5d284e04cd442f36" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::MemorySegment::MemorySegment</definition>
+        <argsstring>(const MemorySegment &amp;other)=default</argsstring>
+        <name>MemorySegment</name>
+        <qualifiedname>paimon::MemorySegment::MemorySegment</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_memory_segment" kindref="compound">MemorySegment</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="58" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1a90c184c7807684c20bcde41797d253c7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_memory_segment" kindref="compound">MemorySegment</ref> &amp;</type>
+        <definition>MemorySegment &amp; paimon::MemorySegment::operator=</definition>
+        <argsstring>(const MemorySegment &amp;other)=default</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::MemorySegment::operator=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_memory_segment" kindref="compound">MemorySegment</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="59" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1a507cd46f4b36b763cf1f6013b06c8611" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::MemorySegment::operator==</definition>
+        <argsstring>(const MemorySegment &amp;other) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>paimon::MemorySegment::operator==</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_memory_segment" kindref="compound">MemorySegment</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="61" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="61" bodyend="75"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1a130a557a1a12e26f402489b91539c596" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::MemorySegment::Size</definition>
+        <argsstring>() const</argsstring>
+        <name>Size</name>
+        <qualifiedname>paimon::MemorySegment::Size</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="77" column="20" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="77" bodyend="79"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1ad8172247e0bd1bc78fdb65409428d4a2" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+        <definition>const char * paimon::MemorySegment::Data</definition>
+        <argsstring>() const</argsstring>
+        <name>Data</name>
+        <qualifiedname>paimon::MemorySegment::Data</qualifiedname>
+        <briefdescription>
+<para>Returns the raw data pointer (valid for both owning and non-owning segments). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="82" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="82" bodyend="84"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1a75063ceffc750af04502838612f5056e" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>char paimon::MemorySegment::Get</definition>
+        <argsstring>(int32_t index) const</argsstring>
+        <name>Get</name>
+        <qualifiedname>paimon::MemorySegment::Get</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>index</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="86" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="86" bodyend="88"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1a5e698a309376175699ecbe80614e10aa" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+        <definition>char * paimon::MemorySegment::MutableData</definition>
+        <argsstring>()</argsstring>
+        <name>MutableData</name>
+        <qualifiedname>paimon::MemorySegment::MutableData</qualifiedname>
+        <briefdescription>
+<para>Returns a mutable pointer to the data. Use with caution on non-owning segments. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="91" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="91" bodyend="93"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1a3fce19b1b1e5c1da996b7c60fde7e69f" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::MemorySegment::Put</definition>
+        <argsstring>(int32_t index, char b)</argsstring>
+        <name>Put</name>
+        <qualifiedname>paimon::MemorySegment::Put</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>index</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+          <declname>b</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="95" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="95" bodyend="97"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1a6c44b1f183c76129d0a24ed8cd6b1ccf" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::MemorySegment::Get</definition>
+        <argsstring>(int32_t index, Bytes *dst) const</argsstring>
+        <name>Get</name>
+        <qualifiedname>paimon::MemorySegment::Get</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>index</declname>
+        </param>
+        <param>
+          <type><ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> *</type>
+          <declname>dst</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="99" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="99" bodyend="101"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1a089f57071308e6c306293462513eb9fe" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::MemorySegment::Put</definition>
+        <argsstring>(int32_t index, const Bytes &amp;src)</argsstring>
+        <name>Put</name>
+        <qualifiedname>paimon::MemorySegment::Put</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>index</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &amp;</type>
+          <declname>src</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="103" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="103" bodyend="105"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1a56b9f11f31752e26d180fa60bf75bf9d" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref></type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::MemorySegment::Get</definition>
+        <argsstring>(int32_t index, T *dst, int32_t offset, int32_t length) const</argsstring>
+        <name>Get</name>
+        <qualifiedname>paimon::MemorySegment::Get</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>index</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> *</type>
+          <declname>dst</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>offset</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>length</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="108" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="108" bodyend="114"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1a24683f71837f647484b3505731749076" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref></type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::MemorySegment::Put</definition>
+        <argsstring>(int32_t index, const T &amp;src, int32_t offset, int32_t length)</argsstring>
+        <name>Put</name>
+        <qualifiedname>paimon::MemorySegment::Put</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>index</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &amp;</type>
+          <declname>src</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>offset</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>length</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="117" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="117" bodyend="123"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1a2ce210c7f2a88826dbb9e0a9a847431b" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref></type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref></type>
+        <definition>T paimon::MemorySegment::GetValue</definition>
+        <argsstring>(int32_t index) const</argsstring>
+        <name>GetValue</name>
+        <qualifiedname>paimon::MemorySegment::GetValue</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>index</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="126" column="7" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="126" bodyend="131"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1ab9dbf9529f2b386532a876127a3109f0" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref></type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::MemorySegment::PutValue</definition>
+        <argsstring>(int32_t index, const T &amp;value)</argsstring>
+        <name>PutValue</name>
+        <qualifiedname>paimon::MemorySegment::PutValue</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>index</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="134" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="134" bodyend="138"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1a95e247bd52b7227c7e158cd856206d31" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+        <definition>uint64_t paimon::MemorySegment::GetLongBigEndian</definition>
+        <argsstring>(int32_t index) const</argsstring>
+        <name>GetLongBigEndian</name>
+        <qualifiedname>paimon::MemorySegment::GetLongBigEndian</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>index</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="140" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1af0bbb2c6fbebc7a674d4300ef7e53684" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::MemorySegment::CopyTo</definition>
+        <argsstring>(int32_t offset, MemorySegment *target, int32_t target_offset, int32_t num_bytes) const</argsstring>
+        <name>CopyTo</name>
+        <qualifiedname>paimon::MemorySegment::CopyTo</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>offset</declname>
+        </param>
+        <param>
+          <type><ref refid="classpaimon_1_1_memory_segment" kindref="compound">MemorySegment</ref> *</type>
+          <declname>target</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>target_offset</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>num_bytes</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="142" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="142" bodyend="150"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1acbab1794f5d7552c8284f3106509e480" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::MemorySegment::CopyToUnsafe</definition>
+        <argsstring>(int32_t offset, void *target, int32_t target_offset, int32_t num_bytes) const</argsstring>
+        <name>CopyToUnsafe</name>
+        <qualifiedname>paimon::MemorySegment::CopyToUnsafe</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>offset</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref> *</type>
+          <declname>target</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>target_offset</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>num_bytes</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="152" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="152" bodyend="157"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1a277760850f8db0faf4547109e1e6d2a4" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::MemorySegment::Compare</definition>
+        <argsstring>(const MemorySegment &amp;seg2, int32_t offset1, int32_t offset2, int32_t len) const</argsstring>
+        <name>Compare</name>
+        <qualifiedname>paimon::MemorySegment::Compare</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_memory_segment" kindref="compound">MemorySegment</ref> &amp;</type>
+          <declname>seg2</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>offset1</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>offset2</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>len</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="159" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1aa4b4baa55491b53307ad81a9f7534d21" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::MemorySegment::Compare</definition>
+        <argsstring>(const MemorySegment &amp;seg2, int32_t offset1, int32_t offset2, int32_t len1, int32_t len2) const</argsstring>
+        <name>Compare</name>
+        <qualifiedname>paimon::MemorySegment::Compare</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_memory_segment" kindref="compound">MemorySegment</ref> &amp;</type>
+          <declname>seg2</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>offset1</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>offset2</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>len1</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>len2</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="161" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1ac539fedaf28b4910159d225a3e7dced4" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::MemorySegment::EqualTo</definition>
+        <argsstring>(const MemorySegment &amp;seg2, int32_t offset1, int32_t offset2, int32_t length) const</argsstring>
+        <name>EqualTo</name>
+        <qualifiedname>paimon::MemorySegment::EqualTo</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_memory_segment" kindref="compound">MemorySegment</ref> &amp;</type>
+          <declname>seg2</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>offset1</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>offset2</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>length</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="164" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1abf6af375e49268413aafbf01413439cd" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; Bytes &gt; paimon::MemorySegment::GetOrCreateHeapMemory</definition>
+        <argsstring>(MemoryPool *pool) const</argsstring>
+        <name>GetOrCreateHeapMemory</name>
+        <qualifiedname>paimon::MemorySegment::GetOrCreateHeapMemory</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> *</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="166" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="166" bodyend="176"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1af85c85976e891bdb752d368a6b6c45cf" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+        </templateparamlist>
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::MemorySegment::GetValue</definition>
+        <argsstring>(int32_t index) const</argsstring>
+        <name>GetValue</name>
+        <qualifiedname>paimon::MemorySegment::GetValue</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>index</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="199" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="199" bodyend="201"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1adcb032b4cafbfb4d1eb18e2a605567c9" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+        </templateparamlist>
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::MemorySegment::PutValue</definition>
+        <argsstring>(int32_t index, const bool &amp;value)</argsstring>
+        <name>PutValue</name>
+        <qualifiedname>paimon::MemorySegment::PutValue</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>index</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref> &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="204" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="204" bodyend="206"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1aef0dd92558d06b22cb576c69fbc357bc" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_memory_segment" kindref="compound">MemorySegment</ref></type>
+        <definition>static MemorySegment paimon::MemorySegment::Wrap</definition>
+        <argsstring>(const std::shared_ptr&lt; Bytes &gt; &amp;buffer)</argsstring>
+        <name>Wrap</name>
+        <qualifiedname>paimon::MemorySegment::Wrap</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &gt; &amp;</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+<para>Wrap a shared_ptr&lt;Bytes&gt; to create an owning segment. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="43" column="26" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="43" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1af2063071f930f0007fa405325578b897" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_memory_segment" kindref="compound">MemorySegment</ref></type>
+        <definition>static MemorySegment paimon::MemorySegment::WrapView</definition>
+        <argsstring>(const char *data, int32_t size)</argsstring>
+        <name>WrapView</name>
+        <qualifiedname>paimon::MemorySegment::WrapView</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>data</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+<para>Create a non-owning segment that references external memory. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The caller must guarantee that <computeroutput>data</computeroutput> remains valid for the lifetime of this segment. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="49" column="26" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="49" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1ad1e44059887eb146ecc7d503613c8011" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_memory_segment" kindref="compound">MemorySegment</ref></type>
+        <definition>static MemorySegment paimon::MemorySegment::AllocateHeapMemory</definition>
+        <argsstring>(int32_t size, MemoryPool *pool)</argsstring>
+        <name>AllocateHeapMemory</name>
+        <qualifiedname>paimon::MemorySegment::AllocateHeapMemory</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>size</declname>
+        </param>
+        <param>
+          <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> *</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="53" column="26" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="53" bodyend="56"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1aa174f871ee0ab76781797382d8208ae4" prot="private" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::MemorySegment::MemorySegment</definition>
+        <argsstring>(const std::shared_ptr&lt; Bytes &gt; &amp;heap_memory)</argsstring>
+        <name>MemorySegment</name>
+        <qualifiedname>paimon::MemorySegment::MemorySegment</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &gt; &amp;</type>
+          <declname>heap_memory</declname>
+        </param>
+        <briefdescription>
+<para>Owning constructor. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="180" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="180" bodyend="185"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_segment_1abff7f1aef34507725ce4986cb4b304e8" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::MemorySegment::MemorySegment</definition>
+        <argsstring>(const char *data, int32_t size)</argsstring>
+        <name>MemorySegment</name>
+        <qualifiedname>paimon::MemorySegment::MemorySegment</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>data</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+<para>Non-owning constructor. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="188" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="188" bodyend="191"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>This class represents a piece of memory. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Supports two modes:<itemizedlist>
+<listitem><para>Owning mode: holds a shared_ptr&lt;Bytes&gt; for lifetime management.</para>
+</listitem><listitem><para>Non-owning (view) mode: holds a raw pointer to external data. The caller must ensure the underlying memory outlives this segment. </para>
+</listitem></itemizedlist>
+</para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" line="38" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_segment.h" bodystart="38" bodyend="196"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_memory_segment_1ad1e44059887eb146ecc7d503613c8011" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>AllocateHeapMemory</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1a277760850f8db0faf4547109e1e6d2a4" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>Compare</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1aa4b4baa55491b53307ad81a9f7534d21" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>Compare</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1af0bbb2c6fbebc7a674d4300ef7e53684" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>CopyTo</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1acbab1794f5d7552c8284f3106509e480" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>CopyToUnsafe</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1ad8172247e0bd1bc78fdb65409428d4a2" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>Data</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1a2f53f484fa6fcedd9fb5ac1e7a80c32d" prot="private" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>data_</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1ac539fedaf28b4910159d225a3e7dced4" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>EqualTo</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1a75063ceffc750af04502838612f5056e" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>Get</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1a6c44b1f183c76129d0a24ed8cd6b1ccf" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>Get</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1a56b9f11f31752e26d180fa60bf75bf9d" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>Get</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1a95e247bd52b7227c7e158cd856206d31" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>GetLongBigEndian</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1abf6af375e49268413aafbf01413439cd" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>GetOrCreateHeapMemory</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1a2ce210c7f2a88826dbb9e0a9a847431b" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>GetValue</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1af85c85976e891bdb752d368a6b6c45cf" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>GetValue</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1ae105bd280ab93024b74ff9bd29c08043" prot="private" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>heap_memory_</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1a5faa808d16c2f0a81808c166c088e07c" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>MemorySegment</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1adbc873e8e404278f5d284e04cd442f36" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>MemorySegment</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1aa174f871ee0ab76781797382d8208ae4" prot="private" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>MemorySegment</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1abff7f1aef34507725ce4986cb4b304e8" prot="private" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>MemorySegment</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1a5e698a309376175699ecbe80614e10aa" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>MutableData</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1a90c184c7807684c20bcde41797d253c7" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1a507cd46f4b36b763cf1f6013b06c8611" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>operator==</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1a3fce19b1b1e5c1da996b7c60fde7e69f" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>Put</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1a089f57071308e6c306293462513eb9fe" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>Put</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1a24683f71837f647484b3505731749076" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>Put</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1ab9dbf9529f2b386532a876127a3109f0" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>PutValue</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1adcb032b4cafbfb4d1eb18e2a605567c9" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>PutValue</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1a130a557a1a12e26f402489b91539c596" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>Size</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1adc785778041cc52b9bb8a7820b6ce5c1" prot="private" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>size_</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1aef0dd92558d06b22cb576c69fbc357bc" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>Wrap</name></member>
+      <member refid="classpaimon_1_1_memory_segment_1af2063071f930f0007fa405325578b897" prot="public" virt="non-virtual"><scope>paimon::MemorySegment</scope><name>WrapView</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

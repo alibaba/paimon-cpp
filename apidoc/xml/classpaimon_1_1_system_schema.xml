@@ -1,0 +1,63 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_system_schema" kind="class" language="C++" prot="public">
+    <compoundname>paimon::SystemSchema</compoundname>
+    <basecompoundref refid="classpaimon_1_1_schema" prot="public" virt="non-virtual">paimon::Schema</basecompoundref>
+    <includes refid="schema_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_system_schema_1a08e549c914a2162825771897bfaccbdc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::SystemSchema::~SystemSchema</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~SystemSchema</name>
+        <qualifiedname>paimon::SystemSchema::~SystemSchema</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="104" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><ref refid="classpaimon_1_1_schema" kindref="compound">Schema</ref> contract for system tables. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::Schema</label>
+        <link refid="classpaimon_1_1_schema"/>
+      </node>
+      <node id="1">
+        <label>paimon::SystemSchema</label>
+        <link refid="classpaimon_1_1_system_schema"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>paimon::Schema</label>
+        <link refid="classpaimon_1_1_schema"/>
+      </node>
+      <node id="1">
+        <label>paimon::SystemSchema</label>
+        <link refid="classpaimon_1_1_system_schema"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="102" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" bodystart="102" bodyend="105"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_schema_1a6a9fcbaa6b332a4104b2006fe59df200" prot="public" virt="pure-virtual"><scope>paimon::SystemSchema</scope><name>Comment</name></member>
+      <member refid="classpaimon_1_1_schema_1a86ebde8a32316069856601c05c9d1a28" prot="public" virt="pure-virtual"><scope>paimon::SystemSchema</scope><name>FieldNames</name></member>
+      <member refid="classpaimon_1_1_schema_1adb2b80cff7d763a887df26d35004e61c" prot="public" virt="pure-virtual"><scope>paimon::SystemSchema</scope><name>GetArrowSchema</name></member>
+      <member refid="classpaimon_1_1_schema_1a8b1eb0e85de19532d17b67839331ee78" prot="public" virt="pure-virtual"><scope>paimon::SystemSchema</scope><name>GetFieldType</name></member>
+      <member refid="classpaimon_1_1_schema_1a77f0ee7822be63eb90369af843a11ee9" prot="public" virt="pure-virtual"><scope>paimon::SystemSchema</scope><name>GetJsonSchema</name></member>
+      <member refid="classpaimon_1_1_schema_1a35d10462804c6538919a9f8fd597e35a" prot="public" virt="virtual"><scope>paimon::SystemSchema</scope><name>~Schema</name></member>
+      <member refid="classpaimon_1_1_system_schema_1a08e549c914a2162825771897bfaccbdc" prot="public" virt="non-virtual"><scope>paimon::SystemSchema</scope><name>~SystemSchema</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

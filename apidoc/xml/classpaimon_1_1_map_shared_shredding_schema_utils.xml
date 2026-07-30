@@ -1,0 +1,192 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_map_shared_shredding_schema_utils" kind="class" language="C++" prot="public">
+    <compoundname>paimon::MapSharedShreddingSchemaUtils</compoundname>
+    <includes refid="map__shared__shredding__schema__utils_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_map_shared_shredding_schema_utils_1af6767d0d53b59206d83f3b9e2f18de09" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::MapSharedShreddingSchemaUtils::MapSharedShreddingSchemaUtils</definition>
+        <argsstring>()=delete</argsstring>
+        <name>MapSharedShreddingSchemaUtils</name>
+        <qualifiedname>paimon::MapSharedShreddingSchemaUtils::MapSharedShreddingSchemaUtils</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" line="58" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_map_shared_shredding_schema_utils_1afc66f55f22498609c967d404cba06253" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::MapSharedShreddingSchemaUtils::~MapSharedShreddingSchemaUtils</definition>
+        <argsstring>()=delete</argsstring>
+        <name>~MapSharedShreddingSchemaUtils</name>
+        <qualifiedname>paimon::MapSharedShreddingSchemaUtils::~MapSharedShreddingSchemaUtils</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" line="59" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_map_shared_shredding_schema_utils_1a80ce6c18add9667c621c43c93a38d836" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt;<ref refid="struct_arrow_schema" kindref="compound">::ArrowSchema</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt;::ArrowSchema &gt; &gt; paimon::MapSharedShreddingSchemaUtils::LogicalToPhysicalSchema</definition>
+        <argsstring>(std::unique_ptr&lt;::ArrowSchema &gt; logical_schema, const std::map&lt; std::string, int32_t &gt; &amp;field_to_num_columns)</argsstring>
+        <name>LogicalToPhysicalSchema</name>
+        <qualifiedname>paimon::MapSharedShreddingSchemaUtils::LogicalToPhysicalSchema</qualifiedname>
+        <param>
+          <type>std::unique_ptr&lt;<ref refid="struct_arrow_schema" kindref="compound">::ArrowSchema</ref> &gt;</type>
+          <declname>logical_schema</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt; &amp;</type>
+          <declname>field_to_num_columns</declname>
+        </param>
+        <briefdescription>
+<para>Converts a logical schema to a physical schema by replacing shredding MAP columns with their physical Struct representation. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>logical_schema</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The original Arrow C schema with MAP&lt;STRING, T&gt; columns. Ownership of schema resources is transferred to this method. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>field_to_num_columns</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Map from field name to its physical column count K. Each shredding column can have its own width. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The exported Arrow C schema for file writing. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" line="68" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_map_shared_shredding_schema_utils_1ad745ffc7e7088b9aacf923437ee6badf" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt;<ref refid="struct_arrow_schema" kindref="compound">::ArrowSchema</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt;::ArrowSchema &gt; &gt; paimon::MapSharedShreddingSchemaUtils::AttachMetadataToSchema</definition>
+        <argsstring>(std::unique_ptr&lt;::ArrowSchema &gt; physical_schema, const std::map&lt; std::string, MapSharedShreddingFieldMeta &gt; &amp;field_name_to_meta, const std::string &amp;compression)</argsstring>
+        <name>AttachMetadataToSchema</name>
+        <qualifiedname>paimon::MapSharedShreddingSchemaUtils::AttachMetadataToSchema</qualifiedname>
+        <param>
+          <type>std::unique_ptr&lt;<ref refid="struct_arrow_schema" kindref="compound">::ArrowSchema</ref> &gt;</type>
+          <declname>physical_schema</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, <ref refid="structpaimon_1_1_map_shared_shredding_field_meta" kindref="compound">MapSharedShreddingFieldMeta</ref> &gt; &amp;</type>
+          <declname>field_name_to_meta</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>compression</declname>
+        </param>
+        <briefdescription>
+<para>Attaches shared-shredding metadata to fields in a physical schema. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>physical_schema</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The Arrow C physical schema whose fields should receive metadata. Ownership of schema resources is transferred to this method. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>field_name_to_meta</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Map from physical field name to its shared-shredding metadata. Existing shared-shredding metadata keys on matching fields are overwritten. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>compression</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Compression codec name for field_dict serialization. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A new Arrow C schema with shared-shredding metadata attached to matching fields. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" line="79" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_map_shared_shredding_schema_utils_1aaf7cd49242b57987ca28ec96602dcfc0" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="structpaimon_1_1_map_shared_shredding_field_meta" kindref="compound">MapSharedShreddingFieldMeta</ref> &gt;</type>
+        <definition>static Result&lt; MapSharedShreddingFieldMeta &gt; paimon::MapSharedShreddingSchemaUtils::ExtractMetadataFromField</definition>
+        <argsstring>(std::unique_ptr&lt;::ArrowSchema &gt; physical_schema, const std::string &amp;field_name)</argsstring>
+        <name>ExtractMetadataFromField</name>
+        <qualifiedname>paimon::MapSharedShreddingSchemaUtils::ExtractMetadataFromField</qualifiedname>
+        <param>
+          <type>std::unique_ptr&lt;<ref refid="struct_arrow_schema" kindref="compound">::ArrowSchema</ref> &gt;</type>
+          <declname>physical_schema</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>field_name</declname>
+        </param>
+        <briefdescription>
+<para>Extracts shared-shredding metadata from a named field in a physical schema. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>physical_schema</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The Arrow C physical schema that contains the target field. Ownership of schema resources is transferred to this method. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>field_name</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The physical field name whose metadata should be extracted. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Parsed shared-shredding metadata for the field. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" line="89" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" line="56" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" bodystart="56" bodyend="91"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_map_shared_shredding_schema_utils_1ad745ffc7e7088b9aacf923437ee6badf" prot="public" virt="non-virtual"><scope>paimon::MapSharedShreddingSchemaUtils</scope><name>AttachMetadataToSchema</name></member>
+      <member refid="classpaimon_1_1_map_shared_shredding_schema_utils_1aaf7cd49242b57987ca28ec96602dcfc0" prot="public" virt="non-virtual"><scope>paimon::MapSharedShreddingSchemaUtils</scope><name>ExtractMetadataFromField</name></member>
+      <member refid="classpaimon_1_1_map_shared_shredding_schema_utils_1a80ce6c18add9667c621c43c93a38d836" prot="public" virt="non-virtual"><scope>paimon::MapSharedShreddingSchemaUtils</scope><name>LogicalToPhysicalSchema</name></member>
+      <member refid="classpaimon_1_1_map_shared_shredding_schema_utils_1af6767d0d53b59206d83f3b9e2f18de09" prot="public" virt="non-virtual"><scope>paimon::MapSharedShreddingSchemaUtils</scope><name>MapSharedShreddingSchemaUtils</name></member>
+      <member refid="classpaimon_1_1_map_shared_shredding_schema_utils_1afc66f55f22498609c967d404cba06253" prot="public" virt="non-virtual"><scope>paimon::MapSharedShreddingSchemaUtils</scope><name>~MapSharedShreddingSchemaUtils</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

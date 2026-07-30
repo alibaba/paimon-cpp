@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_count_reader" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::CountReader</compoundname>
+    <includes refid="count__reader_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/count_reader.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_count_reader_1a885d6792e6712c99c307983dd670af9c" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::CountReader::~CountReader</definition>
+        <argsstring>()=default</argsstring>
+        <name>~CountReader</name>
+        <qualifiedname>paimon::CountReader::~CountReader</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/count_reader.h" line="27" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_count_reader_1afcf49410739ea94a4daa5d011415bf0c" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+        <definition>virtual Result&lt; int64_t &gt; paimon::CountReader::CountRows</definition>
+        <argsstring>()=0</argsstring>
+        <name>CountRows</name>
+        <qualifiedname>paimon::CountReader::CountRows</qualifiedname>
+        <briefdescription>
+<para>Count rows for splits bound by the corresponding CreateCountReader call. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/count_reader.h" line="30" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Reader abstraction for count queries. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/count_reader.h" line="25" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/count_reader.h" bodystart="25" bodyend="31"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_count_reader_1afcf49410739ea94a4daa5d011415bf0c" prot="public" virt="pure-virtual"><scope>paimon::CountReader</scope><name>CountRows</name></member>
+      <member refid="classpaimon_1_1_count_reader_1a885d6792e6712c99c307983dd670af9c" prot="public" virt="virtual"><scope>paimon::CountReader</scope><name>~CountReader</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,87 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_database" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::Database</compoundname>
+    <includes refid="database_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/database.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_database_1a804a54b5b41ca7b66ca2c68c5c1b4b6e" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::Database::~Database</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Database</name>
+        <qualifiedname>paimon::Database::~Database</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/database.h" line="37" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_database_1ae666191f13fd5e9d3c89547c9c01933f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::string</type>
+        <definition>virtual std::string paimon::Database::Name</definition>
+        <argsstring>() const =0</argsstring>
+        <name>Name</name>
+        <qualifiedname>paimon::Database::Name</qualifiedname>
+        <briefdescription>
+<para>================== <ref refid="classpaimon_1_1_database" kindref="compound">Database</ref> Metadata ===================== </para>
+        </briefdescription>
+        <detaileddescription>
+<para>A name to identify this database. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/database.h" line="42" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_database_1ac55315cb1eb38dfe358243a9431c6e40" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+        <definition>virtual const std::map&lt; std::string, std::string &gt; &amp; paimon::Database::Options</definition>
+        <argsstring>() const =0</argsstring>
+        <name>Options</name>
+        <qualifiedname>paimon::Database::Options</qualifiedname>
+        <briefdescription>
+<para>Get the database-level options associated with this database. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para><ref refid="structpaimon_1_1_options" kindref="compound">Options</ref> </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/database.h" line="46" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_database_1a3f204f0f5e9b0702150beb0ef419dd77" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::optional&lt; std::string &gt;</type>
+        <definition>virtual std::optional&lt; std::string &gt; paimon::Database::Comment</definition>
+        <argsstring>() const =0</argsstring>
+        <name>Comment</name>
+        <qualifiedname>paimon::Database::Comment</qualifiedname>
+        <briefdescription>
+<para>Get an optional comment describing the database. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The database comment if set, or std::nullopt otherwise. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/database.h" line="50" column="27"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Interface of a database in a catalog. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/database.h" line="35" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/database.h" bodystart="35" bodyend="51"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_database_1a3f204f0f5e9b0702150beb0ef419dd77" prot="public" virt="pure-virtual"><scope>paimon::Database</scope><name>Comment</name></member>
+      <member refid="classpaimon_1_1_database_1ae666191f13fd5e9d3c89547c9c01933f" prot="public" virt="pure-virtual"><scope>paimon::Database</scope><name>Name</name></member>
+      <member refid="classpaimon_1_1_database_1ac55315cb1eb38dfe358243a9431c6e40" prot="public" virt="pure-virtual"><scope>paimon::Database</scope><name>Options</name></member>
+      <member refid="classpaimon_1_1_database_1a804a54b5b41ca7b66ca2c68c5c1b4b6e" prot="public" virt="virtual"><scope>paimon::Database</scope><name>~Database</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,20 @@
+var searchData=
+[
+  ['range_5fsize_5flimit_5f_0',['range_size_limit_',['../classpaimon_1_1_cache_config.html#a85f4a665f031038d447ae56aaea61543',1,'paimon::CacheConfig']]],
+  ['ranges_5f_1',['ranges_',['../classpaimon_1_1_row_range_index.html#a36a0ca71b4c8193282ac422f356ad05a',1,'paimon::RowRangeIndex']]],
+  ['read_5fbatch_5fsize_2',['READ_BATCH_SIZE',['../structpaimon_1_1_options.html#a7f83ced15c93c7fd98c28ed4b8a80935',1,'paimon::Options']]],
+  ['read_5ffield_5fids_5f_3',['read_field_ids_',['../classpaimon_1_1_read_context.html#ab641580c84ad07c7066cc54ebf1c9545',1,'paimon::ReadContext']]],
+  ['read_5ffield_5fnames_5f_4',['read_field_names_',['../classpaimon_1_1_read_context.html#a9b6b25e372d520b534150100eb70a9bf',1,'paimon::ReadContext']]],
+  ['read_5fschema_5f_5',['read_schema_',['../classpaimon_1_1_read_context.html#a696249b4f4318ab319b35165bd58dd28',1,'paimon::ReadContext']]],
+  ['release_6',['release',['../struct_arrow_schema.html#ad471ae72074febbeaf80288f2f673c57',1,'ArrowSchema::release'],['../struct_arrow_array.html#a03ad36422f651c0b0ccd9ab9c5b7d5d3',1,'ArrowArray::release']]],
+  ['roaring_5fbitmap_5f_7',['roaring_bitmap_',['../classpaimon_1_1_roaring_bitmap32.html#a5acdeb20661a455a42af77164ccfbeae',1,'paimon::RoaringBitmap32::roaring_bitmap_'],['../classpaimon_1_1_roaring_bitmap64.html#a340491c539b61cc2668d63a038f72383',1,'paimon::RoaringBitmap64::roaring_bitmap_']]],
+  ['root_5fpath_5f_8',['root_path_',['../classpaimon_1_1_commit_context.html#ac43316fa85944c7b9d4e32bdf1d84068',1,'paimon::CommitContext::root_path_'],['../classpaimon_1_1_write_context.html#ac7b49da7ebccde07e061a3b4cdad6d46',1,'paimon::WriteContext::root_path_'],['../classpaimon_1_1_clean_context.html#a0cc11e2daf7b9a5ed20f81d86e4c2a3a',1,'paimon::CleanContext::root_path_']]],
+  ['row_5fcount_9',['row_count',['../structpaimon_1_1_data_split_1_1_simple_data_file_meta.html#aed17b7e6e1a33fe2fb3138d08cc95bf8',1,'paimon::DataSplit::SimpleDataFileMeta']]],
+  ['row_5fcount_5f_10',['row_count_',['../classpaimon_1_1_format_stats_extractor_1_1_file_info.html#a4a22be3d889f368cd7ad86302b78694c',1,'paimon::FormatStatsExtractor::FileInfo']]],
+  ['row_5fid_11',['ROW_ID',['../classpaimon_1_1_special_field_ids.html#a3f3c868308ee404f9a08d3e3a21b4145',1,'paimon::SpecialFieldIds']]],
+  ['row_5fkind_12',['ROW_KIND',['../classpaimon_1_1_special_field_ids.html#a28d4ab64d02b0afed6cb6f6011513382',1,'paimon::SpecialFieldIds']]],
+  ['row_5fkinds_5f_13',['row_kinds_',['../classpaimon_1_1_record_batch.html#a6f2e890e904ff4c97b6ff2adf4592f87',1,'paimon::RecordBatch']]],
+  ['row_5fto_5fbatch_5fthread_5fnumber_5f_14',['row_to_batch_thread_number_',['../classpaimon_1_1_read_context.html#a67cb8988e1f440d46fab2532c71e3c99',1,'paimon::ReadContext']]],
+  ['row_5ftracking_5fenabled_15',['ROW_TRACKING_ENABLED',['../structpaimon_1_1_options.html#adae9d0eca977241094aad9d8f89281a1',1,'paimon::Options']]],
+  ['row_5ftracking_5fpartition_5fgroup_5fon_5fcommit_16',['ROW_TRACKING_PARTITION_GROUP_ON_COMMIT',['../structpaimon_1_1_options.html#a3b5984310f6ab2af22cdb9b0949fe9e8',1,'paimon::Options']]]
+];

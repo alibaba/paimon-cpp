@@ -1,0 +1,1160 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Scan &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=d7227091" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/scan';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Read" href="read.html" />
+    <link rel="prev" title="Commit" href="commit.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.3.0" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="catalog.html">Catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="write.html">Write</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commit.html">Commit</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Scan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read.html">Read</a></li>
+<li class="toctree-l1"><a class="reference internal" href="predicate.html">Predicate</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="file_format.html">File Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_system.html">File System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_types.html">Data Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_index.html">File Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="global_index.html">Global Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clean.html">Orphan Files Clean</a></li>
+<li class="toctree-l1"><a class="reference internal" href="defs.html">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="memory.html">Memory</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../api.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Scan</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="scan">
+<h1>Scan<a class="headerlink" href="#scan" title="Link to this heading">#</a></h1>
+<section id="interface">
+<span id="cpp-api-scan"></span><h2>Interface<a class="headerlink" href="#interface" title="Link to this heading">#</a></h2>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9TableScanE">
+<span id="_CPPv3N6paimon9TableScanE"></span><span id="_CPPv2N6paimon9TableScanE"></span><span id="paimon::TableScan"></span><span class="target" id="classpaimon_1_1_table_scan"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">TableScan</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9TableScanE" title="Link to this definition">#</a><br /></dt>
+<dd><p>A scanner interface for reading table’s meta and create a plan. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9TableScanD0Ev">
+<span id="_CPPv3N6paimon9TableScanD0Ev"></span><span id="_CPPv2N6paimon9TableScanD0Ev"></span><span id="paimon::TableScan::~TableScan"></span><span class="target" id="classpaimon_1_1_table_scan_1ae9b094407c58cd48bc21fb01d70e20f9"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~TableScan</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon9TableScanD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9TableScan10CreatePlanEv">
+<span id="_CPPv3N6paimon9TableScan10CreatePlanEv"></span><span id="_CPPv2N6paimon9TableScan10CreatePlanEv"></span><span id="paimon::TableScan::CreatePlan"></span><span class="target" id="classpaimon_1_1_table_scan_1a4cff0e5627053b0ece53c7eeda61a7b7"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon4PlanE" title="paimon::Plan"><span class="n"><span class="pre">Plan</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CreatePlan</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon9TableScan10CreatePlanEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Create a scan plan. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A Result containing a shared pointer to the created <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_plan"><span class="std std-ref"><span class="pre">Plan</span></span></a></code> or an error status. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9TableScan6CreateENSt10unique_ptrI11ScanContextEE">
+<span id="_CPPv3N6paimon9TableScan6CreateENSt10unique_ptrI11ScanContextEE"></span><span id="_CPPv2N6paimon9TableScan6CreateENSt10unique_ptrI11ScanContextEE"></span><span id="paimon::TableScan::Create__std::unique_ptr:ScanContext:"></span><span class="target" id="classpaimon_1_1_table_scan_1a32e5f7ba110b6474abc09d3c391c3f2e"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon9TableScanE" title="paimon::TableScan"><span class="n"><span class="pre">TableScan</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Create</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon11ScanContextE" title="paimon::ScanContext"><span class="n"><span class="pre">ScanContext</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">context</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon9TableScan6CreateENSt10unique_ptrI11ScanContextEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Create an instance of <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_table_scan"><span class="std std-ref"><span class="pre">TableScan</span></span></a></code>. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>context</strong> – A unique pointer to the <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_scan_context"><span class="std std-ref"><span class="pre">ScanContext</span></span></a></code> used for scan operations. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A Result containing a unique pointer to the <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_table_scan"><span class="std std-ref"><span class="pre">TableScan</span></span></a></code> instance. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilderE">
+<span id="_CPPv3N6paimon18ScanContextBuilderE"></span><span id="_CPPv2N6paimon18ScanContextBuilderE"></span><span id="paimon::ScanContextBuilder"></span><span class="target" id="classpaimon_1_1_scan_context_builder"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ScanContextBuilder</span></span></span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilderE" title="Link to this definition">#</a><br /></dt>
+<dd><p><code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_scan_context_builder"><span class="std std-ref"><span class="pre">ScanContextBuilder</span></span></a></code> used to build a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_scan_context"><span class="std std-ref"><span class="pre">ScanContext</span></span></a></code>, has input validation. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilder18ScanContextBuilderERKNSt6stringE">
+<span id="_CPPv3N6paimon18ScanContextBuilder18ScanContextBuilderERKNSt6stringE"></span><span id="_CPPv2N6paimon18ScanContextBuilder18ScanContextBuilderERKNSt6stringE"></span><span id="paimon::ScanContextBuilder::ScanContextBuilder__ssCR"></span><span class="target" id="classpaimon_1_1_scan_context_builder_1ab83a83a8531fe2213a5e5dfa0c2f594d"></span><span class="k"><span class="pre">explicit</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ScanContextBuilder</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilder18ScanContextBuilderERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Constructs a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_scan_context_builder"><span class="std std-ref"><span class="pre">ScanContextBuilder</span></span></a></code> with required parameters. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> – The root path of the table. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilderD0Ev">
+<span id="_CPPv3N6paimon18ScanContextBuilderD0Ev"></span><span id="_CPPv2N6paimon18ScanContextBuilderD0Ev"></span><span id="paimon::ScanContextBuilder::~ScanContextBuilder"></span><span class="target" id="classpaimon_1_1_scan_context_builder_1a9246776fb168dedf96db566ee173866e"></span><span class="sig-name descname"><span class="n"><span class="pre">~ScanContextBuilder</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilderD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilder8SetLimitE7int32_t">
+<span id="_CPPv3N6paimon18ScanContextBuilder8SetLimitE7int32_t"></span><span id="_CPPv2N6paimon18ScanContextBuilder8SetLimitE7int32_t"></span><span id="paimon::ScanContextBuilder::SetLimit__int32_t"></span><span class="target" id="classpaimon_1_1_scan_context_builder_1a97003890be40f5a79434ca4354d3ffa0"></span><a class="reference internal" href="#_CPPv4N6paimon18ScanContextBuilderE" title="paimon::ScanContextBuilder"><span class="n"><span class="pre">ScanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">SetLimit</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">limit</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilder8SetLimitE7int32_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>If limit is not set, it defaults to unlimited. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilder15SetBucketFilterE7int32_t">
+<span id="_CPPv3N6paimon18ScanContextBuilder15SetBucketFilterE7int32_t"></span><span id="_CPPv2N6paimon18ScanContextBuilder15SetBucketFilterE7int32_t"></span><span id="paimon::ScanContextBuilder::SetBucketFilter__int32_t"></span><span class="target" id="classpaimon_1_1_scan_context_builder_1a8e1aac2bb3b13b2dbf611eab2d9eb683"></span><a class="reference internal" href="#_CPPv4N6paimon18ScanContextBuilderE" title="paimon::ScanContextBuilder"><span class="n"><span class="pre">ScanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">SetBucketFilter</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">bucket_filter</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilder15SetBucketFilterE7int32_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set a bucket filter to scan only specific bucket. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilder18SetPartitionFilterERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEE">
+<span id="_CPPv3N6paimon18ScanContextBuilder18SetPartitionFilterERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEE"></span><span id="_CPPv2N6paimon18ScanContextBuilder18SetPartitionFilterERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEE"></span><span id="paimon::ScanContextBuilder::SetPartitionFilter__std::vector:std::map:ss.ss::CR"></span><span class="target" id="classpaimon_1_1_scan_context_builder_1a0c4ecaa0b9cd65cce3cdb415bc9bc081"></span><a class="reference internal" href="#_CPPv4N6paimon18ScanContextBuilderE" title="paimon::ScanContextBuilder"><span class="n"><span class="pre">ScanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">SetPartitionFilter</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">partition_filters</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilder18SetPartitionFilterERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>partition_filters in vector is supposed to be OR, filter in map is supposed to be AND, e.g., partition_filters is {{k1=1,k2=10}, {k1=2,k2=20}} =&gt; OR(AND(k1=1,k2=10), AND(k1=2,k2=20)) </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilder12SetPredicateERKNSt10shared_ptrI9PredicateEE">
+<span id="_CPPv3N6paimon18ScanContextBuilder12SetPredicateERKNSt10shared_ptrI9PredicateEE"></span><span id="_CPPv2N6paimon18ScanContextBuilder12SetPredicateERKNSt10shared_ptrI9PredicateEE"></span><span id="paimon::ScanContextBuilder::SetPredicate__std::shared_ptr:Predicate:CR"></span><span class="target" id="classpaimon_1_1_scan_context_builder_1aa819a7dc154d63fef2061f6dd7e5310d"></span><a class="reference internal" href="#_CPPv4N6paimon18ScanContextBuilderE" title="paimon::ScanContextBuilder"><span class="n"><span class="pre">ScanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">SetPredicate</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="predicate.html#_CPPv4N6paimon9PredicateE" title="paimon::Predicate"><span class="n"><span class="pre">Predicate</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">predicate</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilder12SetPredicateERKNSt10shared_ptrI9PredicateEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set a predicate for filtering data. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilder20SetGlobalIndexResultERKNSt10shared_ptrI17GlobalIndexResultEE">
+<span id="_CPPv3N6paimon18ScanContextBuilder20SetGlobalIndexResultERKNSt10shared_ptrI17GlobalIndexResultEE"></span><span id="_CPPv2N6paimon18ScanContextBuilder20SetGlobalIndexResultERKNSt10shared_ptrI17GlobalIndexResultEE"></span><span id="paimon::ScanContextBuilder::SetGlobalIndexResult__std::shared_ptr:GlobalIndexResult:CR"></span><span class="target" id="classpaimon_1_1_scan_context_builder_1a85b99415dcb3179120a380353425fe0e"></span><a class="reference internal" href="#_CPPv4N6paimon18ScanContextBuilderE" title="paimon::ScanContextBuilder"><span class="n"><span class="pre">ScanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">SetGlobalIndexResult</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="global_index.html#_CPPv4N6paimon17GlobalIndexResultE" title="paimon::GlobalIndexResult"><span class="n"><span class="pre">GlobalIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">global_index_result</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilder20SetGlobalIndexResultERKNSt10shared_ptrI17GlobalIndexResultEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Sets the result of a global index search (e.g., row ids (may with scores) from a distributed index lookup). </p>
+<p>This is used to push down index-filtered row ids into the scan for efficient data retrieval. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilder9AddOptionERKNSt6stringERKNSt6stringE">
+<span id="_CPPv3N6paimon18ScanContextBuilder9AddOptionERKNSt6stringERKNSt6stringE"></span><span id="_CPPv2N6paimon18ScanContextBuilder9AddOptionERKNSt6stringERKNSt6stringE"></span><span id="paimon::ScanContextBuilder::AddOption__ssCR.ssCR"></span><span class="target" id="classpaimon_1_1_scan_context_builder_1a8f7e61d36bdcb87234a039e6e596a2de"></span><a class="reference internal" href="#_CPPv4N6paimon18ScanContextBuilderE" title="paimon::ScanContextBuilder"><span class="n"><span class="pre">ScanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">AddOption</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">key</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">value</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilder9AddOptionERKNSt6stringERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>The options added or set in <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_scan_context_builder"><span class="std std-ref"><span class="pre">ScanContextBuilder</span></span></a></code> have high priority and will be merged with the options in table schema. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3N6paimon18ScanContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2N6paimon18ScanContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="paimon::ScanContextBuilder::SetOptions__std::map:ss.ss:CR"></span><span class="target" id="classpaimon_1_1_scan_context_builder_1a5ac91a704fd08580863e65dee6a93f89"></span><a class="reference internal" href="#_CPPv4N6paimon18ScanContextBuilderE" title="paimon::ScanContextBuilder"><span class="n"><span class="pre">ScanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">SetOptions</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set a configuration options map to set some option entries which are not defined in the table schema or whose values you want to overwrite. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The options map will clear the options added by <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_scan_context_builder_1a8f7e61d36bdcb87234a039e6e596a2de"><span class="std std-ref"><span class="pre">AddOption()</span></span></a></code> before. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>options</strong> – The configuration options map. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilder17WithStreamingModeEb">
+<span id="_CPPv3N6paimon18ScanContextBuilder17WithStreamingModeEb"></span><span id="_CPPv2N6paimon18ScanContextBuilder17WithStreamingModeEb"></span><span id="paimon::ScanContextBuilder::WithStreamingMode__b"></span><span class="target" id="classpaimon_1_1_scan_context_builder_1aa146a4237c8ae6ebbd454bc35c589bbe"></span><a class="reference internal" href="#_CPPv4N6paimon18ScanContextBuilderE" title="paimon::ScanContextBuilder"><span class="n"><span class="pre">ScanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithStreamingMode</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">is_streaming_mode</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilder17WithStreamingModeEb" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set whether the scan is in streaming mode. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>if not set, is_streaming_mode = false </p>
+</div>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3N6paimon18ScanContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2N6paimon18ScanContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::ScanContextBuilder::WithMemoryPool__std::shared_ptr:MemoryPool:CR"></span><span class="target" id="classpaimon_1_1_scan_context_builder_1ab156aa90827d8bf89065ef0f6c0ddc0d"></span><a class="reference internal" href="#_CPPv4N6paimon18ScanContextBuilderE" title="paimon::ScanContextBuilder"><span class="n"><span class="pre">ScanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithMemoryPool</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">memory_pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set custom memory pool for memory management. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>if not set, memory_pool is default pool </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>memory_pool</strong> – The memory pool to use. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE">
+<span id="_CPPv3N6paimon18ScanContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE"></span><span id="_CPPv2N6paimon18ScanContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE"></span><span id="paimon::ScanContextBuilder::WithExecutor__std::shared_ptr:Executor:CR"></span><span class="target" id="classpaimon_1_1_scan_context_builder_1a5d82e70e24017a68af4e3497bef85222"></span><a class="reference internal" href="#_CPPv4N6paimon18ScanContextBuilderE" title="paimon::ScanContextBuilder"><span class="n"><span class="pre">ScanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithExecutor</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="executor.html#_CPPv4N6paimon8ExecutorE" title="paimon::Executor"><span class="n"><span class="pre">Executor</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">executor</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set custom executor for task execution. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>if not set, executor is default executor </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>executor</strong> – The executor to use. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilder14WithFileSystemERKNSt10shared_ptrI10FileSystemEE">
+<span id="_CPPv3N6paimon18ScanContextBuilder14WithFileSystemERKNSt10shared_ptrI10FileSystemEE"></span><span id="_CPPv2N6paimon18ScanContextBuilder14WithFileSystemERKNSt10shared_ptrI10FileSystemEE"></span><span id="paimon::ScanContextBuilder::WithFileSystem__std::shared_ptr:FileSystem:CR"></span><span class="target" id="classpaimon_1_1_scan_context_builder_1a0f5b822bc0675e025271880cb335b505"></span><a class="reference internal" href="#_CPPv4N6paimon18ScanContextBuilderE" title="paimon::ScanContextBuilder"><span class="n"><span class="pre">ScanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithFileSystem</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon10FileSystemE" title="paimon::FileSystem"><span class="n"><span class="pre">FileSystem</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">file_system</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilder14WithFileSystemERKNSt10shared_ptrI10FileSystemEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Sets a custom file system instance to be used for all file operations in this scan context. </p>
+<p>This bypasses the global file system registry and uses the provided implementation directly. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If not set, use default file system (configured in <code class="docutils literal notranslate"><a class="reference internal" href="defs.html#structpaimon_1_1_options_1a91cdf2a3a8110ea53a0d9197d38cfae3"><span class="std std-ref"><span class="pre">Options::FILE_SYSTEM</span></span></a></code>) </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>file_system</strong> – The file system to use. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilder14SetTableSchemaERKNSt6stringE">
+<span id="_CPPv3N6paimon18ScanContextBuilder14SetTableSchemaERKNSt6stringE"></span><span id="_CPPv2N6paimon18ScanContextBuilder14SetTableSchemaERKNSt6stringE"></span><span id="paimon::ScanContextBuilder::SetTableSchema__ssCR"></span><span class="target" id="classpaimon_1_1_scan_context_builder_1ab06899c8b7e5104e94ff468797e06ffd"></span><a class="reference internal" href="#_CPPv4N6paimon18ScanContextBuilderE" title="paimon::ScanContextBuilder"><span class="n"><span class="pre">ScanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">SetTableSchema</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">table_schema</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilder14SetTableSchemaERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set the table schema as a string to avoid schema loading I/O operations. </p>
+<p>This optimization allows the scanner to use a pre-loaded schema instead of reading it from the table metadata, which can improve performance especially in scenarios with many small scan operations.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The user must ensure that the schema string is valid and matches the table. </p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If not set, the schema will be loaded from the table path. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>table_schema</strong> – String representation of the table schema. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilder9WithCacheERKNSt10shared_ptrI5CacheEE">
+<span id="_CPPv3N6paimon18ScanContextBuilder9WithCacheERKNSt10shared_ptrI5CacheEE"></span><span id="_CPPv2N6paimon18ScanContextBuilder9WithCacheERKNSt10shared_ptrI5CacheEE"></span><span id="paimon::ScanContextBuilder::WithCache__std::shared_ptr:Cache:CR"></span><span class="target" id="classpaimon_1_1_scan_context_builder_1ad28cbe6d39bb029d3b3b477f5c3fe992"></span><a class="reference internal" href="#_CPPv4N6paimon18ScanContextBuilderE" title="paimon::ScanContextBuilder"><span class="n"><span class="pre">ScanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithCache</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">Cache</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">cache</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilder9WithCacheERKNSt10shared_ptrI5CacheEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Inject a cache for scan operations. </p>
+<p>Passing nullptr disables cache. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18ScanContextBuilder6FinishEv">
+<span id="_CPPv3N6paimon18ScanContextBuilder6FinishEv"></span><span id="_CPPv2N6paimon18ScanContextBuilder6FinishEv"></span><span id="paimon::ScanContextBuilder::Finish"></span><span class="target" id="classpaimon_1_1_scan_context_builder_1aef304a0cf71b610b7a74ec97b47de168"></span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon11ScanContextE" title="paimon::ScanContext"><span class="n"><span class="pre">ScanContext</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Finish</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18ScanContextBuilder6FinishEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Build and return a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_scan_context"><span class="std std-ref"><span class="pre">ScanContext</span></span></a></code> instance with input validation. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Result containing the constructed <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_scan_context"><span class="std std-ref"><span class="pre">ScanContext</span></span></a></code> or an error status. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11ScanContextE">
+<span id="_CPPv3N6paimon11ScanContextE"></span><span id="_CPPv2N6paimon11ScanContextE"></span><span id="paimon::ScanContext"></span><span class="target" id="classpaimon_1_1_scan_context"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ScanContext</span></span></span><a class="headerlink" href="#_CPPv4N6paimon11ScanContextE" title="Link to this definition">#</a><br /></dt>
+<dd><p><code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_scan_context"><span class="std std-ref"><span class="pre">ScanContext</span></span></a></code> is some configuration for table scan operations. </p>
+<p>Please do not use this class directly, use <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_scan_context_builder"><span class="std std-ref"><span class="pre">ScanContextBuilder</span></span></a></code> to build a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_scan_context"><span class="std std-ref"><span class="pre">ScanContext</span></span></a></code> which has input validation. <div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#classpaimon_1_1_scan_context_builder"><span class="std std-ref">ScanContextBuilder</span></a></p>
+</div>
+</p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11ScanContext11ScanContextERKNSt6stringEbNSt8optionalI7int32_tEERKNSt10shared_ptrI10ScanFilterEERKNSt10shared_ptrI17GlobalIndexResultEERKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt10shared_ptrI10FileSystemEERKNSt8optionalINSt6stringEEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI5CacheEE">
+<span id="_CPPv3N6paimon11ScanContext11ScanContextERKNSt6stringEbNSt8optionalI7int32_tEERKNSt10shared_ptrI10ScanFilterEERKNSt10shared_ptrI17GlobalIndexResultEERKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt10shared_ptrI10FileSystemEERKNSt8optionalINSt6stringEEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI5CacheEE"></span><span id="_CPPv2N6paimon11ScanContext11ScanContextERKNSt6stringEbNSt8optionalI7int32_tEERKNSt10shared_ptrI10ScanFilterEERKNSt10shared_ptrI17GlobalIndexResultEERKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt10shared_ptrI10FileSystemEERKNSt8optionalINSt6stringEEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI5CacheEE"></span><span id="paimon::ScanContext::ScanContext__ssCR.b.std::optional:int32_t:.std::shared_ptr:ScanFilter:CR.std::shared_ptr:GlobalIndexResult:CR.std::shared_ptr:MemoryPool:CR.std::shared_ptr:Executor:CR.std::shared_ptr:FileSystem:CR.std::optional:ss:CR.std::map:ss.ss:CR.std::shared_ptr:Cache:CR"></span><span class="target" id="classpaimon_1_1_scan_context_1a96bd28124ac9fea8a2edbc3781ce9451"></span><span class="sig-name descname"><span class="n"><span class="pre">ScanContext</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">is_streaming_mode</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int32_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">limit</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon10ScanFilterE" title="paimon::ScanFilter"><span class="n"><span class="pre">ScanFilter</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">scan_filter</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="global_index.html#_CPPv4N6paimon17GlobalIndexResultE" title="paimon::GlobalIndexResult"><span class="n"><span class="pre">GlobalIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">global_index_result</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">memory_pool</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="executor.html#_CPPv4N6paimon8ExecutorE" title="paimon::Executor"><span class="n"><span class="pre">Executor</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">executor</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon10FileSystemE" title="paimon::FileSystem"><span class="n"><span class="pre">FileSystem</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">specific_file_system</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">table_schema</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">Cache</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">cache</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon11ScanContext11ScanContextERKNSt6stringEbNSt8optionalI7int32_tEERKNSt10shared_ptrI10ScanFilterEERKNSt10shared_ptrI17GlobalIndexResultEERKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt10shared_ptrI10FileSystemEERKNSt8optionalINSt6stringEEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI5CacheEE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11ScanContextD0Ev">
+<span id="_CPPv3N6paimon11ScanContextD0Ev"></span><span id="_CPPv2N6paimon11ScanContextD0Ev"></span><span id="paimon::ScanContext::~ScanContext"></span><span class="target" id="classpaimon_1_1_scan_context_1ac19c5958c6a1182107787be2ba673fab"></span><span class="sig-name descname"><span class="n"><span class="pre">~ScanContext</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon11ScanContextD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11ScanContext7GetPathEv">
+<span id="_CPPv3NK6paimon11ScanContext7GetPathEv"></span><span id="_CPPv2NK6paimon11ScanContext7GetPathEv"></span><span id="paimon::ScanContext::GetPathC"></span><span class="target" id="classpaimon_1_1_scan_context_1a497994eb483d08ac75f2fd8f2b0c4e92"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetPath</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon11ScanContext7GetPathEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11ScanContext15IsStreamingModeEv">
+<span id="_CPPv3NK6paimon11ScanContext15IsStreamingModeEv"></span><span id="_CPPv2NK6paimon11ScanContext15IsStreamingModeEv"></span><span id="paimon::ScanContext::IsStreamingModeC"></span><span class="target" id="classpaimon_1_1_scan_context_1aff01e81bf71ebfb4390415bbf605044a"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IsStreamingMode</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon11ScanContext15IsStreamingModeEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11ScanContext8GetLimitEv">
+<span id="_CPPv3NK6paimon11ScanContext8GetLimitEv"></span><span id="_CPPv2NK6paimon11ScanContext8GetLimitEv"></span><span id="paimon::ScanContext::GetLimitC"></span><span class="target" id="classpaimon_1_1_scan_context_1a04f9b46b2289c9d54193d9f21d64e166"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int32_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetLimit</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon11ScanContext8GetLimitEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11ScanContext14GetScanFiltersEv">
+<span id="_CPPv3NK6paimon11ScanContext14GetScanFiltersEv"></span><span id="_CPPv2NK6paimon11ScanContext14GetScanFiltersEv"></span><span id="paimon::ScanContext::GetScanFiltersC"></span><span class="target" id="classpaimon_1_1_scan_context_1a68fe5273d1070c6a650c55586055686e"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon10ScanFilterE" title="paimon::ScanFilter"><span class="n"><span class="pre">ScanFilter</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetScanFilters</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon11ScanContext14GetScanFiltersEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11ScanContext10GetOptionsEv">
+<span id="_CPPv3NK6paimon11ScanContext10GetOptionsEv"></span><span id="_CPPv2NK6paimon11ScanContext10GetOptionsEv"></span><span id="paimon::ScanContext::GetOptionsC"></span><span class="target" id="classpaimon_1_1_scan_context_1aa9b0f79fd33b7c77a3b54386861591f7"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetOptions</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon11ScanContext10GetOptionsEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11ScanContext13GetMemoryPoolEv">
+<span id="_CPPv3NK6paimon11ScanContext13GetMemoryPoolEv"></span><span id="_CPPv2NK6paimon11ScanContext13GetMemoryPoolEv"></span><span id="paimon::ScanContext::GetMemoryPoolC"></span><span class="target" id="classpaimon_1_1_scan_context_1ac565e9a1ea9c2b3e71a1fe8430ac7978"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetMemoryPool</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon11ScanContext13GetMemoryPoolEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11ScanContext11GetExecutorEv">
+<span id="_CPPv3NK6paimon11ScanContext11GetExecutorEv"></span><span id="_CPPv2NK6paimon11ScanContext11GetExecutorEv"></span><span id="paimon::ScanContext::GetExecutorC"></span><span class="target" id="classpaimon_1_1_scan_context_1ae6afc5bbad95e97f1335c760a6f4e307"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="executor.html#_CPPv4N6paimon8ExecutorE" title="paimon::Executor"><span class="n"><span class="pre">Executor</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetExecutor</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon11ScanContext11GetExecutorEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11ScanContext20GetGlobalIndexResultEv">
+<span id="_CPPv3NK6paimon11ScanContext20GetGlobalIndexResultEv"></span><span id="_CPPv2NK6paimon11ScanContext20GetGlobalIndexResultEv"></span><span id="paimon::ScanContext::GetGlobalIndexResultC"></span><span class="target" id="classpaimon_1_1_scan_context_1a7a59bdf0a3b02006bef2a9834b41581e"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="global_index.html#_CPPv4N6paimon17GlobalIndexResultE" title="paimon::GlobalIndexResult"><span class="n"><span class="pre">GlobalIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetGlobalIndexResult</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon11ScanContext20GetGlobalIndexResultEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11ScanContext21GetSpecificFileSystemEv">
+<span id="_CPPv3NK6paimon11ScanContext21GetSpecificFileSystemEv"></span><span id="_CPPv2NK6paimon11ScanContext21GetSpecificFileSystemEv"></span><span id="paimon::ScanContext::GetSpecificFileSystemC"></span><span class="target" id="classpaimon_1_1_scan_context_1a25357931383dc8b199a65a36b5f00a6c"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon10FileSystemE" title="paimon::FileSystem"><span class="n"><span class="pre">FileSystem</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetSpecificFileSystem</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon11ScanContext21GetSpecificFileSystemEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11ScanContext22GetSpecificTableSchemaEv">
+<span id="_CPPv3NK6paimon11ScanContext22GetSpecificTableSchemaEv"></span><span id="_CPPv2NK6paimon11ScanContext22GetSpecificTableSchemaEv"></span><span id="paimon::ScanContext::GetSpecificTableSchemaC"></span><span class="target" id="classpaimon_1_1_scan_context_1a2c360fb9ca8bb006a59eb7fd279aedec"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetSpecificTableSchema</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon11ScanContext22GetSpecificTableSchemaEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11ScanContext8GetCacheEv">
+<span id="_CPPv3NK6paimon11ScanContext8GetCacheEv"></span><span id="_CPPv2NK6paimon11ScanContext8GetCacheEv"></span><span id="paimon::ScanContext::GetCacheC"></span><span class="target" id="classpaimon_1_1_scan_context_1aa0f1e8e50632c4212a0f61ad57191a53"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">Cache</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetCache</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon11ScanContext8GetCacheEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon4PlanE">
+<span id="_CPPv3N6paimon4PlanE"></span><span id="_CPPv2N6paimon4PlanE"></span><span id="paimon::Plan"></span><span class="target" id="classpaimon_1_1_plan"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Plan</span></span></span><a class="headerlink" href="#_CPPv4N6paimon4PlanE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Result plan of this <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_table_scan"><span class="std std-ref"><span class="pre">TableScan</span></span></a></code>. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon4PlanD0Ev">
+<span id="_CPPv3N6paimon4PlanD0Ev"></span><span id="_CPPv2N6paimon4PlanD0Ev"></span><span id="paimon::Plan::~Plan"></span><span class="target" id="classpaimon_1_1_plan_1a2cf8ed81d56ec8e934343dfd34e2322f"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~Plan</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon4PlanD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon4Plan6SplitsEv">
+<span id="_CPPv3NK6paimon4Plan6SplitsEv"></span><span id="_CPPv2NK6paimon4Plan6SplitsEv"></span><span id="paimon::Plan::SplitsC"></span><span class="target" id="classpaimon_1_1_plan_1ab124cddfda8919a57423cdd3f5f9cf63"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon5SplitE" title="paimon::Split"><span class="n"><span class="pre">Split</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">Splits</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon4Plan6SplitsEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Result splits. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon4Plan10SnapshotIdEv">
+<span id="_CPPv3NK6paimon4Plan10SnapshotIdEv"></span><span id="_CPPv2NK6paimon4Plan10SnapshotIdEv"></span><span id="paimon::Plan::SnapshotIdC"></span><span class="target" id="classpaimon_1_1_plan_1a75f08f9b263572a5461769c49d0fbd0a"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SnapshotId</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon4Plan10SnapshotIdEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Snapshot id of this plan, return <code class="docutils literal notranslate"><span class="pre">std::nullopt</span></code> if the table is empty. </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon5SplitE">
+<span id="_CPPv3N6paimon5SplitE"></span><span id="_CPPv2N6paimon5SplitE"></span><span id="paimon::Split"></span><span class="target" id="classpaimon_1_1_split"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Split</span></span></span><a class="headerlink" href="#_CPPv4N6paimon5SplitE" title="Link to this definition">#</a><br /></dt>
+<dd><p>An input split for reading operation. </p>
+<p>Needed by most batch computation engines. Support Serialize and Deserialize, compatible with java version. This split can be either a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_data_split"><span class="std std-ref"><span class="pre">DataSplit</span></span></a></code> (for direct data file reads) or an <code class="docutils literal notranslate"><a class="reference internal" href="global_index.html#classpaimon_1_1_indexed_split"><span class="std std-ref"><span class="pre">IndexedSplit</span></span></a></code> (for reads leveraging global indexes). </p>
+<p>Subclassed by <a class="reference internal" href="#classpaimon_1_1_data_split"><span class="std std-ref">paimon::DataSplit</span></a>, <a class="reference internal" href="global_index.html#classpaimon_1_1_indexed_split"><span class="std std-ref">paimon::IndexedSplit</span></a></p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon5SplitD0Ev">
+<span id="_CPPv3N6paimon5SplitD0Ev"></span><span id="_CPPv2N6paimon5SplitD0Ev"></span><span id="paimon::Split::~Split"></span><span class="target" id="classpaimon_1_1_split_1ad1bc1ca6627a627b1396991113b178b7"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~Split</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon5SplitD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon5Split11DeserializeEPKc6size_tRKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3N6paimon5Split11DeserializeEPKc6size_tRKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2N6paimon5Split11DeserializeEPKc6size_tRKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::Split::Deserialize__cCP.s.std::shared_ptr:MemoryPool:CR"></span><span class="target" id="classpaimon_1_1_split_1aad238266c89e85852982405e60cdd9b2"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon5SplitE" title="paimon::Split"><span class="n"><span class="pre">Split</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Deserialize</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">buffer</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">length</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon5Split11DeserializeEPKc6size_tRKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Deserialize a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_split"><span class="std std-ref"><span class="pre">Split</span></span></a></code> from a binary buffer. </p>
+<p>Creates a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_split"><span class="std std-ref"><span class="pre">Split</span></span></a></code> instance from its serialized binary representation. This is typically used in distributed computing scenarios where splits are transmitted between different nodes or processes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – Const pointer to the binary data containing the serialized <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_split"><span class="std std-ref"><span class="pre">Split</span></span></a></code>. </p></li>
+<li><p><strong>length</strong> – Size of the buffer in bytes. </p></li>
+<li><p><strong>pool</strong> – Memory pool for allocating objects during deserialization. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result containing the deserialized <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_split"><span class="std std-ref"><span class="pre">Split</span></span></a></code> or an error status. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon5Split9SerializeERKNSt10shared_ptrI5SplitEERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3N6paimon5Split9SerializeERKNSt10shared_ptrI5SplitEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2N6paimon5Split9SerializeERKNSt10shared_ptrI5SplitEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::Split::Serialize__std::shared_ptr:Split:CR.std::shared_ptr:MemoryPool:CR"></span><span class="target" id="classpaimon_1_1_split_1a21cf471702ca3bb471eacc4bce9cf050"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Serialize</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon5SplitE" title="paimon::Split"><span class="n"><span class="pre">Split</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">split</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon5Split9SerializeERKNSt10shared_ptrI5SplitEERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Serialize a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_split"><span class="std std-ref"><span class="pre">Split</span></span></a></code> to a binary string. </p>
+<p>Converts a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_split"><span class="std std-ref"><span class="pre">Split</span></span></a></code> instance to its binary representation for storage or transmission. The serialized data can later be deserialized using the Deserialize method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>split</strong> – The <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_split"><span class="std std-ref"><span class="pre">Split</span></span></a></code> instance to serialize. </p></li>
+<li><p><strong>pool</strong> – Memory pool for allocating temporary objects during serialization. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result containing the serialized binary data as a string or an error status. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9DataSplitE">
+<span id="_CPPv3N6paimon9DataSplitE"></span><span id="_CPPv2N6paimon9DataSplitE"></span><span id="paimon::DataSplit"></span><span class="target" id="classpaimon_1_1_data_split"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DataSplit</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span><a class="reference internal" href="#_CPPv4N6paimon5SplitE" title="paimon::Split"><span class="n"><span class="pre">Split</span></span></a><a class="headerlink" href="#_CPPv4N6paimon9DataSplitE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Input data split for reading operation. Needed by most batch computation engines. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon9DataSplit6BucketEv">
+<span id="_CPPv3NK6paimon9DataSplit6BucketEv"></span><span id="_CPPv2NK6paimon9DataSplit6BucketEv"></span><span id="paimon::DataSplit::BucketC"></span><span class="target" id="classpaimon_1_1_data_split_1ad04b26b151bb88e079feb57c75058b1b"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Bucket</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon9DataSplit6BucketEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the bucket id of this data split. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon9DataSplit11GetFileListEv">
+<span id="_CPPv3NK6paimon9DataSplit11GetFileListEv"></span><span id="_CPPv2NK6paimon9DataSplit11GetFileListEv"></span><span id="paimon::DataSplit::GetFileListC"></span><span class="target" id="classpaimon_1_1_data_split_1ac8a847a0c9374134bd8df653a10f8a24"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMetaE" title="paimon::DataSplit::SimpleDataFileMeta"><span class="n"><span class="pre">SimpleDataFileMeta</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetFileList</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon9DataSplit11GetFileListEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the list of metadata for all data files in this split. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This method will be removed in future versions and is only used for append tables. </p>
+</div>
+</dd></dl>
+
+</div>
+<dl class="cpp struct">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9DataSplit18SimpleDataFileMetaE">
+<span id="_CPPv3N6paimon9DataSplit18SimpleDataFileMetaE"></span><span id="_CPPv2N6paimon9DataSplit18SimpleDataFileMetaE"></span><span id="paimon::DataSplit::SimpleDataFileMeta"></span><span class="target" id="structpaimon_1_1_data_split_1_1_simple_data_file_meta"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SimpleDataFileMeta</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMetaE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Metadata structure for simple data files. </p>
+<p>Contains essential information about a data file including its location, size, row count, sequence numbers, schema information, and timestamps. This structure is used to track file metadata without loading the actual file content. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9DataSplit18SimpleDataFileMeta18SimpleDataFileMetaERKNSt6stringE7int64_t7int64_t7int64_t7int64_t7int64_t7int32_tRK9TimestampRKNSt8optionalI7int64_tEE">
+<span id="_CPPv3N6paimon9DataSplit18SimpleDataFileMeta18SimpleDataFileMetaERKNSt6stringE7int64_t7int64_t7int64_t7int64_t7int64_t7int32_tRK9TimestampRKNSt8optionalI7int64_tEE"></span><span id="_CPPv2N6paimon9DataSplit18SimpleDataFileMeta18SimpleDataFileMetaERKNSt6stringE7int64_t7int64_t7int64_t7int64_t7int64_t7int32_tRK9TimestampRKNSt8optionalI7int64_tEE"></span><span id="paimon::DataSplit::SimpleDataFileMeta::SimpleDataFileMeta__ssCR.int64_t.int64_t.int64_t.int64_t.int64_t.int32_t.TimestampCR.std::optional:int64_t:CR"></span><span class="target" id="structpaimon_1_1_data_split_1_1_simple_data_file_meta_1a2c69e664b382bbb768671d481c15bd70"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SimpleDataFileMeta</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">_file_path</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">_file_size</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">_row_count</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">_min_sequence_number</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">_max_sequence_number</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">_schema_id</span></span>, <span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">_level</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="data_types.html#_CPPv4N6paimon9TimestampE" title="paimon::Timestamp"><span class="n"><span class="pre">Timestamp</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">_creation_time</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">_delete_row_count</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta18SimpleDataFileMetaERKNSt6stringE7int64_t7int64_t7int64_t7int64_t7int64_t7int32_tRK9TimestampRKNSt8optionalI7int64_tEE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon9DataSplit18SimpleDataFileMetaeqERK18SimpleDataFileMeta">
+<span id="_CPPv3NK6paimon9DataSplit18SimpleDataFileMetaeqERK18SimpleDataFileMeta"></span><span id="_CPPv2NK6paimon9DataSplit18SimpleDataFileMetaeqERK18SimpleDataFileMeta"></span><span id="paimon::DataSplit::SimpleDataFileMeta::eq-operator__SimpleDataFileMetaCRC"></span><span class="target" id="structpaimon_1_1_data_split_1_1_simple_data_file_meta_1ae69d8b458320a8676ae2d1621019409a"></span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">==</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMetaE" title="paimon::DataSplit::SimpleDataFileMeta"><span class="n"><span class="pre">SimpleDataFileMeta</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon9DataSplit18SimpleDataFileMetaeqERK18SimpleDataFileMeta" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon9DataSplit18SimpleDataFileMeta8ToStringEv">
+<span id="_CPPv3NK6paimon9DataSplit18SimpleDataFileMeta8ToStringEv"></span><span id="_CPPv2NK6paimon9DataSplit18SimpleDataFileMeta8ToStringEv"></span><span id="paimon::DataSplit::SimpleDataFileMeta::ToStringC"></span><span class="target" id="structpaimon_1_1_data_split_1_1_simple_data_file_meta_1a2dc831247a34afcec0be769fccc8dc76"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ToString</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon9DataSplit18SimpleDataFileMeta8ToStringEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-members">Public Members</p>
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9DataSplit18SimpleDataFileMeta9file_pathE">
+<span id="_CPPv3N6paimon9DataSplit18SimpleDataFileMeta9file_pathE"></span><span id="_CPPv2N6paimon9DataSplit18SimpleDataFileMeta9file_pathE"></span><span id="paimon::DataSplit::SimpleDataFileMeta::file_path__ss"></span><span class="target" id="structpaimon_1_1_data_split_1_1_simple_data_file_meta_1a6b38b5c393189f46180b68a4e1a1e837"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">file_path</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta9file_pathE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Absolute path of the data file. </p>
+<p>If external path is enabled, <code class="docutils literal notranslate"><span class="pre">file_path</span></code> indicates the actual location in the external storage system. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9DataSplit18SimpleDataFileMeta9file_sizeE">
+<span id="_CPPv3N6paimon9DataSplit18SimpleDataFileMeta9file_sizeE"></span><span id="_CPPv2N6paimon9DataSplit18SimpleDataFileMeta9file_sizeE"></span><span id="paimon::DataSplit::SimpleDataFileMeta::file_size__int64_t"></span><span class="target" id="structpaimon_1_1_data_split_1_1_simple_data_file_meta_1a87e34ff7d3104af42d6ee9281bf59212"></span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">file_size</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta9file_sizeE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9DataSplit18SimpleDataFileMeta9row_countE">
+<span id="_CPPv3N6paimon9DataSplit18SimpleDataFileMeta9row_countE"></span><span id="_CPPv2N6paimon9DataSplit18SimpleDataFileMeta9row_countE"></span><span id="paimon::DataSplit::SimpleDataFileMeta::row_count__int64_t"></span><span class="target" id="structpaimon_1_1_data_split_1_1_simple_data_file_meta_1aed17b7e6e1a33fe2fb3138d08cc95bf8"></span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">row_count</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta9row_countE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9DataSplit18SimpleDataFileMeta19min_sequence_numberE">
+<span id="_CPPv3N6paimon9DataSplit18SimpleDataFileMeta19min_sequence_numberE"></span><span id="_CPPv2N6paimon9DataSplit18SimpleDataFileMeta19min_sequence_numberE"></span><span id="paimon::DataSplit::SimpleDataFileMeta::min_sequence_number__int64_t"></span><span class="target" id="structpaimon_1_1_data_split_1_1_simple_data_file_meta_1a6fa127f94092a6c49fc94bc78fbb32e3"></span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">min_sequence_number</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta19min_sequence_numberE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9DataSplit18SimpleDataFileMeta19max_sequence_numberE">
+<span id="_CPPv3N6paimon9DataSplit18SimpleDataFileMeta19max_sequence_numberE"></span><span id="_CPPv2N6paimon9DataSplit18SimpleDataFileMeta19max_sequence_numberE"></span><span id="paimon::DataSplit::SimpleDataFileMeta::max_sequence_number__int64_t"></span><span class="target" id="structpaimon_1_1_data_split_1_1_simple_data_file_meta_1afddb01f237b2e6f83327ff7db80f3f6d"></span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">max_sequence_number</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta19max_sequence_numberE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9DataSplit18SimpleDataFileMeta9schema_idE">
+<span id="_CPPv3N6paimon9DataSplit18SimpleDataFileMeta9schema_idE"></span><span id="_CPPv2N6paimon9DataSplit18SimpleDataFileMeta9schema_idE"></span><span id="paimon::DataSplit::SimpleDataFileMeta::schema_id__int64_t"></span><span class="target" id="structpaimon_1_1_data_split_1_1_simple_data_file_meta_1a8748f66496a102b8327322834ad57fe6"></span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">schema_id</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta9schema_idE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9DataSplit18SimpleDataFileMeta5levelE">
+<span id="_CPPv3N6paimon9DataSplit18SimpleDataFileMeta5levelE"></span><span id="_CPPv2N6paimon9DataSplit18SimpleDataFileMeta5levelE"></span><span id="paimon::DataSplit::SimpleDataFileMeta::level__int32_t"></span><span class="target" id="structpaimon_1_1_data_split_1_1_simple_data_file_meta_1a0cdd075be7118aae173317f9e6cbb9e4"></span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">level</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta5levelE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9DataSplit18SimpleDataFileMeta13creation_timeE">
+<span id="_CPPv3N6paimon9DataSplit18SimpleDataFileMeta13creation_timeE"></span><span id="_CPPv2N6paimon9DataSplit18SimpleDataFileMeta13creation_timeE"></span><span id="paimon::DataSplit::SimpleDataFileMeta::creation_time__Timestamp"></span><span class="target" id="structpaimon_1_1_data_split_1_1_simple_data_file_meta_1a0ab8571101e858eca65ac44047d0cb7f"></span><a class="reference internal" href="data_types.html#_CPPv4N6paimon9TimestampE" title="paimon::Timestamp"><span class="n"><span class="pre">Timestamp</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">creation_time</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta13creation_timeE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9DataSplit18SimpleDataFileMeta16delete_row_countE">
+<span id="_CPPv3N6paimon9DataSplit18SimpleDataFileMeta16delete_row_countE"></span><span id="_CPPv2N6paimon9DataSplit18SimpleDataFileMeta16delete_row_countE"></span><span id="paimon::DataSplit::SimpleDataFileMeta::delete_row_count__std::optional:int64_t:"></span><span class="target" id="structpaimon_1_1_data_split_1_1_simple_data_file_meta_1af7394db2f705a57450917946645cd7c3"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">delete_row_count</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta16delete_row_countE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10ScanFilterE">
+<span id="_CPPv3N6paimon10ScanFilterE"></span><span id="_CPPv2N6paimon10ScanFilterE"></span><span id="paimon::ScanFilter"></span><span class="target" id="classpaimon_1_1_scan_filter"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ScanFilter</span></span></span><a class="headerlink" href="#_CPPv4N6paimon10ScanFilterE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Filter configuration for table scan operations. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10ScanFilter10ScanFilterERKNSt10shared_ptrI9PredicateEERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt8optionalI7int32_tEE">
+<span id="_CPPv3N6paimon10ScanFilter10ScanFilterERKNSt10shared_ptrI9PredicateEERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt8optionalI7int32_tEE"></span><span id="_CPPv2N6paimon10ScanFilter10ScanFilterERKNSt10shared_ptrI9PredicateEERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt8optionalI7int32_tEE"></span><span id="paimon::ScanFilter::ScanFilter__std::shared_ptr:Predicate:CR.std::vector:std::map:ss.ss::CR.std::optional:int32_t:CR"></span><span class="target" id="classpaimon_1_1_scan_filter_1a1eac7c6fa53692b7ef78b4e7a116c190"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ScanFilter</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="predicate.html#_CPPv4N6paimon9PredicateE" title="paimon::Predicate"><span class="n"><span class="pre">Predicate</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">predicate</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">partition_filters</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int32_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">bucket_filter</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon10ScanFilter10ScanFilterERKNSt10shared_ptrI9PredicateEERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt8optionalI7int32_tEE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10ScanFilter12GetPredicateEv">
+<span id="_CPPv3NK6paimon10ScanFilter12GetPredicateEv"></span><span id="_CPPv2NK6paimon10ScanFilter12GetPredicateEv"></span><span id="paimon::ScanFilter::GetPredicateC"></span><span class="target" id="classpaimon_1_1_scan_filter_1a0be6516ca4418ed7f0d5864d7cce821f"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="predicate.html#_CPPv4N6paimon9PredicateE" title="paimon::Predicate"><span class="n"><span class="pre">Predicate</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetPredicate</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon10ScanFilter12GetPredicateEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10ScanFilter15GetBucketFilterEv">
+<span id="_CPPv3NK6paimon10ScanFilter15GetBucketFilterEv"></span><span id="_CPPv2NK6paimon10ScanFilter15GetBucketFilterEv"></span><span id="paimon::ScanFilter::GetBucketFilterC"></span><span class="target" id="classpaimon_1_1_scan_filter_1a9693b6b36c29ffa044f3566a04afbec3"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int32_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetBucketFilter</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon10ScanFilter15GetBucketFilterEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10ScanFilter19GetPartitionFiltersEv">
+<span id="_CPPv3NK6paimon10ScanFilter19GetPartitionFiltersEv"></span><span id="_CPPv2NK6paimon10ScanFilter19GetPartitionFiltersEv"></span><span id="paimon::ScanFilter::GetPartitionFiltersC"></span><span class="target" id="classpaimon_1_1_scan_filter_1a0e9575a9c2e77d66f80a1850ba648e9a"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetPartitionFilters</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon10ScanFilter19GetPartitionFiltersEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="commit.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Commit</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="read.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Read</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#interface">Interface</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9TableScanE"><code class="docutils literal notranslate"><span class="pre">paimon::TableScan</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9TableScanD0Ev"><code class="docutils literal notranslate"><span class="pre">~TableScan()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9TableScan10CreatePlanEv"><code class="docutils literal notranslate"><span class="pre">CreatePlan()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9TableScan6CreateENSt10unique_ptrI11ScanContextEE"><code class="docutils literal notranslate"><span class="pre">Create()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilderE"><code class="docutils literal notranslate"><span class="pre">paimon::ScanContextBuilder</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilder18ScanContextBuilderERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">ScanContextBuilder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilderD0Ev"><code class="docutils literal notranslate"><span class="pre">~ScanContextBuilder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilder8SetLimitE7int32_t"><code class="docutils literal notranslate"><span class="pre">SetLimit()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilder15SetBucketFilterE7int32_t"><code class="docutils literal notranslate"><span class="pre">SetBucketFilter()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilder18SetPartitionFilterERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEE"><code class="docutils literal notranslate"><span class="pre">SetPartitionFilter()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilder12SetPredicateERKNSt10shared_ptrI9PredicateEE"><code class="docutils literal notranslate"><span class="pre">SetPredicate()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilder20SetGlobalIndexResultERKNSt10shared_ptrI17GlobalIndexResultEE"><code class="docutils literal notranslate"><span class="pre">SetGlobalIndexResult()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilder9AddOptionERKNSt6stringERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">AddOption()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">SetOptions()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilder17WithStreamingModeEb"><code class="docutils literal notranslate"><span class="pre">WithStreamingMode()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">WithMemoryPool()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE"><code class="docutils literal notranslate"><span class="pre">WithExecutor()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilder14WithFileSystemERKNSt10shared_ptrI10FileSystemEE"><code class="docutils literal notranslate"><span class="pre">WithFileSystem()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilder14SetTableSchemaERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">SetTableSchema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilder9WithCacheERKNSt10shared_ptrI5CacheEE"><code class="docutils literal notranslate"><span class="pre">WithCache()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18ScanContextBuilder6FinishEv"><code class="docutils literal notranslate"><span class="pre">Finish()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11ScanContextE"><code class="docutils literal notranslate"><span class="pre">paimon::ScanContext</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11ScanContext11ScanContextERKNSt6stringEbNSt8optionalI7int32_tEERKNSt10shared_ptrI10ScanFilterEERKNSt10shared_ptrI17GlobalIndexResultEERKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt10shared_ptrI10FileSystemEERKNSt8optionalINSt6stringEEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI5CacheEE"><code class="docutils literal notranslate"><span class="pre">ScanContext()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11ScanContextD0Ev"><code class="docutils literal notranslate"><span class="pre">~ScanContext()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11ScanContext7GetPathEv"><code class="docutils literal notranslate"><span class="pre">GetPath()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11ScanContext15IsStreamingModeEv"><code class="docutils literal notranslate"><span class="pre">IsStreamingMode()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11ScanContext8GetLimitEv"><code class="docutils literal notranslate"><span class="pre">GetLimit()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11ScanContext14GetScanFiltersEv"><code class="docutils literal notranslate"><span class="pre">GetScanFilters()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11ScanContext10GetOptionsEv"><code class="docutils literal notranslate"><span class="pre">GetOptions()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11ScanContext13GetMemoryPoolEv"><code class="docutils literal notranslate"><span class="pre">GetMemoryPool()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11ScanContext11GetExecutorEv"><code class="docutils literal notranslate"><span class="pre">GetExecutor()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11ScanContext20GetGlobalIndexResultEv"><code class="docutils literal notranslate"><span class="pre">GetGlobalIndexResult()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11ScanContext21GetSpecificFileSystemEv"><code class="docutils literal notranslate"><span class="pre">GetSpecificFileSystem()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11ScanContext22GetSpecificTableSchemaEv"><code class="docutils literal notranslate"><span class="pre">GetSpecificTableSchema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11ScanContext8GetCacheEv"><code class="docutils literal notranslate"><span class="pre">GetCache()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon4PlanE"><code class="docutils literal notranslate"><span class="pre">paimon::Plan</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon4PlanD0Ev"><code class="docutils literal notranslate"><span class="pre">~Plan()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon4Plan6SplitsEv"><code class="docutils literal notranslate"><span class="pre">Splits()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon4Plan10SnapshotIdEv"><code class="docutils literal notranslate"><span class="pre">SnapshotId()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon5SplitE"><code class="docutils literal notranslate"><span class="pre">paimon::Split</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon5SplitD0Ev"><code class="docutils literal notranslate"><span class="pre">~Split()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon5Split11DeserializeEPKc6size_tRKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">Deserialize()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon5Split9SerializeERKNSt10shared_ptrI5SplitEERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">Serialize()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9DataSplitE"><code class="docutils literal notranslate"><span class="pre">paimon::DataSplit</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon9DataSplit6BucketEv"><code class="docutils literal notranslate"><span class="pre">Bucket()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon9DataSplit11GetFileListEv"><code class="docutils literal notranslate"><span class="pre">GetFileList()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMetaE"><code class="docutils literal notranslate"><span class="pre">paimon::DataSplit::SimpleDataFileMeta</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta18SimpleDataFileMetaERKNSt6stringE7int64_t7int64_t7int64_t7int64_t7int64_t7int32_tRK9TimestampRKNSt8optionalI7int64_tEE"><code class="docutils literal notranslate"><span class="pre">SimpleDataFileMeta()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon9DataSplit18SimpleDataFileMetaeqERK18SimpleDataFileMeta"><code class="docutils literal notranslate"><span class="pre">operator==()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon9DataSplit18SimpleDataFileMeta8ToStringEv"><code class="docutils literal notranslate"><span class="pre">ToString()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta9file_pathE"><code class="docutils literal notranslate"><span class="pre">file_path</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta9file_sizeE"><code class="docutils literal notranslate"><span class="pre">file_size</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta9row_countE"><code class="docutils literal notranslate"><span class="pre">row_count</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta19min_sequence_numberE"><code class="docutils literal notranslate"><span class="pre">min_sequence_number</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta19max_sequence_numberE"><code class="docutils literal notranslate"><span class="pre">max_sequence_number</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta9schema_idE"><code class="docutils literal notranslate"><span class="pre">schema_id</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta5levelE"><code class="docutils literal notranslate"><span class="pre">level</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta13creation_timeE"><code class="docutils literal notranslate"><span class="pre">creation_time</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta16delete_row_countE"><code class="docutils literal notranslate"><span class="pre">delete_row_count</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10ScanFilterE"><code class="docutils literal notranslate"><span class="pre">paimon::ScanFilter</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10ScanFilter10ScanFilterERKNSt10shared_ptrI9PredicateEERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt8optionalI7int32_tEE"><code class="docutils literal notranslate"><span class="pre">ScanFilter()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10ScanFilter12GetPredicateEv"><code class="docutils literal notranslate"><span class="pre">GetPredicate()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10ScanFilter15GetBucketFilterEv"><code class="docutils literal notranslate"><span class="pre">GetBucketFilter()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10ScanFilter19GetPartitionFiltersEv"><code class="docutils literal notranslate"><span class="pre">GetPartitionFilters()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/api/scan.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

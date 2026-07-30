@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_94827ce922f878ac02e1d2e2a28038d9" kind="dir">
+    <compoundname>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format</compoundname>
+    <innerfile refid="column__stats_8h">column_stats.h</innerfile>
+    <innerfile refid="file__format_8h">file_format.h</innerfile>
+    <innerfile refid="file__format__factory_8h">file_format_factory.h</innerfile>
+    <innerfile refid="format__stats__extractor_8h">format_stats_extractor.h</innerfile>
+    <innerfile refid="format__writer_8h">format_writer.h</innerfile>
+    <innerfile refid="reader__builder_8h">reader_builder.h</innerfile>
+    <innerfile refid="writer__builder_8h">writer_builder.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/"/>
+  </compounddef>
+</doxygen>

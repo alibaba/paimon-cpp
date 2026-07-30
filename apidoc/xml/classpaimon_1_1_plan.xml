@@ -1,0 +1,64 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_plan" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::Plan</compoundname>
+    <includes refid="plan_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/plan.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_plan_1a2cf8ed81d56ec8e934343dfd34e2322f" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::Plan::~Plan</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Plan</name>
+        <qualifiedname>paimon::Plan::~Plan</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/plan.h" line="29" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_plan_1ab124cddfda8919a57423cdd3f5f9cf63" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_split" kindref="compound">Split</ref> &gt; &gt; &amp;</type>
+        <definition>virtual const std::vector&lt; std::shared_ptr&lt; Split &gt; &gt; &amp; paimon::Plan::Splits</definition>
+        <argsstring>() const =0</argsstring>
+        <name>Splits</name>
+        <qualifiedname>paimon::Plan::Splits</qualifiedname>
+        <briefdescription>
+<para>Result splits. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/plan.h" line="31" column="31"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_plan_1a75f08f9b263572a5461769c49d0fbd0a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+        <definition>virtual std::optional&lt; int64_t &gt; paimon::Plan::SnapshotId</definition>
+        <argsstring>() const =0</argsstring>
+        <name>SnapshotId</name>
+        <qualifiedname>paimon::Plan::SnapshotId</qualifiedname>
+        <briefdescription>
+<para>Snapshot id of this plan, return <computeroutput>std::nullopt</computeroutput> if the table is empty. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/plan.h" line="33" column="27"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Result plan of this <computeroutput><ref refid="classpaimon_1_1_table_scan" kindref="compound">TableScan</ref></computeroutput>. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/plan.h" line="27" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/plan.h" bodystart="27" bodyend="34"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_plan_1a75f08f9b263572a5461769c49d0fbd0a" prot="public" virt="pure-virtual"><scope>paimon::Plan</scope><name>SnapshotId</name></member>
+      <member refid="classpaimon_1_1_plan_1ab124cddfda8919a57423cdd3f5f9cf63" prot="public" virt="pure-virtual"><scope>paimon::Plan</scope><name>Splits</name></member>
+      <member refid="classpaimon_1_1_plan_1a2cf8ed81d56ec8e934343dfd34e2322f" prot="public" virt="virtual"><scope>paimon::Plan</scope><name>~Plan</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

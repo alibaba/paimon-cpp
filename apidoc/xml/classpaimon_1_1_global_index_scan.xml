@@ -1,0 +1,401 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_global_index_scan" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::GlobalIndexScan</compoundname>
+    <includes refid="global__index__scan_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_scan.h</includes>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_global_index_scan_1a1f8aace0a549c16e138c9f680db78040" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_global_index_scan" kindref="compound">GlobalIndexScan</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; GlobalIndexScan &gt; &gt; paimon::GlobalIndexScan::Create</definition>
+        <argsstring>(const std::string &amp;table_path, const std::optional&lt; int64_t &gt; &amp;snapshot_id, const std::optional&lt; std::vector&lt; std::map&lt; std::string, std::string &gt; &gt; &gt; &amp;partitions, const std::map&lt; std::string, std::string &gt; &amp;options, const std::shared_ptr&lt; FileSystem &gt; &amp;file_system, const std::shared_ptr&lt; Executor &gt; &amp;executor, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::GlobalIndexScan::Create</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>table_path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt; &amp;</type>
+          <declname>snapshot_id</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::optional&lt; std::vector&lt; std::map&lt; std::string, std::string &gt; &gt; &gt; &amp;</type>
+          <declname>partitions</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_system" kindref="compound">FileSystem</ref> &gt; &amp;</type>
+          <declname>file_system</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt; &amp;</type>
+          <declname>executor</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Creates a <computeroutput><ref refid="classpaimon_1_1_global_index_scan" kindref="compound">GlobalIndexScan</ref></computeroutput> instance for the specified table and context. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>table_path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Root directory of the table. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>snapshot_id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional snapshot id to read from; if not provided, uses the latest. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>partitions</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional list of specific partitions to restrict the scan scope. Each map represents one partition (e.g., {&quot;dt&quot;: &quot;2024-06-01&quot;}). If omitted (<computeroutput>std::nullopt</computeroutput>), scans all partitions of the table. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>options</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>User defined configuration. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>file_system</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>File system for accessing index files. If not provided (nullptr), it is inferred from the <computeroutput>FILE_SYSTEM</computeroutput> key in the <computeroutput>options</computeroutput> parameter. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>executor</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The executor to be used for asynchronous operations during global index scan. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for temporary allocations; if nullptr, uses default. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref></computeroutput> containing a unique pointer to the created scanner, or an error if initialization fails (e.g., I/O error, invalid snapshot id, unknown partition). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_scan.h" line="55" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_scan_1a5492873a52ecd09e4ce363a35da9ce30" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_global_index_scan" kindref="compound">GlobalIndexScan</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; GlobalIndexScan &gt; &gt; paimon::GlobalIndexScan::Create</definition>
+        <argsstring>(const std::string &amp;root_path, const std::optional&lt; int64_t &gt; &amp;snapshot_id, const std::shared_ptr&lt; Predicate &gt; &amp;partition_filters, const std::map&lt; std::string, std::string &gt; &amp;options, const std::shared_ptr&lt; FileSystem &gt; &amp;file_system, const std::shared_ptr&lt; Executor &gt; &amp;executor, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::GlobalIndexScan::Create</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>root_path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt; &amp;</type>
+          <declname>snapshot_id</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &amp;</type>
+          <declname>partition_filters</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_system" kindref="compound">FileSystem</ref> &gt; &amp;</type>
+          <declname>file_system</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt; &amp;</type>
+          <declname>executor</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Creates a <computeroutput><ref refid="classpaimon_1_1_global_index_scan" kindref="compound">GlobalIndexScan</ref></computeroutput> instance for the specified table and context, with a predicate-based partition filter. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>root_path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Root directory of the table. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>snapshot_id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional snapshot id to read from; if not provided, uses the latest snapshot. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>partition_filters</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional partition-level predicate used for partition pruning. If nullptr, all partitions are scanned. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>options</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>User defined configuration. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>file_system</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>File system for accessing index files. If nullptr, it is inferred from the <computeroutput>FILE_SYSTEM</computeroutput> key in <computeroutput>options</computeroutput>. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>executor</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The executor to be used for asynchronous operations during global index scan. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for temporary allocations; if nullptr, uses default. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref></computeroutput> containing a unique pointer to the created scanner, or an error if initialization fails. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_scan.h" line="77" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_global_index_scan_1a1051cd7569a99f0686645e701f88b2b3" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::GlobalIndexScan::~GlobalIndexScan</definition>
+        <argsstring>()=default</argsstring>
+        <name>~GlobalIndexScan</name>
+        <qualifiedname>paimon::GlobalIndexScan::~GlobalIndexScan</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_scan.h" line="84" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_scan_1a43d7c958b304e92560a41daafafc3098" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_reader" kindref="compound">GlobalIndexReader</ref> &gt; &gt; &gt;</type>
+        <definition>virtual Result&lt; std::vector&lt; std::shared_ptr&lt; GlobalIndexReader &gt; &gt; &gt; paimon::GlobalIndexScan::CreateReaders</definition>
+        <argsstring>(const std::string &amp;field_name, const std::optional&lt; RowRangeIndex &gt; &amp;row_range_index) const =0</argsstring>
+        <name>CreateReaders</name>
+        <qualifiedname>paimon::GlobalIndexScan::CreateReaders</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>field_name</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::optional&lt; <ref refid="classpaimon_1_1_row_range_index" kindref="compound">RowRangeIndex</ref> &gt; &amp;</type>
+          <declname>row_range_index</declname>
+        </param>
+        <briefdescription>
+<para>Creates several <computeroutput><ref refid="classpaimon_1_1_global_index_reader" kindref="compound">GlobalIndexReader</ref></computeroutput>s for a specific field. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>field_name</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Name of the indexed column. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>row_range_index</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional row range that limits the scan to a sub-range of row ids. If not provided, the entire row range is considered. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref></computeroutput> that is:<itemizedlist>
+<listitem><para>Successful with several <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">readers(with global row id)</ref> if the indexes exist and load correctly;</para>
+</listitem><listitem><para>Successful with an empty vector if no index was built for the given field;</para>
+</listitem><listitem><para>Error returns when loading fails (e.g., file corruption, I/O error, unsupported format). </para>
+</listitem></itemizedlist>
+</para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_scan.h" line="96" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_scan_1a7b842f1c37b1be50dd0f1bdacc645e0e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_reader" kindref="compound">GlobalIndexReader</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::shared_ptr&lt; GlobalIndexReader &gt; &gt; paimon::GlobalIndexScan::CreateReader</definition>
+        <argsstring>(const std::string &amp;field_name, const std::string &amp;index_type, const std::optional&lt; RowRangeIndex &gt; &amp;row_range_index) const =0</argsstring>
+        <name>CreateReader</name>
+        <qualifiedname>paimon::GlobalIndexScan::CreateReader</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>field_name</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>index_type</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::optional&lt; <ref refid="classpaimon_1_1_row_range_index" kindref="compound">RowRangeIndex</ref> &gt; &amp;</type>
+          <declname>row_range_index</declname>
+        </param>
+        <briefdescription>
+<para>Creates a <computeroutput><ref refid="classpaimon_1_1_global_index_reader" kindref="compound">GlobalIndexReader</ref></computeroutput> for a specific field with a specific index type. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>field_name</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Name of the indexed column. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>index_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Name of index type. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>row_range_index</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional row range that limits the scan to a sub-range of row ids. If not provided, the entire row range is considered. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref></computeroutput> that is:<itemizedlist>
+<listitem><para>Successful with a <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">reader(with global row id)</ref> if the index exists and loads correctly;</para>
+</listitem><listitem><para>Successful with nullptr if no index was built for the given field with the given index type;</para>
+</listitem><listitem><para>Error returns when loading fails (e.g., file corruption, I/O error, unsupported format). </para>
+</listitem></itemizedlist>
+</para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_scan.h" line="112" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_scan_1a6e85bd78a0b4cabff050601370f6b7ab" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_reader" kindref="compound">GlobalIndexReader</ref> &gt; &gt; &gt;</type>
+        <definition>virtual Result&lt; std::vector&lt; std::shared_ptr&lt; GlobalIndexReader &gt; &gt; &gt; paimon::GlobalIndexScan::CreateReaders</definition>
+        <argsstring>(int32_t field_id, const std::optional&lt; RowRangeIndex &gt; &amp;row_range_index) const =0</argsstring>
+        <name>CreateReaders</name>
+        <qualifiedname>paimon::GlobalIndexScan::CreateReaders</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>field_id</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::optional&lt; <ref refid="classpaimon_1_1_row_range_index" kindref="compound">RowRangeIndex</ref> &gt; &amp;</type>
+          <declname>row_range_index</declname>
+        </param>
+        <briefdescription>
+<para>Creates several <computeroutput><ref refid="classpaimon_1_1_global_index_reader" kindref="compound">GlobalIndexReader</ref></computeroutput>s for a specific field (looked up by id),. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>field_id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Field id of the indexed column. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>row_range_index</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Optional row range that limits the scan to a sub-range of row ids. If not provided, the entire row range is considered. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref></computeroutput> that is:<itemizedlist>
+<listitem><para>Successful with several <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">readers(with global row id)</ref> if the indexes exist and load correctly;</para>
+</listitem><listitem><para>Successful with an empty vector if no index was built for the given field;</para>
+</listitem><listitem><para>Error returns when loading fails (e.g., file corruption, I/O error, unsupported format). </para>
+</listitem></itemizedlist>
+</para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_scan.h" line="126" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Represents a logical scan over a global index for a table. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_scan.h" line="37" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_scan.h" bodystart="37" bodyend="128"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_global_index_scan_1a1f8aace0a549c16e138c9f680db78040" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexScan</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_global_index_scan_1a5492873a52ecd09e4ce363a35da9ce30" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexScan</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_global_index_scan_1a7b842f1c37b1be50dd0f1bdacc645e0e" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexScan</scope><name>CreateReader</name></member>
+      <member refid="classpaimon_1_1_global_index_scan_1a43d7c958b304e92560a41daafafc3098" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexScan</scope><name>CreateReaders</name></member>
+      <member refid="classpaimon_1_1_global_index_scan_1a6e85bd78a0b4cabff050601370f6b7ab" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexScan</scope><name>CreateReaders</name></member>
+      <member refid="classpaimon_1_1_global_index_scan_1a1051cd7569a99f0686645e701f88b2b3" prot="public" virt="virtual"><scope>paimon::GlobalIndexScan</scope><name>~GlobalIndexScan</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

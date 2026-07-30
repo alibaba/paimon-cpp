@@ -1,0 +1,157 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_variant_access_builder" kind="class" language="C++" prot="public">
+    <compoundname>paimon::VariantAccessBuilder</compoundname>
+    <includes refid="variant_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_variant_access_builder_1a0922ee261b06e2980e3ad1aa72731851" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Impl</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;Impl&gt; paimon::VariantAccessBuilder::impl_</definition>
+        <argsstring></argsstring>
+        <name>impl_</name>
+        <qualifiedname>paimon::VariantAccessBuilder::impl_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="194" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" bodystart="194" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_variant_access_builder_1ac8a038b4b042128e598e269b4d354127" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::VariantAccessBuilder::VariantAccessBuilder</definition>
+        <argsstring>()</argsstring>
+        <name>VariantAccessBuilder</name>
+        <qualifiedname>paimon::VariantAccessBuilder::VariantAccessBuilder</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="174" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_variant_access_builder_1a47f2b7420e2f8491e8436f568e0c0459" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::VariantAccessBuilder::~VariantAccessBuilder</definition>
+        <argsstring>()</argsstring>
+        <name>~VariantAccessBuilder</name>
+        <qualifiedname>paimon::VariantAccessBuilder::~VariantAccessBuilder</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="175" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_variant_access_builder_1a28679d0209a8c96c920d319a0fc4a56d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::VariantAccessBuilder::AddField</definition>
+        <argsstring>(struct ArrowSchema *target_type, const std::string &amp;path, bool fail_on_error=true, const std::string &amp;zone_id=&quot;UTC&quot;)</argsstring>
+        <name>AddField</name>
+        <qualifiedname>paimon::VariantAccessBuilder::AddField</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">struct</ref> <ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref> *</type>
+          <declname>target_type</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>fail_on_error</declname>
+          <defval><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">true</ref></defval>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>zone_id</declname>
+          <defval>&quot;UTC&quot;</defval>
+        </param>
+        <briefdescription>
+<para>Adds an extracted field. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>target_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The Arrow type the extracted value is cast to (C data interface, consumed by the call). Nested targets follow <computeroutput><ref refid="classpaimon_1_1_variant_1a144edb205ed3159696cd3b8fbdd98ef1" kindref="member">Variant::VariantGetArrow</ref></computeroutput> semantics. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The extraction path, e.g. <computeroutput>$.a.b</computeroutput> or <computeroutput>$.array[0]</computeroutput>. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>fail_on_error</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Whether an invalid cast fails the read (true) or yields SQL NULL. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>zone_id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The time zone used when rendering TIMESTAMP values. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="184" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_variant_access_builder_1aa9a9c4faaa6125538ebece8bf5b60dd8" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">struct</ref> <ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::unique_ptr&lt; struct ArrowSchema &gt; &gt; paimon::VariantAccessBuilder::Build</definition>
+        <argsstring>(const std::string &amp;field_name) const</argsstring>
+        <name>Build</name>
+        <qualifiedname>paimon::VariantAccessBuilder::Build</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>field_name</declname>
+        </param>
+        <briefdescription>
+<para>Builds the projection field named <computeroutput>field_name</computeroutput>, to be used in the read schema in place of the variant column with the same name. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="189" column="12"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Builds a variant-access projection field: a struct field that replaces a VARIANT column in the read schema so that, instead of the full variant, only the described paths are extracted at read time (reading only the required shredded sub-columns from shredded files). </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Example: read <computeroutput>$.age</computeroutput> as INT64 and <computeroutput>$.city</computeroutput> as STRING from variant column <computeroutput>v</computeroutput>: <verbatim>VariantAccessBuilder builder;
+builder.AddField(age_type, &quot;$.age&quot;);
+builder.AddField(city_type, &quot;$.city&quot;);
+auto field = builder.Build(&quot;v&quot;);  // use in ReadContextBuilder::SetReadSchema
+</verbatim> The resulting struct has one child per added field, named by its position (&quot;0&quot;, &quot;1&quot;, ...). </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="172" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" bodystart="172" bodyend="195"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_variant_access_builder_1a28679d0209a8c96c920d319a0fc4a56d" prot="public" virt="non-virtual"><scope>paimon::VariantAccessBuilder</scope><name>AddField</name></member>
+      <member refid="classpaimon_1_1_variant_access_builder_1aa9a9c4faaa6125538ebece8bf5b60dd8" prot="public" virt="non-virtual"><scope>paimon::VariantAccessBuilder</scope><name>Build</name></member>
+      <member refid="classpaimon_1_1_variant_access_builder_1a0922ee261b06e2980e3ad1aa72731851" prot="private" virt="non-virtual"><scope>paimon::VariantAccessBuilder</scope><name>impl_</name></member>
+      <member refid="classpaimon_1_1_variant_access_builder_1ac8a038b4b042128e598e269b4d354127" prot="public" virt="non-virtual"><scope>paimon::VariantAccessBuilder</scope><name>VariantAccessBuilder</name></member>
+      <member refid="classpaimon_1_1_variant_access_builder_1a47f2b7420e2f8491e8436f568e0c0459" prot="public" virt="non-virtual"><scope>paimon::VariantAccessBuilder</scope><name>~VariantAccessBuilder</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

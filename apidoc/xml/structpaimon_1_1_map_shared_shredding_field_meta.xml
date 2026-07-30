@@ -1,0 +1,120 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="structpaimon_1_1_map_shared_shredding_field_meta" kind="struct" language="C++" prot="public">
+    <compoundname>paimon::MapSharedShreddingFieldMeta</compoundname>
+    <includes refid="map__shared__shredding__schema__utils_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpaimon_1_1_map_shared_shredding_field_meta_1a55b5f3036bf5c8ddaee7d888659e2b3d" prot="public" static="no" mutable="no">
+        <type>std::map&lt; std::string, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>std::map&lt;std::string, int32_t&gt; paimon::MapSharedShreddingFieldMeta::name_to_id</definition>
+        <argsstring></argsstring>
+        <name>name_to_id</name>
+        <qualifiedname>paimon::MapSharedShreddingFieldMeta::name_to_id</qualifiedname>
+        <briefdescription>
+<para>field_name -&gt; field_id </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" line="36" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" bodystart="36" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_map_shared_shredding_field_meta_1ae9983c748fa617ca277cc9cf6445ce77" prot="public" static="no" mutable="no">
+        <type>std::map&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref>, std::vector&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt; &gt;</type>
+        <definition>std::map&lt;int32_t, std::vector&lt;int32_t&gt; &gt; paimon::MapSharedShreddingFieldMeta::field_to_columns</definition>
+        <argsstring></argsstring>
+        <name>field_to_columns</name>
+        <qualifiedname>paimon::MapSharedShreddingFieldMeta::field_to_columns</qualifiedname>
+        <briefdescription>
+<para>field_id -&gt; ordered physical column indices </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" line="38" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_map_shared_shredding_field_meta_1aec65eb79d1ee445c2fb05c1f68c89fed" prot="public" static="no" mutable="no">
+        <type>std::set&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>std::set&lt;int32_t&gt; paimon::MapSharedShreddingFieldMeta::overflow_field_set</definition>
+        <argsstring></argsstring>
+        <name>overflow_field_set</name>
+        <qualifiedname>paimon::MapSharedShreddingFieldMeta::overflow_field_set</qualifiedname>
+        <briefdescription>
+<para>Set of field_ids that ever spilled into __overflow. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" line="40" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_map_shared_shredding_field_meta_1a7ee9ad8990f3b56f43e0811478923d4d" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::MapSharedShreddingFieldMeta::num_columns</definition>
+        <argsstring></argsstring>
+        <name>num_columns</name>
+        <qualifiedname>paimon::MapSharedShreddingFieldMeta::num_columns</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+<para>Number of physical columns K in this file. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" line="42" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" bodystart="42" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_map_shared_shredding_field_meta_1a532a3641603411d270acd091aa4ae1da" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::MapSharedShreddingFieldMeta::max_row_width</definition>
+        <argsstring></argsstring>
+        <name>max_row_width</name>
+        <qualifiedname>paimon::MapSharedShreddingFieldMeta::max_row_width</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+<para>Maximum row width observed in this file. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" line="44" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" bodystart="44" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpaimon_1_1_map_shared_shredding_field_meta_1a00dd777ff9dcfdb55ff29692dc05e9ac" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::MapSharedShreddingFieldMeta::operator==</definition>
+        <argsstring>(const MapSharedShreddingFieldMeta &amp;other) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>paimon::MapSharedShreddingFieldMeta::operator==</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_map_shared_shredding_field_meta" kindref="compound">MapSharedShreddingFieldMeta</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" line="46" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" bodystart="46" bodyend="53"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Parsed file-level meta for one shared-shredding MAP column. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" line="34" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/shredding/map_shared_shredding_schema_utils.h" bodystart="34" bodyend="54"/>
+    <listofallmembers>
+      <member refid="structpaimon_1_1_map_shared_shredding_field_meta_1ae9983c748fa617ca277cc9cf6445ce77" prot="public" virt="non-virtual"><scope>paimon::MapSharedShreddingFieldMeta</scope><name>field_to_columns</name></member>
+      <member refid="structpaimon_1_1_map_shared_shredding_field_meta_1a532a3641603411d270acd091aa4ae1da" prot="public" virt="non-virtual"><scope>paimon::MapSharedShreddingFieldMeta</scope><name>max_row_width</name></member>
+      <member refid="structpaimon_1_1_map_shared_shredding_field_meta_1a55b5f3036bf5c8ddaee7d888659e2b3d" prot="public" virt="non-virtual"><scope>paimon::MapSharedShreddingFieldMeta</scope><name>name_to_id</name></member>
+      <member refid="structpaimon_1_1_map_shared_shredding_field_meta_1a7ee9ad8990f3b56f43e0811478923d4d" prot="public" virt="non-virtual"><scope>paimon::MapSharedShreddingFieldMeta</scope><name>num_columns</name></member>
+      <member refid="structpaimon_1_1_map_shared_shredding_field_meta_1a00dd777ff9dcfdb55ff29692dc05e9ac" prot="public" virt="non-virtual"><scope>paimon::MapSharedShreddingFieldMeta</scope><name>operator==</name></member>
+      <member refid="structpaimon_1_1_map_shared_shredding_field_meta_1aec65eb79d1ee445c2fb05c1f68c89fed" prot="public" virt="non-virtual"><scope>paimon::MapSharedShreddingFieldMeta</scope><name>overflow_field_set</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

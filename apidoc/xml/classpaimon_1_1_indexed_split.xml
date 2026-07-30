@@ -1,0 +1,99 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_indexed_split" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::IndexedSplit</compoundname>
+    <basecompoundref refid="classpaimon_1_1_split" prot="public" virt="non-virtual">paimon::Split</basecompoundref>
+    <includes refid="indexed__split_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/indexed_split.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_indexed_split_1a300f60cf027e4f074528b8fee6b95174" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_data_split" kindref="compound">DataSplit</ref> &gt;</type>
+        <definition>virtual std::shared_ptr&lt; DataSplit &gt; paimon::IndexedSplit::GetDataSplit</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetDataSplit</name>
+        <qualifiedname>paimon::IndexedSplit::GetDataSplit</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The underlying physical data split containing actual data file details. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/indexed_split.h" line="35" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_indexed_split_1a3cbb838885cd2b1e8f3724c0c15b3cb6" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &gt; &amp;</type>
+        <definition>virtual const std::vector&lt; Range &gt; &amp; paimon::IndexedSplit::RowRanges</definition>
+        <argsstring>() const =0</argsstring>
+        <name>RowRanges</name>
+        <qualifiedname>paimon::IndexedSplit::RowRanges</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A list of row intervals [start, end] indicating which rows are relevant (e.g., passed predicate pushdown). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/indexed_split.h" line="39" column="31"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_indexed_split_1a83da73ba29107339b818100ddbecae6c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">float</ref> &gt; &amp;</type>
+        <definition>virtual const std::vector&lt; float &gt; &amp; paimon::IndexedSplit::Scores</definition>
+        <argsstring>() const =0</argsstring>
+        <name>Scores</name>
+        <qualifiedname>paimon::IndexedSplit::Scores</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A score for <bold>each individual row</bold> included in <computeroutput><ref refid="classpaimon_1_1_indexed_split_1a3cbb838885cd2b1e8f3724c0c15b3cb6" kindref="member">RowRanges()</ref></computeroutput>, in the order they appear when traversing the ranges. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/indexed_split.h" line="43" column="31"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Indexed split for global index reading operation. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>paimon::IndexedSplit</label>
+        <link refid="classpaimon_1_1_indexed_split"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::Split</label>
+        <link refid="classpaimon_1_1_split"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>paimon::IndexedSplit</label>
+        <link refid="classpaimon_1_1_indexed_split"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::Split</label>
+        <link refid="classpaimon_1_1_split"/>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/indexed_split.h" line="32" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/indexed_split.h" bodystart="32" bodyend="44"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_split_1aad238266c89e85852982405e60cdd9b2" prot="public" virt="non-virtual"><scope>paimon::IndexedSplit</scope><name>Deserialize</name></member>
+      <member refid="classpaimon_1_1_indexed_split_1a300f60cf027e4f074528b8fee6b95174" prot="public" virt="pure-virtual"><scope>paimon::IndexedSplit</scope><name>GetDataSplit</name></member>
+      <member refid="classpaimon_1_1_indexed_split_1a3cbb838885cd2b1e8f3724c0c15b3cb6" prot="public" virt="pure-virtual"><scope>paimon::IndexedSplit</scope><name>RowRanges</name></member>
+      <member refid="classpaimon_1_1_indexed_split_1a83da73ba29107339b818100ddbecae6c" prot="public" virt="pure-virtual"><scope>paimon::IndexedSplit</scope><name>Scores</name></member>
+      <member refid="classpaimon_1_1_split_1a21cf471702ca3bb471eacc4bce9cf050" prot="public" virt="non-virtual"><scope>paimon::IndexedSplit</scope><name>Serialize</name></member>
+      <member refid="classpaimon_1_1_split_1ad1bc1ca6627a627b1396991113b178b7" prot="public" virt="virtual"><scope>paimon::IndexedSplit</scope><name>~Split</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

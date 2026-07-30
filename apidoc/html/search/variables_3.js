@@ -1,0 +1,28 @@
+var searchData=
+[
+  ['data_5f_0',['data_',['../classpaimon_1_1_memory_segment.html#a2f53f484fa6fcedd9fb5ac1e7a80c32d',1,'paimon::MemorySegment::data_'],['../classpaimon_1_1_record_batch.html#a86803721d568dc987b7b256899f0e28c',1,'paimon::RecordBatch::data_'],['../classpaimon_1_1_result.html#a26ebf2d8b474d0fd6ad46b30760aa0f7',1,'paimon::Result::data_'],['../classpaimon_1_1_bytes.html#a2ae963aa9cb7699175799ab554bab2f0',1,'paimon::Bytes::data_']]],
+  ['data_5fevolution_5fenabled_1',['DATA_EVOLUTION_ENABLED',['../structpaimon_1_1_options.html#ab1508a51de5769f8906183f5ecb3aedd',1,'paimon::Options']]],
+  ['data_5ffile_5fexternal_5fpaths_2',['DATA_FILE_EXTERNAL_PATHS',['../structpaimon_1_1_options.html#abdbc3a1b6f206104f7e6d3d8df5a6dae',1,'paimon::Options']]],
+  ['data_5ffile_5fexternal_5fpaths_5fstrategy_3',['DATA_FILE_EXTERNAL_PATHS_STRATEGY',['../structpaimon_1_1_options.html#afdfac4ab2795c18d579580443f0a3228',1,'paimon::Options']]],
+  ['data_5ffile_5fprefix_4',['DATA_FILE_PREFIX',['../structpaimon_1_1_options.html#a6793acd517b0759d14e18c89808a70c0',1,'paimon::Options']]],
+  ['data_5ftable_5f_5',['data_table_',['../classpaimon_1_1_identifier.html#af829b006125759c4073826c8eeeb33cc',1,'paimon::Identifier']]],
+  ['database_5f_6',['database_',['../classpaimon_1_1_identifier.html#a68dc02413dd4eff2b51de61613cbd430',1,'paimon::Identifier::database_'],['../classpaimon_1_1_table.html#a5e3048b0b4eab034171ee20337e6eee6',1,'paimon::Table::database_']]],
+  ['db_5flocation_5fprop_7',['DB_LOCATION_PROP',['../classpaimon_1_1_catalog.html#a35cd0cfd608112dcf536d5b561ec7d8c',1,'paimon::Catalog']]],
+  ['db_5fsuffix_8',['DB_SUFFIX',['../classpaimon_1_1_catalog.html#a88b6d8397691b01f256b288916786177',1,'paimon::Catalog']]],
+  ['default_5fagg_5ffunction_9',['DEFAULT_AGG_FUNCTION',['../structpaimon_1_1_options.html#a2efcd211258e28e590cedf2b69ac69a3',1,'paimon::Options']]],
+  ['default_5fbuffer_5fsize_10',['DEFAULT_BUFFER_SIZE',['../classpaimon_1_1_buffered_input_stream.html#a05f7af049a46171ded30cf72b83c8fca',1,'paimon::BufferedInputStream']]],
+  ['default_5fexecutor_5fthread_5fcount_11',['DEFAULT_EXECUTOR_THREAD_COUNT',['../namespacepaimon.html#ade283b3f19d9c89a871ec1d028a0aee8',1,'paimon']]],
+  ['default_5fprecision_12',['default_precision',['../classpaimon_1_1_timestamp.html#a0dedb5ee71152d52dc6bd04eb4cff1c3',1,'paimon::Timestamp::DEFAULT_PRECISION'],['../classpaimon_1_1_decimal.html#a5bbcbbaffc001d48993cd8f2933f6ed5',1,'paimon::Decimal::DEFAULT_PRECISION']]],
+  ['default_5fscale_13',['DEFAULT_SCALE',['../classpaimon_1_1_decimal.html#adb5d987155d24b0bb38271df051c277c',1,'paimon::Decimal']]],
+  ['delete_5frow_5fcount_14',['delete_row_count',['../structpaimon_1_1_data_split_1_1_simple_data_file_meta.html#af7394db2f705a57450917946645cd7c3',1,'paimon::DataSplit::SimpleDataFileMeta']]],
+  ['deletion_5fvector_5fbitmap64_15',['DELETION_VECTOR_BITMAP64',['../structpaimon_1_1_options.html#ab5d9c282d5dbc2300cd24c8250042b9e',1,'paimon::Options']]],
+  ['deletion_5fvector_5findex_5ffile_5ftarget_5fsize_16',['DELETION_VECTOR_INDEX_FILE_TARGET_SIZE',['../structpaimon_1_1_options.html#a216e6aeb19b745a57dc6dbb19968ac7e',1,'paimon::Options']]],
+  ['deletion_5fvectors_5fenabled_17',['DELETION_VECTORS_ENABLED',['../structpaimon_1_1_options.html#a74820aa9cd3a53d9685ccbc469ee6367',1,'paimon::Options']]],
+  ['delta_5frecord_5fcount_18',['delta_record_count',['../structpaimon_1_1_snapshot_info.html#a98e0c0264b4b0006583024015caad28e',1,'paimon::SnapshotInfo']]],
+  ['detail_19',['detail',['../structpaimon_1_1_status_1_1_state.html#ad67a33c735408d8166de438038746728',1,'paimon::Status::State']]],
+  ['dictionary_20',['dictionary',['../struct_arrow_schema.html#ac608367ec75500cd6322cf6bf45bc4cf',1,'ArrowSchema::dictionary'],['../struct_arrow_array.html#aa4b987f9f4c600b5accc9830006b4da8',1,'ArrowArray::dictionary']]],
+  ['distance_5ftype_21',['distance_type',['../structpaimon_1_1_vector_search.html#a4d9869e20b0c4fe464aa3afef46de546',1,'paimon::VectorSearch']]],
+  ['distinct_22',['DISTINCT',['../structpaimon_1_1_options.html#a76bf1895e41989075a23c47b366ab06a',1,'paimon::Options']]],
+  ['dummy_5f_23',['dummy_',['../classpaimon_1_1_result.html#ac724ed06622737fa60b7ef49b66c9935',1,'paimon::Result']]],
+  ['dynamic_5fpartition_5foverwrite_24',['DYNAMIC_PARTITION_OVERWRITE',['../structpaimon_1_1_options.html#a104973933d014de49accbef603955e36',1,'paimon::Options']]]
+];

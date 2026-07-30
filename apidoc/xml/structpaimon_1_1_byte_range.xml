@@ -1,0 +1,166 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="structpaimon_1_1_byte_range" kind="struct" language="C++" prot="public">
+    <compoundname>paimon::ByteRange</compoundname>
+    <includes refid="read__ahead__cache_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpaimon_1_1_byte_range_1a1db3d4bb8fb524a548eac031bf41b307" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+        <definition>uint64_t paimon::ByteRange::offset</definition>
+        <argsstring></argsstring>
+        <name>offset</name>
+        <qualifiedname>paimon::ByteRange::offset</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" line="114" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" bodystart="114" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_byte_range_1af6819a7e5e5a11f34f9197e5c4802108" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+        <definition>uint64_t paimon::ByteRange::length</definition>
+        <argsstring></argsstring>
+        <name>length</name>
+        <qualifiedname>paimon::ByteRange::length</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" line="115" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" bodystart="115" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpaimon_1_1_byte_range_1a22a86dd1f1f014cd1da639bdfd617771" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::ByteRange::ByteRange</definition>
+        <argsstring>()=default</argsstring>
+        <name>ByteRange</name>
+        <qualifiedname>paimon::ByteRange::ByteRange</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" line="117" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="structpaimon_1_1_byte_range_1a26c73bede7e3e89201437bdeae87a52b" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::ByteRange::ByteRange</definition>
+        <argsstring>(uint64_t offset, uint64_t length)</argsstring>
+        <name>ByteRange</name>
+        <qualifiedname>paimon::ByteRange::ByteRange</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+          <declname>offset</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+          <declname>length</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" line="118" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" bodystart="118" bodyend="118"/>
+      </memberdef>
+      <memberdef kind="function" id="structpaimon_1_1_byte_range_1aa5ff13951209f168638e7faa305bb60c" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::ByteRange::Contains</definition>
+        <argsstring>(const ByteRange &amp;other) const</argsstring>
+        <name>Contains</name>
+        <qualifiedname>paimon::ByteRange::Contains</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_byte_range" kindref="compound">ByteRange</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>other</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The other byte range to check. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>true if this range contains the other range </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" line="129" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" bodystart="129" bodyend="131"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="friend">
+      <memberdef kind="friend" id="structpaimon_1_1_byte_range_1a63a7449b3918265310a18cac0e649f37" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool operator==</definition>
+        <argsstring>(const ByteRange &amp;left, const ByteRange &amp;right)</argsstring>
+        <name>operator==</name>
+        <qualifiedname>paimon::ByteRange::operator==</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_byte_range" kindref="compound">ByteRange</ref> &amp;</type>
+          <declname>left</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_byte_range" kindref="compound">ByteRange</ref> &amp;</type>
+          <declname>right</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" line="120" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" bodystart="120" bodyend="122"/>
+      </memberdef>
+      <memberdef kind="friend" id="structpaimon_1_1_byte_range_1a37734e96f5ff38abd539c52e0ae69998" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool operator!=</definition>
+        <argsstring>(const ByteRange &amp;left, const ByteRange &amp;right)</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>paimon::ByteRange::operator!=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_byte_range" kindref="compound">ByteRange</ref> &amp;</type>
+          <declname>left</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_byte_range" kindref="compound">ByteRange</ref> &amp;</type>
+          <declname>right</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" line="123" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" bodystart="123" bodyend="125"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A byte range with offset and length. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" line="113" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" bodystart="113" bodyend="132"/>
+    <listofallmembers>
+      <member refid="structpaimon_1_1_byte_range_1a22a86dd1f1f014cd1da639bdfd617771" prot="public" virt="non-virtual"><scope>paimon::ByteRange</scope><name>ByteRange</name></member>
+      <member refid="structpaimon_1_1_byte_range_1a26c73bede7e3e89201437bdeae87a52b" prot="public" virt="non-virtual"><scope>paimon::ByteRange</scope><name>ByteRange</name></member>
+      <member refid="structpaimon_1_1_byte_range_1aa5ff13951209f168638e7faa305bb60c" prot="public" virt="non-virtual"><scope>paimon::ByteRange</scope><name>Contains</name></member>
+      <member refid="structpaimon_1_1_byte_range_1af6819a7e5e5a11f34f9197e5c4802108" prot="public" virt="non-virtual"><scope>paimon::ByteRange</scope><name>length</name></member>
+      <member refid="structpaimon_1_1_byte_range_1a1db3d4bb8fb524a548eac031bf41b307" prot="public" virt="non-virtual"><scope>paimon::ByteRange</scope><name>offset</name></member>
+      <member refid="structpaimon_1_1_byte_range_1a37734e96f5ff38abd539c52e0ae69998" prot="public" virt="non-virtual"><scope>paimon::ByteRange</scope><name>operator!=</name></member>
+      <member refid="structpaimon_1_1_byte_range_1a63a7449b3918265310a18cac0e649f37" prot="public" virt="non-virtual"><scope>paimon::ByteRange</scope><name>operator==</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

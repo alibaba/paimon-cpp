@@ -1,0 +1,36 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="structstd_1_1hash_3_1_1paimon_1_1_literal_01_4" kind="struct" language="C++" prot="private">
+    <compoundname>std::hash&lt;::paimon::Literal &gt;</compoundname>
+    <templateparamlist>
+    </templateparamlist>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="structstd_1_1hash_3_1_1paimon_1_1_literal_01_4_1a31b0191544a26b2491bc989090ffd7f4" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+        <definition>size_t std::hash&lt;::paimon::Literal &gt;::operator()</definition>
+        <argsstring>(const ::paimon::Literal &amp;literal) const</argsstring>
+        <name>operator()</name>
+        <qualifiedname>std::hash&lt;::paimon::Literal &gt;::operator()</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">::paimon::Literal</ref> &amp;</type>
+          <declname>literal</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="118" column="12" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" bodystart="118" bodyend="120"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="117" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" bodystart="117" bodyend="121"/>
+    <listofallmembers>
+      <member refid="structstd_1_1hash_3_1_1paimon_1_1_literal_01_4_1a31b0191544a26b2491bc989090ffd7f4" prot="public" virt="non-virtual"><scope>std::hash&lt;::paimon::Literal &gt;</scope><name>operator()</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

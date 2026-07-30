@@ -1,0 +1,1028 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>IO &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=d7227091" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/io';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Data Types" href="data_types.html" />
+    <link rel="prev" title="File System" href="file_system.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.3.0" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="catalog.html">Catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="write.html">Write</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commit.html">Commit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scan.html">Scan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read.html">Read</a></li>
+<li class="toctree-l1"><a class="reference internal" href="predicate.html">Predicate</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="file_format.html">File Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_system.html">File System</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">IO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_types.html">Data Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_index.html">File Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="global_index.html">Global Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clean.html">Orphan Files Clean</a></li>
+<li class="toctree-l1"><a class="reference internal" href="defs.html">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="memory.html">Memory</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../api.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">IO</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="io">
+<h1>IO<a class="headerlink" href="#io" title="Link to this heading">#</a></h1>
+<section id="interface">
+<span id="cpp-api-io"></span><h2>Interface<a class="headerlink" href="#interface" title="Link to this heading">#</a></h2>
+<dl class="cpp enum-class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9ByteOrderE">
+<span id="_CPPv3N6paimon9ByteOrderE"></span><span id="_CPPv2N6paimon9ByteOrderE"></span><span class="target" id="namespacepaimon_1ad9aa7d30bb0d191711934a49db8fece8"></span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">ByteOrder</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int8_t</span></span><a class="headerlink" href="#_CPPv4N6paimon9ByteOrderE" title="Link to this definition">#</a><br /></dt>
+<dd><p><em>Values:</em></p>
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9ByteOrder17PAIMON_BIG_ENDIANE">
+<span id="_CPPv3N6paimon9ByteOrder17PAIMON_BIG_ENDIANE"></span><span id="_CPPv2N6paimon9ByteOrder17PAIMON_BIG_ENDIANE"></span><span class="target" id="namespacepaimon_1ad9aa7d30bb0d191711934a49db8fece8a566dd912653af0e0e1f6a49ee6a0e791"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">PAIMON_BIG_ENDIAN</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9ByteOrder17PAIMON_BIG_ENDIANE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9ByteOrder20PAIMON_LITTLE_ENDIANE">
+<span id="_CPPv3N6paimon9ByteOrder20PAIMON_LITTLE_ENDIANE"></span><span id="_CPPv2N6paimon9ByteOrder20PAIMON_LITTLE_ENDIANE"></span><span class="target" id="namespacepaimon_1ad9aa7d30bb0d191711934a49db8fece8aea84ea0af87f00f9497e9a9a366f0b69"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">PAIMON_LITTLE_ENDIAN</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9ByteOrder20PAIMON_LITTLE_ENDIANE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15SystemByteOrderEv">
+<span id="_CPPv3N6paimon15SystemByteOrderEv"></span><span id="_CPPv2N6paimon15SystemByteOrderEv"></span><span id="paimon::SystemByteOrderCE"></span><span class="target" id="namespacepaimon_1a6499ced4286349d08015d00e1cc5462f"></span><span class="k"><span class="pre">constexpr</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon9ByteOrderE" title="paimon::ByteOrder"><span class="n"><span class="pre">ByteOrder</span></span></a><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">SystemByteOrder</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon15SystemByteOrderEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the byte order of the system. </p>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19BufferedInputStreamE">
+<span id="_CPPv3N6paimon19BufferedInputStreamE"></span><span id="_CPPv2N6paimon19BufferedInputStreamE"></span><span id="paimon::BufferedInputStream"></span><span class="target" id="classpaimon_1_1_buffered_input_stream"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">BufferedInputStream</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon11InputStreamE" title="paimon::InputStream"><span class="n"><span class="pre">InputStream</span></span></a><a class="headerlink" href="#_CPPv4N6paimon19BufferedInputStreamE" title="Link to this definition">#</a><br /></dt>
+<dd><p>A buffered input stream that wraps another <code class="docutils literal notranslate"><a class="reference internal" href="file_system.html#classpaimon_1_1_input_stream"><span class="std std-ref"><span class="pre">InputStream</span></span></a></code> to provide buffering capabilities. </p>
+<p><code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_buffered_input_stream"><span class="std std-ref"><span class="pre">BufferedInputStream</span></span></a></code> improves I/O performance by reducing the number of system calls through internal buffering. It reads data from the underlying stream in larger chunks and serves subsequent read requests from the internal buffer when possible. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19BufferedInputStream19BufferedInputStreamERKNSt10shared_ptrI11InputStreamEE7int64_tP10MemoryPool">
+<span id="_CPPv3N6paimon19BufferedInputStream19BufferedInputStreamERKNSt10shared_ptrI11InputStreamEE7int64_tP10MemoryPool"></span><span id="_CPPv2N6paimon19BufferedInputStream19BufferedInputStreamERKNSt10shared_ptrI11InputStreamEE7int64_tP10MemoryPool"></span><span id="paimon::BufferedInputStream::BufferedInputStream__std::shared_ptr:InputStream:CR.int64_t.MemoryPoolP"></span><span class="target" id="classpaimon_1_1_buffered_input_stream_1ada95af29bb858e805fa8fde141a1e584"></span><span class="sig-name descname"><span class="n"><span class="pre">BufferedInputStream</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon11InputStreamE" title="paimon::InputStream"><span class="n"><span class="pre">InputStream</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">in</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">buffer_size</span></span>, <a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19BufferedInputStream19BufferedInputStreamERKNSt10shared_ptrI11InputStreamEE7int64_tP10MemoryPool" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates a new buffered input stream that wraps the provided input stream. </p>
+<p>The buffer is allocated from the specified memory pool.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>in</strong> – The underlying input stream to wrap. </p></li>
+<li><p><strong>buffer_size</strong> – Size of the internal buffer in bytes. </p></li>
+<li><p><strong>pool</strong> – Memory pool for buffer allocation. </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19BufferedInputStreamD0Ev">
+<span id="_CPPv3N6paimon19BufferedInputStreamD0Ev"></span><span id="_CPPv2N6paimon19BufferedInputStreamD0Ev"></span><span id="paimon::BufferedInputStream::~BufferedInputStream"></span><span class="target" id="classpaimon_1_1_buffered_input_stream_1aae1d0fc7feb644b06de9f563f0d5123b"></span><span class="sig-name descname"><span class="n"><span class="pre">~BufferedInputStream</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon19BufferedInputStreamD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19BufferedInputStream4SeekE7int64_t10SeekOrigin">
+<span id="_CPPv3N6paimon19BufferedInputStream4SeekE7int64_t10SeekOrigin"></span><span id="_CPPv2N6paimon19BufferedInputStream4SeekE7int64_t10SeekOrigin"></span><span id="paimon::BufferedInputStream::Seek__int64_t.SeekOrigin"></span><span class="target" id="classpaimon_1_1_buffered_input_stream_1a632c6c39f06cbd9e9c22626ed776dcc9"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Seek</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">offset</span></span>, <a class="reference internal" href="file_system.html#_CPPv4N6paimon10SeekOriginE" title="paimon::SeekOrigin"><span class="n"><span class="pre">SeekOrigin</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">origin</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon19BufferedInputStream4SeekE7int64_t10SeekOrigin" title="Link to this definition">#</a><br /></dt>
+<dd><p>Seek to a specified position in the input stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>offset</strong> – The byte offset relative to the origin position. </p></li>
+<li><p><strong>origin</strong> – The reference point for seeking (<code class="docutils literal notranslate"><a class="reference internal" href="file_system.html#namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9a770c25711516829cd50bfbca5f15867e"><span class="std std-ref"><span class="pre">FS_SEEK_SET</span></span></a></code>, <code class="docutils literal notranslate"><a class="reference internal" href="file_system.html#namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9a5199153f908442fa3fcc3e97d03358b7"><span class="std std-ref"><span class="pre">FS_SEEK_CUR</span></span></a></code>, <code class="docutils literal notranslate"><a class="reference internal" href="file_system.html#namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9ac74982539e1b5314febf367c19aa7a27"><span class="std std-ref"><span class="pre">FS_SEEK_END</span></span></a></code>). </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Status indicating success (OK) or failure with appropriate error information. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon19BufferedInputStream6GetPosEv">
+<span id="_CPPv3NK6paimon19BufferedInputStream6GetPosEv"></span><span id="_CPPv2NK6paimon19BufferedInputStream6GetPosEv"></span><span id="paimon::BufferedInputStream::GetPosC"></span><span class="target" id="classpaimon_1_1_buffered_input_stream_1a150cbb2548d8ef77cfbada6e0038fbeb"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetPos</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4NK6paimon19BufferedInputStream6GetPosEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the current position in the input stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Current position in the input stream. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>IOError returned if an I/O error occurred in the underlying stream. implementation while accessing the stream’s position. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19BufferedInputStream4ReadEPc7int64_t">
+<span id="_CPPv3N6paimon19BufferedInputStream4ReadEPc7int64_t"></span><span id="_CPPv2N6paimon19BufferedInputStream4ReadEPc7int64_t"></span><span id="paimon::BufferedInputStream::Read__cP.int64_t"></span><span class="target" id="classpaimon_1_1_buffered_input_stream_1ad2c3e8c869cfeec5ff3ffb0b4e8a26d0"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Read</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">buffer</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon19BufferedInputStream4ReadEPc7int64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Read data from the current position in the stream. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The stream position advances by the number of bytes actually read. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – <strong>[out]</strong> Pointer to the buffer where read data will be stored. </p></li>
+<li><p><strong>size</strong> – Maximum number of bytes to read. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result containing the actual number of bytes read on success, or an error status on failure. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19BufferedInputStream4ReadEPc7int64_t7int64_t">
+<span id="_CPPv3N6paimon19BufferedInputStream4ReadEPc7int64_t7int64_t"></span><span id="_CPPv2N6paimon19BufferedInputStream4ReadEPc7int64_t7int64_t"></span><span id="paimon::BufferedInputStream::Read__cP.int64_t.int64_t"></span><span class="target" id="classpaimon_1_1_buffered_input_stream_1a71707d01d3daf6c28fff1d0d7c25b896"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Read</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">buffer</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">offset</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon19BufferedInputStream4ReadEPc7int64_t7int64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Read data from given position in the stream. </p>
+<p>Read with offset performs like <code class="docutils literal notranslate"><span class="pre">pread()</span></code> function, which will not change the position in the input stream.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – <strong>[out]</strong> The buffer to store the read content. </p></li>
+<li><p><strong>size</strong> – The number of bytes to read. </p></li>
+<li><p><strong>offset</strong> – The position in the stream to read from. </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19BufferedInputStream9ReadAsyncEPc7int64_t7int64_tRRNSt8functionIFv6StatusEEE">
+<span id="_CPPv3N6paimon19BufferedInputStream9ReadAsyncEPc7int64_t7int64_tRRNSt8functionIFv6StatusEEE"></span><span id="_CPPv2N6paimon19BufferedInputStream9ReadAsyncEPc7int64_t7int64_tRRNSt8functionIFv6StatusEEE"></span><span class="target" id="classpaimon_1_1_buffered_input_stream_1aab96f41e349fe480668396ce133aa753"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ReadAsync</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">buffer</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">offset</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">function</span></span><span class="p"><span class="pre">&lt;</span></span><span class="kt"><span class="pre">void</span></span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">Status</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">callback</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon19BufferedInputStream9ReadAsyncEPc7int64_t7int64_tRRNSt8functionIFv6StatusEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Asynchronously read data from the input stream. </p>
+<p>This function initiates an asynchronous read operation. The specified number of bytes will be read from the stream starting at the given offset and stored in the provided buffer. Once the read operation is complete, the provided callback function will be invoked with the status of the read operation.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The caller must keep the input stream and buffer alive until the callback is invoked. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – <strong>[out]</strong> The buffer to store the read content. </p></li>
+<li><p><strong>size</strong> – The number of bytes to read. </p></li>
+<li><p><strong>offset</strong> – The position in the stream to read from. </p></li>
+<li><p><strong>callback</strong> – The callback function to be invoked upon completion of the read operation. The callback will receive a Status object indicating the success or failure of the read operation. </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon19BufferedInputStream6LengthEv">
+<span id="_CPPv3NK6paimon19BufferedInputStream6LengthEv"></span><span id="_CPPv2NK6paimon19BufferedInputStream6LengthEv"></span><span id="paimon::BufferedInputStream::LengthC"></span><span class="target" id="classpaimon_1_1_buffered_input_stream_1ab48b9c9c18069b3b414a0cbb8f047178"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Length</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4NK6paimon19BufferedInputStream6LengthEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the total length of the file in bytes. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19BufferedInputStream5CloseEv">
+<span id="_CPPv3N6paimon19BufferedInputStream5CloseEv"></span><span id="_CPPv2N6paimon19BufferedInputStream5CloseEv"></span><span id="paimon::BufferedInputStream::Close"></span><span class="target" id="classpaimon_1_1_buffered_input_stream_1a595869ad75eb02c8b24bb6a224e3f4fb"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Close</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon19BufferedInputStream5CloseEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Close the stream. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon19BufferedInputStream6GetUriEv">
+<span id="_CPPv3NK6paimon19BufferedInputStream6GetUriEv"></span><span id="_CPPv2NK6paimon19BufferedInputStream6GetUriEv"></span><span id="paimon::BufferedInputStream::GetUriC"></span><span class="target" id="classpaimon_1_1_buffered_input_stream_1a646ecb64407e882b5d448f37e27884f3"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetUri</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4NK6paimon19BufferedInputStream6GetUriEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get an identifier that uniquely identify the underlying content. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>An uri if the underlying content can be uniquely identified. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Empty string if the underlying content cannot be uniquely identified. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-attributes">Public Static Attributes</p>
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19BufferedInputStream19DEFAULT_BUFFER_SIZEE">
+<span id="_CPPv3N6paimon19BufferedInputStream19DEFAULT_BUFFER_SIZEE"></span><span id="_CPPv2N6paimon19BufferedInputStream19DEFAULT_BUFFER_SIZEE"></span><span id="paimon::BufferedInputStream::DEFAULT_BUFFER_SIZE__int64_t"></span><span class="target" id="classpaimon_1_1_buffered_input_stream_1a05f7af049a46171ded30cf72b83c8fca"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">constexpr</span></span><span class="w"> </span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DEFAULT_BUFFER_SIZE</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">8192</span></span><a class="headerlink" href="#_CPPv4N6paimon19BufferedInputStream19DEFAULT_BUFFER_SIZEE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20ByteArrayInputStreamE">
+<span id="_CPPv3N6paimon20ByteArrayInputStreamE"></span><span id="_CPPv2N6paimon20ByteArrayInputStreamE"></span><span id="paimon::ByteArrayInputStream"></span><span class="target" id="classpaimon_1_1_byte_array_input_stream"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ByteArrayInputStream</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon11InputStreamE" title="paimon::InputStream"><span class="n"><span class="pre">InputStream</span></span></a><a class="headerlink" href="#_CPPv4N6paimon20ByteArrayInputStreamE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Input stream for memory buffer, inherits from <code class="docutils literal notranslate"><a class="reference internal" href="file_system.html#classpaimon_1_1_input_stream"><span class="std std-ref"><span class="pre">InputStream</span></span></a></code>. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20ByteArrayInputStream20ByteArrayInputStreamEPKc7int64_t">
+<span id="_CPPv3N6paimon20ByteArrayInputStream20ByteArrayInputStreamEPKc7int64_t"></span><span id="_CPPv2N6paimon20ByteArrayInputStream20ByteArrayInputStreamEPKc7int64_t"></span><span id="paimon::ByteArrayInputStream::ByteArrayInputStream__cCP.int64_t"></span><span class="target" id="classpaimon_1_1_byte_array_input_stream_1ada80dd5d59b7d4ab5564bd72c7a6d8a4"></span><span class="sig-name descname"><span class="n"><span class="pre">ByteArrayInputStream</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">buffer</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">length</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon20ByteArrayInputStream20ByteArrayInputStreamEPKc7int64_t" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20ByteArrayInputStreamD0Ev">
+<span id="_CPPv3N6paimon20ByteArrayInputStreamD0Ev"></span><span id="_CPPv2N6paimon20ByteArrayInputStreamD0Ev"></span><span id="paimon::ByteArrayInputStream::~ByteArrayInputStream"></span><span class="target" id="classpaimon_1_1_byte_array_input_stream_1a3f67c44fbd4538999d957dce4c6b8d74"></span><span class="sig-name descname"><span class="n"><span class="pre">~ByteArrayInputStream</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon20ByteArrayInputStreamD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon20ByteArrayInputStream10GetRawDataEv">
+<span id="_CPPv3NK6paimon20ByteArrayInputStream10GetRawDataEv"></span><span id="_CPPv2NK6paimon20ByteArrayInputStream10GetRawDataEv"></span><span id="paimon::ByteArrayInputStream::GetRawDataC"></span><span class="target" id="classpaimon_1_1_byte_array_input_stream_1aa88cc72ea6b2b2246678a4b8a26df27d"></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetRawData</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon20ByteArrayInputStream10GetRawDataEv" title="Link to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The raw data pointer of current pos. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20ByteArrayInputStream4SeekE7int64_t10SeekOrigin">
+<span id="_CPPv3N6paimon20ByteArrayInputStream4SeekE7int64_t10SeekOrigin"></span><span id="_CPPv2N6paimon20ByteArrayInputStream4SeekE7int64_t10SeekOrigin"></span><span id="paimon::ByteArrayInputStream::Seek__int64_t.SeekOrigin"></span><span class="target" id="classpaimon_1_1_byte_array_input_stream_1a126079b40c47569c924fd569547166f8"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Seek</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">offset</span></span>, <a class="reference internal" href="file_system.html#_CPPv4N6paimon10SeekOriginE" title="paimon::SeekOrigin"><span class="n"><span class="pre">SeekOrigin</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">origin</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon20ByteArrayInputStream4SeekE7int64_t10SeekOrigin" title="Link to this definition">#</a><br /></dt>
+<dd><p>Seek to a specified position in the input stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>offset</strong> – The byte offset relative to the origin position. </p></li>
+<li><p><strong>origin</strong> – The reference point for seeking (<code class="docutils literal notranslate"><a class="reference internal" href="file_system.html#namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9a770c25711516829cd50bfbca5f15867e"><span class="std std-ref"><span class="pre">FS_SEEK_SET</span></span></a></code>, <code class="docutils literal notranslate"><a class="reference internal" href="file_system.html#namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9a5199153f908442fa3fcc3e97d03358b7"><span class="std std-ref"><span class="pre">FS_SEEK_CUR</span></span></a></code>, <code class="docutils literal notranslate"><a class="reference internal" href="file_system.html#namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9ac74982539e1b5314febf367c19aa7a27"><span class="std std-ref"><span class="pre">FS_SEEK_END</span></span></a></code>). </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Status indicating success (OK) or failure with appropriate error information. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon20ByteArrayInputStream6GetPosEv">
+<span id="_CPPv3NK6paimon20ByteArrayInputStream6GetPosEv"></span><span id="_CPPv2NK6paimon20ByteArrayInputStream6GetPosEv"></span><span id="paimon::ByteArrayInputStream::GetPosC"></span><span class="target" id="classpaimon_1_1_byte_array_input_stream_1a6b6c3122b49d821ca0cee14ba2234e46"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetPos</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4NK6paimon20ByteArrayInputStream6GetPosEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the current position in the input stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Current position in the input stream. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>IOError returned if an I/O error occurred in the underlying stream. implementation while accessing the stream’s position. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20ByteArrayInputStream4ReadEPc7int64_t">
+<span id="_CPPv3N6paimon20ByteArrayInputStream4ReadEPc7int64_t"></span><span id="_CPPv2N6paimon20ByteArrayInputStream4ReadEPc7int64_t"></span><span id="paimon::ByteArrayInputStream::Read__cP.int64_t"></span><span class="target" id="classpaimon_1_1_byte_array_input_stream_1a6ea19d743b67a3b711649515e2d7f719"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Read</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">buffer</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon20ByteArrayInputStream4ReadEPc7int64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Read data from the current position in the stream. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The stream position advances by the number of bytes actually read. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – <strong>[out]</strong> Pointer to the buffer where read data will be stored. </p></li>
+<li><p><strong>size</strong> – Maximum number of bytes to read. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result containing the actual number of bytes read on success, or an error status on failure. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20ByteArrayInputStream4ReadEPc7int64_t7int64_t">
+<span id="_CPPv3N6paimon20ByteArrayInputStream4ReadEPc7int64_t7int64_t"></span><span id="_CPPv2N6paimon20ByteArrayInputStream4ReadEPc7int64_t7int64_t"></span><span id="paimon::ByteArrayInputStream::Read__cP.int64_t.int64_t"></span><span class="target" id="classpaimon_1_1_byte_array_input_stream_1a82cc1f4c7b0adcef78a4712766a32a19"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Read</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">buffer</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">offset</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon20ByteArrayInputStream4ReadEPc7int64_t7int64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Read data from given position in the stream. </p>
+<p>Read with offset performs like <code class="docutils literal notranslate"><span class="pre">pread()</span></code> function, which will not change the position in the input stream.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – <strong>[out]</strong> The buffer to store the read content. </p></li>
+<li><p><strong>size</strong> – The number of bytes to read. </p></li>
+<li><p><strong>offset</strong> – The position in the stream to read from. </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20ByteArrayInputStream9ReadAsyncEPc7int64_t7int64_tRRNSt8functionIFv6StatusEEE">
+<span id="_CPPv3N6paimon20ByteArrayInputStream9ReadAsyncEPc7int64_t7int64_tRRNSt8functionIFv6StatusEEE"></span><span id="_CPPv2N6paimon20ByteArrayInputStream9ReadAsyncEPc7int64_t7int64_tRRNSt8functionIFv6StatusEEE"></span><span class="target" id="classpaimon_1_1_byte_array_input_stream_1a0c377bd0b42af8db7c860dd590228b04"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ReadAsync</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">buffer</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">offset</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">function</span></span><span class="p"><span class="pre">&lt;</span></span><span class="kt"><span class="pre">void</span></span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">Status</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">callback</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon20ByteArrayInputStream9ReadAsyncEPc7int64_t7int64_tRRNSt8functionIFv6StatusEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Asynchronously read data from the input stream. </p>
+<p>This function initiates an asynchronous read operation. The specified number of bytes will be read from the stream starting at the given offset and stored in the provided buffer. Once the read operation is complete, the provided callback function will be invoked with the status of the read operation.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The caller must keep the input stream and buffer alive until the callback is invoked. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – <strong>[out]</strong> The buffer to store the read content. </p></li>
+<li><p><strong>size</strong> – The number of bytes to read. </p></li>
+<li><p><strong>offset</strong> – The position in the stream to read from. </p></li>
+<li><p><strong>callback</strong> – The callback function to be invoked upon completion of the read operation. The callback will receive a Status object indicating the success or failure of the read operation. </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon20ByteArrayInputStream6LengthEv">
+<span id="_CPPv3NK6paimon20ByteArrayInputStream6LengthEv"></span><span id="_CPPv2NK6paimon20ByteArrayInputStream6LengthEv"></span><span id="paimon::ByteArrayInputStream::LengthC"></span><span class="target" id="classpaimon_1_1_byte_array_input_stream_1a62055ee2f7e93a36aa5cb5a7a4404579"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Length</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4NK6paimon20ByteArrayInputStream6LengthEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the total length of the file in bytes. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20ByteArrayInputStream5CloseEv">
+<span id="_CPPv3N6paimon20ByteArrayInputStream5CloseEv"></span><span id="_CPPv2N6paimon20ByteArrayInputStream5CloseEv"></span><span id="paimon::ByteArrayInputStream::Close"></span><span class="target" id="classpaimon_1_1_byte_array_input_stream_1af8f33c3d0216d1cef8e332be2e94852f"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Close</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon20ByteArrayInputStream5CloseEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Close the stream. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon20ByteArrayInputStream6GetUriEv">
+<span id="_CPPv3NK6paimon20ByteArrayInputStream6GetUriEv"></span><span id="_CPPv2NK6paimon20ByteArrayInputStream6GetUriEv"></span><span id="paimon::ByteArrayInputStream::GetUriC"></span><span class="target" id="classpaimon_1_1_byte_array_input_stream_1ada7a88c0744aaa95255e4cc631ebb762"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetUri</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4NK6paimon20ByteArrayInputStream6GetUriEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get an identifier that uniquely identify the underlying content. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>An uri if the underlying content can be uniquely identified. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Empty string if the underlying content cannot be uniquely identified. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15DataInputStreamE">
+<span id="_CPPv3N6paimon15DataInputStreamE"></span><span id="_CPPv2N6paimon15DataInputStreamE"></span><span id="paimon::DataInputStream"></span><span class="target" id="classpaimon_1_1_data_input_stream"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DataInputStream</span></span></span><a class="headerlink" href="#_CPPv4N6paimon15DataInputStreamE" title="Link to this definition">#</a><br /></dt>
+<dd><p><code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_data_input_stream"><span class="std std-ref"><span class="pre">DataInputStream</span></span></a></code> provides a convenient wrapper around <code class="docutils literal notranslate"><a class="reference internal" href="file_system.html#classpaimon_1_1_input_stream"><span class="std std-ref"><span class="pre">InputStream</span></span></a></code> for reading typed data. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The default byte order is big-endian to maintain compatibility with the Java implementation. </p>
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15DataInputStream15DataInputStreamERKNSt10shared_ptrI11InputStreamEE">
+<span id="_CPPv3N6paimon15DataInputStream15DataInputStreamERKNSt10shared_ptrI11InputStreamEE"></span><span id="_CPPv2N6paimon15DataInputStream15DataInputStreamERKNSt10shared_ptrI11InputStreamEE"></span><span id="paimon::DataInputStream::DataInputStream__std::shared_ptr:InputStream:CR"></span><span class="target" id="classpaimon_1_1_data_input_stream_1a2707cf4439bb0d8d14da34a7be98e508"></span><span class="k"><span class="pre">explicit</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DataInputStream</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon11InputStreamE" title="paimon::InputStream"><span class="n"><span class="pre">InputStream</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">input_stream</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon15DataInputStream15DataInputStreamERKNSt10shared_ptrI11InputStreamEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Constructs a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_data_input_stream"><span class="std std-ref"><span class="pre">DataInputStream</span></span></a></code> wrapping the given <code class="docutils literal notranslate"><a class="reference internal" href="file_system.html#classpaimon_1_1_input_stream"><span class="std std-ref"><span class="pre">InputStream</span></span></a></code>. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>input_stream</strong> – The underlying input stream to read from. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15DataInputStream4SeekE7int64_t">
+<span id="_CPPv3NK6paimon15DataInputStream4SeekE7int64_t"></span><span id="_CPPv2NK6paimon15DataInputStream4SeekE7int64_t"></span><span id="paimon::DataInputStream::Seek__int64_tC"></span><span class="target" id="classpaimon_1_1_data_input_stream_1af8880ec11e07b93a631d503e2eba5d97"></span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Seek</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">offset</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon15DataInputStream4SeekE7int64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Seek to a specific position in the underlying input stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>offset</strong> – The absolute byte offset to seek to. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4I0ENK6paimon15DataInputStream9ReadValueE6ResultI1TEv">
+<span id="_CPPv3I0ENK6paimon15DataInputStream9ReadValueEv"></span><span id="_CPPv2I0ENK6paimon15DataInputStream9ReadValueEv"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">T</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classpaimon_1_1_data_input_stream_1a382fb1c4d6d93add5fbe1a7b339188c0"></span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I0ENK6paimon15DataInputStream9ReadValueE6ResultI1TEv" title="paimon::DataInputStream::ReadValue::T"><span class="n"><span class="pre">T</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ReadValue</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4I0ENK6paimon15DataInputStream9ReadValueE6ResultI1TEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Read a typed value from the stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Result containing the read value or an error status. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15DataInputStream9ReadBytesEP5Bytes">
+<span id="_CPPv3NK6paimon15DataInputStream9ReadBytesEP5Bytes"></span><span id="_CPPv2NK6paimon15DataInputStream9ReadBytesEP5Bytes"></span><span id="paimon::DataInputStream::ReadBytes__BytesPC"></span><span class="target" id="classpaimon_1_1_data_input_stream_1a7e706f144cfd57fba8779f8b39b15778"></span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ReadBytes</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="memory.html#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">bytes</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon15DataInputStream9ReadBytesEP5Bytes" title="Link to this definition">#</a><br /></dt>
+<dd><p>Read some bytes to a <code class="docutils literal notranslate"><a class="reference internal" href="memory.html#classpaimon_1_1_bytes"><span class="std std-ref"><span class="pre">Bytes</span></span></a></code> object from the stream. </p>
+<p>The length of bytes is the number of bytes read from the stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>bytes</strong> – Buffer to store the read bytes. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15DataInputStream4ReadEPc7int64_t">
+<span id="_CPPv3NK6paimon15DataInputStream4ReadEPc7int64_t"></span><span id="_CPPv2NK6paimon15DataInputStream4ReadEPc7int64_t"></span><span id="paimon::DataInputStream::Read__cP.int64_tC"></span><span class="target" id="classpaimon_1_1_data_input_stream_1adb19649420b33b272e970326a3f129ce"></span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Read</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">data</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon15DataInputStream4ReadEPc7int64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Read raw data of specified size from the stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> – Buffer to store the read data. </p></li>
+<li><p><strong>size</strong> – Number of bytes to read. </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15DataInputStream10ReadStringEv">
+<span id="_CPPv3NK6paimon15DataInputStream10ReadStringEv"></span><span id="_CPPv2NK6paimon15DataInputStream10ReadStringEv"></span><span id="paimon::DataInputStream::ReadStringC"></span><span class="target" id="classpaimon_1_1_data_input_stream_1a7ded3fd2556526c3850eb44b69fcaebe"></span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ReadString</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon15DataInputStream10ReadStringEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Read string from the stream. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>First read length (int16), then read string bytes. </p>
+</div>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15DataInputStream6GetPosEv">
+<span id="_CPPv3NK6paimon15DataInputStream6GetPosEv"></span><span id="_CPPv2NK6paimon15DataInputStream6GetPosEv"></span><span id="paimon::DataInputStream::GetPosC"></span><span class="target" id="classpaimon_1_1_data_input_stream_1a9053538fb581beae3578505bd96a407b"></span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetPos</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon15DataInputStream6GetPosEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the current position in the underlying input stream. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15DataInputStream6LengthEv">
+<span id="_CPPv3NK6paimon15DataInputStream6LengthEv"></span><span id="_CPPv2NK6paimon15DataInputStream6LengthEv"></span><span id="paimon::DataInputStream::LengthC"></span><span class="target" id="classpaimon_1_1_data_input_stream_1a3cbac49f93873f93da461d79756c1662"></span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Length</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon15DataInputStream6LengthEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the total length of the underlying input stream. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15DataInputStream8SetOrderE9ByteOrder">
+<span id="_CPPv3N6paimon15DataInputStream8SetOrderE9ByteOrder"></span><span id="_CPPv2N6paimon15DataInputStream8SetOrderE9ByteOrder"></span><span id="paimon::DataInputStream::SetOrder__ByteOrder"></span><span class="target" id="classpaimon_1_1_data_input_stream_1ac3e6996300630f8853420fad310d8604"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SetOrder</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N6paimon9ByteOrderE" title="paimon::ByteOrder"><span class="n"><span class="pre">ByteOrder</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">order</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon15DataInputStream8SetOrderE9ByteOrder" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set the byte order for endianness conversion. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>order</strong> – The byte order to use <code class="docutils literal notranslate"><span class="pre">PAIMON_BIG_ENDIAN</span></code> or <code class="docutils literal notranslate"><span class="pre">PAIMON_LITTLE_ENDIAN</span></code>. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="file_system.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">File System</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="data_types.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Data Types</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#interface">Interface</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9ByteOrderE"><code class="docutils literal notranslate"><span class="pre">ByteOrder</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9ByteOrder17PAIMON_BIG_ENDIANE"><code class="docutils literal notranslate"><span class="pre">PAIMON_BIG_ENDIAN</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9ByteOrder20PAIMON_LITTLE_ENDIANE"><code class="docutils literal notranslate"><span class="pre">PAIMON_LITTLE_ENDIAN</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15SystemByteOrderEv"><code class="docutils literal notranslate"><span class="pre">SystemByteOrder()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19BufferedInputStreamE"><code class="docutils literal notranslate"><span class="pre">paimon::BufferedInputStream</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19BufferedInputStream19BufferedInputStreamERKNSt10shared_ptrI11InputStreamEE7int64_tP10MemoryPool"><code class="docutils literal notranslate"><span class="pre">BufferedInputStream()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19BufferedInputStreamD0Ev"><code class="docutils literal notranslate"><span class="pre">~BufferedInputStream()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19BufferedInputStream4SeekE7int64_t10SeekOrigin"><code class="docutils literal notranslate"><span class="pre">Seek()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon19BufferedInputStream6GetPosEv"><code class="docutils literal notranslate"><span class="pre">GetPos()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19BufferedInputStream4ReadEPc7int64_t"><code class="docutils literal notranslate"><span class="pre">Read()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19BufferedInputStream4ReadEPc7int64_t7int64_t"><code class="docutils literal notranslate"><span class="pre">Read()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19BufferedInputStream9ReadAsyncEPc7int64_t7int64_tRRNSt8functionIFv6StatusEEE"><code class="docutils literal notranslate"><span class="pre">ReadAsync()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon19BufferedInputStream6LengthEv"><code class="docutils literal notranslate"><span class="pre">Length()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19BufferedInputStream5CloseEv"><code class="docutils literal notranslate"><span class="pre">Close()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon19BufferedInputStream6GetUriEv"><code class="docutils literal notranslate"><span class="pre">GetUri()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19BufferedInputStream19DEFAULT_BUFFER_SIZEE"><code class="docutils literal notranslate"><span class="pre">DEFAULT_BUFFER_SIZE</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20ByteArrayInputStreamE"><code class="docutils literal notranslate"><span class="pre">paimon::ByteArrayInputStream</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20ByteArrayInputStream20ByteArrayInputStreamEPKc7int64_t"><code class="docutils literal notranslate"><span class="pre">ByteArrayInputStream()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20ByteArrayInputStreamD0Ev"><code class="docutils literal notranslate"><span class="pre">~ByteArrayInputStream()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon20ByteArrayInputStream10GetRawDataEv"><code class="docutils literal notranslate"><span class="pre">GetRawData()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20ByteArrayInputStream4SeekE7int64_t10SeekOrigin"><code class="docutils literal notranslate"><span class="pre">Seek()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon20ByteArrayInputStream6GetPosEv"><code class="docutils literal notranslate"><span class="pre">GetPos()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20ByteArrayInputStream4ReadEPc7int64_t"><code class="docutils literal notranslate"><span class="pre">Read()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20ByteArrayInputStream4ReadEPc7int64_t7int64_t"><code class="docutils literal notranslate"><span class="pre">Read()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20ByteArrayInputStream9ReadAsyncEPc7int64_t7int64_tRRNSt8functionIFv6StatusEEE"><code class="docutils literal notranslate"><span class="pre">ReadAsync()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon20ByteArrayInputStream6LengthEv"><code class="docutils literal notranslate"><span class="pre">Length()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20ByteArrayInputStream5CloseEv"><code class="docutils literal notranslate"><span class="pre">Close()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon20ByteArrayInputStream6GetUriEv"><code class="docutils literal notranslate"><span class="pre">GetUri()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15DataInputStreamE"><code class="docutils literal notranslate"><span class="pre">paimon::DataInputStream</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15DataInputStream15DataInputStreamERKNSt10shared_ptrI11InputStreamEE"><code class="docutils literal notranslate"><span class="pre">DataInputStream()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15DataInputStream4SeekE7int64_t"><code class="docutils literal notranslate"><span class="pre">Seek()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4I0ENK6paimon15DataInputStream9ReadValueE6ResultI1TEv"><code class="docutils literal notranslate"><span class="pre">ReadValue()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15DataInputStream9ReadBytesEP5Bytes"><code class="docutils literal notranslate"><span class="pre">ReadBytes()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15DataInputStream4ReadEPc7int64_t"><code class="docutils literal notranslate"><span class="pre">Read()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15DataInputStream10ReadStringEv"><code class="docutils literal notranslate"><span class="pre">ReadString()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15DataInputStream6GetPosEv"><code class="docutils literal notranslate"><span class="pre">GetPos()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15DataInputStream6LengthEv"><code class="docutils literal notranslate"><span class="pre">Length()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15DataInputStream8SetOrderE9ByteOrder"><code class="docutils literal notranslate"><span class="pre">SetOrder()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/api/io.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,422 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_bucket_id_calculator" kind="class" language="C++" prot="public">
+    <compoundname>paimon::BucketIdCalculator</compoundname>
+    <includes refid="bucket__id__calculator_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_id_calculator.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_bucket_id_calculator_1a1b4531bdaa596c944626bbc0a996682e" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::BucketIdCalculator::num_buckets_</definition>
+        <argsstring></argsstring>
+        <name>num_buckets_</name>
+        <qualifiedname>paimon::BucketIdCalculator::num_buckets_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_id_calculator.h" line="93" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_id_calculator.h" bodystart="93" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_bucket_id_calculator_1a4379800231e1bf0a6b4c2ee3fdf706c7" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">BucketFunction</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;BucketFunction&gt; paimon::BucketIdCalculator::bucket_function_</definition>
+        <argsstring></argsstring>
+        <name>bucket_function_</name>
+        <qualifiedname>paimon::BucketIdCalculator::bucket_function_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_id_calculator.h" line="94" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_id_calculator.h" bodystart="94" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_bucket_id_calculator_1accdf17f2dac1252e7890a6257183d847" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;MemoryPool&gt; paimon::BucketIdCalculator::pool_</definition>
+        <argsstring></argsstring>
+        <name>pool_</name>
+        <qualifiedname>paimon::BucketIdCalculator::pool_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_id_calculator.h" line="95" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_id_calculator.h" bodystart="95" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_bucket_id_calculator_1a09cf2e134addf8697e7979ae9857c23d" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_bucket_id_calculator" kindref="compound">BucketIdCalculator</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; BucketIdCalculator &gt; &gt; paimon::BucketIdCalculator::Create</definition>
+        <argsstring>(bool is_pk_table, int32_t num_buckets, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::BucketIdCalculator::Create</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>is_pk_table</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>num_buckets</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Create <computeroutput><ref refid="classpaimon_1_1_bucket_id_calculator" kindref="compound">BucketIdCalculator</ref></computeroutput> with default bucket function. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>is_pk_table</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Whether this is for a primary key table. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>num_buckets</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of buckets. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for memory allocation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_id_calculator.h" line="45" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bucket_id_calculator_1a1a1d537903dca1db536323417d9f9504" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_bucket_id_calculator" kindref="compound">BucketIdCalculator</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; BucketIdCalculator &gt; &gt; paimon::BucketIdCalculator::Create</definition>
+        <argsstring>(bool is_pk_table, int32_t num_buckets, std::unique_ptr&lt; BucketFunction &gt; bucket_function, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::BucketIdCalculator::Create</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>is_pk_table</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>num_buckets</declname>
+        </param>
+        <param>
+          <type>std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">BucketFunction</ref> &gt;</type>
+          <declname>bucket_function</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Create <computeroutput><ref refid="classpaimon_1_1_bucket_id_calculator" kindref="compound">BucketIdCalculator</ref></computeroutput> with a custom bucket function. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>is_pk_table</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Whether this is for a primary key table. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>num_buckets</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of buckets. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bucket_function</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The bucket function to use for bucket assignment. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for memory allocation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_id_calculator.h" line="53" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bucket_id_calculator_1a23074225c03701aab039b6baf8549beb" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_bucket_id_calculator" kindref="compound">BucketIdCalculator</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; BucketIdCalculator &gt; &gt; paimon::BucketIdCalculator::CreateMod</definition>
+        <argsstring>(bool is_pk_table, int32_t num_buckets, FieldType bucket_key_type, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>CreateMod</name>
+        <qualifiedname>paimon::BucketIdCalculator::CreateMod</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>is_pk_table</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>num_buckets</declname>
+        </param>
+        <param>
+          <type><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7" kindref="member">FieldType</ref></type>
+          <declname>bucket_key_type</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Create <computeroutput><ref refid="classpaimon_1_1_bucket_id_calculator" kindref="compound">BucketIdCalculator</ref></computeroutput> with MOD bucket function. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>is_pk_table</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Whether this is for a primary key table. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>num_buckets</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of buckets. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bucket_key_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The type of the single bucket key field. Must be INT or BIGINT. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for memory allocation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_id_calculator.h" line="62" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bucket_id_calculator_1a7ba393e74c8fc422e8dcfbcc2f78f067" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_bucket_id_calculator" kindref="compound">BucketIdCalculator</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; BucketIdCalculator &gt; &gt; paimon::BucketIdCalculator::CreateHive</definition>
+        <argsstring>(bool is_pk_table, int32_t num_buckets, const std::vector&lt; HiveFieldInfo &gt; &amp;field_infos, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>CreateHive</name>
+        <qualifiedname>paimon::BucketIdCalculator::CreateHive</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>is_pk_table</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>num_buckets</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="structpaimon_1_1_hive_field_info" kindref="compound">HiveFieldInfo</ref> &gt; &amp;</type>
+          <declname>field_infos</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Create <computeroutput><ref refid="classpaimon_1_1_bucket_id_calculator" kindref="compound">BucketIdCalculator</ref></computeroutput> with HIVE bucket function. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>is_pk_table</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Whether this is for a primary key table. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>num_buckets</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of buckets. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>field_infos</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The detailed type info of all fields in the bucket key row. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for memory allocation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_id_calculator.h" line="71" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_bucket_id_calculator_1ad02625b1f1dd3a77baec7c0f84f448f1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::BucketIdCalculator::CalculateBucketIds</definition>
+        <argsstring>(ArrowArray *bucket_keys, ArrowSchema *bucket_schema, int32_t *bucket_ids) const</argsstring>
+        <name>CalculateBucketIds</name>
+        <qualifiedname>paimon::BucketIdCalculator::CalculateBucketIds</qualifiedname>
+        <param>
+          <type><ref refid="struct_arrow_array" kindref="compound">ArrowArray</ref> *</type>
+          <declname>bucket_keys</declname>
+        </param>
+        <param>
+          <type><ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref> *</type>
+          <declname>bucket_schema</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> *</type>
+          <declname>bucket_ids</declname>
+        </param>
+        <briefdescription>
+<para>Calculate bucket ids for the given bucket keys. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>bucket_keys</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Arrow struct array containing the bucket key values. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bucket_schema</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Arrow schema describing the structure of bucket_keys. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>bucket_ids</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Output array to store calculated bucket ids. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="note"><para>1. bucket_keys is a struct array, the order of fields needs to be consistent with &quot;bucket-key&quot; options in table schema. 2. bucket_keys and bucket_schema match each other. 3. bucket_ids is allocated enough space, at least &gt;= bucket_keys-&gt;length </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_id_calculator.h" line="82" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bucket_id_calculator_1a992dcff6930077a0a57302eff3c435c5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::BucketIdCalculator::~BucketIdCalculator</definition>
+        <argsstring>()</argsstring>
+        <name>~BucketIdCalculator</name>
+        <qualifiedname>paimon::BucketIdCalculator::~BucketIdCalculator</qualifiedname>
+        <briefdescription>
+<para>Destructor. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_id_calculator.h" line="86" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="classpaimon_1_1_bucket_id_calculator_1a6d091990bb2e27b51f4fded7b95837a6" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::BucketIdCalculator::BucketIdCalculator</definition>
+        <argsstring>(int32_t num_buckets, std::unique_ptr&lt; BucketFunction &gt; bucket_function, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>BucketIdCalculator</name>
+        <qualifiedname>paimon::BucketIdCalculator::BucketIdCalculator</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>num_buckets</declname>
+        </param>
+        <param>
+          <type>std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">BucketFunction</ref> &gt;</type>
+          <declname>bucket_function</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_id_calculator.h" line="89" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Calculator for determining bucket ids based on the given bucket keys. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="note"><para><computeroutput><ref refid="classpaimon_1_1_bucket_id_calculator" kindref="compound">BucketIdCalculator</ref></computeroutput> is compatible with the Java implementation and uses hash-based distribution to ensure even data distribution across buckets. </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_id_calculator.h" line="39" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_id_calculator.h" bodystart="39" bodyend="96"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_bucket_id_calculator_1a4379800231e1bf0a6b4c2ee3fdf706c7" prot="private" virt="non-virtual"><scope>paimon::BucketIdCalculator</scope><name>bucket_function_</name></member>
+      <member refid="classpaimon_1_1_bucket_id_calculator_1a6d091990bb2e27b51f4fded7b95837a6" prot="private" virt="non-virtual"><scope>paimon::BucketIdCalculator</scope><name>BucketIdCalculator</name></member>
+      <member refid="classpaimon_1_1_bucket_id_calculator_1ad02625b1f1dd3a77baec7c0f84f448f1" prot="public" virt="non-virtual"><scope>paimon::BucketIdCalculator</scope><name>CalculateBucketIds</name></member>
+      <member refid="classpaimon_1_1_bucket_id_calculator_1a09cf2e134addf8697e7979ae9857c23d" prot="public" virt="non-virtual"><scope>paimon::BucketIdCalculator</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_bucket_id_calculator_1a1a1d537903dca1db536323417d9f9504" prot="public" virt="non-virtual"><scope>paimon::BucketIdCalculator</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_bucket_id_calculator_1a7ba393e74c8fc422e8dcfbcc2f78f067" prot="public" virt="non-virtual"><scope>paimon::BucketIdCalculator</scope><name>CreateHive</name></member>
+      <member refid="classpaimon_1_1_bucket_id_calculator_1a23074225c03701aab039b6baf8549beb" prot="public" virt="non-virtual"><scope>paimon::BucketIdCalculator</scope><name>CreateMod</name></member>
+      <member refid="classpaimon_1_1_bucket_id_calculator_1a1b4531bdaa596c944626bbc0a996682e" prot="private" virt="non-virtual"><scope>paimon::BucketIdCalculator</scope><name>num_buckets_</name></member>
+      <member refid="classpaimon_1_1_bucket_id_calculator_1accdf17f2dac1252e7890a6257183d847" prot="private" virt="non-virtual"><scope>paimon::BucketIdCalculator</scope><name>pool_</name></member>
+      <member refid="classpaimon_1_1_bucket_id_calculator_1a992dcff6930077a0a57302eff3c435c5" prot="public" virt="non-virtual"><scope>paimon::BucketIdCalculator</scope><name>~BucketIdCalculator</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,289 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="structpaimon_1_1_full_text_search" kind="struct" language="C++" prot="public">
+    <compoundname>paimon::FullTextSearch</compoundname>
+    <includes refid="full__text__search_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="structpaimon_1_1_full_text_search_1a695a566b94394594d908e1b55249d190" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>SearchType</name>
+        <qualifiedname>paimon::FullTextSearch::SearchType</qualifiedname>
+        <enumvalue id="structpaimon_1_1_full_text_search_1a695a566b94394594d908e1b55249d190a627c7991c5d0265194247e92fcf120b0" prot="public">
+          <name>MATCH_ALL</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+<para>All terms in the query must be present (AND semantics). </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpaimon_1_1_full_text_search_1a695a566b94394594d908e1b55249d190a0b34a50323be5afcfd559d4a25434dbe" prot="public">
+          <name>MATCH_ANY</name>
+          <initializer>= 2</initializer>
+          <briefdescription>
+<para>Any term in the query can match (OR semantics). </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpaimon_1_1_full_text_search_1a695a566b94394594d908e1b55249d190a326989110ddd70abcc96d1e4bf40afc9" prot="public">
+          <name>PHRASE</name>
+          <initializer>= 3</initializer>
+          <briefdescription>
+<para>Matches the exact sequence of words (with proximity). </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpaimon_1_1_full_text_search_1a695a566b94394594d908e1b55249d190a4e076080d87888ac96f19b271a6ee406" prot="public">
+          <name>PREFIX</name>
+          <initializer>= 4</initializer>
+          <briefdescription>
+<para>Matches terms starting with the given string (e.g., &quot;run*&quot; → running, runner). </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpaimon_1_1_full_text_search_1a695a566b94394594d908e1b55249d190a15f4cff81d9ee10b162eac10c339d5f4" prot="public">
+          <name>WILDCARD</name>
+          <initializer>= 5</initializer>
+          <briefdescription>
+<para>Supports wildcards * and ? (e.g., &quot;ap*e&quot;, &quot;app?e&quot; -&gt; &quot;apple&quot;). </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpaimon_1_1_full_text_search_1a695a566b94394594d908e1b55249d190a696b031073e74bf2cb98e5ef201d4aa3" prot="public">
+          <name>UNKNOWN</name>
+          <initializer>= 128</initializer>
+          <briefdescription>
+<para>Default/fallback type for unrecognized or invalid queries. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>Enumeration of supported full-text search types. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" line="32" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" bodystart="32" bodyend="45"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpaimon_1_1_full_text_search_1a183afd735252137dd2804bdba3066cd2" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::FullTextSearch::field_name</definition>
+        <argsstring></argsstring>
+        <name>field_name</name>
+        <qualifiedname>paimon::FullTextSearch::field_name</qualifiedname>
+        <briefdescription>
+<para>Name of the field to search within (must be a full-text indexed field). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" line="66" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" bodystart="66" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_full_text_search_1a1b60c838523febd8165891726eb04ba4" prot="public" static="no" mutable="no">
+        <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>std::optional&lt;int32_t&gt; paimon::FullTextSearch::limit</definition>
+        <argsstring></argsstring>
+        <name>limit</name>
+        <qualifiedname>paimon::FullTextSearch::limit</qualifiedname>
+        <briefdescription>
+<para>Maximum number of documents to return. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Purely a truncation switch, orthogonal to <computeroutput>with_score</computeroutput>: set <computeroutput>with_score = true</computeroutput> to get relevance scores; a non-empty <computeroutput>limit</computeroutput> does not by itself imply scoring. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" line="70" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" bodystart="70" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_full_text_search_1ae1182ec479b2c34eeace57ddf98b183e" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::FullTextSearch::query</definition>
+        <argsstring></argsstring>
+        <name>query</name>
+        <qualifiedname>paimon::FullTextSearch::query</qualifiedname>
+        <briefdescription>
+<para>The query string to search for. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The interpretation depends on search_type:</para>
+<para><itemizedlist>
+<listitem><para>For MATCH_ALL/MATCH_ANY: keywords are split into terms using the <bold>same analyzer as indexing</bold>. Example: &quot;Hello World&quot; → terms [&quot;hello&quot;, &quot;world&quot;] (after lowercasing and tokenization).</para>
+</listitem><listitem><para>For PHRASE: matches the exact word sequence (with optional slop). Also be analyzed.</para>
+</listitem><listitem><para>For PREFIX: matches terms starting with the given string (e.g., &quot;run&quot; → running, runner). The query is not tokenized or filtered for stop words. The original prefix is retained, and a prefix consisting entirely of ASCII letters and digits is also matched using the lowercase case-normalization applied to pure ASCII terms at indexing time.</para>
+</listitem><listitem><para>For WILDCARD: supports wildcards * and ? (e.g., &quot;ap*e&quot;, &quot;app?e&quot;). The query is not tokenized or filtered for stop words. The wildcard operators are preserved. Both the original pattern and an alternative with each ASCII alphanumeric fragment lowercased are matched, covering pure ASCII and mixed ASCII/non-ASCII terms.</para>
+</listitem></itemizedlist>
+</para>
+<para><simplesect kind="note"><para>Analyzer consistency between indexing and querying is critical for correctness. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" line="90" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" bodystart="90" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_full_text_search_1aea47f986b27cfc7e525605ef6d315d59" prot="public" static="no" mutable="no">
+        <type><ref refid="structpaimon_1_1_full_text_search_1a695a566b94394594d908e1b55249d190" kindref="member">SearchType</ref></type>
+        <definition>SearchType paimon::FullTextSearch::search_type</definition>
+        <argsstring></argsstring>
+        <name>search_type</name>
+        <qualifiedname>paimon::FullTextSearch::search_type</qualifiedname>
+        <briefdescription>
+<para>Type of search to perform. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" line="92" column="16" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" bodystart="92" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_full_text_search_1a39f5dac7f0ee8cd321a438a6f122bfd0" prot="public" static="no" mutable="no">
+        <type>std::optional&lt; <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &gt;</type>
+        <definition>std::optional&lt;RoaringBitmap64&gt; paimon::FullTextSearch::pre_filter</definition>
+        <argsstring></argsstring>
+        <name>pre_filter</name>
+        <qualifiedname>paimon::FullTextSearch::pre_filter</qualifiedname>
+        <briefdescription>
+<para>A pre-filter based on <bold>global row IDs</bold>, implemented by leveraging another global index. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Only rows whose global row ID is present in <computeroutput>pre_filter</computeroutput> will be included during search. If not set, all rows will be included. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" line="96" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" bodystart="96" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_full_text_search_1a94182f563dd124b749945501c72d8aaa" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::FullTextSearch::with_score</definition>
+        <argsstring></argsstring>
+        <name>with_score</name>
+        <qualifiedname>paimon::FullTextSearch::with_score</qualifiedname>
+        <initializer>= <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">false</ref></initializer>
+        <briefdescription>
+<para>Whether to compute and return relevance scores (e.g. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>BM25). The 4-path matrix:<itemizedlist>
+<listitem><para><computeroutput>with_score=false, limit=nullopt</computeroutput> → <ref refid="classpaimon_1_1_bitmap_global_index_result" kindref="compound">BitmapGlobalIndexResult</ref> (all rows, no score)</para>
+</listitem><listitem><para><computeroutput>with_score=false, limit=N</computeroutput> → <ref refid="classpaimon_1_1_bitmap_global_index_result" kindref="compound">BitmapGlobalIndexResult</ref> (any N matches, unscored)</para>
+</listitem><listitem><para><computeroutput>with_score=true, limit=nullopt</computeroutput> → <ref refid="classpaimon_1_1_bitmap_scored_global_index_result" kindref="compound">BitmapScoredGlobalIndexResult</ref> (all rows + all scores)</para>
+</listitem><listitem><para><computeroutput>with_score=true, limit=N</computeroutput> → <ref refid="classpaimon_1_1_bitmap_scored_global_index_result" kindref="compound">BitmapScoredGlobalIndexResult</ref> (top-N by score + scores)</para>
+</listitem></itemizedlist>
+</para>
+<para>For plain <computeroutput>LIMIT N</computeroutput> without ORDER BY (the common case when an online engine, e.g. StarRocks, pushes down a predicate) set <computeroutput>with_score=false, limit=N</computeroutput> — the unscored fast path. For top-N by relevance use <computeroutput>with_score=true, limit=N</computeroutput> and drop the scores in the caller if unneeded.</para>
+<para>Default is <computeroutput>false</computeroutput> to avoid score computation overhead for callers that don&apos;t need it. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" line="110" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" bodystart="110" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_full_text_search_1a0da70b865f2fa90d3aead777feb86802" prot="public" static="no" mutable="no">
+        <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">float</ref> &gt;</type>
+        <definition>std::optional&lt;float&gt; paimon::FullTextSearch::min_score</definition>
+        <argsstring></argsstring>
+        <name>min_score</name>
+        <qualifiedname>paimon::FullTextSearch::min_score</qualifiedname>
+        <briefdescription>
+<para>Minimum relevance-score threshold (exclusive); results with score ≤ this value are excluded. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The score is whatever the backend&apos;s similarity produces (e.g. BM25 for tantivy, classic TF-IDF for lucene), so a threshold is not directly comparable across backends. Only meaningful when scoring is active (<computeroutput>with_score = true</computeroutput> or <computeroutput>limit</computeroutput> set); applied before truncation so low-score documents never occupy limit slots. Default is nullopt (no threshold filtering). </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" line="117" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" bodystart="117" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpaimon_1_1_full_text_search_1a14686d4afbfb59b1332d515f9354bbd6" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::FullTextSearch::FullTextSearch</definition>
+        <argsstring>(const std::string &amp;_field_name, std::optional&lt; int32_t &gt; _limit, const std::string &amp;_query, const SearchType &amp;_search_type, const std::optional&lt; RoaringBitmap64 &gt; &amp;_pre_filter, bool _with_score=false, std::optional&lt; float &gt; _min_score=std::nullopt)</argsstring>
+        <name>FullTextSearch</name>
+        <qualifiedname>paimon::FullTextSearch::FullTextSearch</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>_field_name</declname>
+        </param>
+        <param>
+          <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+          <declname>_limit</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>_query</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_full_text_search_1a695a566b94394594d908e1b55249d190" kindref="member">SearchType</ref> &amp;</type>
+          <declname>_search_type</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::optional&lt; <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &gt; &amp;</type>
+          <declname>_pre_filter</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>_with_score</declname>
+          <defval><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">false</ref></defval>
+        </param>
+        <param>
+          <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">float</ref> &gt;</type>
+          <declname>_min_score</declname>
+          <defval>std::nullopt</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" line="47" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" bodystart="47" bodyend="57"/>
+      </memberdef>
+      <memberdef kind="function" id="structpaimon_1_1_full_text_search_1a14ff66414492a9246733842d2cd7ee46" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="structpaimon_1_1_full_text_search" kindref="compound">FullTextSearch</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; FullTextSearch &gt; paimon::FullTextSearch::ReplacePreFilter</definition>
+        <argsstring>(const std::optional&lt; RoaringBitmap64 &gt; &amp;_pre_filter) const</argsstring>
+        <name>ReplacePreFilter</name>
+        <qualifiedname>paimon::FullTextSearch::ReplacePreFilter</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::optional&lt; <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &gt; &amp;</type>
+          <declname>_pre_filter</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" line="59" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" bodystart="59" bodyend="63"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A configuration structure for full-text search operations. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" line="30" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/full_text_search.h" bodystart="30" bodyend="118"/>
+    <listofallmembers>
+      <member refid="structpaimon_1_1_full_text_search_1a183afd735252137dd2804bdba3066cd2" prot="public" virt="non-virtual"><scope>paimon::FullTextSearch</scope><name>field_name</name></member>
+      <member refid="structpaimon_1_1_full_text_search_1a14686d4afbfb59b1332d515f9354bbd6" prot="public" virt="non-virtual"><scope>paimon::FullTextSearch</scope><name>FullTextSearch</name></member>
+      <member refid="structpaimon_1_1_full_text_search_1a1b60c838523febd8165891726eb04ba4" prot="public" virt="non-virtual"><scope>paimon::FullTextSearch</scope><name>limit</name></member>
+      <member refid="structpaimon_1_1_full_text_search_1a0da70b865f2fa90d3aead777feb86802" prot="public" virt="non-virtual"><scope>paimon::FullTextSearch</scope><name>min_score</name></member>
+      <member refid="structpaimon_1_1_full_text_search_1a39f5dac7f0ee8cd321a438a6f122bfd0" prot="public" virt="non-virtual"><scope>paimon::FullTextSearch</scope><name>pre_filter</name></member>
+      <member refid="structpaimon_1_1_full_text_search_1ae1182ec479b2c34eeace57ddf98b183e" prot="public" virt="non-virtual"><scope>paimon::FullTextSearch</scope><name>query</name></member>
+      <member refid="structpaimon_1_1_full_text_search_1a14ff66414492a9246733842d2cd7ee46" prot="public" virt="non-virtual"><scope>paimon::FullTextSearch</scope><name>ReplacePreFilter</name></member>
+      <member refid="structpaimon_1_1_full_text_search_1aea47f986b27cfc7e525605ef6d315d59" prot="public" virt="non-virtual"><scope>paimon::FullTextSearch</scope><name>search_type</name></member>
+      <member refid="structpaimon_1_1_full_text_search_1a695a566b94394594d908e1b55249d190" prot="public" virt="non-virtual"><scope>paimon::FullTextSearch</scope><name>SearchType</name></member>
+      <member refid="structpaimon_1_1_full_text_search_1a94182f563dd124b749945501c72d8aaa" prot="public" virt="non-virtual"><scope>paimon::FullTextSearch</scope><name>with_score</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

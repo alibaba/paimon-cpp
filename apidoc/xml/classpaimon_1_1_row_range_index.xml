@@ -1,0 +1,239 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_row_range_index" kind="class" language="C++" prot="public">
+    <compoundname>paimon::RowRangeIndex</compoundname>
+    <includes refid="row__range__index_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_row_range_index_1a36a0ca71b4c8193282ac422f356ad05a" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &gt;</type>
+        <definition>std::vector&lt;Range&gt; paimon::RowRangeIndex::ranges_</definition>
+        <argsstring></argsstring>
+        <name>ranges_</name>
+        <qualifiedname>paimon::RowRangeIndex::ranges_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h" line="60" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h" bodystart="60" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_row_range_index_1af7e520d3feabb93dff02cb991c93bbf0" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+        <definition>std::vector&lt;int64_t&gt; paimon::RowRangeIndex::starts_</definition>
+        <argsstring></argsstring>
+        <name>starts_</name>
+        <qualifiedname>paimon::RowRangeIndex::starts_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h" line="61" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h" bodystart="61" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_row_range_index_1acc7cffdd4ac6226ce8bb0edc4ec6143b" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+        <definition>std::vector&lt;int64_t&gt; paimon::RowRangeIndex::ends_</definition>
+        <argsstring></argsstring>
+        <name>ends_</name>
+        <qualifiedname>paimon::RowRangeIndex::ends_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h" line="62" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h" bodystart="62" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_row_range_index_1a39836040eef56088623a478c480c5c60" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="classpaimon_1_1_row_range_index" kindref="compound">RowRangeIndex</ref> &gt;</type>
+        <definition>static Result&lt; RowRangeIndex &gt; paimon::RowRangeIndex::Create</definition>
+        <argsstring>(const std::vector&lt; Range &gt; &amp;ranges, bool merge_adjacent=true)</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::RowRangeIndex::Create</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &gt; &amp;</type>
+          <declname>ranges</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>merge_adjacent</declname>
+          <defval><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">true</ref></defval>
+        </param>
+        <briefdescription>
+<para>Creates a <ref refid="classpaimon_1_1_row_range_index" kindref="compound">RowRangeIndex</ref> from the given ranges. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The ranges will be sorted and merged (overlapping and adjacent ranges are combined) before indexing. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h" line="34" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_row_range_index_1a5b64ce7214cd0c5635ef719da9f29854" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &gt; &amp;</type>
+        <definition>const std::vector&lt; Range &gt; &amp; paimon::RowRangeIndex::Ranges</definition>
+        <argsstring>() const</argsstring>
+        <name>Ranges</name>
+        <qualifiedname>paimon::RowRangeIndex::Ranges</qualifiedname>
+        <briefdescription>
+<para>Returns the sorted, non-overlapping ranges held by this index. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h" line="38" column="23"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_row_range_index_1a02e9750b4b0507982f41c34896367a72" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::RowRangeIndex::Intersects</definition>
+        <argsstring>(int64_t start, int64_t end) const</argsstring>
+        <name>Intersects</name>
+        <qualifiedname>paimon::RowRangeIndex::Intersects</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>start</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>end</declname>
+        </param>
+        <briefdescription>
+<para>Returns true if any range in this index intersects with the interval [start, end]. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h" line="41" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_row_range_index_1a81286d95495bdee7f4c4c7697de77924" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::RowRangeIndex::Contains</definition>
+        <argsstring>(const Range &amp;range) const</argsstring>
+        <name>Contains</name>
+        <qualifiedname>paimon::RowRangeIndex::Contains</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &amp;</type>
+          <declname>range</declname>
+        </param>
+        <briefdescription>
+<para>Returns true if one range in this index fully contains <computeroutput>range</computeroutput>. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h" line="44" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_row_range_index_1a7eda44bb022037b128ab84046c439650" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::RowRangeIndex::ContainsExactly</definition>
+        <argsstring>(const Range &amp;range) const</argsstring>
+        <name>ContainsExactly</name>
+        <qualifiedname>paimon::RowRangeIndex::ContainsExactly</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &amp;</type>
+          <declname>range</declname>
+        </param>
+        <briefdescription>
+<para>Returns true if one range in this index exactly equals <computeroutput>range</computeroutput>. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h" line="47" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_row_range_index_1abe7f182f7d735493640f592dcefd74a2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &gt;</type>
+        <definition>std::vector&lt; Range &gt; paimon::RowRangeIndex::IntersectedRanges</definition>
+        <argsstring>(int64_t start, int64_t end) const</argsstring>
+        <name>IntersectedRanges</name>
+        <qualifiedname>paimon::RowRangeIndex::IntersectedRanges</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>start</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>end</declname>
+        </param>
+        <briefdescription>
+<para>Returns the sub-ranges of this index that intersect with the interval [start, end]. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Each returned range is clipped to lie within [start, end]. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h" line="51" column="17"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="classpaimon_1_1_row_range_index_1a1b9fe082918db9bcba84c39f2b2255f2" prot="private" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::RowRangeIndex::RowRangeIndex</definition>
+        <argsstring>(std::vector&lt; Range &gt; ranges)</argsstring>
+        <name>RowRangeIndex</name>
+        <qualifiedname>paimon::RowRangeIndex::RowRangeIndex</qualifiedname>
+        <param>
+          <type>std::vector&lt; <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &gt;</type>
+          <declname>ranges</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h" line="54" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_row_range_index_1aefcd2eab08c8884411fc566341a137b3" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::RowRangeIndex::LowerBound</definition>
+        <argsstring>(int64_t target) const</argsstring>
+        <name>LowerBound</name>
+        <qualifiedname>paimon::RowRangeIndex::LowerBound</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>target</declname>
+        </param>
+        <briefdescription>
+<para>Finds the first index in <computeroutput>ends_</computeroutput> whose value is &gt;= target (lower bound). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h" line="57" column="13"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Index for row ranges. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Provides efficient intersection queries over a sorted, non-overlapping collection of ranges using binary search. </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h" line="30" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/row_range_index.h" bodystart="30" bodyend="63"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_row_range_index_1a81286d95495bdee7f4c4c7697de77924" prot="public" virt="non-virtual"><scope>paimon::RowRangeIndex</scope><name>Contains</name></member>
+      <member refid="classpaimon_1_1_row_range_index_1a7eda44bb022037b128ab84046c439650" prot="public" virt="non-virtual"><scope>paimon::RowRangeIndex</scope><name>ContainsExactly</name></member>
+      <member refid="classpaimon_1_1_row_range_index_1a39836040eef56088623a478c480c5c60" prot="public" virt="non-virtual"><scope>paimon::RowRangeIndex</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_row_range_index_1acc7cffdd4ac6226ce8bb0edc4ec6143b" prot="private" virt="non-virtual"><scope>paimon::RowRangeIndex</scope><name>ends_</name></member>
+      <member refid="classpaimon_1_1_row_range_index_1abe7f182f7d735493640f592dcefd74a2" prot="public" virt="non-virtual"><scope>paimon::RowRangeIndex</scope><name>IntersectedRanges</name></member>
+      <member refid="classpaimon_1_1_row_range_index_1a02e9750b4b0507982f41c34896367a72" prot="public" virt="non-virtual"><scope>paimon::RowRangeIndex</scope><name>Intersects</name></member>
+      <member refid="classpaimon_1_1_row_range_index_1aefcd2eab08c8884411fc566341a137b3" prot="private" virt="non-virtual"><scope>paimon::RowRangeIndex</scope><name>LowerBound</name></member>
+      <member refid="classpaimon_1_1_row_range_index_1a5b64ce7214cd0c5635ef719da9f29854" prot="public" virt="non-virtual"><scope>paimon::RowRangeIndex</scope><name>Ranges</name></member>
+      <member refid="classpaimon_1_1_row_range_index_1a36a0ca71b4c8193282ac422f356ad05a" prot="private" virt="non-virtual"><scope>paimon::RowRangeIndex</scope><name>ranges_</name></member>
+      <member refid="classpaimon_1_1_row_range_index_1a1b9fe082918db9bcba84c39f2b2255f2" prot="private" virt="non-virtual"><scope>paimon::RowRangeIndex</scope><name>RowRangeIndex</name></member>
+      <member refid="classpaimon_1_1_row_range_index_1af7e520d3feabb93dff02cb991c93bbf0" prot="private" virt="non-virtual"><scope>paimon::RowRangeIndex</scope><name>starts_</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

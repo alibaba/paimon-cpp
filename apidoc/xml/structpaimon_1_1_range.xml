@@ -1,0 +1,292 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="structpaimon_1_1_range" kind="struct" language="C++" prot="public">
+    <compoundname>paimon::Range</compoundname>
+    <includes refid="range_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpaimon_1_1_range_1a2aceeba0549531343ec74e149c90f63c" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::Range::from</definition>
+        <argsstring></argsstring>
+        <name>from</name>
+        <qualifiedname>paimon::Range::from</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h" line="63" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h" bodystart="63" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_range_1a87a4a51556e185ec9becd15dc793984b" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::Range::to</definition>
+        <argsstring></argsstring>
+        <name>to</name>
+        <qualifiedname>paimon::Range::to</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h" line="64" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h" bodystart="64" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpaimon_1_1_range_1a04609a7bb8c8e1e147dcca1837c00113" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Range::Range</definition>
+        <argsstring>(int64_t _from, int64_t _to)</argsstring>
+        <name>Range</name>
+        <qualifiedname>paimon::Range::Range</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>_from</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>_to</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h" line="27" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="structpaimon_1_1_range_1a4e5188a823be4992d45bdaef7d0a0106" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::Range::Count</definition>
+        <argsstring>() const</argsstring>
+        <name>Count</name>
+        <qualifiedname>paimon::Range::Count</qualifiedname>
+        <briefdescription>
+<para>Returns the number of integers in the range [from, to]. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h" line="30" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="structpaimon_1_1_range_1ab6fc5a08930f75845d144ebe7acef612" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &gt;</type>
+        <definition>std::vector&lt; Range &gt; paimon::Range::Exclude</definition>
+        <argsstring>(const std::vector&lt; Range &gt; &amp;ranges) const</argsstring>
+        <name>Exclude</name>
+        <qualifiedname>paimon::Range::Exclude</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &gt; &amp;</type>
+          <declname>ranges</declname>
+        </param>
+        <briefdescription>
+<para>Excludes the given ranges from this range and returns the remaining ranges. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>For example, if this range is [0, 10000] and ranges to exclude are [1000, 2000], [3000, 4000], [5000, 6000], then the result is [0, 999], [2001, 2999], [4001, 4999], [6001, 10000].</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>ranges</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The ranges to exclude (can be unsorted and overlapping). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The remaining ranges after exclusion. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h" line="56" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="structpaimon_1_1_range_1a1a1fa574fef6cd9cf780a73dc1e6ca51" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Range::operator==</definition>
+        <argsstring>(const Range &amp;other) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>paimon::Range::operator==</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h" line="58" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="structpaimon_1_1_range_1a9bc43ca8202a788f950af5e3bd733501" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Range::operator&lt;</definition>
+        <argsstring>(const Range &amp;other) const</argsstring>
+        <name>operator&lt;</name>
+        <qualifiedname>paimon::Range::operator&lt;</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h" line="59" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="structpaimon_1_1_range_1af8818143954dcd7a22c6723137c35083" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::Range::ToString</definition>
+        <argsstring>() const</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::Range::ToString</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h" line="61" column="17"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="structpaimon_1_1_range_1aa860fd216a5ae6b852ebed611c571244" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::optional&lt; <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &gt;</type>
+        <definition>static std::optional&lt; Range &gt; paimon::Range::Intersection</definition>
+        <argsstring>(const Range &amp;left, const Range &amp;right)</argsstring>
+        <name>Intersection</name>
+        <qualifiedname>paimon::Range::Intersection</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &amp;</type>
+          <declname>left</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &amp;</type>
+          <declname>right</declname>
+        </param>
+        <briefdescription>
+<para>Computes the intersection of two ranges. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h" line="33" column="26"/>
+      </memberdef>
+      <memberdef kind="function" id="structpaimon_1_1_range_1a7e6136dd328220502123c7196c7e2eb7" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>static bool paimon::Range::HasIntersection</definition>
+        <argsstring>(const Range &amp;left, const Range &amp;right)</argsstring>
+        <name>HasIntersection</name>
+        <qualifiedname>paimon::Range::HasIntersection</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &amp;</type>
+          <declname>left</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &amp;</type>
+          <declname>right</declname>
+        </param>
+        <briefdescription>
+<para>Checks whether two ranges have any overlap. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h" line="36" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="structpaimon_1_1_range_1aedbe88852bcb7c12fbcff06f4deb9282" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &gt;</type>
+        <definition>static std::vector&lt; Range &gt; paimon::Range::SortAndMergeOverlap</definition>
+        <argsstring>(const std::vector&lt; Range &gt; &amp;ranges, bool adjacent)</argsstring>
+        <name>SortAndMergeOverlap</name>
+        <qualifiedname>paimon::Range::SortAndMergeOverlap</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &gt; &amp;</type>
+          <declname>ranges</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>adjacent</declname>
+        </param>
+        <briefdescription>
+<para>Sorts a list of ranges by <computeroutput>from</computeroutput>, then merges overlapping or adjacent ranges. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>ranges</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Input vector of ranges to merge. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>adjacent</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>If true, also merges ranges that are adjacent (e.g., [1,3] and [4,5] → [1,5]). If false, only merges strictly overlapping ranges. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A new vector of non-overlapping, sorted ranges. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h" line="44" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="structpaimon_1_1_range_1ac5eff536cfa76766c4e8e88fae4980e5" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &gt;</type>
+        <definition>static std::vector&lt; Range &gt; paimon::Range::And</definition>
+        <argsstring>(const std::vector&lt; Range &gt; &amp;left, const std::vector&lt; Range &gt; &amp;right)</argsstring>
+        <name>And</name>
+        <qualifiedname>paimon::Range::And</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &gt; &amp;</type>
+          <declname>left</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &gt; &amp;</type>
+          <declname>right</declname>
+        </param>
+        <briefdescription>
+<para>Computes the set intersection of two collections of disjoint, sorted ranges. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h" line="47" column="24"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> represents from (inclusive) and to (inclusive). </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h" line="26" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/range.h" bodystart="26" bodyend="65"/>
+    <listofallmembers>
+      <member refid="structpaimon_1_1_range_1ac5eff536cfa76766c4e8e88fae4980e5" prot="public" virt="non-virtual"><scope>paimon::Range</scope><name>And</name></member>
+      <member refid="structpaimon_1_1_range_1a4e5188a823be4992d45bdaef7d0a0106" prot="public" virt="non-virtual"><scope>paimon::Range</scope><name>Count</name></member>
+      <member refid="structpaimon_1_1_range_1ab6fc5a08930f75845d144ebe7acef612" prot="public" virt="non-virtual"><scope>paimon::Range</scope><name>Exclude</name></member>
+      <member refid="structpaimon_1_1_range_1a2aceeba0549531343ec74e149c90f63c" prot="public" virt="non-virtual"><scope>paimon::Range</scope><name>from</name></member>
+      <member refid="structpaimon_1_1_range_1a7e6136dd328220502123c7196c7e2eb7" prot="public" virt="non-virtual"><scope>paimon::Range</scope><name>HasIntersection</name></member>
+      <member refid="structpaimon_1_1_range_1aa860fd216a5ae6b852ebed611c571244" prot="public" virt="non-virtual"><scope>paimon::Range</scope><name>Intersection</name></member>
+      <member refid="structpaimon_1_1_range_1a9bc43ca8202a788f950af5e3bd733501" prot="public" virt="non-virtual"><scope>paimon::Range</scope><name>operator&lt;</name></member>
+      <member refid="structpaimon_1_1_range_1a1a1fa574fef6cd9cf780a73dc1e6ca51" prot="public" virt="non-virtual"><scope>paimon::Range</scope><name>operator==</name></member>
+      <member refid="structpaimon_1_1_range_1a04609a7bb8c8e1e147dcca1837c00113" prot="public" virt="non-virtual"><scope>paimon::Range</scope><name>Range</name></member>
+      <member refid="structpaimon_1_1_range_1aedbe88852bcb7c12fbcff06f4deb9282" prot="public" virt="non-virtual"><scope>paimon::Range</scope><name>SortAndMergeOverlap</name></member>
+      <member refid="structpaimon_1_1_range_1a87a4a51556e185ec9becd15dc793984b" prot="public" virt="non-virtual"><scope>paimon::Range</scope><name>to</name></member>
+      <member refid="structpaimon_1_1_range_1af8818143954dcd7a22c6723137c35083" prot="public" virt="non-virtual"><scope>paimon::Range</scope><name>ToString</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

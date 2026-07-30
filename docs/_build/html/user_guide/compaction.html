@@ -1,0 +1,799 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Compaction &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=d7227091" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'user_guide/compaction';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Read" href="read.html" />
+    <link rel="prev" title="Commit" href="commit.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.3.0" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="catalog.html">Catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="schema.html">Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="snapshot.html">Snapshot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="manifest.html">Manifest</a></li>
+<li class="toctree-l1"><a class="reference internal" href="manifest_cache.html">Manifest Cache</a></li>
+<li class="toctree-l1"><a class="reference internal" href="manifest_entry_cache.html">Manifest Entry Cache</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parquet_metadata_cache.html">Parquet Metadata Cache</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_types.html">Data Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="primary_key_table.html">Primary Key Table</a></li>
+<li class="toctree-l1"><a class="reference internal" href="append_only_table.html">Append Only Table</a></li>
+<li class="toctree-l1"><a class="reference internal" href="system_tables.html">System Tables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="write.html">Write</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commit.html">Commit</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Compaction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read.html">Read</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clean.html">Data Cleanup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="prefetch.html">Prefetch</a></li>
+
+
+
+<li class="toctree-l1"><a class="reference internal" href="arrow.html">Memory Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="global_index.html">Global Index</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../user_guide.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Compaction</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="compaction">
+<h1>Compaction<a class="headerlink" href="#compaction" title="Link to this heading">#</a></h1>
+<p>Compaction is the process of merging multiple small data files into fewer, larger
+files. It is a resource intensive procedure which consumes CPU time and disk IO,
+so too frequent compaction may result in slower writes. However, without
+compaction, the accumulation of small files degrades query performance. Tuning
+compaction is therefore a trade-off between write throughput and read efficiency.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul class="simple">
+<li><p>There can only be one job working on the same partition’s compaction,
+otherwise it will cause conflicts.</p></li>
+<li><p>C++ Paimon does not support producing changelog for now.</p></li>
+<li><p>Compaction is disabled when <code class="docutils literal notranslate"><span class="pre">write-only</span></code> is set to <code class="docutils literal notranslate"><span class="pre">true</span></code>, or when the
+table uses dynamic bucketing (<code class="docutils literal notranslate"><span class="pre">bucket</span> <span class="pre">=</span> <span class="pre">-1</span></code>) for append-only tables.</p></li>
+<li><p>For a complete list of compaction-related configurations, see the
+<a class="reference internal" href="../api/defs.html#cpp-api-options"><span class="std std-ref">Options API Reference</span></a>.</p></li>
+</ul>
+</div>
+<section id="append-only-table-compaction">
+<h2>Append-Only Table Compaction<a class="headerlink" href="#append-only-table-compaction" title="Link to this heading">#</a></h2>
+<p>In append-only table, data files are simply appended in sequence order.
+Over time, many small files accumulate, which degrades read performance due to the
+overhead of opening and scanning numerous files.</p>
+<p>Append-only table compaction merges multiple small files into fewer, larger files
+to improve read efficiency. The compaction is performed asynchronously and does
+not block writes.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Append-only table compaction is only available for fixed-bucket mode
+(<code class="docutils literal notranslate"><span class="pre">bucket</span> <span class="pre">&gt;</span> <span class="pre">0</span></code>). Dynamic bucketing (<code class="docutils literal notranslate"><span class="pre">bucket</span> <span class="pre">=</span> <span class="pre">-1</span></code>) does not support
+compaction. Tables with blob columns also skip compaction.</p>
+</div>
+<section id="auto-compaction">
+<h3>Auto Compaction<a class="headerlink" href="#auto-compaction" title="Link to this heading">#</a></h3>
+<p>During each flush, the writer triggers a best-effort auto compaction. The
+compaction picker scans the file queue ordered by sequence number and selects a
+contiguous window of files for merging when the number of candidate files reaches
+the <code class="docutils literal notranslate"><span class="pre">compaction.min.file-num</span></code> threshold.</p>
+</section>
+<section id="full-compaction">
+<h3>Full Compaction<a class="headerlink" href="#full-compaction" title="Link to this heading">#</a></h3>
+<p>Full compaction rewrites all eligible files in the bucket. During full
+compaction:</p>
+<ul class="simple">
+<li><p>Files whose size is already at or above <code class="docutils literal notranslate"><span class="pre">compaction.file-size</span></code> (and have no
+associated deletion vectors) are skipped to avoid unnecessary rewrites.</p></li>
+<li><p>When deletion vectors are enabled, all files are always eligible for
+compaction regardless of size, because deletion vectors must be applied.</p></li>
+<li><p>When <code class="docutils literal notranslate"><span class="pre">compaction.force-rewrite-all-files</span></code> is <code class="docutils literal notranslate"><span class="pre">true</span></code>, all files are
+rewritten unconditionally.</p></li>
+<li><p>Without deletion vectors, full compaction only proceeds when the number of
+small files exceeds the number of large files and the total file count is at
+least 3.</p></li>
+</ul>
+<p>After compaction, if the last output file is still smaller than
+<code class="docutils literal notranslate"><span class="pre">compaction.file-size</span></code>, it is placed back into the compaction queue for future
+merging.</p>
+</section>
+<section id="append-only-table-compaction-options">
+<h3>Append-Only Table Compaction Options<a class="headerlink" href="#append-only-table-compaction-options" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 10.0%" />
+<col style="width: 10.0%" />
+<col style="width: 10.0%" />
+<col style="width: 40.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Option</p></th>
+<th class="head"><p>Required</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">compaction.min.file-num</span></code></p></td>
+<td><p>No</p></td>
+<td><p>5</p></td>
+<td><p>Integer</p></td>
+<td><p>The minimum number of files to trigger an auto compaction for
+append-only tables.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</section>
+<section id="primary-key-table-compaction">
+<h2>Primary Key Table Compaction<a class="headerlink" href="#primary-key-table-compaction" title="Link to this heading">#</a></h2>
+<p>Primary key tables use an LSM tree (log-structured merge-tree) for file storage.
+When more and more records are written, the number of sorted runs increases.
+Because querying an LSM tree requires all sorted runs to be combined, too many
+sorted runs will result in poor query performance, or even out of memory.</p>
+<p>To limit the number of sorted runs, several sorted runs are merged into one big
+sorted run once in a while. Paimon currently adopts a compaction strategy similar
+to RocksDB’s <a class="reference external" href="https://github.com/facebook/rocksdb/wiki/Universal-Compaction">universal compaction</a>.</p>
+<p>Primary key table compaction solves:</p>
+<ul class="simple">
+<li><p>Reduce Level 0 files to avoid poor query performance.</p></li>
+<li><p>Produce deletion vectors for MOW mode.</p></li>
+</ul>
+<section id="id1">
+<h3>Full Compaction<a class="headerlink" href="#id1" title="Link to this heading">#</a></h3>
+<p>Paimon uses Universal Compaction. By default, when there is too much incremental
+data, Full Compaction will be automatically performed. You don’t usually have to
+worry about it.</p>
+<p>Paimon also provides configurations that allow for regular execution of Full
+Compaction:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">compaction.optimization-interval</span></code>: Implying how often to perform an
+optimization full compaction. This configuration is used to ensure the query
+timeliness of the read-optimized system table.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">compaction.total-size-threshold</span></code>: Full compaction will be constantly triggered
+when total size is smaller than this threshold.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">compaction.incremental-size-threshold</span></code>: Full compaction will be constantly
+triggered when incremental size is bigger than this threshold.</p></li>
+</ul>
+</section>
+<section id="lookup-compaction">
+<h3>Lookup Compaction<a class="headerlink" href="#lookup-compaction" title="Link to this heading">#</a></h3>
+<p>When a primary key table is configured with <code class="docutils literal notranslate"><span class="pre">lookup</span></code> changelog producer or
+<code class="docutils literal notranslate"><span class="pre">first-row</span></code> merge engine or has enabled deletion vectors for MOW mode, Paimon
+will use a radical compaction strategy to force compacting level 0 files to
+higher levels for every compaction trigger.</p>
+<p>Paimon also provides configurations to optimize the frequency of this
+compaction:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">lookup-compact</span></code>: compact mode used for lookup compaction. Possible values:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">radical</span></code>: will use <code class="docutils literal notranslate"><span class="pre">ForceUpLevel0Compaction</span></code> strategy to radically
+compact new files.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gentle</span></code>: will use <code class="docutils literal notranslate"><span class="pre">UniversalCompaction</span></code> strategy to gently compact new
+files.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lookup-compact.max-interval</span></code>: The max interval for a forced L0 lookup
+compaction to be triggered in <code class="docutils literal notranslate"><span class="pre">gentle</span></code> mode. This option is only valid when
+<code class="docutils literal notranslate"><span class="pre">lookup-compact</span></code> mode is <code class="docutils literal notranslate"><span class="pre">gentle</span></code>.</p></li>
+</ul>
+<p>By configuring <code class="docutils literal notranslate"><span class="pre">lookup-compact</span></code> as <code class="docutils literal notranslate"><span class="pre">gentle</span></code>, new files in L0 will not be
+compacted immediately. This may greatly reduce the overall resource usage at the
+expense of worse data freshness in certain cases.</p>
+</section>
+<section id="primary-key-table-compaction-options">
+<h3>Primary Key Table Compaction Options<a class="headerlink" href="#primary-key-table-compaction-options" title="Link to this heading">#</a></h3>
+<section id="number-of-sorted-runs-to-pause-writing">
+<h4>Number of Sorted Runs to Pause Writing<a class="headerlink" href="#number-of-sorted-runs-to-pause-writing" title="Link to this heading">#</a></h4>
+<p>When the number of sorted runs is small, Paimon writers will perform compaction
+asynchronously in separated threads, so records can be continuously written into
+the table. However, to avoid unbounded growth of sorted runs, writers will pause
+writing when the number of sorted runs hits the threshold.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 10.0%" />
+<col style="width: 10.0%" />
+<col style="width: 10.0%" />
+<col style="width: 40.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Option</p></th>
+<th class="head"><p>Required</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">num-sorted-run.stop-trigger</span></code></p></td>
+<td><p>No</p></td>
+<td><p>(none)</p></td>
+<td><p>Integer</p></td>
+<td><p>The number of sorted runs that trigger the stopping of writes. The
+default value is <code class="docutils literal notranslate"><span class="pre">num-sorted-run.compaction-trigger</span> <span class="pre">+</span> <span class="pre">3</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Write stalls will become less frequent when <code class="docutils literal notranslate"><span class="pre">num-sorted-run.stop-trigger</span></code>
+becomes larger, thus improving writing performance. However, if this value
+becomes too large, more memory and CPU time will be needed when querying the
+table.</p>
+</section>
+<section id="number-of-sorted-runs-to-trigger-compaction">
+<h4>Number of Sorted Runs to Trigger Compaction<a class="headerlink" href="#number-of-sorted-runs-to-trigger-compaction" title="Link to this heading">#</a></h4>
+<p>Paimon uses LSM tree which supports a large number of updates. LSM organizes
+files in several sorted runs. When querying records from an LSM tree, all sorted
+runs must be combined to produce a complete view of all records.</p>
+<p>One can easily see that too many sorted runs will result in poor query
+performance. To keep the number of sorted runs in a reasonable range, Paimon
+writers will automatically perform compactions. The following table property
+determines the minimum number of sorted runs to trigger a compaction.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 10.0%" />
+<col style="width: 10.0%" />
+<col style="width: 10.0%" />
+<col style="width: 40.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Option</p></th>
+<th class="head"><p>Required</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">num-sorted-run.compaction-trigger</span></code></p></td>
+<td><p>No</p></td>
+<td><p>5</p></td>
+<td><p>Integer</p></td>
+<td><p>The sorted run number to trigger compaction. Includes level 0 files (one
+file one sorted run) and high-level runs (one level one sorted run).</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Compaction will become less frequent when <code class="docutils literal notranslate"><span class="pre">num-sorted-run.compaction-trigger</span></code>
+becomes larger, thus improving writing performance. However, if this value
+becomes too large, more memory and CPU time will be needed when querying the
+table. This is a trade-off between writing and query performance.</p>
+</section>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="commit.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Commit</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="read.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Read</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#append-only-table-compaction">Append-Only Table Compaction</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#auto-compaction">Auto Compaction</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#full-compaction">Full Compaction</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#append-only-table-compaction-options">Append-Only Table Compaction Options</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#primary-key-table-compaction">Primary Key Table Compaction</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Full Compaction</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lookup-compaction">Lookup Compaction</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#primary-key-table-compaction-options">Primary Key Table Compaction Options</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#number-of-sorted-runs-to-pause-writing">Number of Sorted Runs to Pause Writing</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#number-of-sorted-runs-to-trigger-compaction">Number of Sorted Runs to Trigger Compaction</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/user_guide/compaction.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

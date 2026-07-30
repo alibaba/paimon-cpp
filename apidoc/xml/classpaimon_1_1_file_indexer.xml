@@ -1,0 +1,156 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_file_indexer" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::FileIndexer</compoundname>
+    <includes refid="file__indexer_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_indexer.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_indexer_1a81138fb5658ade9140d7cf0b4d8a1066" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::FileIndexer::~FileIndexer</definition>
+        <argsstring>()=default</argsstring>
+        <name>~FileIndexer</name>
+        <qualifiedname>paimon::FileIndexer::~FileIndexer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_indexer.h" line="34" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_indexer_1a072c568a47206e4591bab167a9efa056" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_reader" kindref="compound">FileIndexReader</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::shared_ptr&lt; FileIndexReader &gt; &gt; paimon::FileIndexer::CreateReader</definition>
+        <argsstring>(::ArrowSchema *arrow_schema, int32_t start, int32_t length, const std::shared_ptr&lt; InputStream &gt; &amp;input_stream, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool) const =0</argsstring>
+        <name>CreateReader</name>
+        <qualifiedname>paimon::FileIndexer::CreateReader</qualifiedname>
+        <param>
+          <type><ref refid="struct_arrow_schema" kindref="compound">::ArrowSchema</ref> *</type>
+          <declname>arrow_schema</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>start</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>length</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_input_stream" kindref="compound">InputStream</ref> &gt; &amp;</type>
+          <declname>input_stream</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Create <computeroutput><ref refid="classpaimon_1_1_file_index_reader" kindref="compound">FileIndexReader</ref></computeroutput> with input stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>arrow_schema</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref> derived from arrow schema or struct type with specified indexed field. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>start</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Start position of input stream. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>length</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Length of index bytes. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>input_stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Input stream for read index. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for memory allocation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_file_index_reader" kindref="compound">FileIndexReader</ref></computeroutput> to read index. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_indexer.h" line="45" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_indexer_1a3a2bd3d51fe4c0b4cabfde03093ac622" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_writer" kindref="compound">FileIndexWriter</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::shared_ptr&lt; FileIndexWriter &gt; &gt; paimon::FileIndexer::CreateWriter</definition>
+        <argsstring>(::ArrowSchema *arrow_schema, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool) const =0</argsstring>
+        <name>CreateWriter</name>
+        <qualifiedname>paimon::FileIndexer::CreateWriter</qualifiedname>
+        <param>
+          <type><ref refid="struct_arrow_schema" kindref="compound">::ArrowSchema</ref> *</type>
+          <declname>arrow_schema</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Create <computeroutput><ref refid="classpaimon_1_1_file_index_writer" kindref="compound">FileIndexWriter</ref></computeroutput> for arrow schema. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>arrow_schema</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref> derived from arrow schema or struct type with specified indexed field. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for memory allocation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_file_index_writer" kindref="compound">FileIndexWriter</ref></computeroutput> to write index. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_indexer.h" line="56" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>File index interface. To read and write a file index. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_indexer.h" line="32" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_indexer.h" bodystart="32" bodyend="58"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_file_indexer_1a072c568a47206e4591bab167a9efa056" prot="public" virt="pure-virtual"><scope>paimon::FileIndexer</scope><name>CreateReader</name></member>
+      <member refid="classpaimon_1_1_file_indexer_1a3a2bd3d51fe4c0b4cabfde03093ac622" prot="public" virt="pure-virtual"><scope>paimon::FileIndexer</scope><name>CreateWriter</name></member>
+      <member refid="classpaimon_1_1_file_indexer_1a81138fb5658ade9140d7cf0b4d8a1066" prot="public" virt="virtual"><scope>paimon::FileIndexer</scope><name>~FileIndexer</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

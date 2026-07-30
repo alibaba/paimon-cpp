@@ -1,0 +1,158 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_file_index_format" kind="class" language="C++" prot="public">
+    <compoundname>paimon::FileIndexFormat</compoundname>
+    <includes refid="file__index__format_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h</includes>
+    <innerclass refid="classpaimon_1_1_file_index_format_1_1_reader" prot="public">paimon::FileIndexFormat::Reader</innerclass>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_file_index_format_1a51305096c29a68fe830eb04c79a50b8c" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>const int64_t paimon::FileIndexFormat::MAGIC</definition>
+        <argsstring></argsstring>
+        <name>MAGIC</name>
+        <qualifiedname>paimon::FileIndexFormat::MAGIC</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h" line="100" column="26" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h" bodystart="100" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_file_index_format_1ae9b162819107a6cb361f2665a643157d" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>const int32_t paimon::FileIndexFormat::EMPTY_INDEX_FLAG</definition>
+        <argsstring></argsstring>
+        <name>EMPTY_INDEX_FLAG</name>
+        <qualifiedname>paimon::FileIndexFormat::EMPTY_INDEX_FLAG</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h" line="101" column="26" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h" bodystart="101" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_file_index_format_1a8f5a2d0c97bea216d8fd4a0923be40c2" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>const int32_t paimon::FileIndexFormat::V_1</definition>
+        <argsstring></argsstring>
+        <name>V_1</name>
+        <qualifiedname>paimon::FileIndexFormat::V_1</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h" line="102" column="26" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h" bodystart="102" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_index_format_1ac515aada8b5be997429df54417413678" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_file_index_format_1_1_reader" kindref="compound">Reader</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; Reader &gt; &gt; paimon::FileIndexFormat::CreateReader</definition>
+        <argsstring>(const std::shared_ptr&lt; InputStream &gt; &amp;input_stream, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>CreateReader</name>
+        <qualifiedname>paimon::FileIndexFormat::CreateReader</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_input_stream" kindref="compound">InputStream</ref> &gt; &amp;</type>
+          <declname>input_stream</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Creates a <computeroutput><ref refid="classpaimon_1_1_file_index_format_1_1_reader" kindref="compound">Reader</ref></computeroutput> to parse a index file (may contain multiple indexes) from the given input stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>input_stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Input stream containing serialized index data. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for temporary allocations during reading. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A unique pointer to a <computeroutput><ref refid="classpaimon_1_1_file_index_format_1_1_reader" kindref="compound">Reader</ref></computeroutput> on success, or an error if the stream is invalid (e.g., wrong magic, unsupported version, or corrupted data). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h" line="96" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Defines the on-disk format and versioning for Paimon file-level indexes. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>File index file format. Put all column and offset in the header.</para>
+<para><preformatted>
+ _______________________________________    _____________________
+|     magic    | version | head length |
+|--------------------------------------|
+|            column number             |
+|--------------------------------------|
+|   column 1        |  index number    |
+|--------------------------------------|
+|  index name 1 | start pos | length   |
+|--------------------------------------|
+|  index name 2 | start pos | length   |
+|--------------------------------------|
+|  index name 3 | start pos | length   |
+|--------------------------------------|            HEAD
+|   column 2        |  index number    |
+|--------------------------------------|
+|  index name 1 | start pos | length   |
+|--------------------------------------|
+|  index name 2 | start pos | length   |
+|--------------------------------------|
+|  index name 3 | start pos | length   |
+|--------------------------------------|
+|                 ...                  |
+|--------------------------------------|
+|                 ...                  |
+|--------------------------------------|
+|  redundant length | redundant bytes  |
+|--------------------------------------|    ---------------------
+|                BODY                  |
+|                BODY                  |
+|                BODY                  |             BODY
+|                BODY                  |
+|______________________________________|    _____________________
+
+magic:               8 bytes long
+version:             4 bytes int
+head length:         4 bytes int
+column number:       4 bytes int
+column x:            var bytes utf (length + bytes)
+index number:        4 bytes int (how many column items below)
+index name x:        var bytes utf
+start pos:           4 bytes int
+length:              4 bytes int
+redundant length:    4 bytes int (for compatibility with later versions, in this version,
+                     content is zero)
+redundant bytes:     var bytes (for compatibility with later version, in this version, is empty)
+BODY:                column index bytes + column index bytes + column index bytes + .......
+</preformatted> </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h" line="86" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h" bodystart="86" bodyend="103"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_file_index_format_1ac515aada8b5be997429df54417413678" prot="public" virt="non-virtual"><scope>paimon::FileIndexFormat</scope><name>CreateReader</name></member>
+      <member refid="classpaimon_1_1_file_index_format_1ae9b162819107a6cb361f2665a643157d" prot="public" virt="non-virtual"><scope>paimon::FileIndexFormat</scope><name>EMPTY_INDEX_FLAG</name></member>
+      <member refid="classpaimon_1_1_file_index_format_1a51305096c29a68fe830eb04c79a50b8c" prot="public" virt="non-virtual"><scope>paimon::FileIndexFormat</scope><name>MAGIC</name></member>
+      <member refid="classpaimon_1_1_file_index_format_1a8f5a2d0c97bea216d8fd4a0923be40c2" prot="public" virt="non-virtual"><scope>paimon::FileIndexFormat</scope><name>V_1</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,162 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_read_ahead_cache" kind="class" language="C++" prot="public">
+    <compoundname>paimon::ReadAheadCache</compoundname>
+    <includes refid="read__ahead__cache_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_read_ahead_cache_1a1d442726bac5c6fbfa3cce79577a4123" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Impl</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;Impl&gt; paimon::ReadAheadCache::impl_</definition>
+        <argsstring></argsstring>
+        <name>impl_</name>
+        <qualifiedname>paimon::ReadAheadCache::impl_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" line="179" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" bodystart="179" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_read_ahead_cache_1a59419e607f302c714b0ed01f258937b7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::ReadAheadCache::ReadAheadCache</definition>
+        <argsstring>(const std::shared_ptr&lt; InputStream &gt; &amp;stream, const CacheConfig &amp;config, const std::shared_ptr&lt; MemoryPool &gt; &amp;memory_pool)</argsstring>
+        <name>ReadAheadCache</name>
+        <qualifiedname>paimon::ReadAheadCache::ReadAheadCache</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_input_stream" kindref="compound">InputStream</ref> &gt; &amp;</type>
+          <declname>stream</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_cache_config" kindref="compound">CacheConfig</ref> &amp;</type>
+          <declname>config</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>memory_pool</declname>
+        </param>
+        <briefdescription>
+<para>Construct a read cache with given options. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" line="153" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_ahead_cache_1a973c05d669dd4cfac5852e0ac5a61dc5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::ReadAheadCache::~ReadAheadCache</definition>
+        <argsstring>()</argsstring>
+        <name>~ReadAheadCache</name>
+        <qualifiedname>paimon::ReadAheadCache::~ReadAheadCache</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" line="155" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_ahead_cache_1a9c467e26b34251cede32cd43ca79b998" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::ReadAheadCache::Init</definition>
+        <argsstring>(std::vector&lt; ByteRange &gt; &amp;&amp;ranges)</argsstring>
+        <name>Init</name>
+        <qualifiedname>paimon::ReadAheadCache::Init</qualifiedname>
+        <param>
+          <type>std::vector&lt; <ref refid="structpaimon_1_1_byte_range" kindref="compound">ByteRange</ref> &gt; &amp;&amp;</type>
+          <declname>ranges</declname>
+        </param>
+        <briefdescription>
+<para>Initialize the cache with given byte ranges to be cached. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>ranges</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The byte ranges to be cached. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> of the operation. </para>
+</simplesect>
+<simplesect kind="note"><para>This method must be called before any <ref refid="classpaimon_1_1_read_ahead_cache_1aef0d61f73f6a97c2b980c391f3d1be52" kindref="member">Read()</ref> calls. Ranges will be coalesced based on the cache configuration. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" line="162" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_ahead_cache_1aef0d61f73f6a97c2b980c391f3d1be52" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="structpaimon_1_1_byte_slice" kindref="compound">ByteSlice</ref> &gt;</type>
+        <definition>Result&lt; ByteSlice &gt; paimon::ReadAheadCache::Read</definition>
+        <argsstring>(const ByteRange &amp;range)</argsstring>
+        <name>Read</name>
+        <qualifiedname>paimon::ReadAheadCache::Read</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_byte_range" kindref="compound">ByteRange</ref> &amp;</type>
+          <declname>range</declname>
+        </param>
+        <briefdescription>
+<para>Read a range previously provided to <ref refid="classpaimon_1_1_read_ahead_cache_1a9c467e26b34251cede32cd43ca79b998" kindref="member">Init()</ref>. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>range</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The byte range to read. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The byte slice containing the requested data. If the data is not yet cached (cache miss), the returned <computeroutput><ref refid="structpaimon_1_1_byte_slice" kindref="compound">ByteSlice</ref></computeroutput> will have a null buffer (<computeroutput>buffer == nullptr</computeroutput>) </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" line="168" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_ahead_cache_1a7b87e72510149507434b9bd6aa01d2f5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::ReadAheadCache::Reset</definition>
+        <argsstring>()</argsstring>
+        <name>Reset</name>
+        <qualifiedname>paimon::ReadAheadCache::Reset</qualifiedname>
+        <briefdescription>
+<para>Reset the cache to its initial state, clearing all cached data and configuration. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This method waits for all ongoing asynchronous read operations to complete, clears all cached entries, and resets the internal state so that <ref refid="classpaimon_1_1_read_ahead_cache_1a9c467e26b34251cede32cd43ca79b998" kindref="member">Init()</ref> can be called again. After calling Reset, the cache can be safely re-initialized with new ranges. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" line="175" column="10"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A read cache designed to hide IO latencies when reading. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Prefetching strategy: When a range is read, the cache will prefetch up to <computeroutput>pre_buffer_range_count</computeroutput> additional adjacent ranges ahead of the requested offset. This helps hide I/O latency for sequential access. Example: If you read range [0, 100), and pre_buffer_range_count=2, the next two configured ranges will also be prefetched.</para>
+<para>Eviction policy: The cache uses a simple FIFO eviction policy based on total cached byte size. When adding new ranges would exceed <computeroutput>buffer_size_limit</computeroutput>, the oldest cached ranges are evicted first until there is enough space for the new data. </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" line="150" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/read_ahead_cache.h" bodystart="150" bodyend="180"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_read_ahead_cache_1a1d442726bac5c6fbfa3cce79577a4123" prot="private" virt="non-virtual"><scope>paimon::ReadAheadCache</scope><name>impl_</name></member>
+      <member refid="classpaimon_1_1_read_ahead_cache_1a9c467e26b34251cede32cd43ca79b998" prot="public" virt="non-virtual"><scope>paimon::ReadAheadCache</scope><name>Init</name></member>
+      <member refid="classpaimon_1_1_read_ahead_cache_1aef0d61f73f6a97c2b980c391f3d1be52" prot="public" virt="non-virtual"><scope>paimon::ReadAheadCache</scope><name>Read</name></member>
+      <member refid="classpaimon_1_1_read_ahead_cache_1a59419e607f302c714b0ed01f258937b7" prot="public" virt="non-virtual"><scope>paimon::ReadAheadCache</scope><name>ReadAheadCache</name></member>
+      <member refid="classpaimon_1_1_read_ahead_cache_1a7b87e72510149507434b9bd6aa01d2f5" prot="public" virt="non-virtual"><scope>paimon::ReadAheadCache</scope><name>Reset</name></member>
+      <member refid="classpaimon_1_1_read_ahead_cache_1a973c05d669dd4cfac5852e0ac5a61dc5" prot="public" virt="non-virtual"><scope>paimon::ReadAheadCache</scope><name>~ReadAheadCache</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

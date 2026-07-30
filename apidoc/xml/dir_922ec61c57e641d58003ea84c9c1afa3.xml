@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_922ec61c57e641d58003ea84c9c1afa3" kind="dir">
+    <compoundname>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source</compoundname>
+    <innerfile refid="data__split_8h">data_split.h</innerfile>
+    <innerfile refid="plan_8h">plan.h</innerfile>
+    <innerfile refid="split_8h">split.h</innerfile>
+    <innerfile refid="startup__mode_8h">startup_mode.h</innerfile>
+    <innerfile refid="table__read_8h">table_read.h</innerfile>
+    <innerfile refid="table__scan_8h">table_scan.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/"/>
+  </compounddef>
+</doxygen>

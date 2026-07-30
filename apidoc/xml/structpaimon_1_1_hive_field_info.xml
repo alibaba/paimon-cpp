@@ -1,0 +1,112 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="structpaimon_1_1_hive_field_info" kind="struct" language="C++" prot="public">
+    <compoundname>paimon::HiveFieldInfo</compoundname>
+    <includes refid="bucket__function__type_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_function_type.h</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpaimon_1_1_hive_field_info_1aff92e731b9ad83369e3a264af67261bf" prot="public" static="no" mutable="no">
+        <type><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7" kindref="member">FieldType</ref></type>
+        <definition>FieldType paimon::HiveFieldInfo::type</definition>
+        <argsstring></argsstring>
+        <name>type</name>
+        <qualifiedname>paimon::HiveFieldInfo::type</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_function_type.h" line="42" column="15" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_function_type.h" bodystart="42" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_hive_field_info_1a08d3f151a16dfe3cfcf5ffb370b04c9d" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::HiveFieldInfo::precision</definition>
+        <argsstring></argsstring>
+        <name>precision</name>
+        <qualifiedname>paimon::HiveFieldInfo::precision</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_function_type.h" line="43" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_function_type.h" bodystart="43" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_hive_field_info_1ae83c6d8c2ff3b886a7bfdfbe7d67309d" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::HiveFieldInfo::scale</definition>
+        <argsstring></argsstring>
+        <name>scale</name>
+        <qualifiedname>paimon::HiveFieldInfo::scale</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_function_type.h" line="44" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_function_type.h" bodystart="44" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpaimon_1_1_hive_field_info_1a6f60ca88da79596e16ecf952abedd3c3" prot="public" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::HiveFieldInfo::HiveFieldInfo</definition>
+        <argsstring>(FieldType t)</argsstring>
+        <name>HiveFieldInfo</name>
+        <qualifiedname>paimon::HiveFieldInfo::HiveFieldInfo</qualifiedname>
+        <param>
+          <type><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7" kindref="member">FieldType</ref></type>
+          <declname>t</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_function_type.h" line="46" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_function_type.h" bodystart="46" bodyend="46"/>
+      </memberdef>
+      <memberdef kind="function" id="structpaimon_1_1_hive_field_info_1a50e198ea2a0f71452a62c5980130ce03" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::HiveFieldInfo::HiveFieldInfo</definition>
+        <argsstring>(FieldType t, int32_t p, int32_t s)</argsstring>
+        <name>HiveFieldInfo</name>
+        <qualifiedname>paimon::HiveFieldInfo::HiveFieldInfo</qualifiedname>
+        <param>
+          <type><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7" kindref="member">FieldType</ref></type>
+          <declname>t</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>p</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_function_type.h" line="47" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_function_type.h" bodystart="47" bodyend="47"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Describes a field&apos;s type information needed for Hive hashing. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_function_type.h" line="41" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/bucket_function_type.h" bodystart="41" bodyend="48"/>
+    <listofallmembers>
+      <member refid="structpaimon_1_1_hive_field_info_1a6f60ca88da79596e16ecf952abedd3c3" prot="public" virt="non-virtual"><scope>paimon::HiveFieldInfo</scope><name>HiveFieldInfo</name></member>
+      <member refid="structpaimon_1_1_hive_field_info_1a50e198ea2a0f71452a62c5980130ce03" prot="public" virt="non-virtual"><scope>paimon::HiveFieldInfo</scope><name>HiveFieldInfo</name></member>
+      <member refid="structpaimon_1_1_hive_field_info_1a08d3f151a16dfe3cfcf5ffb370b04c9d" prot="public" virt="non-virtual"><scope>paimon::HiveFieldInfo</scope><name>precision</name></member>
+      <member refid="structpaimon_1_1_hive_field_info_1ae83c6d8c2ff3b886a7bfdfbe7d67309d" prot="public" virt="non-virtual"><scope>paimon::HiveFieldInfo</scope><name>scale</name></member>
+      <member refid="structpaimon_1_1_hive_field_info_1aff92e731b9ad83369e3a264af67261bf" prot="public" virt="non-virtual"><scope>paimon::HiveFieldInfo</scope><name>type</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,205 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="logging_8h" kind="file" language="C++">
+    <compoundname>logging.h</compoundname>
+    <includes local="no">functional</includes>
+    <includes local="no">memory</includes>
+    <includes local="no">string</includes>
+    <includes refid="visibility_8h" local="yes">paimon/visibility.h</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h</label>
+        <link refid="logging_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>paimon/visibility.h</label>
+        <link refid="visibility_8h"/>
+      </node>
+      <node id="2">
+        <label>functional</label>
+      </node>
+      <node id="3">
+        <label>memory</label>
+      </node>
+      <node id="4">
+        <label>string</label>
+      </node>
+    </incdepgraph>
+    <innerclass refid="classpaimon_1_1_logger" prot="public">paimon::Logger</innerclass>
+    <innernamespace refid="namespacepaimon">paimon</innernamespace>
+    <sectiondef kind="define">
+      <memberdef kind="define" id="logging_8h_1a906414492c7578a9b4a45deff54f1747" prot="public" static="no">
+        <name>PAIMON_LOGGER_IMPL</name>
+        <initializer>&quot;logger_impl&quot;</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" line="27" column="9" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" bodystart="27" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="logging_8h_1aa626eac24853f63beaa25efaf620455f" prot="public" static="no">
+        <name>PAIMON_LOG_V</name>
+        <param><defname>level</defname></param>
+        <param><defname>logger</defname></param>
+        <param><defname>format</defname></param>
+        <param><defname>...</defname></param>
+        <initializer>    <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">do</ref> {                                                                                     \
+        <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">if</ref> (<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">logger</ref>-&gt;IsLevelEnabled(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_LOG_LEVEL_</ref>##level)) {                              \
+            <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">logger</ref>-&gt;LogV(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_LOG_LEVEL_</ref>##level, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">__FILE__</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">__LINE__</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">__FUNCTION__</ref>, format, \
+                         <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">__VA_ARGS__</ref>);                                                       \
+        }                                                                                    \
+    } <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">while</ref> (0)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" line="38" column="9" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" bodystart="38" bodyend="44"/>
+      </memberdef>
+      <memberdef kind="define" id="logging_8h_1ac4b707442bc485c6d1720b55c9fae951" prot="public" static="no">
+        <name>PAIMON_LOG_INFO</name>
+        <param><defname>logger</defname></param>
+        <param><defname>fmt</defname></param>
+        <param><defname>...</defname></param>
+        <initializer><ref refid="logging_8h_1aa626eac24853f63beaa25efaf620455f" kindref="member">PAIMON_LOG_V</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">INFO</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">logger</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">fmt</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">__VA_ARGS__</ref>)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" line="46" column="9" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" bodystart="46" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="logging_8h_1a1b22e2b5aab2214fa9e1660bfc611a18" prot="public" static="no">
+        <name>PAIMON_LOG_ERROR</name>
+        <param><defname>logger</defname></param>
+        <param><defname>fmt</defname></param>
+        <param><defname>...</defname></param>
+        <initializer><ref refid="logging_8h_1aa626eac24853f63beaa25efaf620455f" kindref="member">PAIMON_LOG_V</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">ERROR</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">logger</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">fmt</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">__VA_ARGS__</ref>)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" line="47" column="9" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" bodystart="47" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="logging_8h_1a54f4931d20294fba240b7b62294cd6db" prot="public" static="no">
+        <name>PAIMON_LOG_WARN</name>
+        <param><defname>logger</defname></param>
+        <param><defname>fmt</defname></param>
+        <param><defname>...</defname></param>
+        <initializer><ref refid="logging_8h_1aa626eac24853f63beaa25efaf620455f" kindref="member">PAIMON_LOG_V</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">WARN</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">logger</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">fmt</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">__VA_ARGS__</ref>)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" line="48" column="9" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" bodystart="48" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="logging_8h_1a5324fd46f523b74d11290226577c61ad" prot="public" static="no">
+        <name>PAIMON_LOG_DEBUG</name>
+        <param><defname>logger</defname></param>
+        <param><defname>fmt</defname></param>
+        <param><defname>...</defname></param>
+        <initializer><ref refid="logging_8h_1aa626eac24853f63beaa25efaf620455f" kindref="member">PAIMON_LOG_V</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">DEBUG</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">logger</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">fmt</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">__VA_ARGS__</ref>)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" line="49" column="9" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" bodystart="49" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="comment">/*</highlight></codeline>
+<codeline lineno="2"><highlight class="comment"><sp/>*<sp/>Copyright<sp/>2024-present<sp/>Alibaba<sp/>Inc.</highlight></codeline>
+<codeline lineno="3"><highlight class="comment"><sp/>*</highlight></codeline>
+<codeline lineno="4"><highlight class="comment"><sp/>*<sp/>Licensed<sp/>under<sp/>the<sp/>Apache<sp/>License,<sp/>Version<sp/>2.0<sp/>(the<sp/>&quot;License&quot;);</highlight></codeline>
+<codeline lineno="5"><highlight class="comment"><sp/>*<sp/>you<sp/>may<sp/>not<sp/>use<sp/>this<sp/>file<sp/>except<sp/>in<sp/>compliance<sp/>with<sp/>the<sp/>License.</highlight></codeline>
+<codeline lineno="6"><highlight class="comment"><sp/>*<sp/>You<sp/>may<sp/>obtain<sp/>a<sp/>copy<sp/>of<sp/>the<sp/>License<sp/>at</highlight></codeline>
+<codeline lineno="7"><highlight class="comment"><sp/>*</highlight></codeline>
+<codeline lineno="8"><highlight class="comment"><sp/>*<sp/><sp/><sp/>http://www.apache.org/licenses/LICENSE-2.0</highlight></codeline>
+<codeline lineno="9"><highlight class="comment"><sp/>*</highlight></codeline>
+<codeline lineno="10"><highlight class="comment"><sp/>*<sp/>Unless<sp/>required<sp/>by<sp/>applicable<sp/>law<sp/>or<sp/>agreed<sp/>to<sp/>in<sp/>writing,<sp/>software</highlight></codeline>
+<codeline lineno="11"><highlight class="comment"><sp/>*<sp/>distributed<sp/>under<sp/>the<sp/>License<sp/>is<sp/>distributed<sp/>on<sp/>an<sp/>&quot;AS<sp/>IS&quot;<sp/>BASIS,</highlight></codeline>
+<codeline lineno="12"><highlight class="comment"><sp/>*<sp/>WITHOUT<sp/>WARRANTIES<sp/>OR<sp/>CONDITIONS<sp/>OF<sp/>ANY<sp/>KIND,<sp/>either<sp/>express<sp/>or<sp/>implied.</highlight></codeline>
+<codeline lineno="13"><highlight class="comment"><sp/>*<sp/>See<sp/>the<sp/>License<sp/>for<sp/>the<sp/>specific<sp/>language<sp/>governing<sp/>permissions<sp/>and</highlight></codeline>
+<codeline lineno="14"><highlight class="comment"><sp/>*<sp/>limitations<sp/>under<sp/>the<sp/>License.</highlight></codeline>
+<codeline lineno="15"><highlight class="comment"><sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;functional&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="visibility_8h" kindref="compound">paimon/visibility.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="namespacepaimon" kindref="compound">paimon</ref><sp/>{</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="logging_8h_1a906414492c7578a9b4a45deff54f1747" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PAIMON_LOGGER_IMPL<sp/>&quot;logger_impl&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29" refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985" refkind="member"><highlight class="normal"></highlight><highlight class="keyword">enum</highlight><highlight class="normal"><sp/><ref refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985" kindref="member">PaimonLogLevel</ref><sp/>{</highlight></codeline>
+<codeline lineno="30" refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985aade21ab98dbcd0bb048304397b95bec3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985aade21ab98dbcd0bb048304397b95bec3" kindref="member">PAIMON_LOG_LEVEL_DEBUG</ref><sp/>=<sp/>0,</highlight></codeline>
+<codeline lineno="31" refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985a54f86a665c728d1bbd114d815529fb7d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985a54f86a665c728d1bbd114d815529fb7d" kindref="member">PAIMON_LOG_LEVEL_INFO</ref><sp/>=<sp/>1,</highlight></codeline>
+<codeline lineno="32" refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985ac7b16e3233b48bc10ce18b3242b29668" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985ac7b16e3233b48bc10ce18b3242b29668" kindref="member">PAIMON_LOG_LEVEL_WARN</ref><sp/>=<sp/>2,</highlight></codeline>
+<codeline lineno="33" refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985a4f37fad5a76c20e57e4b1da012685a33" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985a4f37fad5a76c20e57e4b1da012685a33" kindref="member">PAIMON_LOG_LEVEL_ERROR</ref><sp/>=<sp/>3,</highlight></codeline>
+<codeline lineno="34" refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985abfd27253c64491422a528a3dfffefcdd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985abfd27253c64491422a528a3dfffefcdd" kindref="member">PAIMON_LOG_LEVEL_NONE</ref><sp/>=<sp/>4,</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985a0da306ca0eedeaedb41eac18672f7d77" kindref="member">PAIMON_LOG_LEVEL_MAX</ref><sp/>=<sp/>5</highlight></codeline>
+<codeline lineno="36" refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985a0da306ca0eedeaedb41eac18672f7d77" refkind="member"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38" refid="logging_8h_1aa626eac24853f63beaa25efaf620455f" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PAIMON_LOG_V(level,<sp/>logger,<sp/>format,<sp/>...)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="39"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>do<sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="40"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>if<sp/>(logger-&gt;IsLevelEnabled(PAIMON_LOG_LEVEL_##level))<sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="41"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>logger-&gt;LogV(PAIMON_LOG_LEVEL_##level,<sp/>__FILE__,<sp/>__LINE__,<sp/>__FUNCTION__,<sp/>format,<sp/>\</highlight></codeline>
+<codeline lineno="42"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>__VA_ARGS__);<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="43"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="44"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>}<sp/>while<sp/>(0)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46" refid="logging_8h_1ac4b707442bc485c6d1720b55c9fae951" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PAIMON_LOG_INFO(logger,<sp/>fmt,<sp/>...)<sp/>PAIMON_LOG_V(INFO,<sp/>logger,<sp/>fmt,<sp/>__VA_ARGS__)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="47" refid="logging_8h_1a1b22e2b5aab2214fa9e1660bfc611a18" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PAIMON_LOG_ERROR(logger,<sp/>fmt,<sp/>...)<sp/>PAIMON_LOG_V(ERROR,<sp/>logger,<sp/>fmt,<sp/>__VA_ARGS__)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="48" refid="logging_8h_1a54f4931d20294fba240b7b62294cd6db" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PAIMON_LOG_WARN(logger,<sp/>fmt,<sp/>...)<sp/>PAIMON_LOG_V(WARN,<sp/>logger,<sp/>fmt,<sp/>__VA_ARGS__)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="49" refid="logging_8h_1a5324fd46f523b74d11290226577c61ad" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PAIMON_LOG_DEBUG(logger,<sp/>fmt,<sp/>...)<sp/>PAIMON_LOG_V(DEBUG,<sp/>logger,<sp/>fmt,<sp/>__VA_ARGS__)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51" refid="classpaimon_1_1_logger" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_EXPORT</ref><sp/><ref refid="classpaimon_1_1_logger" kindref="compound">Logger</ref><sp/>{</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="53" refid="classpaimon_1_1_logger_1a70d4027842b2894f5d45439a80d997fe" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="classpaimon_1_1_logger_1a70d4027842b2894f5d45439a80d997fe" kindref="member">LoggerCreator</ref><sp/>=<sp/>std::function&lt;std::unique_ptr&lt;Logger&gt;(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string&amp;)&gt;;</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="55" refid="classpaimon_1_1_logger_1af39f3cd5dfaca17f6fd373af69153657" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_logger_1af39f3cd5dfaca17f6fd373af69153657" kindref="member">RegisterLogger</ref>(<ref refid="classpaimon_1_1_logger_1a70d4027842b2894f5d45439a80d997fe" kindref="member">LoggerCreator</ref><sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">creator</ref>);</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"></highlight></codeline>
+<codeline lineno="57" refid="classpaimon_1_1_logger_1a91356e305d1555a460000a6f30f2315f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::unique_ptr&lt;Logger&gt;<sp/><ref refid="classpaimon_1_1_logger_1a91356e305d1555a460000a6f30f2315f" kindref="member">GetLogger</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">path</ref>);</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight></codeline>
+<codeline lineno="59" refid="classpaimon_1_1_logger_1a4fecdd9de19f0fba01ec4b2f9ab0645a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_logger_1a4fecdd9de19f0fba01ec4b2f9ab0645a" kindref="member">LogV</ref>(<ref refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985" kindref="member">PaimonLogLevel</ref><sp/>level,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">fname</ref>,<sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">lineno</ref>,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">function</ref>,</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">fmt</ref>,<sp/>...)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight></codeline>
+<codeline lineno="62" refid="classpaimon_1_1_logger_1ad2422e88d4a70f267f00d4522aaf9aaa" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_logger_1ad2422e88d4a70f267f00d4522aaf9aaa" kindref="member">IsLevelEnabled</ref>(<ref refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985" kindref="member">PaimonLogLevel</ref><sp/>level)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight></codeline>
+<codeline lineno="64" refid="classpaimon_1_1_logger_1a1b4d9bd21d1368856ed7348a2215787f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_logger_1a1b4d9bd21d1368856ed7348a2215787f" kindref="member">~Logger</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/></highlight><highlight class="keyword">protected</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="67" refid="classpaimon_1_1_logger_1a42bca55d07baeebe7c70527145b1bb11" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_logger_1a42bca55d07baeebe7c70527145b1bb11" kindref="member">Logger</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="68"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>paimon</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h"/>
+  </compounddef>
+</doxygen>

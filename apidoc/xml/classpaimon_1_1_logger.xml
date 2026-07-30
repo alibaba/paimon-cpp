@@ -1,0 +1,162 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_logger" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::Logger</compoundname>
+    <includes refid="logging_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpaimon_1_1_logger_1a70d4027842b2894f5d45439a80d997fe" prot="public" static="no">
+        <type>std::function&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_logger" kindref="compound">Logger</ref> &gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;)&gt;</type>
+        <definition>using paimon::Logger::LoggerCreator =  std::function&lt;std::unique_ptr&lt;Logger&gt;(const std::string&amp;)&gt;</definition>
+        <argsstring></argsstring>
+        <name>LoggerCreator</name>
+        <qualifiedname>paimon::Logger::LoggerCreator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" line="53" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" bodystart="53" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_logger_1af39f3cd5dfaca17f6fd373af69153657" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>static void paimon::Logger::RegisterLogger</definition>
+        <argsstring>(LoggerCreator creator)</argsstring>
+        <name>RegisterLogger</name>
+        <qualifiedname>paimon::Logger::RegisterLogger</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_logger_1a70d4027842b2894f5d45439a80d997fe" kindref="member">LoggerCreator</ref></type>
+          <declname>creator</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" line="55" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_logger_1a91356e305d1555a460000a6f30f2315f" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::unique_ptr&lt; <ref refid="classpaimon_1_1_logger" kindref="compound">Logger</ref> &gt;</type>
+        <definition>static std::unique_ptr&lt; Logger &gt; paimon::Logger::GetLogger</definition>
+        <argsstring>(const std::string &amp;path)</argsstring>
+        <name>GetLogger</name>
+        <qualifiedname>paimon::Logger::GetLogger</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" line="57" column="28"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_logger_1a4fecdd9de19f0fba01ec4b2f9ab0645a" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>virtual void paimon::Logger::LogV</definition>
+        <argsstring>(PaimonLogLevel level, const char *fname, int lineno, const char *function, const char *fmt,...)=0</argsstring>
+        <name>LogV</name>
+        <qualifiedname>paimon::Logger::LogV</qualifiedname>
+        <param>
+          <type><ref refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985" kindref="member">PaimonLogLevel</ref></type>
+          <declname>level</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>fname</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int</ref></type>
+          <declname>lineno</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>function</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>fmt</declname>
+        </param>
+        <param>
+          <type>...</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" line="59" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_logger_1ad2422e88d4a70f267f00d4522aaf9aaa" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>virtual bool paimon::Logger::IsLevelEnabled</definition>
+        <argsstring>(PaimonLogLevel level) const =0</argsstring>
+        <name>IsLevelEnabled</name>
+        <qualifiedname>paimon::Logger::IsLevelEnabled</qualifiedname>
+        <param>
+          <type><ref refid="namespacepaimon_1a461f27123748af5c760ceec2290e7985" kindref="member">PaimonLogLevel</ref></type>
+          <declname>level</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" line="62" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_logger_1a1b4d9bd21d1368856ed7348a2215787f" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::Logger::~Logger</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Logger</name>
+        <qualifiedname>paimon::Logger::~Logger</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" line="64" column="13"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="protected-func">
+      <memberdef kind="function" id="classpaimon_1_1_logger_1a42bca55d07baeebe7c70527145b1bb11" prot="protected" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Logger::Logger</definition>
+        <argsstring>()=default</argsstring>
+        <name>Logger</name>
+        <qualifiedname>paimon::Logger::Logger</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" line="67" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" line="51" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" bodystart="51" bodyend="68"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_logger_1a91356e305d1555a460000a6f30f2315f" prot="public" virt="non-virtual"><scope>paimon::Logger</scope><name>GetLogger</name></member>
+      <member refid="classpaimon_1_1_logger_1ad2422e88d4a70f267f00d4522aaf9aaa" prot="public" virt="pure-virtual"><scope>paimon::Logger</scope><name>IsLevelEnabled</name></member>
+      <member refid="classpaimon_1_1_logger_1a42bca55d07baeebe7c70527145b1bb11" prot="protected" virt="non-virtual"><scope>paimon::Logger</scope><name>Logger</name></member>
+      <member refid="classpaimon_1_1_logger_1a70d4027842b2894f5d45439a80d997fe" prot="public" virt="non-virtual"><scope>paimon::Logger</scope><name>LoggerCreator</name></member>
+      <member refid="classpaimon_1_1_logger_1a4fecdd9de19f0fba01ec4b2f9ab0645a" prot="public" virt="pure-virtual"><scope>paimon::Logger</scope><name>LogV</name></member>
+      <member refid="classpaimon_1_1_logger_1af39f3cd5dfaca17f6fd373af69153657" prot="public" virt="non-virtual"><scope>paimon::Logger</scope><name>RegisterLogger</name></member>
+      <member refid="classpaimon_1_1_logger_1a1b4d9bd21d1368856ed7348a2215787f" prot="public" virt="virtual"><scope>paimon::Logger</scope><name>~Logger</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

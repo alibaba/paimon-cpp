@@ -1,0 +1,161 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="struct_arrow_schema" kind="struct" language="C++" prot="public">
+    <compoundname>ArrowSchema</compoundname>
+    <includes refid="abi_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="struct_arrow_schema_1ab5d0127ee66cd298683f2a2d2aae5788" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+        <definition>const char* ArrowSchema::format</definition>
+        <argsstring></argsstring>
+        <name>format</name>
+        <qualifiedname>ArrowSchema::format</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" line="55" column="16" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" bodystart="55" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_arrow_schema_1aa6dae1b0e311f4b30a9e2ca002ad8d22" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+        <definition>const char* ArrowSchema::name</definition>
+        <argsstring></argsstring>
+        <name>name</name>
+        <qualifiedname>ArrowSchema::name</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" line="56" column="16" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" bodystart="56" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_arrow_schema_1a51ceb37c71e94fac6b6e14a3d8e3b50c" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+        <definition>const char* ArrowSchema::metadata</definition>
+        <argsstring></argsstring>
+        <name>metadata</name>
+        <qualifiedname>ArrowSchema::metadata</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" line="57" column="16" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" bodystart="57" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_arrow_schema_1a15b2e390fc6708b23ad29c69e136163c" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t ArrowSchema::flags</definition>
+        <argsstring></argsstring>
+        <name>flags</name>
+        <qualifiedname>ArrowSchema::flags</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" line="58" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" bodystart="58" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_arrow_schema_1a88a53da5862c6d2f66692910ce5e5c42" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t ArrowSchema::n_children</definition>
+        <argsstring></argsstring>
+        <name>n_children</name>
+        <qualifiedname>ArrowSchema::n_children</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" line="59" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" bodystart="59" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_arrow_schema_1ae0ba059e1e9a6879fc231f3475644c1a" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">struct</ref> <ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref> **</type>
+        <definition>struct ArrowSchema** ArrowSchema::children</definition>
+        <argsstring></argsstring>
+        <name>children</name>
+        <qualifiedname>ArrowSchema::children</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" line="60" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" bodystart="60" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_arrow_schema_1ac608367ec75500cd6322cf6bf45bc4cf" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">struct</ref> <ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref> *</type>
+        <definition>struct ArrowSchema* ArrowSchema::dictionary</definition>
+        <argsstring></argsstring>
+        <name>dictionary</name>
+        <qualifiedname>ArrowSchema::dictionary</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" line="61" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" bodystart="61" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_arrow_schema_1ad471ae72074febbeaf80288f2f673c57" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref>(*</type>
+        <definition>void(* ArrowSchema::release) (struct ArrowSchema *)</definition>
+        <argsstring>)(struct ArrowSchema *)</argsstring>
+        <name>release</name>
+        <qualifiedname>ArrowSchema::release</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" line="64" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" bodystart="64" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_arrow_schema_1ab385d6a15b6dc46194dcc4286f36b767" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref> *</type>
+        <definition>void* ArrowSchema::private_data</definition>
+        <argsstring></argsstring>
+        <name>private_data</name>
+        <qualifiedname>ArrowSchema::private_data</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" line="66" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" bodystart="66" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>ArrowSchema</label>
+        <link refid="struct_arrow_schema"/>
+        <childnode refid="1" relation="usage">
+          <edgelabel>children</edgelabel>
+          <edgelabel>dictionary</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" line="53" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/arrow/abi.h" bodystart="53" bodyend="67"/>
+    <listofallmembers>
+      <member refid="struct_arrow_schema_1ae0ba059e1e9a6879fc231f3475644c1a" prot="public" virt="non-virtual"><scope>ArrowSchema</scope><name>children</name></member>
+      <member refid="struct_arrow_schema_1ac608367ec75500cd6322cf6bf45bc4cf" prot="public" virt="non-virtual"><scope>ArrowSchema</scope><name>dictionary</name></member>
+      <member refid="struct_arrow_schema_1a15b2e390fc6708b23ad29c69e136163c" prot="public" virt="non-virtual"><scope>ArrowSchema</scope><name>flags</name></member>
+      <member refid="struct_arrow_schema_1ab5d0127ee66cd298683f2a2d2aae5788" prot="public" virt="non-virtual"><scope>ArrowSchema</scope><name>format</name></member>
+      <member refid="struct_arrow_schema_1a51ceb37c71e94fac6b6e14a3d8e3b50c" prot="public" virt="non-virtual"><scope>ArrowSchema</scope><name>metadata</name></member>
+      <member refid="struct_arrow_schema_1a88a53da5862c6d2f66692910ce5e5c42" prot="public" virt="non-virtual"><scope>ArrowSchema</scope><name>n_children</name></member>
+      <member refid="struct_arrow_schema_1aa6dae1b0e311f4b30a9e2ca002ad8d22" prot="public" virt="non-virtual"><scope>ArrowSchema</scope><name>name</name></member>
+      <member refid="struct_arrow_schema_1ab385d6a15b6dc46194dcc4286f36b767" prot="public" virt="non-virtual"><scope>ArrowSchema</scope><name>private_data</name></member>
+      <member refid="struct_arrow_schema_1ad471ae72074febbeaf80288f2f673c57" prot="public" virt="non-virtual"><scope>ArrowSchema</scope><name>release</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

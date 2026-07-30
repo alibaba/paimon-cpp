@@ -1,0 +1,161 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_schema" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::Schema</compoundname>
+    <derivedcompoundref refid="classpaimon_1_1_data_schema" prot="public" virt="non-virtual">paimon::DataSchema</derivedcompoundref>
+    <derivedcompoundref refid="classpaimon_1_1_system_schema" prot="public" virt="non-virtual">paimon::SystemSchema</derivedcompoundref>
+    <includes refid="schema_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_schema_1a35d10462804c6538919a9f8fd597e35a" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::Schema::~Schema</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Schema</name>
+        <qualifiedname>paimon::Schema::~Schema</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="36" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_schema_1adb2b80cff7d763a887df26d35004e61c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt;<ref refid="struct_arrow_schema" kindref="compound">::ArrowSchema</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt;::ArrowSchema &gt; &gt; paimon::Schema::GetArrowSchema</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetArrowSchema</name>
+        <qualifiedname>paimon::Schema::GetArrowSchema</qualifiedname>
+        <briefdescription>
+<para>Get the Arrow C schema representation of this table schema. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A result containing an <ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref>, or an error status if conversion fails. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="40" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_schema_1a77f0ee7822be63eb90369af843a11ee9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::string &gt;</type>
+        <definition>virtual Result&lt; std::string &gt; paimon::Schema::GetJsonSchema</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetJsonSchema</name>
+        <qualifiedname>paimon::Schema::GetJsonSchema</qualifiedname>
+        <briefdescription>
+<para>Get the JSON schema representation of this table schema. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This method provides a JSON string that represents the complete schema information.</para>
+<para><simplesect kind="return"><para>A string containing the JSON schema, or an error status on failure. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="47" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_schema_1a86ebde8a32316069856601c05c9d1a28" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::vector&lt; std::string &gt;</type>
+        <definition>virtual std::vector&lt; std::string &gt; paimon::Schema::FieldNames</definition>
+        <argsstring>() const =0</argsstring>
+        <name>FieldNames</name>
+        <qualifiedname>paimon::Schema::FieldNames</qualifiedname>
+        <briefdescription>
+<para>Get the names of all fields in the table schema. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A vector of field names. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="51" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_schema_1a8b1eb0e85de19532d17b67839331ee78" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7" kindref="member">FieldType</ref> &gt;</type>
+        <definition>virtual Result&lt; FieldType &gt; paimon::Schema::GetFieldType</definition>
+        <argsstring>(const std::string &amp;field_name) const =0</argsstring>
+        <name>GetFieldType</name>
+        <qualifiedname>paimon::Schema::GetFieldType</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>field_name</declname>
+        </param>
+        <briefdescription>
+<para>Get the type of specific field. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>field_name</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The name of the field to query. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing the FieldType of the specified field, or an error status on failure. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="58" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_schema_1a6a9fcbaa6b332a4104b2006fe59df200" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::optional&lt; std::string &gt;</type>
+        <definition>virtual std::optional&lt; std::string &gt; paimon::Schema::Comment</definition>
+        <argsstring>() const =0</argsstring>
+        <name>Comment</name>
+        <qualifiedname>paimon::Schema::Comment</qualifiedname>
+        <briefdescription>
+<para>Get an optional comment describing the schema object. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The comment if set, or std::nullopt otherwise. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="62" column="27"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>This interface provides access to TableSchema-related information. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::DataSchema</label>
+        <link refid="classpaimon_1_1_data_schema"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>paimon::Schema</label>
+        <link refid="classpaimon_1_1_schema"/>
+      </node>
+      <node id="3">
+        <label>paimon::SystemSchema</label>
+        <link refid="classpaimon_1_1_system_schema"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="34" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" bodystart="34" bodyend="63"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_schema_1a6a9fcbaa6b332a4104b2006fe59df200" prot="public" virt="pure-virtual"><scope>paimon::Schema</scope><name>Comment</name></member>
+      <member refid="classpaimon_1_1_schema_1a86ebde8a32316069856601c05c9d1a28" prot="public" virt="pure-virtual"><scope>paimon::Schema</scope><name>FieldNames</name></member>
+      <member refid="classpaimon_1_1_schema_1adb2b80cff7d763a887df26d35004e61c" prot="public" virt="pure-virtual"><scope>paimon::Schema</scope><name>GetArrowSchema</name></member>
+      <member refid="classpaimon_1_1_schema_1a8b1eb0e85de19532d17b67839331ee78" prot="public" virt="pure-virtual"><scope>paimon::Schema</scope><name>GetFieldType</name></member>
+      <member refid="classpaimon_1_1_schema_1a77f0ee7822be63eb90369af843a11ee9" prot="public" virt="pure-virtual"><scope>paimon::Schema</scope><name>GetJsonSchema</name></member>
+      <member refid="classpaimon_1_1_schema_1a35d10462804c6538919a9f8fd597e35a" prot="public" virt="virtual"><scope>paimon::Schema</scope><name>~Schema</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

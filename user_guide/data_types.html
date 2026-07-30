@@ -1,0 +1,782 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Data Types &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=d7227091" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'user_guide/data_types';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Primary Key Table" href="primary_key_table.html" />
+    <link rel="prev" title="Parquet Metadata Cache" href="parquet_metadata_cache.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.3.0" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="catalog.html">Catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="schema.html">Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="snapshot.html">Snapshot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="manifest.html">Manifest</a></li>
+<li class="toctree-l1"><a class="reference internal" href="manifest_cache.html">Manifest Cache</a></li>
+<li class="toctree-l1"><a class="reference internal" href="manifest_entry_cache.html">Manifest Entry Cache</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parquet_metadata_cache.html">Parquet Metadata Cache</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Data Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="primary_key_table.html">Primary Key Table</a></li>
+<li class="toctree-l1"><a class="reference internal" href="append_only_table.html">Append Only Table</a></li>
+<li class="toctree-l1"><a class="reference internal" href="system_tables.html">System Tables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="write.html">Write</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commit.html">Commit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="compaction.html">Compaction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read.html">Read</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clean.html">Data Cleanup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="prefetch.html">Prefetch</a></li>
+
+
+
+<li class="toctree-l1"><a class="reference internal" href="arrow.html">Memory Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="global_index.html">Global Index</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../user_guide.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Data Types</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="data-types">
+<h1>Data Types<a class="headerlink" href="#data-types" title="Link to this heading">#</a></h1>
+<p>A data type describes the logical type of a value in the table ecosystem. It can
+be used to declare input and/or output types of operations.</p>
+<p>All data types by Java Paimon are as follows, C++ Paimon uses Apache Arrow as
+its schema representation. The following table shows the mapping between <a class="reference external" href="https://paimon.apache.org/docs/master/concepts/data-types/">Java
+Paimon DataTypes</a>
+and <a class="reference external" href="https://arrow.apache.org/docs/format/Columnar.html#data-types">Arrow DataTypes</a>:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 20.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Java Paimon DataType</p></th>
+<th class="head"><p>Arrow DataType</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">BOOLEAN</span></code></p></td>
+<td><p>Boolean</p></td>
+<td><p>Data type of a boolean with a (possibly) three-valued logic of TRUE, FALSE, and UNKNOWN.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">CHAR</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">CHAR(n)</span></code></p>
+</td>
+<td><p>Utf8</p></td>
+<td><p>Data type of a fixed-length character string.</p>
+<p>The type can be declared using <code class="docutils literal notranslate"><span class="pre">CHAR(n)</span></code> where n is the number of code
+points. n must have a value between 1 and 2,147,483,647 (both inclusive).
+If no length is specified, n is equal to 1.</p>
+<p><strong>Note:</strong> Apache Arrow has no fixed-length string type, so the declared
+length <code class="docutils literal notranslate"><span class="pre">n</span></code> is not enforced; values are mapped to a variable-length <code class="docutils literal notranslate"><span class="pre">Utf8</span></code>.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">VARCHAR</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">VARCHAR(n)</span></code></p>
+</td>
+<td><p>Utf8</p></td>
+<td><p>Data type of a variable-length character string.</p>
+<p>The type can be declared using <code class="docutils literal notranslate"><span class="pre">VARCHAR(n)</span></code> where n is the maximum
+number of code points. n must have a value between 1 and 2,147,483,647
+(both inclusive). If no length is specified, n is equal to 1.</p>
+<p><strong>Note:</strong> The declared maximum length <code class="docutils literal notranslate"><span class="pre">n</span></code> is not enforced.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">STRING</span></code></p></td>
+<td><p>Utf8</p></td>
+<td><p>Data type of a variable-length character string. <code class="docutils literal notranslate"><span class="pre">STRING</span></code> is a synonym for <code class="docutils literal notranslate"><span class="pre">VARCHAR(2147483647)</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">BINARY</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">BINARY(n)</span></code></p>
+</td>
+<td><p>Binary</p></td>
+<td><p>Data type of a fixed-length binary string (=a sequence of bytes).</p>
+<p>The type can be declared using <code class="docutils literal notranslate"><span class="pre">BINARY(n)</span></code> where n is the number of
+bytes. n must have a value between 1 and 2,147,483,647 (both inclusive).
+If no length is specified, n is equal to 1.</p>
+<p><strong>Note:</strong> Apache Arrow has no fixed-length binary type here, so the declared
+length <code class="docutils literal notranslate"><span class="pre">n</span></code> is not enforced; values are mapped to a variable-length <code class="docutils literal notranslate"><span class="pre">Binary</span></code>.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">VARBINARY</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">VARBINARY(n)</span></code></p>
+</td>
+<td><p>Binary</p></td>
+<td><p>Data type of a variable-length binary string (=a sequence of bytes).</p>
+<p>The type can be declared using <code class="docutils literal notranslate"><span class="pre">VARBINARY(n)</span></code> where n is the maximum
+number of bytes. n must have a value between 1 and 2,147,483,647
+(both inclusive). If no length is specified, n is equal to 1.</p>
+<p><strong>Note:</strong> The declared maximum length <code class="docutils literal notranslate"><span class="pre">n</span></code> is not enforced.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">BYTES</span></code></p></td>
+<td><p>Binary</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">BYTES</span></code> is a synonym for <code class="docutils literal notranslate"><span class="pre">VARBINARY(2147483647)</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">DECIMAL</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">DECIMAL(p)</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">DECIMAL(p,</span> <span class="pre">s)</span></code></p>
+</td>
+<td><p>Decimal128</p></td>
+<td><p>Data type of a decimal number with fixed precision and scale.</p>
+<p>The type can be declared using <code class="docutils literal notranslate"><span class="pre">DECIMAL(p,</span> <span class="pre">s)</span></code> where p is the number of
+digits in a number (precision) and s is the number of digits to the right
+of the decimal point in a number (scale). p must have a value between 1
+and 38 (both inclusive). s must have a value between 0 and p
+(both inclusive). The default value for p is 10. The default value for s is 0.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TINYINT</span></code></p></td>
+<td><p>Int8</p></td>
+<td><p>Data type of a 1-byte signed integer with values from -128 to 127.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SMALLINT</span></code></p></td>
+<td><p>Int16</p></td>
+<td><p>Data type of a 2-byte signed integer with values from -32,768 to 32,767.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">INT</span></code></p></td>
+<td><p>Int32</p></td>
+<td><p>Data type of a 4-byte signed integer with values from -2,147,483,648 to 2,147,483,647.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">BIGINT</span></code></p></td>
+<td><p>Int64</p></td>
+<td><p>Data type of an 8-byte signed integer with values from -9,223,372,036,854,775,808 to 9,223,372,036,854,775,807.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">FLOAT</span></code></p></td>
+<td><p>Float</p></td>
+<td><p>Data type of a 4-byte single precision floating point number.</p>
+<p>Compared to the SQL standard, the type does not take parameters.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">DOUBLE</span></code></p></td>
+<td><p>Double</p></td>
+<td><p>Data type of an 8-byte double precision floating point number.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">DATE</span></code></p></td>
+<td><p>Date32</p></td>
+<td><p>Data type of a date consisting of year-month-day with values ranging from 0000-01-01 to 9999-12-31.</p>
+<p>Compared to the SQL standard, the range starts at year 0000.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">TIME</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">TIME(p)</span></code></p>
+</td>
+<td><p>Not Supported</p></td>
+<td><p>Data type of a time without time zone consisting of hour:minute:second[.fractional] with up to nanosecond precision and values ranging from 00:00:00.000000000 to 23:59:59.999999999.</p>
+<p>The type can be declared using <code class="docutils literal notranslate"><span class="pre">TIME(p)</span></code> where p is the number of digits of
+fractional seconds (precision). p must have a value between 0 and 9
+(both inclusive). If no precision is specified, p is equal to 0.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TIMESTAMP</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">TIMESTAMP(p)</span></code></p>
+</td>
+<td><p>Timestamp</p></td>
+<td><p>Data type of a timestamp without time zone consisting of year-month-day hour:minute:second[.fractional] with up to nanosecond precision and values ranging from 0000-01-01 00:00:00.000000000 to 9999-12-31 23:59:59.999999999.</p>
+<p>The type can be declared using <code class="docutils literal notranslate"><span class="pre">TIMESTAMP(p)</span></code> where p is the number of
+digits of fractional seconds (precision). Paimon C++ supports precision
+values 0 (seconds), 3 (milliseconds), 6 (microseconds), and 9
+(nanoseconds). If no precision is specified, p is equal to 6.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">TIMESTAMP</span> <span class="pre">WITH</span> <span class="pre">LOCAL</span> <span class="pre">TIME</span> <span class="pre">ZONE</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">TIMESTAMP(p)</span> <span class="pre">WITH</span> <span class="pre">LOCAL</span> <span class="pre">TIME</span> <span class="pre">ZONE</span></code></p>
+</td>
+<td><p>Timestamp</p></td>
+<td><p>Data type of a timestamp with local time zone consisting of year-month-day hour:minute:second[.fractional] zone with up to nanosecond precision and values ranging from 0000-01-01 00:00:00.000000000 +14:59 to 9999-12-31 23:59:59.999999999 -14:59.</p>
+<p>This type fills the gap between time zone free and time zone mandatory
+timestamp types by allowing the interpretation of UTC timestamps according
+to the configured session time zone. A conversion from and to int describes
+the number of seconds since epoch. A conversion from and to long describes the number of milliseconds since epoch.</p>
+<p>Paimon C++ supports precision values 0 (seconds), 3 (milliseconds), 6
+(microseconds), and 9 (nanoseconds).</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ARRAY&lt;t&gt;</span></code></p></td>
+<td><p>List</p></td>
+<td><p>Data type of an array of elements with same subtype.</p>
+<p>Compared to the SQL standard, the maximum cardinality of an array cannot be specified but is fixed at 2,147,483,647. Also, any valid type is supported as a subtype.</p>
+<p>The type can be declared using <code class="docutils literal notranslate"><span class="pre">ARRAY&lt;t&gt;</span></code> where t is the data type of the contained elements.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">MAP&lt;kt,</span> <span class="pre">vt&gt;</span></code></p></td>
+<td><p>Map</p></td>
+<td><p>Data type of an associative array that maps keys to values (including NULL). A map cannot contain duplicate keys; each key can map to at most one value.</p>
+<p>There is no restriction of element types; it is the responsibility of the user to ensure uniqueness.</p>
+<p>The type can be declared using <code class="docutils literal notranslate"><span class="pre">MAP&lt;kt,</span> <span class="pre">vt&gt;</span></code> where kt is the data type of the key elements and vt is the data type of the value elements.</p>
+<p><strong>Note:</strong> In C++ Paimon, map keys must be explicitly marked as <code class="docutils literal notranslate"><span class="pre">NOT</span> <span class="pre">NULL</span></code>.
+Apache Arrow does not support nullable map keys. If the key type is not
+marked as <code class="docutils literal notranslate"><span class="pre">NOT</span> <span class="pre">NULL</span></code> in the schema, parsing will fail with an error.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MULTISET&lt;t&gt;</span></code></p></td>
+<td><p>Not Supported</p></td>
+<td><p>Data type of a multiset (=bag). Unlike a set, it allows for multiple instances for each of its elements with a common subtype. Each unique value (including NULL) is mapped to some multiplicity.</p>
+<p>There is no restriction of element types; it is the responsibility of the user to ensure uniqueness.</p>
+<p>The type can be declared using <code class="docutils literal notranslate"><span class="pre">MULTISET&lt;t&gt;</span></code> where t is the data type of the contained elements.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ROW&lt;n0</span> <span class="pre">t0,</span> <span class="pre">n1</span> <span class="pre">t1,</span> <span class="pre">...&gt;</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">ROW&lt;n0</span> <span class="pre">t0</span> <span class="pre">'d0',</span> <span class="pre">n1</span> <span class="pre">t1</span> <span class="pre">'d1',</span> <span class="pre">...&gt;</span></code></p>
+</td>
+<td><p>Struct</p></td>
+<td><p>Data type of a sequence of fields.</p>
+<p>A field consists of a field name, field type, and an optional description.
+The most specific type of a row of a table is a row type. In this case,
+each column of the row corresponds to the field of the row type that has
+the same ordinal position as the column.</p>
+<p>Compared to the SQL standard, an optional field description simplifies
+the handling with complex structures.</p>
+<p>A row type is similar to the <code class="docutils literal notranslate"><span class="pre">STRUCT</span></code> type known from other non-standard-compliant frameworks.</p>
+<p>The type can be declared using <code class="docutils literal notranslate"><span class="pre">ROW&lt;n0</span> <span class="pre">t0</span> <span class="pre">'d0',</span> <span class="pre">n1</span> <span class="pre">t1</span> <span class="pre">'d1',</span> <span class="pre">...&gt;</span></code> where n
+is the unique name of a field, t is the logical type of a field, d is the description of a field.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">VARIANT</span></code></p></td>
+<td><p>Struct</p></td>
+<td><p>Data type of semi-structured data (e.g. JSON). A variant value contains one of:
+a primitive (e.g. integer, string), an array of variant values, or an object
+mapping string keys to variant values.</p>
+<p>Variant values are encoded with two binaries following the parquet-format
+<a class="reference external" href="https://github.com/apache/parquet-format/blob/master/VariantEncoding.md">Variant Binary Encoding</a>
+specification (compatible with the Java Paimon / Spark implementation). In
+C++ Paimon, a variant field is represented in an Arrow schema as
+<code class="docutils literal notranslate"><span class="pre">Struct{value:</span> <span class="pre">Binary</span> <span class="pre">NOT</span> <span class="pre">NULL,</span> <span class="pre">metadata:</span> <span class="pre">Binary</span> <span class="pre">NOT</span> <span class="pre">NULL}</span></code> marked with
+Paimon-specific field metadata; use <code class="docutils literal notranslate"><span class="pre">paimon::Variant::ArrowField</span></code> to
+construct such a field, and <code class="docutils literal notranslate"><span class="pre">paimon::Variant</span></code> (<code class="docutils literal notranslate"><span class="pre">FromJson</span></code>/<code class="docutils literal notranslate"><span class="pre">ToJson</span></code>/
+<code class="docutils literal notranslate"><span class="pre">VariantGet</span></code>) to build and inspect values.</p>
+<p>Only the parquet file format supports VARIANT columns. VARIANT cannot be
+used as a primary key, partition key or bucket key, and no predicate
+pushdown applies to it.</p>
+<p>When writing, variant columns can optionally be <em>shredded</em> into typed
+parquet columns per the parquet-format
+<a class="reference external" href="https://github.com/apache/parquet-format/blob/master/VariantShredding.md">Variant Shredding</a>
+specification by setting <code class="docutils literal notranslate"><span class="pre">variant.shreddingSchema</span></code> to a ROW type JSON
+whose fields map top-level variant column names to their shredding
+types. Alternatively, setting <code class="docutils literal notranslate"><span class="pre">variant.inferShreddingSchema</span></code> to
+<code class="docutils literal notranslate"><span class="pre">true</span></code> infers a shredding schema per file from the first written rows
+(tuned by <code class="docutils literal notranslate"><span class="pre">variant.shredding.maxSchemaWidth</span></code>, which bounds the total
+number of shredded fields across all variant columns of the schema,
+<code class="docutils literal notranslate"><span class="pre">variant.shredding.maxSchemaDepth</span></code>,
+<code class="docutils literal notranslate"><span class="pre">variant.shredding.minFieldCardinalityRatio</span></code> and
+<code class="docutils literal notranslate"><span class="pre">variant.shredding.maxInferBufferRow</span></code>). Inference also covers variant
+columns nested inside ROW columns (variants inside arrays or maps stay
+unshredded, as in Java Paimon). Readers reassemble shredded columns
+transparently.</p>
+<p>When reading, instead of the full variant, specific paths can be
+extracted by replacing the variant column in the read schema with a
+projection built by <code class="docutils literal notranslate"><span class="pre">paimon::VariantAccessBuilder</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">$.a.b</span></code> as
+BIGINT). For shredded files only the required typed sub-columns are
+read.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="parquet_metadata_cache.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Parquet Metadata Cache</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="primary_key_table.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Primary Key Table</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/user_guide/data_types.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

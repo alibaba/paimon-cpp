@@ -1,0 +1,228 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_table" kind="class" language="C++" prot="public">
+    <compoundname>paimon::Table</compoundname>
+    <includes refid="table_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_table_1a63b35e53784264a5dff454ca9336f5c9" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_schema" kindref="compound">Schema</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Schema&gt; paimon::Table::schema_</definition>
+        <argsstring></argsstring>
+        <name>schema_</name>
+        <qualifiedname>paimon::Table::schema_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" line="72" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" bodystart="72" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_table_1a5e3048b0b4eab034171ee20337e6eee6" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::Table::database_</definition>
+        <argsstring></argsstring>
+        <name>database_</name>
+        <qualifiedname>paimon::Table::database_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" line="73" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" bodystart="73" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_table_1a890bed506e34a2f0afb8dc7e3447d74e" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::Table::table_name_</definition>
+        <argsstring></argsstring>
+        <name>table_name_</name>
+        <qualifiedname>paimon::Table::table_name_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" line="74" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" bodystart="74" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_table_1aa94a49d841dd537c5edd9513b0850aa9" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_table" kindref="compound">Table</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::shared_ptr&lt; Table &gt; &gt; paimon::Table::Create</definition>
+        <argsstring>(const std::shared_ptr&lt; FileSystem &gt; &amp;file_system, const std::string &amp;table_path, const Identifier &amp;identifier)</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::Table::Create</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_system" kindref="compound">FileSystem</ref> &gt; &amp;</type>
+          <declname>file_system</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>table_path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_identifier" kindref="compound">Identifier</ref> &amp;</type>
+          <declname>identifier</declname>
+        </param>
+        <briefdescription>
+<para>Creates a table by loading the latest schema from the specified table path. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>file_system</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>File system used to access the table directory and schema files. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>table_path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Root path of the table in the file system. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>identifier</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Logical table identifier used for naming and error messages. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A table initialized with the latest available schema. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" line="42" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_table_1ad04b846746474aa83957d586fc7a6bbf" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Table::Table</definition>
+        <argsstring>(const std::shared_ptr&lt; Schema &gt; &amp;schema, const std::string &amp;database, const std::string &amp;table_name)</argsstring>
+        <name>Table</name>
+        <qualifiedname>paimon::Table::Table</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_schema" kindref="compound">Schema</ref> &gt; &amp;</type>
+          <declname>schema</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>database</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>table_name</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" line="46" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" bodystart="46" bodyend="48"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_table_1a806c80307e17f4c7184d408f1e847f4b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Table::~Table</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Table</name>
+        <qualifiedname>paimon::Table::~Table</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" line="50" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_table_1af2a114a26e3fbd72c00292bd1db39f53" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::Table::Name</definition>
+        <argsstring>() const</argsstring>
+        <name>Name</name>
+        <qualifiedname>paimon::Table::Name</qualifiedname>
+        <briefdescription>
+<para>A name to identify this table. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" line="53" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" bodystart="53" bodyend="55"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_table_1ac08d18467b0c2179704df36dd4da2c13" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::Table::FullName</definition>
+        <argsstring>() const</argsstring>
+        <name>FullName</name>
+        <qualifiedname>paimon::Table::FullName</qualifiedname>
+        <briefdescription>
+<para>Full name of the table, default is database.tableName. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" line="58" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_table_1ac851845d63e3ae9e3ad0dc3a3d6365fc" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::Table::Uuid</definition>
+        <argsstring>() const</argsstring>
+        <name>Uuid</name>
+        <qualifiedname>paimon::Table::Uuid</qualifiedname>
+        <briefdescription>
+<para>UUID of the table, metastore can provide the true UUID of this table, default is the full name. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" line="62" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" bodystart="62" bodyend="64"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_table_1aec9deca14991901dcd18434613d1dcaa" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_schema" kindref="compound">Schema</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; Schema &gt; paimon::Table::LatestSchema</definition>
+        <argsstring>() const</argsstring>
+        <name>LatestSchema</name>
+        <qualifiedname>paimon::Table::LatestSchema</qualifiedname>
+        <briefdescription>
+<para>Loads the latest schema of table. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" line="67" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" bodystart="67" bodyend="69"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A table provides basic abstraction for table type. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" line="34" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/table.h" bodystart="34" bodyend="75"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_table_1aa94a49d841dd537c5edd9513b0850aa9" prot="public" virt="non-virtual"><scope>paimon::Table</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_table_1a5e3048b0b4eab034171ee20337e6eee6" prot="private" virt="non-virtual"><scope>paimon::Table</scope><name>database_</name></member>
+      <member refid="classpaimon_1_1_table_1ac08d18467b0c2179704df36dd4da2c13" prot="public" virt="non-virtual"><scope>paimon::Table</scope><name>FullName</name></member>
+      <member refid="classpaimon_1_1_table_1aec9deca14991901dcd18434613d1dcaa" prot="public" virt="non-virtual"><scope>paimon::Table</scope><name>LatestSchema</name></member>
+      <member refid="classpaimon_1_1_table_1af2a114a26e3fbd72c00292bd1db39f53" prot="public" virt="non-virtual"><scope>paimon::Table</scope><name>Name</name></member>
+      <member refid="classpaimon_1_1_table_1a63b35e53784264a5dff454ca9336f5c9" prot="private" virt="non-virtual"><scope>paimon::Table</scope><name>schema_</name></member>
+      <member refid="classpaimon_1_1_table_1ad04b846746474aa83957d586fc7a6bbf" prot="public" virt="non-virtual"><scope>paimon::Table</scope><name>Table</name></member>
+      <member refid="classpaimon_1_1_table_1a890bed506e34a2f0afb8dc7e3447d74e" prot="private" virt="non-virtual"><scope>paimon::Table</scope><name>table_name_</name></member>
+      <member refid="classpaimon_1_1_table_1ac851845d63e3ae9e3ad0dc3a3d6365fc" prot="public" virt="non-virtual"><scope>paimon::Table</scope><name>Uuid</name></member>
+      <member refid="classpaimon_1_1_table_1a806c80307e17f4c7184d408f1e847f4b" prot="public" virt="non-virtual"><scope>paimon::Table</scope><name>~Table</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

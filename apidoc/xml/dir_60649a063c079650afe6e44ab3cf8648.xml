@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_60649a063c079650afe6e44ab3cf8648" kind="dir">
+    <compoundname>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories</compoundname>
+    <innerfile refid="factory_8h">factory.h</innerfile>
+    <innerfile refid="factory__creator_8h">factory_creator.h</innerfile>
+    <innerfile refid="singleton_8h">singleton.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/"/>
+  </compounddef>
+</doxygen>

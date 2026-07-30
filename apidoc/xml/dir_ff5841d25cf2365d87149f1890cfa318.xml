@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_ff5841d25cf2365d87149f1890cfa318" kind="dir">
+    <compoundname>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket</compoundname>
+    <innerfile refid="bucket__function__type_8h">bucket_function_type.h</innerfile>
+    <innerfile refid="bucket__id__calculator_8h">bucket_id_calculator.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/bucket/"/>
+  </compounddef>
+</doxygen>

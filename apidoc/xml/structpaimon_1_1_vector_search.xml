@@ -1,0 +1,268 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="structpaimon_1_1_vector_search" kind="struct" language="C++" prot="public">
+    <compoundname>paimon::VectorSearch</compoundname>
+    <includes refid="vector__search_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="structpaimon_1_1_vector_search_1a6f960bf74c4872082c36d26c05c95bef" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>DistanceType</name>
+        <qualifiedname>paimon::VectorSearch::DistanceType</qualifiedname>
+        <enumvalue id="structpaimon_1_1_vector_search_1a6f960bf74c4872082c36d26c05c95befab142d642e537e694b9314e1a56835f8d" prot="public">
+          <name>EUCLIDEAN</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpaimon_1_1_vector_search_1a6f960bf74c4872082c36d26c05c95befa5dbd0030546e2ee560ccd7c5e4bfcfc8" prot="public">
+          <name>INNER_PRODUCT</name>
+          <initializer>= 2</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpaimon_1_1_vector_search_1a6f960bf74c4872082c36d26c05c95befae66ba018ef96aa5c78c8fba787f43717" prot="public">
+          <name>COSINE</name>
+          <initializer>= 3</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpaimon_1_1_vector_search_1a6f960bf74c4872082c36d26c05c95befa696b031073e74bf2cb98e5ef201d4aa3" prot="public">
+          <name>UNKNOWN</name>
+          <initializer>= 128</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>Enumeration of distance or similarity metrics for vector comparison. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" line="41" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" bodystart="41" bodyend="41"/>
+      </memberdef>
+      <memberdef kind="typedef" id="structpaimon_1_1_vector_search_1a294b3b66e32c02cdd139dc87b3e7bae1" prot="public" static="no">
+        <type>std::function&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref>)&gt;</type>
+        <definition>using paimon::VectorSearch::PreFilter =  std::function&lt;bool(int64_t)&gt;</definition>
+        <argsstring></argsstring>
+        <name>PreFilter</name>
+        <qualifiedname>paimon::VectorSearch::PreFilter</qualifiedname>
+        <briefdescription>
+<para><computeroutput>PreFilter</computeroutput>: A lightweight pre-filtering function applied <bold>before</bold> similarity scoring. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>It operates solely on <bold>global row ids</bold> and is typically driven by other global index, such as bitmap, or range index. This filter enables early pruning of irrelevant candidates (e.g., &quot;only consider rows with label X&quot;), significantly reducing the search space. Returns true to include the row in vector search process; false to exclude it.</para>
+<para><simplesect kind="note"><para>Must be thread-safe. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" line="38" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" bodystart="38" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpaimon_1_1_vector_search_1aa03f39649c522c7e757cfb8e43a7dc67" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::VectorSearch::field_name</definition>
+        <argsstring></argsstring>
+        <name>field_name</name>
+        <qualifiedname>paimon::VectorSearch::field_name</qualifiedname>
+        <briefdescription>
+<para>Search field name. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" line="61" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" bodystart="61" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_vector_search_1a00cdd95028fa4e3edf96e71afea26bc4" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::VectorSearch::limit</definition>
+        <argsstring></argsstring>
+        <name>limit</name>
+        <qualifiedname>paimon::VectorSearch::limit</qualifiedname>
+        <briefdescription>
+<para>Number of top results to return. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" line="63" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" bodystart="63" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_vector_search_1ac90fea2a7e3d795ae509cd78f500ee20" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">float</ref> &gt;</type>
+        <definition>std::vector&lt;float&gt; paimon::VectorSearch::query</definition>
+        <argsstring></argsstring>
+        <name>query</name>
+        <qualifiedname>paimon::VectorSearch::query</qualifiedname>
+        <briefdescription>
+<para>The query vector (must match the dimensionality of the indexed vectors). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" line="65" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" bodystart="65" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_vector_search_1a6e6dc0d2cf6b4a7791efb80b80a57589" prot="public" static="no" mutable="no">
+        <type>std::function&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref>)&gt;</type>
+        <definition>std::function&lt;bool(int64_t)&gt; paimon::VectorSearch::pre_filter</definition>
+        <argsstring></argsstring>
+        <name>pre_filter</name>
+        <qualifiedname>paimon::VectorSearch::pre_filter</qualifiedname>
+        <briefdescription>
+<para>A pre-filter based on <bold>global row ids</bold>, implemented by leveraging other global index. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" line="67" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" bodystart="67" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_vector_search_1a69111b7d3e96471b31f364eef152bbe8" prot="public" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Predicate&gt; paimon::VectorSearch::predicate</definition>
+        <argsstring></argsstring>
+        <name>predicate</name>
+        <qualifiedname>paimon::VectorSearch::predicate</qualifiedname>
+        <briefdescription>
+<para>A runtime filtering condition that may involve graph traversal of structured attributes. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><bold>Using this parameter often yields better filtering accuracy</bold> because during index construction, the underlying graph was built with explicit consideration of field connectivity (e.g., relationships between attributes). As a result, predicates can leverage this pre-established semantic structure to perform more meaningful and context-aware filtering at query time. <simplesect kind="note"><para>All fields referenced in the predicate must have been materialized in the index during build to ensure availability. </para>
+</simplesect>
+<simplesect kind="note"><para>For tag-based vector indexes, fields referenced by the predicate must keep the same names and types as the fields used during index construction. Indexes built with tag fields must not be reused across schema evolution that renames or changes those tag fields. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" line="81" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" bodystart="81" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_vector_search_1a4d9869e20b0c4fe464aa3afef46de546" prot="public" static="no" mutable="no">
+        <type>std::optional&lt; <ref refid="structpaimon_1_1_vector_search_1a6f960bf74c4872082c36d26c05c95bef" kindref="member">DistanceType</ref> &gt;</type>
+        <definition>std::optional&lt;DistanceType&gt; paimon::VectorSearch::distance_type</definition>
+        <argsstring></argsstring>
+        <name>distance_type</name>
+        <qualifiedname>paimon::VectorSearch::distance_type</qualifiedname>
+        <briefdescription>
+<para>The distance metric to use for this query, if explicitly specified. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>If set, this value must match the distance type used by the index (e.g., EUCLIDEAN, COSINE). A mismatch will result in an error during query execution. If not set (std::nullopt), the query will use the distance type configured in the index. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" line="86" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" bodystart="86" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_vector_search_1a75b4356198ae0c851bea1909e578611e" prot="public" static="no" mutable="no">
+        <type>std::map&lt; std::string, std::string &gt;</type>
+        <definition>std::map&lt;std::string, std::string&gt; paimon::VectorSearch::options</definition>
+        <argsstring></argsstring>
+        <name>options</name>
+        <qualifiedname>paimon::VectorSearch::options</qualifiedname>
+        <briefdescription>
+<para>A key-value map of query-specific runtime options. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Such as the size of candidate list in approximate search or parallelism for this query. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" line="89" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" bodystart="89" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpaimon_1_1_vector_search_1ac60c0f481348c78b9fc8c94261302a93" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::VectorSearch::VectorSearch</definition>
+        <argsstring>(const std::string &amp;_field_name, int32_t _limit, const std::vector&lt; float &gt; &amp;_query, PreFilter _pre_filter, const std::shared_ptr&lt; Predicate &gt; &amp;_predicate, const std::optional&lt; DistanceType &gt; &amp;_distance_type, const std::map&lt; std::string, std::string &gt; &amp;_options)</argsstring>
+        <name>VectorSearch</name>
+        <qualifiedname>paimon::VectorSearch::VectorSearch</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>_field_name</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>_limit</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">float</ref> &gt; &amp;</type>
+          <declname>_query</declname>
+        </param>
+        <param>
+          <type><ref refid="structpaimon_1_1_vector_search_1a294b3b66e32c02cdd139dc87b3e7bae1" kindref="member">PreFilter</ref></type>
+          <declname>_pre_filter</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &amp;</type>
+          <declname>_predicate</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::optional&lt; <ref refid="structpaimon_1_1_vector_search_1a6f960bf74c4872082c36d26c05c95bef" kindref="member">DistanceType</ref> &gt; &amp;</type>
+          <declname>_distance_type</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>_options</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" line="43" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" bodystart="43" bodyend="53"/>
+      </memberdef>
+      <memberdef kind="function" id="structpaimon_1_1_vector_search_1afbf31025f628951de5c3ff5ba1eabd2a" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="structpaimon_1_1_vector_search" kindref="compound">VectorSearch</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; VectorSearch &gt; paimon::VectorSearch::ReplacePreFilter</definition>
+        <argsstring>(PreFilter _pre_filter) const</argsstring>
+        <name>ReplacePreFilter</name>
+        <qualifiedname>paimon::VectorSearch::ReplacePreFilter</qualifiedname>
+        <param>
+          <type><ref refid="structpaimon_1_1_vector_search_1a294b3b66e32c02cdd139dc87b3e7bae1" kindref="member">PreFilter</ref></type>
+          <declname>_pre_filter</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" line="55" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" bodystart="55" bodyend="58"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><computeroutput><ref refid="structpaimon_1_1_vector_search" kindref="compound">VectorSearch</ref></computeroutput> to perform vector similarity search. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" line="30" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/vector_search.h" bodystart="30" bodyend="90"/>
+    <listofallmembers>
+      <member refid="structpaimon_1_1_vector_search_1a4d9869e20b0c4fe464aa3afef46de546" prot="public" virt="non-virtual"><scope>paimon::VectorSearch</scope><name>distance_type</name></member>
+      <member refid="structpaimon_1_1_vector_search_1a6f960bf74c4872082c36d26c05c95bef" prot="public" virt="non-virtual"><scope>paimon::VectorSearch</scope><name>DistanceType</name></member>
+      <member refid="structpaimon_1_1_vector_search_1aa03f39649c522c7e757cfb8e43a7dc67" prot="public" virt="non-virtual"><scope>paimon::VectorSearch</scope><name>field_name</name></member>
+      <member refid="structpaimon_1_1_vector_search_1a00cdd95028fa4e3edf96e71afea26bc4" prot="public" virt="non-virtual"><scope>paimon::VectorSearch</scope><name>limit</name></member>
+      <member refid="structpaimon_1_1_vector_search_1a75b4356198ae0c851bea1909e578611e" prot="public" virt="non-virtual"><scope>paimon::VectorSearch</scope><name>options</name></member>
+      <member refid="structpaimon_1_1_vector_search_1a6e6dc0d2cf6b4a7791efb80b80a57589" prot="public" virt="non-virtual"><scope>paimon::VectorSearch</scope><name>pre_filter</name></member>
+      <member refid="structpaimon_1_1_vector_search_1a69111b7d3e96471b31f364eef152bbe8" prot="public" virt="non-virtual"><scope>paimon::VectorSearch</scope><name>predicate</name></member>
+      <member refid="structpaimon_1_1_vector_search_1a294b3b66e32c02cdd139dc87b3e7bae1" prot="public" virt="non-virtual"><scope>paimon::VectorSearch</scope><name>PreFilter</name></member>
+      <member refid="structpaimon_1_1_vector_search_1ac90fea2a7e3d795ae509cd78f500ee20" prot="public" virt="non-virtual"><scope>paimon::VectorSearch</scope><name>query</name></member>
+      <member refid="structpaimon_1_1_vector_search_1afbf31025f628951de5c3ff5ba1eabd2a" prot="public" virt="non-virtual"><scope>paimon::VectorSearch</scope><name>ReplacePreFilter</name></member>
+      <member refid="structpaimon_1_1_vector_search_1ac60c0f481348c78b9fc8c94261302a93" prot="public" virt="non-virtual"><scope>paimon::VectorSearch</scope><name>VectorSearch</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,159 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_nested_column_stats" kind="class" language="C++" prot="public">
+    <compoundname>paimon::NestedColumnStats</compoundname>
+    <basecompoundref refid="classpaimon_1_1_column_stats" prot="public" virt="non-virtual">paimon::ColumnStats</basecompoundref>
+    <includes refid="column__stats_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_nested_column_stats_1aaae3eceece6a39fe0308199db2b23c4d" prot="private" static="no" mutable="no">
+        <type><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7" kindref="member">FieldType</ref></type>
+        <definition>FieldType paimon::NestedColumnStats::nested_type_</definition>
+        <argsstring></argsstring>
+        <name>nested_type_</name>
+        <qualifiedname>paimon::NestedColumnStats::nested_type_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" line="193" column="15" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" bodystart="193" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_nested_column_stats_1a4869e74ffcf16635d4f178d47d1464b7" prot="private" static="no" mutable="no">
+        <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+        <definition>std::optional&lt;int64_t&gt; paimon::NestedColumnStats::null_count_</definition>
+        <argsstring></argsstring>
+        <name>null_count_</name>
+        <qualifiedname>paimon::NestedColumnStats::null_count_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" line="194" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" bodystart="194" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_nested_column_stats_1a666c40837f2f6d93aa15ed24abe60597" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::NestedColumnStats::NestedColumnStats</definition>
+        <argsstring>(const FieldType &amp;nested_type, std::optional&lt; int64_t &gt; null_count)</argsstring>
+        <name>NestedColumnStats</name>
+        <qualifiedname>paimon::NestedColumnStats::NestedColumnStats</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7" kindref="member">FieldType</ref> &amp;</type>
+          <declname>nested_type</declname>
+        </param>
+        <param>
+          <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+          <declname>null_count</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" line="178" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" bodystart="178" bodyend="182"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_nested_column_stats_1a099d2325a59079e3268f411d958d7d42" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="virtual">
+        <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+        <definition>std::optional&lt; int64_t &gt; paimon::NestedColumnStats::NullCount</definition>
+        <argsstring>() const override</argsstring>
+        <name>NullCount</name>
+        <qualifiedname>paimon::NestedColumnStats::NullCount</qualifiedname>
+        <reimplements refid="classpaimon_1_1_column_stats_1a092dca4f4e462bba61551fb9b3581696">NullCount</reimplements>
+        <briefdescription>
+<para>Gets the number of null values in this column. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" line="184" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" bodystart="184" bodyend="186"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_nested_column_stats_1a4e622e63449873322242359a54734471" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::NestedColumnStats::ToString</definition>
+        <argsstring>() const override</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::NestedColumnStats::ToString</qualifiedname>
+        <reimplements refid="classpaimon_1_1_column_stats_1aa0c16b023e7414b676c114992cfc28d1">ToString</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" line="188" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_nested_column_stats_1ac2be42a68f732e389cc7eb987880480b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7" kindref="member">FieldType</ref></type>
+        <definition>FieldType paimon::NestedColumnStats::GetFieldType</definition>
+        <argsstring>() const override</argsstring>
+        <name>GetFieldType</name>
+        <qualifiedname>paimon::NestedColumnStats::GetFieldType</qualifiedname>
+        <reimplements refid="classpaimon_1_1_column_stats_1acb12cbb177a9d1f4279e1c79a40ce7ea">GetFieldType</reimplements>
+        <briefdescription>
+<para>Gets the field type that this column statistics instance represents. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" line="190" column="15"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::ColumnStats</label>
+        <link refid="classpaimon_1_1_column_stats"/>
+      </node>
+      <node id="1">
+        <label>paimon::NestedColumnStats</label>
+        <link refid="classpaimon_1_1_nested_column_stats"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>paimon::ColumnStats</label>
+        <link refid="classpaimon_1_1_column_stats"/>
+      </node>
+      <node id="1">
+        <label>paimon::NestedColumnStats</label>
+        <link refid="classpaimon_1_1_nested_column_stats"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" line="176" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" bodystart="176" bodyend="195"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_column_stats_1ae38a4e8f969ce35eced9b59a9c5d94d3" prot="public" virt="non-virtual"><scope>paimon::NestedColumnStats</scope><name>CreateBigIntColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a063785e2558048ab9c23bc5fe9262566" prot="public" virt="non-virtual"><scope>paimon::NestedColumnStats</scope><name>CreateBooleanColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a4152dd602e62575c6578459e76355fba" prot="public" virt="non-virtual"><scope>paimon::NestedColumnStats</scope><name>CreateDateColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a2240e77f944db5d48e34b51d1c31064a" prot="public" virt="non-virtual"><scope>paimon::NestedColumnStats</scope><name>CreateDecimalColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1af62d4a010fc532b97804e48b85bbe423" prot="public" virt="non-virtual"><scope>paimon::NestedColumnStats</scope><name>CreateDoubleColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a13016c01cc9898b897812d6524a9a399" prot="public" virt="non-virtual"><scope>paimon::NestedColumnStats</scope><name>CreateFloatColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1af3c3ef2f5417dd8756560fa28a734d71" prot="public" virt="non-virtual"><scope>paimon::NestedColumnStats</scope><name>CreateIntColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1af0a7d4a3f6b61cbd5ae2eb7841abb691" prot="public" virt="non-virtual"><scope>paimon::NestedColumnStats</scope><name>CreateNestedColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a7a22ec6e1d88cf6bcb2ea4a7ec4682f7" prot="public" virt="non-virtual"><scope>paimon::NestedColumnStats</scope><name>CreateSmallIntColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a77d5d343883a1039fc8e22e93469a886" prot="public" virt="non-virtual"><scope>paimon::NestedColumnStats</scope><name>CreateStringColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1afeb803c5f4f211446805046d4d44286b" prot="public" virt="non-virtual"><scope>paimon::NestedColumnStats</scope><name>CreateTimestampColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a758bff21d7ac005cc022595b6be15e33" prot="public" virt="non-virtual"><scope>paimon::NestedColumnStats</scope><name>CreateTinyIntColumnStats</name></member>
+      <member refid="classpaimon_1_1_nested_column_stats_1ac2be42a68f732e389cc7eb987880480b" prot="public" virt="virtual"><scope>paimon::NestedColumnStats</scope><name>GetFieldType</name></member>
+      <member refid="classpaimon_1_1_nested_column_stats_1aaae3eceece6a39fe0308199db2b23c4d" prot="private" virt="non-virtual"><scope>paimon::NestedColumnStats</scope><name>nested_type_</name></member>
+      <member refid="classpaimon_1_1_nested_column_stats_1a666c40837f2f6d93aa15ed24abe60597" prot="public" virt="non-virtual"><scope>paimon::NestedColumnStats</scope><name>NestedColumnStats</name></member>
+      <member refid="classpaimon_1_1_nested_column_stats_1a4869e74ffcf16635d4f178d47d1464b7" prot="private" virt="non-virtual"><scope>paimon::NestedColumnStats</scope><name>null_count_</name></member>
+      <member refid="classpaimon_1_1_nested_column_stats_1a099d2325a59079e3268f411d958d7d42" prot="public" virt="virtual"><scope>paimon::NestedColumnStats</scope><name>NullCount</name></member>
+      <member refid="classpaimon_1_1_nested_column_stats_1a4e622e63449873322242359a54734471" prot="public" virt="virtual"><scope>paimon::NestedColumnStats</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a4ba1b7e8d8525038f55e9c8daef5f87a" prot="public" virt="virtual"><scope>paimon::NestedColumnStats</scope><name>~ColumnStats</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

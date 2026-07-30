@@ -1,0 +1,92 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_reader_builder" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::ReaderBuilder</compoundname>
+    <includes refid="reader__builder_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/reader_builder.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_reader_builder_1aa4f6427f3e7265ac1ec43047027b2e91" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::ReaderBuilder::~ReaderBuilder</definition>
+        <argsstring>()=default</argsstring>
+        <name>~ReaderBuilder</name>
+        <qualifiedname>paimon::ReaderBuilder::~ReaderBuilder</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/reader_builder.h" line="31" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_reader_builder_1a3256a0e67c0174668a605a5a6513409d" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_reader_builder" kindref="compound">ReaderBuilder</ref> *</type>
+        <definition>virtual ReaderBuilder * paimon::ReaderBuilder::WithMemoryPool</definition>
+        <argsstring>(const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)=0</argsstring>
+        <name>WithMemoryPool</name>
+        <qualifiedname>paimon::ReaderBuilder::WithMemoryPool</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Set memory pool to use. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/reader_builder.h" line="34" column="27"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_reader_builder_1aa1581c13e4a0500f9574748e30cd73ec" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type><ref refid="classpaimon_1_1_reader_builder" kindref="compound">ReaderBuilder</ref> *</type>
+        <definition>virtual ReaderBuilder * paimon::ReaderBuilder::WithCache</definition>
+        <argsstring>(const std::shared_ptr&lt; Cache &gt; &amp;cache)</argsstring>
+        <name>WithCache</name>
+        <qualifiedname>paimon::ReaderBuilder::WithCache</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_cache" kindref="compound">Cache</ref> &gt; &amp;</type>
+          <declname>cache</declname>
+        </param>
+        <briefdescription>
+<para>Inject a cache for reader-specific immutable metadata. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/reader_builder.h" line="37" column="27" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/reader_builder.h" bodystart="37" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_reader_builder_1a0a025fdbb6bd1fbb5254a5ab8e01ed17" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_file_batch_reader" kindref="compound">FileBatchReader</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt; FileBatchReader &gt; &gt; paimon::ReaderBuilder::Build</definition>
+        <argsstring>(const std::shared_ptr&lt; InputStream &gt; &amp;path) const =0</argsstring>
+        <name>Build</name>
+        <qualifiedname>paimon::ReaderBuilder::Build</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_input_stream" kindref="compound">InputStream</ref> &gt; &amp;</type>
+          <declname>path</declname>
+        </param>
+        <briefdescription>
+<para>Build a file batch reader based on the created <computeroutput><ref refid="classpaimon_1_1_input_stream" kindref="compound">InputStream</ref></computeroutput>. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/reader_builder.h" line="43" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Create a file batch reader based on an input stream. Allows you to specify memory pool. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/reader_builder.h" line="29" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/reader_builder.h" bodystart="29" bodyend="45"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_reader_builder_1a0a025fdbb6bd1fbb5254a5ab8e01ed17" prot="public" virt="pure-virtual"><scope>paimon::ReaderBuilder</scope><name>Build</name></member>
+      <member refid="classpaimon_1_1_reader_builder_1aa1581c13e4a0500f9574748e30cd73ec" prot="public" virt="virtual"><scope>paimon::ReaderBuilder</scope><name>WithCache</name></member>
+      <member refid="classpaimon_1_1_reader_builder_1a3256a0e67c0174668a605a5a6513409d" prot="public" virt="pure-virtual"><scope>paimon::ReaderBuilder</scope><name>WithMemoryPool</name></member>
+      <member refid="classpaimon_1_1_reader_builder_1aa4f6427f3e7265ac1ec43047027b2e91" prot="public" virt="virtual"><scope>paimon::ReaderBuilder</scope><name>~ReaderBuilder</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

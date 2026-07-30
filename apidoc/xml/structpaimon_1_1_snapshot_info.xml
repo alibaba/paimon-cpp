@@ -1,0 +1,210 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="structpaimon_1_1_snapshot_info" kind="struct" language="C++" prot="public">
+    <compoundname>paimon::SnapshotInfo</compoundname>
+    <includes refid="snapshot__info_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="structpaimon_1_1_snapshot_info_1a09abaf359397776d634f98845c65232e" prot="public" static="no" strong="yes">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int8_t</ref></type>
+        <name>CommitKind</name>
+        <qualifiedname>paimon::SnapshotInfo::CommitKind</qualifiedname>
+        <enumvalue id="structpaimon_1_1_snapshot_info_1a09abaf359397776d634f98845c65232ea375ffb668aa90f1c7fcae55e9734a752" prot="public">
+          <name>APPEND</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpaimon_1_1_snapshot_info_1a09abaf359397776d634f98845c65232eabbd53c25a2b976c1757ce1f9dbe8bd1f" prot="public">
+          <name>COMPACT</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpaimon_1_1_snapshot_info_1a09abaf359397776d634f98845c65232ea1038b7c5b38b3977c52e47d18cc741ee" prot="public">
+          <name>OVERWRITE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpaimon_1_1_snapshot_info_1a09abaf359397776d634f98845c65232ea7131c39e2eb7ed10c4c28f88be245b49" prot="public">
+          <name>ANALYZE</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="structpaimon_1_1_snapshot_info_1a09abaf359397776d634f98845c65232ea696b031073e74bf2cb98e5ef201d4aa3" prot="public">
+          <name>UNKNOWN</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>Commit kind exposed through the public <ref refid="classpaimon_1_1_catalog" kindref="compound">Catalog</ref> API. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" line="30" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" bodystart="30" bodyend="36"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpaimon_1_1_snapshot_info_1a766a53f2a516f0f1a0a266210e8c6250" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::SnapshotInfo::snapshot_id</definition>
+        <argsstring></argsstring>
+        <name>snapshot_id</name>
+        <qualifiedname>paimon::SnapshotInfo::snapshot_id</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" line="41" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" bodystart="41" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_snapshot_info_1a2ef50ac703c5970a3f785b7ad5c64361" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::SnapshotInfo::schema_id</definition>
+        <argsstring></argsstring>
+        <name>schema_id</name>
+        <qualifiedname>paimon::SnapshotInfo::schema_id</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" line="42" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" bodystart="42" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_snapshot_info_1ab6ccd027ef5ad44ef530d2df794247d2" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::SnapshotInfo::commit_user</definition>
+        <argsstring></argsstring>
+        <name>commit_user</name>
+        <qualifiedname>paimon::SnapshotInfo::commit_user</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" line="43" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" bodystart="43" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_snapshot_info_1a8123854faa9d63b50625c038cfe19687" prot="public" static="no" mutable="no">
+        <type><ref refid="structpaimon_1_1_snapshot_info_1a09abaf359397776d634f98845c65232e" kindref="member">CommitKind</ref></type>
+        <definition>CommitKind paimon::SnapshotInfo::commit_kind</definition>
+        <argsstring></argsstring>
+        <name>commit_kind</name>
+        <qualifiedname>paimon::SnapshotInfo::commit_kind</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" line="44" column="16" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" bodystart="44" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_snapshot_info_1a84c2efac150943637c088acdf55330f0" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::SnapshotInfo::time_millis</definition>
+        <argsstring></argsstring>
+        <name>time_millis</name>
+        <qualifiedname>paimon::SnapshotInfo::time_millis</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" line="45" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" bodystart="45" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_snapshot_info_1ad9ef895ab7b31571753ec88b295ab13d" prot="public" static="no" mutable="no">
+        <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+        <definition>std::optional&lt;int64_t&gt; paimon::SnapshotInfo::total_record_count</definition>
+        <argsstring></argsstring>
+        <name>total_record_count</name>
+        <qualifiedname>paimon::SnapshotInfo::total_record_count</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" line="46" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" bodystart="46" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_snapshot_info_1a98e0c0264b4b0006583024015caad28e" prot="public" static="no" mutable="no">
+        <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+        <definition>std::optional&lt;int64_t&gt; paimon::SnapshotInfo::delta_record_count</definition>
+        <argsstring></argsstring>
+        <name>delta_record_count</name>
+        <qualifiedname>paimon::SnapshotInfo::delta_record_count</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" line="47" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" bodystart="47" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_snapshot_info_1ab33f376fd00b7b5093e31559e9dd69f9" prot="public" static="no" mutable="no">
+        <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+        <definition>std::optional&lt;int64_t&gt; paimon::SnapshotInfo::watermark</definition>
+        <argsstring></argsstring>
+        <name>watermark</name>
+        <qualifiedname>paimon::SnapshotInfo::watermark</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" line="48" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" bodystart="48" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="structpaimon_1_1_snapshot_info_1aa8f240f04576207059737c25e5c2b74b" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>static std::string paimon::SnapshotInfo::CommitKindToString</definition>
+        <argsstring>(CommitKind kind)</argsstring>
+        <name>CommitKindToString</name>
+        <qualifiedname>paimon::SnapshotInfo::CommitKindToString</qualifiedname>
+        <param>
+          <type><ref refid="structpaimon_1_1_snapshot_info_1a09abaf359397776d634f98845c65232e" kindref="member">CommitKind</ref></type>
+          <declname>kind</declname>
+        </param>
+        <briefdescription>
+<para>Convert a CommitKind to its canonical string representation. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" line="39" column="24"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Plain snapshot metadata returned by <ref refid="classpaimon_1_1_catalog_1a44ba13c2315f71f5ca6f42648209150e" kindref="member">Catalog::ListSnapshots()</ref>. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" line="28" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/snapshot/snapshot_info.h" bodystart="28" bodyend="49"/>
+    <listofallmembers>
+      <member refid="structpaimon_1_1_snapshot_info_1a8123854faa9d63b50625c038cfe19687" prot="public" virt="non-virtual"><scope>paimon::SnapshotInfo</scope><name>commit_kind</name></member>
+      <member refid="structpaimon_1_1_snapshot_info_1ab6ccd027ef5ad44ef530d2df794247d2" prot="public" virt="non-virtual"><scope>paimon::SnapshotInfo</scope><name>commit_user</name></member>
+      <member refid="structpaimon_1_1_snapshot_info_1a09abaf359397776d634f98845c65232e" prot="public" virt="non-virtual"><scope>paimon::SnapshotInfo</scope><name>CommitKind</name></member>
+      <member refid="structpaimon_1_1_snapshot_info_1aa8f240f04576207059737c25e5c2b74b" prot="public" virt="non-virtual"><scope>paimon::SnapshotInfo</scope><name>CommitKindToString</name></member>
+      <member refid="structpaimon_1_1_snapshot_info_1a98e0c0264b4b0006583024015caad28e" prot="public" virt="non-virtual"><scope>paimon::SnapshotInfo</scope><name>delta_record_count</name></member>
+      <member refid="structpaimon_1_1_snapshot_info_1a2ef50ac703c5970a3f785b7ad5c64361" prot="public" virt="non-virtual"><scope>paimon::SnapshotInfo</scope><name>schema_id</name></member>
+      <member refid="structpaimon_1_1_snapshot_info_1a766a53f2a516f0f1a0a266210e8c6250" prot="public" virt="non-virtual"><scope>paimon::SnapshotInfo</scope><name>snapshot_id</name></member>
+      <member refid="structpaimon_1_1_snapshot_info_1a84c2efac150943637c088acdf55330f0" prot="public" virt="non-virtual"><scope>paimon::SnapshotInfo</scope><name>time_millis</name></member>
+      <member refid="structpaimon_1_1_snapshot_info_1ad9ef895ab7b31571753ec88b295ab13d" prot="public" virt="non-virtual"><scope>paimon::SnapshotInfo</scope><name>total_record_count</name></member>
+      <member refid="structpaimon_1_1_snapshot_info_1ab33f376fd00b7b5093e31559e9dd69f9" prot="public" virt="non-virtual"><scope>paimon::SnapshotInfo</scope><name>watermark</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

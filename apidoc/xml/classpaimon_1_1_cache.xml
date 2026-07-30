@@ -1,0 +1,126 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_cache" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::Cache</compoundname>
+    <includes refid="cache_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/cache/cache.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_cache_1a5ea61bf9ad2ab0235e548964d170e912" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::Cache::~Cache</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Cache</name>
+        <qualifiedname>paimon::Cache::~Cache</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/cache/cache.h" line="73" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_cache_1a17b3395cd185d3f7595ea597a82812eb" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_cache_value" kindref="compound">CacheValue</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::shared_ptr&lt; CacheValue &gt; &gt; paimon::Cache::Get</definition>
+        <argsstring>(const std::shared_ptr&lt; CacheKey &gt; &amp;key, std::function&lt; Result&lt; std::shared_ptr&lt; CacheValue &gt; &gt;(const std::shared_ptr&lt; CacheKey &gt; &amp;)&gt; supplier)=0</argsstring>
+        <name>Get</name>
+        <qualifiedname>paimon::Cache::Get</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_cache_key" kindref="compound">CacheKey</ref> &gt; &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>std::function&lt; <ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_cache_value" kindref="compound">CacheValue</ref> &gt; &gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_cache_key" kindref="compound">CacheKey</ref> &gt; &amp;)&gt;</type>
+          <declname>supplier</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/cache/cache.h" line="75" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_cache_1af5cf11d5579ed55668025015fd0707de" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::Cache::Put</definition>
+        <argsstring>(const std::shared_ptr&lt; CacheKey &gt; &amp;key, const std::shared_ptr&lt; CacheValue &gt; &amp;value)=0</argsstring>
+        <name>Put</name>
+        <qualifiedname>paimon::Cache::Put</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_cache_key" kindref="compound">CacheKey</ref> &gt; &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_cache_value" kindref="compound">CacheValue</ref> &gt; &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/cache/cache.h" line="80" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_cache_1ab9422eceba244aaa08433204340b09d8" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>virtual void paimon::Cache::Invalidate</definition>
+        <argsstring>(const std::shared_ptr&lt; CacheKey &gt; &amp;key)=0</argsstring>
+        <name>Invalidate</name>
+        <qualifiedname>paimon::Cache::Invalidate</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_cache_key" kindref="compound">CacheKey</ref> &gt; &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/cache/cache.h" line="83" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_cache_1ab14adb1ff0abf71745d6e6693d4a057c" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>virtual void paimon::Cache::InvalidateAll</definition>
+        <argsstring>()=0</argsstring>
+        <name>InvalidateAll</name>
+        <qualifiedname>paimon::Cache::InvalidateAll</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/cache/cache.h" line="85" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_cache_1af77ee0082b7f989e68b08dbee8baea4d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+        <definition>virtual size_t paimon::Cache::Size</definition>
+        <argsstring>() const =0</argsstring>
+        <name>Size</name>
+        <qualifiedname>paimon::Cache::Size</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/cache/cache.h" line="87" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/cache/cache.h" line="71" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/cache/cache.h" bodystart="71" bodyend="88"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_cache_1a17b3395cd185d3f7595ea597a82812eb" prot="public" virt="pure-virtual"><scope>paimon::Cache</scope><name>Get</name></member>
+      <member refid="classpaimon_1_1_cache_1ab9422eceba244aaa08433204340b09d8" prot="public" virt="pure-virtual"><scope>paimon::Cache</scope><name>Invalidate</name></member>
+      <member refid="classpaimon_1_1_cache_1ab14adb1ff0abf71745d6e6693d4a057c" prot="public" virt="pure-virtual"><scope>paimon::Cache</scope><name>InvalidateAll</name></member>
+      <member refid="classpaimon_1_1_cache_1af5cf11d5579ed55668025015fd0707de" prot="public" virt="pure-virtual"><scope>paimon::Cache</scope><name>Put</name></member>
+      <member refid="classpaimon_1_1_cache_1af77ee0082b7f989e68b08dbee8baea4d" prot="public" virt="pure-virtual"><scope>paimon::Cache</scope><name>Size</name></member>
+      <member refid="classpaimon_1_1_cache_1a5ea61bf9ad2ab0235e548964d170e912" prot="public" virt="virtual"><scope>paimon::Cache</scope><name>~Cache</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

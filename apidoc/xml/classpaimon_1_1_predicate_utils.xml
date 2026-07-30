@@ -1,0 +1,262 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_predicate_utils" kind="class" language="C++" prot="public">
+    <compoundname>paimon::PredicateUtils</compoundname>
+    <includes refid="predicate__utils_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate_utils.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_predicate_utils_1a61176b5f7fc198be79772f86262adcfc" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::PredicateUtils::PredicateUtils</definition>
+        <argsstring>()=delete</argsstring>
+        <name>PredicateUtils</name>
+        <qualifiedname>paimon::PredicateUtils::PredicateUtils</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate_utils.h" line="39" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_predicate_utils_1a61404ea03168e1feb5846d9c83c0d147" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::PredicateUtils::~PredicateUtils</definition>
+        <argsstring>()=delete</argsstring>
+        <name>~PredicateUtils</name>
+        <qualifiedname>paimon::PredicateUtils::~PredicateUtils</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate_utils.h" line="40" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_predicate_utils_1ad61dc38c4eaddd9d0898d524bf95f600" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref> &gt;</type>
+        <definition>static Result&lt; bool &gt; paimon::PredicateUtils::ContainAnyField</definition>
+        <argsstring>(const std::shared_ptr&lt; Predicate &gt; &amp;predicate, const std::set&lt; std::string &gt; &amp;field_names)</argsstring>
+        <name>ContainAnyField</name>
+        <qualifiedname>paimon::PredicateUtils::ContainAnyField</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &amp;</type>
+          <declname>predicate</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::set&lt; std::string &gt; &amp;</type>
+          <declname>field_names</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate_utils.h" line="41" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_predicate_utils_1abee2aed4c036acda2dc063959991aa83" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::shared_ptr&lt; Predicate &gt; &gt; paimon::PredicateUtils::ExcludePredicateWithFields</definition>
+        <argsstring>(const std::shared_ptr&lt; Predicate &gt; &amp;predicates, const std::set&lt; std::string &gt; &amp;field_names)</argsstring>
+        <name>ExcludePredicateWithFields</name>
+        <qualifiedname>paimon::PredicateUtils::ExcludePredicateWithFields</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &amp;</type>
+          <declname>predicates</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::set&lt; std::string &gt; &amp;</type>
+          <declname>field_names</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate_utils.h" line="44" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_predicate_utils_1a4bae1311a7aff03ff4a224a3eead55f7" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &gt; &gt;</type>
+        <definition>static Result&lt; std::vector&lt; std::shared_ptr&lt; Predicate &gt; &gt; &gt; paimon::PredicateUtils::ExcludePredicateWithFields</definition>
+        <argsstring>(const std::vector&lt; std::shared_ptr&lt; Predicate &gt; &gt; &amp;predicates, const std::set&lt; std::string &gt; &amp;field_names)</argsstring>
+        <name>ExcludePredicateWithFields</name>
+        <qualifiedname>paimon::PredicateUtils::ExcludePredicateWithFields</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &gt; &amp;</type>
+          <declname>predicates</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::set&lt; std::string &gt; &amp;</type>
+          <declname>field_names</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate_utils.h" line="47" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_predicate_utils_1a47be96e6da8afab9845afc7bb168c8b9" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &gt;</type>
+        <definition>static std::vector&lt; std::shared_ptr&lt; Predicate &gt; &gt; paimon::PredicateUtils::SplitAnd</definition>
+        <argsstring>(const std::shared_ptr&lt; Predicate &gt; &amp;predicate)</argsstring>
+        <name>SplitAnd</name>
+        <qualifiedname>paimon::PredicateUtils::SplitAnd</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &amp;</type>
+          <declname>predicate</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate_utils.h" line="51" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_predicate_utils_1a34e5f3a1bda50527bf750ac01bc7ea37" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::shared_ptr&lt; Predicate &gt; &gt; paimon::PredicateUtils::CreatePickedFieldFilter</definition>
+        <argsstring>(const std::shared_ptr&lt; Predicate &gt; &amp;predicate, const std::map&lt; std::string, int32_t &gt; &amp;picked_field_name_to_idx)</argsstring>
+        <name>CreatePickedFieldFilter</name>
+        <qualifiedname>paimon::PredicateUtils::CreatePickedFieldFilter</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &amp;</type>
+          <declname>predicate</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt; &amp;</type>
+          <declname>picked_field_name_to_idx</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate_utils.h" line="55" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_predicate_utils_1a42c0d4568662143c1502e8052024ffcc" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>static Status paimon::PredicateUtils::GetAllNames</definition>
+        <argsstring>(const std::shared_ptr&lt; Predicate &gt; &amp;predicate, std::set&lt; std::string &gt; *field_names)</argsstring>
+        <name>GetAllNames</name>
+        <qualifiedname>paimon::PredicateUtils::GetAllNames</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &amp;</type>
+          <declname>predicate</declname>
+        </param>
+        <param>
+          <type>std::set&lt; std::string &gt; *</type>
+          <declname>field_names</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate_utils.h" line="59" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_predicate_utils_1a80a44fdf7be7367c069f70a17f679245" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref></type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt;</type>
+        <definition>static Result&lt; T &gt; paimon::PredicateUtils::VisitPredicate</definition>
+        <argsstring>(const std::shared_ptr&lt; LeafPredicate &gt; &amp;predicate, const std::shared_ptr&lt; FunctionVisitor&lt; T &gt; &gt; &amp;visitor)</argsstring>
+        <name>VisitPredicate</name>
+        <qualifiedname>paimon::PredicateUtils::VisitPredicate</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_leaf_predicate" kindref="compound">LeafPredicate</ref> &gt; &amp;</type>
+          <declname>predicate</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_function_visitor" kindref="compound">FunctionVisitor</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt; &gt; &amp;</type>
+          <declname>visitor</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate_utils.h" line="63" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate_utils.h" bodystart="63" bodyend="119"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_predicate_utils_1ab9dbe1209b4698f03b695fe5c5a31783" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::optional&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &gt; &gt;</type>
+        <definition>static Result&lt; std::optional&lt; std::shared_ptr&lt; Predicate &gt; &gt; &gt; paimon::PredicateUtils::ReconstructPredicateWithPickedFields</definition>
+        <argsstring>(const std::shared_ptr&lt; Predicate &gt; &amp;predicate, const std::map&lt; std::string, int32_t &gt; &amp;picked_field_name_to_idx)</argsstring>
+        <name>ReconstructPredicateWithPickedFields</name>
+        <qualifiedname>paimon::PredicateUtils::ReconstructPredicateWithPickedFields</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &amp;</type>
+          <declname>predicate</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt; &amp;</type>
+          <declname>picked_field_name_to_idx</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate_utils.h" line="122" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_predicate_utils_1a85d7578988cbc08f64066f27c4ee3779" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>static void paimon::PredicateUtils::SplitCompound</definition>
+        <argsstring>(const Function::Type &amp;type, const std::shared_ptr&lt; Predicate &gt; &amp;predicate, std::vector&lt; std::shared_ptr&lt; Predicate &gt; &gt; *result)</argsstring>
+        <name>SplitCompound</name>
+        <qualifiedname>paimon::PredicateUtils::SplitCompound</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_function_1aa863a7d5f36a89c6765ea0118bb9a1dc" kindref="member">Function::Type</ref> &amp;</type>
+          <declname>type</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &amp;</type>
+          <declname>predicate</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &gt; *</type>
+          <declname>result</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate_utils.h" line="126" column="17"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate_utils.h" line="37" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate_utils.h" bodystart="37" bodyend="129"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_predicate_utils_1ad61dc38c4eaddd9d0898d524bf95f600" prot="public" virt="non-virtual"><scope>paimon::PredicateUtils</scope><name>ContainAnyField</name></member>
+      <member refid="classpaimon_1_1_predicate_utils_1a34e5f3a1bda50527bf750ac01bc7ea37" prot="public" virt="non-virtual"><scope>paimon::PredicateUtils</scope><name>CreatePickedFieldFilter</name></member>
+      <member refid="classpaimon_1_1_predicate_utils_1abee2aed4c036acda2dc063959991aa83" prot="public" virt="non-virtual"><scope>paimon::PredicateUtils</scope><name>ExcludePredicateWithFields</name></member>
+      <member refid="classpaimon_1_1_predicate_utils_1a4bae1311a7aff03ff4a224a3eead55f7" prot="public" virt="non-virtual"><scope>paimon::PredicateUtils</scope><name>ExcludePredicateWithFields</name></member>
+      <member refid="classpaimon_1_1_predicate_utils_1a42c0d4568662143c1502e8052024ffcc" prot="public" virt="non-virtual"><scope>paimon::PredicateUtils</scope><name>GetAllNames</name></member>
+      <member refid="classpaimon_1_1_predicate_utils_1a61176b5f7fc198be79772f86262adcfc" prot="public" virt="non-virtual"><scope>paimon::PredicateUtils</scope><name>PredicateUtils</name></member>
+      <member refid="classpaimon_1_1_predicate_utils_1ab9dbe1209b4698f03b695fe5c5a31783" prot="private" virt="non-virtual"><scope>paimon::PredicateUtils</scope><name>ReconstructPredicateWithPickedFields</name></member>
+      <member refid="classpaimon_1_1_predicate_utils_1a47be96e6da8afab9845afc7bb168c8b9" prot="public" virt="non-virtual"><scope>paimon::PredicateUtils</scope><name>SplitAnd</name></member>
+      <member refid="classpaimon_1_1_predicate_utils_1a85d7578988cbc08f64066f27c4ee3779" prot="private" virt="non-virtual"><scope>paimon::PredicateUtils</scope><name>SplitCompound</name></member>
+      <member refid="classpaimon_1_1_predicate_utils_1a80a44fdf7be7367c069f70a17f679245" prot="public" virt="non-virtual"><scope>paimon::PredicateUtils</scope><name>VisitPredicate</name></member>
+      <member refid="classpaimon_1_1_predicate_utils_1a61404ea03168e1feb5846d9c83c0d147" prot="public" virt="non-virtual"><scope>paimon::PredicateUtils</scope><name>~PredicateUtils</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

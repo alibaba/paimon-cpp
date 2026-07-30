@@ -1,0 +1,52 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="structpaimon_1_1_variant_cast_args" kind="struct" language="C++" prot="public">
+    <compoundname>paimon::VariantCastArgs</compoundname>
+    <includes refid="variant_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpaimon_1_1_variant_cast_args_1abdccf5a02054bf217a3b2b12a4334a47" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::VariantCastArgs::fail_on_error</definition>
+        <argsstring></argsstring>
+        <name>fail_on_error</name>
+        <qualifiedname>paimon::VariantCastArgs::fail_on_error</qualifiedname>
+        <initializer>= <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">true</ref></initializer>
+        <briefdescription>
+<para>Whether an invalid cast fails the call (true) or yields SQL NULL (false). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="39" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" bodystart="39" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_variant_cast_args_1a837a2aabee0b570b16dc49dff29d8db0" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::VariantCastArgs::zone_id</definition>
+        <argsstring></argsstring>
+        <name>zone_id</name>
+        <qualifiedname>paimon::VariantCastArgs::zone_id</qualifiedname>
+        <initializer>= &quot;UTC&quot;</initializer>
+        <briefdescription>
+<para>The time zone used when rendering TIMESTAMP values. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Supported forms are <computeroutput>UTC</computeroutput>/<computeroutput>Z</computeroutput>/<computeroutput>GMT</computeroutput>, fixed offsets such as <computeroutput>+08:00</computeroutput>, and IANA region ids such as <computeroutput>Asia/Shanghai</computeroutput>. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="42" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" bodystart="42" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Arguments controlling how a variant value is cast to a target type in <computeroutput><ref refid="classpaimon_1_1_variant_1a98aac59dacf5d1178d751f887c43b25e" kindref="member">Variant::VariantGet</ref></computeroutput>. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="37" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" bodystart="37" bodyend="43"/>
+    <listofallmembers>
+      <member refid="structpaimon_1_1_variant_cast_args_1abdccf5a02054bf217a3b2b12a4334a47" prot="public" virt="non-virtual"><scope>paimon::VariantCastArgs</scope><name>fail_on_error</name></member>
+      <member refid="structpaimon_1_1_variant_cast_args_1a837a2aabee0b570b16dc49dff29d8db0" prot="public" virt="non-virtual"><scope>paimon::VariantCastArgs</scope><name>zone_id</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

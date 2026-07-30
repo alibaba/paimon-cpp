@@ -1,0 +1,498 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_variant" kind="class" language="C++" prot="public">
+    <compoundname>paimon::Variant</compoundname>
+    <includes refid="variant_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_variant_1ae9d7245b7135393b32dd059478c2ec48" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Impl</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;Impl&gt; paimon::Variant::impl_</definition>
+        <argsstring></argsstring>
+        <name>impl_</name>
+        <qualifiedname>paimon::Variant::impl_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="157" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" bodystart="157" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_variant_1a4301721ab8a337606351546bad2adaa4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Variant::~Variant</definition>
+        <argsstring>()</argsstring>
+        <name>~Variant</name>
+        <qualifiedname>paimon::Variant::~Variant</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="60" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_variant_1abe3b0749e55861544ee05c5f490a613d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string_view</type>
+        <definition>std::string_view paimon::Variant::Value</definition>
+        <argsstring>() const</argsstring>
+        <name>Value</name>
+        <qualifiedname>paimon::Variant::Value</qualifiedname>
+        <briefdescription>
+<para>The variant value binary. The view remains valid as long as this variant exists. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="83" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_variant_1a757b6689ced7d0a0ce52c4381331269d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string_view</type>
+        <definition>std::string_view paimon::Variant::Metadata</definition>
+        <argsstring>() const</argsstring>
+        <name>Metadata</name>
+        <qualifiedname>paimon::Variant::Metadata</qualifiedname>
+        <briefdescription>
+<para>The variant metadata binary. The view remains valid as long as this variant exists. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="86" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_variant_1a4b74e247d2b224a69ce52daea3a12c72" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::Variant::SizeInBytes</definition>
+        <argsstring>() const</argsstring>
+        <name>SizeInBytes</name>
+        <qualifiedname>paimon::Variant::SizeInBytes</qualifiedname>
+        <briefdescription>
+<para>The size of the variant in bytes (value size + metadata size). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="89" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_variant_1a3b1002f443ea1cafeb1415237b2268f6" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::string &gt;</type>
+        <definition>Result&lt; std::string &gt; paimon::Variant::ToJson</definition>
+        <argsstring>(const std::string &amp;zone_id=&quot;UTC&quot;) const</argsstring>
+        <name>ToJson</name>
+        <qualifiedname>paimon::Variant::ToJson</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>zone_id</declname>
+          <defval>&quot;UTC&quot;</defval>
+        </param>
+        <briefdescription>
+<para>Stringifies the variant in JSON format. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>zone_id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The time zone used when rendering TIMESTAMP values. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A result containing the JSON text or an error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="95" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_variant_1a98aac59dacf5d1178d751f887c43b25e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::optional&lt; <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::optional&lt; Literal &gt; &gt; paimon::Variant::VariantGet</definition>
+        <argsstring>(const std::string &amp;path, struct ArrowSchema *target_type, const VariantCastArgs &amp;cast_args) const</argsstring>
+        <name>VariantGet</name>
+        <qualifiedname>paimon::Variant::VariantGet</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">struct</ref> <ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref> *</type>
+          <declname>target_type</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_variant_cast_args" kindref="compound">VariantCastArgs</ref> &amp;</type>
+          <declname>cast_args</declname>
+        </param>
+        <briefdescription>
+<para>Extracts a sub-variant value according to a path which starts with a <computeroutput>$</computeroutput>, e.g. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><computeroutput>$.key</computeroutput>, <lsquo/>$[&apos;key<rsquo/>]<computeroutput>,</computeroutput>$[&quot;key&quot;]<computeroutput>,</computeroutput>$.array[0]`, and casts the value to the target type.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The extraction path. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>target_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The target Arrow type (C data interface, consumed by the call); only scalar types are supported. Use <computeroutput>VariantGetArrow</computeroutput> for nested targets. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>cast_args</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Cast behavior arguments. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A result containing the extracted literal, or nullopt for SQL NULL (unmatched path, variant null, or an invalid cast with <computeroutput>fail_on_error == false</computeroutput>). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="106" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_variant_1a144edb205ed3159696cd3b8fbdd98ef1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">struct</ref> <ref refid="struct_arrow_array" kindref="compound">ArrowArray</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::unique_ptr&lt; struct ArrowArray &gt; &gt; paimon::Variant::VariantGetArrow</definition>
+        <argsstring>(const std::string &amp;path, struct ArrowSchema *target_field, const VariantCastArgs &amp;cast_args) const</argsstring>
+        <name>VariantGetArrow</name>
+        <qualifiedname>paimon::Variant::VariantGetArrow</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">struct</ref> <ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref> *</type>
+          <declname>target_field</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="structpaimon_1_1_variant_cast_args" kindref="compound">VariantCastArgs</ref> &amp;</type>
+          <declname>cast_args</declname>
+        </param>
+        <briefdescription>
+<para>Extracts a sub-variant value according to a path which starts with a <computeroutput>$</computeroutput> and casts the value to the (possibly nested) target field type. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>In addition to scalar types, the target may be a STRUCT (cast from a variant object, children matched by field name; unmatched children are null), a MAP with string keys (cast from a variant object), a LIST (cast from a variant array), or a variant-marked field created by <computeroutput><ref refid="classpaimon_1_1_variant_1ae928a0af319e34042a7a3045747902fc" kindref="member">Variant::ArrowField</ref></computeroutput> (the sub-variant is deeply re-encoded).</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The extraction path. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>target_field</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The target Arrow field (C data interface, consumed by the call). </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>cast_args</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Cast behavior arguments. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A result containing a length-1 Arrow array of the target type whose single slot holds the result; a null slot represents SQL NULL (unmatched path, variant null, or an invalid cast with <computeroutput>fail_on_error == false</computeroutput>). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="124" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_variant_1a7d4a8df83d12fdb580432197ec83aae5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::optional&lt; std::string &gt; &gt;</type>
+        <definition>Result&lt; std::optional&lt; std::string &gt; &gt; paimon::Variant::VariantGetJson</definition>
+        <argsstring>(const std::string &amp;path, const std::string &amp;zone_id=&quot;UTC&quot;) const</argsstring>
+        <name>VariantGetJson</name>
+        <qualifiedname>paimon::Variant::VariantGetJson</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>zone_id</declname>
+          <defval>&quot;UTC&quot;</defval>
+        </param>
+        <briefdescription>
+<para>Extracts a sub-variant value according to a path which starts with a <computeroutput>$</computeroutput> and renders it as JSON text. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The extraction path. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>zone_id</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The time zone used when rendering TIMESTAMP values. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A result containing the JSON text, or nullopt if the path does not match. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="134" column="12"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_variant_1a063f7124420595ef061f90c27982d022" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_variant" kindref="compound">Variant</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; Variant &gt; &gt; paimon::Variant::FromJson</definition>
+        <argsstring>(const std::string &amp;json, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>FromJson</name>
+        <qualifiedname>paimon::Variant::FromJson</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>json</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Parses a JSON string as a <ref refid="classpaimon_1_1_variant" kindref="compound">Variant</ref> (duplicate object keys are rejected). </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>json</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The JSON document text. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The memory pool used for the variant buffers. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A result containing the created variant or an error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="67" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_variant_1a6e2799f8f49eb1198b79c9c3b7a0f4a2" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_variant" kindref="compound">Variant</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; Variant &gt; &gt; paimon::Variant::Create</definition>
+        <argsstring>(const char *value, uint64_t value_length, const char *metadata, uint64_t metadata_length, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::Variant::Create</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>value</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+          <declname>value_length</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>metadata</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+          <declname>metadata_length</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Creates a <ref refid="classpaimon_1_1_variant" kindref="compound">Variant</ref> from already-encoded value and metadata binaries (copied into <computeroutput>pool</computeroutput>). </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The variant value binary. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>value_length</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The length of the value binary. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>metadata</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The variant metadata binary. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>metadata_length</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The length of the metadata binary. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The memory pool used for the variant buffers. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A result containing the created variant or an error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="78" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_variant_1ae928a0af319e34042a7a3045747902fc" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">struct</ref> <ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; struct ArrowSchema &gt; &gt; paimon::Variant::ArrowField</definition>
+        <argsstring>(const std::string &amp;field_name, bool nullable=true, std::unordered_map&lt; std::string, std::string &gt; metadata={})</argsstring>
+        <name>ArrowField</name>
+        <qualifiedname>paimon::Variant::ArrowField</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>field_name</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>nullable</declname>
+          <defval><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">true</ref></defval>
+        </param>
+        <param>
+          <type>std::unordered_map&lt; std::string, std::string &gt;</type>
+          <declname>metadata</declname>
+          <defval>{}</defval>
+        </param>
+        <briefdescription>
+<para>Creates an Arrow field definition for the <ref refid="classpaimon_1_1_variant" kindref="compound">Variant</ref> type. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This function constructs an Arrow Field (internally <computeroutput>struct&lt;value: binary not null, metadata: binary not null&gt;</computeroutput>) and exports it to the C data interface structure <computeroutput><ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref></computeroutput>. It automatically injects Paimon-specific metadata to identify the field as a VARIANT.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>field_name</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The name of the Arrow field. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>nullable</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Whether the field is nullable. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>metadata</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A map of key-value metadata to be attached to the field. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A result containing a unique pointer to the generated <computeroutput><ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref></computeroutput> or an error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="148" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="classpaimon_1_1_variant_1a5ded33a06b8758a811a7471b15ad7405" prot="private" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Variant::Variant</definition>
+        <argsstring>(std::unique_ptr&lt; Impl &gt; &amp;&amp;impl)</argsstring>
+        <name>Variant</name>
+        <qualifiedname>paimon::Variant::Variant</qualifiedname>
+        <param>
+          <type>std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Impl</ref> &gt; &amp;&amp;</type>
+          <declname>impl</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="155" column="14"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A <ref refid="classpaimon_1_1_variant" kindref="compound">Variant</ref> represents a type that contains one of: 1) Primitive: A type and corresponding value (e.g. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>INT, STRING); 2) Array: An ordered list of <ref refid="classpaimon_1_1_variant" kindref="compound">Variant</ref> values; 3) Object: An unordered collection of string/Variant pairs (i.e. key/value pairs). An object may not contain duplicate keys.</para>
+<para>A <ref refid="classpaimon_1_1_variant" kindref="compound">Variant</ref> is encoded with 2 binaries: the value and the metadata, following the parquet <ref refid="classpaimon_1_1_variant" kindref="compound">Variant</ref> Binary Encoding specification (compatible with the Java / Spark implementation). The encoding allows representation of semi-structured data (e.g. JSON) in a form that can be efficiently queried by path.</para>
+<para>In an Arrow schema, a <ref refid="classpaimon_1_1_variant" kindref="compound">Variant</ref> field is represented as <computeroutput>struct&lt;value: binary not null, metadata: binary not null&gt;</computeroutput> marked with Paimon-specific field metadata; use <computeroutput><ref refid="classpaimon_1_1_variant_1ae928a0af319e34042a7a3045747902fc" kindref="member">Variant::ArrowField</ref></computeroutput> to construct such a field. </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" line="58" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/variant.h" bodystart="58" bodyend="158"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_variant_1ae928a0af319e34042a7a3045747902fc" prot="public" virt="non-virtual"><scope>paimon::Variant</scope><name>ArrowField</name></member>
+      <member refid="classpaimon_1_1_variant_1a6e2799f8f49eb1198b79c9c3b7a0f4a2" prot="public" virt="non-virtual"><scope>paimon::Variant</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_variant_1a063f7124420595ef061f90c27982d022" prot="public" virt="non-virtual"><scope>paimon::Variant</scope><name>FromJson</name></member>
+      <member refid="classpaimon_1_1_variant_1ae9d7245b7135393b32dd059478c2ec48" prot="private" virt="non-virtual"><scope>paimon::Variant</scope><name>impl_</name></member>
+      <member refid="classpaimon_1_1_variant_1a757b6689ced7d0a0ce52c4381331269d" prot="public" virt="non-virtual"><scope>paimon::Variant</scope><name>Metadata</name></member>
+      <member refid="classpaimon_1_1_variant_1a4b74e247d2b224a69ce52daea3a12c72" prot="public" virt="non-virtual"><scope>paimon::Variant</scope><name>SizeInBytes</name></member>
+      <member refid="classpaimon_1_1_variant_1a3b1002f443ea1cafeb1415237b2268f6" prot="public" virt="non-virtual"><scope>paimon::Variant</scope><name>ToJson</name></member>
+      <member refid="classpaimon_1_1_variant_1abe3b0749e55861544ee05c5f490a613d" prot="public" virt="non-virtual"><scope>paimon::Variant</scope><name>Value</name></member>
+      <member refid="classpaimon_1_1_variant_1a5ded33a06b8758a811a7471b15ad7405" prot="private" virt="non-virtual"><scope>paimon::Variant</scope><name>Variant</name></member>
+      <member refid="classpaimon_1_1_variant_1a98aac59dacf5d1178d751f887c43b25e" prot="public" virt="non-virtual"><scope>paimon::Variant</scope><name>VariantGet</name></member>
+      <member refid="classpaimon_1_1_variant_1a144edb205ed3159696cd3b8fbdd98ef1" prot="public" virt="non-virtual"><scope>paimon::Variant</scope><name>VariantGetArrow</name></member>
+      <member refid="classpaimon_1_1_variant_1a7d4a8df83d12fdb580432197ec83aae5" prot="public" virt="non-virtual"><scope>paimon::Variant</scope><name>VariantGetJson</name></member>
+      <member refid="classpaimon_1_1_variant_1a4301721ab8a337606351546bad2adaa4" prot="public" virt="non-virtual"><scope>paimon::Variant</scope><name>~Variant</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>
