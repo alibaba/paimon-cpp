@@ -101,7 +101,8 @@ static inline const char PARQUET_READ_ENABLE_PAGE_INDEX_FILTER[] =
 static inline const char PARQUET_READ_ENABLE_PRE_BUFFER[] = "parquet.read.enable-pre-buffer";
 
 static constexpr uint32_t DEFAULT_PARQUET_READ_CACHE_OPTION_PREFETCH_LIMIT = 0;
-static constexpr uint32_t DEFAULT_PARQUET_READ_CACHE_OPTION_HOLE_SIZE_LIMIT = 4 * 1024 * 1024;
+// Default value of hole size limit, inherited from Arrow
+static constexpr uint32_t DEFAULT_PARQUET_READ_CACHE_OPTION_HOLE_SIZE_LIMIT = 8 * 1024;
 static constexpr uint32_t DEFAULT_PARQUET_READ_CACHE_OPTION_RANGE_SIZE_LIMIT = 32 * 1024 * 1024;
 static constexpr uint32_t DEFAULT_PARQUET_READ_PREDICATE_NODE_COUNT_LIMIT = 512;
 static constexpr bool DEFAULT_PARQUET_READ_ENABLE_PAGE_INDEX_FILTER = true;
