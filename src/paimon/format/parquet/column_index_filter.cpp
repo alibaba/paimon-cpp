@@ -17,12 +17,12 @@
 #include "paimon/format/parquet/column_index_filter.h"
 
 #include <algorithm>
-#include <cmath>
 #include <cstring>
 #include <memory>
 #include <set>
 
 #include "fmt/format.h"
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/data/decimal.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
@@ -100,6 +100,10 @@ Result<RowRanges> ColumnIndexFilter::VisitLeafPredicate(
         literals.empty()) {
         return Status::Invalid(
             fmt::format("predicate on column '{}' requires at least one literal", field_name));
+    }
+    if (std::any_of(literals.begin(), literals.end(),
+                    [](const Literal& literal) { return literal.IsNull(); })) {
+        return Status::Invalid("literal cannot be null in predicate");
     }
     std::vector<int32_t> matching_pages;
 
@@ -555,10 +559,7 @@ std::optional<int32_t> ColumnIndexFilter::CompareEncodedWithLiteral(const std::s
             float enc_val;
             std::memcpy(&enc_val, encoded.data(), sizeof(float));
             auto lit_val = literal.GetValue<float>();
-            if (std::isnan(enc_val) || std::isnan(lit_val)) {
-                return std::nullopt;
-            }
-            return (enc_val < lit_val) ? -1 : (enc_val > lit_val) ? 1 : 0;
+            return FieldsComparator::CompareFloatingPoint(enc_val, lit_val);
         }
         case FieldType::DOUBLE: {
             if (encoded.size() < sizeof(double)) {
@@ -567,10 +568,7 @@ std::optional<int32_t> ColumnIndexFilter::CompareEncodedWithLiteral(const std::s
             double enc_val;
             std::memcpy(&enc_val, encoded.data(), sizeof(double));
             auto lit_val = literal.GetValue<double>();
-            if (std::isnan(enc_val) || std::isnan(lit_val)) {
-                return std::nullopt;
-            }
-            return (enc_val < lit_val) ? -1 : (enc_val > lit_val) ? 1 : 0;
+            return FieldsComparator::CompareFloatingPoint(enc_val, lit_val);
         }
         case FieldType::STRING:
         case FieldType::BINARY: {

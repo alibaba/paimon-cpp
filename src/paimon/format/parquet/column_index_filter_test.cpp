@@ -17,6 +17,7 @@
 #include "paimon/format/parquet/column_index_filter.h"
 
 #include <cstdint>
+#include <limits>
 #include <map>
 #include <memory>
 #include <string>
@@ -468,6 +469,131 @@ TEST_F(ColumnIndexFilterTest, OrCompound) {
     EXPECT_EQ(99, ranges.GetRanges()[1].to);
 }
 
+TEST_F(ColumnIndexFilterTest, SignedZeroUsesJavaOrderForFloatingPointPages) {
+    for (FieldType field_type : {FieldType::FLOAT, FieldType::DOUBLE}) {
+        std::shared_ptr<arrow::Array> values;
+        if (field_type == FieldType::FLOAT) {
+            arrow::FloatBuilder builder;
+            ASSERT_TRUE(builder.Reserve(20).ok());
+            for (int32_t i = 0; i < 10; ++i) {
+                builder.UnsafeAppend(0.0f);
+            }
+            for (int32_t i = 0; i < 10; ++i) {
+                builder.UnsafeAppend(1.0f);
+            }
+            values = builder.Finish().ValueOrDie();
+        } else {
+            arrow::DoubleBuilder builder;
+            ASSERT_TRUE(builder.Reserve(20).ok());
+            for (int32_t i = 0; i < 10; ++i) {
+                builder.UnsafeAppend(0.0);
+            }
+            for (int32_t i = 0; i < 10; ++i) {
+                builder.UnsafeAppend(1.0);
+            }
+            values = builder.Finish().ValueOrDie();
+        }
+
+        auto field = arrow::field(
+            "value", field_type == FieldType::FLOAT ? arrow::float32() : arrow::float64());
+        auto data = arrow::StructArray::Make({values}, {field}).ValueOrDie();
+        std::string file_name =
+            dir_->Str() + (field_type == FieldType::FLOAT ? "/float_signed_zero.parquet"
+                                                          : "/double_signed_zero.parquet");
+        WriteTestFile(file_name, data, /*write_batch_size=*/10,
+                      /*max_row_group_length=*/20);
+
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
+        ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
+        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
+        auto reader = ::parquet::ParquetFileReader::Open(in_stream);
+        ASSERT_TRUE(reader);
+        auto page_index_reader = reader->GetPageIndexReader();
+        ASSERT_TRUE(page_index_reader);
+
+        auto predicate = PredicateBuilder::LessThan(
+            /*field_index=*/0, /*field_name=*/"value", field_type,
+            field_type == FieldType::FLOAT ? Literal(-0.0f) : Literal(-0.0));
+        ASSERT_OK_AND_ASSIGN(
+            auto ranges, ColumnIndexFilter::CalculateRowRanges(
+                             predicate, page_index_reader, {{"value", 0}}, /*row_group_index=*/0,
+                             reader->metadata()->RowGroup(0)->num_rows()));
+        EXPECT_TRUE(ranges.IsEmpty()) << "field type: " << static_cast<int32_t>(field_type);
+
+        auto greater_finite = PredicateBuilder::GreaterThan(
+            /*field_index=*/0, /*field_name=*/"value", field_type,
+            field_type == FieldType::FLOAT ? Literal(2.0f) : Literal(2.0));
+        ASSERT_OK_AND_ASSIGN(
+            ranges, ColumnIndexFilter::CalculateRowRanges(
+                        greater_finite, page_index_reader, {{"value", 0}},
+                        /*row_group_index=*/0, reader->metadata()->RowGroup(0)->num_rows()));
+        EXPECT_TRUE(ranges.IsEmpty());
+
+        auto greater_between_pages = PredicateBuilder::GreaterThan(
+            /*field_index=*/0, /*field_name=*/"value", field_type,
+            field_type == FieldType::FLOAT ? Literal(0.5f) : Literal(0.5));
+        ASSERT_OK_AND_ASSIGN(
+            ranges, ColumnIndexFilter::CalculateRowRanges(
+                        greater_between_pages, page_index_reader, {{"value", 0}},
+                        /*row_group_index=*/0, reader->metadata()->RowGroup(0)->num_rows()));
+        EXPECT_EQ(10, ranges.RowCount());
+        ASSERT_EQ(1, ranges.GetRanges().size());
+        EXPECT_EQ(10, ranges.GetRanges()[0].from);
+        EXPECT_EQ(19, ranges.GetRanges()[0].to);
+
+        auto equal_finite = PredicateBuilder::Equal(
+            /*field_index=*/0, /*field_name=*/"value", field_type,
+            field_type == FieldType::FLOAT ? Literal(2.0f) : Literal(2.0));
+        ASSERT_OK_AND_ASSIGN(
+            ranges, ColumnIndexFilter::CalculateRowRanges(
+                        equal_finite, page_index_reader, {{"value", 0}},
+                        /*row_group_index=*/0, reader->metadata()->RowGroup(0)->num_rows()));
+        EXPECT_TRUE(ranges.IsEmpty());
+
+        auto greater_nan = PredicateBuilder::GreaterThan(
+            /*field_index=*/0, /*field_name=*/"value", field_type,
+            field_type == FieldType::FLOAT ? Literal(std::numeric_limits<float>::quiet_NaN())
+                                           : Literal(std::numeric_limits<double>::quiet_NaN()));
+        ASSERT_OK_AND_ASSIGN(
+            ranges, ColumnIndexFilter::CalculateRowRanges(
+                        greater_nan, page_index_reader, {{"value", 0}},
+                        /*row_group_index=*/0, reader->metadata()->RowGroup(0)->num_rows()));
+        EXPECT_TRUE(ranges.IsEmpty());
+    }
+}
+
+TEST_F(ColumnIndexFilterTest, MissingNanColumnIndexFallsBackToAllRows) {
+    arrow::DoubleBuilder builder;
+    ASSERT_TRUE(builder.Reserve(10).ok());
+    for (int32_t i = 0; i < 10; ++i) {
+        builder.UnsafeAppend(std::numeric_limits<double>::quiet_NaN());
+    }
+    std::shared_ptr<arrow::Array> values = builder.Finish().ValueOrDie();
+    auto field = arrow::field("value", arrow::float64());
+    auto data = arrow::StructArray::Make({values}, {field}).ValueOrDie();
+    std::string file_name = dir_->Str() + "/double_nan.parquet";
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/10);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
+    ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
+    auto reader = ::parquet::ParquetFileReader::Open(in_stream);
+    ASSERT_TRUE(reader);
+    auto page_index_reader = reader->GetPageIndexReader();
+    ASSERT_TRUE(page_index_reader);
+    auto row_group_page_index = page_index_reader->RowGroup(0);
+    ASSERT_TRUE(row_group_page_index);
+    EXPECT_EQ(nullptr, row_group_page_index->GetColumnIndex(0));
+
+    auto predicate = PredicateBuilder::GreaterThan(
+        /*field_index=*/0, /*field_name=*/"value", FieldType::DOUBLE, Literal(10.0));
+    ASSERT_OK_AND_ASSIGN(auto ranges,
+                         ColumnIndexFilter::CalculateRowRanges(
+                             predicate, page_index_reader, {{"value", 0}}, /*row_group_index=*/0,
+                             reader->metadata()->RowGroup(0)->num_rows()));
+    EXPECT_EQ(10, ranges.RowCount());
+}
+
 /// Predicates referencing fields absent from the data file are stripped upstream
 /// by FieldMappingBuilder, so reaching ColumnIndexFilter with such a predicate is
 /// a contract violation and surfaces as an error.
@@ -500,6 +626,12 @@ TEST_F(ColumnIndexFilterTest, EmptyLiteralsInReturnsError) {
                                                             FieldType::INT, std::vector<Literal>());
     auto result = Filter(pred);
     EXPECT_FALSE(result.ok());
+}
+
+TEST_F(ColumnIndexFilterTest, NullLiteralReturnsError) {
+    auto pred =
+        PredicateBuilder::In(0, "val", FieldType::INT, {Literal(1), Literal(FieldType::INT)});
+    ASSERT_NOK_WITH_MSG(Filter(pred), "literal cannot be null in predicate");
 }
 
 }  // namespace paimon::parquet::test

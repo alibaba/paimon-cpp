@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
+#include <algorithm>
+#include <array>
+#include <cmath>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -38,6 +42,41 @@ class DataType;
 
 namespace paimon::test {
 
+template <typename T>
+void AssertSameFloatingPoint(T actual, T expected) {
+    if (std::isnan(expected)) {
+        ASSERT_TRUE(std::isnan(actual));
+        return;
+    }
+    ASSERT_EQ(actual, expected);
+    if (expected == static_cast<T>(0.0)) {
+        ASSERT_EQ(std::signbit(actual), std::signbit(expected));
+    }
+}
+
+template <typename T>
+void CheckJavaCompatibleFloatingPointMinMax(const std::shared_ptr<arrow::DataType>& type) {
+    const T infinity = std::numeric_limits<T>::infinity();
+    const T nan = std::numeric_limits<T>::quiet_NaN();
+    // This is the total order defined by Java Float.compare and Double.compare.
+    const std::array<T, 5> values = {-infinity, -static_cast<T>(0.0), static_cast<T>(0.0), infinity,
+                                     nan};
+
+    ASSERT_OK_AND_ASSIGN(auto field_min_agg, FieldMinAgg::Create(type));
+    ASSERT_OK_AND_ASSIGN(auto field_max_agg, FieldMaxAgg::Create(type));
+    for (size_t i = 0; i < values.size(); ++i) {
+        for (size_t j = 0; j < values.size(); ++j) {
+            VariantType min_result = field_min_agg->Agg(values[i], values[j]);
+            AssertSameFloatingPoint(DataDefine::GetVariantValue<T>(min_result),
+                                    values[std::min(i, j)]);
+
+            VariantType max_result = field_max_agg->Agg(values[i], values[j]);
+            AssertSameFloatingPoint(DataDefine::GetVariantValue<T>(max_result),
+                                    values[std::max(i, j)]);
+        }
+    }
+}
+
 TEST(FieldMinMaxAggTest, TestSimple) {
     {
         ASSERT_OK_AND_ASSIGN(auto field_min_agg, FieldMinAgg::Create(arrow::int32()));
@@ -49,6 +88,11 @@ TEST(FieldMinMaxAggTest, TestSimple) {
         auto agg_ret = field_max_agg->Agg(5, 10);
         ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 10);
     }
+}
+
+TEST(FieldMinMaxAggTest, TestJavaCompatibleFloatingPointOrder) {
+    CheckJavaCompatibleFloatingPointMinMax<float>(arrow::float32());
+    CheckJavaCompatibleFloatingPointMinMax<double>(arrow::float64());
 }
 
 TEST(FieldMinMaxAggTest, TestInvalidType) {
