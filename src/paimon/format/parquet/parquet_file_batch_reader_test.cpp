@@ -703,7 +703,9 @@ TEST_F(ParquetFileBatchReaderTest, TestCreateArrowReaderProperties) {
         ASSERT_EQ(arrow_reader_properties.batch_size(), 1024);
         ASSERT_EQ(arrow_reader_properties.use_threads(), true);
         ASSERT_EQ(arrow::GetCpuThreadPoolCapacity(), 3);
-        ASSERT_EQ(arrow_reader_properties.cache_options(), arrow::io::CacheOptions::Defaults());
+        auto expected_cache_options = arrow::io::CacheOptions::Defaults();
+        expected_cache_options.hole_size_limit = DEFAULT_PARQUET_READ_CACHE_OPTION_HOLE_SIZE_LIMIT;
+        ASSERT_EQ(arrow_reader_properties.cache_options(), expected_cache_options);
     }
     {
         std::map<std::string, std::string> options = {{PARQUET_READ_EXECUTOR_THREAD_COUNT, "0"}};
@@ -721,6 +723,40 @@ TEST_F(ParquetFileBatchReaderTest, TestCreateArrowReaderProperties) {
             ParquetFileBatchReader::CreateArrowReaderProperties(pool_, options, batch_size));
         ASSERT_EQ(arrow_reader_properties.use_threads(), true);
         ASSERT_EQ(arrow::GetCpuThreadPoolCapacity(), 6);
+    }
+    {
+        std::map<std::string, std::string> options = {
+            {PARQUET_READ_CACHE_OPTION_LAZY, "true"},
+            {PARQUET_READ_CACHE_OPTION_PREFETCH_LIMIT, "2"},
+            {PARQUET_READ_CACHE_OPTION_HOLE_SIZE_LIMIT, "1048576"},
+            {PARQUET_READ_CACHE_OPTION_RANGE_SIZE_LIMIT, "8388608"},
+        };
+        ASSERT_OK_AND_ASSIGN(
+            auto arrow_reader_properties,
+            ParquetFileBatchReader::CreateArrowReaderProperties(pool_, options, 1024));
+        const auto& cache_options = arrow_reader_properties.cache_options();
+        ASSERT_TRUE(cache_options.lazy);
+        ASSERT_EQ(cache_options.prefetch_limit, 2);
+        ASSERT_EQ(cache_options.hole_size_limit, 1024 * 1024);
+        ASSERT_EQ(cache_options.range_size_limit, 8 * 1024 * 1024);
+    }
+    {
+        std::map<std::string, std::string> options = {
+            {PARQUET_READ_CACHE_OPTION_HOLE_SIZE_LIMIT, "-1"},
+        };
+        ASSERT_NOK_WITH_MSG(
+            ParquetFileBatchReader::CreateArrowReaderProperties(pool_, options, 1024),
+            "parquet.read.cache-option.hole-size-limit must be non-negative");
+    }
+    {
+        std::map<std::string, std::string> options = {
+            {PARQUET_READ_CACHE_OPTION_HOLE_SIZE_LIMIT, "1048576"},
+            {PARQUET_READ_CACHE_OPTION_RANGE_SIZE_LIMIT, "1048576"},
+        };
+        ASSERT_NOK_WITH_MSG(
+            ParquetFileBatchReader::CreateArrowReaderProperties(pool_, options, 1024),
+            "parquet.read.cache-option.range-size-limit must be greater than "
+            "parquet.read.cache-option.hole-size-limit");
     }
 }
 

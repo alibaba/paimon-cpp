@@ -617,12 +617,28 @@ Result<::parquet::ArrowReaderProperties> ParquetFileBatchReader::CreateArrowRead
         OptionsUtils::GetValueFromMap<int64_t>(options, PARQUET_READ_CACHE_OPTION_PREFETCH_LIMIT,
                                                DEFAULT_PARQUET_READ_CACHE_OPTION_PREFETCH_LIMIT));
     PAIMON_ASSIGN_OR_RAISE(
+        int64_t cache_hole_size_limit,
+        OptionsUtils::GetValueFromMap<int64_t>(options, PARQUET_READ_CACHE_OPTION_HOLE_SIZE_LIMIT,
+                                               DEFAULT_PARQUET_READ_CACHE_OPTION_HOLE_SIZE_LIMIT));
+    PAIMON_ASSIGN_OR_RAISE(
         int64_t cache_range_size_limit,
         OptionsUtils::GetValueFromMap<int64_t>(options, PARQUET_READ_CACHE_OPTION_RANGE_SIZE_LIMIT,
                                                DEFAULT_PARQUET_READ_CACHE_OPTION_RANGE_SIZE_LIMIT));
+    if (cache_hole_size_limit < 0) {
+        return Status::Invalid(fmt::format("{} must be non-negative, but was {}",
+                                           PARQUET_READ_CACHE_OPTION_HOLE_SIZE_LIMIT,
+                                           cache_hole_size_limit));
+    }
+    if (cache_range_size_limit <= cache_hole_size_limit) {
+        return Status::Invalid(fmt::format("{} must be greater than {}, but was {} <= {}",
+                                           PARQUET_READ_CACHE_OPTION_RANGE_SIZE_LIMIT,
+                                           PARQUET_READ_CACHE_OPTION_HOLE_SIZE_LIMIT,
+                                           cache_range_size_limit, cache_hole_size_limit));
+    }
     auto cache_option = arrow::io::CacheOptions::Defaults();
     cache_option.lazy = cache_lazy;
     cache_option.prefetch_limit = cache_prefetch_limit;
+    cache_option.hole_size_limit = cache_hole_size_limit;
     cache_option.range_size_limit = cache_range_size_limit;
     arrow_reader_props.set_cache_options(cache_option);
     return arrow_reader_props;

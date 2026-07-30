@@ -63,6 +63,11 @@ static constexpr uint32_t DEFAULT_PARQUET_READ_EXECUTOR_THREAD_COUNT = 3;
 static inline const char PARQUET_READ_CACHE_OPTION_LAZY[] = "parquet.read.cache-option.lazy";
 static inline const char PARQUET_READ_CACHE_OPTION_PREFETCH_LIMIT[] =
     "parquet.read.cache-option.prefetch-limit";
+// Arrow I/O range coalescing limits, both measured in bytes. Adjacent ranges whose gap is
+// <= hole-size-limit can be merged; range-size-limit stops further merging once the combined
+// span would exceed it. A single input range may itself be larger than range-size-limit.
+static inline const char PARQUET_READ_CACHE_OPTION_HOLE_SIZE_LIMIT[] =
+    "parquet.read.cache-option.hole-size-limit";
 static inline const char PARQUET_READ_CACHE_OPTION_RANGE_SIZE_LIMIT[] =
     "parquet.read.cache-option.range-size-limit";
 // Strategy for refining row ranges using the selection bitmap produced by pushed-down
@@ -96,6 +101,7 @@ static inline const char PARQUET_READ_ENABLE_PAGE_INDEX_FILTER[] =
 static inline const char PARQUET_READ_ENABLE_PRE_BUFFER[] = "parquet.read.enable-pre-buffer";
 
 static constexpr uint32_t DEFAULT_PARQUET_READ_CACHE_OPTION_PREFETCH_LIMIT = 0;
+static constexpr uint32_t DEFAULT_PARQUET_READ_CACHE_OPTION_HOLE_SIZE_LIMIT = 4 * 1024 * 1024;
 static constexpr uint32_t DEFAULT_PARQUET_READ_CACHE_OPTION_RANGE_SIZE_LIMIT = 32 * 1024 * 1024;
 static constexpr uint32_t DEFAULT_PARQUET_READ_PREDICATE_NODE_COUNT_LIMIT = 512;
 static constexpr bool DEFAULT_PARQUET_READ_ENABLE_PAGE_INDEX_FILTER = true;
