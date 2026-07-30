@@ -263,10 +263,11 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateNoMergeReader(
         pool_);
 
     // create read schema without extra fields (e.g., completed key, sequence fields)
-    auto row_kind_field = DataField::ConvertDataFieldToArrowField(SpecialFields::ValueKind());
-
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> read_schema,
-                                      raw_read_schema_->AddField(0, row_kind_field));
+    std::shared_ptr<arrow::Schema> read_schema = raw_read_schema_;
+    if (read_schema->GetFieldIndex(SpecialFields::ValueKind().Name()) < 0) {
+        auto row_kind_field = DataField::ConvertDataFieldToArrowField(SpecialFields::ValueKind());
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(read_schema, read_schema->AddField(0, row_kind_field));
+    }
     PAIMON_ASSIGN_OR_RAISE(
         std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers,
         CreateRawFileReaders(data_split->Partition(), data_split->DataFiles(), read_schema,

@@ -54,11 +54,8 @@ the corresponding snapshot.
 
 Data Files
 ---------------------------
-Data files are grouped by partitions. Currently, Paimon supports using parquet
-(default) and orc as data file formats.
-
-.. note::
-   avro write as a data file format is not supported yet.
+Data files are grouped by partitions. Paimon C++ supports Parquet (default),
+ORC, and Avro as data file formats.
 
 Partition
 ---------------------------
@@ -84,6 +81,3 @@ For any two writers modifying a table at the same time, as long as they do not
 modify the same partition, their commits can occur in parallel. If they modify
 the same partition, only snapshot isolation is guaranteed. That is, the final
 table state may be a mix of the two commits, but no changes are lost.
-
-.. note::
-   Paimon C++ currently does not support compaction.

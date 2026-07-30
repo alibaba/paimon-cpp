@@ -37,10 +37,10 @@ class PAIMON_EXPORT GlobalIndexWriteTask {
     /// @param table_path   Path to the table root directory where index files are stored.
     /// @param field_name   Name of the indexed column (must be present in the table schema).
     /// @param index_type   Type of global index to build (e.g., "btree", "lumina").
-    /// @param index_split  The indexed split containing the actual data (e.g., Parquet file) and
-    //                      row id range [from, to] for data to build index.
+    /// @param indexed_split The indexed split containing the actual data (e.g., Parquet file) and
+    ///                      row id range [from, to] for data to build index.
     ///                     The range must be fully contained within the data covered
-    ///                     by the given `split`.
+    ///                     by the given `indexed_split`.
     /// @param options      Index-specific configuration (e.g., false positive rate for bloom
     /// filters).
     /// @param pool         Memory pool for temporary allocations during index construction.

@@ -81,7 +81,6 @@ repository:
 
    $ git clone https://github.com/alibaba/paimon-cpp.git
    $ cd paimon-cpp
-   $ git lfs pull
 
 Manual configuration
 --------------------
@@ -180,13 +179,21 @@ require project-specific patches, so their supported source values are
      -Dzstd_SOURCE=BUNDLED
 
 Use ``PAIMON_PACKAGE_PREFIX`` to provide one common prefix for dependencies
-whose own ``<Package>_ROOT`` variable is not set.
+whose own ``<Package>_ROOT`` variable is not set. Because the patched Arrow and
+ORC dependencies cannot be resolved from the system, a global ``SYSTEM`` build
+must override them to ``BUNDLED``:
 
 .. code-block:: shell
 
    cmake -B build \
      -DPAIMON_DEPENDENCY_SOURCE=SYSTEM \
+     -DArrow_SOURCE=BUNDLED \
+     -DORC_SOURCE=BUNDLED \
      -DPAIMON_PACKAGE_PREFIX=/opt/paimon-deps
+
+All other enabled dependencies must be available as system packages or under
+the specified prefix. When ORC support is disabled, the ``ORC_SOURCE`` override
+can be omitted.
 
 Package-manager-specific modes are intentionally out of scope for this first
 dependency source interface. They can still be used through standard CMake

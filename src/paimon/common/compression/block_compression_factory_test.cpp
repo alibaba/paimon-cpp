@@ -115,4 +115,35 @@ TEST_P(CompressionFactoryTest, TestCompressInsufficientOutputBuffer) {
 INSTANTIATE_TEST_SUITE_P(BlockCompressionTypeGroup, CompressionFactoryTest,
                          ::testing::Values(BlockCompressionType::LZ4, BlockCompressionType::ZSTD));
 
+TEST(CompressionFactoryCreateTest, TestCreateFromCompressOptions) {
+    ASSERT_OK_AND_ASSIGN(auto none_factory,
+                         BlockCompressionFactory::Create(CompressOptions{"none", 0}));
+    ASSERT_EQ(BlockCompressionType::NONE, none_factory->GetCompressionType());
+
+    // Codec name matching is case-insensitive.
+    ASSERT_OK_AND_ASSIGN(auto zstd_factory,
+                         BlockCompressionFactory::Create(CompressOptions{"ZSTD", 1}));
+    ASSERT_EQ(BlockCompressionType::ZSTD, zstd_factory->GetCompressionType());
+
+    ASSERT_OK_AND_ASSIGN(auto lz4_factory,
+                         BlockCompressionFactory::Create(CompressOptions{"Lz4", 0}));
+    ASSERT_EQ(BlockCompressionType::LZ4, lz4_factory->GetCompressionType());
+
+    // Unsupported codec name returns an Invalid status.
+    auto unsupported = BlockCompressionFactory::Create(CompressOptions{"lzo", 0});
+    ASSERT_NOK(unsupported);
+    ASSERT_TRUE(unsupported.status().IsInvalid());
+}
+
+TEST(CompressionFactoryCreateTest, TestCreateFromCompressionType) {
+    ASSERT_OK_AND_ASSIGN(auto none_factory,
+                         BlockCompressionFactory::Create(BlockCompressionType::NONE));
+    ASSERT_EQ(BlockCompressionType::NONE, none_factory->GetCompressionType());
+
+    // LZO is declared but not yet implemented, so it hits the default branch.
+    auto lzo = BlockCompressionFactory::Create(BlockCompressionType::LZO);
+    ASSERT_NOK(lzo);
+    ASSERT_TRUE(lzo.status().IsInvalid());
+}
+
 }  // namespace paimon::test

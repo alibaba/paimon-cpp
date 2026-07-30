@@ -105,6 +105,11 @@ class HiveBucketFunctionTest : public ::testing::Test {
         return BinaryRowGenerator::GenerateRow({value}, pool.get());
     }
 
+    BinaryRow CreateShortRow(int16_t value) {
+        auto pool = GetDefaultPool();
+        return BinaryRowGenerator::GenerateRow({value}, pool.get());
+    }
+
     float FloatFromBits(uint32_t bits) {
         float value;
         std::memcpy(&value, &bits, sizeof(value));
@@ -254,6 +259,14 @@ TEST_F(HiveBucketFunctionTest, TestTinyintNegativeValuesCompatibleWithJava) {
     // Verified with Java HiveBucketFunction using DataTypes.TINYINT().
     ASSERT_EQ(647, func->Bucket(CreateByteRow(static_cast<int8_t>(-1)), 1000));
     ASSERT_EQ(520, func->Bucket(CreateByteRow(std::numeric_limits<int8_t>::min()), 1000));
+}
+
+TEST_F(HiveBucketFunctionTest, TestSmallintField) {
+    std::vector<FieldType> field_types = {FieldType::SMALLINT};
+    ASSERT_OK_AND_ASSIGN(auto func, HiveBucketFunction::Create(field_types));
+
+    ASSERT_EQ(234, func->Bucket(CreateShortRow(static_cast<int16_t>(1234)), 1000));
+    ASSERT_EQ(647, func->Bucket(CreateShortRow(static_cast<int16_t>(-1)), 1000));
 }
 
 /// Test STRING field
