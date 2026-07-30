@@ -71,8 +71,15 @@ search modes including match-all, match-any, phrase, prefix, and wildcard querie
 - ``MATCH_ALL``: All terms in the query must be present (AND semantics).
 - ``MATCH_ANY``: Any term in the query can match (OR semantics).
 - ``PHRASE``: Matches the exact sequence of words (with proximity).
-- ``PREFIX``: Matches terms starting with the given string (e.g., "run*" → running, runner).
-- ``WILDCARD``: Supports wildcards ``*`` and ``?`` (e.g., "ap*e", "app?e" → "apple").
+- ``PREFIX``: Matches terms starting with the given string (e.g., "run*" → running, runner). The
+  query is not tokenized. The original prefix is retained, and a pure ASCII alphanumeric prefix
+  is also matched using the lowercase case-normalization applied to pure ASCII terms at indexing
+  time. This preserves matches for mixed terms such as ``B超`` while allowing ``THIS`` to match
+  terms indexed as ``this...``.
+- ``WILDCARD``: Supports wildcards ``*`` and ``?`` (e.g., "ap*e", "app?e" → "apple"). The query
+  is not tokenized, and wildcard operators are preserved. Both the original pattern and an
+  alternative with each ASCII alphanumeric fragment lowercased are matched, covering pure ASCII
+  and mixed ASCII/non-ASCII terms.
 
 **Special Configuration:**
 

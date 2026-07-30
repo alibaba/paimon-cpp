@@ -120,11 +120,7 @@ impl PaimonJiebaTokenizer {
             let start = piece.as_ptr() as usize - text_start;
             let end = start + piece.len();
             // lowercase only if pure ASCII alphanumeric (match cppjieba Normalize behavior)
-            let token_text = if is_ascii_alnum(piece) {
-                piece.to_ascii_lowercase()
-            } else {
-                piece.to_string()
-            };
+            let token_text = normalize_case(piece);
             out.push((start, end, token_text));
         }
         out
@@ -133,6 +129,14 @@ impl PaimonJiebaTokenizer {
 
 fn is_ascii_alnum(s: &str) -> bool {
     !s.is_empty() && s.bytes().all(|b| b.is_ascii_alphanumeric())
+}
+
+pub(crate) fn normalize_case(s: &str) -> String {
+    if is_ascii_alnum(s) {
+        s.to_ascii_lowercase()
+    } else {
+        s.to_string()
+    }
 }
 
 fn load_jieba(dict_dir: &Path) -> Result<Jieba, String> {

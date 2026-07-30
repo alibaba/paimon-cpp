@@ -2368,6 +2368,22 @@ TEST_P(GlobalIndexTest, TestLuceneWriteCommitScanReadIndexWithScore) {
                                  /*pre_filter=*/std::nullopt)));
         ASSERT_TRUE(index_result->ToString().find("row ids: {3}") != std::string::npos);
     }
+    {
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             index_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "THIS", FullTextSearch::SearchType::PREFIX,
+                                 /*pre_filter=*/std::nullopt)));
+        ASSERT_TRUE(index_result->ToString().find("row ids: {0,1}") != std::string::npos);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             index_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "*THIS*", FullTextSearch::SearchType::WILDCARD,
+                                 /*pre_filter=*/std::nullopt)));
+        ASSERT_TRUE(index_result->ToString().find("row ids: {0,1}") != std::string::npos);
+    }
 }
 
 TEST_P(GlobalIndexTest, TestWriteCommitScanReadLuceneIndexWithPartition) {
