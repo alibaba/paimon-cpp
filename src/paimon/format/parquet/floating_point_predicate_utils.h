@@ -16,7 +16,9 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cmath>
+#include <vector>
 
 #include "paimon/defs.h"
 #include "paimon/predicate/function.h"
@@ -26,12 +28,6 @@ namespace paimon::parquet {
 
 class FloatingPointPredicateUtils {
  public:
-    struct LiteralInfo {
-        bool is_nan;
-        bool is_zero;
-        bool is_negative_zero;
-    };
-
     FloatingPointPredicateUtils() = delete;
     ~FloatingPointPredicateUtils() = delete;
 
@@ -39,33 +35,48 @@ class FloatingPointPredicateUtils {
         return field_type == FieldType::FLOAT || field_type == FieldType::DOUBLE;
     }
 
-    static bool IsComparison(Function::Type function_type) {
+    static bool IsZero(const Literal& literal) {
+        if (literal.IsNull()) {
+            return false;
+        }
+        if (literal.GetType() == FieldType::FLOAT) {
+            return literal.GetValue<float>() == 0.0f;
+        }
+        if (literal.GetType() == FieldType::DOUBLE) {
+            return literal.GetValue<double>() == 0.0;
+        }
+        return false;
+    }
+
+    static bool IsNegativeZero(const Literal& literal) {
+        if (!IsZero(literal)) {
+            return false;
+        }
+        if (literal.GetType() == FieldType::FLOAT) {
+            return std::signbit(literal.GetValue<float>());
+        }
+        return std::signbit(literal.GetValue<double>());
+    }
+
+    static bool RequiresJavaSignedZeroHandling(Function::Type function_type,
+                                               const std::vector<Literal>& literals) {
+        if (literals.empty()) {
+            return false;
+        }
         switch (function_type) {
-            case Function::Type::EQUAL:
             case Function::Type::NOT_EQUAL:
+                return IsZero(literals[0]);
             case Function::Type::GREATER_THAN:
-            case Function::Type::GREATER_OR_EQUAL:
+                return IsNegativeZero(literals[0]);
             case Function::Type::LESS_THAN:
-            case Function::Type::LESS_OR_EQUAL:
-            case Function::Type::IN:
+                return IsZero(literals[0]) && !IsNegativeZero(literals[0]);
             case Function::Type::NOT_IN:
-                return true;
+                return std::any_of(literals.begin(), literals.end(), [](const Literal& literal) {
+                    return FloatingPointPredicateUtils::IsZero(literal);
+                });
             default:
                 return false;
         }
-    }
-
-    static LiteralInfo GetLiteralInfo(const Literal& literal) {
-        if (literal.GetType() == FieldType::FLOAT) {
-            float value = literal.GetValue<float>();
-            return {/*is_nan=*/std::isnan(value),
-                    /*is_zero=*/value == 0.0f,
-                    /*is_negative_zero=*/value == 0.0f && std::signbit(value)};
-        }
-        double value = literal.GetValue<double>();
-        return {/*is_nan=*/std::isnan(value),
-                /*is_zero=*/value == 0.0,
-                /*is_negative_zero=*/value == 0.0 && std::signbit(value)};
     }
 };
 

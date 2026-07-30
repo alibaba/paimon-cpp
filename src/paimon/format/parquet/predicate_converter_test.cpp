@@ -17,7 +17,6 @@
 #include "paimon/format/parquet/predicate_converter.h"
 
 #include <cstdint>
-#include <limits>
 #include <utility>
 
 #include "arrow/compute/expression.h"
@@ -190,17 +189,16 @@ TEST(PredicateConverterTest, TestSimple) {
     }
 }
 
-TEST(PredicateConverterTest, TestJavaCompatibleFloatingPointExpressions) {
+TEST(PredicateConverterTest, TestJavaCompatibleSignedZeroExpressions) {
     struct TestType {
         FieldType field_type;
         Literal negative_zero;
         Literal positive_zero;
-        Literal nan;
+        Literal one;
     };
-    const std::vector<TestType> test_types = {{FieldType::FLOAT, Literal(-0.0f), Literal(0.0f),
-                                               Literal(std::numeric_limits<float>::quiet_NaN())},
-                                              {FieldType::DOUBLE, Literal(-0.0), Literal(0.0),
-                                               Literal(std::numeric_limits<double>::quiet_NaN())}};
+    const std::vector<TestType> test_types = {
+        {FieldType::FLOAT, Literal(-0.0f), Literal(0.0f), Literal(1.0f)},
+        {FieldType::DOUBLE, Literal(-0.0), Literal(0.0), Literal(1.0)}};
 
     for (const auto& test_type : test_types) {
         auto greater_negative_zero = PredicateBuilder::GreaterThan(
@@ -217,27 +215,6 @@ TEST(PredicateConverterTest, TestJavaCompatibleFloatingPointExpressions) {
                                                          /*predicate_node_count_limit=*/100));
         ASSERT_EQ("(f0 <= 0)", less_positive_zero_expr.ToString());
 
-        auto equal_nan = PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0",
-                                                 test_type.field_type, test_type.nan);
-        ASSERT_OK_AND_ASSIGN(auto equal_nan_expr,
-                             PredicateConverter::Convert(equal_nan,
-                                                         /*predicate_node_count_limit=*/100));
-        ASSERT_EQ("(f0 > inf)", equal_nan_expr.ToString());
-
-        auto not_equal_nan = PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0",
-                                                        test_type.field_type, test_type.nan);
-        ASSERT_OK_AND_ASSIGN(auto not_equal_nan_expr,
-                             PredicateConverter::Convert(not_equal_nan,
-                                                         /*predicate_node_count_limit=*/100));
-        ASSERT_EQ("is_valid(f0)", not_equal_nan_expr.ToString());
-
-        auto greater_nan = PredicateBuilder::GreaterThan(
-            /*field_index=*/0, /*field_name=*/"f0", test_type.field_type, test_type.nan);
-        ASSERT_OK_AND_ASSIGN(auto greater_nan_expr,
-                             PredicateConverter::Convert(greater_nan,
-                                                         /*predicate_node_count_limit=*/100));
-        ASSERT_EQ("false", greater_nan_expr.ToString());
-
         auto not_equal_negative_zero = PredicateBuilder::NotEqual(
             /*field_index=*/0, /*field_name=*/"f0", test_type.field_type, test_type.negative_zero);
         ASSERT_OK_AND_ASSIGN(auto not_equal_negative_zero_expr,
@@ -245,21 +222,34 @@ TEST(PredicateConverterTest, TestJavaCompatibleFloatingPointExpressions) {
                                                          /*predicate_node_count_limit=*/100));
         ASSERT_EQ("is_valid(f0)", not_equal_negative_zero_expr.ToString());
 
-        auto equal_finite = PredicateBuilder::Equal(
-            /*field_index=*/0, /*field_name=*/"f0", test_type.field_type,
-            test_type.field_type == FieldType::FLOAT ? Literal(2.0f) : Literal(2.0));
-        ASSERT_OK_AND_ASSIGN(auto equal_finite_expr,
-                             PredicateConverter::Convert(equal_finite,
+        auto not_equal_positive_zero = PredicateBuilder::NotEqual(
+            /*field_index=*/0, /*field_name=*/"f0", test_type.field_type, test_type.positive_zero);
+        ASSERT_OK_AND_ASSIGN(auto not_equal_positive_zero_expr,
+                             PredicateConverter::Convert(not_equal_positive_zero,
                                                          /*predicate_node_count_limit=*/100));
-        ASSERT_EQ("(f0 == 2)", equal_finite_expr.ToString());
+        ASSERT_EQ("is_valid(f0)", not_equal_positive_zero_expr.ToString());
 
-        auto greater_finite = PredicateBuilder::GreaterThan(
-            /*field_index=*/0, /*field_name=*/"f0", test_type.field_type,
-            test_type.field_type == FieldType::FLOAT ? Literal(10.0f) : Literal(10.0));
-        ASSERT_OK_AND_ASSIGN(auto greater_finite_expr,
-                             PredicateConverter::Convert(greater_finite,
+        auto greater_positive_zero = PredicateBuilder::GreaterThan(
+            /*field_index=*/0, /*field_name=*/"f0", test_type.field_type, test_type.positive_zero);
+        ASSERT_OK_AND_ASSIGN(auto greater_positive_zero_expr,
+                             PredicateConverter::Convert(greater_positive_zero,
                                                          /*predicate_node_count_limit=*/100));
-        ASSERT_EQ("(f0 > 10)", greater_finite_expr.ToString());
+        ASSERT_EQ("(f0 > 0)", greater_positive_zero_expr.ToString());
+
+        auto less_negative_zero = PredicateBuilder::LessThan(
+            /*field_index=*/0, /*field_name=*/"f0", test_type.field_type, test_type.negative_zero);
+        ASSERT_OK_AND_ASSIGN(auto less_negative_zero_expr,
+                             PredicateConverter::Convert(less_negative_zero,
+                                                         /*predicate_node_count_limit=*/100));
+        ASSERT_EQ("(f0 < -0)", less_negative_zero_expr.ToString());
+
+        auto not_in_negative_zero = PredicateBuilder::NotIn(
+            /*field_index=*/0, /*field_name=*/"f0", test_type.field_type,
+            {test_type.negative_zero, test_type.one});
+        ASSERT_OK_AND_ASSIGN(auto not_in_negative_zero_expr,
+                             PredicateConverter::Convert(not_in_negative_zero,
+                                                         /*predicate_node_count_limit=*/100));
+        ASSERT_EQ("(is_valid(f0) and (f0 != 1))", not_in_negative_zero_expr.ToString());
     }
 }
 
@@ -463,13 +453,6 @@ TEST(PredicateConverterTest, TestInvalidCase) {
         PredicateBuilder::In(/*field_index=*/0, /*field_name=*/"f0", FieldType::INT, {});
     ASSERT_NOK_WITH_MSG(PredicateConverter::Convert(empty_in, /*predicate_node_count_limit=*/100),
                         "predicate [In] need literal on field f0");
-
-    auto float_in_with_null =
-        PredicateBuilder::In(/*field_index=*/0, /*field_name=*/"f0", FieldType::FLOAT,
-                             {Literal(1.0f), Literal(FieldType::FLOAT)});
-    ASSERT_NOK_WITH_MSG(
-        PredicateConverter::Convert(float_in_with_null, /*predicate_node_count_limit=*/100),
-        "literal cannot be null in predicate");
 }
 
 }  // namespace paimon::parquet::test

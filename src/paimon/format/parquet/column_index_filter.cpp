@@ -101,10 +101,6 @@ Result<RowRanges> ColumnIndexFilter::VisitLeafPredicate(
         return Status::Invalid(
             fmt::format("predicate on column '{}' requires at least one literal", field_name));
     }
-    if (std::any_of(literals.begin(), literals.end(),
-                    [](const Literal& literal) { return literal.IsNull(); })) {
-        return Status::Invalid("literal cannot be null in predicate");
-    }
     std::vector<int32_t> matching_pages;
 
     switch (function_type) {

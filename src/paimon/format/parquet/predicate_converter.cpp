@@ -16,9 +16,7 @@
 
 #include "paimon/format/parquet/predicate_converter.h"
 
-#include <algorithm>
 #include <cstdint>
-#include <limits>
 #include <utility>
 
 #include "arrow/compute/api.h"
@@ -39,69 +37,38 @@
 namespace paimon::parquet {
 namespace {
 
-arrow::compute::Expression PositiveInfinity(const Literal& literal) {
-    if (literal.GetType() == FieldType::FLOAT) {
-        return arrow::compute::literal(
-            std::make_shared<arrow::FloatScalar>(std::numeric_limits<float>::infinity()));
-    }
-    return arrow::compute::literal(
-        std::make_shared<arrow::DoubleScalar>(std::numeric_limits<double>::infinity()));
-}
-
 arrow::compute::Expression ConvertFloatingPointComparison(
     const std::string& field_name, Function::Type function_type, const Literal& literal,
     const arrow::compute::Expression& arrow_literal) {
-    const FloatingPointPredicateUtils::LiteralInfo info =
-        FloatingPointPredicateUtils::GetLiteralInfo(literal);
     arrow::compute::Expression field = arrow::compute::field_ref(field_name);
     switch (function_type) {
         case Function::Type::EQUAL:
-            if (info.is_nan) {
-                // parquet-mr omits FLOAT/DOUBLE min/max statistics when they contain NaN.
-                // Therefore a row group with NaN cannot be eliminated, while a row group with
-                // valid finite statistics can be pruned using max <= +infinity.
-                return arrow::compute::greater(std::move(field), PositiveInfinity(literal));
-            }
-            // Arrow considers -0.0 and +0.0 equal, which is a safe pruning superset.
             return arrow::compute::equal(std::move(field), arrow_literal);
         case Function::Type::NOT_EQUAL:
-            if (info.is_nan || info.is_zero) {
-                // NaN invalidates parquet-mr statistics, and Arrow cannot distinguish the two
-                // zero signs. Neither case can be safely eliminated through Arrow expressions.
+            if (FloatingPointPredicateUtils::IsZero(literal)) {
+                // Arrow treats both zero signs as equal. Keep every non-null row group so the
+                // exact predicate can distinguish the opposite zero sign.
                 return arrow::compute::is_valid(std::move(field));
             }
             return arrow::compute::not_equal(std::move(field), arrow_literal);
         case Function::Type::GREATER_THAN:
-            if (info.is_nan) {
-                return arrow::compute::literal(false);
-            }
-            if (info.is_negative_zero) {
+            if (FloatingPointPredicateUtils::IsNegativeZero(literal)) {
                 // parquet-mr normalizes a zero upper bound to +0.0. Arrow treats both zero signs
                 // as equal, so >= is the safe pruning equivalent of Java's > -0.0.
                 return arrow::compute::greater_equal(std::move(field), arrow_literal);
             }
             return arrow::compute::greater(std::move(field), arrow_literal);
         case Function::Type::GREATER_OR_EQUAL:
-            if (info.is_nan) {
-                return arrow::compute::greater(std::move(field), PositiveInfinity(literal));
-            }
             return arrow::compute::greater_equal(std::move(field), arrow_literal);
         case Function::Type::LESS_THAN:
-            if (info.is_nan) {
-                // Every non-null value may satisfy Java's value < NaN. If NaN is present,
-                // parquet-mr omits the statistics, so the row group is also retained.
-                return arrow::compute::is_valid(std::move(field));
-            }
-            if (info.is_zero && !info.is_negative_zero) {
+            if (FloatingPointPredicateUtils::IsZero(literal) &&
+                !FloatingPointPredicateUtils::IsNegativeZero(literal)) {
                 // parquet-mr normalizes a zero lower bound to -0.0. Arrow's <= 0.0 retains the
                 // page for Java's -0.0 < +0.0.
                 return arrow::compute::less_equal(std::move(field), arrow_literal);
             }
             return arrow::compute::less(std::move(field), arrow_literal);
         case Function::Type::LESS_OR_EQUAL:
-            if (info.is_nan) {
-                return arrow::compute::is_valid(std::move(field));
-            }
             return arrow::compute::less_equal(std::move(field), arrow_literal);
         default:
             return arrow::compute::literal(true);
@@ -218,7 +185,7 @@ Result<arrow::compute::Expression> PredicateConverter::ConvertLeaf(
     const auto& function = leaf_predicate->GetFunction();
     auto function_type = function.GetType();
     if (FloatingPointPredicateUtils::IsType(leaf_predicate->GetFieldType()) &&
-        FloatingPointPredicateUtils::IsComparison(function_type)) {
+        FloatingPointPredicateUtils::RequiresJavaSignedZeroHandling(function_type, literals)) {
         return ConvertFloatingPointLeaf(leaf_predicate);
     }
     switch (function_type) {
@@ -330,23 +297,15 @@ Result<arrow::compute::Expression> PredicateConverter::ConvertFloatingPointLeaf(
     Function::Type function_type = function.GetType();
     PAIMON_RETURN_NOT_OK(CheckLiteralNotEmpty(literals, function, field_name));
 
-    if (function_type == Function::Type::IN || function_type == Function::Type::NOT_IN) {
-        if (std::any_of(literals.begin(), literals.end(),
-                        [](const Literal& literal) { return literal.IsNull(); })) {
-            return Status::Invalid("literal cannot be null in predicate");
-        }
+    if (function_type == Function::Type::NOT_IN) {
         std::vector<arrow::compute::Expression> sub_exprs;
         sub_exprs.reserve(literals.size());
         for (const auto& literal : literals) {
             CONVERT_TO_ARROW_LITERAL(literal);
-            sub_exprs.push_back(ConvertFloatingPointComparison(field_name,
-                                                               function_type == Function::Type::IN
-                                                                   ? Function::Type::EQUAL
-                                                                   : Function::Type::NOT_EQUAL,
-                                                               literal, arrow_literal));
+            sub_exprs.push_back(ConvertFloatingPointComparison(
+                field_name, Function::Type::NOT_EQUAL, literal, arrow_literal));
         }
-        return function_type == Function::Type::IN ? arrow::compute::or_(sub_exprs)
-                                                   : arrow::compute::and_(sub_exprs);
+        return arrow::compute::and_(sub_exprs);
     }
 
     CONVERT_TO_ARROW_LITERAL(literals[0]);
