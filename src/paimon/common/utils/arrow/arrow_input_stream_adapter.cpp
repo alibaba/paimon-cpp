@@ -40,6 +40,19 @@ arrow::Status ValidateArrowIoRange(int64_t value, const char* name) {
     return arrow::Status::OK();
 }
 
+struct BufferWithMemoryPool {
+    std::shared_ptr<arrow::MemoryPool> pool;
+    std::shared_ptr<arrow::Buffer> buffer;
+};
+
+std::shared_ptr<arrow::Buffer> KeepMemoryPoolAlive(std::shared_ptr<arrow::Buffer> buffer,
+                                                   const std::shared_ptr<arrow::MemoryPool>& pool) {
+    auto holder =
+        std::make_shared<BufferWithMemoryPool>(BufferWithMemoryPool{pool, std::move(buffer)});
+    auto* buffer_ptr = holder->buffer.get();
+    return std::shared_ptr<arrow::Buffer>(std::move(holder), buffer_ptr);
+}
+
 }  // namespace
 
 ArrowInputStreamAdapter::ArrowInputStreamAdapter(
@@ -79,7 +92,7 @@ arrow::Result<std::shared_ptr<arrow::Buffer>> ArrowInputStreamAdapter::Read(int6
     if (read_bytes < nbytes) {
         ARROW_RETURN_NOT_OK(buffer->Resize(read_bytes));
     }
-    return std::shared_ptr<arrow::Buffer>(std::move(buffer));
+    return KeepMemoryPoolAlive(std::shared_ptr<arrow::Buffer>(std::move(buffer)), pool_);
 }
 
 arrow::Result<int64_t> ArrowInputStreamAdapter::ReadAt(int64_t position, int64_t nbytes,
@@ -104,7 +117,7 @@ arrow::Result<std::shared_ptr<arrow::Buffer>> ArrowInputStreamAdapter::ReadAt(in
     if (read_bytes < nbytes) {
         ARROW_RETURN_NOT_OK(buffer->Resize(read_bytes));
     }
-    return std::shared_ptr<arrow::Buffer>(std::move(buffer));
+    return KeepMemoryPoolAlive(std::shared_ptr<arrow::Buffer>(std::move(buffer)), pool_);
 }
 
 arrow::Future<std::shared_ptr<arrow::Buffer>> ArrowInputStreamAdapter::ReadAsync(
@@ -128,6 +141,7 @@ arrow::Future<std::shared_ptr<arrow::Buffer>> ArrowInputStreamAdapter::ReadAsync
         return fut;
     }
     std::shared_ptr<arrow::Buffer> buffer = std::move(buffer_result).ValueUnsafe();
+    buffer = KeepMemoryPoolAlive(std::move(buffer), pool_);
     std::shared_ptr<std::atomic<uint64_t>> storage_read_bytes = storage_read_bytes_;
     input_stream_->ReadAsync(
         reinterpret_cast<char*>(buffer->mutable_data()), nbytes, position,

@@ -15,8 +15,11 @@
  */
 
 #include <cstdint>
+#include <cstring>
+#include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "arrow/api.h"
 #include "arrow/io/type_fwd.h"
@@ -31,6 +34,79 @@
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
+
+namespace {
+
+constexpr char kTestPayload[] = "data";
+constexpr int64_t kTestSize = sizeof(kTestPayload) - 1;
+
+class DeferredInputStream : public InputStream {
+ public:
+    Status Seek(int64_t, SeekOrigin) override {
+        return Status::OK();
+    }
+
+    Result<int64_t> GetPos() const override {
+        return 0;
+    }
+
+    Result<int64_t> Read(char* buffer, int64_t size) override {
+        if (size != kTestSize) {
+            return Status::Invalid("unexpected read size");
+        }
+        std::memcpy(buffer, kTestPayload, kTestSize);
+        return kTestSize;
+    }
+
+    Result<int64_t> Read(char* buffer, int64_t size, int64_t) override {
+        return Read(buffer, size);
+    }
+
+    void ReadAsync(char* buffer, int64_t size, int64_t,
+                   std::function<void(Status)>&& callback) override {
+        buffer_ = buffer;
+        size_ = size;
+        callback_ = std::move(callback);
+    }
+
+    Status Complete() {
+        if (!callback_) {
+            return Status::Invalid("async request was not started");
+        }
+        if (size_ != kTestSize) {
+            return Status::Invalid("unexpected async read size");
+        }
+        std::memcpy(buffer_, kTestPayload, kTestSize);
+        auto callback = std::move(callback_);
+        callback(Status::OK());
+        return Status::OK();
+    }
+
+    Status Close() override {
+        return Status::OK();
+    }
+
+    Result<std::string> GetUri() const override {
+        return std::string("test://input");
+    }
+
+    Result<int64_t> Length() const override {
+        return kTestSize;
+    }
+
+ private:
+    char* buffer_ = nullptr;
+    int64_t size_ = 0;
+    std::function<void(Status)> callback_;
+};
+
+std::shared_ptr<ArrowInputStreamAdapter> CreateAdapter(
+    const std::shared_ptr<DeferredInputStream>& stream,
+    const std::shared_ptr<arrow::MemoryPool>& pool) {
+    return std::make_shared<ArrowInputStreamAdapter>(stream, kTestSize, pool);
+}
+
+}  // namespace
 
 TEST(ArrowStreamAdapterTest, TestInputAndOutputStream) {
     auto test_root_dir = UniqueTestDirectory::Create();
@@ -86,6 +162,50 @@ TEST(ArrowStreamAdapterTest, TestInputAndOutputStream) {
 
     ASSERT_TRUE(in_stream->Close().ok());
     ASSERT_TRUE(in_stream->closed());
+}
+
+TEST(ArrowStreamAdapterTest, TestReadKeepsMemoryPoolAliveUntilBufferReleased) {
+    auto stream = std::make_shared<DeferredInputStream>();
+    std::shared_ptr<arrow::MemoryPool> pool(GetArrowPool(GetDefaultPool()));
+    auto adapter = CreateAdapter(stream, pool);
+    ASSERT_NE(adapter, nullptr);
+
+    std::shared_ptr<arrow::Buffer> buffer = adapter->Read(kTestSize).ValueOrDie();
+    adapter.reset();
+    pool.reset();
+
+    ASSERT_EQ(buffer->ToString(), kTestPayload);
+    buffer.reset();
+}
+
+TEST(ArrowStreamAdapterTest, TestReadAtKeepsMemoryPoolAliveUntilBufferReleased) {
+    auto stream = std::make_shared<DeferredInputStream>();
+    std::shared_ptr<arrow::MemoryPool> pool(GetArrowPool(GetDefaultPool()));
+    auto adapter = CreateAdapter(stream, pool);
+    ASSERT_NE(adapter, nullptr);
+
+    std::shared_ptr<arrow::Buffer> buffer = adapter->ReadAt(0, kTestSize).ValueOrDie();
+    adapter.reset();
+    pool.reset();
+
+    ASSERT_EQ(buffer->ToString(), kTestPayload);
+    buffer.reset();
+}
+
+TEST(ArrowStreamAdapterTest, TestAsyncReadKeepsMemoryPoolAliveUntilBufferReleased) {
+    auto stream = std::make_shared<DeferredInputStream>();
+    std::shared_ptr<arrow::MemoryPool> pool(GetArrowPool(GetDefaultPool()));
+    auto adapter = CreateAdapter(stream, pool);
+    ASSERT_NE(adapter, nullptr);
+
+    auto future = adapter->ReadAsync(arrow::io::default_io_context(), 0, kTestSize);
+    adapter.reset();
+    pool.reset();
+
+    ASSERT_OK(stream->Complete());
+    std::shared_ptr<arrow::Buffer> buffer = future.MoveResult().ValueOrDie();
+    ASSERT_EQ(buffer->ToString(), kTestPayload);
+    buffer.reset();
 }
 
 }  // namespace paimon::test
