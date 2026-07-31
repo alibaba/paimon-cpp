@@ -44,9 +44,9 @@ class BlobFileBatchReaderTest : public testing::Test, public ::testing::WithPara
         std::shared_ptr<FileSystem> fs = std::make_shared<LocalFileSystem>();
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream,
                              fs->Open(table_path + "/bucket-0/" + paimon_blob_file));
-        ASSERT_OK_AND_ASSIGN(auto reader,
-                             BlobFileBatchReader::Create(input_stream, /*batch_size=*/1024,
-                                                         blob_as_descriptor, pool_));
+        ASSERT_OK_AND_ASSIGN(auto reader, BlobFileBatchReader::Create(
+                                              input_stream, /*batch_size=*/1024, blob_as_descriptor,
+                                              /*emit_placeholder_sentinel=*/false, pool_));
         ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, selection_bitmap));
         ASSERT_OK_AND_ASSIGN(auto chunked_array,
                              paimon::test::ReadResultCollector::CollectResult(reader.get()));
@@ -162,9 +162,10 @@ TEST_F(BlobFileBatchReaderTest, TestRowNumbers) {
     ASSERT_OK_AND_ASSIGN(
         std::shared_ptr<InputStream> input_stream,
         fs->Open(table_path + "/bucket-0/data-d7816e8e-6c6d-4e28-9137-837cdf706350-1.blob"));
-    ASSERT_OK_AND_ASSIGN(auto reader, BlobFileBatchReader::Create(
-                                          input_stream,
-                                          /*batch_size=*/1, /*blob_as_descriptor=*/true, pool_));
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         BlobFileBatchReader::Create(input_stream,
+                                                     /*batch_size=*/1, /*blob_as_descriptor=*/true,
+                                                     /*emit_placeholder_sentinel=*/false, pool_));
 
     ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, std::nullopt));
     ASSERT_OK_AND_ASSIGN(auto number_of_rows, reader->GetNumberOfRows());
@@ -187,6 +188,45 @@ TEST_F(BlobFileBatchReaderTest, TestRowNumbers) {
     ASSERT_TRUE(BatchReader::IsEofBatch(batch4));
 }
 
+TEST_F(BlobFileBatchReaderTest, TestRowNumbersWithSelectionBitmap) {
+    // a selection bitmap removes rows, but batch positions must still map back to the original
+    // file row indexes so _ROW_ID completion works under row-range pushdown
+    auto schema = arrow::schema({BlobUtils::ToArrowField("my_blob_field", false)});
+    ::ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
+
+    std::string test_data_path = paimon::test::GetDataDir() + "/db_with_blob.db/table_with_blob/";
+    auto dir = paimon::test::UniqueTestDirectory::Create();
+    std::string table_path = dir->Str();
+    ASSERT_TRUE(paimon::test::TestUtil::CopyDirectory(test_data_path, table_path));
+
+    std::shared_ptr<FileSystem> fs = std::make_shared<LocalFileSystem>();
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<InputStream> input_stream,
+        fs->Open(table_path + "/bucket-0/data-d7816e8e-6c6d-4e28-9137-837cdf706350-1.blob"));
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         BlobFileBatchReader::Create(input_stream,
+                                                     /*batch_size=*/1, /*blob_as_descriptor=*/true,
+                                                     /*emit_placeholder_sentinel=*/false, pool_));
+
+    RoaringBitmap32 selection;
+    selection.Add(0);
+    selection.Add(2);
+    ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, selection));
+    ASSERT_NOK_WITH_MSG(reader->GetPreviousBatchFileRowId(0), "No batch has been read yet");
+    ASSERT_OK_AND_ASSIGN(auto batch1, reader->NextBatch());
+    ArrowArrayRelease(batch1.first.get());
+    ArrowSchemaRelease(batch1.second.get());
+    ASSERT_EQ(0, reader->GetPreviousBatchFileRowId(0).value());
+    ASSERT_OK_AND_ASSIGN(auto batch2, reader->NextBatch());
+    ArrowArrayRelease(batch2.first.get());
+    ArrowSchemaRelease(batch2.second.get());
+    ASSERT_EQ(2, reader->GetPreviousBatchFileRowId(0).value());
+    ASSERT_OK_AND_ASSIGN(auto batch3, reader->NextBatch());
+    ASSERT_NOK_WITH_MSG(reader->GetPreviousBatchFileRowId(0), "Last batch was EOF");
+    ASSERT_TRUE(BatchReader::IsEofBatch(batch3));
+}
+
 TEST_F(BlobFileBatchReaderTest, InvalidScenario) {
     auto dir = paimon::test::UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
@@ -202,20 +242,22 @@ TEST_F(BlobFileBatchReaderTest, InvalidScenario) {
     {
         ASSERT_NOK_WITH_MSG(
             BlobFileBatchReader::Create(input_stream,
-                                        /*batch_size=*/0, /*blob_as_descriptor=*/true, pool_),
+                                        /*batch_size=*/0, /*blob_as_descriptor=*/true,
+                                        /*emit_placeholder_sentinel=*/false, pool_),
             "blob file batch reader create failed: read batch size '0' should be larger than zero");
     }
     {
         ASSERT_NOK_WITH_MSG(
             BlobFileBatchReader::Create(/*input_stream=*/nullptr,
-                                        /*batch_size=*/1, /*blob_as_descriptor=*/true, pool_),
+                                        /*batch_size=*/1, /*blob_as_descriptor=*/true,
+                                        /*emit_placeholder_sentinel=*/false, pool_),
             "blob file batch reader create failed: input stream is nullptr");
     }
     {
         ASSERT_OK_AND_ASSIGN(
-            auto reader,
-            BlobFileBatchReader::Create(/*input_stream=*/input_stream,
-                                        /*batch_size=*/1, /*blob_as_descriptor=*/true, pool_));
+            auto reader, BlobFileBatchReader::Create(/*input_stream=*/input_stream,
+                                                     /*batch_size=*/1, /*blob_as_descriptor=*/true,
+                                                     /*emit_placeholder_sentinel=*/false, pool_));
         ASSERT_NOK_WITH_MSG(reader->GetFileSchema(),
                             "blob file has no self-describing file schema");
         ASSERT_TRUE(reader->GetReaderMetrics());
@@ -237,7 +279,8 @@ TEST_P(BlobFileBatchReaderTest, EmptyFile) {
     ASSERT_OK_AND_ASSIGN(
         std::shared_ptr<BlobFormatWriter> writer,
         BlobFormatWriter::Create(output_stream, struct_type, /*write_null_on_missing_file=*/false,
-                                 /*write_null_on_fetch_failure=*/false, file_system, pool_));
+                                 /*write_null_on_fetch_failure=*/false,
+                                 /*write_placeholder=*/false, file_system, pool_));
 
     ASSERT_OK(writer->Flush());
     ASSERT_OK(writer->Finish());
@@ -248,9 +291,10 @@ TEST_P(BlobFileBatchReaderTest, EmptyFile) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream,
                          file_system->Open(dir->Str() + "/file.blob"));
-    ASSERT_OK_AND_ASSIGN(auto reader, BlobFileBatchReader::Create(
-                                          input_stream,
-                                          /*batch_size=*/1, /*blob_as_descriptor=*/true, pool_));
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         BlobFileBatchReader::Create(input_stream,
+                                                     /*batch_size=*/1, /*blob_as_descriptor=*/true,
+                                                     /*emit_placeholder_sentinel=*/false, pool_));
 
     ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, std::nullopt));
     ASSERT_OK_AND_ASSIGN(auto number_of_rows, reader->GetNumberOfRows());
@@ -273,9 +317,9 @@ TEST_F(BlobFileBatchReaderTest, SetReadSchemaWithInvalidInputs) {
             std::shared_ptr<InputStream> input_stream,
             fs->Open(table_path + "/bucket-0/data-d7816e8e-6c6d-4e28-9137-837cdf706350-1.blob"));
         ASSERT_OK_AND_ASSIGN(
-            auto reader,
-            BlobFileBatchReader::Create(input_stream,
-                                        /*batch_size=*/1, /*blob_as_descriptor=*/true, pool_));
+            auto reader, BlobFileBatchReader::Create(input_stream,
+                                                     /*batch_size=*/1, /*blob_as_descriptor=*/true,
+                                                     /*emit_placeholder_sentinel=*/false, pool_));
         ASSERT_NOK_WITH_MSG(reader->SetReadSchema(/*read_schema=*/nullptr, /*predicate=*/nullptr,
                                                   /*selection_bitmap=*/std::nullopt),
                             "SetReadSchema failed: read schema cannot be nullptr");
@@ -298,9 +342,9 @@ TEST_F(BlobFileBatchReaderTest, SetReadSchemaWithInvalidInputs) {
             std::shared_ptr<InputStream> input_stream,
             fs->Open(table_path + "/bucket-0/data-d7816e8e-6c6d-4e28-9137-837cdf706350-1.blob"));
         ASSERT_OK_AND_ASSIGN(
-            auto reader,
-            BlobFileBatchReader::Create(input_stream,
-                                        /*batch_size=*/1, /*blob_as_descriptor=*/true, pool_));
+            auto reader, BlobFileBatchReader::Create(input_stream,
+                                                     /*batch_size=*/1, /*blob_as_descriptor=*/true,
+                                                     /*emit_placeholder_sentinel=*/false, pool_));
         ASSERT_NOK_WITH_MSG(reader->SetReadSchema(&c_schema, /*predicate=*/nullptr,
                                                   /*selection_bitmap=*/std::nullopt),
                             "read schema field number 2 is not 1");
@@ -323,9 +367,9 @@ TEST_F(BlobFileBatchReaderTest, SetReadSchemaWithInvalidInputs) {
             std::shared_ptr<InputStream> input_stream,
             fs->Open(table_path + "/bucket-0/data-d7816e8e-6c6d-4e28-9137-837cdf706350-1.blob"));
         ASSERT_OK_AND_ASSIGN(
-            auto reader,
-            BlobFileBatchReader::Create(input_stream,
-                                        /*batch_size=*/1, /*blob_as_descriptor=*/true, pool_));
+            auto reader, BlobFileBatchReader::Create(input_stream,
+                                                     /*batch_size=*/1, /*blob_as_descriptor=*/true,
+                                                     /*emit_placeholder_sentinel=*/false, pool_));
         ASSERT_NOK_WITH_MSG(reader->SetReadSchema(&c_schema, /*predicate=*/nullptr,
                                                   /*selection_bitmap=*/std::nullopt),
                             "field my_blob_field: large_binary is not BLOB");
@@ -346,9 +390,9 @@ TEST_F(BlobFileBatchReaderTest, SetReadSchemaWithInvalidInputs) {
             std::shared_ptr<InputStream> input_stream,
             fs->Open(table_path + "/bucket-0/data-d7816e8e-6c6d-4e28-9137-837cdf706350-1.blob"));
         ASSERT_OK_AND_ASSIGN(
-            auto reader,
-            BlobFileBatchReader::Create(input_stream,
-                                        /*batch_size=*/1, /*blob_as_descriptor=*/true, pool_));
+            auto reader, BlobFileBatchReader::Create(input_stream,
+                                                     /*batch_size=*/1, /*blob_as_descriptor=*/true,
+                                                     /*emit_placeholder_sentinel=*/false, pool_));
         RoaringBitmap32 roaring;
         roaring.Add(0);
         roaring.Add(1);

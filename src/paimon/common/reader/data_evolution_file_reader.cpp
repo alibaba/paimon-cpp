@@ -41,8 +41,13 @@ Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionFileReader::Create
         return Status::Invalid(
             "read schema, row offsets and field offsets must have the same size");
     }
-    if (readers.size() <= 1) {
-        return Status::Invalid("readers size is supposed to be more than 1");
+    if (readers.empty()) {
+        return Status::Invalid("readers must not be empty");
+    }
+    for (int32_t reader_offset : reader_offsets) {
+        if (reader_offset >= static_cast<int32_t>(readers.size())) {
+            return Status::Invalid("reader offset is out of range of readers");
+        }
     }
     return std::unique_ptr<DataEvolutionFileReader>(
         new DataEvolutionFileReader(std::move(readers), read_schema, read_batch_size,

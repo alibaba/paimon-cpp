@@ -68,9 +68,15 @@ class BlobFormatWriter : public FormatWriter {
     /// `write_null_on_missing_file` is enabled; otherwise a missing file follows
     /// `write_null_on_fetch_failure` like any other failed open.
     /// See Options::BLOB_WRITE_NULL_ON_MISSING_FILE / BLOB_WRITE_NULL_ON_FETCH_FAILURE.
+    ///
+    /// `write_placeholder` (see BlobDefs::kWritePlaceholderKey, false unless the write is a
+    /// data-evolution partial update) persists a value exactly equal to
+    /// BlobDefs::kPlaceholderSentinel as a placeholder entry (bin_length -2, no data bytes);
+    /// any other value is stored verbatim. When disabled, values are never interpreted and can
+    /// never be turned into placeholder entries.
     static Result<std::unique_ptr<BlobFormatWriter>> Create(
         const std::shared_ptr<OutputStream>& out, const std::shared_ptr<arrow::DataType>& data_type,
-        bool write_null_on_missing_file, bool write_null_on_fetch_failure,
+        bool write_null_on_missing_file, bool write_null_on_fetch_failure, bool write_placeholder,
         const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<MemoryPool>& pool);
 
     Status AddBatch(ArrowArray* batch) override;
@@ -91,7 +97,7 @@ class BlobFormatWriter : public FormatWriter {
     BlobFormatWriter(const std::shared_ptr<OutputStream>& out, const std::string& uri,
                      const std::shared_ptr<arrow::DataType>& data_type,
                      bool write_null_on_missing_file, bool write_null_on_fetch_failure,
-                     const std::shared_ptr<FileSystem>& fs,
+                     bool write_placeholder, const std::shared_ptr<FileSystem>& fs,
                      const std::shared_ptr<MemoryPool>& pool);
 
     Status WriteBlob(std::string_view blob_data);
@@ -135,6 +141,7 @@ class BlobFormatWriter : public FormatWriter {
     std::shared_ptr<Metrics> metrics_;
     bool write_null_on_missing_file_ = false;
     bool write_null_on_fetch_failure_ = false;
+    bool write_placeholder_ = false;
     uint64_t null_on_missing_file_count_ = 0;
     uint64_t null_on_fetch_failure_count_ = 0;
     std::unique_ptr<Logger> logger_;

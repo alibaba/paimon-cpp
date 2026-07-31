@@ -26,10 +26,12 @@
 #include "paimon/result.h"
 
 namespace paimon {
-/// This is a union reader which contains multiple inner readers.
+/// This is a union reader which contains one or more inner readers.
 ///
 /// This reader, assembling multiple reader into one big and great reader. The row it produces
-/// also come from the readers it contains.
+/// also come from the readers it contains. A single inner reader is a valid degenerate case
+/// (e.g. a blob-only write): the union still maps its fields into the read schema order and
+/// null fills unmatched read fields.
 ///
 /// For example, the expected schema for this reader is : int, int, string, int, string, int.(Total
 /// 6 fields) It contains three inner readers, we call them reader0, reader1 and reader2.

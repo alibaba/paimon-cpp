@@ -16,6 +16,9 @@
 
 #include "paimon/core/table/source/data_evolution_batch_scan.h"
 
+#include <algorithm>
+#include <limits>
+
 #include "paimon/core/global_index/global_index_scan_impl.h"
 #include "paimon/core/global_index/indexed_split_impl.h"
 #include "paimon/core/table/source/data_split_impl.h"
@@ -72,7 +75,7 @@ Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::CreatePlan() {
 
 Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::WrapToIndexedSplits(
     const std::shared_ptr<Plan>& data_plan, const RowRangeIndex& row_range_index,
-    const std::map<int64_t, float>& id_to_score) const {
+    const std::map<int64_t, float>& id_to_score) {
     // TODO(lisizhuo.lsz): add executor here
     auto data_splits = data_plan->Splits();
     std::vector<std::shared_ptr<Split>> indexed_splits;
@@ -86,11 +89,23 @@ Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::WrapToIndexedSplits(
         if (files.empty()) {
             return Status::Invalid("Empty data files in WrapToIndexedSplits");
         }
-        PAIMON_ASSIGN_OR_RAISE(int64_t min, files[0]->NonNullFirstRowId());
-        PAIMON_ASSIGN_OR_RAISE(int64_t max, files[files.size() - 1]->NonNullFirstRowId());
-        max += files[files.size() - 1]->row_count - 1;
+        // The row-id ranges of the files in a split may be unordered, discontiguous, or
+        // overlapping, so intersect the index with each file's range separately, then sort and
+        // merge the intersected ranges.
+        std::vector<Range> intersected;
+        int64_t min = std::numeric_limits<int64_t>::max();
+        int64_t max = std::numeric_limits<int64_t>::min();
+        for (const auto& file : files) {
+            PAIMON_ASSIGN_OR_RAISE(int64_t first_row_id, file->NonNullFirstRowId());
+            int64_t last_row_id = first_row_id + file->row_count - 1;
+            min = std::min(min, first_row_id);
+            max = std::max(max, last_row_id);
+            std::vector<Range> file_ranges =
+                row_range_index.IntersectedRanges(first_row_id, last_row_id);
+            intersected.insert(intersected.end(), file_ranges.begin(), file_ranges.end());
+        }
 
-        std::vector<Range> expected = row_range_index.IntersectedRanges(min, max);
+        std::vector<Range> expected = Range::SortAndMergeOverlap(intersected, /*adjacent=*/true);
         if (expected.empty()) {
             return Status::Invalid(
                 fmt::format("There should be intersected ranges for split with min row id {} and "

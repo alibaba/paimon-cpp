@@ -164,6 +164,20 @@ TEST_F(DataEvolutionFileReaderTest, TestInvalid) {
                             "read schema, row offsets and field offsets must have the same size");
     }
     {
+        arrow::FieldVector read_fields = {
+            arrow::field("f0", arrow::int32()),
+            arrow::field("f1", arrow::int32()),
+            arrow::field("f2", arrow::utf8()),
+            arrow::field("f3", arrow::int32()),
+        };
+        auto read_schema = arrow::schema(read_fields);
+        std::vector<int32_t> reader_offsets = {0, 0, 1, 1};
+        std::vector<int32_t> field_offsets = {0, 1, 1, 0};
+        ASSERT_NOK_WITH_MSG(DataEvolutionFileReader::Create({}, read_schema, /*read_batch_size=*/10,
+                                                            reader_offsets, field_offsets, pool_),
+                            "readers must not be empty");
+    }
+    {
         std::vector<std::unique_ptr<BatchReader>> readers;
         readers.push_back(nullptr);
 
@@ -179,7 +193,7 @@ TEST_F(DataEvolutionFileReaderTest, TestInvalid) {
         ASSERT_NOK_WITH_MSG(
             DataEvolutionFileReader::Create(std::move(readers), read_schema, /*read_batch_size=*/10,
                                             reader_offsets, field_offsets, pool_),
-            "readers size is supposed to be more than 1");
+            "reader offset is out of range of readers");
     }
 }
 

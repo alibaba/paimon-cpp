@@ -31,10 +31,13 @@ namespace paimon {
 // Precondition: read_schema has special fields
 class CompleteRowTrackingFieldsBatchReader : public FileBatchReader {
  public:
-    CompleteRowTrackingFieldsBatchReader(std::unique_ptr<FileBatchReader>&& reader,
-                                         const std::optional<int64_t>& first_row_id,
-                                         int64_t snapshot_id,
-                                         const std::shared_ptr<MemoryPool>& pool);
+    /// `file_field_names` declares the physical fields of a file whose format has no
+    /// self-describing schema (e.g. blob); when nullopt the file schema is queried from the
+    /// inner reader via GetFileSchema().
+    CompleteRowTrackingFieldsBatchReader(
+        std::unique_ptr<FileBatchReader>&& reader, const std::optional<int64_t>& first_row_id,
+        int64_t snapshot_id, const std::optional<std::vector<std::string>>& file_field_names,
+        const std::shared_ptr<MemoryPool>& pool);
 
     Result<std::unique_ptr<::ArrowSchema>> GetFileSchema() const override {
         return Status::Invalid(
@@ -80,6 +83,7 @@ class CompleteRowTrackingFieldsBatchReader : public FileBatchReader {
  private:
     std::optional<int64_t> first_row_id_;
     int64_t snapshot_id_ = -1;
+    std::optional<std::vector<std::string>> file_field_names_;
     std::shared_ptr<arrow::MemoryPool> arrow_pool_;
     std::shared_ptr<arrow::Schema> read_schema_;
     std::unique_ptr<FileBatchReader> reader_;

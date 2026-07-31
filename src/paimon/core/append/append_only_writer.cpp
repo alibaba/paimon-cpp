@@ -211,11 +211,11 @@ Result<AppendOnlyWriter::WriterFactory> AppendOnlyWriter::GetDataFileWriterFacto
 
 AppendOnlyWriter::WriterFactory AppendOnlyWriter::GetBlobFileWriterFactory(
     const std::shared_ptr<arrow::Schema>& single_field_schema,
-    const std::optional<std::vector<std::string>>& write_cols) const {
+    const std::optional<std::vector<std::string>>& write_cols, bool write_placeholder) const {
     std::shared_ptr<DataFilePathFactory> path_factory = path_factory_;
     return std::make_shared<BlobDataFileWriterFactory>(options_, schema_id_, single_field_schema,
                                                        write_cols, seq_num_counter_, path_factory,
-                                                       memory_pool_);
+                                                       write_placeholder, memory_pool_);
 }
 
 AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingBlobWriter(
@@ -223,8 +223,16 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingBlobWri
     // Multiple blob fields are supported. Each blob field gets its own rolling file writer
     // via MultipleBlobFileWriter.
     auto blob_schema = schemas.blob_schema;
+    // A data-evolution write touching only blob columns is a partial update: its rows may mark
+    // untouched blobs with the placeholder sentinel (see BlobDefs::kWritePlaceholderKey). Any
+    // write that also carries non-blob columns stores blob bytes verbatim. The gate cannot tell
+    // a first write from an update, so a blob-only first write also runs under the sentinel
+    // channel: a user value equal to the sentinel is then persisted as a placeholder entry with
+    // no older layer to resolve it, and reading fails loudly rather than returning wrong bytes.
+    bool write_placeholder =
+        options_.DataEvolutionEnabled() && schemas.main_schema->num_fields() == 0;
     MultipleBlobFileWriter::BlobWriterCreator blob_writer_creator =
-        [this, blob_schema](const std::string& blob_field_name)
+        [this, blob_schema, write_placeholder](const std::string& blob_field_name)
         -> Result<
             std::unique_ptr<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>> {
         // Create a single-field schema for this blob field
@@ -236,7 +244,7 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingBlobWri
         auto single_field_schema = arrow::schema({field});
         std::vector<std::string> write_cols = {blob_field_name};
         auto single_blob_file_writer_factory =
-            GetBlobFileWriterFactory(single_field_schema, write_cols);
+            GetBlobFileWriterFactory(single_field_schema, write_cols, write_placeholder);
         return std::make_unique<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
             options_.GetBlobTargetFileSize(),
             /*target_file_row_num=*/std::numeric_limits<int64_t>::max(),

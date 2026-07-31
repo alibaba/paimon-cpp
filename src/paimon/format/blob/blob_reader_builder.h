@@ -43,7 +43,11 @@ class BlobReaderBuilder : public ReaderBuilder {
         PAIMON_ASSIGN_OR_RAISE(
             bool blob_as_descriptor,
             OptionsUtils::GetValueFromMap<bool>(options_, Options::BLOB_AS_DESCRIPTOR, false));
-        return BlobFileBatchReader::Create(input_stream, batch_size_, blob_as_descriptor, pool_);
+        PAIMON_ASSIGN_OR_RAISE(bool emit_placeholder_sentinel,
+                               OptionsUtils::GetValueFromMap<bool>(
+                                   options_, BlobDefs::kEmitPlaceholderSentinelKey, false));
+        return BlobFileBatchReader::Create(input_stream, batch_size_, blob_as_descriptor,
+                                           emit_placeholder_sentinel, pool_);
     }
 
  private:

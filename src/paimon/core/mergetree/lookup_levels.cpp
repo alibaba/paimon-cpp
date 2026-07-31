@@ -345,7 +345,8 @@ Status LookupLevels<T>::CreateSstFileFromDataFile(const std::shared_ptr<DataFile
         std::vector<std::unique_ptr<FileBatchReader>> raw_readers,
         split_read_->CreateRawFileReaders(partition_, {file}, read_schema_,
                                           /*predicate=*/nullptr, dv_factory_,
-                                          /*row_ranges=*/std::nullopt, data_file_path_factory_));
+                                          /*row_ranges=*/std::nullopt, data_file_path_factory_,
+                                          /*extra_format_options=*/{}));
     if (raw_readers.size() != 1) {
         return Status::Invalid("Unexpected, CreateSstFileFromDataFile only create single reader");
     }
