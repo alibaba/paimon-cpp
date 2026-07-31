@@ -272,7 +272,8 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateNoMergeReader(
         std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers,
         CreateRawFileReaders(data_split->Partition(), data_split->DataFiles(), read_schema,
                              only_filter_key ? predicate_for_keys_ : context_->GetPredicate(),
-                             dv_factory, /*row_ranges=*/{}, data_file_path_factory));
+                             dv_factory, /*row_ranges=*/{}, data_file_path_factory,
+                             /*extra_format_options=*/{}));
 
     auto raw_readers =
         ObjectUtils::MoveVector<std::unique_ptr<BatchReader>>(std::move(raw_file_readers));
@@ -496,7 +497,8 @@ Result<std::unique_ptr<KeyValueRecordReader>> MergeFileSplitRead::CreateReaderFo
     PAIMON_ASSIGN_OR_RAISE(
         std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers,
         CreateRawFileReaders(partition, data_files, read_schema_, predicate, dv_factory,
-                             /*row_ranges=*/{}, data_file_path_factory));
+                             /*row_ranges=*/{}, data_file_path_factory,
+                             /*extra_format_options=*/{}));
 
     assert(data_files.size() == raw_file_readers.size());
     // KeyValueDataFileRecordReader converts arrow array from format reader to KeyValue objects

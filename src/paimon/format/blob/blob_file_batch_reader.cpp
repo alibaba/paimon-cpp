@@ -17,6 +17,7 @@
 #include "paimon/format/blob/blob_file_batch_reader.h"
 
 #include <algorithm>
+#include <cstring>
 #include <numeric>
 
 #include "arrow/api.h"
@@ -38,7 +39,7 @@ namespace paimon::blob {
 
 Result<std::unique_ptr<BlobFileBatchReader>> BlobFileBatchReader::Create(
     const std::shared_ptr<InputStream>& input_stream, int32_t batch_size, bool blob_as_descriptor,
-    const std::shared_ptr<MemoryPool>& pool) {
+    bool emit_placeholder_sentinel, const std::shared_ptr<MemoryPool>& pool) {
     if (input_stream == nullptr) {
         return Status::Invalid("blob file batch reader create failed: input stream is nullptr");
     }
@@ -83,14 +84,15 @@ Result<std::unique_ptr<BlobFileBatchReader>> BlobFileBatchReader::Create(
     int64_t offset = 0;
     for (const auto& blob_length : blob_lengths) {
         blob_offsets.push_back(offset);
-        // Null blobs (bin_length == -1) don't occupy file space
+        // null (-1) and placeholder (-2) entries occupy no file space
         if (blob_length >= 0) {
             offset += blob_length;
         }
     }
     PAIMON_ASSIGN_OR_RAISE(std::string file_path, input_stream->GetUri());
-    auto reader = std::unique_ptr<BlobFileBatchReader>(new BlobFileBatchReader(
-        input_stream, file_path, blob_lengths, blob_offsets, batch_size, blob_as_descriptor, pool));
+    auto reader = std::unique_ptr<BlobFileBatchReader>(
+        new BlobFileBatchReader(input_stream, file_path, blob_lengths, blob_offsets, batch_size,
+                                blob_as_descriptor, emit_placeholder_sentinel, pool));
     return reader;
 }
 
@@ -99,6 +101,7 @@ BlobFileBatchReader::BlobFileBatchReader(const std::shared_ptr<InputStream>& inp
                                          const std::vector<int64_t>& blob_lengths,
                                          const std::vector<int64_t>& blob_offsets,
                                          int32_t batch_size, bool blob_as_descriptor,
+                                         bool emit_placeholder_sentinel,
                                          const std::shared_ptr<MemoryPool>& pool)
     : input_stream_(input_stream),
       file_path_(file_path),
@@ -108,6 +111,7 @@ BlobFileBatchReader::BlobFileBatchReader(const std::shared_ptr<InputStream>& inp
       target_blob_offsets_(blob_offsets),
       batch_size_(batch_size),
       blob_as_descriptor_(blob_as_descriptor),
+      emit_placeholder_sentinel_(emit_placeholder_sentinel),
       pool_(pool),
       arrow_pool_(GetArrowPool(pool_)),
       metrics_(std::make_shared<MetricsImpl>()) {
@@ -156,7 +160,7 @@ Status BlobFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
     }
     target_type_ = arrow::struct_(arrow_schema->fields());
     current_pos_ = 0;
-    previous_batch_first_row_number_ = std::numeric_limits<uint64_t>::max();
+    previous_batch_start_pos_ = std::numeric_limits<size_t>::max();
     previous_batch_row_count_ = 0;
     return Status::OK();
 }
@@ -168,11 +172,7 @@ Result<std::shared_ptr<arrow::Buffer>> BlobFileBatchReader::NextBlobOffsets(
     PAIMON_RETURN_NOT_OK_FROM_ARROW(buffer_builder.Append(0));
     int64_t data_length = 0;
     for (int32_t k = 0; k < rows_to_read; ++k) {
-        const size_t i = current_pos_ + k;
-        // Null blobs contribute zero bytes to content
-        if (!IsTargetNull(i)) {
-            data_length += GetTargetContentLength(i);
-        }
+        data_length += GetTargetOutputLength(current_pos_ + k);
         PAIMON_RETURN_NOT_OK_FROM_ARROW(buffer_builder.Append(data_length));
     }
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Buffer> offset_buffer,
@@ -184,10 +184,7 @@ Result<std::shared_ptr<arrow::Buffer>> BlobFileBatchReader::NextBlobContents(
     int32_t rows_to_read) const {
     int64_t total_length = 0;
     for (int32_t k = 0; k < rows_to_read; ++k) {
-        const size_t i = current_pos_ + k;
-        if (!IsTargetNull(i)) {
-            total_length += GetTargetContentLength(i);
-        }
+        total_length += GetTargetOutputLength(current_pos_ + k);
     }
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Buffer> data_buffer,
                                       arrow::AllocateBuffer(total_length, arrow_pool_.get()));
@@ -195,6 +192,13 @@ Result<std::shared_ptr<arrow::Buffer>> BlobFileBatchReader::NextBlobContents(
     for (int32_t k = 0; k < rows_to_read; ++k) {
         const size_t i = current_pos_ + k;
         if (IsTargetNull(i)) {
+            continue;
+        }
+        if (IsTargetPlaceholder(i)) {
+            // a placeholder entry has no data bytes in the file; emit the sentinel for the
+            // data-evolution blob fallback merge to identify it
+            memcpy(buffer, BlobDefs::kPlaceholderSentinel, BlobDefs::kPlaceholderSentinelLength);
+            buffer += BlobDefs::kPlaceholderSentinelLength;
             continue;
         }
         int64_t offset = GetTargetContentOffset(i);
@@ -268,6 +272,9 @@ Result<std::shared_ptr<arrow::Array>> BlobFileBatchReader::BuildTargetArray(
         PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append());
         if (IsTargetNull(i)) {
             PAIMON_RETURN_NOT_OK_FROM_ARROW(field_builder->AppendNull());
+        } else if (IsTargetPlaceholder(i)) {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(field_builder->Append(
+                BlobDefs::kPlaceholderSentinel, BlobDefs::kPlaceholderSentinelLength));
         } else {
             int64_t offset = GetTargetContentOffset(i);
             int64_t length = GetTargetContentLength(i);
@@ -291,18 +298,29 @@ Result<BatchReader::ReadBatch> BlobFileBatchReader::NextBatch() {
         return Status::Invalid("target type is nullptr, call SetReadSchema first");
     }
     if (current_pos_ >= target_blob_lengths_.size()) {
-        PAIMON_ASSIGN_OR_RAISE(previous_batch_first_row_number_, GetNumberOfRows());
+        previous_batch_start_pos_ = target_blob_lengths_.size();
         previous_batch_row_count_ = 0;
         return BatchReader::MakeEofBatch();
     }
     int32_t left_rows = target_blob_lengths_.size() - current_pos_;
     int32_t rows_to_read = std::min(left_rows, batch_size_);
+    if (!emit_placeholder_sentinel_) {
+        for (int32_t k = 0; k < rows_to_read; ++k) {
+            if (IsTargetPlaceholder(current_pos_ + k)) {
+                return Status::Invalid(fmt::format(
+                    "blob file {} contains a placeholder entry (bin_length {}) written by a "
+                    "data-evolution partial update; it can only be resolved by the data-evolution "
+                    "blob fallback read path",
+                    file_path_, BlobDefs::kPlaceholderBinLength));
+            }
+        }
+    }
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> blob_array,
                            BuildTargetArray(rows_to_read));
     std::unique_ptr<ArrowArray> c_array = std::make_unique<ArrowArray>();
     std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*blob_array, c_array.get(), c_schema.get()));
-    previous_batch_first_row_number_ = target_blob_row_indexes_[current_pos_];
+    previous_batch_start_pos_ = current_pos_;
     current_pos_ += rows_to_read;
     previous_batch_row_count_ = c_array->length;
     return make_pair(std::move(c_array), std::move(c_schema));

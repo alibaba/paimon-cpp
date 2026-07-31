@@ -16,6 +16,8 @@
 
 #include "paimon/core/operation/data_evolution_split_read.h"
 
+#include <algorithm>
+#include <limits>
 #include <map>
 #include <string>
 #include <string_view>
@@ -28,10 +30,12 @@
 #include "arrow/array/array_nested.h"
 #include "arrow/c/bridge.h"
 #include "paimon/common/catalog/catalog_context.h"
+#include "paimon/common/data/blob_defs.h"
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/data/blob_view_struct.h"
 #include "paimon/common/file_index/bitmap/apply_bitmap_index_batch_reader.h"
 #include "paimon/common/global_index/complete_index_score_batch_reader.h"
+#include "paimon/common/reader/blob_fallback_batch_reader.h"
 #include "paimon/common/reader/blob_view_resolving_batch_reader.h"
 #include "paimon/common/reader/complete_row_kind_batch_reader.h"
 #include "paimon/common/reader/concat_batch_reader.h"
@@ -45,71 +49,61 @@
 #include "paimon/core/global_index/indexed_split_impl.h"
 #include "paimon/core/utils/blob_view_lookup.h"
 namespace paimon {
+int64_t DataEvolutionSplitRead::BlobBunch::RowCount() const {
+    if (files_.empty()) {
+        return 0;
+    }
+    if (!has_row_ids_selection_) {
+        // Add enforces the union range to be contiguous
+        return union_end_row_id_ - union_first_row_id_;
+    }
+    // with a row-ids selection the scan may have pruned files, leaving holes in the union
+    int64_t row_count = 0;
+    for (const auto& range : Range::SortAndMergeOverlap(ranges_, /*adjacent=*/true)) {
+        row_count += range.Count();
+    }
+    return row_count;
+}
+
 Status DataEvolutionSplitRead::BlobBunch::Add(const std::shared_ptr<DataFileMeta>& file) {
     if (!BlobUtils::IsBlobFile(file->file_name)) {
         return Status::Invalid("Only blob file can be added to a blob bunch.");
     }
     PAIMON_ASSIGN_OR_RAISE(int64_t first_row_id, file->NonNullFirstRowId());
-    if (first_row_id == latest_first_row_id_) {
-        if (file->max_sequence_number >= latest_max_sequence_number_) {
-            return Status::Invalid(
-                "Blob file with same first row id should have decreasing sequence number.");
-        }
-        // for files with the same first row id, file with larger sequence_number will be chosen,
-        // other files will be skipped
-        return Status::OK();
-    }
     if (!files_.empty()) {
-        if (has_row_ids_selection_) {
-            // for the case:
-            // snapshot 1: blob0 [0, 9]
-            // snapshot 2: blob1 [0, 4] + blob2 [5, 9]
-            // when selected row id is {5}, only blob0 and blob2 is reserved in scan process, as
-            // blob1 has no intersect with {5}
-            // BlobBunch will first add blob0 [0, 9]
-            // then when it comes to blob2 [5, 9], blob0 will be removed as it has smaller sequence
-            // number
-            if (first_row_id < expected_next_first_row_id_) {
-                if (file->max_sequence_number > latest_max_sequence_number_) {
-                    row_count_ -= files_.back()->row_count;
-                    files_.pop_back();
-                } else {
-                    return Status::OK();
-                }
-            }
-        } else {
-            if (first_row_id < expected_next_first_row_id_) {
-                if (file->max_sequence_number >= latest_max_sequence_number_) {
-                    return Status::Invalid(
-                        "Blob file with overlapping row id should have decreasing sequence "
-                        "number.");
-                }
-                // for files with overlapping, if the file with smaller sequence_number is chosen,
-                // there will not exist file with larger sequence_number
-                return Status::OK();
-            } else if (first_row_id > expected_next_first_row_id_) {
-                return Status::Invalid(
-                    fmt::format("Blob file first row id should be continuous, expect {} but got {}",
-                                expected_next_first_row_id_, first_row_id));
-            }
-        }
-        if (!files_.empty()) {
-            // Blob files for the same field may span schema ids.
-            if (file->write_cols != files_[0]->write_cols) {
-                return Status::Invalid(
-                    "All files in a blob bunch should have the same write columns.");
-            }
+        // Blob files for the same field may span schema ids.
+        if (file->write_cols != files_[0]->write_cols) {
+            return Status::Invalid("All files in a blob bunch should have the same write columns.");
         }
     }
-    row_count_ += file->row_count;
-    if (row_count_ > expected_row_count_) {
+    // files sharing a max sequence number form one layer, whose row id ranges must be disjoint;
+    // overlaps across layers are the expected shape of partial updates and are kept for the
+    // row-level placeholder fallback
+    auto [layer_iter, layer_inserted] =
+        sequence_group_end_.try_emplace(file->max_sequence_number, 0);
+    if (!layer_inserted && first_row_id < layer_iter->second) {
+        return Status::Invalid(fmt::format(
+            "Blob files with the same max sequence number should not have overlapping row id "
+            "ranges: file {} (max sequence number {}) starts at row id {} before the previous "
+            "file's end {}",
+            file->file_name, file->max_sequence_number, first_row_id, layer_iter->second));
+    }
+    if (!has_row_ids_selection_ && !files_.empty() && first_row_id > union_end_row_id_) {
+        // a hole no layer covers cannot be aligned with the data files
+        return Status::Invalid(
+            fmt::format("Blob file first row id should be continuous, expect {} but got {}",
+                        union_end_row_id_, first_row_id));
+    }
+    int64_t end_row_id = first_row_id + file->row_count;
+    layer_iter->second = end_row_id;
+    union_first_row_id_ = std::min(union_first_row_id_, first_row_id);
+    union_end_row_id_ = std::max(union_end_row_id_, end_row_id);
+    ranges_.emplace_back(first_row_id, end_row_id - 1);
+    files_.push_back(file);
+    if (!has_row_ids_selection_ && expected_row_count_ >= 0 && RowCount() > expected_row_count_) {
         return Status::Invalid(
             fmt::format("Blob files row count exceed the expect {}", expected_row_count_));
     }
-    files_.push_back(file);
-    latest_max_sequence_number_ = file->max_sequence_number;
-    latest_first_row_id_ = first_row_id;
-    expected_next_first_row_id_ = latest_first_row_id_ + file->row_count;
     return Status::OK();
 }
 DataEvolutionSplitRead::DataEvolutionSplitRead(
@@ -233,7 +227,8 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::CreateBlobViewReade
         std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers,
         CreateRawFileReaders(split_impl->Partition(), data_files, blob_view_schema,
                              /*predicate=*/nullptr, /*dv_factory=*/nullptr,
-                             /*row_ranges=*/std::nullopt, data_file_path_factory));
+                             /*row_ranges=*/std::nullopt, data_file_path_factory,
+                             /*extra_format_options=*/{}));
 
     auto batch_readers =
         ObjectUtils::MoveVector<std::unique_ptr<BatchReader>>(std::move(raw_file_readers));
@@ -312,7 +307,8 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::InnerCreateReader(
                 std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers,
                 CreateRawFileReaders(split_impl->Partition(), need_merge_files, raw_read_schema_,
                                      /*predicate=*/nullptr,
-                                     /*dv_factory=*/nullptr, row_ranges, data_file_path_factory));
+                                     /*dv_factory=*/nullptr, row_ranges, data_file_path_factory,
+                                     /*extra_format_options=*/{}));
             assert(raw_file_readers.size() == 1);
             sub_readers.push_back(std::move(raw_file_readers[0]));
         } else {
@@ -488,18 +484,30 @@ Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionSplitRead::CreateU
         if (!read_fields_in_file.empty()) {
             // create new FieldMappingReader for read partial fields
             auto file_read_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields_in_file);
-            PAIMON_ASSIGN_OR_RAISE(std::vector<std::unique_ptr<FileBatchReader>> file_readers,
-                                   CreateRawFileReaders(partition, bunch->Files(), file_read_schema,
-                                                        /*predicate=*/nullptr, /*dv_factory=*/{},
-                                                        row_ranges, data_file_path_factory));
-            if (file_readers.size() == 1) {
-                file_batch_readers[file_idx] = std::move(file_readers[0]);
+            auto blob_bunch = std::dynamic_pointer_cast<BlobBunch>(bunch);
+            if (blob_bunch && !blob_bunch->SequentialReadOptimize()) {
+                // blob files span multiple max sequence number layers: placeholder entries of
+                // newer layers must fall back row by row to older layers
+                PAIMON_ASSIGN_OR_RAISE(
+                    file_batch_readers[file_idx],
+                    CreateBlobFallbackReader(partition, blob_bunch->Files(), file_read_schema,
+                                             row_ranges, data_file_path_factory));
             } else {
-                auto raw_readers =
-                    ObjectUtils::MoveVector<std::unique_ptr<BatchReader>>(std::move(file_readers));
-                // Concat multiple blob files that map to the same data file.
-                file_batch_readers[file_idx] =
-                    std::make_unique<ConcatBatchReader>(std::move(raw_readers), pool_);
+                PAIMON_ASSIGN_OR_RAISE(
+                    std::vector<std::unique_ptr<FileBatchReader>> file_readers,
+                    CreateRawFileReaders(partition, bunch->Files(), file_read_schema,
+                                         /*predicate=*/nullptr, /*dv_factory=*/{}, row_ranges,
+                                         data_file_path_factory,
+                                         /*extra_format_options=*/{}));
+                if (file_readers.size() == 1) {
+                    file_batch_readers[file_idx] = std::move(file_readers[0]);
+                } else {
+                    auto raw_readers = ObjectUtils::MoveVector<std::unique_ptr<BatchReader>>(
+                        std::move(file_readers));
+                    // Concat multiple blob files that map to the same data file.
+                    file_batch_readers[file_idx] =
+                        std::make_unique<ConcatBatchReader>(std::move(raw_readers), pool_);
+                }
             }
         }
     }
@@ -507,6 +515,98 @@ Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionSplitRead::CreateU
     return DataEvolutionFileReader::Create(std::move(file_batch_readers), raw_read_schema_,
                                            options_.GetReadBatchSize(), reader_offsets,
                                            field_offsets, pool_);
+}
+
+namespace {
+/// Selected row ids in [from, to] as sorted disjoint ranges: the whole range without a
+/// selection, otherwise its intersection with the (possibly overlapping) selected ranges.
+std::vector<Range> SelectedRangesInRange(int64_t from, int64_t to,
+                                         const std::optional<std::vector<Range>>& row_ranges) {
+    if (!row_ranges) {
+        return {Range(from, to)};
+    }
+    std::vector<Range> selected;
+    Range gap_range(from, to);
+    for (const auto& range : Range::SortAndMergeOverlap(row_ranges.value(), /*adjacent=*/true)) {
+        std::optional<Range> intersection = Range::Intersection(gap_range, range);
+        if (intersection) {
+            selected.push_back(*intersection);
+        }
+    }
+    return selected;
+}
+}  // namespace
+
+Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::CreateBlobFallbackReader(
+    const BinaryRow& partition, const std::vector<std::shared_ptr<DataFileMeta>>& files,
+    const std::shared_ptr<arrow::Schema>& file_read_schema,
+    const std::optional<std::vector<Range>>& row_ranges,
+    const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
+    int64_t union_first_row_id = std::numeric_limits<int64_t>::max();
+    int64_t union_last_row_id = std::numeric_limits<int64_t>::min();
+    using FileWithFirstRowId = std::pair<int64_t, std::shared_ptr<DataFileMeta>>;
+    std::map<int64_t, std::vector<FileWithFirstRowId>, std::greater<>> sequence_groups;
+    for (const auto& file : files) {
+        PAIMON_ASSIGN_OR_RAISE(int64_t first_row_id, file->NonNullFirstRowId());
+        union_first_row_id = std::min(union_first_row_id, first_row_id);
+        union_last_row_id = std::max(union_last_row_id, first_row_id + file->row_count - 1);
+        sequence_groups[file->max_sequence_number].emplace_back(first_row_id, file);
+    }
+    // the blob format reader must emit placeholder sentinels instead of failing on them
+    const std::map<std::string, std::string> blob_format_options = {
+        {BlobDefs::kEmitPlaceholderSentinelKey, "true"}};
+    std::vector<std::vector<BlobFallbackBatchReader::Segment>> groups;
+    groups.reserve(sequence_groups.size());
+    for (auto& [max_sequence_number, group_files] : sequence_groups) {
+        std::stable_sort(group_files.begin(), group_files.end(),
+                         [](const FileWithFirstRowId& f1, const FileWithFirstRowId& f2) {
+                             return f1.first < f2.first;
+                         });
+        std::vector<BlobFallbackBatchReader::Segment> segments;
+        // pad row ids this layer does not cover with placeholder gaps, so that every layer spans
+        // the same union range and the groups can be stepped in lockstep
+        int64_t next_row_id = union_first_row_id;
+        for (const auto& [first_row_id, file] : group_files) {
+            if (first_row_id < next_row_id) {
+                return Status::Invalid(fmt::format(
+                    "Blob files with the same max sequence number should not have overlapping "
+                    "row id ranges: file {} (max sequence number {}) starts at row id {} before "
+                    "the previous file's end {}",
+                    file->file_name, max_sequence_number, first_row_id, next_row_id));
+            }
+            if (first_row_id > next_row_id) {
+                std::vector<Range> gap_selected_ranges =
+                    SelectedRangesInRange(next_row_id, first_row_id - 1, row_ranges);
+                if (!gap_selected_ranges.empty()) {
+                    segments.push_back(
+                        BlobFallbackBatchReader::Segment{nullptr, std::move(gap_selected_ranges)});
+                }
+            }
+            PAIMON_ASSIGN_OR_RAISE(
+                std::vector<std::unique_ptr<FileBatchReader>> file_readers,
+                CreateRawFileReaders(partition, {file}, file_read_schema,
+                                     /*predicate=*/nullptr, /*dv_factory=*/{}, row_ranges,
+                                     data_file_path_factory, blob_format_options));
+            if (file_readers.size() != 1) {
+                return Status::Invalid("Unexpected: blob fallback file reader was skipped.");
+            }
+            segments.push_back(BlobFallbackBatchReader::Segment{std::move(file_readers[0]), {}});
+            next_row_id = first_row_id + file->row_count;
+        }
+        if (next_row_id <= union_last_row_id) {
+            std::vector<Range> gap_selected_ranges =
+                SelectedRangesInRange(next_row_id, union_last_row_id, row_ranges);
+            if (!gap_selected_ranges.empty()) {
+                segments.push_back(
+                    BlobFallbackBatchReader::Segment{nullptr, std::move(gap_selected_ranges)});
+            }
+        }
+        groups.push_back(std::move(segments));
+    }
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlobFallbackBatchReader> fallback_reader,
+                           BlobFallbackBatchReader::Create(std::move(groups), file_read_schema,
+                                                           options_.GetReadBatchSize(), pool_));
+    return std::move(fallback_reader);
 }
 
 Result<bool> DataEvolutionSplitRead::Match(const std::shared_ptr<Split>& split,

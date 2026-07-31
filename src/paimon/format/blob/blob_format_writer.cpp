@@ -39,7 +39,7 @@ namespace paimon::blob {
 BlobFormatWriter::BlobFormatWriter(const std::shared_ptr<OutputStream>& out, const std::string& uri,
                                    const std::shared_ptr<arrow::DataType>& data_type,
                                    bool write_null_on_missing_file,
-                                   bool write_null_on_fetch_failure,
+                                   bool write_null_on_fetch_failure, bool write_placeholder,
                                    const std::shared_ptr<FileSystem>& fs,
                                    const std::shared_ptr<MemoryPool>& pool)
     : out_(out),
@@ -48,7 +48,8 @@ BlobFormatWriter::BlobFormatWriter(const std::shared_ptr<OutputStream>& out, con
       fs_(fs),
       pool_(pool),
       write_null_on_missing_file_(write_null_on_missing_file),
-      write_null_on_fetch_failure_(write_null_on_fetch_failure) {
+      write_null_on_fetch_failure_(write_null_on_fetch_failure),
+      write_placeholder_(write_placeholder) {
     // Create() has already checked that data_type has exactly one BLOB field.
     blob_field_name_ = data_type_->field(0)->name();
     metrics_ = std::make_shared<MetricsImpl>();
@@ -59,7 +60,7 @@ BlobFormatWriter::BlobFormatWriter(const std::shared_ptr<OutputStream>& out, con
 
 Result<std::unique_ptr<BlobFormatWriter>> BlobFormatWriter::Create(
     const std::shared_ptr<OutputStream>& out, const std::shared_ptr<arrow::DataType>& data_type,
-    bool write_null_on_missing_file, bool write_null_on_fetch_failure,
+    bool write_null_on_missing_file, bool write_null_on_fetch_failure, bool write_placeholder,
     const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<MemoryPool>& pool) {
     if (out == nullptr) {
         return Status::Invalid("blob format writer create failed. out is nullptr");
@@ -82,8 +83,9 @@ Result<std::unique_ptr<BlobFormatWriter>> BlobFormatWriter::Create(
             fmt::format("field {} is not BLOB", data_type->field(0)->ToString()));
     }
     PAIMON_ASSIGN_OR_RAISE(std::string uri, out->GetUri());
-    return std::unique_ptr<BlobFormatWriter>(new BlobFormatWriter(
-        out, uri, data_type, write_null_on_missing_file, write_null_on_fetch_failure, fs, pool));
+    return std::unique_ptr<BlobFormatWriter>(
+        new BlobFormatWriter(out, uri, data_type, write_null_on_missing_file,
+                             write_null_on_fetch_failure, write_placeholder, fs, pool));
 }
 
 Status BlobFormatWriter::AddBatch(ArrowArray* batch) {
@@ -117,7 +119,16 @@ Status BlobFormatWriter::AddBatch(ArrowArray* batch) {
     const auto& blob_array =
         arrow::internal::checked_cast<const arrow::LargeBinaryArray&>(*child_array);
     assert(blob_array.length() == 1);
-    PAIMON_RETURN_NOT_OK(WriteBlob(blob_array.GetView(0)));
+    std::string_view blob_data = blob_array.GetView(0);
+    // Only a data-evolution partial-update write interprets the sentinel, which marks a row
+    // the update did not touch; any other write stores the bytes verbatim. See
+    // BlobDefs::kPlaceholderSentinel for the accepted collision with a sentinel-equal user
+    // value.
+    if (write_placeholder_ && BlobDefs::IsPlaceholderSentinel(blob_data.data(), blob_data.size())) {
+        bin_lengths_.push_back(BlobDefs::kPlaceholderBinLength);
+        return Status::OK();
+    }
+    PAIMON_RETURN_NOT_OK(WriteBlob(blob_data));
     PAIMON_RETURN_NOT_OK(Flush());
     return Status::OK();
 }

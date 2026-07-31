@@ -24,6 +24,7 @@
 #include <utility>
 
 #include "arrow/api.h"
+#include "paimon/common/data/blob_defs.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/defs.h"
 #include "paimon/format/blob/blob_format_writer.h"
@@ -73,8 +74,11 @@ class BlobWriterBuilder : public SpecificFSWriterBuilder {
         PAIMON_ASSIGN_OR_RAISE(bool write_null_on_fetch_failure,
                                OptionsUtils::GetValueFromMap<bool>(
                                    options_, Options::BLOB_WRITE_NULL_ON_FETCH_FAILURE, false));
+        PAIMON_ASSIGN_OR_RAISE(
+            bool write_placeholder,
+            OptionsUtils::GetValueFromMap<bool>(options_, BlobDefs::kWritePlaceholderKey, false));
         return BlobFormatWriter::Create(out, data_type_, write_null_on_missing_file,
-                                        write_null_on_fetch_failure, fs_, pool_);
+                                        write_null_on_fetch_failure, write_placeholder, fs_, pool_);
     }
 
  private:

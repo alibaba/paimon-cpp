@@ -43,12 +43,15 @@ class BlobDataFileWriterFactory
     : public DataFileWriterFactory,
       public SingleFileWriterFactory<::ArrowArray*, std::shared_ptr<DataFileMeta>> {
  public:
+    /// `write_placeholder` marks a data-evolution partial-update write: the blob format
+    /// writer is created with BlobDefs::kWritePlaceholderKey and persists placeholder
+    /// sentinel rows as placeholder entries.
     BlobDataFileWriterFactory(const CoreOptions& options, int64_t schema_id,
                               const std::shared_ptr<arrow::Schema>& file_schema,
                               const std::optional<std::vector<std::string>>& write_cols,
                               const std::shared_ptr<LongCounter>& seq_num_counter,
                               const std::shared_ptr<DataFilePathFactory>& path_factory,
-                              const std::shared_ptr<MemoryPool>& pool);
+                              bool write_placeholder, const std::shared_ptr<MemoryPool>& pool);
 
     Result<std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>>
     CreateWriter() const override;
@@ -58,6 +61,7 @@ class BlobDataFileWriterFactory
     std::optional<std::vector<std::string>> write_cols_;
     std::shared_ptr<LongCounter> seq_num_counter_;
     std::shared_ptr<DataFilePathFactory> path_factory_;
+    bool write_placeholder_ = false;
 };
 
 }  // namespace paimon

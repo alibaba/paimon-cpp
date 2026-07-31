@@ -108,7 +108,7 @@ class AppendOnlyWriter : public BatchWriter {
 
     WriterFactory GetBlobFileWriterFactory(
         const std::shared_ptr<arrow::Schema>& single_field_schema,
-        const std::optional<std::vector<std::string>>& write_cols) const;
+        const std::optional<std::vector<std::string>>& write_cols, bool write_placeholder) const;
 
     Status TrySyncLatestCompaction(bool blocking);
     Status UpdateCompactDeletionFile(const std::shared_ptr<CompactDeletionFile>& new_deletion_file);

@@ -48,10 +48,13 @@ BlobStatsExtractor::ExtractWithFileInfo(const std::shared_ptr<FileSystem>& file_
             fmt::format("field {} is not BLOB", write_schema_->field(0)->ToString()));
     }
 
+    // The reader only serves footer metadata (GetNumberOfRows); NextBatch is never called, so
+    // the strict placeholder mode is irrelevant even for files containing placeholder entries.
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<BlobFileBatchReader> blob_reader,
         BlobFileBatchReader::Create(input_stream,
-                                    /*batch_size=*/1024, /*blob_as_descriptor=*/true, pool));
+                                    /*batch_size=*/1024, /*blob_as_descriptor=*/true,
+                                    /*emit_placeholder_sentinel=*/false, pool));
     ColumnStatsVector result_stats;
     result_stats.push_back(
         ColumnStats::CreateStringColumnStats(std::nullopt, std::nullopt, std::nullopt));
