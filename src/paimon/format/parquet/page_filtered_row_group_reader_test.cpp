@@ -16,10 +16,15 @@
 
 #include "paimon/format/parquet/page_filtered_row_group_reader.h"
 
+#include <algorithm>
 #include <cstdint>
+#include <cstring>
+#include <functional>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <utility>
@@ -29,10 +34,12 @@
 #include "arrow/array/array_nested.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
+#include "arrow/io/api.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/common/utils/arrow/arrow_input_stream_adapter.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
+#include "paimon/common/utils/stream_utils.h"
 #include "paimon/defs.h"
 #include "paimon/format/parquet/parquet_file_batch_reader.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
@@ -47,6 +54,7 @@
 #include "paimon/testing/utils/testharness.h"
 #include "paimon/utils/roaring_bitmap32.h"
 #include "parquet/arrow/reader.h"
+#include "parquet/column_page.h"
 #include "parquet/file_reader.h"
 #include "parquet/properties.h"
 
@@ -55,6 +63,67 @@ class Predicate;
 }  // namespace paimon
 
 namespace paimon::parquet::test {
+
+class ReadAtTrackingInputStream : public InputStream {
+ public:
+    explicit ReadAtTrackingInputStream(std::shared_ptr<InputStream> input)
+        : input_(std::move(input)) {}
+
+    Status Seek(int64_t offset, SeekOrigin origin) override {
+        return input_->Seek(offset, origin);
+    }
+
+    Result<int64_t> GetPos() const override {
+        return input_->GetPos();
+    }
+
+    Result<int64_t> Read(char* buffer, int64_t size) override {
+        return input_->Read(buffer, size);
+    }
+
+    Result<int64_t> Read(char* buffer, int64_t size, int64_t offset) override {
+        RecordPositionalRead(offset, size);
+        return input_->Read(buffer, size, offset);
+    }
+
+    void ReadAsync(char* buffer, int64_t size, int64_t offset,
+                   std::function<void(Status)>&& callback) override {
+        RecordPositionalRead(offset, size);
+        input_->ReadAsync(buffer, size, offset, std::move(callback));
+    }
+
+    Result<std::string> GetUri() const override {
+        return input_->GetUri();
+    }
+
+    Result<int64_t> Length() const override {
+        return input_->Length();
+    }
+
+    Status Close() override {
+        return input_->Close();
+    }
+
+    void ClearReadAtRanges() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        read_at_ranges_.clear();
+    }
+
+    std::vector<arrow::io::ReadRange> GetReadAtRanges() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return read_at_ranges_;
+    }
+
+ private:
+    void RecordPositionalRead(int64_t offset, int64_t size) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        read_at_ranges_.push_back({offset, size});
+    }
+
+    std::shared_ptr<InputStream> input_;
+    mutable std::mutex mutex_;
+    std::vector<arrow::io::ReadRange> read_at_ranges_;
+};
 
 /// Test fixture for page-level filtering.
 /// Creates Parquet files with multiple row groups and small page sizes to ensure
@@ -74,10 +143,12 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
     /// @param struct_array Data to write
     /// @param write_batch_size Controls page size (number of rows per page)
     /// @param max_row_group_length Controls row group size
-    void WriteTestFile(const std::string& file_name,
-                       const std::shared_ptr<arrow::StructArray>& struct_array,
-                       int32_t write_batch_size, int64_t max_row_group_length,
-                       bool enable_dictionary = false, int64_t data_page_size = 1) {
+    void WriteTestFile(
+        const std::string& file_name, const std::shared_ptr<arrow::StructArray>& struct_array,
+        int32_t write_batch_size, int64_t max_row_group_length, bool enable_dictionary = false,
+        int64_t data_page_size = 1, bool enable_page_index = true,
+        ::parquet::ParquetDataPageVersion data_page_version = ::parquet::ParquetDataPageVersion::V1,
+        int64_t dictionary_page_size_limit = -1) {
         auto data_type = struct_array->struct_type();
         auto data_schema = arrow::schema(data_type->fields());
         auto data_arrow_array = std::make_unique<ArrowArray>();
@@ -89,10 +160,18 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
         builder.max_row_group_length(max_row_group_length);
         if (enable_dictionary) {
             builder.enable_dictionary();
+            if (dictionary_page_size_limit >= 0) {
+                builder.dictionary_pagesize_limit(dictionary_page_size_limit);
+            }
         } else {
             builder.disable_dictionary();  // Ensure page index min/max are meaningful
         }
-        builder.enable_write_page_index();  // Enable page index for page-level filtering
+        if (enable_page_index) {
+            builder.enable_write_page_index();
+        } else {
+            builder.disable_write_page_index();
+        }
+        builder.data_page_version(data_page_version);
         // Data page size controls when a page is flushed. The default of 1 byte forces a new
         // page after every write_batch_size rows (each batch becomes one page), giving pages
         // aligned across columns. A larger byte-based value combined with write_batch_size=1
@@ -135,15 +214,19 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
     }
 
     /// Read back a Parquet file with a predicate, a bitmap, and page index filter enabled.
-    void ReadWithPredicateAndBitmapImpl(const std::string& file_name,
-                                        const std::shared_ptr<arrow::Schema>& read_schema,
-                                        const std::shared_ptr<Predicate>& predicate,
-                                        const RoaringBitmap32& bitmap,
-                                        std::shared_ptr<arrow::ChunkedArray>* out,
-                                        const std::map<std::string, std::string> options = {},
-                                        int32_t batch_size = 1024) {
+    void ReadWithPredicateAndBitmapImpl(
+        const std::string& file_name, const std::shared_ptr<arrow::Schema>& read_schema,
+        const std::shared_ptr<Predicate>& predicate, const RoaringBitmap32& bitmap,
+        std::shared_ptr<arrow::ChunkedArray>* out,
+        const std::map<std::string, std::string> options = {}, int32_t batch_size = 1024,
+        std::vector<arrow::io::ReadRange>* read_at_ranges = nullptr) {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
         ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
+        std::shared_ptr<ReadAtTrackingInputStream> tracking_in;
+        if (read_at_ranges != nullptr) {
+            tracking_in = std::make_shared<ReadAtTrackingInputStream>(in);
+            in = tracking_in;
+        }
         auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
 
         ASSERT_OK_AND_ASSIGN(
@@ -153,8 +236,16 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
         auto c_schema = std::make_unique<ArrowSchema>();
         ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
         ASSERT_OK(batch_reader->SetReadSchema(c_schema.get(), predicate, bitmap));
+        if (tracking_in) {
+            // Ignore footer and schema metadata reads. The test only checks I/O issued while
+            // consuming data pages.
+            tracking_in->ClearReadAtRanges();
+        }
         ASSERT_OK_AND_ASSIGN(*out,
                              paimon::test::ReadResultCollector::CollectResult(batch_reader.get()));
+        if (tracking_in) {
+            *read_at_ranges = tracking_in->GetReadAtRanges();
+        }
     }
 
  protected:
@@ -192,6 +283,50 @@ static std::shared_ptr<arrow::StructArray> MakeTwoColumnData(int32_t num_rows) {
     auto field_a = arrow::field("a", arrow::int32());
     auto field_b = arrow::field("b", arrow::int32());
     return arrow::StructArray::Make({a_array, b_array}, {field_a, field_b}).ValueOrDie();
+}
+
+static void AssertUnselectedPageHeadersNotRead(
+    const std::vector<::parquet::PageLocation>& page_locations,
+    const std::vector<int32_t>& selected_pages,
+    const std::vector<arrow::io::ReadRange>& read_at_ranges) {
+    for (int32_t page_idx = 0; page_idx < static_cast<int32_t>(page_locations.size()); ++page_idx) {
+        if (std::find(selected_pages.begin(), selected_pages.end(), page_idx) !=
+            selected_pages.end()) {
+            continue;
+        }
+        const int64_t page_header_offset = page_locations[page_idx].offset;
+        for (const auto& read_range : read_at_ranges) {
+            ASSERT_FALSE(read_range.offset <= page_header_offset &&
+                         page_header_offset < read_range.offset + read_range.length)
+                << "unselected page " << page_idx << " header at " << page_header_offset
+                << " was covered by positional ReadAt [" << read_range.offset << ", "
+                << read_range.offset + read_range.length << ")";
+        }
+    }
+}
+
+static void AssertReadRangeCovered(const std::vector<arrow::io::ReadRange>& read_ranges,
+                                   int64_t expected_offset, int64_t expected_size) {
+    ASSERT_GT(expected_size, 0);
+    ASSERT_TRUE(std::any_of(
+        read_ranges.begin(), read_ranges.end(),
+        [expected_offset, expected_size](const arrow::io::ReadRange& read_range) {
+            return read_range.offset <= expected_offset &&
+                   expected_offset + expected_size <= read_range.offset + read_range.length;
+        }))
+        << "expected range [" << expected_offset << ", " << expected_offset + expected_size
+        << ") was not covered by any positional read";
+}
+
+static void AssertSelectedPagesRead(const std::vector<::parquet::PageLocation>& page_locations,
+                                    const std::vector<int32_t>& selected_pages,
+                                    const std::vector<arrow::io::ReadRange>& read_ranges) {
+    for (int32_t page_idx : selected_pages) {
+        ASSERT_GE(page_idx, 0);
+        ASSERT_LT(page_idx, static_cast<int32_t>(page_locations.size()));
+        const auto& page = page_locations[page_idx];
+        AssertReadRangeCovered(read_ranges, page.offset, page.compressed_page_size);
+    }
 }
 
 /// Test: page-level filtering correctly skips non-matching pages.
@@ -1178,6 +1313,424 @@ TEST_F(PageFilteredRowGroupReaderTest, BitmapAllPagesSomeRowGroups) {
     for (int32_t i = 0; i < 100; ++i) {
         ASSERT_EQ(i, val_arr->Value(i));
     }
+}
+
+/// Test: OffsetIndex lets the reader jump directly to selected data pages.
+///
+/// The bitmap selects rows from page 1 and page 8. Synchronous positional reads issued while
+/// consuming the row group must not cover any unselected page header. Before direct page jumps,
+/// SerializedPageReader sequentially Peeked every page header and this assertion failed.
+TEST_F(PageFilteredRowGroupReaderTest, DirectOffsetIndexJumpDoesNotReadUnselectedPageHeaders) {
+    std::string file_name = dir_->Str() + "/direct_offset_index_jump.parquet";
+    auto data = MakeSequentialIntData(100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+
+    std::vector<::parquet::PageLocation> page_locations;
+    {
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
+        ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
+        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
+        auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
+        ASSERT_TRUE(parquet_reader);
+
+        auto page_index_reader = parquet_reader->GetPageIndexReader();
+        ASSERT_TRUE(page_index_reader);
+        auto row_group_page_index = page_index_reader->RowGroup(0);
+        ASSERT_TRUE(row_group_page_index);
+        auto offset_index = row_group_page_index->GetOffsetIndex(0);
+        ASSERT_TRUE(offset_index);
+        page_locations = offset_index->page_locations();
+    }
+
+    ASSERT_EQ(10, page_locations.size());
+    for (int32_t page_idx = 0; page_idx < 10; ++page_idx) {
+        ASSERT_EQ(page_idx * 10, page_locations[page_idx].first_row_index);
+    }
+
+    RoaringBitmap32 bitmap;
+    bitmap.Add(15);  // page 1
+    bitmap.Add(85);  // page 8
+
+    std::map<std::string, std::string> options;
+    options[PARQUET_READ_ROW_RANGES_COALESCE_HOLE_SIZE_LIMIT] = "0";
+    options[PARQUET_READ_CACHE_OPTION_HOLE_SIZE_LIMIT] = "0";
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    std::vector<arrow::io::ReadRange> read_at_ranges;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result,
+                                   options, /*batch_size=*/1024, &read_at_ranges);
+
+    ASSERT_TRUE(result);
+    ASSERT_EQ(2, result->length());
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    ASSERT_TRUE(val_arr);
+    ASSERT_EQ(15, val_arr->Value(0));
+    ASSERT_EQ(85, val_arr->Value(1));
+
+    AssertSelectedPagesRead(page_locations, /*selected_pages=*/{1, 8}, read_at_ranges);
+    AssertUnselectedPageHeadersNotRead(page_locations, /*selected_pages=*/{1, 8}, read_at_ranges);
+}
+
+/// Dictionary pages are column-local. Each leaf must load its own dictionary before the
+/// PageReader jumps directly to a selected late data page.
+TEST_F(PageFilteredRowGroupReaderTest, DirectOffsetIndexJumpReadsEachLeafDictionary) {
+    std::string file_name = dir_->Str() + "/direct_offset_index_jump_dictionary.parquet";
+
+    arrow::Int32Builder a_builder;
+    arrow::Int32Builder b_builder;
+    ASSERT_TRUE(a_builder.Reserve(100).ok());
+    ASSERT_TRUE(b_builder.Reserve(100).ok());
+    for (int32_t i = 0; i < 100; ++i) {
+        a_builder.UnsafeAppend(i % 7);
+        b_builder.UnsafeAppend(i % 5);
+    }
+    auto a_array = a_builder.Finish().ValueOrDie();
+    auto b_array = b_builder.Finish().ValueOrDie();
+    auto field_a = arrow::field("a", arrow::int32());
+    auto field_b = arrow::field("b", arrow::int32());
+    auto data = arrow::StructArray::Make({a_array, b_array}, {field_a, field_b}).ValueOrDie();
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100,
+                  /*enable_dictionary=*/true);
+
+    std::vector<std::vector<::parquet::PageLocation>> page_locations(2);
+    std::vector<arrow::io::ReadRange> dictionary_ranges;
+    {
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
+        ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
+        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
+        auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
+        ASSERT_TRUE(parquet_reader);
+
+        auto row_group = parquet_reader->metadata()->RowGroup(0);
+        auto page_index_reader = parquet_reader->GetPageIndexReader();
+        ASSERT_TRUE(page_index_reader);
+        auto row_group_page_index = page_index_reader->RowGroup(0);
+        ASSERT_TRUE(row_group_page_index);
+
+        RowRanges selected_rows;
+        selected_rows.Add(RowRanges::Range(95, 95));
+        auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
+            TargetRowGroup(/*rg_index=*/0, /*is_partially_matched=*/true,
+                           /*ranges=*/selected_rows),
+            /*column_indices=*/{0, 1}, parquet_reader.get());
+
+        for (int32_t col_idx = 0; col_idx < 2; ++col_idx) {
+            auto column_chunk = row_group->ColumnChunk(col_idx);
+            ASSERT_TRUE(column_chunk->has_dictionary_page());
+            const int64_t dictionary_offset = column_chunk->dictionary_page_offset();
+            const int64_t data_page_offset = column_chunk->data_page_offset();
+            ASSERT_LT(dictionary_offset, data_page_offset);
+
+            auto offset_index = row_group_page_index->GetOffsetIndex(col_idx);
+            ASSERT_TRUE(offset_index);
+            page_locations[col_idx] = offset_index->page_locations();
+            ASSERT_EQ(10, page_locations[col_idx].size());
+
+            const auto& selected_page = page_locations[col_idx][9];
+            const auto contains_range = [&ranges](int64_t offset, int64_t size) {
+                return std::any_of(ranges.begin(), ranges.end(),
+                                   [offset, size](const arrow::io::ReadRange& range) {
+                                       return range.offset == offset && range.length == size;
+                                   });
+            };
+            ASSERT_TRUE(contains_range(dictionary_offset, data_page_offset - dictionary_offset));
+            ASSERT_TRUE(contains_range(selected_page.offset, selected_page.compressed_page_size));
+            dictionary_ranges.push_back({dictionary_offset, data_page_offset - dictionary_offset});
+
+            auto page_reader = parquet_reader->RowGroup(0)->GetColumnPageReader(col_idx);
+            ASSERT_TRUE(page_reader);
+            std::vector<::parquet::Encoding::type> data_page_encodings;
+            while (std::shared_ptr<::parquet::Page> page = page_reader->NextPage()) {
+                if (page->type() == ::parquet::PageType::DATA_PAGE ||
+                    page->type() == ::parquet::PageType::DATA_PAGE_V2) {
+                    data_page_encodings.push_back(
+                        std::static_pointer_cast<::parquet::DataPage>(page)->encoding());
+                }
+            }
+            ASSERT_EQ(page_locations[col_idx].size(), data_page_encodings.size());
+            ASSERT_TRUE(data_page_encodings[9] == ::parquet::Encoding::PLAIN_DICTIONARY ||
+                        data_page_encodings[9] == ::parquet::Encoding::RLE_DICTIONARY);
+        }
+    }
+
+    RoaringBitmap32 bitmap;
+    bitmap.Add(95);  // Last data page; every leaf still needs its dictionary first.
+
+    std::map<std::string, std::string> options;
+    options[PARQUET_READ_ROW_RANGES_COALESCE_HOLE_SIZE_LIMIT] = "0";
+    options[PARQUET_READ_CACHE_OPTION_HOLE_SIZE_LIMIT] = "0";
+
+    auto read_schema = arrow::schema({field_a, field_b});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    std::vector<arrow::io::ReadRange> read_at_ranges;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result,
+                                   options, /*batch_size=*/1024, &read_at_ranges);
+
+    ASSERT_TRUE(result);
+    ASSERT_EQ(1, result->length());
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto result_a = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    auto result_b = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(1));
+    ASSERT_TRUE(result_a);
+    ASSERT_TRUE(result_b);
+    ASSERT_EQ(95 % 7, result_a->Value(0));
+    ASSERT_EQ(95 % 5, result_b->Value(0));
+
+    for (size_t col_idx = 0; col_idx < page_locations.size(); ++col_idx) {
+        AssertReadRangeCovered(read_at_ranges, dictionary_ranges[col_idx].offset,
+                               dictionary_ranges[col_idx].length);
+        AssertSelectedPagesRead(page_locations[col_idx], /*selected_pages=*/{9}, read_at_ranges);
+        const auto& leaf_page_locations = page_locations[col_idx];
+        AssertUnselectedPageHeadersNotRead(leaf_page_locations, /*selected_pages=*/{9},
+                                           read_at_ranges);
+    }
+}
+
+/// A column can switch from dictionary encoding to PLAIN after the dictionary reaches its size
+/// limit. A single direct read plan must decode both kinds of selected data pages correctly.
+TEST_F(PageFilteredRowGroupReaderTest, DirectOffsetIndexJumpSupportsDictionaryFallbackToPlain) {
+    std::string file_name = dir_->Str() + "/direct_offset_index_dictionary_fallback.parquet";
+    auto data = MakeSequentialIntData(1000);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/1000,
+                  /*enable_dictionary=*/true, /*data_page_size=*/1,
+                  /*enable_page_index=*/true, ::parquet::ParquetDataPageVersion::V1,
+                  /*dictionary_page_size_limit=*/256);
+
+    std::vector<::parquet::PageLocation> page_locations;
+    std::vector<::parquet::Encoding::type> data_page_encodings;
+    int64_t dictionary_offset = 0;
+    int64_t first_data_page_offset = 0;
+    {
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
+        ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
+        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
+        auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
+        ASSERT_TRUE(parquet_reader);
+
+        auto column_chunk = parquet_reader->metadata()->RowGroup(0)->ColumnChunk(0);
+        ASSERT_TRUE(column_chunk->has_dictionary_page());
+        dictionary_offset = column_chunk->dictionary_page_offset();
+
+        auto page_index_reader = parquet_reader->GetPageIndexReader();
+        ASSERT_TRUE(page_index_reader);
+        auto row_group_page_index = page_index_reader->RowGroup(0);
+        ASSERT_TRUE(row_group_page_index);
+        auto offset_index = row_group_page_index->GetOffsetIndex(0);
+        ASSERT_TRUE(offset_index);
+        page_locations = offset_index->page_locations();
+        ASSERT_FALSE(page_locations.empty());
+        first_data_page_offset = page_locations.front().offset;
+        ASSERT_LT(dictionary_offset, first_data_page_offset);
+
+        auto page_reader = parquet_reader->RowGroup(0)->GetColumnPageReader(0);
+        ASSERT_TRUE(page_reader);
+        while (std::shared_ptr<::parquet::Page> page = page_reader->NextPage()) {
+            if (page->type() == ::parquet::PageType::DATA_PAGE ||
+                page->type() == ::parquet::PageType::DATA_PAGE_V2) {
+                data_page_encodings.push_back(
+                    std::static_pointer_cast<::parquet::DataPage>(page)->encoding());
+            }
+        }
+    }
+    ASSERT_EQ(page_locations.size(), data_page_encodings.size());
+
+    int32_t dictionary_page_idx = -1;
+    int32_t plain_page_idx = -1;
+    for (int32_t page_idx = 0; page_idx < static_cast<int32_t>(data_page_encodings.size());
+         ++page_idx) {
+        const auto encoding = data_page_encodings[page_idx];
+        if (dictionary_page_idx < 0 && (encoding == ::parquet::Encoding::PLAIN_DICTIONARY ||
+                                        encoding == ::parquet::Encoding::RLE_DICTIONARY)) {
+            dictionary_page_idx = page_idx;
+        }
+        if (encoding == ::parquet::Encoding::PLAIN) {
+            plain_page_idx = page_idx;
+        }
+    }
+    ASSERT_GE(dictionary_page_idx, 0);
+    ASSERT_GT(plain_page_idx, dictionary_page_idx);
+
+    const int32_t dictionary_row =
+        static_cast<int32_t>(page_locations[dictionary_page_idx].first_row_index);
+    const int32_t plain_row = static_cast<int32_t>(page_locations[plain_page_idx].first_row_index);
+    RoaringBitmap32 bitmap;
+    bitmap.Add(dictionary_row);
+    bitmap.Add(plain_row);
+
+    std::map<std::string, std::string> options;
+    options[PARQUET_READ_ROW_RANGES_COALESCE_HOLE_SIZE_LIMIT] = "0";
+    options[PARQUET_READ_CACHE_OPTION_HOLE_SIZE_LIMIT] = "0";
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    std::vector<arrow::io::ReadRange> read_at_ranges;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result,
+                                   options, /*batch_size=*/1024, &read_at_ranges);
+
+    ASSERT_TRUE(result);
+    ASSERT_EQ(2, result->length());
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto values = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    ASSERT_TRUE(values);
+    ASSERT_EQ(dictionary_row, values->Value(0));
+    ASSERT_EQ(plain_row, values->Value(1));
+
+    AssertReadRangeCovered(read_at_ranges, dictionary_offset,
+                           first_data_page_offset - dictionary_offset);
+    AssertSelectedPagesRead(page_locations, {dictionary_page_idx, plain_page_idx}, read_at_ranges);
+    AssertUnselectedPageHeadersNotRead(page_locations, {dictionary_page_idx, plain_page_idx},
+                                       read_at_ranges);
+}
+
+/// Empty row selection may read OffsetIndex metadata, but must not read dictionary/data pages.
+TEST_F(PageFilteredRowGroupReaderTest, DictionaryEmptySelectionDoesNotReadPages) {
+    std::string file_name = dir_->Str() + "/dictionary_empty_bitmap.parquet";
+    auto data = MakeSequentialIntData(100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100,
+                  /*enable_dictionary=*/true);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input, fs_->Open(file_name));
+    auto tracking_input = std::make_shared<ReadAtTrackingInputStream>(input);
+    ASSERT_OK_AND_ASSIGN(int64_t length, tracking_input->Length());
+    auto in_stream = std::make_shared<ArrowInputStreamAdapter>(tracking_input, length, arrow_pool_);
+
+    ::parquet::arrow::FileReaderBuilder builder;
+    ASSERT_TRUE(builder.Open(in_stream).ok());
+    builder.memory_pool(arrow_pool_.get());
+    auto arrow_file_reader_result = builder.Build();
+    ASSERT_TRUE(arrow_file_reader_result.ok()) << arrow_file_reader_result.status().ToString();
+    std::unique_ptr<::parquet::arrow::FileReader> arrow_file_reader =
+        std::move(arrow_file_reader_result).ValueOrDie();
+
+    auto column_chunk =
+        arrow_file_reader->parquet_reader()->metadata()->RowGroup(0)->ColumnChunk(0);
+    ASSERT_TRUE(column_chunk->has_dictionary_page());
+    const int64_t column_chunk_offset = column_chunk->dictionary_page_offset();
+    const int64_t column_chunk_end = column_chunk_offset + column_chunk->total_compressed_size();
+    ASSERT_GE(column_chunk_offset, 0);
+    ASSERT_GT(column_chunk_end, column_chunk_offset);
+
+    RowRanges empty_ranges;
+    TargetRowGroup empty_target(/*rg_index=*/0, /*is_partially_matched=*/true,
+                                /*ranges=*/empty_ranges);
+    auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
+        empty_target, /*column_indices=*/{0}, arrow_file_reader->parquet_reader());
+    ASSERT_TRUE(page_ranges.empty());
+
+    tracking_input->ClearReadAtRanges();
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<arrow::RecordBatchReader> result_reader,
+        PageFilteredRowGroupReader::ReadFilteredRowGroup(
+            empty_target, /*column_indices=*/{0}, arrow::io::CacheOptions::Defaults(),
+            /*pre_buffered=*/false, /*page_ranges=*/{}, /*max_chunksize=*/1024, arrow_pool_,
+            arrow_file_reader.get()));
+    std::shared_ptr<arrow::RecordBatch> batch;
+    ASSERT_TRUE(result_reader->ReadNext(&batch).ok());
+    ASSERT_FALSE(batch);
+    for (const auto& read_range : tracking_input->GetReadAtRanges()) {
+        const int64_t read_end = read_range.offset + read_range.length;
+        ASSERT_TRUE(read_end <= column_chunk_offset || read_range.offset >= column_chunk_end)
+            << "empty selection read column chunk [" << column_chunk_offset << ", "
+            << column_chunk_end << ") via positional range [" << read_range.offset << ", "
+            << read_end << ")";
+    }
+}
+
+/// The direct page plan must work for DATA_PAGE_V2 as well as DATA_PAGE_V1. Selecting adjacent
+/// pages also verifies that the plan cursor advances exactly once per page.
+TEST_F(PageFilteredRowGroupReaderTest, DirectOffsetIndexJumpDataPageV2AdjacentPages) {
+    std::string file_name = dir_->Str() + "/direct_offset_index_jump_v2.parquet";
+    auto data = MakeSequentialIntData(100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100,
+                  /*enable_dictionary=*/false, /*data_page_size=*/1,
+                  /*enable_page_index=*/true, ::parquet::ParquetDataPageVersion::V2);
+
+    std::vector<::parquet::PageLocation> page_locations;
+    {
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
+        ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
+        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
+        auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
+        auto page_index_reader = parquet_reader->GetPageIndexReader();
+        ASSERT_TRUE(page_index_reader);
+        auto row_group_page_index = page_index_reader->RowGroup(0);
+        ASSERT_TRUE(row_group_page_index);
+        auto offset_index = row_group_page_index->GetOffsetIndex(0);
+        ASSERT_TRUE(offset_index);
+        page_locations = offset_index->page_locations();
+    }
+    ASSERT_EQ(10, page_locations.size());
+
+    RoaringBitmap32 bitmap;
+    bitmap.Add(45);  // Page 4.
+    bitmap.Add(55);  // Adjacent page 5.
+
+    std::map<std::string, std::string> options;
+    options[PARQUET_READ_ROW_RANGES_COALESCE_HOLE_SIZE_LIMIT] = "0";
+    options[PARQUET_READ_CACHE_OPTION_HOLE_SIZE_LIMIT] = "0";
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    std::vector<arrow::io::ReadRange> read_at_ranges;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result,
+                                   options, /*batch_size=*/1024, &read_at_ranges);
+
+    ASSERT_TRUE(result);
+    ASSERT_EQ(2, result->length());
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto values = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    ASSERT_TRUE(values);
+    ASSERT_EQ(45, values->Value(0));
+    ASSERT_EQ(55, values->Value(1));
+    AssertSelectedPagesRead(page_locations, /*selected_pages=*/{4, 5}, read_at_ranges);
+    AssertUnselectedPageHeadersNotRead(page_locations, /*selected_pages=*/{4, 5}, read_at_ranges);
+}
+
+/// Files without OffsetIndex must keep the original full-column reader path.
+TEST_F(PageFilteredRowGroupReaderTest, MissingOffsetIndexFallsBackToSequentialRead) {
+    std::string file_name = dir_->Str() + "/missing_offset_index_fallback.parquet";
+    auto data = MakeSequentialIntData(100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100,
+                  /*enable_dictionary=*/false, /*data_page_size=*/1,
+                  /*enable_page_index=*/false);
+
+    {
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
+        ASSERT_OK_AND_ASSIGN(int64_t length, in->Length());
+        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, length, arrow_pool_);
+        auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
+        auto page_index_reader = parquet_reader->GetPageIndexReader();
+        ASSERT_TRUE(page_index_reader);
+        ASSERT_FALSE(page_index_reader->RowGroup(0));
+    }
+
+    RoaringBitmap32 bitmap;
+    bitmap.Add(15);
+    bitmap.Add(85);
+
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateAndBitmapImpl(file_name, read_schema, /*predicate=*/nullptr, bitmap, &result);
+
+    ASSERT_TRUE(result);
+    ASSERT_EQ(2, result->length());
+    auto flat = arrow::Concatenate(result->chunks()).ValueOrDie();
+    auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(flat);
+    ASSERT_TRUE(struct_arr);
+    auto values = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+    ASSERT_TRUE(values);
+    ASSERT_EQ(15, values->Value(0));
+    ASSERT_EQ(85, values->Value(1));
 }
 
 /// Test: bitmap hits partial pages of a row group (no predicate).

@@ -17,6 +17,8 @@
 #include "paimon/format/parquet/page_filtered_row_group_reader.h"
 
 #include <algorithm>
+#include <limits>
+#include <optional>
 
 #include "arrow/array.h"
 #include "arrow/builder.h"
@@ -37,6 +39,56 @@
 namespace paimon::parquet {
 
 namespace {
+
+struct DataPageLayout {
+    int64_t column_chunk_offset;
+    int64_t first_data_page_offset;
+};
+
+int64_t GetColumnChunkOffset(const ::parquet::ColumnChunkMetaData& column_chunk) {
+    int64_t column_chunk_offset = column_chunk.data_page_offset();
+    if (column_chunk.has_dictionary_page() && column_chunk.dictionary_page_offset() > 0 &&
+        column_chunk.dictionary_page_offset() < column_chunk_offset) {
+        column_chunk_offset = column_chunk.dictionary_page_offset();
+    }
+    return column_chunk_offset;
+}
+
+std::optional<DataPageLayout> GetDataPageLayout(
+    const ::parquet::ColumnChunkMetaData& column_chunk,
+    const std::shared_ptr<::parquet::OffsetIndex>& offset_index, int64_t row_group_row_count) {
+    const auto& page_locations = offset_index->page_locations();
+    if (page_locations.empty() || row_group_row_count <= 0 ||
+        page_locations.front().first_row_index != 0) {
+        return std::nullopt;
+    }
+
+    const int64_t column_chunk_offset = GetColumnChunkOffset(column_chunk);
+    const int64_t first_data_page_offset = page_locations.front().offset;
+    const int64_t column_chunk_size = column_chunk.total_compressed_size();
+    if (column_chunk_offset < 0 || column_chunk_size <= 0 ||
+        column_chunk_offset > std::numeric_limits<int64_t>::max() - column_chunk_size ||
+        first_data_page_offset < column_chunk_offset) {
+        return std::nullopt;
+    }
+    const int64_t column_chunk_end = column_chunk_offset + column_chunk_size;
+
+    int64_t previous_page_end = first_data_page_offset;
+    int64_t previous_first_row = -1;
+    for (const auto& page : page_locations) {
+        if (page.offset < previous_page_end || page.compressed_page_size <= 0 ||
+            page.offset > std::numeric_limits<int64_t>::max() - page.compressed_page_size ||
+            page.offset + page.compressed_page_size > column_chunk_end ||
+            page.first_row_index <= previous_first_row || page.first_row_index < 0 ||
+            page.first_row_index >= row_group_row_count) {
+            return std::nullopt;
+        }
+        previous_page_end = page.offset + page.compressed_page_size;
+        previous_first_row = page.first_row_index;
+    }
+
+    return DataPageLayout{column_chunk_offset, first_data_page_offset};
+}
 
 /// Wraps an arrow::Table + TableBatchReader as a RecordBatchReader so the caller can
 /// stream batches while ensuring every returned array offset is zero. The Table is held
@@ -76,27 +128,32 @@ class TableRecordBatchReader : public arrow::RecordBatchReader {
     std::shared_ptr<arrow::MemoryPool> pool_;
 };
 
-/// A FileColumnIterator that installs a data_page_filter on every PageReader it
-/// produces, enabling I/O-level page skipping. The base class handles row group
-/// iteration; this subclass only decorates the PageReader returned by NextChunk().
+/// A FileColumnIterator that installs a direct data page read plan on every PageReader
+/// it produces. The base class handles row group iteration; this subclass only
+/// decorates the PageReader returned by NextChunk().
 class PageFilteringColumnIterator : public ::parquet::arrow::FileColumnIterator {
  public:
-    PageFilteringColumnIterator(
-        int column_index, ::parquet::ParquetFileReader* reader, std::vector<int> row_groups,
-        std::function<bool(const ::parquet::DataPageStats&)> data_page_filter)
+    PageFilteringColumnIterator(int column_index, ::parquet::ParquetFileReader* reader,
+                                std::vector<int> row_groups, bool has_data_page_read_plan,
+                                int64_t first_data_page_offset,
+                                std::vector<::parquet::DataPageReadPlanEntry> data_pages)
         : FileColumnIterator(column_index, reader, std::move(row_groups)),
-          data_page_filter_(std::move(data_page_filter)) {}
+          has_data_page_read_plan_(has_data_page_read_plan),
+          first_data_page_offset_(first_data_page_offset),
+          data_pages_(std::move(data_pages)) {}
 
     std::unique_ptr<::parquet::PageReader> NextChunk() override {
         std::unique_ptr<::parquet::PageReader> page_reader = FileColumnIterator::NextChunk();
-        if (page_reader && data_page_filter_) {
-            page_reader->set_data_page_filter(data_page_filter_);
+        if (page_reader && has_data_page_read_plan_) {
+            page_reader->set_data_page_read_plan(first_data_page_offset_, data_pages_);
         }
         return page_reader;
     }
 
  private:
-    std::function<bool(const ::parquet::DataPageStats&)> data_page_filter_;
+    bool has_data_page_read_plan_;
+    int64_t first_data_page_offset_;
+    std::vector<::parquet::DataPageReadPlanEntry> data_pages_;
 };
 
 }  // namespace
@@ -111,22 +168,32 @@ std::pair<int64_t, int64_t> PageFilteredRowGroupReader::GetPageRowRange(
     return {first_row, last_row};
 }
 
-std::function<bool(const ::parquet::DataPageStats&)> PageFilteredRowGroupReader::MakePageFilter(
+std::optional<PageFilteredRowGroupReader::DataPageReadPlan>
+PageFilteredRowGroupReader::MakeDataPageReadPlan(
     const RowRanges& row_ranges, const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
-    int64_t row_group_row_count) {
-    auto page_counter = std::make_shared<int32_t>(0);
+    const ::parquet::ColumnChunkMetaData& column_chunk, int64_t row_group_row_count) {
+    std::optional<DataPageLayout> layout =
+        GetDataPageLayout(column_chunk, offset_index, row_group_row_count);
+    if (!layout) {
+        return std::nullopt;
+    }
+
     const auto& page_locations = offset_index->page_locations();
     auto num_pages = static_cast<int32_t>(page_locations.size());
+    std::vector<::parquet::DataPageReadPlanEntry> data_pages;
+    data_pages.reserve(page_locations.size());
 
-    return [row_ranges, page_locations, num_pages, row_group_row_count,
-            page_counter](const ::parquet::DataPageStats& /*stats*/) -> bool {
-        int32_t page_idx = (*page_counter)++;
-        if (page_idx >= num_pages) {
-            return false;
-        }
+    for (int32_t page_idx = 0; page_idx < num_pages; ++page_idx) {
         auto [first_row, last_row] = GetPageRowRange(page_locations, page_idx, row_group_row_count);
-        return !row_ranges.IsOverlapping(first_row, last_row);
-    };
+        if (row_ranges.IsOverlapping(first_row, last_row)) {
+            const auto& page = page_locations[page_idx];
+            data_pages.push_back(
+                {page_idx, page.offset - layout->column_chunk_offset, page.compressed_page_size});
+        }
+    }
+
+    return DataPageReadPlan{layout->first_data_page_offset - layout->column_chunk_offset,
+                            std::move(data_pages)};
 }
 
 std::pair<RowRanges, int64_t> PageFilteredRowGroupReader::ComputeCompressedRowRanges(
@@ -144,7 +211,7 @@ std::pair<RowRanges, int64_t> PageFilteredRowGroupReader::ComputeCompressedRowRa
         int64_t page_size = page_to - page_from + 1;
 
         if (!original_ranges.IsOverlapping(page_from, page_to)) {
-            // Page will be skipped by data_page_filter, not in compressed space
+            // Page will be skipped by the direct read plan, not in compressed space
             continue;
         }
 
@@ -217,21 +284,40 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
     int32_t row_group_index, int32_t field_index, const std::vector<int32_t>& column_indices,
     const RowRanges& row_ranges, int64_t row_group_row_count,
     ::parquet::arrow::FileReader* arrow_file_reader) {
-    // Factory: set data_page_filter on every leaf (per-leaf OffsetIndex).
-    // data_page_filter enables I/O-level page skipping for all leaves.
+    // Factory: set a direct data page read plan on every leaf (per-leaf OffsetIndex).
+    // The plan lets Arrow jump over unselected page headers as well as page bodies.
     auto factory =
         [row_group_index, &rg_page_index_reader, &row_ranges, row_group_row_count](
             int col_idx,
             ::parquet::ParquetFileReader* reader) -> ::parquet::arrow::FileColumnIterator* {
-        std::function<bool(const ::parquet::DataPageStats&)> data_page_filter;
+        bool has_data_page_read_plan = false;
+        int64_t first_data_page_offset = 0;
+        std::vector<::parquet::DataPageReadPlanEntry> data_pages;
         if (rg_page_index_reader) {
             auto offset_index = rg_page_index_reader->GetOffsetIndex(col_idx);
             if (offset_index) {
-                data_page_filter = MakePageFilter(row_ranges, offset_index, row_group_row_count);
+                auto row_group_metadata = reader->metadata()->RowGroup(row_group_index);
+                auto column_chunk = row_group_metadata->ColumnChunk(col_idx);
+                std::optional<DataPageReadPlan> plan = MakeDataPageReadPlan(
+                    row_ranges, offset_index, *column_chunk, row_group_row_count);
+                if (plan) {
+                    first_data_page_offset = plan->first_data_page_offset;
+                    data_pages = std::move(plan->data_pages);
+                    has_data_page_read_plan = true;
+                }
             }
         }
-        return new PageFilteringColumnIterator(col_idx, reader, std::vector<int>{row_group_index},
-                                               std::move(data_page_filter));
+        // An empty selection still needs the projected Arrow type, especially for partial nested
+        // projection, but must not construct a PageReader: without a range cache Arrow eagerly
+        // reads the whole column chunk in GetColumnPageReader(). An iterator with no row groups
+        // builds the same reader/type tree and immediately reaches EOF without file I/O.
+        std::vector<int> row_groups;
+        if (!row_ranges.IsEmpty()) {
+            row_groups.push_back(row_group_index);
+        }
+        return new PageFilteringColumnIterator(col_idx, reader, std::move(row_groups),
+                                               has_data_page_read_plan, first_data_page_offset,
+                                               std::move(data_pages));
     };
 
     // Build reader tree with leaf column filtering
@@ -251,14 +337,20 @@ Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFil
 
     for (int col_idx : column_reader->LeafColumnIndices()) {
         RowRanges effective_ranges = row_ranges;
-        int64_t effective_total = row_group_row_count;
-        if (rg_page_index_reader) {
+        int64_t effective_total = row_ranges.IsEmpty() ? 0 : row_group_row_count;
+        if (!row_ranges.IsEmpty() && rg_page_index_reader) {
             auto offset_index = rg_page_index_reader->GetOffsetIndex(col_idx);
             if (offset_index) {
-                auto [compressed, total] =
-                    ComputeCompressedRowRanges(row_ranges, offset_index, row_group_row_count);
-                effective_ranges = std::move(compressed);
-                effective_total = total;
+                auto row_group_metadata =
+                    arrow_file_reader->parquet_reader()->metadata()->RowGroup(row_group_index);
+                auto column_chunk = row_group_metadata->ColumnChunk(col_idx);
+                if (MakeDataPageReadPlan(row_ranges, offset_index, *column_chunk,
+                                         row_group_row_count)) {
+                    auto [compressed, total] =
+                        ComputeCompressedRowRanges(row_ranges, offset_index, row_group_row_count);
+                    effective_ranges = std::move(compressed);
+                    effective_total = total;
+                }
             }
         }
 
@@ -344,6 +436,10 @@ std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRange
     const auto& row_ranges = target_row_group.GetRowRanges();
 
     std::vector<::arrow::io::ReadRange> ranges;
+    if (row_ranges.IsEmpty()) {
+        return ranges;
+    }
+
     auto file_metadata = parquet_reader->metadata();
     auto rg_metadata = file_metadata->RowGroup(row_group_index);
     int64_t row_group_row_count = rg_metadata->num_rows();
@@ -356,20 +452,8 @@ std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRange
 
     for (int32_t col_idx : column_indices) {
         auto col_chunk = rg_metadata->ColumnChunk(col_idx);
-        int64_t data_page_offset = col_chunk->data_page_offset();
-        int64_t data_page_compressed_size = col_chunk->total_compressed_size();
-        // Dictionary page: always include if present
-        if (col_chunk->has_dictionary_page()) {
-            int64_t dict_offset = col_chunk->dictionary_page_offset();
-            int64_t dict_size = data_page_offset - dict_offset;
-            if (dict_size > 0) {
-                // if dictionary exists, the data page size should be reduced by the dictionary
-                data_page_compressed_size -= dict_size;
-                ranges.push_back({dict_offset, dict_size});
-            }
-        }
-
-        int64_t chunk_end = data_page_offset + data_page_compressed_size;
+        const int64_t column_chunk_offset = GetColumnChunkOffset(*col_chunk);
+        const int64_t column_chunk_compressed_size = col_chunk->total_compressed_size();
 
         // Try to get OffsetIndex for page-level ranges
         std::shared_ptr<::parquet::OffsetIndex> offset_index;
@@ -379,8 +463,25 @@ std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRange
 
         if (!offset_index) {
             // No OffsetIndex: fall back to entire column chunk
-            ranges.push_back({data_page_offset, data_page_compressed_size});
+            ranges.push_back({column_chunk_offset, column_chunk_compressed_size});
             continue;
+        }
+
+        std::optional<DataPageLayout> layout =
+            GetDataPageLayout(*col_chunk, offset_index, row_group_row_count);
+        if (!layout) {
+            // Invalid or empty OffsetIndex: keep the original sequential reader path.
+            ranges.push_back({column_chunk_offset, column_chunk_compressed_size});
+            continue;
+        }
+
+        // The full OffsetIndex, rather than data_page_offset in the column metadata, is the
+        // authoritative location of the first data page. Older parquet-mr files may omit the
+        // dictionary offset or set it equal to data_page_offset even though a dictionary prefix
+        // is present (PARQUET-1850/PARQUET-1977).
+        if (layout->first_data_page_offset > layout->column_chunk_offset) {
+            ranges.push_back({layout->column_chunk_offset,
+                              layout->first_data_page_offset - layout->column_chunk_offset});
         }
 
         const auto& page_locations = offset_index->page_locations();
@@ -394,11 +495,8 @@ std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRange
                 continue;
             }
 
-            int64_t page_offset = page_locations[page_idx].offset;
-            int64_t page_size = (page_idx + 1 < num_pages)
-                                    ? page_locations[page_idx + 1].offset - page_offset
-                                    : chunk_end - page_offset;
-            ranges.push_back({page_offset, page_size});
+            const auto& page = page_locations[page_idx];
+            ranges.push_back({page.offset, page.compressed_page_size});
         }
     }
 

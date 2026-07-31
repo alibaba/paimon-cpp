@@ -17,9 +17,10 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
 #include <limits>
 #include <memory>
+#include <optional>
+#include <utility>
 #include <vector>
 
 #include "arrow/io/caching.h"
@@ -70,6 +71,11 @@ class PageFilteredRowGroupReader {
         ::parquet::ParquetFileReader* parquet_reader);
 
  private:
+    struct DataPageReadPlan {
+        int64_t first_data_page_offset;
+        std::vector<::parquet::DataPageReadPlanEntry> data_pages;
+    };
+
     /// Get the [first_row, last_row] range of a page given page locations.
     static std::pair<int64_t, int64_t> GetPageRowRange(
         const std::vector<::parquet::PageLocation>& page_locations, int32_t page_idx,
@@ -84,12 +90,14 @@ class PageFilteredRowGroupReader {
                                    std::shared_ptr<::arrow::MemoryPool> pool,
                                    ::parquet::ParquetFileReader* parquet_reader);
 
-    /// Create a data_page_filter callback for a column based on RowRanges + OffsetIndex.
-    static std::function<bool(const ::parquet::DataPageStats&)> MakePageFilter(
+    /// Build a direct data page read plan for a column based on RowRanges + OffsetIndex.
+    /// The returned first data page offset and all page offsets are relative to the
+    /// beginning of the column chunk stream used by Arrow's PageReader.
+    static std::optional<DataPageReadPlan> MakeDataPageReadPlan(
         const RowRanges& row_ranges, const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
-        int64_t row_group_row_count);
+        const ::parquet::ColumnChunkMetaData& column_chunk, int64_t row_group_row_count);
 
-    /// Compute compressed RowRanges after data_page_filter skips non-matching pages.
+    /// Compute compressed RowRanges after the direct read plan skips non-matching pages.
     static std::pair<RowRanges, int64_t> ComputeCompressedRowRanges(
         const RowRanges& original_ranges,
         const std::shared_ptr<::parquet::OffsetIndex>& offset_index, int64_t row_group_row_count);
@@ -100,7 +108,7 @@ class PageFilteredRowGroupReader {
                                          ::parquet::arrow::ColumnReader* column_reader);
 
     /// Read a field (flat or nested) using ColumnReader tree.
-    /// Sets data_page_filter on all leaves via factory, then drives each leaf
+    /// Sets a direct page read plan on all leaves via factory, then drives each leaf
     /// independently via ResetLeaf/SkipRecords/ReadRecords using its own
     /// compressed_ranges.
     static Result<std::shared_ptr<arrow::ChunkedArray>> ReadFilteredField(
