@@ -79,23 +79,13 @@ Result<std::unique_ptr<FieldCollectAgg>> FieldCollectAgg::Create(
         new FieldCollectAgg(field_type, list_type->value_type(), distinct));
 }
 
-VariantType FieldCollectAgg::Agg(const VariantType& accumulator, const VariantType& input_field) {
-    Result<VariantType> result = AggImpl(accumulator, input_field);
-    return result.ok() ? std::move(result).value() : accumulator;
-}
-
-Result<VariantType> FieldCollectAgg::AggResult(const VariantType& accumulator,
-                                               const VariantType& input_field) {
+Result<VariantType> FieldCollectAgg::Agg(const VariantType& accumulator,
+                                         const VariantType& input_field) {
     return AggImpl(accumulator, input_field);
 }
 
-VariantType FieldCollectAgg::AggReversed(const VariantType& accumulator,
-                                         const VariantType& input_field) {
-    return Agg(accumulator, input_field);
-}
-
-Result<VariantType> FieldCollectAgg::AggReversedResult(const VariantType& accumulator,
-                                                       const VariantType& input_field) {
+Result<VariantType> FieldCollectAgg::AggReversed(const VariantType& accumulator,
+                                                 const VariantType& input_field) {
     return AggImpl(accumulator, input_field);
 }
 

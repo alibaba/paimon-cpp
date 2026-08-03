@@ -28,13 +28,13 @@
 namespace paimon::test {
 TEST(FieldBoolAndAggTest, TestSimple) {
     ASSERT_OK_AND_ASSIGN(auto agg, FieldBoolAndAgg::Create(arrow::boolean()));
-    auto agg_ret = agg->Agg(true, true);
+    auto agg_ret = agg->Agg(true, true).value();
     ASSERT_EQ(DataDefine::GetVariantValue<bool>(agg_ret), true);
-    agg_ret = agg->Agg(true, false);
+    agg_ret = agg->Agg(true, false).value();
     ASSERT_EQ(DataDefine::GetVariantValue<bool>(agg_ret), false);
-    agg_ret = agg->Agg(false, true);
+    agg_ret = agg->Agg(false, true).value();
     ASSERT_EQ(DataDefine::GetVariantValue<bool>(agg_ret), false);
-    agg_ret = agg->Agg(false, false);
+    agg_ret = agg->Agg(false, false).value();
     ASSERT_EQ(DataDefine::GetVariantValue<bool>(agg_ret), false);
 
     auto retract_ret = agg->Retract(false, false);
@@ -49,28 +49,28 @@ TEST(FieldBoolAndAggTest, TestInvalidType) {
 TEST(FieldBoolAndAggTest, TestNull) {
     ASSERT_OK_AND_ASSIGN(auto agg, FieldBoolAndAgg::Create(arrow::boolean()));
     {
-        auto agg_ret = agg->Agg(true, NullType());
+        auto agg_ret = agg->Agg(true, NullType()).value();
         ASSERT_EQ(DataDefine::GetVariantValue<bool>(agg_ret), true);
     }
     {
-        auto agg_ret = agg->Agg(NullType(), true);
+        auto agg_ret = agg->Agg(NullType(), true).value();
         ASSERT_EQ(DataDefine::GetVariantValue<bool>(agg_ret), true);
     }
     {
-        auto agg_ret = agg->Agg(NullType(), NullType());
+        auto agg_ret = agg->Agg(NullType(), NullType()).value();
         ASSERT_TRUE(DataDefine::IsVariantNull(agg_ret));
     }
 }
 
 TEST(FieldBoolOrAggTest, TestSimple) {
     ASSERT_OK_AND_ASSIGN(auto agg, FieldBoolOrAgg::Create(arrow::boolean()));
-    auto agg_ret = agg->Agg(true, true);
+    auto agg_ret = agg->Agg(true, true).value();
     ASSERT_EQ(DataDefine::GetVariantValue<bool>(agg_ret), true);
-    agg_ret = agg->Agg(true, false);
+    agg_ret = agg->Agg(true, false).value();
     ASSERT_EQ(DataDefine::GetVariantValue<bool>(agg_ret), true);
-    agg_ret = agg->Agg(false, true);
+    agg_ret = agg->Agg(false, true).value();
     ASSERT_EQ(DataDefine::GetVariantValue<bool>(agg_ret), true);
-    agg_ret = agg->Agg(false, false);
+    agg_ret = agg->Agg(false, false).value();
     ASSERT_EQ(DataDefine::GetVariantValue<bool>(agg_ret), false);
 
     auto retract_ret = agg->Retract(false, false);
@@ -85,15 +85,15 @@ TEST(FieldBoolOrAggTest, TestInvalidType) {
 TEST(FieldBoolOrAggTest, TestNull) {
     ASSERT_OK_AND_ASSIGN(auto agg, FieldBoolOrAgg::Create(arrow::boolean()));
     {
-        auto agg_ret = agg->Agg(true, NullType());
+        auto agg_ret = agg->Agg(true, NullType()).value();
         ASSERT_EQ(DataDefine::GetVariantValue<bool>(agg_ret), true);
     }
     {
-        auto agg_ret = agg->Agg(NullType(), true);
+        auto agg_ret = agg->Agg(NullType(), true).value();
         ASSERT_EQ(DataDefine::GetVariantValue<bool>(agg_ret), true);
     }
     {
-        auto agg_ret = agg->Agg(NullType(), NullType());
+        auto agg_ret = agg->Agg(NullType(), NullType()).value();
         ASSERT_TRUE(DataDefine::IsVariantNull(agg_ret));
     }
 }

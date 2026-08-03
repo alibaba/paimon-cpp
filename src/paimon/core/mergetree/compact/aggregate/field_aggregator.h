@@ -33,35 +33,26 @@ class FieldAggregator {
     FieldAggregator(const std::string& name, const std::shared_ptr<arrow::DataType>& field_type)
         : name_(name), field_type_(field_type) {}
 
-    virtual VariantType Agg(const VariantType& accumulator, const VariantType& input_field) = 0;
-
-    /// Fallible aggregation entry point used by merge functions. Aggregators which deserialize
-    /// external representations override this method to report invalid input without throwing.
+    /// Merge a value into the accumulator.
     ///
     /// @param accumulator Current aggregated value.
     /// @param input_field Value to merge into the accumulator.
-    /// @return The merged value, or an error Status.
-    virtual Result<VariantType> AggResult(const VariantType& accumulator,
-                                          const VariantType& input_field) {
-        return Agg(accumulator, input_field);
-    }
+    /// @return The merged value, or an error Status for aggregators which deserialize external
+    /// representations and can reject invalid input.
+    virtual Result<VariantType> Agg(const VariantType& accumulator,
+                                    const VariantType& input_field) = 0;
 
     /// reset the aggregator to a clean start state.
     virtual void Reset() {}
 
-    virtual VariantType AggReversed(const VariantType& accumulator,
-                                    const VariantType& input_field) {
-        return Agg(input_field, accumulator);
-    }
-
-    /// Fallible reversed aggregation entry point used by merge functions.
+    /// Merge an older value into the accumulator.
     ///
     /// @param accumulator Current aggregated value.
     /// @param input_field Older value to merge into the accumulator.
     /// @return The merged value, or an error Status.
-    virtual Result<VariantType> AggReversedResult(const VariantType& accumulator,
-                                                  const VariantType& input_field) {
-        return AggResult(input_field, accumulator);
+    virtual Result<VariantType> AggReversed(const VariantType& accumulator,
+                                            const VariantType& input_field) {
+        return Agg(input_field, accumulator);
     }
 
     virtual Result<VariantType> Retract(const VariantType& accumulator,

@@ -53,10 +53,9 @@ TEST(FieldMergeMapAggTest, InputOverwritesAndRetractUsesKeys) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldMergeMapAgg> agg,
                          FieldMergeMapAgg::Create(arrow::map(arrow::int32(), arrow::int32()), "f"));
 
-    ASSERT_OK_AND_ASSIGN(
-        VariantType merged,
-        agg->AggResult(IntMap({int32_t{1}, int32_t{2}}, {int32_t{10}, int32_t{20}}),
-                       IntMap({int32_t{2}, int32_t{3}}, {int32_t{200}, int32_t{30}})));
+    ASSERT_OK_AND_ASSIGN(VariantType merged,
+                         agg->Agg(IntMap({int32_t{1}, int32_t{2}}, {int32_t{10}, int32_t{20}}),
+                                  IntMap({int32_t{2}, int32_t{3}}, {int32_t{200}, int32_t{30}})));
     auto merged_map = DataDefine::GetVariantValue<std::shared_ptr<InternalMap>>(merged);
     ASSERT_EQ(3, merged_map->Size());
     ASSERT_EQ(10, FindValue(merged, 1));
@@ -79,7 +78,7 @@ TEST(FieldMergeMapAggTest, NullAndTypeValidation) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldMergeMapAgg> agg,
                          FieldMergeMapAgg::Create(arrow::map(arrow::int32(), arrow::int32()), "f"));
     VariantType map = IntMap({int32_t{1}}, {int32_t{10}});
-    ASSERT_OK_AND_ASSIGN(VariantType result, agg->AggResult(VariantType(NullType()), map));
+    ASSERT_OK_AND_ASSIGN(VariantType result, agg->Agg(VariantType(NullType()), map));
     ASSERT_EQ(10, FindValue(result, 1));
     ASSERT_NOK(FieldMergeMapAgg::Create(arrow::int32(), "f"));
 }

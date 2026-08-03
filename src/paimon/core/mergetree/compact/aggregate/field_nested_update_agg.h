@@ -48,9 +48,8 @@ class FieldNestedUpdateAgg : public FieldAggregator {
         const std::shared_ptr<arrow::DataType>& field_type, const CoreOptions& options,
         const std::string& field_name);
 
-    VariantType Agg(const VariantType& accumulator, const VariantType& input_field) override;
-    Result<VariantType> AggResult(const VariantType& accumulator,
-                                  const VariantType& input_field) override;
+    Result<VariantType> Agg(const VariantType& accumulator,
+                            const VariantType& input_field) override;
     Result<VariantType> Retract(const VariantType& accumulator,
                                 const VariantType& input_field) const override;
 

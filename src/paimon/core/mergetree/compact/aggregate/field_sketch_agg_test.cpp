@@ -135,7 +135,7 @@ TEST(BinaryAggMergeFunctionTest, OwnedAccumulatorSurvivesNullInput) {
 TEST(FieldSketchAggTest, UnionsHllSketchesAsCompactHll4) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldHllSketchAgg> agg,
                          FieldHllSketchAgg::Create(arrow::binary(), "f"));
-    ASSERT_OK_AND_ASSIGN(VariantType result, agg->AggResult(Hll({1, 2, 3}), Hll({3, 4, 5})));
+    ASSERT_OK_AND_ASSIGN(VariantType result, agg->Agg(Hll({1, 2, 3}), Hll({3, 4, 5})));
     std::string_view bytes = DataDefine::GetStringView(result);
     datasketches::hll_sketch sketch =
         datasketches::hll_sketch::deserialize(bytes.data(), bytes.size());
@@ -146,7 +146,7 @@ TEST(FieldSketchAggTest, UnionsHllSketchesAsCompactHll4) {
 TEST(FieldSketchAggTest, UnionsOrderedThetaSketches) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldThetaSketchAgg> agg,
                          FieldThetaSketchAgg::Create(arrow::binary(), "f"));
-    ASSERT_OK_AND_ASSIGN(VariantType result, agg->AggResult(Theta({1, 2, 3}), Theta({3, 4, 5})));
+    ASSERT_OK_AND_ASSIGN(VariantType result, agg->Agg(Theta({1, 2, 3}), Theta({3, 4, 5})));
     std::string_view bytes = DataDefine::GetStringView(result);
     datasketches::compact_theta_sketch sketch =
         datasketches::compact_theta_sketch::deserialize(bytes.data(), bytes.size());
@@ -161,9 +161,9 @@ TEST(FieldSketchAggTest, ReportsInvalidBytesAndTypes) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldThetaSketchAgg> theta_agg,
                          FieldThetaSketchAgg::Create(arrow::binary(), "f"));
     VariantType invalid = VariantType(std::string_view("bad"));
-    ASSERT_NOK(hll_agg->AggResult(invalid, Hll({1})));
-    ASSERT_NOK(hll_agg->AggReversedResult(invalid, Hll({1})));
-    ASSERT_NOK(theta_agg->AggResult(invalid, Theta({1})));
+    ASSERT_NOK(hll_agg->Agg(invalid, Hll({1})));
+    ASSERT_NOK(hll_agg->AggReversed(invalid, Hll({1})));
+    ASSERT_NOK(theta_agg->Agg(invalid, Theta({1})));
     ASSERT_NOK(FieldHllSketchAgg::Create(arrow::int32(), "f"));
     ASSERT_NOK(FieldThetaSketchAgg::Create(arrow::int32(), "f"));
 }

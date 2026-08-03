@@ -100,13 +100,8 @@ Result<std::unique_ptr<FieldMergeMapAgg>> FieldMergeMapAgg::Create(
         new FieldMergeMapAgg(field_type, map_type->key_type(), map_type->item_type()));
 }
 
-VariantType FieldMergeMapAgg::Agg(const VariantType& accumulator, const VariantType& input_field) {
-    Result<VariantType> result = AggImpl(accumulator, input_field);
-    return result.ok() ? std::move(result).value() : accumulator;
-}
-
-Result<VariantType> FieldMergeMapAgg::AggResult(const VariantType& accumulator,
-                                                const VariantType& input_field) {
+Result<VariantType> FieldMergeMapAgg::Agg(const VariantType& accumulator,
+                                          const VariantType& input_field) {
     return AggImpl(accumulator, input_field);
 }
 

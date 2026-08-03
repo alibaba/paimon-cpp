@@ -363,7 +363,7 @@ Status PartialUpdateMergeFunction::UpdateWithSequenceGroup(KeyValue&& kv) {
             (agg_iter == field_aggregators_.end() ? nullptr : agg_iter->second.get());
         if (comp_iter == field_comparators_.end()) {
             if (agg) {
-                PAIMON_ASSIGN_OR_RAISE(VariantType result, agg->AggResult(accumulator, field));
+                PAIMON_ASSIGN_OR_RAISE(VariantType result, agg->Agg(accumulator, field));
                 row_->SetField(i, result);
             } else if (!DataDefine::IsVariantNull(field)) {
                 row_->SetField(i, field);
@@ -386,14 +386,13 @@ Status PartialUpdateMergeFunction::UpdateWithSequenceGroup(KeyValue&& kv) {
                     continue;
                 }
                 if (agg) {
-                    PAIMON_ASSIGN_OR_RAISE(VariantType result, agg->AggResult(accumulator, field));
+                    PAIMON_ASSIGN_OR_RAISE(VariantType result, agg->Agg(accumulator, field));
                     row_->SetField(i, result);
                 } else {
                     row_->SetField(i, field);
                 }
             } else if (agg) {
-                PAIMON_ASSIGN_OR_RAISE(VariantType result,
-                                       agg->AggReversedResult(accumulator, field));
+                PAIMON_ASSIGN_OR_RAISE(VariantType result, agg->AggReversed(accumulator, field));
                 row_->SetField(i, result);
             }
         }

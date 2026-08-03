@@ -155,14 +155,8 @@ Result<std::unique_ptr<FieldNestedUpdateAgg>> FieldNestedUpdateAgg::Create(
                                  null_strategy, std::move(sequence_comparator), count_limit));
 }
 
-VariantType FieldNestedUpdateAgg::Agg(const VariantType& accumulator,
-                                      const VariantType& input_field) {
-    Result<VariantType> result = AggImpl(accumulator, input_field);
-    return result.ok() ? std::move(result).value() : accumulator;
-}
-
-Result<VariantType> FieldNestedUpdateAgg::AggResult(const VariantType& accumulator,
-                                                    const VariantType& input_field) {
+Result<VariantType> FieldNestedUpdateAgg::Agg(const VariantType& accumulator,
+                                              const VariantType& input_field) {
     return AggImpl(accumulator, input_field);
 }
 

@@ -36,7 +36,7 @@ TEST(FieldIgnoreRetractAggTest, TestSimple) {
     ASSERT_OK_AND_ASSIGN(auto field_sum_agg, FieldSumAgg::Create(arrow::int32()));
     auto agg = std::make_unique<FieldIgnoreRetractAgg>(std::move(field_sum_agg));
 
-    auto agg_ret = agg->Agg(5, 10);
+    auto agg_ret = agg->Agg(5, 10).value();
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 15);
 
     ASSERT_OK_AND_ASSIGN(auto retract_ret, agg->Retract(5, 10));
@@ -46,15 +46,15 @@ TEST(FieldIgnoreRetractAggTest, TestNull) {
     ASSERT_OK_AND_ASSIGN(auto field_sum_agg, FieldSumAgg::Create(arrow::int32()));
     auto agg = std::make_unique<FieldIgnoreRetractAgg>(std::move(field_sum_agg));
     {
-        auto agg_ret = agg->Agg(5, NullType());
+        auto agg_ret = agg->Agg(5, NullType()).value();
         ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 5);
     }
     {
-        auto agg_ret = agg->Agg(NullType(), 10);
+        auto agg_ret = agg->Agg(NullType(), 10).value();
         ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 10);
     }
     {
-        auto agg_ret = agg->Agg(NullType(), NullType());
+        auto agg_ret = agg->Agg(NullType(), NullType()).value();
         ASSERT_TRUE(DataDefine::IsVariantNull(agg_ret));
     }
     {
@@ -84,7 +84,7 @@ TEST(FieldIgnoreRetractAggTest, ReversedAggBypassesWrappedOverride) {
     VariantType input = VariantType(std::static_pointer_cast<InternalArray>(
         std::make_shared<GenericArray>(std::vector<VariantType>{int32_t{3}, int32_t{4}})));
 
-    ASSERT_OK_AND_ASSIGN(VariantType result, agg->AggReversedResult(accumulator, input));
+    ASSERT_OK_AND_ASSIGN(VariantType result, agg->AggReversed(accumulator, input));
     auto values = DataDefine::GetVariantValue<std::shared_ptr<InternalArray>>(result);
     ASSERT_EQ(4, values->Size());
     ASSERT_EQ(3, values->GetInt(0));

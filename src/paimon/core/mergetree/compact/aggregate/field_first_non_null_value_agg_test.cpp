@@ -26,15 +26,15 @@ namespace paimon::test {
 TEST(FieldFirstNonNullValueAggTest, TestSimple) {
     auto agg = std::make_unique<FieldFirstNonNullValueAgg>(arrow::int32());
 
-    auto agg_ret = agg->Agg(5, 10);
+    auto agg_ret = agg->Agg(5, 10).value();
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 10);
-    agg_ret = agg->Agg(10, 20);
+    agg_ret = agg->Agg(10, 20).value();
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 10);
-    agg_ret = agg->Agg(10, 30);
+    agg_ret = agg->Agg(10, 30).value();
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 10);
 
     agg->Reset();
-    agg_ret = agg->Agg(10, 30);
+    agg_ret = agg->Agg(10, 30).value();
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 30);
 
     auto retract_ret = agg->Retract(10, 30);
@@ -43,25 +43,25 @@ TEST(FieldFirstNonNullValueAggTest, TestSimple) {
 
 TEST(FieldFirstNonNullValueAggTest, TestNull) {
     auto agg = std::make_unique<FieldFirstNonNullValueAgg>(arrow::int32());
-    auto agg_ret = agg->Agg(5, NullType());
+    auto agg_ret = agg->Agg(5, NullType()).value();
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 5);
-    agg_ret = agg->Agg(5, 10);
+    agg_ret = agg->Agg(5, 10).value();
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 10);
-    agg_ret = agg->Agg(10, NullType());
+    agg_ret = agg->Agg(10, NullType()).value();
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 10);
-    agg_ret = agg->Agg(10, 20);
+    agg_ret = agg->Agg(10, 20).value();
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 10);
 
     agg->Reset();
 
-    agg_ret = agg->Agg(NullType(), NullType());
+    agg_ret = agg->Agg(NullType(), NullType()).value();
     ASSERT_TRUE(DataDefine::IsVariantNull(agg_ret));
 
     agg->Reset();
 
-    agg_ret = agg->Agg(NullType(), 5);
+    agg_ret = agg->Agg(NullType(), 5).value();
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 5);
-    agg_ret = agg->Agg(5, NullType());
+    agg_ret = agg->Agg(5, NullType()).value();
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 5);
 }
 

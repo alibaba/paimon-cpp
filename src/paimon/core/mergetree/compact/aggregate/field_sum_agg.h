@@ -41,7 +41,8 @@ class FieldSumAgg : public FieldAggregator {
         return std::unique_ptr<FieldSumAgg>(new FieldSumAgg(field_type, sum_func, neg_func));
     }
 
-    VariantType Agg(const VariantType& accumulator, const VariantType& input_field) override {
+    Result<VariantType> Agg(const VariantType& accumulator,
+                            const VariantType& input_field) override {
         bool accumulator_null = DataDefine::IsVariantNull(accumulator);
         bool input_null = DataDefine::IsVariantNull(input_field);
         if (accumulator_null || input_null) {

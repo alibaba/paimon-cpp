@@ -33,7 +33,8 @@ class FieldFirstValueAgg : public FieldAggregator {
     explicit FieldFirstValueAgg(const std::shared_ptr<arrow::DataType>& field_type)
         : FieldAggregator(std::string(NAME), field_type) {}
 
-    VariantType Agg(const VariantType& accumulator, const VariantType& input_field) override {
+    Result<VariantType> Agg(const VariantType& accumulator,
+                            const VariantType& input_field) override {
         if (!initialized_) {
             initialized_ = true;
             return input_field;

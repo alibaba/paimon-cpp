@@ -53,7 +53,8 @@ class FieldListaggAgg : public FieldAggregator {
             new FieldListaggAgg(field_type, std::move(delimiter), distinct));
     }
 
-    VariantType Agg(const VariantType& accumulator, const VariantType& input_field) override {
+    Result<VariantType> Agg(const VariantType& accumulator,
+                            const VariantType& input_field) override {
         bool accumulator_null = DataDefine::IsVariantNull(accumulator);
         bool input_null = DataDefine::IsVariantNull(input_field);
         if (accumulator_null || input_null) {
@@ -79,7 +80,7 @@ class FieldListaggAgg : public FieldAggregator {
             new_result.append(in_str);
             result_ = std::move(new_result);
         }
-        return std::string_view{result_};
+        return VariantType(std::string_view{result_});
     }
 
  private:

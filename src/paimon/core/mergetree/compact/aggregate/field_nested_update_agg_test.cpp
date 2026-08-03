@@ -87,7 +87,7 @@ TEST(FieldNestedUpdateAggTest, UpsertsByKeySequenceAndCountLimit) {
     VariantType accumulator = Rows({Row(int32_t{1}, 1, 10), Row(int32_t{2}, 1, 20)});
     VariantType input =
         Rows({Row(int32_t{1}, 0, 100), Row(int32_t{1}, 2, 200), Row(int32_t{3}, 3, 300)});
-    ASSERT_OK_AND_ASSIGN(VariantType result, agg->AggResult(accumulator, input));
+    ASSERT_OK_AND_ASSIGN(VariantType result, agg->Agg(accumulator, input));
 
     ASSERT_EQ(2, GetRows(result)->Size());
     ASSERT_EQ(200, FindRow(result, 1)->GetInt(2));
@@ -107,10 +107,10 @@ TEST(FieldNestedUpdateAggTest, UpsertsByKeySequenceAndCountLimit) {
 TEST(FieldNestedUpdateAggTest, AppendsNonNullRowsUpToLimit) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> agg,
                          MakeAgg({{"fields.f.count-limit", "2"}}));
-    ASSERT_OK_AND_ASSIGN(VariantType result,
-                         agg->AggResult(VariantType(NullType()),
-                                        Rows({VariantType(NullType()), Row(int32_t{1}, 1, 10),
-                                              Row(int32_t{2}, 1, 20), Row(int32_t{3}, 1, 30)})));
+    ASSERT_OK_AND_ASSIGN(
+        VariantType result,
+        agg->Agg(VariantType(NullType()), Rows({VariantType(NullType()), Row(int32_t{1}, 1, 10),
+                                                Row(int32_t{2}, 1, 20), Row(int32_t{3}, 1, 30)})));
     ASSERT_EQ(2, GetRows(result)->Size());
     ASSERT_TRUE(FindRow(result, 1));
     ASSERT_TRUE(FindRow(result, 2));
@@ -124,17 +124,16 @@ TEST(FieldNestedUpdateAggTest, CountLimitCountsNullElementsOfAccumulator) {
     VariantType full = Rows({VariantType(NullType()), Row(int32_t{1}, 1, 10),
                              VariantType(NullType()), Row(int32_t{2}, 1, 20)});
     ASSERT_OK_AND_ASSIGN(VariantType unchanged,
-                         full_agg->AggResult(full, Rows({Row(int32_t{3}, 1, 30)})));
+                         full_agg->Agg(full, Rows({Row(int32_t{3}, 1, 30)})));
     ASSERT_EQ(4, GetRows(unchanged)->Size());
     ASSERT_FALSE(FindRow(unchanged, 3));
 
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> agg,
                          MakeAgg({{"fields.f.count-limit", "4"}}));
     VariantType accumulator = Rows({VariantType(NullType()), Row(int32_t{1}, 1, 10)});
-    ASSERT_OK_AND_ASSIGN(
-        VariantType result,
-        agg->AggResult(accumulator, Rows({Row(int32_t{2}, 1, 20), Row(int32_t{3}, 1, 30),
-                                          Row(int32_t{4}, 1, 40)})));
+    ASSERT_OK_AND_ASSIGN(VariantType result,
+                         agg->Agg(accumulator, Rows({Row(int32_t{2}, 1, 20), Row(int32_t{3}, 1, 30),
+                                                     Row(int32_t{4}, 1, 40)})));
     ASSERT_EQ(3, GetRows(result)->Size());
     ASSERT_TRUE(FindRow(result, 1));
     ASSERT_TRUE(FindRow(result, 2));
@@ -146,9 +145,9 @@ TEST(FieldNestedUpdateAggTest, AppliesNullKeyStrategies) {
     ASSERT_OK_AND_ASSIGN(
         std::unique_ptr<FieldNestedUpdateAgg> ignore_agg,
         MakeAgg({{"fields.f.nested-key", "id"}, {"fields.f.nested-key-null-strategy", "ignore"}}));
-    ASSERT_OK_AND_ASSIGN(VariantType ignored,
-                         ignore_agg->AggResult(VariantType(NullType()),
-                                               Rows({Row(VariantType(NullType()), 1, 10)})));
+    ASSERT_OK_AND_ASSIGN(
+        VariantType ignored,
+        ignore_agg->Agg(VariantType(NullType()), Rows({Row(VariantType(NullType()), 1, 10)})));
     ASSERT_EQ(0, GetRows(ignored)->Size());
 
     ASSERT_OK_AND_ASSIGN(VariantType normalized,
@@ -162,7 +161,7 @@ TEST(FieldNestedUpdateAggTest, AppliesNullKeyStrategies) {
         std::unique_ptr<FieldNestedUpdateAgg> error_agg,
         MakeAgg({{"fields.f.nested-key", "id"}, {"fields.f.nested-key-null-strategy", "error"}}));
     ASSERT_NOK(
-        error_agg->AggResult(VariantType(NullType()), Rows({Row(VariantType(NullType()), 1, 10)})));
+        error_agg->Agg(VariantType(NullType()), Rows({Row(VariantType(NullType()), 1, 10)})));
 }
 
 TEST(FieldNestedUpdateAggTest, ValidatesTypeAndOptionDependencies) {

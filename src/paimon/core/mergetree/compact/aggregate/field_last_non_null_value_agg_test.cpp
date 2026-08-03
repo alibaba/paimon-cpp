@@ -27,7 +27,7 @@ namespace paimon::test {
 TEST(FieldLastNonNullValueAggTest, TestSimple) {
     auto agg = std::make_unique<FieldLastNonNullValueAgg>(arrow::int32());
 
-    auto agg_ret = agg->Agg(5, 10);
+    auto agg_ret = agg->Agg(5, 10).value();
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 10);
 
     ASSERT_OK_AND_ASSIGN(auto retract_ret, agg->Retract(5, 10));
@@ -36,15 +36,15 @@ TEST(FieldLastNonNullValueAggTest, TestSimple) {
 TEST(FieldLastNonNullValueAggTest, TestNull) {
     auto agg = std::make_unique<FieldLastNonNullValueAgg>(arrow::int32());
     {
-        auto agg_ret = agg->Agg(5, NullType());
+        auto agg_ret = agg->Agg(5, NullType()).value();
         ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 5);
     }
     {
-        auto agg_ret = agg->Agg(NullType(), 10);
+        auto agg_ret = agg->Agg(NullType(), 10).value();
         ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 10);
     }
     {
-        auto agg_ret = agg->Agg(NullType(), NullType());
+        auto agg_ret = agg->Agg(NullType(), NullType()).value();
         ASSERT_TRUE(DataDefine::IsVariantNull(agg_ret));
     }
 

@@ -62,13 +62,8 @@ Result<std::unique_ptr<FieldHllSketchAgg>> FieldHllSketchAgg::Create(
     return std::unique_ptr<FieldHllSketchAgg>(new FieldHllSketchAgg(field_type));
 }
 
-VariantType FieldHllSketchAgg::Agg(const VariantType& accumulator, const VariantType& input_field) {
-    Result<VariantType> result = AggResult(accumulator, input_field);
-    return result.ok() ? std::move(result).value() : accumulator;
-}
-
-Result<VariantType> FieldHllSketchAgg::AggResult(const VariantType& accumulator,
-                                                 const VariantType& input_field) {
+Result<VariantType> FieldHllSketchAgg::Agg(const VariantType& accumulator,
+                                           const VariantType& input_field) {
     bool accumulator_null = DataDefine::IsVariantNull(accumulator);
     bool input_null = DataDefine::IsVariantNull(input_field);
     if (accumulator_null || input_null) {
@@ -100,14 +95,8 @@ Result<std::unique_ptr<FieldThetaSketchAgg>> FieldThetaSketchAgg::Create(
     return std::unique_ptr<FieldThetaSketchAgg>(new FieldThetaSketchAgg(field_type));
 }
 
-VariantType FieldThetaSketchAgg::Agg(const VariantType& accumulator,
-                                     const VariantType& input_field) {
-    Result<VariantType> result = AggResult(accumulator, input_field);
-    return result.ok() ? std::move(result).value() : accumulator;
-}
-
-Result<VariantType> FieldThetaSketchAgg::AggResult(const VariantType& accumulator,
-                                                   const VariantType& input_field) {
+Result<VariantType> FieldThetaSketchAgg::Agg(const VariantType& accumulator,
+                                             const VariantType& input_field) {
     bool accumulator_null = DataDefine::IsVariantNull(accumulator);
     bool input_null = DataDefine::IsVariantNull(input_field);
     if (accumulator_null || input_null) {

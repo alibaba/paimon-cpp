@@ -32,7 +32,8 @@ class FieldMaxAgg : public FieldAggregator {
         return std::unique_ptr<FieldMaxAgg>(new FieldMaxAgg(field_type, max_func));
     }
 
-    VariantType Agg(const VariantType& accumulator, const VariantType& input_field) override {
+    Result<VariantType> Agg(const VariantType& accumulator,
+                            const VariantType& input_field) override {
         bool accumulator_null = DataDefine::IsVariantNull(accumulator);
         bool input_null = DataDefine::IsVariantNull(input_field);
         if (accumulator_null || input_null) {

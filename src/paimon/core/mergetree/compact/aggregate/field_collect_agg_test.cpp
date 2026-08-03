@@ -57,7 +57,7 @@ TEST(FieldCollectAggTest, ConcatenatesWithoutReversing) {
     VariantType left = IntArray({int32_t{1}, int32_t{2}});
     VariantType right = IntArray({int32_t{3}, int32_t{4}});
 
-    ASSERT_OK_AND_ASSIGN(VariantType result, agg->AggReversedResult(left, right));
+    ASSERT_OK_AND_ASSIGN(VariantType result, agg->AggReversed(left, right));
     ASSERT_EQ((std::vector<int32_t>{1, 2, 3, 4}), Values(result));
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<BinaryArray> binary_result,
                          BinarySerializerUtils::WriteBinaryArray(
@@ -66,15 +66,15 @@ TEST(FieldCollectAggTest, ConcatenatesWithoutReversing) {
     ASSERT_EQ((std::vector<int32_t>{1, 2, 3, 4}), binary_result->ToIntArray().value());
 
     ASSERT_OK_AND_ASSIGN(VariantType null_result,
-                         agg->AggResult(VariantType(NullType()), VariantType(NullType())));
+                         agg->Agg(VariantType(NullType()), VariantType(NullType())));
     ASSERT_TRUE(DataDefine::IsVariantNull(null_result));
 }
 
 TEST(FieldCollectAggTest, DistinctAndRetractOneOccurrence) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldCollectAgg> distinct_agg, MakeCollectAgg(true));
     ASSERT_OK_AND_ASSIGN(VariantType distinct_result,
-                         distinct_agg->AggResult(IntArray({int32_t{1}, int32_t{2}, int32_t{2}}),
-                                                 IntArray({int32_t{2}, int32_t{3}})));
+                         distinct_agg->Agg(IntArray({int32_t{1}, int32_t{2}, int32_t{2}}),
+                                           IntArray({int32_t{2}, int32_t{3}})));
     ASSERT_EQ((std::vector<int32_t>{1, 2, 3}), Values(distinct_result));
 
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldCollectAgg> agg, MakeCollectAgg(false));

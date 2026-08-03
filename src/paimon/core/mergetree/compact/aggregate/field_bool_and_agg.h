@@ -35,7 +35,8 @@ class FieldBoolAndAgg : public FieldAggregator {
         return std::unique_ptr<FieldBoolAndAgg>(new FieldBoolAndAgg(field_type));
     }
 
-    VariantType Agg(const VariantType& accumulator, const VariantType& input_field) override {
+    Result<VariantType> Agg(const VariantType& accumulator,
+                            const VariantType& input_field) override {
         bool accumulator_null = DataDefine::IsVariantNull(accumulator);
         bool input_null = DataDefine::IsVariantNull(input_field);
         if (accumulator_null || input_null) {
@@ -43,7 +44,7 @@ class FieldBoolAndAgg : public FieldAggregator {
         }
         bool accumulator_value = DataDefine::GetVariantValue<bool>(accumulator);
         bool input_value = DataDefine::GetVariantValue<bool>(input_field);
-        return accumulator_value && input_value;
+        return VariantType(accumulator_value && input_value);
     }
 
  public:
