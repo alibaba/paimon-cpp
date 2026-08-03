@@ -35,7 +35,6 @@
 #include "paimon/memory/memory_pool.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/testharness.h"
-#include "paimon/utils/roaring_bitmap64.h"
 
 namespace paimon::test {
 namespace {
@@ -74,14 +73,6 @@ std::shared_ptr<Bytes> ThetaBytes(std::initializer_list<int32_t> values) {
     return DataDefine::GetVariantValue<std::shared_ptr<Bytes>>(Theta(values));
 }
 
-std::shared_ptr<Bytes> BitmapBytes(std::initializer_list<int64_t> values) {
-    RoaringBitmap64 bitmap;
-    for (int64_t value : values) {
-        bitmap.Add(value);
-    }
-    return std::shared_ptr<Bytes>(bitmap.Serialize(/*pool=*/nullptr));
-}
-
 // reuse freed heap blocks so a row still pointing into released memory yields corrupted bytes
 std::vector<pooled_unique_ptr<Bytes>> ScribbleFreedMemory() {
     std::vector<pooled_unique_ptr<Bytes>> blocks;
@@ -96,52 +87,46 @@ std::vector<pooled_unique_ptr<Bytes>> ScribbleFreedMemory() {
 }  // namespace
 
 TEST(BinaryAggMergeFunctionTest, OwnedAccumulatorSurvivesNullInput) {
-    arrow::FieldVector fields = {
-        arrow::field("k0", arrow::int32()), arrow::field("rbm", arrow::binary()),
-        arrow::field("hll", arrow::binary()), arrow::field("theta", arrow::binary())};
+    arrow::FieldVector fields = {arrow::field("k0", arrow::int32()),
+                                 arrow::field("hll", arrow::binary()),
+                                 arrow::field("theta", arrow::binary())};
     ASSERT_OK_AND_ASSIGN(
         CoreOptions options,
-        CoreOptions::FromMap({{"fields.rbm.aggregate-function", "rbm64"},
-                              {"fields.hll.aggregate-function", "hll_sketch"},
+        CoreOptions::FromMap({{"fields.hll.aggregate-function", "hll_sketch"},
                               {"fields.theta.aggregate-function", "theta_sketch"}}));
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<AggregateMergeFunction> merge_func,
                          AggregateMergeFunction::Create(arrow::schema(fields),
                                                         /*primary_keys=*/{"k0"}, options));
 
     MemoryPool* pool = GetDefaultPool().get();
-    ASSERT_OK(merge_func->Add(KeyValue(
-        RowKind::Insert(), /*sequence_number=*/0, /*level=*/0,
-        BinaryRowGenerator::GenerateRowPtr({10}, pool),
-        BinaryRowGenerator::GenerateRowPtr(
-            {10, BitmapBytes({1, 3}), HllBytes({1, 2, 3}), ThetaBytes({1, 2, 3})}, pool))));
+    ASSERT_OK(
+        merge_func->Add(KeyValue(RowKind::Insert(), /*sequence_number=*/0, /*level=*/0,
+                                 BinaryRowGenerator::GenerateRowPtr({10}, pool),
+                                 BinaryRowGenerator::GenerateRowPtr(
+                                     {10, HllBytes({1, 2, 3}), ThetaBytes({1, 2, 3})}, pool))));
     // both sides non-null, so each aggregator now owns a freshly allocated buffer in the row
-    ASSERT_OK(merge_func->Add(KeyValue(
-        RowKind::Insert(), /*sequence_number=*/1, /*level=*/0,
-        BinaryRowGenerator::GenerateRowPtr({10}, pool),
-        BinaryRowGenerator::GenerateRowPtr(
-            {10, BitmapBytes({2, 3}), HllBytes({3, 4, 5}), ThetaBytes({3, 4, 5})}, pool))));
+    ASSERT_OK(
+        merge_func->Add(KeyValue(RowKind::Insert(), /*sequence_number=*/1, /*level=*/0,
+                                 BinaryRowGenerator::GenerateRowPtr({10}, pool),
+                                 BinaryRowGenerator::GenerateRowPtr(
+                                     {10, HllBytes({3, 4, 5}), ThetaBytes({3, 4, 5})}, pool))));
     // input side is null, so the accumulator is passed through and written back into that field
-    ASSERT_OK(merge_func->Add(KeyValue(
-        RowKind::Insert(), /*sequence_number=*/2, /*level=*/0,
-        BinaryRowGenerator::GenerateRowPtr({10}, pool),
-        BinaryRowGenerator::GenerateRowPtr({10, NullType(), NullType(), NullType()}, pool))));
+    ASSERT_OK(merge_func->Add(
+        KeyValue(RowKind::Insert(), /*sequence_number=*/2, /*level=*/0,
+                 BinaryRowGenerator::GenerateRowPtr({10}, pool),
+                 BinaryRowGenerator::GenerateRowPtr({10, NullType(), NullType()}, pool))));
 
     ASSERT_OK_AND_ASSIGN(std::optional<KeyValue> result, merge_func->GetResult());
     ASSERT_TRUE(result.has_value());
     std::vector<pooled_unique_ptr<Bytes>> scribbled = ScribbleFreedMemory();
 
-    std::string_view rbm_bytes = result->value->GetStringView(1);
-    RoaringBitmap64 bitmap;
-    ASSERT_OK(bitmap.Deserialize(rbm_bytes.data(), rbm_bytes.size()));
-    ASSERT_EQ(3, bitmap.Cardinality());
-
-    std::string_view hll_bytes = result->value->GetStringView(2);
+    std::string_view hll_bytes = result->value->GetStringView(1);
     ASSERT_NEAR(
         5.0,
         datasketches::hll_sketch::deserialize(hll_bytes.data(), hll_bytes.size()).get_estimate(),
         0.1);
 
-    std::string_view theta_bytes = result->value->GetStringView(3);
+    std::string_view theta_bytes = result->value->GetStringView(2);
     ASSERT_DOUBLE_EQ(
         5.0, datasketches::compact_theta_sketch::deserialize(theta_bytes.data(), theta_bytes.size())
                  .get_estimate());

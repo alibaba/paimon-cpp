@@ -145,7 +145,7 @@ TEST(FieldAggregatorFactoryTest, CreatesJavaCompatibleAggregators) {
         FieldAggregatorFactory::CreateFieldAggregator("f", nested_type, "nested_update", options));
     ASSERT_TRUE(dynamic_cast<FieldNestedUpdateAgg*>(nested_update.get()));
 
-    for (const char* name : {"rbm64", "hll_sketch", "theta_sketch"}) {
+    for (const char* name : {"hll_sketch", "theta_sketch"}) {
         ASSERT_OK_AND_ASSIGN(
             std::unique_ptr<FieldAggregator> aggregator,
             FieldAggregatorFactory::CreateFieldAggregator("f", arrow::binary(), name, options));

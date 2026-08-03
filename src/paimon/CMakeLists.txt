@@ -293,7 +293,6 @@ set(PAIMON_CORE_SRCS
     core/mergetree/compact/aggregate/field_collect_agg.cpp
     core/mergetree/compact/aggregate/field_merge_map_agg.cpp
     core/mergetree/compact/aggregate/field_nested_update_agg.cpp
-    core/mergetree/compact/aggregate/field_roaring_bitmap64_agg.cpp
     core/mergetree/compact/aggregate/field_sketch_agg.cpp
     core/mergetree/compact/aggregate/field_sum_agg.cpp
     core/mergetree/compact/interval_partition.cpp
@@ -732,7 +731,6 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/compact/aggregate/field_min_max_agg_test.cpp
                     core/mergetree/compact/aggregate/field_nested_update_agg_test.cpp
                     core/mergetree/compact/aggregate/field_primary_key_agg_test.cpp
-                    core/mergetree/compact/aggregate/field_roaring_bitmap64_agg_test.cpp
                     core/mergetree/compact/aggregate/field_sketch_agg_test.cpp
                     core/mergetree/compact/aggregate/field_sum_agg_test.cpp
                     core/mergetree/compact/deduplicate_merge_function_test.cpp
