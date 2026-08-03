@@ -1556,9 +1556,9 @@ TEST_F(PageFilteredRowGroupReaderTest, DirectOffsetIndexJumpSupportsDictionaryFa
     ASSERT_GE(dictionary_page_idx, 0);
     ASSERT_GT(plain_page_idx, dictionary_page_idx);
 
-    const int32_t dictionary_row =
+    const auto dictionary_row =
         static_cast<int32_t>(page_locations[dictionary_page_idx].first_row_index);
-    const int32_t plain_row = static_cast<int32_t>(page_locations[plain_page_idx].first_row_index);
+    const auto plain_row = static_cast<int32_t>(page_locations[plain_page_idx].first_row_index);
     RoaringBitmap32 bitmap;
     bitmap.Add(dictionary_row);
     bitmap.Add(plain_row);
