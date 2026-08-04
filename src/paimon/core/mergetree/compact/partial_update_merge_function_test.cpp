@@ -903,9 +903,7 @@ std::vector<pooled_unique_ptr<Bytes>> ScribbleFreedMemory() {
 
 }  // namespace
 
-// An out-of-order record routes through AggReversed, which swaps the arguments, so the accumulator
-// the row owns arrives as the aggregator's input_field. Returning its view on the null path would
-// dangle once the row overwrites the field.
+// An out-of-order record routes through AggReversed, which swaps the arguments
 TEST_F(PartialUpdateMergeFunctionTest, SequenceGroupKeepsBinaryAccumulatorOnOlderNullField) {
     std::vector<DataField> data_fields = {DataField(0, arrow::field("f0", arrow::int32())),
                                           DataField(1, arrow::field("f1", arrow::binary())),

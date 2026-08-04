@@ -65,7 +65,6 @@ class FieldNestedUpdateAgg : public FieldAggregator {
                                 const VariantType& input_field) const;
     Result<bool> AcceptKey(const InternalRow& row) const;
     Result<bool> KeysEqual(const InternalRow& lhs, const InternalRow& rhs) const;
-    Result<bool> RowsEqual(const InternalRow& lhs, const InternalRow& rhs) const;
 
     std::shared_ptr<arrow::StructType> row_type_;
     std::vector<int32_t> key_fields_;

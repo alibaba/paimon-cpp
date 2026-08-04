@@ -202,6 +202,12 @@ TEST(FieldNestedUpdateAggTest, ValidatesTypeAndOptionDependencies) {
     ASSERT_OK_AND_ASSIGN(CoreOptions negative_limit,
                          CoreOptions::FromMap({{"fields.f.count-limit", "-1"}}));
     ASSERT_NOK(FieldNestedUpdateAgg::Create(NestedType(), negative_limit, "f"));
+
+    // GetFieldIndex only returns -1 for a missing or ambiguous name, not for one repeated here
+    ASSERT_OK_AND_ASSIGN(CoreOptions repeated_key,
+                         CoreOptions::FromMap({{"fields.f.nested-key", "id,id"}}));
+    ASSERT_NOK_WITH_MSG(FieldNestedUpdateAgg::Create(NestedType(), repeated_key, "f"),
+                        "is configured more than once");
 }
 
 }  // namespace paimon::test

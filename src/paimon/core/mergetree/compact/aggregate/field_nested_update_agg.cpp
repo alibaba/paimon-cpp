@@ -193,29 +193,6 @@ Result<bool> FieldNestedUpdateAgg::KeysEqual(const InternalRow& lhs, const Inter
     return true;
 }
 
-Result<bool> FieldNestedUpdateAgg::RowsEqual(const InternalRow& lhs, const InternalRow& rhs) const {
-    PAIMON_ASSIGN_OR_RAISE(const RowKind* lhs_kind, lhs.GetRowKind());
-    PAIMON_ASSIGN_OR_RAISE(const RowKind* rhs_kind, rhs.GetRowKind());
-    if (lhs_kind != rhs_kind) {
-        return false;
-    }
-    for (int32_t field = 0; field < row_type_->num_fields(); ++field) {
-        PAIMON_ASSIGN_OR_RAISE(
-            VariantType lhs_value,
-            FieldAggregateUtils::GetValue(lhs, field, row_type_->field(field)->type()));
-        PAIMON_ASSIGN_OR_RAISE(
-            VariantType rhs_value,
-            FieldAggregateUtils::GetValue(rhs, field, row_type_->field(field)->type()));
-        PAIMON_ASSIGN_OR_RAISE(
-            bool equal,
-            FieldAggregateUtils::Equals(lhs_value, rhs_value, row_type_->field(field)->type()));
-        if (!equal) {
-            return false;
-        }
-    }
-    return true;
-}
-
 Result<VariantType> FieldNestedUpdateAgg::AggImpl(const VariantType& accumulator,
                                                   const VariantType& input_field) const {
     if (DataDefine::IsVariantNull(input_field)) {
@@ -309,7 +286,9 @@ Result<VariantType> FieldNestedUpdateAgg::Retract(const VariantType& accumulator
             }
             std::shared_ptr<InternalRow> retract_row = retract->GetRow(i, row_type_->num_fields());
             for (auto iter = rows.begin(); iter != rows.end();) {
-                PAIMON_ASSIGN_OR_RAISE(bool equal, RowsEqual(**iter, *retract_row));
+                PAIMON_ASSIGN_OR_RAISE(
+                    bool equal, FieldAggregateUtils::Equals(VariantType(*iter),
+                                                            VariantType(retract_row), row_type_));
                 if (equal) {
                     iter = rows.erase(iter);
                 } else {

@@ -155,6 +155,33 @@ TEST(FieldSketchAggTest, UnionsOrderedThetaSketches) {
     ASSERT_DOUBLE_EQ(5.0, sketch.get_estimate());
 }
 
+// AggReversed swaps its arguments, so either side may carry the row-owned accumulator
+TEST(FieldSketchAggTest, NullArgumentsKeepOwnershipInBothDirections) {
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldHllSketchAgg> agg,
+                         FieldHllSketchAgg::Create(arrow::binary(), "f"));
+    VariantType null_value = VariantType(NullType());
+    // pass a view, not an owning value, or OwnedBinary short-circuits and skips the copy path
+    VariantType owned = Hll({1, 2, 3});
+    VariantType sketch = VariantType(DataDefine::GetStringView(owned));
+
+    for (const VariantType& result :
+         {agg->Agg(sketch, null_value).value(), agg->Agg(null_value, sketch).value(),
+          agg->AggReversed(sketch, null_value).value(),
+          agg->AggReversed(null_value, sketch).value()}) {
+        ASSERT_TRUE(DataDefine::GetVariantPtr<std::shared_ptr<Bytes>>(result))
+            << "the surviving value must own its buffer";
+        std::string_view bytes = DataDefine::GetStringView(result);
+        ASSERT_NEAR(
+            3.0, datasketches::hll_sketch::deserialize(bytes.data(), bytes.size()).get_estimate(),
+            0.1);
+    }
+
+    ASSERT_OK_AND_ASSIGN(VariantType both_null, agg->Agg(null_value, null_value));
+    ASSERT_TRUE(DataDefine::IsVariantNull(both_null));
+    ASSERT_OK_AND_ASSIGN(VariantType both_null_reversed, agg->AggReversed(null_value, null_value));
+    ASSERT_TRUE(DataDefine::IsVariantNull(both_null_reversed));
+}
+
 TEST(FieldSketchAggTest, ReportsInvalidBytesAndTypes) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldHllSketchAgg> hll_agg,
                          FieldHllSketchAgg::Create(arrow::binary(), "f"));
