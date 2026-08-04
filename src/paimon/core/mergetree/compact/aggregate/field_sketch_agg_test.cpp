@@ -182,6 +182,17 @@ TEST(FieldSketchAggTest, NullArgumentsKeepOwnershipInBothDirections) {
     ASSERT_TRUE(DataDefine::IsVariantNull(both_null_reversed));
 }
 
+// Java leaves retract unimplemented for the sketch aggregators, so it must surface as an error
+// pointing at fields.<f>.ignore-retract rather than silently succeeding.
+TEST(FieldSketchAggTest, RetractionIsUnsupported) {
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldHllSketchAgg> hll_agg,
+                         FieldHllSketchAgg::Create(arrow::binary(), "f"));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldThetaSketchAgg> theta_agg,
+                         FieldThetaSketchAgg::Create(arrow::binary(), "f"));
+    ASSERT_NOK_WITH_MSG(hll_agg->Retract(Hll({1}), Hll({1})), "does not support retraction");
+    ASSERT_NOK_WITH_MSG(theta_agg->Retract(Theta({1}), Theta({1})), "does not support retraction");
+}
+
 TEST(FieldSketchAggTest, ReportsInvalidBytesAndTypes) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldHllSketchAgg> hll_agg,
                          FieldHllSketchAgg::Create(arrow::binary(), "f"));

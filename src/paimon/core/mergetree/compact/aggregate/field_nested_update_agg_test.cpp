@@ -16,6 +16,7 @@
 
 #include "paimon/core/mergetree/compact/aggregate/field_nested_update_agg.h"
 
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <string>
@@ -203,11 +204,108 @@ TEST(FieldNestedUpdateAggTest, ValidatesTypeAndOptionDependencies) {
                          CoreOptions::FromMap({{"fields.f.count-limit", "-1"}}));
     ASSERT_NOK(FieldNestedUpdateAgg::Create(NestedType(), negative_limit, "f"));
 
-    // GetFieldIndex only returns -1 for a missing or ambiguous name, not for one repeated here
+    // Java resolves nested-key names with List.indexOf and accepts repeats, so we must too
     ASSERT_OK_AND_ASSIGN(CoreOptions repeated_key,
                          CoreOptions::FromMap({{"fields.f.nested-key", "id,id"}}));
-    ASSERT_NOK_WITH_MSG(FieldNestedUpdateAgg::Create(NestedType(), repeated_key, "f"),
-                        "is configured more than once");
+    ASSERT_OK(FieldNestedUpdateAgg::Create(NestedType(), repeated_key, "f"));
+}
+
+// Ported from Java FieldAggregatorTest: composite nested keys, multiple sequence fields and the
+// count-limit / null-key-strategy boundaries.
+namespace {
+
+std::shared_ptr<arrow::DataType> CompositeKeyType() {
+    return arrow::list(
+        arrow::struct_({arrow::field("k0", arrow::int32()), arrow::field("k1", arrow::int32()),
+                        arrow::field("v", arrow::utf8()), arrow::field("seq", arrow::int32()),
+                        arrow::field("seq2", arrow::int32())}));
+}
+
+VariantType KeyedRow(VariantType k0, VariantType k1, std::string_view v, int32_t seq,
+                     int32_t seq2) {
+    std::shared_ptr<GenericRow> row = std::make_shared<GenericRow>(5);
+    row->SetField(0, k0);
+    row->SetField(1, k1);
+    row->SetField(2, v);
+    row->SetField(3, seq);
+    row->SetField(4, seq2);
+    return VariantType(std::static_pointer_cast<InternalRow>(row));
+}
+
+Result<std::unique_ptr<FieldNestedUpdateAgg>> MakeKeyedAgg(
+    const std::map<std::string, std::string>& options_map) {
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(options_map));
+    return FieldNestedUpdateAgg::Create(CompositeKeyType(), options, "f");
+}
+
+std::vector<std::string> SortedKeyed(const VariantType& value) {
+    std::shared_ptr<InternalArray> rows = GetRows(value);
+    std::vector<std::string> out;
+    for (int32_t i = 0; i < rows->Size(); ++i) {
+        std::shared_ptr<InternalRow> row = rows->GetRow(i, 5);
+        std::string k0 = row->IsNullAt(0) ? "null" : std::to_string(row->GetInt(0));
+        std::string k1 = row->IsNullAt(1) ? "null" : std::to_string(row->GetInt(1));
+        out.push_back(k0 + "/" + k1 + "/" + std::string(row->GetStringView(2)));
+    }
+    std::sort(out.begin(), out.end());
+    return out;
+}
+
+}  // namespace
+
+TEST(FieldNestedUpdateAggTest, CountLimitStillUpdatesExistingCompositeKey) {
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> agg,
+                         MakeKeyedAgg({{"fields.f.nested-key", "k0,k1"},
+                                       {"fields.f.nested-sequence-field", "seq"},
+                                       {"fields.f.count-limit", "2"}}));
+    VariantType acc = VariantType(NullType());
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(0, 1, "B", 1, 0)})));
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(1, 2, "C", 3, 0)})));
+
+    // at the limit an existing key can still be updated
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(0, 1, "B_updated", 4, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/B_updated", "1/2/C"}), SortedKeyed(acc));
+
+    // but a new key is rejected
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(2, 3, "D", 5, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/B_updated", "1/2/C"}), SortedKeyed(acc));
+}
+
+TEST(FieldNestedUpdateAggTest, MultipleSequenceFieldsCompareInOrder) {
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> agg,
+                         MakeKeyedAgg({{"fields.f.nested-key", "k0,k1"},
+                                       {"fields.f.nested-sequence-field", "seq,seq2"}}));
+    VariantType acc = VariantType(NullType());
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(0, 1, "A", 1, 5)})));
+
+    // same leading sequence, smaller second field, so the row is kept
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(0, 1, "older", 1, 4)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/A"}), SortedKeyed(acc));
+
+    // same leading sequence, larger second field, so the row wins
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(0, 1, "newer", 1, 6)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/newer"}), SortedKeyed(acc));
+}
+
+TEST(FieldNestedUpdateAggTest, NullKeyStrategyAppliesToRetractInput) {
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> merge_agg,
+                         MakeKeyedAgg({{"fields.f.nested-key", "k0,k1"}}));
+    VariantType acc = VariantType(NullType());
+    ASSERT_OK_AND_ASSIGN(acc, merge_agg->Agg(acc, Rows({KeyedRow(0, 0, "A", 0, 0)})));
+    ASSERT_OK_AND_ASSIGN(acc, merge_agg->Agg(acc, Rows({KeyedRow(1, 1, "B", 0, 0)})));
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> ignore_agg,
+                         MakeKeyedAgg({{"fields.f.nested-key", "k0,k1"},
+                                       {"fields.f.nested-key-null-strategy", "ignore"}}));
+    ASSERT_OK_AND_ASSIGN(
+        VariantType kept,
+        ignore_agg->Retract(acc, Rows({KeyedRow(0, VariantType(NullType()), "X", 0, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/0/A", "1/1/B"}), SortedKeyed(kept));
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> error_agg,
+                         MakeKeyedAgg({{"fields.f.nested-key", "k0,k1"},
+                                       {"fields.f.nested-key-null-strategy", "error"}}));
+    ASSERT_NOK(error_agg->Retract(acc, Rows({KeyedRow(0, VariantType(NullType()), "X", 0, 0)})));
 }
 
 }  // namespace paimon::test

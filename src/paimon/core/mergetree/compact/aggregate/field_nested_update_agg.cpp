@@ -16,7 +16,6 @@
 
 #include "paimon/core/mergetree/compact/aggregate/field_nested_update_agg.h"
 
-#include <algorithm>
 #include <utility>
 #include <vector>
 
@@ -49,10 +48,6 @@ Result<std::vector<int32_t>> ResolveFields(const std::shared_ptr<arrow::StructTy
         if (index < 0) {
             return Status::Invalid(fmt::format("Field '{}' configured by '{}' does not exist in {}",
                                                name, option_name, row_type->ToString()));
-        }
-        if (std::find(fields.begin(), fields.end(), index) != fields.end()) {
-            return Status::Invalid(
-                fmt::format("Field '{}' is configured more than once by '{}'", name, option_name));
         }
         fields.push_back(index);
     }
