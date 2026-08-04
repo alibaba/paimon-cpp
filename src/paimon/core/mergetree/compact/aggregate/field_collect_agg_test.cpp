@@ -121,8 +121,8 @@ VariantType IntStringMap(std::vector<std::pair<int32_t, std::string_view>> entri
     std::vector<VariantType> keys;
     std::vector<VariantType> values;
     for (const auto& entry : entries) {
-        keys.push_back(VariantType(entry.first));
-        values.push_back(VariantType(entry.second));
+        keys.emplace_back(entry.first);
+        values.emplace_back(entry.second);
     }
     return VariantType(std::static_pointer_cast<InternalMap>(
         std::make_shared<GenericMap>(std::make_shared<GenericArray>(std::move(keys)),
