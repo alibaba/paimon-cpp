@@ -30,6 +30,9 @@
 namespace paimon {
 namespace {
 
+// TODO(liangjie.liang): Hash VariantType by its type so that this scan, the key lookup in
+// FieldMergeMapAgg and the keyed upsert in FieldNestedUpdateAgg stop being O(n^2). Java only pays
+// that cost for constructed element types and uses HashSet/HashMap for the rest.
 Result<bool> Contains(const std::vector<VariantType>& values, const VariantType& candidate,
                       const std::shared_ptr<arrow::DataType>& element_type) {
     for (const VariantType& value : values) {

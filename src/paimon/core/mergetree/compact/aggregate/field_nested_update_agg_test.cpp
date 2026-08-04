@@ -27,6 +27,7 @@
 #include "paimon/common/data/generic_array.h"
 #include "paimon/common/data/generic_row.h"
 #include "paimon/common/data/serializer/binary_serializer_utils.h"
+#include "paimon/common/types/row_kind.h"
 #include "paimon/core/core_options.h"
 #include "paimon/testing/utils/testharness.h"
 
@@ -139,6 +140,23 @@ TEST(FieldNestedUpdateAggTest, CountLimitCountsNullElementsOfAccumulator) {
     ASSERT_TRUE(FindRow(result, 2));
     ASSERT_TRUE(FindRow(result, 3));
     ASSERT_FALSE(FindRow(result, 4));
+}
+
+// matches Java's RecordEqualiser, which compares the row kind before any field
+TEST(FieldNestedUpdateAggTest, RetractRequiresMatchingRowKind) {
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> agg, MakeAgg({}));
+    std::shared_ptr<GenericRow> retract_row = std::make_shared<GenericRow>(3);
+    retract_row->SetField(0, int32_t{1});
+    retract_row->SetField(1, 1);
+    retract_row->SetField(2, 10);
+    retract_row->SetRowKind(RowKind::Delete());
+
+    ASSERT_OK_AND_ASSIGN(
+        VariantType kept,
+        agg->Retract(Rows({Row(int32_t{1}, 1, 10)}),
+                     Rows({VariantType(std::static_pointer_cast<InternalRow>(retract_row))})));
+    ASSERT_EQ(1, GetRows(kept)->Size());
+    ASSERT_TRUE(FindRow(kept, 1));
 }
 
 TEST(FieldNestedUpdateAggTest, AppliesNullKeyStrategies) {

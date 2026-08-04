@@ -26,6 +26,7 @@
 #include "paimon/common/data/generic_array.h"
 #include "paimon/common/data/internal_row.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/types/row_kind.h"
 #include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/mergetree/compact/aggregate/field_aggregate_utils.h"
 #include "paimon/defs.h"
@@ -193,6 +194,11 @@ Result<bool> FieldNestedUpdateAgg::KeysEqual(const InternalRow& lhs, const Inter
 }
 
 Result<bool> FieldNestedUpdateAgg::RowsEqual(const InternalRow& lhs, const InternalRow& rhs) const {
+    PAIMON_ASSIGN_OR_RAISE(const RowKind* lhs_kind, lhs.GetRowKind());
+    PAIMON_ASSIGN_OR_RAISE(const RowKind* rhs_kind, rhs.GetRowKind());
+    if (lhs_kind != rhs_kind) {
+        return false;
+    }
     for (int32_t field = 0; field < row_type_->num_fields(); ++field) {
         PAIMON_ASSIGN_OR_RAISE(
             VariantType lhs_value,

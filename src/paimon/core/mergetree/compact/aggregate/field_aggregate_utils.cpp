@@ -28,6 +28,7 @@
 #include "paimon/common/data/internal_array.h"
 #include "paimon/common/data/internal_map.h"
 #include "paimon/common/data/internal_row.h"
+#include "paimon/common/types/row_kind.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/fields_comparator.h"
 #include "paimon/memory/bytes.h"
@@ -52,6 +53,11 @@ Result<bool> EqualRows(const std::shared_ptr<InternalRow>& lhs,
     if (!lhs || !rhs || lhs->GetFieldCount() != rhs->GetFieldCount() ||
         lhs->GetFieldCount() != type->num_fields()) {
         return lhs == rhs;
+    }
+    PAIMON_ASSIGN_OR_RAISE(const RowKind* lhs_kind, lhs->GetRowKind());
+    PAIMON_ASSIGN_OR_RAISE(const RowKind* rhs_kind, rhs->GetRowKind());
+    if (lhs_kind != rhs_kind) {
+        return false;
     }
     for (int32_t i = 0; i < type->num_fields(); ++i) {
         PAIMON_ASSIGN_OR_RAISE(bool equal, EqualGetters(*lhs, i, *rhs, i, type->field(i)->type()));
