@@ -282,4 +282,11 @@ TEST(FieldCollectAggTest, RetractRemovesOneOccurrencePerElement) {
     ASSERT_EQ((std::vector<std::string>{"1=A;", "1=C;"}), SortedMaps(maps));
 }
 
+// Ported from Java FieldAggregatorRetractNullTest: retraction is supported and returns a value.
+TEST(FieldCollectAggTest, RetractOnEmptyArraysIsSupported) {
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldCollectAgg> agg, MakeCollectAgg(false));
+    ASSERT_OK_AND_ASSIGN(VariantType result, agg->Retract(IntArray({}), IntArray({})));
+    ASSERT_TRUE(Values(result).empty());
+}
+
 }  // namespace paimon::test

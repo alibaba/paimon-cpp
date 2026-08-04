@@ -83,4 +83,12 @@ TEST(FieldMergeMapAggTest, NullAndTypeValidation) {
     ASSERT_NOK(FieldMergeMapAgg::Create(arrow::int32(), "f"));
 }
 
+// Ported from Java FieldAggregatorRetractNullTest: retraction is supported and returns a value.
+TEST(FieldMergeMapAggTest, RetractOnEmptyMapIsSupported) {
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldMergeMapAgg> agg,
+                         FieldMergeMapAgg::Create(arrow::map(arrow::int32(), arrow::int32()), "f"));
+    ASSERT_OK_AND_ASSIGN(VariantType result, agg->Retract(IntMap({}, {}), IntMap({}, {})));
+    ASSERT_EQ(0, DataDefine::GetVariantValue<std::shared_ptr<InternalMap>>(result)->Size());
+}
+
 }  // namespace paimon::test

@@ -308,4 +308,176 @@ TEST(FieldNestedUpdateAggTest, NullKeyStrategyAppliesToRetractInput) {
     ASSERT_NOK(error_agg->Retract(acc, Rows({KeyedRow(0, VariantType(NullType()), "X", 0, 0)})));
 }
 
+// Ported from Java FieldAggregatorTest#testFieldNestedAppendAgg*: without a nested key rows are
+// appended rather than upserted, and retraction removes an equal row.
+TEST(FieldNestedUpdateAggTest, AppendsWithoutNestedKey) {
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> agg, MakeKeyedAgg({}));
+    VariantType acc = VariantType(NullType());
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(0, 1, "B", 0, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/B"}), SortedKeyed(acc));
+
+    // same key fields but a different value, so it is appended instead of replacing
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(0, 1, "b", 0, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/B", "0/1/b"}), SortedKeyed(acc));
+
+    ASSERT_OK_AND_ASSIGN(acc, agg->Retract(acc, Rows({KeyedRow(0, 1, "b", 0, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/B"}), SortedKeyed(acc));
+}
+
+TEST(FieldNestedUpdateAggTest, AppendsWithoutNestedKeyRespectCountLimit) {
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> agg,
+                         MakeKeyedAgg({{"fields.f.count-limit", "2"}}));
+    VariantType acc = VariantType(NullType());
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(0, 1, "B", 0, 0)})));
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(0, 1, "b", 0, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/B", "0/1/b"}), SortedKeyed(acc));
+
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(0, 1, "C", 0, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/B", "0/1/b"}), SortedKeyed(acc));
+
+    // the limit also applies within a single input array, and null elements are skipped
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> first_input_agg,
+                         MakeKeyedAgg({{"fields.f.count-limit", "2"}}));
+    ASSERT_OK_AND_ASSIGN(
+        VariantType first,
+        first_input_agg->Agg(VariantType(NullType()),
+                             Rows({KeyedRow(0, 1, "B", 0, 0), VariantType(NullType()),
+                                   KeyedRow(0, 1, "b", 0, 0), KeyedRow(0, 1, "C", 0, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/B", "0/1/b"}), SortedKeyed(first));
+}
+
+TEST(FieldNestedUpdateAggTest, CountLimitAppliesWithinFirstInputArray) {
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> with_seq,
+                         MakeKeyedAgg({{"fields.f.nested-key", "k0,k1"},
+                                       {"fields.f.nested-sequence-field", "seq"},
+                                       {"fields.f.count-limit", "2"}}));
+    ASSERT_OK_AND_ASSIGN(
+        VariantType seq_result,
+        with_seq->Agg(VariantType(NullType()),
+                      Rows({KeyedRow(0, 1, "B", 1, 0), KeyedRow(1, 2, "C", 3, 0),
+                            KeyedRow(2, 3, "D", 5, 0), KeyedRow(0, 1, "B_updated", 4, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/B_updated", "1/2/C"}), SortedKeyed(seq_result));
+
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<FieldNestedUpdateAgg> without_seq,
+        MakeKeyedAgg({{"fields.f.nested-key", "k0,k1"}, {"fields.f.count-limit", "2"}}));
+    ASSERT_OK_AND_ASSIGN(
+        VariantType no_seq_result,
+        without_seq->Agg(VariantType(NullType()),
+                         Rows({KeyedRow(0, 1, "B", 0, 0), KeyedRow(1, 2, "C", 0, 0),
+                               KeyedRow(2, 3, "D", 0, 0), KeyedRow(0, 1, "B_updated", 0, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/B_updated", "1/2/C"}), SortedKeyed(no_seq_result));
+}
+
+TEST(FieldNestedUpdateAggTest, CountLimitStillUpdatesExistingKeyWithoutSequence) {
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<FieldNestedUpdateAgg> agg,
+        MakeKeyedAgg({{"fields.f.nested-key", "k0,k1"}, {"fields.f.count-limit", "2"}}));
+    VariantType acc = VariantType(NullType());
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(0, 1, "B", 0, 0)})));
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(1, 2, "C", 0, 0)})));
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(0, 1, "B_updated", 0, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/B_updated", "1/2/C"}), SortedKeyed(acc));
+
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(2, 3, "D", 0, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/B_updated", "1/2/C"}), SortedKeyed(acc));
+}
+
+// MERGE keeps rows whose nested key is partially or fully null, treating null as a key value.
+TEST(FieldNestedUpdateAggTest, MergeStrategyKeepsNullNestedKeys) {
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> agg,
+                         MakeKeyedAgg({{"fields.f.nested-key", "k0,k1"}}));
+    VariantType null_k1 = VariantType(NullType());
+
+    ASSERT_OK_AND_ASSIGN(VariantType partial, agg->Agg(VariantType(NullType()),
+                                                       Rows({KeyedRow(0, null_k1, "C", 3, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/null/C"}), SortedKeyed(partial));
+
+    ASSERT_OK_AND_ASSIGN(VariantType full, agg->Agg(VariantType(NullType()),
+                                                    Rows({KeyedRow(null_k1, null_k1, "D", 4, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"null/null/D"}), SortedKeyed(full));
+
+    VariantType acc = VariantType(NullType());
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(0, 0, "A", 1, 0)})));
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(0, 1, "B", 2, 0)})));
+    ASSERT_OK_AND_ASSIGN(acc, agg->Agg(acc, Rows({KeyedRow(0, null_k1, "C", 3, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/0/A", "0/1/B", "0/null/C"}), SortedKeyed(acc));
+}
+
+// Null-keyed rows consume the count limit under MERGE but are skipped entirely under IGNORE.
+TEST(FieldNestedUpdateAggTest, CountLimitInteractsWithNullKeyStrategies) {
+    VariantType null_key = VariantType(NullType());
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> merge_agg,
+                         MakeKeyedAgg({{"fields.f.nested-key", "k0,k1"},
+                                       {"fields.f.nested-sequence-field", "seq"},
+                                       {"fields.f.count-limit", "3"}}));
+    VariantType merged = VariantType(NullType());
+    ASSERT_OK_AND_ASSIGN(merged, merge_agg->Agg(merged, Rows({KeyedRow(0, 1, "B", 1, 0)})));
+    ASSERT_OK_AND_ASSIGN(merged,
+                         merge_agg->Agg(merged, Rows({KeyedRow(null_key, 2, "NULL_2", 2, 0)})));
+    ASSERT_OK_AND_ASSIGN(
+        merged, merge_agg->Agg(merged, Rows({KeyedRow(null_key, null_key, "NULL_NULL", 3, 0)})));
+    ASSERT_OK_AND_ASSIGN(merged, merge_agg->Agg(merged, Rows({KeyedRow(1, 2, "C", 5, 0)})));
+    ASSERT_OK_AND_ASSIGN(merged, merge_agg->Agg(merged, Rows({KeyedRow(0, 1, "B_updated", 4, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/B_updated", "null/2/NULL_2", "null/null/NULL_NULL"}),
+              SortedKeyed(merged));
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> ignore_agg,
+                         MakeKeyedAgg({{"fields.f.nested-key", "k0,k1"},
+                                       {"fields.f.nested-key-null-strategy", "ignore"},
+                                       {"fields.f.nested-sequence-field", "seq"},
+                                       {"fields.f.count-limit", "3"}}));
+    VariantType ignored = VariantType(NullType());
+    ASSERT_OK_AND_ASSIGN(ignored, ignore_agg->Agg(ignored, Rows({KeyedRow(0, 1, "B", 1, 0)})));
+    ASSERT_OK_AND_ASSIGN(ignored,
+                         ignore_agg->Agg(ignored, Rows({KeyedRow(null_key, 2, "NULL_2", 2, 0)})));
+    ASSERT_OK_AND_ASSIGN(
+        ignored, ignore_agg->Agg(ignored, Rows({KeyedRow(null_key, null_key, "NN", 3, 0)})));
+    ASSERT_OK_AND_ASSIGN(ignored, ignore_agg->Agg(ignored, Rows({KeyedRow(1, 2, "C", 3, 0)})));
+    ASSERT_OK_AND_ASSIGN(ignored,
+                         ignore_agg->Agg(ignored, Rows({KeyedRow(0, 1, "B_updated", 4, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/B_updated", "1/2/C"}), SortedKeyed(ignored));
+
+    // room is left for a third real key
+    ASSERT_OK_AND_ASSIGN(ignored, ignore_agg->Agg(ignored, Rows({KeyedRow(2, 3, "D", 5, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/1/B_updated", "1/2/C", "2/3/D"}), SortedKeyed(ignored));
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> error_agg,
+                         MakeKeyedAgg({{"fields.f.nested-key", "k0,k1"},
+                                       {"fields.f.nested-key-null-strategy", "error"},
+                                       {"fields.f.count-limit", "3"}}));
+    ASSERT_NOK(
+        error_agg->Agg(VariantType(NullType()), Rows({KeyedRow(null_key, 2, "NULL_2", 2, 0)})));
+}
+
+TEST(FieldNestedUpdateAggTest, NullKeyStrategyAppliesToRetractAccumulator) {
+    VariantType null_key = VariantType(NullType());
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> merge_agg,
+                         MakeKeyedAgg({{"fields.f.nested-key", "k0,k1"}}));
+    VariantType acc = VariantType(NullType());
+    ASSERT_OK_AND_ASSIGN(acc, merge_agg->Agg(acc, Rows({KeyedRow(0, 0, "A", 0, 0)})));
+    ASSERT_OK_AND_ASSIGN(acc, merge_agg->Agg(acc, Rows({KeyedRow(null_key, 1, "N", 0, 0)})));
+
+    // IGNORE drops the null-keyed accumulator row while retracting an unrelated key
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> ignore_agg,
+                         MakeKeyedAgg({{"fields.f.nested-key", "k0,k1"},
+                                       {"fields.f.nested-key-null-strategy", "ignore"}}));
+    ASSERT_OK_AND_ASSIGN(VariantType result,
+                         ignore_agg->Retract(acc, Rows({KeyedRow(9, 9, "X", 0, 0)})));
+    ASSERT_EQ((std::vector<std::string>{"0/0/A"}), SortedKeyed(result));
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> error_agg,
+                         MakeKeyedAgg({{"fields.f.nested-key", "k0,k1"},
+                                       {"fields.f.nested-key-null-strategy", "error"}}));
+    ASSERT_NOK(error_agg->Retract(acc, Rows({KeyedRow(9, 9, "X", 0, 0)})));
+}
+
+// Ported from Java FieldAggregatorRetractNullTest: retraction is supported and returns a value.
+TEST(FieldNestedUpdateAggTest, RetractOnEmptyArraysIsSupported) {
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldNestedUpdateAgg> agg, MakeKeyedAgg({}));
+    ASSERT_OK_AND_ASSIGN(VariantType result, agg->Retract(Rows({}), Rows({})));
+    ASSERT_EQ(0, GetRows(result)->Size());
+}
+
 }  // namespace paimon::test
