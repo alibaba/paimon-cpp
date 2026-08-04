@@ -346,6 +346,7 @@ RowRanges ParquetFileBatchReader::BitmapToContiguousRanges(const RoaringBitmap32
     auto run_start = static_cast<int64_t>(*it);
     auto prev = run_start;
 
+    // aaa
     for (++it; it != end; ++it) {
         auto current = static_cast<int64_t>(*it);
         if (current >= static_cast<int64_t>(end_row)) {
