@@ -49,6 +49,7 @@ jobs:
             cxx: g++-14
           - name: clang-debug
             fetch_depth: '0' # fetch the PR target branch history for clang-tidy
+            enable_core_dumps: true # print a backtrace when a test crashes
             build_args: >-
               --check_clang_tidy
               --lint_git_target_commit "origin/${{ github.base_ref || github.event.repository.default_branch }}"
@@ -75,6 +76,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev libssl-dev
+      - name: Enable core dumps
+        if: ${{ matrix.enable_core_dumps }}
+        shell: bash
+        run: |
+          sudo apt-get install -y gdb
+          # build_support/run-test.sh runs each test inside its own working
+          # directory and looks for `core.<executable>*` there afterwards, so the
+          # core file must be written relative to the crashing process.
+          sudo sysctl -w kernel.core_pattern=core.%e.%p
+          cat /proc/sys/kernel/core_pattern
+          echo "PAIMON_ENABLE_CORE_DUMPS=1" >> "$GITHUB_ENV"
       - name: Build Paimon
         shell: bash
         env:

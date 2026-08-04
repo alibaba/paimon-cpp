@@ -144,8 +144,16 @@ if [[ "${enable_tsan}" == "true" ]]; then
 fi
 
 cmake "${CMAKE_ARGS[@]}" "${source_dir}"
-cmake --build . -- -j "$(nproc)"
-ctest --output-on-failure -j "$(nproc)"
+cmake --build . -- -j "${build_jobs}"
+
+# Let the OS write a core file so build_support/run-test.sh can print a backtrace
+# for a crashing test. The limit only applies to descendants of this shell, so it
+# has to be raised here rather than in a separate CI step.
+if [[ -n "${PAIMON_ENABLE_CORE_DUMPS:-}" ]]; then
+    ulimit -c unlimited || echo "warning: failed to raise the core dump size limit"
+fi
+
+ctest --output-on-failure -j "${build_jobs}"
 
 if [[ "${check_clang_tidy}" == "true" ]]; then
     cmake --build . --target check-clang-tidy
