@@ -297,25 +297,30 @@ class PkCompactionInteTest : public ::testing::Test,
     }
 
     // Read every row of the table, for fields whose expected value cannot be spelled out as JSON.
-    Result<std::shared_ptr<arrow::ChunkedArray>> ScanAll(const std::string& table_path) {
+    // `consume` runs while the reader is still alive, because the arrow arrays are allocated from
+    // a pool the reader owns and must not outlive it.
+    template <typename Fn>
+    void ScanAllRows(const std::string& table_path, Fn consume) {
         std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"}};
         ScanContextBuilder scan_context_builder(table_path);
         scan_context_builder.WithStreamingMode(false).SetOptions(options).AddOption(
             Options::SCAN_MODE, StartupMode::LatestFull().ToString());
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ScanContext> scan_context,
-                               scan_context_builder.Finish());
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableScan> table_scan,
-                               TableScan::Create(std::move(scan_context)));
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Plan> result_plan, table_scan->CreatePlan());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> scan_context,
+                             scan_context_builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> table_scan,
+                             TableScan::Create(std::move(scan_context)));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> result_plan, table_scan->CreatePlan());
         ReadContextBuilder read_context_builder(table_path);
         read_context_builder.SetOptions(options);
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
-                               read_context_builder.Finish());
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> table_read,
-                               TableRead::Create(std::move(read_context)));
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> batch_reader,
-                               table_read->CreateReader(result_plan->Splits()));
-        return ReadResultCollector::CollectResult(batch_reader.get());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ReadContext> read_context,
+                             read_context_builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableRead> table_read,
+                             TableRead::Create(std::move(read_context)));
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<BatchReader> batch_reader,
+                             table_read->CreateReader(result_plan->Splits()));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> result,
+                             ReadResultCollector::CollectResult(batch_reader.get()));
+        consume(result);
     }
 
     // Helper: check whether compact commit messages contain new DV index files.
@@ -3500,26 +3505,27 @@ TEST_F(PkCompactionInteTest, AggHllAndThetaSketches) {
         [[maybe_unused]] auto full_compact_msgs,
         CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
 
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> result, ScanAll(table_path));
     std::map<std::string, std::pair<double, double>> estimates;
-    for (const std::shared_ptr<arrow::Array>& chunk : result->chunks()) {
-        auto rows = std::static_pointer_cast<arrow::StructArray>(chunk);
-        auto keys = std::static_pointer_cast<arrow::StringArray>(rows->field(1));
-        auto hll_column = std::static_pointer_cast<arrow::BinaryArray>(rows->field(2));
-        auto theta_column = std::static_pointer_cast<arrow::BinaryArray>(rows->field(3));
-        for (int64_t i = 0; i < rows->length(); ++i) {
-            ASSERT_FALSE(hll_column->IsNull(i));
-            ASSERT_FALSE(theta_column->IsNull(i));
-            std::string_view hll_bytes = hll_column->GetView(i);
-            std::string_view theta_bytes = theta_column->GetView(i);
-            estimates[keys->GetString(i)] = {
-                datasketches::hll_sketch::deserialize(hll_bytes.data(), hll_bytes.size())
-                    .get_estimate(),
-                datasketches::compact_theta_sketch::deserialize(theta_bytes.data(),
-                                                                theta_bytes.size())
-                    .get_estimate()};
+    ScanAllRows(table_path, [&estimates](const std::shared_ptr<arrow::ChunkedArray>& result) {
+        for (const std::shared_ptr<arrow::Array>& chunk : result->chunks()) {
+            auto rows = std::static_pointer_cast<arrow::StructArray>(chunk);
+            auto keys = std::static_pointer_cast<arrow::StringArray>(rows->field(1));
+            auto hll_column = std::static_pointer_cast<arrow::BinaryArray>(rows->field(2));
+            auto theta_column = std::static_pointer_cast<arrow::BinaryArray>(rows->field(3));
+            for (int64_t i = 0; i < rows->length(); ++i) {
+                ASSERT_FALSE(hll_column->IsNull(i));
+                ASSERT_FALSE(theta_column->IsNull(i));
+                std::string_view hll_bytes = hll_column->GetView(i);
+                std::string_view theta_bytes = theta_column->GetView(i);
+                estimates[keys->GetString(i)] = {
+                    datasketches::hll_sketch::deserialize(hll_bytes.data(), hll_bytes.size())
+                        .get_estimate(),
+                    datasketches::compact_theta_sketch::deserialize(theta_bytes.data(),
+                                                                    theta_bytes.size())
+                        .get_estimate()};
+            }
         }
-    }
+    });
 
     ASSERT_EQ(2, estimates.size());
     ASSERT_NEAR(5.0, estimates["Alice"].first, 0.1);
