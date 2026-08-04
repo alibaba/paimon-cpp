@@ -99,6 +99,16 @@ fi
 
 build_dir="${source_dir}/build"
 
+if [[ -n "${PAIMON_BUILD_JOBS:-}" ]]; then
+    build_jobs="${PAIMON_BUILD_JOBS}"
+elif command -v nproc >/dev/null 2>&1; then
+    build_jobs=$(nproc)
+elif command -v sysctl >/dev/null 2>&1; then
+    build_jobs=$(sysctl -n hw.ncpu)
+else
+    build_jobs=4
+fi
+
 # Display ccache status if available
 if command -v ccache &> /dev/null; then
     echo "=== ccache found: $(ccache --version | head -1) ==="
