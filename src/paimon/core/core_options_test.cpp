@@ -17,6 +17,9 @@
 #include "paimon/core/core_options.h"
 
 #include <limits>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "paimon/bucket/bucket_function_type.h"
@@ -503,6 +506,39 @@ TEST(CoreOptionsTest, TestInvalidCase) {
                          CoreOptions::FromMap({{"fields.f0.count-limit", "-1"}}));
     ASSERT_NOK_WITH_MSG(negative_limit.FieldNestedUpdateAggCountLimit("f0"),
                         "must not be negative");
+}
+
+TEST(CoreOptionsTest, TestNestedKeyNullStrategyIsCaseInsensitive) {
+    const std::vector<std::pair<std::string, CoreOptions::NestedKeyNullStrategy>> cases = {
+        {"MERGE", CoreOptions::NestedKeyNullStrategy::MERGE},
+        {"Merge", CoreOptions::NestedKeyNullStrategy::MERGE},
+        {"IGNORE", CoreOptions::NestedKeyNullStrategy::IGNORE},
+        {"Ignore", CoreOptions::NestedKeyNullStrategy::IGNORE},
+        {"ERROR", CoreOptions::NestedKeyNullStrategy::ERROR},
+        {"eRrOr", CoreOptions::NestedKeyNullStrategy::ERROR},
+    };
+    for (const auto& [value, expected] : cases) {
+        ASSERT_OK_AND_ASSIGN(CoreOptions core_options,
+                             CoreOptions::FromMap({{"fields.f0.nested-key-null-strategy", value}}));
+        ASSERT_EQ(expected, core_options.FieldNestedUpdateAggNestedKeyNullStrategy("f0").value())
+            << "value: " << value;
+    }
+
+    // The rejection message keeps the value exactly as the user wrote it.
+    ASSERT_OK_AND_ASSIGN(CoreOptions invalid,
+                         CoreOptions::FromMap({{"fields.f0.nested-key-null-strategy", "InVaLid"}}));
+    ASSERT_NOK_WITH_MSG(invalid.FieldNestedUpdateAggNestedKeyNullStrategy("f0"),
+                        "nested-key-null-strategy: InVaLid");
+
+    // An absent option keeps the default, but an explicitly empty one is a config error: the
+    // std::string overload of StringToValue passes "" through, so it reaches the strategy match.
+    ASSERT_OK_AND_ASSIGN(CoreOptions absent, CoreOptions::FromMap({}));
+    ASSERT_EQ(CoreOptions::NestedKeyNullStrategy::MERGE,
+              absent.FieldNestedUpdateAggNestedKeyNullStrategy("f0").value());
+    ASSERT_OK_AND_ASSIGN(CoreOptions empty,
+                         CoreOptions::FromMap({{"fields.f0.nested-key-null-strategy", ""}}));
+    ASSERT_NOK_WITH_MSG(empty.FieldNestedUpdateAggNestedKeyNullStrategy("f0"),
+                        "supported values are merge, ignore and error");
 }
 
 TEST(CoreOptionsTest, TestLookupCompactMaxIntervalComputedValue) {

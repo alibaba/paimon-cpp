@@ -1396,13 +1396,14 @@ Result<CoreOptions::NestedKeyNullStrategy> CoreOptions::FieldNestedUpdateAggNest
     std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
                       std::string(Options::NESTED_KEY_NULL_STRATEGY);
     PAIMON_RETURN_NOT_OK(parser.Parse(key, &strategy));
-    if (strategy == "merge") {
+    std::string lower = StringUtils::ToLowerCase(strategy);
+    if (lower == "merge") {
         return NestedKeyNullStrategy::MERGE;
     }
-    if (strategy == "ignore") {
+    if (lower == "ignore") {
         return NestedKeyNullStrategy::IGNORE;
     }
-    if (strategy == "error") {
+    if (lower == "error") {
         return NestedKeyNullStrategy::ERROR;
     }
     return Status::Invalid(fmt::format(
