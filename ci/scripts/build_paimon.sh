@@ -163,7 +163,20 @@ if [[ -n "${PAIMON_ENABLE_CORE_DUMPS:-}" ]]; then
     ulimit -c unlimited || echo "warning: failed to raise the core dump size limit"
 fi
 
-ctest --output-on-failure -j "${build_jobs}"
+# TEMPORARY (flake hunt): when PAIMON_FLAKE_HUNT_TEST is set, rerun only the
+# ctest tests it matches until one fails, instead of running the whole suite
+# once. Each iteration is a fresh process going through build_support/run-test.sh,
+# so a crash still gets its backtrace printed. Widen the regex to also reproduce
+# the concurrency of a normal CI run. Remove together with the env vars set in
+# .github/workflows/build_and_test.yaml.
+if [[ -n "${PAIMON_FLAKE_HUNT_TEST:-}" ]]; then
+    # --no-tests=error: a regex that matches nothing must fail instead of
+    # reporting success without having run anything.
+    ctest --output-on-failure -j "${build_jobs}" -R "${PAIMON_FLAKE_HUNT_TEST}" \
+        --repeat "until-fail:${PAIMON_FLAKE_HUNT_RUNS:-100}" --no-tests=error
+else
+    ctest --output-on-failure -j "${build_jobs}"
+fi
 
 if [[ "${check_clang_tidy}" == "true" ]]; then
     cmake --build . --target check-clang-tidy

@@ -33,31 +33,35 @@ jobs:
   build-and-test:
     name: ${{ matrix.name }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    # TEMPORARY (flake hunt): repeating one test 100 times needs more head room.
+    timeout-minutes: 300
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: gcc-release
-            cc: gcc-14
-            cxx: g++-14
-            build_args: --build_type Release
-          - name: clang-release
-            build_args: --build_type Release
-          - name: gcc-debug
-            cc: gcc-14
-            cxx: g++-14
+          # TEMPORARY (flake hunt): only clang-debug runs, and it reruns
+          # paimon-parquet-format-test until it fails. Restore the commented-out
+          # entries and the original clang-debug build_args when done.
+          # - name: gcc-release
+          #   cc: gcc-14
+          #   cxx: g++-14
+          #   build_args: --build_type Release
+          # - name: clang-release
+          #   build_args: --build_type Release
+          # - name: gcc-debug
+          #   cc: gcc-14
+          #   cxx: g++-14
           - name: clang-debug
-            fetch_depth: '0' # fetch the PR target branch history for clang-tidy
             enable_core_dumps: true # print a backtrace when a test crashes
-            build_args: >-
-              --check_clang_tidy
-              --lint_git_target_commit "origin/${{ github.base_ref || github.event.repository.default_branch }}"
-          - name: asan-ubsan
-            build_args: --enable_asan --enable_ubsan
-          - name: tsan
-            skip_rust: true
-            build_args: --enable_tsan
+            # fetch_depth: '0' # fetch the PR target branch history for clang-tidy
+            # build_args: >-
+            #   --check_clang_tidy
+            #   --lint_git_target_commit "origin/${{ github.base_ref || github.event.repository.default_branch }}"
+          # - name: asan-ubsan
+          #   build_args: --enable_asan --enable_ubsan
+          # - name: tsan
+          #   skip_rust: true
+          #   build_args: --enable_tsan
     steps:
       - name: Checkout paimon-cpp
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -92,6 +96,10 @@ jobs:
         env:
           CC: ${{ matrix.cc || 'clang' }}
           CXX: ${{ matrix.cxx || 'clang++' }}
+          # TEMPORARY (flake hunt): rerun the tests matching this ctest regex
+          # until one fails, instead of running the whole suite once.
+          PAIMON_FLAKE_HUNT_TEST: ^paimon-parquet-format-test$
+          PAIMON_FLAKE_HUNT_RUNS: '100'
         run: >-
           ci/scripts/build_paimon.sh
           --source_dir "$(pwd)"
