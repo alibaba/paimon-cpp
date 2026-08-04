@@ -81,6 +81,7 @@ Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
     std::shared_ptr<::parquet::FileMetaData> file_metadata,
     std::shared_ptr<std::atomic<uint64_t>> storage_read_bytes,
     const std::shared_ptr<arrow::MemoryPool>& pool) {
+    // s
     try {
         assert(input_stream);
         PAIMON_ASSIGN_OR_RAISE(::parquet::ReaderProperties reader_properties,
