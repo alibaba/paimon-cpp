@@ -102,6 +102,7 @@ if(PAIMON_BUILD_TESTS)
                     paimon_shared
                     ${TEST_STATIC_LINK_LIBS}
                     test_utils_static
+                    DataSketches
                     ${GTEST_LINK_TOOLCHAIN})
 
     add_paimon_test(nested_column_pruning_inte_test

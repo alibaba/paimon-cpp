@@ -16,10 +16,13 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "DataSketches/hll.hpp"
+#include "DataSketches/theta_sketch.hpp"
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/json_simple.h"
 #include "arrow/type.h"
@@ -291,6 +294,28 @@ class PkCompactionInteTest : public ::testing::Test,
             }
             ASSERT_TRUE(success);
         }
+    }
+
+    // Read every row of the table, for fields whose expected value cannot be spelled out as JSON.
+    Result<std::shared_ptr<arrow::ChunkedArray>> ScanAll(const std::string& table_path) {
+        std::map<std::string, std::string> options = {{Options::FILE_SYSTEM, "local"}};
+        ScanContextBuilder scan_context_builder(table_path);
+        scan_context_builder.WithStreamingMode(false).SetOptions(options).AddOption(
+            Options::SCAN_MODE, StartupMode::LatestFull().ToString());
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ScanContext> scan_context,
+                               scan_context_builder.Finish());
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableScan> table_scan,
+                               TableScan::Create(std::move(scan_context)));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Plan> result_plan, table_scan->CreatePlan());
+        ReadContextBuilder read_context_builder(table_path);
+        read_context_builder.SetOptions(options);
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
+                               read_context_builder.Finish());
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> table_read,
+                               TableRead::Create(std::move(read_context)));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> batch_reader,
+                               table_read->CreateReader(result_plan->Splits()));
+        return ReadResultCollector::CollectResult(batch_reader.get());
     }
 
     // Helper: check whether compact commit messages contain new DV index files.
@@ -3314,6 +3339,193 @@ TEST_F(PkCompactionInteTest, PkDvAndAggWithIOException) {
         break;
     }
     ASSERT_TRUE(run_complete);
+}
+
+// End-to-end coverage for the collect / merge_map / nested_update aggregators: values are merged
+// both on read (across level-0 files) and during compaction, then verified from the written files.
+TEST_F(PkCompactionInteTest, AggCollectMergeMapAndNestedUpdate) {
+    auto map_type =
+        std::make_shared<arrow::MapType>(arrow::field("key", arrow::int32(), /*nullable=*/false),
+                                         arrow::field("value", arrow::int32()));
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()),  // PK
+        arrow::field("f1", arrow::list(arrow::int32())), arrow::field("f2", map_type),
+        arrow::field("f3", arrow::list(arrow::struct_({arrow::field("id", arrow::int32()),
+                                                       arrow::field("name", arrow::utf8())})))};
+    std::map<std::string, std::string> options = {{Options::FILE_FORMAT, "parquet"},
+                                                  {Options::BUCKET, "1"},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::MERGE_ENGINE, "aggregation"},
+                                                  {Options::DELETION_VECTORS_ENABLED, "true"},
+                                                  {"fields.f1.aggregate-function", "collect"},
+                                                  {"fields.f1.distinct", "true"},
+                                                  {"fields.f2.aggregate-function", "merge_map"},
+                                                  {"fields.f3.aggregate-function", "nested_update"},
+                                                  {"fields.f3.nested-key", "id"}};
+    CreateTable(fields, /*partition_keys=*/{}, /*primary_keys=*/{"f0"}, options);
+    std::string table_path = TablePath();
+    auto data_type = arrow::struct_(fields);
+    int64_t commit_id = 0;
+
+    // Step 1: initial batch, then full compact so it lands in the max level.
+    {
+        auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
+            ["Alice", [1,2], [[1,10]], [[1,"a"]]],
+            ["Bob",   [5],   [[5,50]], [[5,"e"]]]
+        ])")
+                         .ValueOrDie();
+        ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
+    }
+    ASSERT_OK_AND_ASSIGN(
+        [[maybe_unused]] auto upgrade_msgs,
+        CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
+
+    // Step 2: two more level-0 files overlapping the max-level rows.
+    {
+        auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
+            ["Alice", [2,3], [[1,11],[2,20]], [[1,"A"],[2,"b"]]]
+        ])")
+                         .ValueOrDie();
+        ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
+    }
+    {
+        auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
+            ["Alice", [3,4], [[3,30]], [[2,"B"]]],
+            ["Bob",   [6],   [[6,60]], [[6,"f"]]]
+        ])")
+                         .ValueOrDie();
+        ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
+    }
+
+    // Step 3: non-full compact merges the level-0 files against the max-level file.
+    ASSERT_OK_AND_ASSIGN(
+        [[maybe_unused]] auto dv_compact_msgs,
+        CompactAndCommit(table_path, {}, 0, /*full_compaction=*/false, commit_id++));
+
+    // collect keeps insertion order and drops the duplicated 2 and 3,
+    // merge_map overwrites key 1 in place, nested_update replaces key 1 and then key 2.
+    const std::string expected = R"([
+        [0, "Alice", [1,2,3,4], [[1,11],[2,20],[3,30]], [[1,"A"],[2,"B"]]],
+        [0, "Bob",   [5,6],     [[5,50],[6,60]],        [[5,"e"],[6,"f"]]]
+    ])";
+    {
+        std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+        expected_data[std::make_pair("", 0)] = expected;
+        ScanAndVerify(table_path, fields, expected_data);
+    }
+
+    // Step 4: the same values must survive a full compaction and come back from the files.
+    ASSERT_OK_AND_ASSIGN(
+        [[maybe_unused]] auto full_compact_msgs,
+        CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
+    {
+        std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+        expected_data[std::make_pair("", 0)] = expected;
+        ScanAndVerify(table_path, fields, expected_data);
+    }
+}
+
+// End-to-end coverage for the sketch aggregators. The last batch writes null sketches, which is the
+// path where the aggregator must hand back an owning copy of the accumulator rather than a view
+// into the row buffer that is about to be overwritten.
+TEST_F(PkCompactionInteTest, AggHllAndThetaSketches) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::utf8()),  // PK
+                                 arrow::field("f1", arrow::binary()),
+                                 arrow::field("f2", arrow::binary())};
+    std::map<std::string, std::string> options = {{Options::FILE_FORMAT, "parquet"},
+                                                  {Options::BUCKET, "1"},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::MERGE_ENGINE, "aggregation"},
+                                                  {Options::DELETION_VECTORS_ENABLED, "true"},
+                                                  {"fields.f1.aggregate-function", "hll_sketch"},
+                                                  {"fields.f2.aggregate-function", "theta_sketch"}};
+    CreateTable(fields, /*partition_keys=*/{}, /*primary_keys=*/{"f0"}, options);
+    std::string table_path = TablePath();
+    int64_t commit_id = 0;
+
+    auto hll = [](std::initializer_list<int32_t> values) {
+        datasketches::hll_sketch sketch(12, datasketches::HLL_4);
+        for (int32_t value : values) {
+            sketch.update(value);
+        }
+        return sketch.serialize_compact();
+    };
+    auto theta = [](std::initializer_list<int32_t> values) {
+        datasketches::update_theta_sketch sketch =
+            datasketches::update_theta_sketch::builder().build();
+        for (int32_t value : values) {
+            sketch.update(value);
+        }
+        return sketch.compact(/*ordered=*/true).serialize();
+    };
+    // Sketches are opaque binaries, so build the arrays directly instead of via JSON.
+    auto make_batch = [&fields](const std::vector<std::string>& keys,
+                                const std::vector<std::optional<std::vector<uint8_t>>>& hlls,
+                                const std::vector<std::optional<std::vector<uint8_t>>>& thetas) {
+        arrow::StringBuilder key_builder;
+        EXPECT_TRUE(key_builder.AppendValues(keys).ok());
+        arrow::ArrayVector children(3);
+        children[0] = key_builder.Finish().ValueOrDie();
+        const std::vector<std::optional<std::vector<uint8_t>>>* columns[] = {&hlls, &thetas};
+        for (int32_t column = 0; column < 2; ++column) {
+            arrow::BinaryBuilder builder;
+            for (const std::optional<std::vector<uint8_t>>& value : *columns[column]) {
+                if (value.has_value()) {
+                    EXPECT_TRUE(builder.Append(value->data(), value->size()).ok());
+                } else {
+                    EXPECT_TRUE(builder.AppendNull().ok());
+                }
+            }
+            children[column + 1] = builder.Finish().ValueOrDie();
+        }
+        return std::static_pointer_cast<arrow::Array>(
+            arrow::StructArray::Make(children, fields).ValueOrDie());
+    };
+
+    ASSERT_OK(WriteAndCommit(
+        table_path, {}, 0,
+        make_batch({"Alice", "Bob"}, {hll({1, 2, 3}), hll({7})}, {theta({1, 2, 3}), theta({7})}),
+        commit_id++));
+    ASSERT_OK_AND_ASSIGN(
+        [[maybe_unused]] auto upgrade_msgs,
+        CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
+
+    ASSERT_OK(WriteAndCommit(table_path, {}, 0,
+                             make_batch({"Alice"}, {hll({3, 4, 5})}, {theta({3, 4, 5})}),
+                             commit_id++));
+    // null on both sides of the union, so the accumulator has to be copied out of the row
+    ASSERT_OK(WriteAndCommit(table_path, {}, 0,
+                             make_batch({"Alice"}, {std::nullopt}, {std::nullopt}), commit_id++));
+    ASSERT_OK_AND_ASSIGN(
+        [[maybe_unused]] auto full_compact_msgs,
+        CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> result, ScanAll(table_path));
+    std::map<std::string, std::pair<double, double>> estimates;
+    for (const std::shared_ptr<arrow::Array>& chunk : result->chunks()) {
+        auto rows = std::static_pointer_cast<arrow::StructArray>(chunk);
+        auto keys = std::static_pointer_cast<arrow::StringArray>(rows->field(1));
+        auto hll_column = std::static_pointer_cast<arrow::BinaryArray>(rows->field(2));
+        auto theta_column = std::static_pointer_cast<arrow::BinaryArray>(rows->field(3));
+        for (int64_t i = 0; i < rows->length(); ++i) {
+            ASSERT_FALSE(hll_column->IsNull(i));
+            ASSERT_FALSE(theta_column->IsNull(i));
+            std::string_view hll_bytes = hll_column->GetView(i);
+            std::string_view theta_bytes = theta_column->GetView(i);
+            estimates[keys->GetString(i)] = {
+                datasketches::hll_sketch::deserialize(hll_bytes.data(), hll_bytes.size())
+                    .get_estimate(),
+                datasketches::compact_theta_sketch::deserialize(theta_bytes.data(),
+                                                                theta_bytes.size())
+                    .get_estimate()};
+        }
+    }
+
+    ASSERT_EQ(2, estimates.size());
+    ASSERT_NEAR(5.0, estimates["Alice"].first, 0.1);
+    ASSERT_DOUBLE_EQ(5.0, estimates["Alice"].second);
+    ASSERT_NEAR(1.0, estimates["Bob"].first, 0.1);
+    ASSERT_DOUBLE_EQ(1.0, estimates["Bob"].second);
 }
 
 std::vector<std::string> GetTestValuesForCompactionInteTest() {
