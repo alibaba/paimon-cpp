@@ -66,8 +66,14 @@ Result<VariantType> FieldHllSketchAgg::Agg(const VariantType& accumulator,
                                            const VariantType& input_field) {
     bool accumulator_null = DataDefine::IsVariantNull(accumulator);
     bool input_null = DataDefine::IsVariantNull(input_field);
+    if (accumulator_null && input_null) {
+        return VariantType(NullType());
+    }
     if (accumulator_null || input_null) {
-        return accumulator_null ? input_field : FieldAggregateUtils::OwnedBinary(accumulator);
+        // AggReversed swaps the arguments, so either side may be the accumulator the merged row
+        // owns. Copy whichever survives; returning its view would dangle once the row overwrites
+        // the field.
+        return FieldAggregateUtils::OwnedBinary(accumulator_null ? input_field : accumulator);
     }
     std::string_view accumulator_bytes = DataDefine::GetStringView(accumulator);
     std::string_view input_bytes = DataDefine::GetStringView(input_field);
@@ -99,8 +105,14 @@ Result<VariantType> FieldThetaSketchAgg::Agg(const VariantType& accumulator,
                                              const VariantType& input_field) {
     bool accumulator_null = DataDefine::IsVariantNull(accumulator);
     bool input_null = DataDefine::IsVariantNull(input_field);
+    if (accumulator_null && input_null) {
+        return VariantType(NullType());
+    }
     if (accumulator_null || input_null) {
-        return accumulator_null ? input_field : FieldAggregateUtils::OwnedBinary(accumulator);
+        // AggReversed swaps the arguments, so either side may be the accumulator the merged row
+        // owns. Copy whichever survives; returning its view would dangle once the row overwrites
+        // the field.
+        return FieldAggregateUtils::OwnedBinary(accumulator_null ? input_field : accumulator);
     }
     std::string_view accumulator_bytes = DataDefine::GetStringView(accumulator);
     std::string_view input_bytes = DataDefine::GetStringView(input_field);
