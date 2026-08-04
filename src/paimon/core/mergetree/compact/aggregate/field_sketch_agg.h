@@ -32,16 +32,19 @@ class FieldHllSketchAgg : public FieldAggregator {
     ///
     /// @param field_type Type of the aggregated field.
     /// @param field_name Name of the aggregated field.
+    /// @param pool Pool the unioned sketch bytes are allocated from.
     /// @return An hll_sketch aggregator, or an error Status.
     static Result<std::unique_ptr<FieldHllSketchAgg>> Create(
-        const std::shared_ptr<arrow::DataType>& field_type, const std::string& field_name);
+        const std::shared_ptr<arrow::DataType>& field_type, const std::string& field_name,
+        const std::shared_ptr<MemoryPool>& pool);
 
     Result<VariantType> Agg(const VariantType& accumulator,
                             const VariantType& input_field) override;
 
  private:
-    explicit FieldHllSketchAgg(const std::shared_ptr<arrow::DataType>& field_type)
-        : FieldAggregator(NAME, field_type) {}
+    FieldHllSketchAgg(const std::shared_ptr<arrow::DataType>& field_type,
+                      const std::shared_ptr<MemoryPool>& pool)
+        : FieldAggregator(NAME, field_type, pool) {}
 };
 
 /// Unions serialized Theta sketch fields.
@@ -53,16 +56,19 @@ class FieldThetaSketchAgg : public FieldAggregator {
     ///
     /// @param field_type Type of the aggregated field.
     /// @param field_name Name of the aggregated field.
+    /// @param pool Pool the unioned sketch bytes are allocated from.
     /// @return A theta_sketch aggregator, or an error Status.
     static Result<std::unique_ptr<FieldThetaSketchAgg>> Create(
-        const std::shared_ptr<arrow::DataType>& field_type, const std::string& field_name);
+        const std::shared_ptr<arrow::DataType>& field_type, const std::string& field_name,
+        const std::shared_ptr<MemoryPool>& pool);
 
     Result<VariantType> Agg(const VariantType& accumulator,
                             const VariantType& input_field) override;
 
  private:
-    explicit FieldThetaSketchAgg(const std::shared_ptr<arrow::DataType>& field_type)
-        : FieldAggregator(NAME, field_type) {}
+    FieldThetaSketchAgg(const std::shared_ptr<arrow::DataType>& field_type,
+                        const std::shared_ptr<MemoryPool>& pool)
+        : FieldAggregator(NAME, field_type, pool) {}
 };
 
 }  // namespace paimon

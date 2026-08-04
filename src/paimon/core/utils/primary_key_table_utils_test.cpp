@@ -73,9 +73,9 @@ TEST(PrimaryKeyTableUtilsTest, TestCreateFirstRowMergeFunctionWithIgnoreDelete) 
         ASSERT_OK_AND_ASSIGN(CoreOptions core_options,
                              CoreOptions::FromMap({{Options::MERGE_ENGINE, "first-row"},
                                                    {ignore_delete_key, "true"}}));
-        ASSERT_OK_AND_ASSIGN(
-            std::unique_ptr<MergeFunction> merge_function,
-            PrimaryKeyTableUtils::CreateMergeFunction(value_schema, {"k0"}, core_options));
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<MergeFunction> merge_function,
+                             PrimaryKeyTableUtils::CreateMergeFunction(
+                                 value_schema, {"k0"}, core_options, GetDefaultPool()));
         merge_function->Reset();
 
         KeyValue insert_kv(RowKind::Insert(), /*sequence_number=*/0, /*level=*/0, /*key=*/
@@ -99,9 +99,9 @@ TEST(PrimaryKeyTableUtilsTest, TestCreateFirstRowMergeFunctionWithIgnoreDelete) 
     // Without the option, the first-row merge engine still rejects retract records.
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options,
                          CoreOptions::FromMap({{Options::MERGE_ENGINE, "first-row"}}));
-    ASSERT_OK_AND_ASSIGN(
-        std::unique_ptr<MergeFunction> merge_function,
-        PrimaryKeyTableUtils::CreateMergeFunction(value_schema, {"k0"}, core_options));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<MergeFunction> merge_function,
+                         PrimaryKeyTableUtils::CreateMergeFunction(value_schema, {"k0"},
+                                                                   core_options, GetDefaultPool()));
     merge_function->Reset();
     KeyValue delete_kv(RowKind::Delete(), /*sequence_number=*/0, /*level=*/0, /*key=*/
                        BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),

@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 #include <unordered_set>
+#include <utility>
 
 #include "paimon/common/data/data_define.h"
 #include "paimon/core/core_options.h"
@@ -37,7 +38,7 @@ class FieldListaggAgg : public FieldAggregator {
 
     static Result<std::unique_ptr<FieldListaggAgg>> Create(
         const std::shared_ptr<arrow::DataType>& field_type, const CoreOptions& options,
-        const std::string& field_name) {
+        const std::string& field_name, const std::shared_ptr<MemoryPool>& pool) {
         if (field_type->id() != arrow::Type::type::STRING) {
             return Status::Invalid(
                 fmt::format("invalid field type {} for field '{}' of {}, supposed to be string",
@@ -50,7 +51,7 @@ class FieldListaggAgg : public FieldAggregator {
             delimiter = " ";
         }
         return std::unique_ptr<FieldListaggAgg>(
-            new FieldListaggAgg(field_type, std::move(delimiter), distinct));
+            new FieldListaggAgg(field_type, std::move(delimiter), distinct, pool));
     }
 
     Result<VariantType> Agg(const VariantType& accumulator,
@@ -122,9 +123,9 @@ class FieldListaggAgg : public FieldAggregator {
         return result;
     }
 
-    explicit FieldListaggAgg(const std::shared_ptr<arrow::DataType>& field_type,
-                             std::string delimiter, bool distinct)
-        : FieldAggregator(std::string(NAME), field_type),
+    FieldListaggAgg(const std::shared_ptr<arrow::DataType>& field_type, std::string delimiter,
+                    bool distinct, const std::shared_ptr<MemoryPool>& pool)
+        : FieldAggregator(std::string(NAME), field_type, pool),
           delimiter_(std::move(delimiter)),
           distinct_(distinct) {}
 

@@ -20,11 +20,12 @@
 
 #include "arrow/type_fwd.h"
 #include "gtest/gtest.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
 
 namespace paimon::test {
 TEST(FieldFirstValueAggTest, TestSimple) {
-    auto agg = std::make_unique<FieldFirstValueAgg>(arrow::int32());
+    auto agg = std::make_unique<FieldFirstValueAgg>(arrow::int32(), GetDefaultPool());
 
     auto agg_ret = agg->Agg(5, 10).value();
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 10);
@@ -42,7 +43,7 @@ TEST(FieldFirstValueAggTest, TestSimple) {
 }
 
 TEST(FieldFirstValueAggTest, TestNull) {
-    auto agg = std::make_unique<FieldFirstValueAgg>(arrow::int32());
+    auto agg = std::make_unique<FieldFirstValueAgg>(arrow::int32(), GetDefaultPool());
     auto agg_ret = agg->Agg(5, NullType()).value();
     ASSERT_TRUE(DataDefine::IsVariantNull(agg_ret));
     agg_ret = agg->Agg(NullType(), 10).value();

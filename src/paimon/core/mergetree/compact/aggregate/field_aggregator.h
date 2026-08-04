@@ -25,13 +25,23 @@
 #include "paimon/result.h"
 
 namespace paimon {
+class MemoryPool;
+
 /// abstract class of aggregating a field of a row.
 class FieldAggregator {
  public:
     virtual ~FieldAggregator() = default;
 
-    FieldAggregator(const std::string& name, const std::shared_ptr<arrow::DataType>& field_type)
-        : name_(name), field_type_(field_type) {}
+    /// Construct an aggregator for one field.
+    ///
+    /// @param name Name of the aggregate function.
+    /// @param field_type Type of the aggregated field.
+    /// @param pool Pool every allocation made while aggregating is charged to. Merging runs inside
+    /// the write and compaction paths, so the caller's pool keeps those bytes visible to memory
+    /// accounting and to the spill decisions driven by it.
+    FieldAggregator(const std::string& name, const std::shared_ptr<arrow::DataType>& field_type,
+                    const std::shared_ptr<MemoryPool>& pool)
+        : name_(name), field_type_(field_type), pool_(pool) {}
 
     /// Merge a value into the accumulator.
     ///
@@ -69,9 +79,13 @@ class FieldAggregator {
     std::shared_ptr<arrow::DataType> GetFieldType() const {
         return field_type_;
     }
+    const std::shared_ptr<MemoryPool>& GetPool() const {
+        return pool_;
+    }
 
  protected:
     std::string name_;
     std::shared_ptr<arrow::DataType> field_type_;
+    std::shared_ptr<MemoryPool> pool_;
 };
 }  // namespace paimon

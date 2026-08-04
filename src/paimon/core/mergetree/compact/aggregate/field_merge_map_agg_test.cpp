@@ -25,6 +25,7 @@
 #include "paimon/common/data/generic_array.h"
 #include "paimon/common/data/generic_map.h"
 #include "paimon/common/data/serializer/binary_serializer_utils.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -51,7 +52,8 @@ int32_t FindValue(const VariantType& value, int32_t key) {
 
 TEST(FieldMergeMapAggTest, InputOverwritesAndRetractUsesKeys) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldMergeMapAgg> agg,
-                         FieldMergeMapAgg::Create(arrow::map(arrow::int32(), arrow::int32()), "f"));
+                         FieldMergeMapAgg::Create(arrow::map(arrow::int32(), arrow::int32()), "f",
+                                                  GetDefaultPool()));
 
     ASSERT_OK_AND_ASSIGN(VariantType merged,
                          agg->Agg(IntMap({int32_t{1}, int32_t{2}}, {int32_t{10}, int32_t{20}}),
@@ -76,17 +78,19 @@ TEST(FieldMergeMapAggTest, InputOverwritesAndRetractUsesKeys) {
 
 TEST(FieldMergeMapAggTest, NullAndTypeValidation) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldMergeMapAgg> agg,
-                         FieldMergeMapAgg::Create(arrow::map(arrow::int32(), arrow::int32()), "f"));
+                         FieldMergeMapAgg::Create(arrow::map(arrow::int32(), arrow::int32()), "f",
+                                                  GetDefaultPool()));
     VariantType map = IntMap({int32_t{1}}, {int32_t{10}});
     ASSERT_OK_AND_ASSIGN(VariantType result, agg->Agg(VariantType(NullType()), map));
     ASSERT_EQ(10, FindValue(result, 1));
-    ASSERT_NOK(FieldMergeMapAgg::Create(arrow::int32(), "f"));
+    ASSERT_NOK(FieldMergeMapAgg::Create(arrow::int32(), "f", GetDefaultPool()));
 }
 
 // Ported from Java FieldAggregatorRetractNullTest: retraction is supported and returns a value.
 TEST(FieldMergeMapAggTest, RetractOnEmptyMapIsSupported) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldMergeMapAgg> agg,
-                         FieldMergeMapAgg::Create(arrow::map(arrow::int32(), arrow::int32()), "f"));
+                         FieldMergeMapAgg::Create(arrow::map(arrow::int32(), arrow::int32()), "f",
+                                                  GetDefaultPool()));
     ASSERT_OK_AND_ASSIGN(VariantType result, agg->Retract(IntMap({}, {}), IntMap({}, {})));
     ASSERT_EQ(0, DataDefine::GetVariantValue<std::shared_ptr<InternalMap>>(result)->Size());
 }

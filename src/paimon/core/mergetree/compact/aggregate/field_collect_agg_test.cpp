@@ -29,6 +29,7 @@
 #include "paimon/common/data/generic_row.h"
 #include "paimon/common/data/serializer/binary_serializer_utils.h"
 #include "paimon/core/core_options.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -52,7 +53,7 @@ Result<std::unique_ptr<FieldCollectAgg>> MakeCollectAgg(bool distinct) {
     PAIMON_ASSIGN_OR_RAISE(
         CoreOptions options,
         CoreOptions::FromMap({{"fields.f.distinct", distinct ? "true" : "false"}}));
-    return FieldCollectAgg::Create(arrow::list(arrow::int32()), options, "f");
+    return FieldCollectAgg::Create(arrow::list(arrow::int32()), options, "f", GetDefaultPool());
 }
 
 }  // namespace
@@ -91,7 +92,7 @@ TEST(FieldCollectAggTest, DistinctAndRetractOneOccurrence) {
 
 TEST(FieldCollectAggTest, RejectsNonArrayType) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
-    ASSERT_NOK(FieldCollectAgg::Create(arrow::int32(), options, "f"));
+    ASSERT_NOK(FieldCollectAgg::Create(arrow::int32(), options, "f", GetDefaultPool()));
 }
 
 // Ported from Java FieldAggregatorTest#testFiledCollectAggWith{Row,Array,Map}Type: distinct
@@ -102,7 +103,7 @@ Result<std::unique_ptr<FieldCollectAgg>> MakeDistinctAgg(
     const std::shared_ptr<arrow::DataType>& element_type) {
     PAIMON_ASSIGN_OR_RAISE(CoreOptions options,
                            CoreOptions::FromMap({{"fields.f.distinct", "true"}}));
-    return FieldCollectAgg::Create(arrow::list(element_type), options, "f");
+    return FieldCollectAgg::Create(arrow::list(element_type), options, "f", GetDefaultPool());
 }
 
 VariantType Array(std::vector<VariantType> values) {

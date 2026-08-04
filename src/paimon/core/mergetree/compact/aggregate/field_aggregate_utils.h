@@ -26,6 +26,7 @@ namespace paimon {
 
 class Bytes;
 class DataGetters;
+class MemoryPool;
 
 /// Helpers for extracting and comparing field aggregation values.
 class FieldAggregateUtils {
@@ -37,8 +38,9 @@ class FieldAggregateUtils {
     /// into buffers it releases once the field is overwritten.
     ///
     /// @param value Binary value, either owning or a view.
+    /// @param pool Pool the copy is allocated from when one is needed.
     /// @return The value itself when it already owns its buffer, otherwise an owning copy.
-    static VariantType OwnedBinary(const VariantType& value);
+    static VariantType OwnedBinary(const VariantType& value, MemoryPool* pool);
 
     /// Extract a value from a typed field.
     ///

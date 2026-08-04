@@ -240,12 +240,12 @@ MergeTreeCompactManagerFactory::CreateLookupRewriterWithDeletionVector(
         auto merge_function_wrapper_factory =
             [data_schema = schema_, options = options_, trimmed_primary_keys,
              lookup_levels_ptr = lookup_levels.get(), lookup_strategy,
-             dv_maintainer_ptr = dv_maintainer,
+             dv_maintainer_ptr = dv_maintainer, pool = pool_,
              user_defined_seq_comparator = user_defined_seq_comparator_](
                 int32_t output_level) -> Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> {
             PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<MergeFunction> merge_func,
                                    PrimaryKeyTableUtils::CreateMergeFunction(
-                                       data_schema, trimmed_primary_keys, options));
+                                       data_schema, trimmed_primary_keys, options, pool));
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper,
                 LookupMergeTreeCompactRewriter<PositionedKeyValue>::
@@ -274,12 +274,12 @@ MergeTreeCompactManagerFactory::CreateLookupRewriterWithDeletionVector(
     auto merge_function_wrapper_factory =
         [data_schema = schema_, options = options_, trimmed_primary_keys,
          lookup_levels_ptr = lookup_levels.get(), lookup_strategy,
-         dv_maintainer_ptr = dv_maintainer,
+         dv_maintainer_ptr = dv_maintainer, pool = pool_,
          user_defined_seq_comparator = user_defined_seq_comparator_](
             int32_t output_level) -> Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> {
-        PAIMON_ASSIGN_OR_RAISE(
-            std::unique_ptr<MergeFunction> merge_func,
-            PrimaryKeyTableUtils::CreateMergeFunction(data_schema, trimmed_primary_keys, options));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<MergeFunction> merge_func,
+                               PrimaryKeyTableUtils::CreateMergeFunction(
+                                   data_schema, trimmed_primary_keys, options, pool));
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper,
             LookupMergeTreeCompactRewriter<FilePosition>::CreateLookupMergeFunctionWrapper(
@@ -317,12 +317,12 @@ MergeTreeCompactManagerFactory::CreateLookupRewriterWithoutDeletionVector(
     auto merge_function_wrapper_factory =
         [data_schema = schema_, options = options_, trimmed_primary_keys,
          lookup_levels_ptr = lookup_levels.get(), lookup_strategy,
-         dv_maintainer_ptr = dv_maintainer,
+         dv_maintainer_ptr = dv_maintainer, pool = pool_,
          user_defined_seq_comparator = user_defined_seq_comparator_](
             int32_t output_level) -> Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> {
-        PAIMON_ASSIGN_OR_RAISE(
-            std::unique_ptr<MergeFunction> merge_func,
-            PrimaryKeyTableUtils::CreateMergeFunction(data_schema, trimmed_primary_keys, options));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<MergeFunction> merge_func,
+                               PrimaryKeyTableUtils::CreateMergeFunction(
+                                   data_schema, trimmed_primary_keys, options, pool));
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper,
             LookupMergeTreeCompactRewriter<KeyValue>::CreateLookupMergeFunctionWrapper(

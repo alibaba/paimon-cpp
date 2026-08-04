@@ -122,12 +122,12 @@ Result<bool> EqualMaps(const std::shared_ptr<InternalMap>& lhs,
 
 }  // namespace
 
-VariantType FieldAggregateUtils::OwnedBinary(const VariantType& value) {
+VariantType FieldAggregateUtils::OwnedBinary(const VariantType& value, MemoryPool* pool) {
     if (DataDefine::GetVariantPtr<std::shared_ptr<Bytes>>(value)) {
         return value;
     }
     std::string_view view = DataDefine::GetStringView(value);
-    pooled_unique_ptr<Bytes> owned = Bytes::AllocateBytes(view.size(), GetDefaultPool().get());
+    pooled_unique_ptr<Bytes> owned = Bytes::AllocateBytes(view.size(), pool);
     if (!view.empty()) {
         std::memcpy(owned->data(), view.data(), view.size());
     }

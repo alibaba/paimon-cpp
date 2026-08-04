@@ -157,7 +157,8 @@ class MergeFileSplitRead : public AbstractSplitRead {
 
     static Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> CreateMergeFunctionWrapper(
         const CoreOptions& core_options, const std::shared_ptr<TableSchema>& table_schema,
-        const std::shared_ptr<arrow::Schema>& value_schema);
+        const std::shared_ptr<arrow::Schema>& value_schema,
+        const std::shared_ptr<MemoryPool>& pool);
 
     static Status GenerateKeyValueReadSchema(
         const TableSchema& table_schema, const CoreOptions& options,

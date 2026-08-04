@@ -94,9 +94,10 @@ TEST(BinaryAggMergeFunctionTest, OwnedAccumulatorSurvivesNullInput) {
         CoreOptions options,
         CoreOptions::FromMap({{"fields.hll.aggregate-function", "hll_sketch"},
                               {"fields.theta.aggregate-function", "theta_sketch"}}));
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<AggregateMergeFunction> merge_func,
-                         AggregateMergeFunction::Create(arrow::schema(fields),
-                                                        /*primary_keys=*/{"k0"}, options));
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<AggregateMergeFunction> merge_func,
+        AggregateMergeFunction::Create(arrow::schema(fields),
+                                       /*primary_keys=*/{"k0"}, options, GetDefaultPool()));
 
     MemoryPool* pool = GetDefaultPool().get();
     ASSERT_OK(
@@ -134,7 +135,7 @@ TEST(BinaryAggMergeFunctionTest, OwnedAccumulatorSurvivesNullInput) {
 
 TEST(FieldSketchAggTest, UnionsHllSketchesAsCompactHll4) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldHllSketchAgg> agg,
-                         FieldHllSketchAgg::Create(arrow::binary(), "f"));
+                         FieldHllSketchAgg::Create(arrow::binary(), "f", GetDefaultPool()));
     ASSERT_OK_AND_ASSIGN(VariantType result, agg->Agg(Hll({1, 2, 3}), Hll({3, 4, 5})));
     std::string_view bytes = DataDefine::GetStringView(result);
     datasketches::hll_sketch sketch =
@@ -145,7 +146,7 @@ TEST(FieldSketchAggTest, UnionsHllSketchesAsCompactHll4) {
 
 TEST(FieldSketchAggTest, UnionsOrderedThetaSketches) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldThetaSketchAgg> agg,
-                         FieldThetaSketchAgg::Create(arrow::binary(), "f"));
+                         FieldThetaSketchAgg::Create(arrow::binary(), "f", GetDefaultPool()));
     ASSERT_OK_AND_ASSIGN(VariantType result, agg->Agg(Theta({1, 2, 3}), Theta({3, 4, 5})));
     std::string_view bytes = DataDefine::GetStringView(result);
     datasketches::compact_theta_sketch sketch =
@@ -158,7 +159,7 @@ TEST(FieldSketchAggTest, UnionsOrderedThetaSketches) {
 // AggReversed swaps its arguments, so either side may carry the row-owned accumulator
 TEST(FieldSketchAggTest, NullArgumentsKeepOwnershipInBothDirections) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldHllSketchAgg> agg,
-                         FieldHllSketchAgg::Create(arrow::binary(), "f"));
+                         FieldHllSketchAgg::Create(arrow::binary(), "f", GetDefaultPool()));
     VariantType null_value = VariantType(NullType());
     // pass a view, not an owning value, or OwnedBinary short-circuits and skips the copy path
     VariantType owned = Hll({1, 2, 3});
@@ -186,24 +187,24 @@ TEST(FieldSketchAggTest, NullArgumentsKeepOwnershipInBothDirections) {
 // pointing at fields.<f>.ignore-retract rather than silently succeeding.
 TEST(FieldSketchAggTest, RetractionIsUnsupported) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldHllSketchAgg> hll_agg,
-                         FieldHllSketchAgg::Create(arrow::binary(), "f"));
+                         FieldHllSketchAgg::Create(arrow::binary(), "f", GetDefaultPool()));
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldThetaSketchAgg> theta_agg,
-                         FieldThetaSketchAgg::Create(arrow::binary(), "f"));
+                         FieldThetaSketchAgg::Create(arrow::binary(), "f", GetDefaultPool()));
     ASSERT_NOK_WITH_MSG(hll_agg->Retract(Hll({1}), Hll({1})), "does not support retraction");
     ASSERT_NOK_WITH_MSG(theta_agg->Retract(Theta({1}), Theta({1})), "does not support retraction");
 }
 
 TEST(FieldSketchAggTest, ReportsInvalidBytesAndTypes) {
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldHllSketchAgg> hll_agg,
-                         FieldHllSketchAgg::Create(arrow::binary(), "f"));
+                         FieldHllSketchAgg::Create(arrow::binary(), "f", GetDefaultPool()));
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldThetaSketchAgg> theta_agg,
-                         FieldThetaSketchAgg::Create(arrow::binary(), "f"));
+                         FieldThetaSketchAgg::Create(arrow::binary(), "f", GetDefaultPool()));
     VariantType invalid = VariantType(std::string_view("bad"));
     ASSERT_NOK(hll_agg->Agg(invalid, Hll({1})));
     ASSERT_NOK(hll_agg->AggReversed(invalid, Hll({1})));
     ASSERT_NOK(theta_agg->Agg(invalid, Theta({1})));
-    ASSERT_NOK(FieldHllSketchAgg::Create(arrow::int32(), "f"));
-    ASSERT_NOK(FieldThetaSketchAgg::Create(arrow::int32(), "f"));
+    ASSERT_NOK(FieldHllSketchAgg::Create(arrow::int32(), "f", GetDefaultPool()));
+    ASSERT_NOK(FieldThetaSketchAgg::Create(arrow::int32(), "f", GetDefaultPool()));
 }
 
 }  // namespace paimon::test

@@ -31,8 +31,9 @@ namespace paimon {
 /// primary key aggregate a field of a row.
 class FieldPrimaryKeyAgg : public FieldAggregator {
  public:
-    explicit FieldPrimaryKeyAgg(const std::shared_ptr<arrow::DataType>& field_type)
-        : FieldAggregator(std::string(NAME), field_type) {}
+    FieldPrimaryKeyAgg(const std::shared_ptr<arrow::DataType>& field_type,
+                       const std::shared_ptr<MemoryPool>& pool)
+        : FieldAggregator(std::string(NAME), field_type, pool) {}
 
     Result<VariantType> Agg(const VariantType& accumulator,
                             const VariantType& input_field) override {

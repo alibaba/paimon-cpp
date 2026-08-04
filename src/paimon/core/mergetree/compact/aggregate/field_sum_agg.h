@@ -35,10 +35,11 @@ namespace paimon {
 class FieldSumAgg : public FieldAggregator {
  public:
     static Result<std::unique_ptr<FieldSumAgg>> Create(
-        const std::shared_ptr<arrow::DataType>& field_type) {
+        const std::shared_ptr<arrow::DataType>& field_type,
+        const std::shared_ptr<MemoryPool>& pool) {
         PAIMON_ASSIGN_OR_RAISE(FieldSumFunc sum_func, CreateSumFunc(field_type));
         PAIMON_ASSIGN_OR_RAISE(FieldNegFunc neg_func, CreateNegFunc(field_type));
-        return std::unique_ptr<FieldSumAgg>(new FieldSumAgg(field_type, sum_func, neg_func));
+        return std::unique_ptr<FieldSumAgg>(new FieldSumAgg(field_type, sum_func, neg_func, pool));
     }
 
     Result<VariantType> Agg(const VariantType& accumulator,
@@ -77,8 +78,8 @@ class FieldSumAgg : public FieldAggregator {
     using FieldNegFunc = std::function<VariantType(const VariantType& input_field)>;
 
     FieldSumAgg(const std::shared_ptr<arrow::DataType>& field_type, const FieldSumFunc& sum_func,
-                const FieldNegFunc& neg_func)
-        : FieldAggregator(std::string(NAME), field_type),
+                const FieldNegFunc& neg_func, const std::shared_ptr<MemoryPool>& pool)
+        : FieldAggregator(std::string(NAME), field_type, pool),
           sum_func_(sum_func),
           neg_func_(neg_func) {}
 

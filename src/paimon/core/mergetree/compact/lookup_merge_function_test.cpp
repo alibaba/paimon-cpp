@@ -40,9 +40,9 @@ TEST(LookupMergeFunctionTest, TestSimple) {
     auto value_schema = arrow::schema(fields);
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options,
                          CoreOptions::FromMap({{Options::FIELDS_DEFAULT_AGG_FUNC, "sum"}}));
-    ASSERT_OK_AND_ASSIGN(
-        std::unique_ptr<AggregateMergeFunction> agg_merge_func,
-        AggregateMergeFunction::Create(value_schema, /*primary_keys=*/{"k0"}, core_options));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<AggregateMergeFunction> agg_merge_func,
+                         AggregateMergeFunction::Create(value_schema, /*primary_keys=*/{"k0"},
+                                                        core_options, GetDefaultPool()));
     auto merge_func = std::make_unique<LookupMergeFunction>(std::move(agg_merge_func));
 
     auto pool = GetDefaultPool();

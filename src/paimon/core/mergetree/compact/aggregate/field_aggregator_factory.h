@@ -52,48 +52,58 @@ class FieldAggregatorFactory {
     FieldAggregatorFactory() = delete;
     ~FieldAggregatorFactory() = delete;
 
+    /// Create the aggregator named by @p str_agg for one field.
+    ///
+    /// @param field_name Name of the aggregated field.
+    /// @param field_type Type of the aggregated field.
+    /// @param str_agg Name of the aggregate function.
+    /// @param options Table options holding the per-field aggregate settings.
+    /// @param pool Pool every aggregator allocation is charged to, so that merging done during
+    /// writes and compaction stays visible to the caller's memory accounting.
+    /// @return The aggregator, or an error Status for an unknown or misconfigured function.
     static Result<std::unique_ptr<FieldAggregator>> CreateFieldAggregator(
         const std::string& field_name, const std::shared_ptr<arrow::DataType>& field_type,
-        const std::string& str_agg, const CoreOptions& options) {
+        const std::string& str_agg, const CoreOptions& options,
+        const std::shared_ptr<MemoryPool>& pool) {
         std::unique_ptr<FieldAggregator> field_aggregator;
         if (str_agg == FieldPrimaryKeyAgg::NAME) {
-            field_aggregator = std::make_unique<FieldPrimaryKeyAgg>(field_type);
+            field_aggregator = std::make_unique<FieldPrimaryKeyAgg>(field_type, pool);
         } else if (str_agg == FieldLastNonNullValueAgg::NAME) {
-            field_aggregator = std::make_unique<FieldLastNonNullValueAgg>(field_type);
+            field_aggregator = std::make_unique<FieldLastNonNullValueAgg>(field_type, pool);
         } else if (str_agg == FieldFirstNonNullValueAgg::NAME) {
-            field_aggregator = std::make_unique<FieldFirstNonNullValueAgg>(field_type);
+            field_aggregator = std::make_unique<FieldFirstNonNullValueAgg>(field_type, pool);
         } else if (str_agg == FieldLastValueAgg::NAME) {
-            field_aggregator = std::make_unique<FieldLastValueAgg>(field_type);
+            field_aggregator = std::make_unique<FieldLastValueAgg>(field_type, pool);
         } else if (str_agg == FieldFirstValueAgg::NAME) {
-            field_aggregator = std::make_unique<FieldFirstValueAgg>(field_type);
+            field_aggregator = std::make_unique<FieldFirstValueAgg>(field_type, pool);
         } else if (str_agg == FieldSumAgg::NAME) {
-            PAIMON_ASSIGN_OR_RAISE(field_aggregator, FieldSumAgg::Create(field_type));
+            PAIMON_ASSIGN_OR_RAISE(field_aggregator, FieldSumAgg::Create(field_type, pool));
         } else if (str_agg == FieldMinAgg::NAME) {
-            PAIMON_ASSIGN_OR_RAISE(field_aggregator, FieldMinAgg::Create(field_type));
+            PAIMON_ASSIGN_OR_RAISE(field_aggregator, FieldMinAgg::Create(field_type, pool));
         } else if (str_agg == FieldMaxAgg::NAME) {
-            PAIMON_ASSIGN_OR_RAISE(field_aggregator, FieldMaxAgg::Create(field_type));
+            PAIMON_ASSIGN_OR_RAISE(field_aggregator, FieldMaxAgg::Create(field_type, pool));
         } else if (str_agg == FieldBoolOrAgg::NAME) {
-            PAIMON_ASSIGN_OR_RAISE(field_aggregator, FieldBoolOrAgg::Create(field_type));
+            PAIMON_ASSIGN_OR_RAISE(field_aggregator, FieldBoolOrAgg::Create(field_type, pool));
         } else if (str_agg == FieldBoolAndAgg::NAME) {
-            PAIMON_ASSIGN_OR_RAISE(field_aggregator, FieldBoolAndAgg::Create(field_type));
+            PAIMON_ASSIGN_OR_RAISE(field_aggregator, FieldBoolAndAgg::Create(field_type, pool));
         } else if (str_agg == FieldListaggAgg::NAME) {
             PAIMON_ASSIGN_OR_RAISE(field_aggregator,
-                                   FieldListaggAgg::Create(field_type, options, field_name));
+                                   FieldListaggAgg::Create(field_type, options, field_name, pool));
         } else if (str_agg == FieldCollectAgg::NAME) {
             PAIMON_ASSIGN_OR_RAISE(field_aggregator,
-                                   FieldCollectAgg::Create(field_type, options, field_name));
+                                   FieldCollectAgg::Create(field_type, options, field_name, pool));
         } else if (str_agg == FieldMergeMapAgg::NAME) {
             PAIMON_ASSIGN_OR_RAISE(field_aggregator,
-                                   FieldMergeMapAgg::Create(field_type, field_name));
+                                   FieldMergeMapAgg::Create(field_type, field_name, pool));
         } else if (str_agg == FieldNestedUpdateAgg::NAME) {
-            PAIMON_ASSIGN_OR_RAISE(field_aggregator,
-                                   FieldNestedUpdateAgg::Create(field_type, options, field_name));
+            PAIMON_ASSIGN_OR_RAISE(field_aggregator, FieldNestedUpdateAgg::Create(
+                                                         field_type, options, field_name, pool));
         } else if (str_agg == FieldHllSketchAgg::NAME) {
             PAIMON_ASSIGN_OR_RAISE(field_aggregator,
-                                   FieldHllSketchAgg::Create(field_type, field_name));
+                                   FieldHllSketchAgg::Create(field_type, field_name, pool));
         } else if (str_agg == FieldThetaSketchAgg::NAME) {
             PAIMON_ASSIGN_OR_RAISE(field_aggregator,
-                                   FieldThetaSketchAgg::Create(field_type, field_name));
+                                   FieldThetaSketchAgg::Create(field_type, field_name, pool));
         } else {
             return Status::Invalid(fmt::format(
                 "Use unsupported aggregation {} or spell aggregate function incorrectly!",

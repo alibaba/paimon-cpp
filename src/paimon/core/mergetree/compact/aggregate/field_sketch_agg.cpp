@@ -35,9 +35,8 @@ namespace paimon {
 namespace {
 
 template <typename T>
-std::shared_ptr<Bytes> CopyBytes(const std::vector<T>& serialized) {
-    pooled_unique_ptr<Bytes> result =
-        Bytes::AllocateBytes(serialized.size() * sizeof(T), GetDefaultPool().get());
+std::shared_ptr<Bytes> CopyBytes(const std::vector<T>& serialized, MemoryPool* pool) {
+    pooled_unique_ptr<Bytes> result = Bytes::AllocateBytes(serialized.size() * sizeof(T), pool);
     if (!serialized.empty()) {
         std::memcpy(result->data(), serialized.data(), result->size());
     }
@@ -57,9 +56,10 @@ Status ValidateSketchType(const std::shared_ptr<arrow::DataType>& field_type,
 }  // namespace
 
 Result<std::unique_ptr<FieldHllSketchAgg>> FieldHllSketchAgg::Create(
-    const std::shared_ptr<arrow::DataType>& field_type, const std::string& field_name) {
+    const std::shared_ptr<arrow::DataType>& field_type, const std::string& field_name,
+    const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_RETURN_NOT_OK(ValidateSketchType(field_type, field_name, NAME));
-    return std::unique_ptr<FieldHllSketchAgg>(new FieldHllSketchAgg(field_type));
+    return std::unique_ptr<FieldHllSketchAgg>(new FieldHllSketchAgg(field_type, pool));
 }
 
 Result<VariantType> FieldHllSketchAgg::Agg(const VariantType& accumulator,
@@ -71,7 +71,8 @@ Result<VariantType> FieldHllSketchAgg::Agg(const VariantType& accumulator,
     }
     if (accumulator_null || input_null) {
         // AggReversed swaps the arguments, so either side may be the row-owned accumulator
-        return FieldAggregateUtils::OwnedBinary(accumulator_null ? input_field : accumulator);
+        return FieldAggregateUtils::OwnedBinary(accumulator_null ? input_field : accumulator,
+                                                pool_.get());
     }
     std::string_view accumulator_bytes = DataDefine::GetStringView(accumulator);
     std::string_view input_bytes = DataDefine::GetStringView(input_field);
@@ -84,7 +85,7 @@ Result<VariantType> FieldHllSketchAgg::Agg(const VariantType& accumulator,
         sketch_union.update(input_sketch);
         sketch_union.update(accumulator_sketch);
         datasketches::hll_sketch result = sketch_union.get_result(datasketches::HLL_4);
-        return VariantType(CopyBytes(result.serialize_compact()));
+        return VariantType(CopyBytes(result.serialize_compact(), pool_.get()));
     } catch (const std::exception& exception) {
         return Status::Invalid(
             fmt::format("Unable to deserialize or union HLL sketch: {}", exception.what()));
@@ -94,9 +95,10 @@ Result<VariantType> FieldHllSketchAgg::Agg(const VariantType& accumulator,
 }
 
 Result<std::unique_ptr<FieldThetaSketchAgg>> FieldThetaSketchAgg::Create(
-    const std::shared_ptr<arrow::DataType>& field_type, const std::string& field_name) {
+    const std::shared_ptr<arrow::DataType>& field_type, const std::string& field_name,
+    const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_RETURN_NOT_OK(ValidateSketchType(field_type, field_name, NAME));
-    return std::unique_ptr<FieldThetaSketchAgg>(new FieldThetaSketchAgg(field_type));
+    return std::unique_ptr<FieldThetaSketchAgg>(new FieldThetaSketchAgg(field_type, pool));
 }
 
 Result<VariantType> FieldThetaSketchAgg::Agg(const VariantType& accumulator,
@@ -108,7 +110,8 @@ Result<VariantType> FieldThetaSketchAgg::Agg(const VariantType& accumulator,
     }
     if (accumulator_null || input_null) {
         // AggReversed swaps the arguments, so either side may be the row-owned accumulator
-        return FieldAggregateUtils::OwnedBinary(accumulator_null ? input_field : accumulator);
+        return FieldAggregateUtils::OwnedBinary(accumulator_null ? input_field : accumulator,
+                                                pool_.get());
     }
     std::string_view accumulator_bytes = DataDefine::GetStringView(accumulator);
     std::string_view input_bytes = DataDefine::GetStringView(input_field);
@@ -121,7 +124,8 @@ Result<VariantType> FieldThetaSketchAgg::Agg(const VariantType& accumulator,
         datasketches::theta_union sketch_union = datasketches::theta_union::builder().build();
         sketch_union.update(accumulator_sketch);
         sketch_union.update(input_sketch);
-        return VariantType(CopyBytes(sketch_union.get_result(/*ordered=*/true).serialize()));
+        return VariantType(
+            CopyBytes(sketch_union.get_result(/*ordered=*/true).serialize(), pool_.get()));
     } catch (const std::exception& exception) {
         return Status::Invalid(
             fmt::format("Unable to deserialize or union theta sketch: {}", exception.what()));

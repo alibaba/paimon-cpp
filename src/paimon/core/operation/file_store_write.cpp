@@ -180,9 +180,9 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
             FieldsComparator::Create(trimmed_primary_key_fields,
                                      options.SequenceFieldSortOrderIsAscending()));
         auto primary_keys = schema->PrimaryKeys();
-        PAIMON_ASSIGN_OR_RAISE(
-            std::unique_ptr<MergeFunction> merge_function,
-            PrimaryKeyTableUtils::CreateMergeFunction(arrow_schema, primary_keys, options));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<MergeFunction> merge_function,
+                               PrimaryKeyTableUtils::CreateMergeFunction(
+                                   arrow_schema, primary_keys, options, ctx->GetMemoryPool()));
         if (options.NeedLookup() && options.GetMergeEngine() != MergeEngine::FIRST_ROW) {
             // don't wrap first row, it is already OK
             merge_function = std::make_unique<LookupMergeFunction>(std::move(merge_function));

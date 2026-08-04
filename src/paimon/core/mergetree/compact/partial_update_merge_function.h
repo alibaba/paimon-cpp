@@ -65,7 +65,7 @@ class PartialUpdateMergeFunction : public MergeFunction {
         const std::shared_ptr<arrow::Schema>& value_schema,
         const std::vector<std::string>& primary_keys, const CoreOptions& options,
         const std::map<std::string, std::vector<std::string>>& value_field_to_seq_group_field,
-        const std::set<std::string>& seq_group_key_set);
+        const std::set<std::string>& seq_group_key_set, const std::shared_ptr<MemoryPool>& pool);
 
     void Reset() override;
 
@@ -94,7 +94,7 @@ class PartialUpdateMergeFunction : public MergeFunction {
         const std::shared_ptr<arrow::Schema>& value_schema,
         const std::vector<std::string>& primary_keys, const CoreOptions& options,
         const std::map<std::string, std::vector<std::string>>& value_field_to_seq_group_field,
-        const std::set<std::string>& seq_group_key_set);
+        const std::set<std::string>& seq_group_key_set, const std::shared_ptr<MemoryPool>& pool);
 
     bool IsEmptySequenceGroup(const KeyValue& kv,
                               const std::shared_ptr<FieldsComparator>& comparator) const;

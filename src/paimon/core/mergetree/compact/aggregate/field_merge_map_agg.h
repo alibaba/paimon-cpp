@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "paimon/core/mergetree/compact/aggregate/field_aggregator.h"
 
@@ -32,9 +33,11 @@ class FieldMergeMapAgg : public FieldAggregator {
     ///
     /// @param field_type Type of the aggregated field.
     /// @param field_name Name of the aggregated field.
+    /// @param pool Pool the merged maps are allocated from.
     /// @return A merge_map aggregator, or an error Status.
     static Result<std::unique_ptr<FieldMergeMapAgg>> Create(
-        const std::shared_ptr<arrow::DataType>& field_type, const std::string& field_name);
+        const std::shared_ptr<arrow::DataType>& field_type, const std::string& field_name,
+        const std::shared_ptr<MemoryPool>& pool);
 
     Result<VariantType> Agg(const VariantType& accumulator,
                             const VariantType& input_field) override;
@@ -44,8 +47,9 @@ class FieldMergeMapAgg : public FieldAggregator {
  private:
     FieldMergeMapAgg(const std::shared_ptr<arrow::DataType>& field_type,
                      std::shared_ptr<arrow::DataType> key_type,
-                     std::shared_ptr<arrow::DataType> value_type)
-        : FieldAggregator(NAME, field_type),
+                     std::shared_ptr<arrow::DataType> value_type,
+                     const std::shared_ptr<MemoryPool>& pool)
+        : FieldAggregator(NAME, field_type, pool),
           key_type_(std::move(key_type)),
           value_type_(std::move(value_type)) {}
 

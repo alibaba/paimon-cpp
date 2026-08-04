@@ -47,7 +47,8 @@ class AggregateMergeFunction : public MergeFunction {
     // value_schema is the schema of parameter value in KeyValue object
     static Result<std::unique_ptr<AggregateMergeFunction>> Create(
         const std::shared_ptr<arrow::Schema>& value_schema,
-        const std::vector<std::string>& primary_keys, const CoreOptions& options);
+        const std::vector<std::string>& primary_keys, const CoreOptions& options,
+        const std::shared_ptr<MemoryPool>& pool);
 
     void Reset() override {
         latest_kv_ = std::nullopt;

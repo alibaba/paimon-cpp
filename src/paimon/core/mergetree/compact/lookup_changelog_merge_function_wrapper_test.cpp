@@ -133,7 +133,7 @@ TEST(LookupChangelogMergeFunctionWrapperTest, TestWithLookupWithDv) {
                          CoreOptions::FromMap({{Options::FIELDS_DEFAULT_AGG_FUNC, "sum"}}));
     ASSERT_OK_AND_ASSIGN(auto mfunc, AggregateMergeFunction::Create(
                                          arrow::schema({arrow::field("value", arrow::int32())}),
-                                         {"key"}, core_options));
+                                         {"key"}, core_options, GetDefaultPool()));
     auto lookup_mfunc = std::make_unique<LookupMergeFunction>(std::move(mfunc));
     auto lookup =
         [&](const std::shared_ptr<InternalRow>& key) -> Result<std::optional<PositionedKeyValue>> {

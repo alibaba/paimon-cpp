@@ -27,9 +27,10 @@ namespace paimon {
 class FieldMinAgg : public FieldAggregator {
  public:
     static Result<std::unique_ptr<FieldMinAgg>> Create(
-        const std::shared_ptr<arrow::DataType>& field_type) {
+        const std::shared_ptr<arrow::DataType>& field_type,
+        const std::shared_ptr<MemoryPool>& pool) {
         PAIMON_ASSIGN_OR_RAISE(FieldMinFunc min_func, CreateMinFunc(field_type));
-        return std::unique_ptr<FieldMinAgg>(new FieldMinAgg(field_type, min_func));
+        return std::unique_ptr<FieldMinAgg>(new FieldMinAgg(field_type, min_func, pool));
     }
 
     Result<VariantType> Agg(const VariantType& accumulator,
@@ -49,8 +50,9 @@ class FieldMinAgg : public FieldAggregator {
     using FieldMinFunc =
         std::function<VariantType(const VariantType& accumulator, const VariantType& input_field)>;
 
-    FieldMinAgg(const std::shared_ptr<arrow::DataType>& field_type, const FieldMinFunc& min_func)
-        : FieldAggregator(std::string(NAME), field_type), min_func_(min_func) {}
+    FieldMinAgg(const std::shared_ptr<arrow::DataType>& field_type, const FieldMinFunc& min_func,
+                const std::shared_ptr<MemoryPool>& pool)
+        : FieldAggregator(std::string(NAME), field_type, pool), min_func_(min_func) {}
 
     static Result<FieldMinFunc> CreateMinFunc(const std::shared_ptr<arrow::DataType>& field_type) {
         arrow::Type::type type = field_type->id();

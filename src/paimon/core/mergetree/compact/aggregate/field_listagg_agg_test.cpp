@@ -23,6 +23,7 @@
 #include "arrow/type_fwd.h"
 #include "gtest/gtest.h"
 #include "paimon/core/core_options.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
 
@@ -36,7 +37,7 @@ class FieldListaggAggTest : public testing::Test {
         opts["fields.f.list-agg-delimiter"] = delimiter;
         opts["fields.f.distinct"] = distinct ? "true" : "false";
         PAIMON_ASSIGN_OR_RAISE(auto options, CoreOptions::FromMap(opts));
-        return FieldListaggAgg::Create(arrow::utf8(), std::move(options), "f");
+        return FieldListaggAgg::Create(arrow::utf8(), std::move(options), "f", GetDefaultPool());
     }
 };
 
@@ -144,7 +145,7 @@ TEST_F(FieldListaggAggTest, TestDistinctFalse) {
 
 TEST_F(FieldListaggAggTest, TestInvalidType) {
     EXPECT_OK_AND_ASSIGN(auto options, CoreOptions::FromMap({}));
-    auto result = FieldListaggAgg::Create(arrow::int32(), options, "f");
+    auto result = FieldListaggAgg::Create(arrow::int32(), options, "f", GetDefaultPool());
     ASSERT_FALSE(result.ok());
     ASSERT_TRUE(result.status().ToString().find("supposed to be string") != std::string::npos)
         << result.status().ToString();

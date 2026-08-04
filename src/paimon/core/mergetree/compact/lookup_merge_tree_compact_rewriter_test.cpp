@@ -177,10 +177,10 @@ class LookupMergeTreeCompactRewriterTest : public ::testing::TestWithParam<std::
             [this, table_schema, options, lookup_levels_ptr = lookup_levels.get(),
              lookup_strategy = options.GetLookupStrategy()](
                 int32_t output_level) -> Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> {
-            PAIMON_ASSIGN_OR_RAISE(
-                auto merge_func,
-                AggregateMergeFunction::Create(
-                    arrow_schema_, table_schema->TrimmedPrimaryKeys().value(), options));
+            PAIMON_ASSIGN_OR_RAISE(auto merge_func,
+                                   AggregateMergeFunction::Create(
+                                       arrow_schema_, table_schema->TrimmedPrimaryKeys().value(),
+                                       options, GetDefaultPool()));
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper,
                 LookupMergeTreeCompactRewriter<KeyValue>::CreateLookupMergeFunctionWrapper(
@@ -253,10 +253,10 @@ class LookupMergeTreeCompactRewriterTest : public ::testing::TestWithParam<std::
             [this, table_schema, options, lookup_levels_ptr = lookup_levels.get(),
              lookup_strategy = options.GetLookupStrategy(), dv_maintainer_ptr = dv_maintainer](
                 int32_t output_level) -> Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> {
-            PAIMON_ASSIGN_OR_RAISE(
-                auto merge_func,
-                AggregateMergeFunction::Create(
-                    arrow_schema_, table_schema->TrimmedPrimaryKeys().value(), options));
+            PAIMON_ASSIGN_OR_RAISE(auto merge_func,
+                                   AggregateMergeFunction::Create(
+                                       arrow_schema_, table_schema->TrimmedPrimaryKeys().value(),
+                                       options, GetDefaultPool()));
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper,
                 LookupMergeTreeCompactRewriter<PositionedKeyValue>::

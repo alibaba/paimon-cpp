@@ -22,6 +22,7 @@
 #include "arrow/api.h"
 #include "arrow/type_fwd.h"
 #include "gtest/gtest.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -29,80 +30,82 @@ TEST(FieldAggregatorFactoryTest, TestSimple) {
     {
         ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldAggregator> agg,
-                             FieldAggregatorFactory::CreateFieldAggregator("f0", arrow::int32(),
-                                                                           "primary-key", options));
+                             FieldAggregatorFactory::CreateFieldAggregator(
+                                 "f0", arrow::int32(), "primary-key", options, GetDefaultPool()));
         ASSERT_TRUE(dynamic_cast<FieldPrimaryKeyAgg*>(agg.get()));
     }
     {
         ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
-        ASSERT_OK_AND_ASSIGN(
-            std::unique_ptr<FieldAggregator> agg,
-            FieldAggregatorFactory::CreateFieldAggregator("f0", arrow::int32(), "sum", options));
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldAggregator> agg,
+                             FieldAggregatorFactory::CreateFieldAggregator(
+                                 "f0", arrow::int32(), "sum", options, GetDefaultPool()));
         ASSERT_TRUE(dynamic_cast<FieldSumAgg*>(agg.get()));
     }
     {
         ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
-        ASSERT_OK_AND_ASSIGN(
-            std::unique_ptr<FieldAggregator> agg,
-            FieldAggregatorFactory::CreateFieldAggregator("f0", arrow::int32(), "min", options));
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldAggregator> agg,
+                             FieldAggregatorFactory::CreateFieldAggregator(
+                                 "f0", arrow::int32(), "min", options, GetDefaultPool()));
         ASSERT_TRUE(dynamic_cast<FieldMinAgg*>(agg.get()));
     }
     {
         ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
-        ASSERT_OK_AND_ASSIGN(
-            std::unique_ptr<FieldAggregator> agg,
-            FieldAggregatorFactory::CreateFieldAggregator("f0", arrow::int32(), "max", options));
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldAggregator> agg,
+                             FieldAggregatorFactory::CreateFieldAggregator(
+                                 "f0", arrow::int32(), "max", options, GetDefaultPool()));
         ASSERT_TRUE(dynamic_cast<FieldMaxAgg*>(agg.get()));
     }
     {
         ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldAggregator> agg,
-                             FieldAggregatorFactory::CreateFieldAggregator("f0", arrow::boolean(),
-                                                                           "bool_and", options));
+                             FieldAggregatorFactory::CreateFieldAggregator(
+                                 "f0", arrow::boolean(), "bool_and", options, GetDefaultPool()));
         ASSERT_TRUE(dynamic_cast<FieldBoolAndAgg*>(agg.get()));
     }
     {
         ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldAggregator> agg,
-                             FieldAggregatorFactory::CreateFieldAggregator("f0", arrow::boolean(),
-                                                                           "bool_or", options));
+                             FieldAggregatorFactory::CreateFieldAggregator(
+                                 "f0", arrow::boolean(), "bool_or", options, GetDefaultPool()));
         ASSERT_TRUE(dynamic_cast<FieldBoolOrAgg*>(agg.get()));
     }
     {
         ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
-        ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldAggregator> agg,
-                             FieldAggregatorFactory::CreateFieldAggregator(
-                                 "f0", arrow::int32(), "last_non_null_value", options));
+        ASSERT_OK_AND_ASSIGN(
+            std::unique_ptr<FieldAggregator> agg,
+            FieldAggregatorFactory::CreateFieldAggregator(
+                "f0", arrow::int32(), "last_non_null_value", options, GetDefaultPool()));
         ASSERT_TRUE(dynamic_cast<FieldLastNonNullValueAgg*>(agg.get()));
     }
     {
         ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
-        ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldAggregator> agg,
-                             FieldAggregatorFactory::CreateFieldAggregator(
-                                 "f0", arrow::int32(), "first_non_null_value", options));
+        ASSERT_OK_AND_ASSIGN(
+            std::unique_ptr<FieldAggregator> agg,
+            FieldAggregatorFactory::CreateFieldAggregator(
+                "f0", arrow::int32(), "first_non_null_value", options, GetDefaultPool()));
         ASSERT_TRUE(dynamic_cast<FieldFirstNonNullValueAgg*>(agg.get()));
     }
     {
         ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldAggregator> agg,
-                             FieldAggregatorFactory::CreateFieldAggregator("f0", arrow::int32(),
-                                                                           "last_value", options));
+                             FieldAggregatorFactory::CreateFieldAggregator(
+                                 "f0", arrow::int32(), "last_value", options, GetDefaultPool()));
         ASSERT_TRUE(dynamic_cast<FieldLastValueAgg*>(agg.get()));
     }
     {
         ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldAggregator> agg,
-                             FieldAggregatorFactory::CreateFieldAggregator("f0", arrow::int32(),
-                                                                           "first_value", options));
+                             FieldAggregatorFactory::CreateFieldAggregator(
+                                 "f0", arrow::int32(), "first_value", options, GetDefaultPool()));
         ASSERT_TRUE(dynamic_cast<FieldFirstValueAgg*>(agg.get()));
     }
     {
         // test ignore_retract is true
         ASSERT_OK_AND_ASSIGN(CoreOptions options,
                              CoreOptions::FromMap({{"fields.f0.ignore-retract", "true"}}));
-        ASSERT_OK_AND_ASSIGN(
-            std::unique_ptr<FieldAggregator> agg,
-            FieldAggregatorFactory::CreateFieldAggregator("f0", arrow::int32(), "sum", options));
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldAggregator> agg,
+                             FieldAggregatorFactory::CreateFieldAggregator(
+                                 "f0", arrow::int32(), "sum", options, GetDefaultPool()));
         auto ignore_retract_agg = dynamic_cast<FieldIgnoreRetractAgg*>(agg.get());
         ASSERT_TRUE(ignore_retract_agg);
         ASSERT_TRUE(dynamic_cast<FieldSumAgg*>(ignore_retract_agg->agg_.get()));
@@ -110,8 +113,8 @@ TEST(FieldAggregatorFactoryTest, TestSimple) {
     {
         // test non exist agg
         ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
-        auto agg = FieldAggregatorFactory::CreateFieldAggregator("f0", arrow::int32(),
-                                                                 "non-exist-agg", options);
+        auto agg = FieldAggregatorFactory::CreateFieldAggregator(
+            "f0", arrow::int32(), "non-exist-agg", options, GetDefaultPool());
         ASSERT_FALSE(agg.ok());
     }
 }
@@ -121,9 +124,9 @@ TEST(FieldAggregatorFactoryTest, TestRemoveRecordOnDeleteConflictsWithIgnoreRetr
         CoreOptions options,
         CoreOptions::FromMap({{Options::AGGREGATION_REMOVE_RECORD_ON_DELETE, "true"},
                               {"fields.f0.ignore-retract", "true"}}));
-    ASSERT_NOK_WITH_MSG(
-        FieldAggregatorFactory::CreateFieldAggregator("f0", arrow::int32(), "sum", options),
-        "conflicting behavior");
+    ASSERT_NOK_WITH_MSG(FieldAggregatorFactory::CreateFieldAggregator("f0", arrow::int32(), "sum",
+                                                                      options, GetDefaultPool()),
+                        "conflicting behavior");
 }
 
 TEST(FieldAggregatorFactoryTest, CreatesJavaCompatibleAggregators) {
@@ -131,24 +134,25 @@ TEST(FieldAggregatorFactoryTest, CreatesJavaCompatibleAggregators) {
     std::shared_ptr<arrow::DataType> nested_type =
         arrow::list(arrow::struct_({arrow::field("id", arrow::int32())}));
 
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldAggregator> collect,
-                         FieldAggregatorFactory::CreateFieldAggregator(
-                             "f", arrow::list(arrow::int32()), "collect", options));
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<FieldAggregator> collect,
+        FieldAggregatorFactory::CreateFieldAggregator("f", arrow::list(arrow::int32()), "collect",
+                                                      options, GetDefaultPool()));
     ASSERT_TRUE(dynamic_cast<FieldCollectAgg*>(collect.get()));
-    ASSERT_OK_AND_ASSIGN(
-        std::unique_ptr<FieldAggregator> merge_map,
-        FieldAggregatorFactory::CreateFieldAggregator(
-            "f", arrow::map(arrow::int32(), arrow::int32()), "merge_map", options));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldAggregator> merge_map,
+                         FieldAggregatorFactory::CreateFieldAggregator(
+                             "f", arrow::map(arrow::int32(), arrow::int32()), "merge_map", options,
+                             GetDefaultPool()));
     ASSERT_TRUE(dynamic_cast<FieldMergeMapAgg*>(merge_map.get()));
-    ASSERT_OK_AND_ASSIGN(
-        std::unique_ptr<FieldAggregator> nested_update,
-        FieldAggregatorFactory::CreateFieldAggregator("f", nested_type, "nested_update", options));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldAggregator> nested_update,
+                         FieldAggregatorFactory::CreateFieldAggregator(
+                             "f", nested_type, "nested_update", options, GetDefaultPool()));
     ASSERT_TRUE(dynamic_cast<FieldNestedUpdateAgg*>(nested_update.get()));
 
     for (const char* name : {"hll_sketch", "theta_sketch"}) {
-        ASSERT_OK_AND_ASSIGN(
-            std::unique_ptr<FieldAggregator> aggregator,
-            FieldAggregatorFactory::CreateFieldAggregator("f", arrow::binary(), name, options));
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldAggregator> aggregator,
+                             FieldAggregatorFactory::CreateFieldAggregator(
+                                 "f", arrow::binary(), name, options, GetDefaultPool()));
         ASSERT_EQ(name, aggregator->GetName());
     }
 }

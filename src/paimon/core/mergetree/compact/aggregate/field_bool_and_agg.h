@@ -26,13 +26,14 @@ namespace paimon {
 class FieldBoolAndAgg : public FieldAggregator {
  public:
     static Result<std::unique_ptr<FieldBoolAndAgg>> Create(
-        const std::shared_ptr<arrow::DataType>& field_type) {
+        const std::shared_ptr<arrow::DataType>& field_type,
+        const std::shared_ptr<MemoryPool>& pool) {
         if (field_type->id() != arrow::Type::type::BOOL) {
             return Status::Invalid(
                 fmt::format("invalid field type {} for {}, supposed to be boolean",
                             field_type->ToString(), NAME));
         }
-        return std::unique_ptr<FieldBoolAndAgg>(new FieldBoolAndAgg(field_type));
+        return std::unique_ptr<FieldBoolAndAgg>(new FieldBoolAndAgg(field_type, pool));
     }
 
     Result<VariantType> Agg(const VariantType& accumulator,
@@ -51,7 +52,8 @@ class FieldBoolAndAgg : public FieldAggregator {
     static constexpr char NAME[] = "bool_and";
 
  private:
-    explicit FieldBoolAndAgg(const std::shared_ptr<arrow::DataType>& field_type)
-        : FieldAggregator(std::string(NAME), field_type) {}
+    FieldBoolAndAgg(const std::shared_ptr<arrow::DataType>& field_type,
+                    const std::shared_ptr<MemoryPool>& pool)
+        : FieldAggregator(std::string(NAME), field_type, pool) {}
 };
 }  // namespace paimon

@@ -28,7 +28,8 @@ namespace paimon {
 class FieldIgnoreRetractAgg : public FieldAggregator {
  public:
     explicit FieldIgnoreRetractAgg(std::unique_ptr<FieldAggregator>&& agg)
-        : FieldAggregator(agg->GetName(), agg->GetFieldType()), agg_(std::move(agg)) {}
+        : FieldAggregator(agg->GetName(), agg->GetFieldType(), agg->GetPool()),
+          agg_(std::move(agg)) {}
 
     Result<VariantType> Agg(const VariantType& accumulator,
                             const VariantType& input_field) override {

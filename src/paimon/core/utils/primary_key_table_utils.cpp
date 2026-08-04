@@ -43,7 +43,8 @@ namespace paimon {
 
 Result<std::unique_ptr<MergeFunction>> PrimaryKeyTableUtils::CreateMergeFunction(
     const std::shared_ptr<arrow::Schema>& value_schema,
-    const std::vector<std::string>& primary_keys, const CoreOptions& options) {
+    const std::vector<std::string>& primary_keys, const CoreOptions& options,
+    const std::shared_ptr<MemoryPool>& pool) {
     auto merge_engine = options.GetMergeEngine();
     std::unique_ptr<MergeFunction> merge_function;
     if (merge_engine == MergeEngine::DEDUPLICATE) {
@@ -51,17 +52,17 @@ Result<std::unique_ptr<MergeFunction>> PrimaryKeyTableUtils::CreateMergeFunction
     } else if (merge_engine == MergeEngine::FIRST_ROW) {
         merge_function = std::make_unique<FirstRowMergeFunction>(options.IgnoreDelete());
     } else if (merge_engine == MergeEngine::AGGREGATE) {
-        PAIMON_ASSIGN_OR_RAISE(merge_function,
-                               AggregateMergeFunction::Create(value_schema, primary_keys, options));
+        PAIMON_ASSIGN_OR_RAISE(merge_function, AggregateMergeFunction::Create(
+                                                   value_schema, primary_keys, options, pool));
     } else if (merge_engine == MergeEngine::PARTIAL_UPDATE) {
         std::map<std::string, std::vector<std::string>> value_field_to_seq_group_field;
         std::set<std::string> seq_group_key_set;
         PAIMON_RETURN_NOT_OK(PartialUpdateMergeFunction::ParseSequenceGroupFields(
             options, &value_field_to_seq_group_field, &seq_group_key_set));
         PAIMON_ASSIGN_OR_RAISE(
-            merge_function,
-            PartialUpdateMergeFunction::Create(value_schema, primary_keys, options,
-                                               value_field_to_seq_group_field, seq_group_key_set));
+            merge_function, PartialUpdateMergeFunction::Create(value_schema, primary_keys, options,
+                                                               value_field_to_seq_group_field,
+                                                               seq_group_key_set, pool));
     } else {
         return Status::Invalid(
             "only support deduplicate/partial-update/aggregation/first-row merge engine.");

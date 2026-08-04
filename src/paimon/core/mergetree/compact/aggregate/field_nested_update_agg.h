@@ -43,10 +43,11 @@ class FieldNestedUpdateAgg : public FieldAggregator {
     /// @param field_type Type of the aggregated field.
     /// @param options Table options describing nested keys, sequences, and limits.
     /// @param field_name Name of the aggregated field.
+    /// @param pool Pool the merged nested rows are allocated from.
     /// @return A nested_update aggregator, or an error Status.
     static Result<std::unique_ptr<FieldNestedUpdateAgg>> Create(
         const std::shared_ptr<arrow::DataType>& field_type, const CoreOptions& options,
-        const std::string& field_name);
+        const std::string& field_name, const std::shared_ptr<MemoryPool>& pool);
 
     Result<VariantType> Agg(const VariantType& accumulator,
                             const VariantType& input_field) override;
@@ -58,8 +59,8 @@ class FieldNestedUpdateAgg : public FieldAggregator {
                          std::shared_ptr<arrow::StructType> row_type,
                          std::vector<int32_t> key_fields,
                          CoreOptions::NestedKeyNullStrategy null_strategy,
-                         std::unique_ptr<FieldsComparator> sequence_comparator,
-                         int32_t count_limit);
+                         std::unique_ptr<FieldsComparator> sequence_comparator, int32_t count_limit,
+                         const std::shared_ptr<MemoryPool>& pool);
 
     Result<VariantType> AggImpl(const VariantType& accumulator,
                                 const VariantType& input_field) const;

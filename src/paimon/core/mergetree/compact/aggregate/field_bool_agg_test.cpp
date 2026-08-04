@@ -21,13 +21,14 @@
 #include "paimon/common/data/data_define.h"
 #include "paimon/core/mergetree/compact/aggregate/field_bool_and_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_bool_or_agg.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
 TEST(FieldBoolAndAggTest, TestSimple) {
-    ASSERT_OK_AND_ASSIGN(auto agg, FieldBoolAndAgg::Create(arrow::boolean()));
+    ASSERT_OK_AND_ASSIGN(auto agg, FieldBoolAndAgg::Create(arrow::boolean(), GetDefaultPool()));
     auto agg_ret = agg->Agg(true, true).value();
     ASSERT_EQ(DataDefine::GetVariantValue<bool>(agg_ret), true);
     agg_ret = agg->Agg(true, false).value();
@@ -42,12 +43,12 @@ TEST(FieldBoolAndAggTest, TestSimple) {
 }
 
 TEST(FieldBoolAndAggTest, TestInvalidType) {
-    auto agg = FieldBoolAndAgg::Create(arrow::utf8());
+    auto agg = FieldBoolAndAgg::Create(arrow::utf8(), GetDefaultPool());
     ASSERT_FALSE(agg.ok());
 }
 
 TEST(FieldBoolAndAggTest, TestNull) {
-    ASSERT_OK_AND_ASSIGN(auto agg, FieldBoolAndAgg::Create(arrow::boolean()));
+    ASSERT_OK_AND_ASSIGN(auto agg, FieldBoolAndAgg::Create(arrow::boolean(), GetDefaultPool()));
     {
         auto agg_ret = agg->Agg(true, NullType()).value();
         ASSERT_EQ(DataDefine::GetVariantValue<bool>(agg_ret), true);
@@ -63,7 +64,7 @@ TEST(FieldBoolAndAggTest, TestNull) {
 }
 
 TEST(FieldBoolOrAggTest, TestSimple) {
-    ASSERT_OK_AND_ASSIGN(auto agg, FieldBoolOrAgg::Create(arrow::boolean()));
+    ASSERT_OK_AND_ASSIGN(auto agg, FieldBoolOrAgg::Create(arrow::boolean(), GetDefaultPool()));
     auto agg_ret = agg->Agg(true, true).value();
     ASSERT_EQ(DataDefine::GetVariantValue<bool>(agg_ret), true);
     agg_ret = agg->Agg(true, false).value();
@@ -78,12 +79,12 @@ TEST(FieldBoolOrAggTest, TestSimple) {
 }
 
 TEST(FieldBoolOrAggTest, TestInvalidType) {
-    auto agg = FieldBoolOrAgg::Create(arrow::utf8());
+    auto agg = FieldBoolOrAgg::Create(arrow::utf8(), GetDefaultPool());
     ASSERT_FALSE(agg.ok());
 }
 
 TEST(FieldBoolOrAggTest, TestNull) {
-    ASSERT_OK_AND_ASSIGN(auto agg, FieldBoolOrAgg::Create(arrow::boolean()));
+    ASSERT_OK_AND_ASSIGN(auto agg, FieldBoolOrAgg::Create(arrow::boolean(), GetDefaultPool()));
     {
         auto agg_ret = agg->Agg(true, NullType()).value();
         ASSERT_EQ(DataDefine::GetVariantValue<bool>(agg_ret), true);

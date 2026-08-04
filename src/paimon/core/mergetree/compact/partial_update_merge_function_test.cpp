@@ -87,8 +87,8 @@ class PartialUpdateMergeFunctionTest : public testing::Test {
         PAIMON_RETURN_NOT_OK(PartialUpdateMergeFunction::ParseSequenceGroupFields(
             options, &value_field_to_seq_group_field, &seq_group_key_set));
         return PartialUpdateMergeFunction::Create(value_schema, /*primary_keys=*/{"f0"}, options,
-                                                  value_field_to_seq_group_field,
-                                                  seq_group_key_set);
+                                                  value_field_to_seq_group_field, seq_group_key_set,
+                                                  GetDefaultPool());
     }
 
     std::string CreateMergeFunctionWithInvalidOptions(
@@ -122,10 +122,10 @@ class PartialUpdateMergeFunctionTest : public testing::Test {
             table_schema, value_field_to_seq_group_field, &copy_value_fields));
         EXPECT_EQ(copy_value_fields, expected_completed_value_fields);
         auto value_schema = DataField::ConvertDataFieldsToArrowSchema(copy_value_fields);
-        EXPECT_OK_AND_ASSIGN(
-            std::unique_ptr<PartialUpdateMergeFunction> mfunc,
-            PartialUpdateMergeFunction::Create(value_schema, {"f0"}, options,
-                                               value_field_to_seq_group_field, seq_group_key_set));
+        EXPECT_OK_AND_ASSIGN(std::unique_ptr<PartialUpdateMergeFunction> mfunc,
+                             PartialUpdateMergeFunction::Create(
+                                 value_schema, {"f0"}, options, value_field_to_seq_group_field,
+                                 seq_group_key_set, GetDefaultPool()));
         return mfunc;
     }
 
@@ -440,10 +440,10 @@ TEST_F(PartialUpdateMergeFunctionTest, TestAdjustProjectionCreateDirectly) {
 
     ASSERT_OK(PartialUpdateMergeFunction::ParseSequenceGroupFields(
         options, &value_field_to_seq_group_field, &seq_group_key_set));
-    ASSERT_NOK_WITH_MSG(
-        PartialUpdateMergeFunction::Create(value_schema, {"f0"}, options,
-                                           value_field_to_seq_group_field, seq_group_key_set),
-        "cannot find sequence group field f4 in value schema, unexpected.");
+    ASSERT_NOK_WITH_MSG(PartialUpdateMergeFunction::Create(value_schema, {"f0"}, options,
+                                                           value_field_to_seq_group_field,
+                                                           seq_group_key_set, GetDefaultPool()),
+                        "cannot find sequence group field f4 in value schema, unexpected.");
 }
 
 TEST_F(PartialUpdateMergeFunctionTest, TestFirstValue) {
@@ -754,7 +754,7 @@ TEST_F(PartialUpdateMergeFunctionTest, TestCreateFieldAggregatorsWithDefaultAgg)
     ASSERT_OK_AND_ASSIGN(aggs, PartialUpdateMergeFunction::CreateFieldAggregators(
                                    value_schema,
                                    /*primary_keys=*/{"p0"}, options, value_field_to_seq_group_field,
-                                   seq_group_key_set));
+                                   seq_group_key_set, GetDefaultPool()));
     ASSERT_EQ(4, aggs.size());
     // test primary key: p0
     ASSERT_TRUE(dynamic_cast<FieldPrimaryKeyAgg*>(aggs[0].get()));
@@ -785,7 +785,7 @@ TEST_F(PartialUpdateMergeFunctionTest, TestCreateFieldAggregatorsWithoutDefaultA
     ASSERT_OK_AND_ASSIGN(aggs, PartialUpdateMergeFunction::CreateFieldAggregators(
                                    value_schema,
                                    /*primary_keys=*/{"p0"}, options, value_field_to_seq_group_field,
-                                   seq_group_key_set));
+                                   seq_group_key_set, GetDefaultPool()));
     ASSERT_EQ(2, aggs.size());
     // test primary key: p0
     ASSERT_TRUE(dynamic_cast<FieldPrimaryKeyAgg*>(aggs[0].get()));
@@ -864,9 +864,10 @@ TEST_F(PartialUpdateMergeFunctionTest, TestInitRowWithNullableFieldOnDelete) {
     std::set<std::string> seq_group_key_set;
     ASSERT_OK(PartialUpdateMergeFunction::ParseSequenceGroupFields(
         options, &value_field_to_seq_group_field, &seq_group_key_set));
-    ASSERT_OK_AND_ASSIGN(auto mfunc, PartialUpdateMergeFunction::Create(
-                                         value_schema, /*primary_keys=*/{"f0"}, options,
-                                         value_field_to_seq_group_field, seq_group_key_set));
+    ASSERT_OK_AND_ASSIGN(auto mfunc,
+                         PartialUpdateMergeFunction::Create(value_schema, /*primary_keys=*/{"f0"},
+                                                            options, value_field_to_seq_group_field,
+                                                            seq_group_key_set, GetDefaultPool()));
     mfunc->Reset();
 
     // insert some data first
@@ -916,10 +917,10 @@ TEST_F(PartialUpdateMergeFunctionTest, SequenceGroupKeepsBinaryAccumulatorOnOlde
     std::set<std::string> seq_group_key_set;
     ASSERT_OK(PartialUpdateMergeFunction::ParseSequenceGroupFields(
         options, &value_field_to_seq_group_field, &seq_group_key_set));
-    ASSERT_OK_AND_ASSIGN(
-        std::unique_ptr<PartialUpdateMergeFunction> mfunc,
-        PartialUpdateMergeFunction::Create(value_schema, /*primary_keys=*/{"f0"}, options,
-                                           value_field_to_seq_group_field, seq_group_key_set));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<PartialUpdateMergeFunction> mfunc,
+                         PartialUpdateMergeFunction::Create(value_schema, /*primary_keys=*/{"f0"},
+                                                            options, value_field_to_seq_group_field,
+                                                            seq_group_key_set, GetDefaultPool()));
     mfunc->Reset();
     Add(mfunc, {1, HllBytes({1, 2, 3}), 10});
     // newer record, so the forward path unions and stores an owned buffer in the row

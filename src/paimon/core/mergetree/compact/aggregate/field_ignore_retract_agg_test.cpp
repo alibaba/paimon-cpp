@@ -28,12 +28,13 @@
 #include "paimon/core/core_options.h"
 #include "paimon/core/mergetree/compact/aggregate/field_collect_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_sum_agg.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
 TEST(FieldIgnoreRetractAggTest, TestSimple) {
-    ASSERT_OK_AND_ASSIGN(auto field_sum_agg, FieldSumAgg::Create(arrow::int32()));
+    ASSERT_OK_AND_ASSIGN(auto field_sum_agg, FieldSumAgg::Create(arrow::int32(), GetDefaultPool()));
     auto agg = std::make_unique<FieldIgnoreRetractAgg>(std::move(field_sum_agg));
 
     auto agg_ret = agg->Agg(5, 10).value();
@@ -43,7 +44,7 @@ TEST(FieldIgnoreRetractAggTest, TestSimple) {
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(retract_ret), 5);
 }
 TEST(FieldIgnoreRetractAggTest, TestNull) {
-    ASSERT_OK_AND_ASSIGN(auto field_sum_agg, FieldSumAgg::Create(arrow::int32()));
+    ASSERT_OK_AND_ASSIGN(auto field_sum_agg, FieldSumAgg::Create(arrow::int32(), GetDefaultPool()));
     auto agg = std::make_unique<FieldIgnoreRetractAgg>(std::move(field_sum_agg));
     {
         auto agg_ret = agg->Agg(5, NullType()).value();
@@ -75,8 +76,9 @@ TEST(FieldIgnoreRetractAggTest, TestNull) {
 // implementation and therefore bypasses the wrapped aggregator's own aggReversed override
 TEST(FieldIgnoreRetractAggTest, ReversedAggBypassesWrappedOverride) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<FieldCollectAgg> collect_agg,
-                         FieldCollectAgg::Create(arrow::list(arrow::int32()), options, "f0"));
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<FieldCollectAgg> collect_agg,
+        FieldCollectAgg::Create(arrow::list(arrow::int32()), options, "f0", GetDefaultPool()));
     auto agg = std::make_unique<FieldIgnoreRetractAgg>(std::move(collect_agg));
 
     VariantType accumulator = VariantType(std::static_pointer_cast<InternalArray>(

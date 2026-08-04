@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "paimon/core/mergetree/compact/aggregate/field_aggregator.h"
 
@@ -35,10 +36,11 @@ class FieldCollectAgg : public FieldAggregator {
     /// @param field_type Type of the aggregated field.
     /// @param options Table options containing the distinct setting.
     /// @param field_name Name of the aggregated field.
+    /// @param pool Pool the merged arrays are allocated from.
     /// @return A collect aggregator, or an error Status.
     static Result<std::unique_ptr<FieldCollectAgg>> Create(
         const std::shared_ptr<arrow::DataType>& field_type, const CoreOptions& options,
-        const std::string& field_name);
+        const std::string& field_name, const std::shared_ptr<MemoryPool>& pool);
 
     Result<VariantType> Agg(const VariantType& accumulator,
                             const VariantType& input_field) override;
@@ -49,8 +51,9 @@ class FieldCollectAgg : public FieldAggregator {
 
  private:
     FieldCollectAgg(const std::shared_ptr<arrow::DataType>& field_type,
-                    std::shared_ptr<arrow::DataType> element_type, bool distinct)
-        : FieldAggregator(NAME, field_type),
+                    std::shared_ptr<arrow::DataType> element_type, bool distinct,
+                    const std::shared_ptr<MemoryPool>& pool)
+        : FieldAggregator(NAME, field_type, pool),
           element_type_(std::move(element_type)),
           distinct_(distinct) {}
 

@@ -88,7 +88,8 @@ VariantType MakeMap(std::vector<MapEntry> entries,
 }  // namespace
 
 Result<std::unique_ptr<FieldMergeMapAgg>> FieldMergeMapAgg::Create(
-    const std::shared_ptr<arrow::DataType>& field_type, const std::string& field_name) {
+    const std::shared_ptr<arrow::DataType>& field_type, const std::string& field_name,
+    const std::shared_ptr<MemoryPool>& pool) {
     if (field_type->id() != arrow::Type::MAP) {
         return Status::Invalid(
             fmt::format("invalid field type {} for field '{}' of {}, supposed to be map",
@@ -97,7 +98,7 @@ Result<std::unique_ptr<FieldMergeMapAgg>> FieldMergeMapAgg::Create(
     std::shared_ptr<arrow::MapType> map_type =
         arrow::internal::checked_pointer_cast<arrow::MapType>(field_type);
     return std::unique_ptr<FieldMergeMapAgg>(
-        new FieldMergeMapAgg(field_type, map_type->key_type(), map_type->item_type()));
+        new FieldMergeMapAgg(field_type, map_type->key_type(), map_type->item_type(), pool));
 }
 
 Result<VariantType> FieldMergeMapAgg::Agg(const VariantType& accumulator,

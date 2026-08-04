@@ -20,13 +20,14 @@
 
 #include "arrow/type_fwd.h"
 #include "gtest/gtest.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
 // just for test, in practice, for primary key, accumulator will always equals to input_field
 TEST(FieldPrimaryKeyAggTest, TestSimple) {
-    auto agg = std::make_unique<FieldPrimaryKeyAgg>(arrow::int32());
+    auto agg = std::make_unique<FieldPrimaryKeyAgg>(arrow::int32(), GetDefaultPool());
 
     auto agg_ret = agg->Agg(5, 10).value();
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 10);
@@ -35,7 +36,7 @@ TEST(FieldPrimaryKeyAggTest, TestSimple) {
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(retract_ret), 10);
 }
 TEST(FieldPrimaryKeyAggTest, TestNull) {
-    auto agg = std::make_unique<FieldPrimaryKeyAgg>(arrow::int32());
+    auto agg = std::make_unique<FieldPrimaryKeyAgg>(arrow::int32(), GetDefaultPool());
     {
         auto agg_ret = agg->Agg(5, NullType()).value();
         ASSERT_TRUE(DataDefine::IsVariantNull(agg_ret));

@@ -120,13 +120,13 @@ Result<std::unique_ptr<PartialUpdateMergeFunction>> PartialUpdateMergeFunction::
     const std::shared_ptr<arrow::Schema>& value_schema,
     const std::vector<std::string>& primary_keys, const CoreOptions& options,
     const std::map<std::string, std::vector<std::string>>& value_field_to_seq_group_field,
-    const std::set<std::string>& seq_group_key_set) {
+    const std::set<std::string>& seq_group_key_set, const std::shared_ptr<MemoryPool>& pool) {
     // 1. create field aggregator
     std::map<int32_t, std::shared_ptr<FieldAggregator>> field_aggregators;
     PAIMON_ASSIGN_OR_RAISE(
         field_aggregators,
         CreateFieldAggregators(value_schema, primary_keys, options, value_field_to_seq_group_field,
-                               seq_group_key_set));
+                               seq_group_key_set, pool));
     // 2. create field seq comparator
     std::map<int32_t, std::shared_ptr<FieldsComparator>> field_comparators;
     PAIMON_ASSIGN_OR_RAISE(field_comparators,
@@ -223,7 +223,7 @@ PartialUpdateMergeFunction::CreateFieldAggregators(
     const std::shared_ptr<arrow::Schema>& value_schema,
     const std::vector<std::string>& primary_keys, const CoreOptions& options,
     const std::map<std::string, std::vector<std::string>>& value_field_to_seq_group_field,
-    const std::set<std::string>& seq_group_key_set) {
+    const std::set<std::string>& seq_group_key_set, const std::shared_ptr<MemoryPool>& pool) {
     std::map<int32_t, std::shared_ptr<FieldAggregator>> aggregators;
     std::optional<std::string> default_agg_func = options.GetFieldsDefaultFunc();
     for (int32_t i = 0; i < value_schema->num_fields(); i++) {
@@ -235,9 +235,10 @@ PartialUpdateMergeFunction::CreateFieldAggregators(
         }
         auto primary_key_iter = std::find(primary_keys.begin(), primary_keys.end(), field_name);
         if (primary_key_iter != primary_keys.end()) {
-            PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FieldAggregator> agg,
-                                   FieldAggregatorFactory::CreateFieldAggregator(
-                                       field_name, field_type, FieldPrimaryKeyAgg::NAME, options));
+            PAIMON_ASSIGN_OR_RAISE(
+                std::unique_ptr<FieldAggregator> agg,
+                FieldAggregatorFactory::CreateFieldAggregator(
+                    field_name, field_type, FieldPrimaryKeyAgg::NAME, options, pool));
             aggregators[i] = std::move(agg);
             continue;
         }
@@ -257,7 +258,7 @@ PartialUpdateMergeFunction::CreateFieldAggregators(
             }
             PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FieldAggregator> agg,
                                    FieldAggregatorFactory::CreateFieldAggregator(
-                                       field_name, field_type, str_agg.value(), options));
+                                       field_name, field_type, str_agg.value(), options, pool));
             aggregators[i] = std::move(agg);
         }
     }

@@ -170,7 +170,7 @@ MergeFileSplitRead::GetMergeFunctionWrapper() {
         // raise errors when creating MergeFileSplitRead at the beginning.
         PAIMON_ASSIGN_OR_RAISE(
             merge_function_wrapper_,
-            CreateMergeFunctionWrapper(options_, context_->GetTableSchema(), value_schema_));
+            CreateMergeFunctionWrapper(options_, context_->GetTableSchema(), value_schema_, pool_));
     }
     return merge_function_wrapper_;
 }
@@ -178,10 +178,11 @@ MergeFileSplitRead::GetMergeFunctionWrapper() {
 Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>>
 MergeFileSplitRead::CreateMergeFunctionWrapper(const CoreOptions& core_options,
                                                const std::shared_ptr<TableSchema>& table_schema,
-                                               const std::shared_ptr<arrow::Schema>& value_schema) {
+                                               const std::shared_ptr<arrow::Schema>& value_schema,
+                                               const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<MergeFunction> merge_function,
                            PrimaryKeyTableUtils::CreateMergeFunction(
-                               value_schema, table_schema->PrimaryKeys(), core_options));
+                               value_schema, table_schema->PrimaryKeys(), core_options, pool));
     if (core_options.NeedLookup() && core_options.GetMergeEngine() != MergeEngine::FIRST_ROW) {
         // don't wrap first row, it is already OK
         merge_function = std::make_unique<LookupMergeFunction>(std::move(merge_function));

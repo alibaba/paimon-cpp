@@ -35,7 +35,8 @@
 namespace paimon {
 Result<std::unique_ptr<AggregateMergeFunction>> AggregateMergeFunction::Create(
     const std::shared_ptr<arrow::Schema>& value_schema,
-    const std::vector<std::string>& primary_keys, const CoreOptions& options) {
+    const std::vector<std::string>& primary_keys, const CoreOptions& options,
+    const std::shared_ptr<MemoryPool>& pool) {
     std::vector<std::unique_ptr<FieldAggregator>> aggregators;
     aggregators.reserve(value_schema->num_fields());
     for (int32_t i = 0; i < value_schema->num_fields(); i++) {
@@ -44,8 +45,8 @@ Result<std::unique_ptr<AggregateMergeFunction>> AggregateMergeFunction::Create(
         PAIMON_ASSIGN_OR_RAISE(std::string str_agg,
                                GetAggFuncName(field_name, primary_keys, options));
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FieldAggregator> agg,
-                               FieldAggregatorFactory::CreateFieldAggregator(field_name, field_type,
-                                                                             str_agg, options));
+                               FieldAggregatorFactory::CreateFieldAggregator(
+                                   field_name, field_type, str_agg, options, pool));
         aggregators.push_back(std::move(agg));
     }
 

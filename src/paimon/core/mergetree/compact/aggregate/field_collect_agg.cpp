@@ -69,7 +69,7 @@ Status AppendArray(const std::shared_ptr<InternalArray>& array,
 
 Result<std::unique_ptr<FieldCollectAgg>> FieldCollectAgg::Create(
     const std::shared_ptr<arrow::DataType>& field_type, const CoreOptions& options,
-    const std::string& field_name) {
+    const std::string& field_name, const std::shared_ptr<MemoryPool>& pool) {
     if (field_type->id() != arrow::Type::LIST) {
         return Status::Invalid(
             fmt::format("invalid field type {} for field '{}' of {}, supposed to be array",
@@ -79,7 +79,7 @@ Result<std::unique_ptr<FieldCollectAgg>> FieldCollectAgg::Create(
         arrow::internal::checked_pointer_cast<arrow::ListType>(field_type);
     PAIMON_ASSIGN_OR_RAISE(bool distinct, options.FieldCollectAggDistinct(field_name));
     return std::unique_ptr<FieldCollectAgg>(
-        new FieldCollectAgg(field_type, list_type->value_type(), distinct));
+        new FieldCollectAgg(field_type, list_type->value_type(), distinct, pool));
 }
 
 Result<VariantType> FieldCollectAgg::Agg(const VariantType& accumulator,

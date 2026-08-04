@@ -82,8 +82,9 @@ FieldNestedUpdateAgg::FieldNestedUpdateAgg(const std::shared_ptr<arrow::DataType
                                            std::vector<int32_t> key_fields,
                                            CoreOptions::NestedKeyNullStrategy null_strategy,
                                            std::unique_ptr<FieldsComparator> sequence_comparator,
-                                           int32_t count_limit)
-    : FieldAggregator(NAME, field_type),
+                                           int32_t count_limit,
+                                           const std::shared_ptr<MemoryPool>& pool)
+    : FieldAggregator(NAME, field_type, pool),
       row_type_(std::move(row_type)),
       key_fields_(std::move(key_fields)),
       null_strategy_(null_strategy),
@@ -94,7 +95,7 @@ FieldNestedUpdateAgg::~FieldNestedUpdateAgg() = default;
 
 Result<std::unique_ptr<FieldNestedUpdateAgg>> FieldNestedUpdateAgg::Create(
     const std::shared_ptr<arrow::DataType>& field_type, const CoreOptions& options,
-    const std::string& field_name) {
+    const std::string& field_name, const std::shared_ptr<MemoryPool>& pool) {
     if (field_type->id() != arrow::Type::LIST) {
         return Status::Invalid(
             fmt::format("invalid field type {} for field '{}' of {}, supposed to be array<struct>",
@@ -148,7 +149,7 @@ Result<std::unique_ptr<FieldNestedUpdateAgg>> FieldNestedUpdateAgg::Create(
     PAIMON_ASSIGN_OR_RAISE(int32_t count_limit, options.FieldNestedUpdateAggCountLimit(field_name));
     return std::unique_ptr<FieldNestedUpdateAgg>(
         new FieldNestedUpdateAgg(field_type, std::move(row_type), std::move(key_fields),
-                                 null_strategy, std::move(sequence_comparator), count_limit));
+                                 null_strategy, std::move(sequence_comparator), count_limit, pool));
 }
 
 Result<VariantType> FieldNestedUpdateAgg::Agg(const VariantType& accumulator,

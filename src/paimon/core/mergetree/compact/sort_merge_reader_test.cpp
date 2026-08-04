@@ -150,9 +150,9 @@ class SortMergeReaderTest : public testing::Test {
         const std::vector<std::string>& primary_keys, const CoreOptions& core_options,
         const std::vector<KeyValue>& expected) const {
         for (auto batch_size : {1, 2, 3, 4, 100}) {
-            ASSERT_OK_AND_ASSIGN(
-                std::unique_ptr<AggregateMergeFunction> mfunc,
-                AggregateMergeFunction::Create(value_schema, primary_keys, core_options));
+            ASSERT_OK_AND_ASSIGN(std::unique_ptr<AggregateMergeFunction> mfunc,
+                                 AggregateMergeFunction::Create(value_schema, primary_keys,
+                                                                core_options, GetDefaultPool()));
             auto merge_function_wrapper =
                 std::make_shared<ReducerMergeFunctionWrapper>(std::move(mfunc));
             std::vector<std::unique_ptr<KeyValueRecordReader>> merged_readers;

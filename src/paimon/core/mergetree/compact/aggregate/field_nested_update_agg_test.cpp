@@ -30,6 +30,7 @@
 #include "paimon/common/data/serializer/binary_serializer_utils.h"
 #include "paimon/common/types/row_kind.h"
 #include "paimon/core/core_options.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -75,7 +76,7 @@ std::shared_ptr<InternalRow> FindRow(const VariantType& value, int32_t id) {
 Result<std::unique_ptr<FieldNestedUpdateAgg>> MakeAgg(
     const std::map<std::string, std::string>& options_map) {
     PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(options_map));
-    return FieldNestedUpdateAgg::Create(NestedType(), options, "f");
+    return FieldNestedUpdateAgg::Create(NestedType(), options, "f", GetDefaultPool());
 }
 
 }  // namespace
@@ -185,29 +186,32 @@ TEST(FieldNestedUpdateAggTest, AppliesNullKeyStrategies) {
 
 TEST(FieldNestedUpdateAggTest, ValidatesTypeAndOptionDependencies) {
     ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
-    ASSERT_NOK(FieldNestedUpdateAgg::Create(arrow::list(arrow::int32()), options, "f"));
+    ASSERT_NOK(
+        FieldNestedUpdateAgg::Create(arrow::list(arrow::int32()), options, "f", GetDefaultPool()));
 
     ASSERT_OK_AND_ASSIGN(CoreOptions strategy_without_key,
                          CoreOptions::FromMap({{"fields.f.nested-key-null-strategy", "ignore"}}));
-    ASSERT_NOK(FieldNestedUpdateAgg::Create(NestedType(), strategy_without_key, "f"));
+    ASSERT_NOK(
+        FieldNestedUpdateAgg::Create(NestedType(), strategy_without_key, "f", GetDefaultPool()));
 
     ASSERT_OK_AND_ASSIGN(CoreOptions sequence_without_key,
                          CoreOptions::FromMap({{"fields.f.nested-sequence-field", "seq"}}));
-    ASSERT_NOK(FieldNestedUpdateAgg::Create(NestedType(), sequence_without_key, "f"));
+    ASSERT_NOK(
+        FieldNestedUpdateAgg::Create(NestedType(), sequence_without_key, "f", GetDefaultPool()));
 
     ASSERT_OK_AND_ASSIGN(CoreOptions invalid_strategy,
                          CoreOptions::FromMap({{"fields.f.nested-key", "id"},
                                                {"fields.f.nested-key-null-strategy", "invalid"}}));
-    ASSERT_NOK(FieldNestedUpdateAgg::Create(NestedType(), invalid_strategy, "f"));
+    ASSERT_NOK(FieldNestedUpdateAgg::Create(NestedType(), invalid_strategy, "f", GetDefaultPool()));
 
     ASSERT_OK_AND_ASSIGN(CoreOptions negative_limit,
                          CoreOptions::FromMap({{"fields.f.count-limit", "-1"}}));
-    ASSERT_NOK(FieldNestedUpdateAgg::Create(NestedType(), negative_limit, "f"));
+    ASSERT_NOK(FieldNestedUpdateAgg::Create(NestedType(), negative_limit, "f", GetDefaultPool()));
 
     // Java resolves nested-key names with List.indexOf and accepts repeats, so we must too
     ASSERT_OK_AND_ASSIGN(CoreOptions repeated_key,
                          CoreOptions::FromMap({{"fields.f.nested-key", "id,id"}}));
-    ASSERT_OK(FieldNestedUpdateAgg::Create(NestedType(), repeated_key, "f"));
+    ASSERT_OK(FieldNestedUpdateAgg::Create(NestedType(), repeated_key, "f", GetDefaultPool()));
 }
 
 // Ported from Java FieldAggregatorTest: composite nested keys, multiple sequence fields and the
@@ -235,7 +239,7 @@ VariantType KeyedRow(VariantType k0, VariantType k1, std::string_view v, int32_t
 Result<std::unique_ptr<FieldNestedUpdateAgg>> MakeKeyedAgg(
     const std::map<std::string, std::string>& options_map) {
     PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(options_map));
-    return FieldNestedUpdateAgg::Create(CompositeKeyType(), options, "f");
+    return FieldNestedUpdateAgg::Create(CompositeKeyType(), options, "f", GetDefaultPool());
 }
 
 std::vector<std::string> SortedKeyed(const VariantType& value) {
