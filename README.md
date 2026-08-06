@@ -22,7 +22,9 @@
 > implementation of Apache Paimon. The official repository provides the same functionality and
 > APIs as this repository. We welcome everyone to use and contribute to Apache Paimon C++.
 > Please direct all future issues, pull requests, and other contributions to
-> [apache/paimon-cpp](https://github.com/apache/paimon-cpp).
+> [apache/paimon-cpp](https://github.com/apache/paimon-cpp). We sincerely thank everyone who has
+> used and contributed to Paimon C++ over the years. We warmly welcome you to continue using and
+> contributing to Paimon C++ in the Apache community.
 
 [![GitHub License](https://img.shields.io/github/license/alibaba/paimon-cpp?color=blue)](https://github.com/alibaba/paimon-cpp/blob/main/LICENSE)
 [![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/alibaba/paimon-cpp)
