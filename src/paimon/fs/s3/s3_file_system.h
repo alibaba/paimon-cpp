@@ -32,6 +32,10 @@ inline constexpr char kS3ProfileOption[] = "s3.profile";
 inline constexpr char kS3AccessKeyOption[] = "s3.access-key";
 inline constexpr char kS3SecretKeyOption[] = "s3.secret-key";
 inline constexpr char kS3SessionTokenOption[] = "s3.session.token";
+inline constexpr char kS3ConnectionEstablishTimeoutOption[] = "s3.connection.establish.timeout";
+inline constexpr char kS3ConnectionRequestTimeoutOption[] = "s3.connection.request.timeout";
+inline constexpr char kS3LowSpeedLimitOption[] = "s3.low-speed-limit";
+inline constexpr char kS3LowSpeedTimeSecondsOption[] = "s3.low-speed-time-seconds";
 
 Status ValidateS3Options(const std::map<std::string, std::string>& options);
 Result<std::shared_ptr<ObjectStoreClient>> MakeS3ObjectStoreClient(

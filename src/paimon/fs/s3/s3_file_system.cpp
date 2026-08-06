@@ -16,6 +16,7 @@
 
 #include "paimon/fs/s3/s3_file_system.h"
 
+#include <arrow/util/value_parsing.h>
 #include <aws/auth/auth.h>
 #include <aws/auth/credentials.h>
 #include <aws/auth/signable.h>
@@ -33,9 +34,12 @@
 
 #include <algorithm>
 #include <cctype>
+#include <climits>
 #include <condition_variable>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <limits>
 #include <mutex>
 #include <optional>
@@ -52,10 +56,10 @@ namespace paimon::s3 {
 namespace {
 
 Result<std::string> PercentEncode(std::string_view value, bool preserve_slash) {
-    if (value.size() > std::numeric_limits<int>::max()) {
+    if (value.size() > std::numeric_limits<int32_t>::max()) {
         return Status::IOError("S3 URL component is too large to encode");
     }
-    char* encoded = curl_easy_escape(nullptr, value.data(), static_cast<int>(value.size()));
+    char* encoded = curl_easy_escape(nullptr, value.data(), static_cast<int32_t>(value.size()));
     if (encoded == nullptr) {
         return Status::IOError("failed to URL encode S3 component");
     }
@@ -69,19 +73,18 @@ Result<std::string> PercentEncode(std::string_view value, bool preserve_slash) {
 
 Result<std::string> PercentDecode(std::string_view value, const std::string& field) {
     for (size_t position = 0; position < value.size(); ++position) {
-        if (value[position] == '%' &&
-            (position + 2 >= value.size() ||
-             !std::isxdigit(static_cast<unsigned char>(value[position + 1])) ||
-             !std::isxdigit(static_cast<unsigned char>(value[position + 2])))) {
+        if (value[position] == '%' && (position + 2 >= value.size() ||
+                                       !std::isxdigit(static_cast<uint8_t>(value[position + 1])) ||
+                                       !std::isxdigit(static_cast<uint8_t>(value[position + 2])))) {
             return Status::IOError(fmt::format("invalid URL encoding in S3 {}", field));
         }
     }
-    if (value.size() > std::numeric_limits<int>::max()) {
+    if (value.size() > std::numeric_limits<int32_t>::max()) {
         return Status::IOError(fmt::format("S3 {} is too large to URL decode", field));
     }
-    int decoded_size = 0;
-    char* decoded =
-        curl_easy_unescape(nullptr, value.data(), static_cast<int>(value.size()), &decoded_size);
+    int32_t decoded_size = 0;
+    char* decoded = curl_easy_unescape(nullptr, value.data(), static_cast<int32_t>(value.size()),
+                                       &decoded_size);
     if (decoded == nullptr) {
         return Status::IOError(fmt::format("failed to URL decode S3 {}", field));
     }
@@ -98,9 +101,22 @@ Result<int64_t> ParseNonNegativeInt64(const std::string& value, const std::strin
     return *result;
 }
 
-int64_t ParseModificationTime(const std::string& value) {
+int64_t ParseHttpModificationTime(const std::string& value) {
     time_t seconds = curl_getdate(value.c_str(), nullptr);
     return seconds == static_cast<time_t>(-1) ? 0 : static_cast<int64_t>(seconds) * 1000;
+}
+
+int64_t ParseIso8601ModificationTime(const std::string& value) {
+    if (value.size() < 20 || value[4] != '-' || value[7] != '-' || value[10] != 'T' ||
+        value[13] != ':' || value[16] != ':' || value.back() != 'Z') {
+        return 0;
+    }
+    static const std::shared_ptr<arrow::TimestampParser> parser =
+        arrow::TimestampParser::MakeISO8601();
+    int64_t milliseconds = 0;
+    return (*parser)(value.data(), value.size(), arrow::TimeUnit::MILLI, &milliseconds)
+               ? milliseconds
+               : 0;
 }
 
 std::string XmlUnescape(const std::string& value) {
@@ -261,14 +277,11 @@ class AwsAuthRuntime {
 };
 
 Result<AwsAuthRuntime*> GetAwsAuthRuntime() {
-    static const Result<AwsAuthRuntime*> runtime = [] {
-        Result<std::unique_ptr<AwsAuthRuntime>> created = AwsAuthRuntime::Create();
-        if (!created.ok()) {
-            return Result<AwsAuthRuntime*>(created.status());
-        }
-        return Result<AwsAuthRuntime*>(std::move(created).value().release());
-    }();
-    return runtime;
+    static const Result<std::unique_ptr<AwsAuthRuntime>> runtime = AwsAuthRuntime::Create();
+    if (!runtime.ok()) {
+        return runtime.status();
+    }
+    return runtime.value().get();
 }
 
 aws_byte_cursor Cursor(const std::string& value) {
@@ -298,6 +311,18 @@ const char* CanonicalS3OptionName(const std::string& option) {
     if (option == "profile") {
         return kS3ProfileOption;
     }
+    if (option == "connection.establish.timeout") {
+        return kS3ConnectionEstablishTimeoutOption;
+    }
+    if (option == "connection.request.timeout") {
+        return kS3ConnectionRequestTimeoutOption;
+    }
+    if (option == "low-speed-limit") {
+        return kS3LowSpeedLimitOption;
+    }
+    if (option == "low-speed-time-seconds") {
+        return kS3LowSpeedTimeSecondsOption;
+    }
     return nullptr;
 }
 
@@ -323,6 +348,34 @@ std::map<std::string, std::string> NormalizeS3Options(
         }
     }
     return normalized;
+}
+
+Result<int64_t> ResolveCurlOption(const std::map<std::string, std::string>& options,
+                                  const std::string& key, int64_t default_value) {
+    PAIMON_ASSIGN_OR_RAISE(int64_t value,
+                           OptionsUtils::GetValueFromMap<int64_t>(options, key, default_value));
+    if (value < 0 || value > LONG_MAX) {
+        return Status::Invalid(fmt::format("{} must be between 0 and {}", key, LONG_MAX));
+    }
+    return value;
+}
+
+Result<CurlHttpClientOptions> ResolveCurlHttpClientOptions(
+    const std::map<std::string, std::string>& options) {
+    CurlHttpClientOptions result;
+    PAIMON_ASSIGN_OR_RAISE(
+        result.connect_timeout_ms,
+        ResolveCurlOption(options, kS3ConnectionEstablishTimeoutOption, result.connect_timeout_ms));
+    PAIMON_ASSIGN_OR_RAISE(
+        result.request_timeout_ms,
+        ResolveCurlOption(options, kS3ConnectionRequestTimeoutOption, result.request_timeout_ms));
+    PAIMON_ASSIGN_OR_RAISE(result.low_speed_limit_bytes_per_second,
+                           ResolveCurlOption(options, kS3LowSpeedLimitOption,
+                                             result.low_speed_limit_bytes_per_second));
+    PAIMON_ASSIGN_OR_RAISE(
+        result.low_speed_time_seconds,
+        ResolveCurlOption(options, kS3LowSpeedTimeSecondsOption, result.low_speed_time_seconds));
+    return result;
 }
 
 std::shared_ptr<aws_credentials_provider> WrapProvider(aws_credentials_provider* provider) {
@@ -352,16 +405,20 @@ Result<std::string> ResolveRegion(const std::map<std::string, std::string>& opti
         profile_override_ptr = &profile_override;
     }
     aws_string* config_path = aws_get_config_file_path(runtime->allocator(), nullptr);
+    ScopeGuard destroy_config_path([config_path] { aws_string_destroy(config_path); });
     aws_string* profile_name = aws_get_profile_name(runtime->allocator(), profile_override_ptr);
+    ScopeGuard destroy_profile_name([profile_name] { aws_string_destroy(profile_name); });
     aws_profile_collection* profiles = config_path == nullptr
                                            ? nullptr
                                            : aws_profile_collection_new_from_file(
                                                  runtime->allocator(), config_path, AWS_PST_CONFIG);
+    ScopeGuard release_profiles([profiles] { aws_profile_collection_release(profiles); });
     const aws_profile* selected_profile =
         profiles == nullptr || profile_name == nullptr
             ? nullptr
             : aws_profile_collection_get_profile(profiles, profile_name);
     aws_string* region_name = aws_string_new_from_c_str(runtime->allocator(), "region");
+    ScopeGuard destroy_region_name([region_name] { aws_string_destroy(region_name); });
     const aws_profile_property* property =
         selected_profile == nullptr || region_name == nullptr
             ? nullptr
@@ -369,10 +426,6 @@ Result<std::string> ResolveRegion(const std::map<std::string, std::string>& opti
     const aws_string* value =
         property == nullptr ? nullptr : aws_profile_property_get_value(property);
     std::string resolved = value == nullptr ? "" : aws_string_c_str(value);
-    aws_string_destroy(region_name);
-    aws_profile_collection_release(profiles);
-    aws_string_destroy(profile_name);
-    aws_string_destroy(config_path);
     return resolved.empty() ? "us-east-1" : resolved;
 }
 
@@ -407,6 +460,11 @@ Result<std::shared_ptr<aws_credentials_provider>> MakeCredentialsProvider(
     }
 
     std::vector<aws_credentials_provider*> providers;
+    ScopeGuard release_providers([&providers] {
+        for (aws_credentials_provider* provider : providers) {
+            aws_credentials_provider_release(provider);
+        }
+    });
     aws_credentials_provider_environment_options environment_options{};
     providers.push_back(
         aws_credentials_provider_new_environment(runtime->allocator(), &environment_options));
@@ -453,18 +511,15 @@ Result<std::shared_ptr<aws_credentials_provider>> MakeCredentialsProvider(
     chain_options.provider_count = providers.size();
     aws_credentials_provider* chain =
         aws_credentials_provider_new_chain(runtime->allocator(), &chain_options);
-    for (aws_credentials_provider* provider : providers) {
-        aws_credentials_provider_release(provider);
-    }
     if (chain == nullptr) {
         return std::shared_ptr<aws_credentials_provider>();
     }
+    ScopeGuard release_chain([chain] { aws_credentials_provider_release(chain); });
     aws_credentials_provider_cached_options cached_options{};
     cached_options.source = chain;
     cached_options.refresh_time_in_milliseconds = 15 * 60 * 1000;
     aws_credentials_provider* cached =
         aws_credentials_provider_new_cached(runtime->allocator(), &cached_options);
-    aws_credentials_provider_release(chain);
     return WrapProvider(cached);
 }
 
@@ -486,7 +541,7 @@ Result<Endpoint> ParseEndpoint(std::string endpoint) {
     CURLUcode code = curl_url_set(url, CURLUPART_URL, endpoint.c_str(), 0);
     if (code != CURLUE_OK) {
         return Status::Invalid(
-            fmt::format("invalid S3 endpoint {}: code {}", endpoint, static_cast<int>(code)));
+            fmt::format("invalid S3 endpoint {}: code {}", endpoint, static_cast<int32_t>(code)));
     }
     auto get_part = [url, &endpoint](CURLUPart part, CURLUcode no_value,
                                      const char* name) -> Result<std::optional<std::string>> {
@@ -497,7 +552,7 @@ Result<Endpoint> ParseEndpoint(std::string endpoint) {
         }
         if (result != CURLUE_OK) {
             return Status::Invalid(fmt::format("invalid S3 endpoint {} {}: code {}", endpoint, name,
-                                               static_cast<int>(result)));
+                                               static_cast<int32_t>(result)));
         }
         ScopeGuard free_value([value] { curl_free(value); });
         return std::optional<std::string>(value);
@@ -522,22 +577,30 @@ Result<Endpoint> ParseEndpoint(std::string endpoint) {
         return Status::Invalid(fmt::format(
             "S3 endpoint {} must not contain user, password, query, or fragment", endpoint));
     }
-    PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> port,
-                           get_part(CURLUPART_PORT, CURLUE_NO_PORT, "port"));
     char* path = nullptr;
     code = curl_url_get(url, CURLUPART_PATH, &path, 0);
     if (code != CURLUE_OK) {
-        return Status::Invalid(
-            fmt::format("invalid S3 endpoint {} path: code {}", endpoint, static_cast<int>(code)));
+        return Status::Invalid(fmt::format("invalid S3 endpoint {} path: code {}", endpoint,
+                                           static_cast<int32_t>(code)));
     }
     ScopeGuard free_path([path] { curl_free(path); });
-    std::string authority = *host;
-    if (authority.find(':') != std::string::npos) {
-        authority = "[" + authority + "]";
+    char* normalized_url = nullptr;
+    code = curl_url_get(url, CURLUPART_URL, &normalized_url, 0);
+    if (code != CURLUE_OK) {
+        return Status::Invalid(fmt::format("invalid S3 endpoint {} URL: code {}", endpoint,
+                                           static_cast<int32_t>(code)));
     }
-    if (port) {
-        authority += ":" + *port;
+    ScopeGuard free_normalized_url([normalized_url] { curl_free(normalized_url); });
+    std::string_view normalized_url_view(normalized_url);
+    size_t scheme_end = normalized_url_view.find("://");
+    size_t authority_start =
+        scheme_end == std::string_view::npos ? std::string_view::npos : scheme_end + 3;
+    size_t authority_end = normalized_url_view.find('/', authority_start);
+    if (authority_start == std::string_view::npos) {
+        return Status::Invalid(fmt::format("invalid S3 endpoint {}", endpoint));
     }
+    std::string authority(
+        normalized_url_view.substr(authority_start, authority_end - authority_start));
     return Endpoint{std::move(normalized_scheme), std::move(authority), path};
 }
 
@@ -547,7 +610,7 @@ bool IsVirtualHostableS3Bucket(const std::string& bucket, bool allow_subdomains)
     }
     bool label_start = true;
     for (size_t index = 0; index < bucket.size(); ++index) {
-        const auto character = static_cast<unsigned char>(bucket[index]);
+        const auto character = static_cast<uint8_t>(bucket[index]);
         if (std::islower(character) || std::isdigit(character)) {
             label_start = false;
             continue;
@@ -580,15 +643,15 @@ bool IsIpAddressAuthority(const std::string& authority) {
         host = host.substr(0, port_separator);
     }
     size_t component_start = 0;
-    int component_count = 0;
+    int32_t component_count = 0;
     while (component_start < host.size()) {
         size_t component_end = host.find('.', component_start);
         std::string_view component = host.substr(component_start, component_end - component_start);
         if (component.empty() || component.size() > 3) {
             return false;
         }
-        int value = 0;
-        for (unsigned char character : component) {
+        int32_t value = 0;
+        for (uint8_t character : component) {
             if (!std::isdigit(character)) {
                 return false;
             }
@@ -636,11 +699,11 @@ struct SigningContext {
     aws_http_message* message;
     std::mutex mutex;
     std::condition_variable condition;
-    int error_code = AWS_ERROR_SUCCESS;
+    int32_t error_code = AWS_ERROR_SUCCESS;
     bool complete = false;
 };
 
-void OnSigningComplete(aws_signing_result* result, int error_code, void* user_data) {
+void OnSigningComplete(aws_signing_result* result, int32_t error_code, void* user_data) {
     auto* context = static_cast<SigningContext*>(user_data);
     if (error_code == AWS_ERROR_SUCCESS &&
         aws_apply_signing_result_to_http_request(context->message, context->allocator, result)) {
@@ -654,12 +717,18 @@ void OnSigningComplete(aws_signing_result* result, int error_code, void* user_da
     context->condition.notify_one();
 }
 
+std::shared_ptr<Executor> GetS3Executor() {
+    static std::shared_ptr<Executor> executor = CreateDefaultExecutor();
+    return executor;
+}
+
 class S3ObjectStoreClient : public ObjectStoreClient,
                             public std::enable_shared_from_this<S3ObjectStoreClient> {
  public:
     static Result<std::shared_ptr<ObjectStoreClient>> Create(
         const std::map<std::string, std::string>& options, std::shared_ptr<HttpClient> http_client,
-        std::shared_ptr<aws_credentials_provider> credentials, std::unique_ptr<Executor> executor) {
+        std::shared_ptr<aws_credentials_provider> credentials,
+        const std::shared_ptr<Executor>& executor) {
         PAIMON_ASSIGN_OR_RAISE(std::string region, ResolveRegion(options));
         auto endpoint = options.find(kS3EndpointOption);
         bool use_default_endpoint = endpoint == options.end() || endpoint->second.empty();
@@ -668,10 +737,8 @@ class S3ObjectStoreClient : public ObjectStoreClient,
             ParseEndpoint(use_default_endpoint ? fmt::format("https://s3.{}.{}", region,
                                                              AwsDnsSuffixForRegion(region))
                                                : endpoint->second));
-        auto path_style = options.find(kS3PathStyleAccessOption);
-        bool use_path_style =
-            path_style != options.end() &&
-            OptionsUtils::GetValueFromMap<bool>(options, kS3PathStyleAccessOption).value();
+        PAIMON_ASSIGN_OR_RAISE(bool use_path_style, OptionsUtils::GetValueFromMap<bool>(
+                                                        options, kS3PathStyleAccessOption, false));
         return std::shared_ptr<ObjectStoreClient>(new S3ObjectStoreClient(
             std::move(http_client), std::move(credentials), std::move(executor),
             std::move(parsed_endpoint), std::move(region), use_path_style, use_default_endpoint));
@@ -692,7 +759,7 @@ class S3ObjectStoreClient : public ObjectStoreClient,
         int64_t modification_time = 0;
         auto modified = response.headers.find("last-modified");
         if (modified != response.headers.end()) {
-            modification_time = ParseModificationTime(modified->second);
+            modification_time = ParseHttpModificationTime(modified->second);
         }
         PAIMON_ASSIGN_OR_RAISE(int64_t object_size,
                                ParseNonNegativeInt64(length->second, "Content-Length"));
@@ -745,7 +812,7 @@ class S3ObjectStoreClient : public ObjectStoreClient,
             int64_t modified = 0;
             auto last_modified = TagValue(block, "LastModified");
             if (last_modified) {
-                modified = ParseModificationTime(*last_modified);
+                modified = ParseIso8601ModificationTime(*last_modified);
             }
             result.objects.push_back(ObjectMetadata{decoded_key, object_size, modified});
         }
@@ -803,9 +870,14 @@ class S3ObjectStoreClient : public ObjectStoreClient,
 
     void GetObjectRangeAsync(const ObjectStorePath& path, int64_t offset, int64_t size,
                              char* buffer, std::function<void(Status)>&& callback) const override {
+        std::shared_ptr<Executor> executor = executor_.lock();
+        if (!executor) {
+            callback(Status::IOError("S3 executor is unavailable"));
+            return;
+        }
         auto self = shared_from_this();
-        executor_->Add([self = std::move(self), path, offset, size, buffer,
-                        callback = std::move(callback)]() mutable {
+        executor->Add([self = std::move(self), path, offset, size, buffer,
+                       callback = std::move(callback)]() mutable {
             Result<int64_t> result = self->GetObjectRange(path, offset, size, buffer);
             callback(result.ok() ? Status::OK() : result.status());
         });
@@ -814,8 +886,8 @@ class S3ObjectStoreClient : public ObjectStoreClient,
  private:
     S3ObjectStoreClient(std::shared_ptr<HttpClient> http_client,
                         std::shared_ptr<aws_credentials_provider> credentials,
-                        std::unique_ptr<Executor> executor, Endpoint endpoint, std::string region,
-                        bool path_style, bool use_default_endpoint)
+                        const std::shared_ptr<Executor>& executor, Endpoint endpoint,
+                        std::string region, bool path_style, bool use_default_endpoint)
         : http_client_(std::move(http_client)),
           credentials_(std::move(credentials)),
           endpoint_(std::move(endpoint)),
@@ -823,13 +895,27 @@ class S3ObjectStoreClient : public ObjectStoreClient,
           path_style_(path_style),
           use_default_endpoint_(use_default_endpoint),
           executor_(std::move(executor)) {}
+
     Status CheckResponse(const HttpResponse& response, const std::string& operation,
                          const ObjectStorePath& path) const {
         if (response.status_code >= 200 && response.status_code < 300) {
             return Status::OK();
         }
-        return Status::IOError(fmt::format("{} failed for s3://{}/{}: HTTP {}", operation,
-                                           path.bucket, path.key, response.status_code));
+        std::string detail;
+        auto error_code = TagValue(response.error_body, "Code");
+        auto error_message = TagValue(response.error_body, "Message");
+        if (error_code) {
+            detail = ", S3 error " + *error_code;
+        }
+        if (error_message) {
+            detail += error_code ? ": " + *error_message : ", S3 message " + *error_message;
+        }
+        auto bucket_region = response.headers.find("x-amz-bucket-region");
+        if (bucket_region != response.headers.end()) {
+            detail += ", bucket region " + bucket_region->second;
+        }
+        return Status::IOError(fmt::format("{} failed for s3://{}/{}: HTTP {}{}", operation,
+                                           path.bucket, path.key, response.status_code, detail));
     }
 
     Result<HttpResponse> Execute(const ObjectStorePath& object, HttpMethod method,
@@ -844,8 +930,8 @@ class S3ObjectStoreClient : public ObjectStoreClient,
             path_style_ ||
             (use_default_endpoint_
                  ? !IsVirtualHostableS3Bucket(object.bucket, false)
-                 : endpoint_.scheme != "http" || IsIpAddressAuthority(endpoint_.authority) ||
-                       !IsVirtualHostableS3Bucket(object.bucket, true));
+                 : IsIpAddressAuthority(endpoint_.authority) ||
+                       !IsVirtualHostableS3Bucket(object.bucket, endpoint_.scheme == "http"));
         if (use_path_style) {
             PAIMON_ASSIGN_OR_RAISE(std::string encoded_bucket, PercentEncode(object.bucket, false));
             request_path += encoded_bucket + "/";
@@ -896,15 +982,15 @@ class S3ObjectStoreClient : public ObjectStoreClient,
         config.credentials_provider = credentials_.get();
 
         SigningContext context(runtime->allocator(), message);
-        int result = aws_sign_request_aws(runtime->allocator(), signable,
-                                          reinterpret_cast<aws_signing_config_base*>(&config),
-                                          OnSigningComplete, &context);
+        int32_t result = aws_sign_request_aws(runtime->allocator(), signable,
+                                              reinterpret_cast<aws_signing_config_base*>(&config),
+                                              OnSigningComplete, &context);
         if (result == AWS_OP_SUCCESS) {
             std::unique_lock<std::mutex> lock(context.mutex);
             context.condition.wait(lock, [&context] { return context.complete; });
         }
         if (result != AWS_OP_SUCCESS || context.error_code != AWS_ERROR_SUCCESS) {
-            int error = result == AWS_OP_SUCCESS ? context.error_code : aws_last_error();
+            int32_t error = result == AWS_OP_SUCCESS ? context.error_code : aws_last_error();
             return Status::IOError(
                 fmt::format("failed to sign S3 request: {}", aws_error_debug_str(error)));
         }
@@ -933,7 +1019,7 @@ class S3ObjectStoreClient : public ObjectStoreClient,
     std::string region_;
     bool path_style_ = false;
     bool use_default_endpoint_ = false;
-    std::unique_ptr<Executor> executor_;
+    std::weak_ptr<Executor> executor_;
 };
 
 }  // namespace
@@ -959,15 +1045,16 @@ Status ValidateS3Options(const std::map<std::string, std::string>& options) {
     if (has_secret && secret->second.empty()) {
         return Status::Invalid(fmt::format("{} must not be empty", kS3SecretKeyOption));
     }
-    if (options.find(kS3PathStyleAccessOption) == options.end()) {
-        return Status::OK();
+    if (options.find(kS3PathStyleAccessOption) != options.end()) {
+        Result<bool> parsed =
+            OptionsUtils::GetValueFromMap<bool>(options, kS3PathStyleAccessOption);
+        if (!parsed.ok()) {
+            return Status::Invalid(
+                fmt::format("{} {}", kS3PathStyleAccessOption, parsed.status().message()));
+        }
     }
-    Result<bool> parsed = OptionsUtils::GetValueFromMap<bool>(options, kS3PathStyleAccessOption);
-    if (!parsed.ok()) {
-        return Status::Invalid(
-            fmt::format("{} {}", kS3PathStyleAccessOption, parsed.status().message()));
-    }
-    return Status::OK();
+    Result<CurlHttpClientOptions> http_options = ResolveCurlHttpClientOptions(options);
+    return http_options.ok() ? Status::OK() : http_options.status();
 }
 
 S3FileSystem::S3FileSystem(std::shared_ptr<ObjectStoreClient> client)
@@ -975,8 +1062,13 @@ S3FileSystem::S3FileSystem(std::shared_ptr<ObjectStoreClient> client)
 
 Result<std::unique_ptr<FileSystem>> S3FileSystem::Create(
     const std::map<std::string, std::string>& options) {
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ObjectStoreClient> client,
-                           MakeS3ObjectStoreClient(options, std::make_shared<CurlHttpClient>()));
+    std::map<std::string, std::string> normalized_options = NormalizeS3Options(options);
+    PAIMON_ASSIGN_OR_RAISE(CurlHttpClientOptions http_options,
+                           ResolveCurlHttpClientOptions(normalized_options));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<ObjectStoreClient> client,
+        MakeS3ObjectStoreClient(normalized_options,
+                                std::make_shared<CurlHttpClient>(std::move(http_options))));
     return std::unique_ptr<FileSystem>(new S3FileSystem(std::move(client)));
 }
 
@@ -989,9 +1081,8 @@ Result<std::shared_ptr<ObjectStoreClient>> MakeS3ObjectStoreClient(
     if (!credentials) {
         return Status::IOError("failed to initialize S3 credentials provider");
     }
-    std::unique_ptr<Executor> executor = CreateDefaultExecutor();
     return S3ObjectStoreClient::Create(normalized_options, std::move(http_client),
-                                       std::move(credentials), std::move(executor));
+                                       std::move(credentials), GetS3Executor());
 }
 
 }  // namespace paimon::s3

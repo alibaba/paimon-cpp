@@ -18,11 +18,16 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+#include <condition_variable>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <future>
+#include <mutex>
 #include <optional>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -30,7 +35,7 @@
 #include "paimon/fs/s3/s3_file_system_factory.h"
 #include "paimon/testing/utils/testharness.h"
 
-namespace paimon::s3 {
+namespace paimon::s3::test {
 namespace {
 
 class MockHttpClient : public HttpClient {
@@ -42,7 +47,11 @@ class MockHttpClient : public HttpClient {
         response.status_code = status_code_;
         response.headers = response_headers_;
         if (!body_.empty()) {
-            PAIMON_RETURN_NOT_OK(consumer(body_.data(), body_.size()));
+            if (status_code_ >= 300) {
+                response.error_body = body_;
+            } else {
+                PAIMON_RETURN_NOT_OK(consumer(body_.data(), body_.size()));
+            }
             response.body_size = body_.size();
         }
         return response;
@@ -52,6 +61,39 @@ class MockHttpClient : public HttpClient {
     int32_t status_code_ = 200;
     HttpHeaders response_headers_;
     std::string body_;
+};
+
+class BlockingMockHttpClient : public MockHttpClient {
+ public:
+    Result<HttpResponse> Execute(const HttpRequest& request,
+                                 const HttpBodyConsumer& consumer) const override {
+        if (request.method == HttpMethod::GET) {
+            std::unique_lock<std::mutex> lock(mutex_);
+            get_started_ = true;
+            condition_.notify_all();
+            condition_.wait(lock, [this] { return release_get_; });
+        }
+        return MockHttpClient::Execute(request, consumer);
+    }
+
+    bool WaitForGetStart() const {
+        std::unique_lock<std::mutex> lock(mutex_);
+        return condition_.wait_for(lock, std::chrono::seconds(5), [this] { return get_started_; });
+    }
+
+    void ReleaseGet() {
+        {
+            std::scoped_lock lock(mutex_);
+            release_get_ = true;
+        }
+        condition_.notify_all();
+    }
+
+ private:
+    mutable std::mutex mutex_;
+    mutable std::condition_variable condition_;
+    mutable bool get_started_ = false;
+    bool release_get_ = false;
 };
 
 class ScopedEnvironmentVariable {
@@ -145,7 +187,7 @@ TEST(S3ObjectStoreClientTest, TestCustomEndpointAddressing) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<ObjectStoreClient> https_client,
                          MakeS3ObjectStoreClient(https_options, http));
     ASSERT_OK(https_client->HeadObject({"bucket", "file"}));
-    ASSERT_EQ(http->request_.url, "https://s3.example.com/bucket/file");
+    ASSERT_EQ(http->request_.url, "https://bucket.s3.example.com/file");
     ASSERT_OK(https_client->HeadObject({"paimon.prod.data", "file"}));
     ASSERT_EQ(http->request_.url, "https://s3.example.com/paimon.prod.data/file");
 
@@ -162,6 +204,22 @@ TEST(S3ObjectStoreClientTest, TestCustomEndpointAddressing) {
                          MakeS3ObjectStoreClient(ip_options, http));
     ASSERT_OK(ip_client->HeadObject({"bucket", "file"}));
     ASSERT_EQ(http->request_.url, "http://127.0.0.1:9000/bucket/file");
+
+    auto ipv6_options = StaticOptions();
+    ipv6_options[kS3EndpointOption] = "http://[::1]:9000";
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<ObjectStoreClient> ipv6_client,
+                         MakeS3ObjectStoreClient(ipv6_options, http));
+    ASSERT_OK(ipv6_client->HeadObject({"bucket", "file"}));
+    ASSERT_EQ(http->request_.url, "http://[::1]:9000/bucket/file");
+    ASSERT_EQ(http->request_.headers["host"], "[::1]:9000");
+
+    auto ipv6_zone_options = StaticOptions();
+    ipv6_zone_options[kS3EndpointOption] = "http://[fe80::1%25eth0]:9000";
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<ObjectStoreClient> ipv6_zone_client,
+                         MakeS3ObjectStoreClient(ipv6_zone_options, http));
+    ASSERT_OK(ipv6_zone_client->HeadObject({"bucket", "file"}));
+    ASSERT_EQ(http->request_.url, "http://[fe80::1%25eth0]:9000/bucket/file");
+    ASSERT_EQ(http->request_.headers["host"], "[fe80::1%25eth0]:9000");
 
     auto base_path_options = StaticOptions();
     base_path_options[kS3EndpointOption] = "HTTPS://s3.example.com/storage";
@@ -296,6 +354,53 @@ TEST(S3ObjectStoreClientTest, TestInvalidModificationTime) {
         "<LastModified>invalid</LastModified><Size>12</Size></Contents></ListBucketResult>";
     ASSERT_OK_AND_ASSIGN(auto result, client->ListObjects({"bucket", ""}, "", 0));
     ASSERT_EQ(result.objects[0].modification_time, 0);
+
+    http->body_ =
+        "<ListBucketResult><IsTruncated>false</IsTruncated><Contents><Key>file</Key>"
+        "<LastModified>2026-02-30T00:00:00.000Z</LastModified>"
+        "<Size>12</Size></Contents></ListBucketResult>";
+    ASSERT_OK_AND_ASSIGN(result, client->ListObjects({"bucket", ""}, "", 0));
+    ASSERT_EQ(result.objects[0].modification_time, 0);
+}
+
+TEST(S3ObjectStoreClientTest, TestModificationTimeFormats) {
+    auto http = std::make_shared<MockHttpClient>();
+    http->response_headers_["content-length"] = "12";
+    http->response_headers_["last-modified"] = "Mon, 12 Oct 2009 17:50:30 GMT";
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<ObjectStoreClient> client,
+                         MakeS3ObjectStoreClient(StaticOptions(), http));
+    ASSERT_OK_AND_ASSIGN(ObjectMetadata head, client->HeadObject({"bucket", "file"}));
+    ASSERT_EQ(head.modification_time, 1255369830000);
+
+    http->body_ =
+        "<ListBucketResult><IsTruncated>false</IsTruncated><Contents><Key>file</Key>"
+        "<LastModified>2009-10-12T17:50:30.123Z</LastModified>"
+        "<Size>12</Size></Contents></ListBucketResult>";
+    ASSERT_OK_AND_ASSIGN(ListObjectsResult list, client->ListObjects({"bucket", ""}, "", 0));
+    ASSERT_EQ(list.objects[0].modification_time, 1255369830123);
+}
+
+TEST(S3ObjectStoreClientTest, TestNotFoundAndErrorDetails) {
+    auto http = std::make_shared<MockHttpClient>();
+    http->status_code_ = 404;
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<ObjectStoreClient> client,
+                         MakeS3ObjectStoreClient(StaticOptions(), http));
+    ASSERT_TRUE(client->HeadObject({"bucket", "missing"}).status().IsNotExist());
+    char buffer[1];
+    ASSERT_TRUE(client->GetObjectRange({"bucket", "missing"}, 0, 1, buffer).status().IsNotExist());
+    ASSERT_TRUE(client->ListObjects({"missing", ""}, "", 0).status().IsNotExist());
+
+    http->status_code_ = 403;
+    http->body_ = "<Error><Code>AccessDenied</Code><Message>access is denied</Message></Error>";
+    ASSERT_NOK_WITH_MSG(client->GetObjectRange({"bucket", "file"}, 0, 1, buffer),
+                        "S3 error AccessDenied");
+    ASSERT_NOK_WITH_MSG(client->GetObjectRange({"bucket", "file"}, 0, 1, buffer),
+                        "access is denied");
+
+    http->status_code_ = 301;
+    http->body_.clear();
+    http->response_headers_["x-amz-bucket-region"] = "eu-west-1";
+    ASSERT_NOK_WITH_MSG(client->HeadObject({"bucket", "file"}), "bucket region eu-west-1");
 }
 
 TEST(S3ObjectStoreClientTest, TestRegionFromEnvironment) {
@@ -425,11 +530,43 @@ TEST(S3ObjectStoreClientTest, TestRangeAndListObjects) {
     ASSERT_TRUE(result.is_truncated);
     ASSERT_EQ(result.continuation_token, "next token");
     ASSERT_EQ(result.objects[0].key, "dir/a&b");
+    ASSERT_EQ(result.objects[0].modification_time, 1767225600000);
     ASSERT_EQ(result.objects[1].key, "dir/a&lt;b");
     ASSERT_EQ(result.common_prefixes[0], "dir/sub/");
     ASSERT_NE(http->request_.url.find("amazonaws.com/?list-type=2"), std::string::npos);
     ASSERT_NE(http->request_.url.find("encoding-type=url"), std::string::npos);
     ASSERT_NE(http->request_.url.find("continuation-token=old%20token"), std::string::npos);
+}
+
+TEST(S3ObjectStoreClientTest, TestAsyncReadCanReleaseStreamAndClient) {
+    auto http = std::make_shared<BlockingMockHttpClient>();
+    http->response_headers_["content-length"] = "4";
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<ObjectStoreClient> client,
+                         MakeS3ObjectStoreClient(StaticOptions(), http));
+    std::weak_ptr<ObjectStoreClient> weak_client = client;
+    auto file_system = std::make_unique<ObjectStoreFileSystem>("s3", client);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<InputStream> stream, file_system->Open("s3://bucket/key"));
+    http->body_ = "data";
+
+    char buffer[4];
+    std::promise<Status> completion;
+    std::future<Status> completed = completion.get_future();
+    stream->ReadAsync(buffer, sizeof(buffer), 0,
+                      [&completion](Status status) { completion.set_value(std::move(status)); });
+    bool get_started = http->WaitForGetStart();
+    stream.reset();
+    file_system.reset();
+    client.reset();
+    http->ReleaseGet();
+
+    ASSERT_TRUE(get_started);
+    ASSERT_EQ(completed.wait_for(std::chrono::seconds(5)), std::future_status::ready);
+    ASSERT_OK(completed.get());
+    ASSERT_EQ(std::string(buffer, sizeof(buffer)), "data");
+    for (int32_t attempt = 0; attempt < 100 && !weak_client.expired(); ++attempt) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    ASSERT_TRUE(weak_client.expired());
 }
 
 TEST(S3ObjectStoreClientTest, TestUrlEncodedListObjects) {
@@ -494,7 +631,21 @@ TEST(S3FileSystemFactoryTest, TestOptionValidation) {
         MakeS3ObjectStoreClient({{kS3AccessKeyOption, "access"}}, http).status().IsInvalid());
     ASSERT_TRUE(
         MakeS3ObjectStoreClient({{kS3PathStyleAccessOption, "treu"}}, http).status().IsInvalid());
+    ASSERT_TRUE(MakeS3ObjectStoreClient({{kS3ConnectionEstablishTimeoutOption, "-1"}}, http)
+                    .status()
+                    .IsInvalid());
+    ASSERT_TRUE(MakeS3ObjectStoreClient({{kS3ConnectionRequestTimeoutOption, "-1"}}, http)
+                    .status()
+                    .IsInvalid());
+    ASSERT_TRUE(
+        MakeS3ObjectStoreClient({{kS3LowSpeedLimitOption, "invalid"}}, http).status().IsInvalid());
+    ASSERT_TRUE(MakeS3ObjectStoreClient({{"s3a.connection.establish.timeout", "-1"}}, http)
+                    .status()
+                    .IsInvalid());
+    ASSERT_TRUE(MakeS3ObjectStoreClient({{"fs.s3a.connection.request.timeout", "-1"}}, http)
+                    .status()
+                    .IsInvalid());
 }
 
 }  // namespace
-}  // namespace paimon::s3
+}  // namespace paimon::s3::test
