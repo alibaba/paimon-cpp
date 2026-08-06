@@ -16,6 +16,14 @@
 
 # Paimon C++
 
+> [!IMPORTANT]
+> This repository has been sealed. We have contributed all functionality from this repository to
+> [apache/paimon-cpp](https://github.com/apache/paimon-cpp), which is now the official C++
+> implementation of Apache Paimon. The official repository provides the same functionality and
+> APIs as this repository. We welcome everyone to use and contribute to Apache Paimon C++.
+> Please direct all future issues, pull requests, and other contributions to
+> [apache/paimon-cpp](https://github.com/apache/paimon-cpp).
+
 [![GitHub License](https://img.shields.io/github/license/alibaba/paimon-cpp?color=blue)](https://github.com/alibaba/paimon-cpp/blob/main/LICENSE)
 [![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/alibaba/paimon-cpp)
 
@@ -135,7 +143,7 @@ The reading is divided into two stages:
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/alibaba/paimon-cpp.git
+git clone https://github.com/apache/paimon-cpp.git
 cd paimon-cpp
 ```
 
@@ -208,13 +216,9 @@ resolved dependency.
 
 ## Contributing
 
-Paimon-cpp is an active open-source project and we welcome people who want to contribute or share good ideas!
-Before contributing, please read the [Contributing Guide](CONTRIBUTING.md) and the [Code Style Guide](docs/code-style.md). You are encouraged to check out our [documentation](https://alibaba.github.io/paimon-cpp/).
-
-If you have suggestions, feedback, want to report a bug or request a feature, please open an [issue](https://github.com/alibaba/paimon-cpp/issues/new).
-Pull requests are also very welcome!
-
-We value respectful and open collaboration, and appreciate everyone who helps make paimon-cpp better. Thank you for your support!
+Development has moved to the official [apache/paimon-cpp](https://github.com/apache/paimon-cpp)
+repository. We welcome contributions and encourage everyone to use Apache Paimon C++. Please
+submit all future issues and pull requests to the official repository.
 
 ### Linting
 
