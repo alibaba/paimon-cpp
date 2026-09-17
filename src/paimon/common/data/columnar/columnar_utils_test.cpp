@@ -17,6 +17,7 @@
 #include "paimon/common/data/columnar/columnar_utils.h"
 
 #include <string>
+#include <vector>
 
 #include "arrow/api.h"
 #include "arrow/array/array_dict.h"
@@ -50,6 +51,53 @@ TEST(ColumnarUtilsTest, TestGetViewAndBytesOfDict) {
     ASSERT_EQ("foo", std::string(ColumnarUtils::GetView(dict_array.get(), 2)));
     ASSERT_EQ("baz", std::string(ColumnarUtils::GetView(dict_array.get(), 3)));
     ASSERT_EQ("foo", std::string(ColumnarUtils::GetView(dict_array.get(), 4)));
+}
+
+template <typename ArrowType>
+class ColumnarUtilsBinaryDictionaryTest : public ::testing::Test {};
+
+using BinaryDictionaryTypes = ::testing::Types<arrow::BinaryType, arrow::LargeBinaryType>;
+TYPED_TEST_SUITE(ColumnarUtilsBinaryDictionaryTest, BinaryDictionaryTypes);
+
+TYPED_TEST(ColumnarUtilsBinaryDictionaryTest, GetViewAndBytes) {
+    auto pool = GetDefaultPool();
+    const std::vector<std::string> values = {std::string("\x00\xff\x80", 3), "",
+                                             std::string("a\0b", 3)};
+    typename arrow::TypeTraits<TypeParam>::BuilderType builder;
+    ASSERT_TRUE(builder.Append("unused").ok());
+    for (const auto& value : values) {
+        ASSERT_TRUE(builder.Append(value).ok());
+    }
+    std::shared_ptr<arrow::Array> dictionary;
+    ASSERT_TRUE(builder.Finish(&dictionary).ok());
+    dictionary = dictionary->Slice(1);
+
+    const std::vector<std::shared_ptr<arrow::DataType>> index_types = {
+        arrow::int8(), arrow::int16(), arrow::int32(), arrow::int64()};
+    const std::vector<int32_t> expected_indices = {0, 1, 2, 0, -1, 2};
+    for (const auto& index_type : index_types) {
+        SCOPED_TRACE(index_type->ToString());
+        auto indices =
+            arrow::ipc::internal::json::ArrayFromJSON(index_type, "[0, 1, 2, 0, null, 2]")
+                .ValueOrDie();
+        auto dict_array = arrow::DictionaryArray::FromArrays(indices, dictionary).ValueOrDie();
+        ASSERT_TRUE(dict_array->ValidateFull().ok());
+        for (int32_t offset : {0, 1}) {
+            SCOPED_TRACE(offset);
+            auto sliced = dict_array->Slice(offset);
+            for (int32_t pos = 0; pos < sliced->length(); ++pos) {
+                SCOPED_TRACE(pos);
+                int32_t index = expected_indices[offset + pos];
+                ASSERT_EQ(index == -1, sliced->IsNull(pos));
+                if (index == -1) {
+                    continue;
+                }
+                ASSERT_EQ(values[index], ColumnarUtils::GetView(sliced.get(), pos));
+                auto bytes = ColumnarUtils::GetBytes<TypeParam>(sliced.get(), pos, pool.get());
+                ASSERT_EQ(Bytes(values[index], pool.get()), *bytes);
+            }
+        }
+    }
 }
 
 }  // namespace paimon::test

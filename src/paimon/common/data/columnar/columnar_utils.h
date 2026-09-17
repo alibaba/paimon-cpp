@@ -87,13 +87,15 @@ class ColumnarUtils {
                 dict_index = indices->Value(pos);
             }
             assert(dict_index >= 0);
-            if (value_type_id == arrow::Type::type::STRING) {
-                auto dictionary = arrow::internal::checked_cast<arrow::StringArray*>(
+            if (value_type_id == arrow::Type::type::STRING ||
+                value_type_id == arrow::Type::type::BINARY) {
+                auto dictionary = arrow::internal::checked_cast<arrow::BinaryArray*>(
                     typed_array->dictionary().get());
                 assert(dictionary);
                 return dictionary->GetView(dict_index);
-            } else if (value_type_id == arrow::Type::type::LARGE_STRING) {
-                auto dictionary = arrow::internal::checked_cast<arrow::LargeStringArray*>(
+            } else if (value_type_id == arrow::Type::type::LARGE_STRING ||
+                       value_type_id == arrow::Type::type::LARGE_BINARY) {
+                auto dictionary = arrow::internal::checked_cast<arrow::LargeBinaryArray*>(
                     typed_array->dictionary().get());
                 assert(dictionary);
                 return dictionary->GetView(dict_index);

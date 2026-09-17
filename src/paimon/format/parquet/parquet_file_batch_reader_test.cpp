@@ -32,9 +32,13 @@
 #include "arrow/c/bridge.h"
 #include "arrow/io/caching.h"
 #include "arrow/io/interfaces.h"
+#include "arrow/io/memory.h"
 #include "arrow/ipc/api.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
+#include "paimon/common/data/columnar/columnar_array.h"
+#include "paimon/common/data/columnar/columnar_row.h"
+#include "paimon/common/data/columnar/columnar_row_ref.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/arrow/arrow_input_stream_adapter.h"
 #include "paimon/common/utils/arrow/arrow_utils.h"
@@ -563,6 +567,74 @@ TEST_F(ParquetFileBatchReaderTest, TestNextBatchWithDictionary) {
     };
     check_result(true);
     check_result(false);
+}
+
+TEST_F(ParquetFileBatchReaderTest, TestColumnarAccessWithBinaryDictionary) {
+    const std::vector<std::string> values = {std::string("\x00\xff\x80", 3), "",
+                                             std::string("a\0b", 3)};
+    arrow::BinaryBuilder builder;
+    for (const auto& value : values) {
+        ASSERT_TRUE(builder.Append(value).ok());
+    }
+    std::shared_ptr<arrow::Array> dictionary;
+    ASSERT_TRUE(builder.Finish(&dictionary).ok());
+    auto indices =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[0, 1, null, 2, 0, 1]")
+            .ValueOrDie();
+    auto dict_array = arrow::DictionaryArray::FromArrays(indices, dictionary).ValueOrDie();
+    auto schema = arrow::schema({arrow::field("payload", dict_array->type())});
+    auto table = arrow::Table::Make(schema, {dict_array});
+    auto sink = arrow::io::BufferOutputStream::Create().ValueOrDie();
+    auto writer_properties = ::parquet::WriterProperties::Builder().enable_dictionary()->build();
+    // Preserve the Arrow dictionary type so the reader returns dictionary-encoded binary.
+    auto arrow_properties = ::parquet::ArrowWriterProperties::Builder().store_schema()->build();
+    ASSERT_TRUE(::parquet::arrow::WriteTable(*table, pool_.get(), sink, /*chunk_size=*/3,
+                                             writer_properties, arrow_properties)
+                    .ok());
+    auto buffer = sink->Finish().ValueOrDie();
+    auto reader = PrepareParquetFileBatchReader(std::make_unique<arrow::io::BufferReader>(buffer),
+                                                /*options=*/{}, schema, /*predicate=*/nullptr,
+                                                /*selection_bitmap=*/std::nullopt,
+                                                /*batch_size=*/2);
+    ASSERT_TRUE(reader);
+
+    auto pool = GetDefaultPool();
+    const std::vector<int32_t> expected_indices = {0, 1, -1, 2, 0, 1};
+    int32_t row_offset = 0;
+    while (true) {
+        ASSERT_OK_AND_ASSIGN(auto batch, reader->NextBatch());
+        if (BatchReader::IsEofBatch(batch)) {
+            break;
+        }
+        auto array = arrow::ImportArray(batch.first.get(), batch.second.get()).ValueOrDie();
+        auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(array);
+        ASSERT_TRUE(struct_array);
+        auto payload = std::dynamic_pointer_cast<arrow::DictionaryArray>(struct_array->field(0));
+        ASSERT_TRUE(payload);
+        ASSERT_EQ(arrow::Type::BINARY, payload->dictionary()->type_id());
+        auto ctx = std::make_shared<ColumnarBatchContext>(struct_array->fields(), pool);
+        ColumnarArray column(payload.get(), pool, /*offset=*/0, payload->length());
+        for (int32_t pos = 0; pos < struct_array->length(); ++pos) {
+            ASSERT_LT(row_offset, expected_indices.size());
+            int32_t index = expected_indices[row_offset++];
+            ColumnarRow row(struct_array->fields(), pool, pos);
+            ColumnarRowRef row_ref(ctx, pos);
+            ASSERT_EQ(index == -1, row.IsNullAt(0));
+            ASSERT_EQ(index == -1, row_ref.IsNullAt(0));
+            ASSERT_EQ(index == -1, column.IsNullAt(pos));
+            if (index == -1) {
+                continue;
+            }
+            ASSERT_EQ(values[index], row.GetStringView(0));
+            ASSERT_EQ(Bytes(values[index], pool.get()), *row.GetBinary(0));
+            ASSERT_EQ(values[index], row_ref.GetStringView(0));
+            ASSERT_EQ(Bytes(values[index], pool.get()), *row_ref.GetBinary(0));
+            ASSERT_EQ(values[index], column.GetStringView(pos));
+            ASSERT_EQ(Bytes(values[index], pool.get()), *column.GetBinary(pos));
+        }
+    }
+    ASSERT_EQ(expected_indices.size(), row_offset);
+    reader->Close();
 }
 
 TEST_F(ParquetFileBatchReaderTest, TestNestedStructChildProjectionRecall) {
