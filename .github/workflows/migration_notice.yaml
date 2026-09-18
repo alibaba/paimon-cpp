@@ -1,0 +1,65 @@
+# Copyright 2026-present Alibaba Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Migration notice
+
+on:
+  issues:
+    types: [opened]
+  # Allows commenting on fork PRs. Never check out or execute PR code here.
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  migration-notice:
+    if: github.repository == 'alibaba/paimon-cpp'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Reply with the Apache repository link
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const marker = '<!-- paimon-cpp-migration-notice -->';
+            const issue = {
+              ...context.repo,
+              issue_number: context.issue.number,
+            };
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              ...issue,
+              per_page: 100,
+            });
+            if (comments.some(comment =>
+              comment.user?.login === 'github-actions[bot]' &&
+              comment.body?.includes(marker))) {
+              return;
+            }
+
+            await github.rest.issues.createComment({
+              ...issue,
+              body: [
+                marker,
+                'Thank you for your interest in Paimon C++!',
+                '',
+                'Paimon C++ has moved to the Apache Software Foundation. ' +
+                  'Please submit issues and pull requests to the new repository: ' +
+                  '[apache/paimon-cpp](https://github.com/apache/paimon-cpp).',
+                '',
+                '- [Open an issue](https://github.com/apache/paimon-cpp/issues/new/choose)',
+                '- [Submit a pull request](https://github.com/apache/paimon-cpp/compare)',
+              ].join('\n'),
+            });
