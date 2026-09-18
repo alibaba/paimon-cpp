@@ -18,6 +18,7 @@
 
 #include <curl/curl.h>
 
+#include <algorithm>
 #include <chrono>
 #include <mutex>
 #include <thread>
@@ -33,6 +34,7 @@ namespace paimon {
 namespace {
 
 constexpr int32_t kMaxAttempts = 3;
+constexpr size_t kMaxErrorBodySize = 4096;
 
 class CurlGlobalGuard {
  public:
@@ -78,6 +80,8 @@ size_t WriteCallback(char* data, size_t size, size_t count, void* user_data) {
     curl_easy_getinfo(context->handle, CURLINFO_RESPONSE_CODE, &status_code);
     context->response.status_code = static_cast<int32_t>(status_code);
     if (status_code >= 300) {
+        size_t remaining = kMaxErrorBodySize - context->response.error_body.size();
+        context->response.error_body.append(data, std::min(bytes, remaining));
         context->response.body_size += static_cast<int64_t>(bytes);
         return bytes;
     }
@@ -118,7 +122,8 @@ bool IsRetryable(CURLcode code, int64_t status_code) {
 
 class CurlHttpClient::Impl {
  public:
-    Impl() : guard_(GetCurlGlobalGuard()) {}
+    explicit Impl(CurlHttpClientOptions options)
+        : guard_(GetCurlGlobalGuard()), options_(std::move(options)) {}
 
     ~Impl() {
         for (CURL* handle : handles_) {
@@ -142,13 +147,19 @@ class CurlHttpClient::Impl {
         handles_.push_back(handle);
     }
 
+    const CurlHttpClientOptions& options() const {
+        return options_;
+    }
+
  private:
     std::shared_ptr<CurlGlobalGuard> guard_;
+    CurlHttpClientOptions options_;
     mutable std::mutex mutex_;
     mutable std::vector<CURL*> handles_;
 };
 
-CurlHttpClient::CurlHttpClient() : impl_(std::make_unique<Impl>()) {}
+CurlHttpClient::CurlHttpClient(CurlHttpClientOptions options)
+    : impl_(std::make_unique<Impl>(std::move(options))) {}
 CurlHttpClient::~CurlHttpClient() = default;
 
 Result<HttpResponse> CurlHttpClient::Execute(const HttpRequest& request,
@@ -172,7 +183,18 @@ Result<HttpResponse> CurlHttpClient::Execute(const HttpRequest& request,
         curl_easy_setopt(handle, CURLOPT_URL, request.url.c_str());
         curl_easy_setopt(handle, CURLOPT_HTTPHEADER, headers);
         curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L);
-        curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT_MS, 30000L);
+        curl_easy_setopt(
+            handle, CURLOPT_CONNECTTIMEOUT_MS,
+            static_cast<long>(impl_->options().connect_timeout_ms));  // NOLINT(runtime/int)
+        curl_easy_setopt(
+            handle, CURLOPT_TIMEOUT_MS,
+            static_cast<long>(impl_->options().request_timeout_ms));  // NOLINT(runtime/int)
+        curl_easy_setopt(handle, CURLOPT_LOW_SPEED_LIMIT,
+                         static_cast<long>(  // NOLINT(runtime/int): required by curl.
+                             impl_->options().low_speed_limit_bytes_per_second));
+        curl_easy_setopt(handle, CURLOPT_LOW_SPEED_TIME,
+                         static_cast<long>(  // NOLINT(runtime/int): required by curl.
+                             impl_->options().low_speed_time_seconds));
         curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(handle, CURLOPT_WRITEDATA, &context);
         curl_easy_setopt(handle, CURLOPT_HEADERFUNCTION, HeaderCallback);
@@ -196,8 +218,7 @@ Result<HttpResponse> CurlHttpClient::Execute(const HttpRequest& request,
             (context.response.body_size > 0 && response_code < 300) ||
             attempt + 1 == kMaxAttempts) {
             if (code == CURLE_OK) {
-                return Status::IOError(fmt::format("HTTP request to {} returned status {}",
-                                                   request.url, response_code));
+                return context.response;
             }
             return Status::IOError(fmt::format("HTTP request to {} failed: {} (status {})",
                                                request.url, curl_easy_strerror(code),

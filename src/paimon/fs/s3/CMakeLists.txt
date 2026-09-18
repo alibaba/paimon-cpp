@@ -23,6 +23,7 @@ if(PAIMON_ENABLE_S3)
                    paimon_shared
                    CURL::libcurl
                    STATIC_LINK_LIBS
+                   arrow
                    CURL::libcurl
                    aws_auth_minimal
                    fmt

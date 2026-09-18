@@ -487,9 +487,6 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/PaimonConfig.cmake"
 
 config_summary_message()
 
-if(PAIMON_ENABLE_S3)
-    find_package(CURL REQUIRED)
-endif()
 add_subdirectory(src/paimon)
 add_subdirectory(src/paimon/fs/local)
 add_subdirectory(src/paimon/fs/jindo)

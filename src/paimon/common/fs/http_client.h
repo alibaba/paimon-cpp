@@ -41,6 +41,7 @@ struct HttpResponse {
     int32_t status_code = 0;
     HttpHeaders headers;
     int64_t body_size = 0;
+    std::string error_body;
 };
 
 class PAIMON_EXPORT HttpClient {
@@ -50,9 +51,16 @@ class PAIMON_EXPORT HttpClient {
                                          const HttpBodyConsumer& consumer) const = 0;
 };
 
+struct CurlHttpClientOptions {
+    int64_t connect_timeout_ms = 30000;
+    int64_t request_timeout_ms = 300000;
+    int64_t low_speed_limit_bytes_per_second = 1;
+    int64_t low_speed_time_seconds = 30;
+};
+
 class PAIMON_EXPORT CurlHttpClient : public HttpClient {
  public:
-    CurlHttpClient();
+    explicit CurlHttpClient(CurlHttpClientOptions options = {});
     ~CurlHttpClient() override;
 
     Result<HttpResponse> Execute(const HttpRequest& request,
